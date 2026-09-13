@@ -1,0 +1,68 @@
+import type { CalendarEventItem, DailyLoadAssessment, LoadEstimate, LoadLevel, TaskItem } from '../../types';
+
+const SEGMENTS = 4;
+
+/** Above this share of the active day being committed, a day stops reading as "open". */
+const BUSY_SHARE = 0.25;
+
+/**
+ * A deliberately coarse, presentational summary of the same inputs Daily Load
+ * already reasons about. It exists to give the recommendation context at a
+ * glance — it is NOT a score of the user, and it is not precise enough to
+ * deserve a percentage, which is why it renders as four segments.
+ */
+export function describeLoad(
+  events: CalendarEventItem[],
+  tasks: TaskItem[],
+  assessment: DailyLoadAssessment
+): LoadEstimate {
+  const committedShare = shareOfDayCommitted(events, tasks);
+  const shortfall = assessment.gap ? assessment.requiredBufferMinutes - assessment.bufferMinutes : 0;
+
+  const level = pickLevel(shortfall, assessment.requiredBufferMinutes, committedShare);
+
+  return { level, ...copyFor(level), filled: filledFor(level), total: SEGMENTS };
+}
+
+function pickLevel(shortfall: number, required: number, committedShare: number): LoadLevel {
+  if (shortfall > required * 0.5) return 'full';
+  if (shortfall > 0) return 'tight';
+  if (committedShare >= BUSY_SHARE) return 'steady';
+  return 'open';
+}
+
+function filledFor(level: LoadLevel): number {
+  if (level === 'full') return 4;
+  if (level === 'tight') return 3;
+  if (level === 'steady') return 2;
+  return 1;
+}
+
+function copyFor(level: LoadLevel): { label: string; caption: string } {
+  switch (level) {
+    case 'full':
+      return { label: 'Full', caption: 'Several transitions are short on room.' };
+    case 'tight':
+      return { label: 'Tight', caption: 'One window is short on room. The rest of the day has space.' };
+    case 'steady':
+      return { label: 'Steady', caption: 'Every transition has room.' };
+    default:
+      return { label: 'Open', caption: 'Plenty of room between today’s commitments.' };
+  }
+}
+
+function shareOfDayCommitted(events: CalendarEventItem[], tasks: TaskItem[]): number {
+  if (events.length === 0) return 0;
+
+  const starts = events.map((e) => e.startMinutes);
+  const ends = events.map((e) => e.endMinutes);
+  const windowMinutes = Math.max(...ends) - Math.min(...starts);
+  if (windowMinutes <= 0) return 0;
+
+  const eventMinutes = events.reduce((sum, e) => sum + (e.endMinutes - e.startMinutes), 0);
+  const taskMinutes = tasks
+    .filter((t) => t.scheduledStartMinutes != null)
+    .reduce((sum, t) => sum + t.durationMinutes, 0);
+
+  return (eventMinutes + taskMinutes) / windowMinutes;
+}
