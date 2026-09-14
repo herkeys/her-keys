@@ -1,20 +1,12 @@
 import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
+import { onboardingOptions } from '../../src/data/catalog/onboardingOptions';
 import { ChipToggle } from '../../src/design/components';
 import { OnboardingScaffold } from '../../src/features/onboarding/OnboardingScaffold';
 import { useOnboarding } from '../../src/store/OnboardingContext';
 
-const GOAL_OPTIONS = [
-  'Financial stability',
-  'A calmer household',
-  'More time with the kids',
-  'Better routines',
-  'Reduced stress',
-  'Building savings',
-];
-
 export default function GoalsStep() {
-  const { answers, toggleGoal } = useOnboarding();
+  const { selected, toggleGoal, recordStep } = useOnboarding();
 
   return (
     <OnboardingScaffold
@@ -22,12 +14,20 @@ export default function GoalsStep() {
       total={4}
       title="What are you rebuilding toward?"
       description="Pick a few. This isn't permanent — priorities can change."
-      onContinue={() => router.push('/onboarding/strengths')}
-      continueDisabled={answers.goals.length === 0}
+      onContinue={() => {
+        recordStep('strengths');
+        router.push('/onboarding/strengths');
+      }}
+      continueDisabled={selected.goalIds.length === 0}
     >
       <View style={styles.chips}>
-        {GOAL_OPTIONS.map((goal) => (
-          <ChipToggle key={goal} label={goal} selected={answers.goals.includes(goal)} onPress={() => toggleGoal(goal)} />
+        {onboardingOptions.goals.map((option) => (
+          <ChipToggle
+            key={option.id}
+            label={option.label}
+            selected={selected.goalIds.includes(option.id)}
+            onPress={() => toggleGoal(option.id)}
+          />
         ))}
       </View>
     </OnboardingScaffold>

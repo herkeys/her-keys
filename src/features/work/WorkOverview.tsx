@@ -1,11 +1,15 @@
 import { StyleSheet, View } from 'react-native';
-import { todaysEvents } from '../../data/seed/schedule';
 import { AppText, Overline, StatusList } from '../../design/components';
 import { colors, spacing } from '../../design/tokens';
+import { useSchedule } from '../../store/ScheduleContext';
+import { useHousehold } from '../../store/useHousehold';
 import { formatTime } from '../daily-load/computeDailyLoad';
 
 export function WorkOverview() {
-  const workEvents = todaysEvents.filter((e) => e.category === 'work');
+  const { events } = useSchedule();
+  const { categoryIdForRole } = useHousehold();
+  const workCategoryId = categoryIdForRole('work');
+  const workEvents = events.filter((e) => e.categoryId === workCategoryId);
 
   return (
     <View>

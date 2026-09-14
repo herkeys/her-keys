@@ -1,9 +1,17 @@
-import { router } from 'expo-router';
+import { Redirect, router } from 'expo-router';
+import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { AppText, Button, Overline, Screen } from '../src/design/components';
 import { colors, spacing } from '../src/design/tokens';
+import { useOnboarding } from '../src/store/OnboardingContext';
 
 export default function Welcome() {
+  const { resumeStep, recordStep } = useOnboarding();
+  // Decided when Welcome first appears after launch: someone part-way through
+  // onboarding picks up where she left off. Access itself is decided by the root guards.
+  const [resumeAt] = useState(resumeStep);
+  if (resumeAt) return <Redirect href={`/onboarding/${resumeAt}`} />;
+
   return (
     <Screen scroll={false}>
       <View style={styles.body}>
@@ -21,7 +29,13 @@ export default function Welcome() {
         <AppText variant="bodySm" color={colors.textTertiary} style={styles.footnote}>
           First, a couple of minutes on how your life runs now — what already works, and where it tends to break down.
         </AppText>
-        <Button label="Begin" onPress={() => router.push('/onboarding/goals')} />
+        <Button
+          label="Begin"
+          onPress={() => {
+            recordStep('goals');
+            router.push('/onboarding/goals');
+          }}
+        />
       </View>
     </Screen>
   );

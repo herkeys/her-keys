@@ -2,12 +2,10 @@ import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { AppText, Overline, Screen, StatusList } from '../../../src/design/components';
 import { colors, spacing } from '../../../src/design/tokens';
-import { deriveLifeStatus } from '../../../src/features/life/lifeStatus';
-import { useSchedule } from '../../../src/store/ScheduleContext';
+import { useLifeStatus } from '../../../src/features/life/useLifeStatus';
 
 export default function LifeHub() {
-  const { events, tasks } = useSchedule();
-  const statuses = deriveLifeStatus(events, tasks);
+  const statuses = useLifeStatus();
 
   return (
     <Screen>

@@ -1,15 +1,19 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
-import { todaysEvents, todaysTasks as seedTasks } from '../data/seed/schedule';
+import { approveDailyLoadMove, dailyLoadDecisionFor, keepDailyLoadPlan, type AppliedMove } from '../domain/dailyLoadDecisions';
+import { loadTierOf, type LoadTier } from '../domain/loadTier';
+import { projectDay } from '../domain/projectDay';
 import { computeDailyLoad } from '../features/daily-load/computeDailyLoad';
-import type { CalendarEventItem, DailyLoadAssessment, DailyLoadDecision, DailyLoadRecommendation, TaskItem } from '../types';
+import type { CalendarEventItem, DailyLoadAssessment, DailyLoadDecision, TaskItem } from '../types';
+import { useAppStore, useHouseholdState } from './AppStateProvider';
 
 interface ScheduleContextValue {
   events: CalendarEventItem[];
   tasks: TaskItem[];
   assessment: DailyLoadAssessment;
+  loadTier: LoadTier;
   decision: DailyLoadDecision;
   candidateIndex: number;
-  appliedRecommendation: DailyLoadRecommendation | null;
+  appliedMove: AppliedMove | null;
   showNextCandidate: () => void;
   moveRecommendedTask: () => void;
   keepAsPlanned: () => void;
@@ -18,48 +22,46 @@ interface ScheduleContextValue {
 const ScheduleContext = createContext<ScheduleContextValue | null>(null);
 
 /**
- * Holds today's local schedule state so the Daily Load recommendation and
- * the Today timeline stay in sync: moving a task here is what makes it
- * disappear from the timeline and the buffer recalculate. In-memory only —
- * Build 1 has no persistence, so this resets on reload.
+ * Today's schedule as the Daily Load card, the timeline and life status see
+ * it. The facts come from the household store; this projects them onto the
+ * logical day and recomputes the assessment. A move made before a relaunch
+ * shows up because the task itself moved — no earlier analysis is kept.
+ * Browsing alternative recommendations is the only local state.
  */
 export function ScheduleProvider({ children }: { children: ReactNode }) {
-  const [tasks, setTasks] = useState<TaskItem[]>(seedTasks);
-  const [decision, setDecision] = useState<DailyLoadDecision>('pending');
+  const store = useAppStore();
+  const { state, today } = useHouseholdState();
   const [candidateIndex, setCandidateIndex] = useState(0);
-  const [appliedRecommendation, setAppliedRecommendation] = useState<DailyLoadRecommendation | null>(null);
 
-  const assessment = useMemo(() => computeDailyLoad(todaysEvents, tasks), [tasks]);
-  const activeCandidate = assessment.candidates[candidateIndex] ?? null;
+  const day = useMemo(
+    () => projectDay({ events: state.events, tasks: state.tasks, timeZone: state.user.timezone }, today),
+    [state.events, state.tasks, state.user.timezone, today]
+  );
+  const assessment = useMemo(() => computeDailyLoad(day.events, day.tasks), [day]);
+  const { decision, appliedMove } = useMemo(() => dailyLoadDecisionFor(state, today), [state, today]);
 
-  function showNextCandidate() {
-    if (assessment.candidates.length === 0) return;
-    setCandidateIndex((i) => (i + 1) % assessment.candidates.length);
-  }
-
-  function moveRecommendedTask() {
-    if (!activeCandidate) return;
-    setAppliedRecommendation(activeCandidate);
-    setTasks((prev) =>
-      prev.map((t) => (t.id === activeCandidate.task.id ? { ...t, scheduledStartMinutes: undefined } : t))
-    );
-    setDecision('moved');
-  }
-
-  function keepAsPlanned() {
-    setDecision('kept');
-  }
+  // Candidates change after a move or on a new day, so the index can never point past the end (HK-AUDIT-037).
+  const count = assessment.candidates.length;
+  const activeIndex = count === 0 ? 0 : candidateIndex % count;
+  const activeCandidate = assessment.candidates[activeIndex] ?? null;
 
   const value: ScheduleContextValue = {
-    events: todaysEvents,
-    tasks,
+    events: day.events,
+    tasks: day.tasks,
     assessment,
+    loadTier: loadTierOf(assessment),
     decision,
-    candidateIndex,
-    appliedRecommendation,
-    showNextCandidate,
-    moveRecommendedTask,
-    keepAsPlanned,
+    candidateIndex: activeIndex,
+    appliedMove,
+    showNextCandidate: () => {
+      if (count > 0) setCandidateIndex((activeIndex + 1) % count);
+    },
+    moveRecommendedTask: () => {
+      if (activeCandidate) store.dispatch((current, ctx) => approveDailyLoadMove(current, ctx, activeCandidate.task.id));
+    },
+    keepAsPlanned: () => {
+      store.dispatch((current, ctx) => keepDailyLoadPlan(current, ctx, activeCandidate?.task.id ?? null));
+    },
   };
 
   return <ScheduleContext.Provider value={value}>{children}</ScheduleContext.Provider>;

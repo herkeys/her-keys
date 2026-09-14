@@ -1,5 +1,4 @@
 import { StyleSheet, View } from 'react-native';
-import { oneMove } from '../../data/seed/oneMove';
 import { AppText, Button, Card, Overline } from '../../design/components';
 import { colors, spacing } from '../../design/tokens';
 import { useOneMove } from '../../store/OneMoveContext';
@@ -10,9 +9,9 @@ import { useOneMove } from '../../store/OneMoveContext';
  * underneath it, so it reads as an invitation rather than a diagnosis.
  */
 export function OneMoveCard() {
-  const { completed, complete } = useOneMove();
+  const { status, move, complete } = useOneMove();
 
-  if (completed) {
+  if (status === 'completed') {
     return (
       <Card tone="accent" style={styles.card}>
         <Overline color={colors.accent}>One move</Overline>
@@ -26,20 +25,37 @@ export function OneMoveCard() {
     );
   }
 
+  // Not adding another obligation can be the right move (HER_KEYS_PRODUCT.md section 7).
+  if (status !== 'selected' || !move) {
+    return (
+      <Card tone="accent" style={styles.card}>
+        <Overline color={colors.accent}>One move</Overline>
+        <AppText variant="title" style={styles.action}>
+          No One Move today.
+        </AppText>
+        {status === 'withheld' && (
+          <AppText variant="bodySm" color={colors.textSecondary} style={styles.note}>
+            Today is already full, so Her Keys isn’t adding anything.
+          </AppText>
+        )}
+      </Card>
+    );
+  }
+
   return (
     <Card tone="accent" style={styles.card}>
       <View style={styles.header}>
         <Overline color={colors.accent}>One move</Overline>
         <AppText variant="micro" color={colors.textTertiary}>
-          ABOUT {oneMove.estimatedMinutes} MINUTES
+          ABOUT {move.estimatedMinutes} MINUTES
         </AppText>
       </View>
 
       <AppText variant="title" style={styles.action}>
-        {oneMove.action}
+        {move.action}
       </AppText>
       <AppText variant="bodySm" color={colors.textTertiary} style={styles.note}>
-        {oneMove.observation}
+        {move.observation}
       </AppText>
 
       <Button label="I did it" variant="secondary" size="sm" onPress={complete} style={styles.button} />

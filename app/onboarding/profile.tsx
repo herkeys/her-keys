@@ -1,4 +1,3 @@
-import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { AppText, Button, Card, Overline, Screen, Tag } from '../../src/design/components';
 import { colors, radius, spacing } from '../../src/design/tokens';
@@ -6,7 +5,7 @@ import { buildOperatingProfile } from '../../src/features/onboarding/buildOperat
 import { useOnboarding } from '../../src/store/OnboardingContext';
 
 export default function ProfileResult() {
-  const { answers } = useOnboarding();
+  const { answers, complete } = useOnboarding();
   const profile = buildOperatingProfile(answers);
 
   return (
@@ -52,15 +51,10 @@ export default function ProfileResult() {
         </AppText>
       </Card>
 
-      <Button label="Show me my day" onPress={showMyDay} />
+      {/* Completion is saved first; the root guards then close onboarding and open the app, taking onboarding out of history. */}
+      <Button label="Show me my day" onPress={() => void complete()} />
     </Screen>
   );
-}
-
-/** Onboarding is finished, so clear it from history — Back from Today should never land inside it. */
-function showMyDay() {
-  if (router.canDismiss()) router.dismissAll();
-  router.replace('/(app)/today');
 }
 
 const styles = StyleSheet.create({

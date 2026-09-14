@@ -1,29 +1,91 @@
-import { Stack } from 'expo-router';
+import { SplashScreen, Stack } from 'expo-router';
+import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { colors } from '../src/design/tokens';
+import { canOpenScreen, isSettled, type RootScreen } from '../src/domain/routeAccess';
+import { AppStateProvider, useStoreSnapshot } from '../src/store/AppStateProvider';
+import { appStore, internalTools } from '../src/store/appStoreInstance';
 import { OnboardingProvider } from '../src/store/OnboardingContext';
 import { OneMoveProvider } from '../src/store/OneMoveContext';
 import { ScheduleProvider } from '../src/store/ScheduleContext';
 import { TalkItOutProvider } from '../src/store/TalkItOutContext';
 
+// Keep the launch screen up until household state has loaded.
+SplashScreen.preventAutoHideAsync();
+
 export default function RootLayout() {
   return (
     <SafeAreaProvider>
-      <OnboardingProvider>
-        <ScheduleProvider>
-          <OneMoveProvider>
-            <TalkItOutProvider>
-              <Stack
-                initialRouteName="index"
-                screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}
-              >
-                <Stack.Screen name="index" />
-                <Stack.Screen name="talk-it-out" options={{ presentation: 'modal', headerShown: true, title: 'Talk It Out' }} />
-              </Stack>
-            </TalkItOutProvider>
-          </OneMoveProvider>
-        </ScheduleProvider>
-      </OnboardingProvider>
+      <AppStateProvider store={appStore}>
+        <RootNavigator />
+      </AppStateProvider>
     </SafeAreaProvider>
+  );
+}
+
+/**
+ * The routing authority. Every root screen is declared inside its own guard
+ * from the access table, so a link can't reach the app before onboarding is
+ * finished, or onboarding after it.
+ */
+function RootNavigator() {
+  const snapshot = useStoreSnapshot();
+  const settled = isSettled(snapshot.status);
+
+  useEffect(() => {
+    if (!settled) return;
+    SplashScreen.hide();
+    if (__DEV__) console.info('[herkeys] navigator-ready');
+  }, [settled]);
+
+  // No navigator until state has loaded. The navigation container holds on to
+  // the launch URL until one mounts, so a deep link waits through hydration and
+  // is then checked against the guards — nothing is decided, or shown, early.
+  if (!settled || !snapshot.state) return null;
+
+  const access = { status: snapshot.status, onboarding: snapshot.state.onboarding, internalTools };
+  const allow = (screen: RootScreen) => canOpenScreen(screen, access);
+
+  return (
+    <OnboardingProvider>
+      <ScheduleProvider>
+        <OneMoveProvider>
+          <TalkItOutProvider>
+            <Stack
+              initialRouteName="index"
+              screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}
+            >
+              <Stack.Protected guard={allow('index')}>
+                <Stack.Screen name="index" />
+              </Stack.Protected>
+              <Stack.Protected guard={allow('onboarding/goals')}>
+                <Stack.Screen name="onboarding/goals" />
+              </Stack.Protected>
+              <Stack.Protected guard={allow('onboarding/strengths')}>
+                <Stack.Screen name="onboarding/strengths" />
+              </Stack.Protected>
+              <Stack.Protected guard={allow('onboarding/struggles')}>
+                <Stack.Screen name="onboarding/struggles" />
+              </Stack.Protected>
+              <Stack.Protected guard={allow('onboarding/talk-it-out')}>
+                <Stack.Screen name="onboarding/talk-it-out" />
+              </Stack.Protected>
+              <Stack.Protected guard={allow('onboarding/profile')}>
+                <Stack.Screen name="onboarding/profile" />
+              </Stack.Protected>
+              <Stack.Protected guard={allow('(app)')}>
+                <Stack.Screen name="(app)" />
+              </Stack.Protected>
+              <Stack.Protected guard={allow('talk-it-out')}>
+                <Stack.Screen name="talk-it-out" options={{ presentation: 'modal', headerShown: true, title: 'Talk It Out' }} />
+              </Stack.Protected>
+              <Stack.Protected guard={allow('dev-tools')}>
+                <Stack.Screen name="dev-tools" options={{ headerShown: true, title: 'Internal tools' }} />
+              </Stack.Protected>
+            </Stack>
+          </TalkItOutProvider>
+        </OneMoveProvider>
+      </ScheduleProvider>
+    </OnboardingProvider>
   );
 }

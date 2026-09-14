@@ -1,23 +1,25 @@
 import { StyleSheet, View } from 'react-native';
-import { household } from '../../data/seed/household';
-import { todaysEvents, todaysTasks } from '../../data/seed/schedule';
 import { AppText, Overline, StatusList } from '../../design/components';
 import { colors, spacing } from '../../design/tokens';
+import { useSchedule } from '../../store/ScheduleContext';
+import { useHousehold } from '../../store/useHousehold';
 
 export function KidsOverview() {
-  const kidsEvents = todaysEvents.filter((e) => e.category === 'kids');
-  const kidsTasks = todaysTasks.filter((t) => t.domain === 'kids');
+  const { events, tasks } = useSchedule();
+  const { children, categoryIdForRole } = useHousehold();
+  const kidsCategoryId = categoryIdForRole('kids');
+  const kidsTasks = tasks.filter((t) => t.categoryId === kidsCategoryId);
 
   return (
     <View>
       <Overline style={styles.label}>Today</Overline>
       <StatusList
-        items={household.children.map((child) => ({
+        items={children.map((child) => ({
           key: child.id,
-          label: `${child.name}, ${child.age}`,
+          label: `${child.displayName}, ${child.age}`,
           value:
-            kidsEvents
-              .filter((e) => e.ownerId === child.id)
+            events
+              .filter((e) => e.subjectMemberId === child.id)
               .map((e) => e.title)
               .join(', ') || 'On the family schedule',
         }))}

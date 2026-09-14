@@ -121,6 +121,21 @@ function Bubble({ message, previous }: { message: TalkItOutMessage; previous?: T
   const isUser = message.speaker === 'user';
   // Tight spacing inside one turn, generous spacing between turns.
   const continuesTurn = previous?.speaker === message.speaker;
+
+  // Rebuilt after a relaunch from the option she chose — shown as her answer, never as words she typed.
+  if (message.recalled) {
+    return (
+      <View style={[styles.row, styles.rowUser, continuesTurn ? styles.rowTight : styles.rowSpaced]}>
+        <View style={styles.recalled}>
+          <Overline style={styles.stage}>{message.recalled === 'topic' ? 'Your topic' : 'Your answer'}</Overline>
+          <AppText variant="body" color={colors.textSecondary}>
+            {message.text}
+          </AppText>
+        </View>
+      </View>
+    );
+  }
+
   const label = message.stage ? stageLabels[message.stage] : undefined;
   const emphasized = message.stage === 'clarify' || message.stage === 'next-step';
   const labelColor = emphasized ? colors.accent : colors.textTertiary;
@@ -175,6 +190,7 @@ const styles = StyleSheet.create({
     borderColor: colors.borderSubtle,
   },
   bubbleUser: { backgroundColor: colors.accentSoft },
+  recalled: { maxWidth: '88%', alignItems: 'flex-end', paddingHorizontal: spacing.lg },
   stage: { marginBottom: spacing.sm },
   confidence: { marginTop: spacing.md },
   evidence: {

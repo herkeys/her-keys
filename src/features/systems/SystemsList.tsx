@@ -1,15 +1,17 @@
 import { StyleSheet, View } from 'react-native';
-import { householdSystems } from '../../data/seed/systems';
 import { AppText, Card, Overline } from '../../design/components';
 import { colors, spacing } from '../../design/tokens';
+import { useHousehold } from '../../store/useHousehold';
 
 export function SystemsList() {
+  const { systems, categoryName } = useHousehold();
+
   return (
     <View style={styles.list}>
-      {householdSystems.map((system) => (
+      {systems.map((system) => (
         <Card key={system.id} tone="surface">
           <View style={styles.header}>
-            <Overline>{system.domain}</Overline>
+            <Overline>{categoryName(system.categoryId)}</Overline>
             <AppText variant="micro" color={colors.accent}>
               WORKING
             </AppText>

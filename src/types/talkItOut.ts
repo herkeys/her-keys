@@ -25,6 +25,12 @@ export interface TalkItOutMessage {
   confidenceLabel?: string;
   /** What this conclusion was built from, shown under the result. */
   evidence?: string[];
+  /**
+   * Set on her side of a conversation rebuilt after a relaunch. The text is
+   * the option she chose, not what she typed, so it's shown as a recalled
+   * answer rather than as a message in her words.
+   */
+  recalled?: 'topic' | 'answer';
 }
 
 /** Where the discovery loop currently sits. */

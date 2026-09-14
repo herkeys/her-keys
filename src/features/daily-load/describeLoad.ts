@@ -1,3 +1,4 @@
+import { loadTierOf, type LoadTier } from '../../domain/loadTier';
 import type { CalendarEventItem, DailyLoadAssessment, LoadEstimate, LoadLevel, TaskItem } from '../../types';
 
 const SEGMENTS = 4;
@@ -17,16 +18,15 @@ export function describeLoad(
   assessment: DailyLoadAssessment
 ): LoadEstimate {
   const committedShare = shareOfDayCommitted(events, tasks);
-  const shortfall = assessment.gap ? assessment.requiredBufferMinutes - assessment.bufferMinutes : 0;
-
-  const level = pickLevel(shortfall, assessment.requiredBufferMinutes, committedShare);
+  const level = pickLevel(loadTierOf(assessment), committedShare);
 
   return { level, ...copyFor(level), filled: filledFor(level), total: SEGMENTS };
 }
 
-function pickLevel(shortfall: number, required: number, committedShare: number): LoadLevel {
-  if (shortfall > required * 0.5) return 'full';
-  if (shortfall > 0) return 'tight';
+/** The load tier owns the thresholds; the meter only adds how busy an open day looks. */
+function pickLevel(tier: LoadTier, committedShare: number): LoadLevel {
+  if (tier === 'overloaded') return 'full';
+  if (tier === 'tight') return 'tight';
   if (committedShare >= BUSY_SHARE) return 'steady';
   return 'open';
 }

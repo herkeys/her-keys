@@ -3,15 +3,21 @@ import { StyleSheet } from 'react-native';
 import { AppText, Card, Overline } from '../../src/design/components';
 import { colors, spacing } from '../../src/design/tokens';
 import { OnboardingScaffold } from '../../src/features/onboarding/OnboardingScaffold';
+import { useOnboarding } from '../../src/store/OnboardingContext';
 
 export default function TalkItOutInviteStep() {
+  const { recordStep } = useOnboarding();
+
   return (
     <OnboardingScaffold
       step={4}
       total={4}
       title="You don’t need to know what’s wrong."
       description="When something feels off but you can’t name it, you can just talk it out."
-      onContinue={() => router.push('/onboarding/profile')}
+      onContinue={() => {
+        recordStep('profile');
+        router.push('/onboarding/profile');
+      }}
       continueLabel="See my profile"
     >
       <Card tone="accent">

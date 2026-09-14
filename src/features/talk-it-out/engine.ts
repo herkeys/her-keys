@@ -113,7 +113,7 @@ function refineHypothesis(state: ConversationState, userText: string, optionId?:
   const option = matchOption(question, userText, optionId);
   if (!option) return notUnderstood(state, question);
 
-  const branch = topic.branches[option.id];
+  const branch = ownEntry(topic.branches, option.id);
   if (!branch) return notUnderstood(state, question);
 
   return {
@@ -146,7 +146,7 @@ function concludeDiscovery(state: ConversationState, userText: string, optionId?
   const option = matchOption(question, userText, optionId);
   if (!option) return notUnderstood(state, question);
 
-  const result = branch.outcomes[option.id] ?? branch.fallbackOutcome;
+  const result = ownEntry(branch.outcomes, option.id) ?? branch.fallbackOutcome;
   const evidence = [...state.evidence, recordEvidence(question, option)];
 
   return {
@@ -180,12 +180,19 @@ function notUnderstood(state: ConversationState, question: ClarificationQuestion
   };
 }
 
-function restartFallback(state: ConversationState): DiscoveryTurn {
+function restartFallback(_state: ConversationState): DiscoveryTurn {
+  // Back to listening means a clean slate: a topic or evidence carried over
+  // would be stored as an investigation that never happened (HK-AUDIT-037).
   return {
     messages: [{ speaker: 'herkeys', stage: 'unmatched', text: unmatchedReply }],
-    state: { ...state, stage: 'listening', pendingQuestion: null },
+    state: createInitialState(),
     quickReplies: conversationStarters,
   };
+}
+
+/** Ids reach these lookups from stored state, so inherited keys like `constructor` must never match (HK-AUDIT-039). */
+function ownEntry<T>(record: Record<string, T>, key: string): T | undefined {
+  return Object.prototype.hasOwnProperty.call(record, key) ? record[key] : undefined;
 }
 
 function recordEvidence(question: ClarificationQuestion, option: ClarificationOption, override?: string): EvidenceItem {

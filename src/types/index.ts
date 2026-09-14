@@ -1,4 +1,3 @@
-export * from './household';
 export * from './schedule';
 export * from './dailyLoad';
 export * from './oneMove';

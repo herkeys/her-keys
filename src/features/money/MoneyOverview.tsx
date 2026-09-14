@@ -1,12 +1,15 @@
 import { StyleSheet, View } from 'react-native';
-import { todaysTasks } from '../../data/seed/schedule';
-import { householdSystems } from '../../data/seed/systems';
 import { AppText, Overline, StatusList } from '../../design/components';
 import { colors, spacing } from '../../design/tokens';
+import { useSchedule } from '../../store/ScheduleContext';
+import { useHousehold } from '../../store/useHousehold';
 
 export function MoneyOverview() {
-  const moneyTasks = todaysTasks.filter((t) => t.domain === 'money');
-  const moneySystems = householdSystems.filter((s) => s.domain === 'money');
+  const { tasks } = useSchedule();
+  const { systems, categoryIdForRole } = useHousehold();
+  const moneyCategoryId = categoryIdForRole('money');
+  const moneyTasks = tasks.filter((t) => t.categoryId === moneyCategoryId);
+  const moneySystems = systems.filter((s) => s.categoryId === moneyCategoryId);
 
   return (
     <View>

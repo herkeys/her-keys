@@ -1,10 +1,12 @@
 import { StyleSheet, View } from 'react-native';
-import { householdSystems } from '../../data/seed/systems';
 import { AppText, Card, Overline } from '../../design/components';
 import { colors, spacing } from '../../design/tokens';
+import { useHousehold } from '../../store/useHousehold';
 
 export function HomeOverview() {
-  const homeSystems = householdSystems.filter((s) => s.domain === 'home');
+  const { systems, categoryIdForRole } = useHousehold();
+  const homeCategoryId = categoryIdForRole('home');
+  const homeSystems = systems.filter((s) => s.categoryId === homeCategoryId);
 
   return (
     <View>

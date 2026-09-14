@@ -6,7 +6,7 @@ import type { CalendarEventItem, DailyLoadAssessment, DailyLoadRecommendation, D
  * deliberately simple, explainable placeholder for a rule the real Daily
  * Load Agent would tune per household over time.
  */
-const REQUIRED_TRANSITION_BUFFER_MINUTES = 45;
+export const REQUIRED_TRANSITION_BUFFER_MINUTES = 45;
 
 interface EvaluatedGap {
   before: CalendarEventItem;

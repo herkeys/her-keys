@@ -4,22 +4,22 @@ import { colors, spacing } from '../../design/tokens';
 import { useSchedule } from '../../store/ScheduleContext';
 
 export function DailyLoadCard() {
-  const { assessment, decision, candidateIndex, appliedRecommendation, showNextCandidate, moveRecommendedTask, keepAsPlanned } =
+  const { events, tasks, assessment, decision, candidateIndex, appliedMove, showNextCandidate, moveRecommendedTask, keepAsPlanned } =
     useSchedule();
 
-  if (decision === 'moved' && appliedRecommendation) {
+  // What she approved, as recorded at the time; the rest of Today recomputes from the moved task.
+  if (decision === 'moved' && appliedMove) {
     return (
       <Card tone="success" style={styles.card}>
         <Tag label="Adjusted" tone="success" />
         <AppText variant="headline" style={styles.headline}>
-          “{appliedRecommendation.task.title}” moved to tomorrow.
+          “{appliedMove.taskTitle}” moved to tomorrow.
         </AppText>
         <AppText variant="title" color={colors.textSecondary} style={styles.impact}>
-          That window now has {appliedRecommendation.projectedBufferMinutes} minutes instead of{' '}
-          {appliedRecommendation.currentBufferMinutes} —{' '}
-          {appliedRecommendation.resolvesShortfall
-            ? `enough room before ${appliedRecommendation.windowAfterTitle}.`
-            : `better, but still short of the ${assessment.requiredBufferMinutes} before ${appliedRecommendation.windowAfterTitle}.`}
+          That window now has {appliedMove.projectedBufferMinutes} minutes instead of {appliedMove.currentBufferMinutes} —{' '}
+          {appliedMove.resolvesShortfall
+            ? `enough room before ${appliedMove.windowAfterTitle}.`
+            : `better, but still short of the ${appliedMove.requiredBufferMinutes} before ${appliedMove.windowAfterTitle}.`}
         </AppText>
       </Card>
     );
@@ -35,6 +35,14 @@ export function DailyLoadCard() {
         <AppText variant="body" color={colors.textSecondary} style={styles.impact}>
           Her Keys will watch how the afternoon actually goes.
         </AppText>
+      </Card>
+    );
+  }
+
+  if (events.length === 0 && tasks.length === 0) {
+    return (
+      <Card tone="subtle" style={styles.card}>
+        <AppText variant="headline">Nothing scheduled.</AppText>
       </Card>
     );
   }

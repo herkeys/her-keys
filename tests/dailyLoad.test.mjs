@@ -1,8 +1,16 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
-import { todaysEvents, todaysTasks } from '../src/data/seed/schedule.ts';
+import { materializeDemoState } from '../src/data/seed/demoHousehold.ts';
+import { projectStateDay } from '../src/domain/projectDay.ts';
 import { computeDailyLoad } from '../src/features/daily-load/computeDailyLoad.ts';
 import { describeDayState } from '../src/features/today/dayState.ts';
+
+/** The seeded demo day, materialized and projected exactly as the app shows it. */
+const SEEDED_DAY = '2026-09-16';
+const { events: todaysEvents, tasks: todaysTasks } = projectStateDay(
+  materializeDemoState({ anchorDate: SEEDED_DAY, timeZone: 'America/New_York' }),
+  SEEDED_DAY
+);
 
 const at = (hour, minute = 0) => hour * 60 + minute;
 

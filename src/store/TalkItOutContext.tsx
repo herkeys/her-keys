@@ -1,11 +1,9 @@
 import { createContext, useContext, useRef, useState, type ReactNode } from 'react';
-import {
-  advance,
-  createInitialState,
-  createOpeningMessage,
-  openingQuickReplies,
-} from '../features/talk-it-out/engine';
+import { applyDiscoveryConversation, clearDiscovery, freshDiscovery, replayDiscovery, type DiscoveryReplay } from '../domain/discovery';
+import type { DiscoveryRecord } from '../domain/state';
+import { advance } from '../features/talk-it-out/engine';
 import type { ClarificationOption, ConversationState, TalkItOutMessage } from '../types';
+import { useAppStore, useHouseholdState } from './AppStateProvider';
 
 interface TalkItOutContextValue {
   messages: TalkItOutMessage[];
@@ -18,6 +16,14 @@ interface TalkItOutContextValue {
   restart: () => void;
 }
 
+interface Session {
+  /** The stored record this conversation was built from or last saved as. */
+  recordId: string | null;
+  conversation: ConversationState;
+  quickReplies: ClarificationOption[];
+  messages: TalkItOutMessage[];
+}
+
 const TalkItOutContext = createContext<TalkItOutContextValue | null>(null);
 
 /**
@@ -26,43 +32,70 @@ const TalkItOutContext = createContext<TalkItOutContextValue | null>(null);
  * on Today — matching the product principle that problem routing is the
  * agent's job, not something the user manages across separate screens.
  *
- * Holds the ConversationState, so an answer is interpreted as a reply to the
- * pending question rather than as a brand-new statement. In memory only.
+ * Messages, including what she types, live only in memory. What's saved is
+ * the structured record (topic and chosen answers); after a relaunch the
+ * conversation is rebuilt from it by replaying the script.
  */
 export function TalkItOutProvider({ children }: { children: ReactNode }) {
+  const store = useAppStore();
+  const record = useHouseholdState().state.discovery;
   const counterRef = useRef(0);
-  const makeId = () => {
-    counterRef.current += 1;
-    return `msg-${counterRef.current}`;
+
+  const withIds = (drafts: DiscoveryReplay['messages']): TalkItOutMessage[] =>
+    drafts.map((draft) => {
+      counterRef.current += 1;
+      return { ...draft, id: `msg-${counterRef.current}` };
+    });
+
+  const startFrom = (stored: DiscoveryRecord | null): Session => {
+    const replay = replayDiscovery(stored) ?? freshDiscovery();
+    return { recordId: stored?.id ?? null, conversation: replay.conversation, quickReplies: replay.quickReplies, messages: withIds(replay.messages) };
   };
 
-  const [messages, setMessages] = useState<TalkItOutMessage[]>(() => [{ ...createOpeningMessage(), id: 'msg-0' }]);
-  const [state, setState] = useState<ConversationState>(createInitialState);
-  const [quickReplies, setQuickReplies] = useState<ClarificationOption[]>(openingQuickReplies);
+  const [session, setSession] = useState<Session>(() => startFrom(record));
+  // Read by handlers so two quick sends build on each other rather than on a stale render (HK-AUDIT-037).
+  const sessionRef = useRef(session);
+
+  // The stored record changed without this conversation changing it (a reset, for instance): rebuild from it.
+  const storedId = record?.id ?? null;
+  if (sessionRef.current.recordId !== storedId && session.recordId !== storedId) {
+    const rebuilt = startFrom(record);
+    sessionRef.current = rebuilt;
+    setSession(rebuilt);
+  }
+
+  function update(next: Session) {
+    sessionRef.current = next;
+    setSession(next);
+  }
 
   function submit(text: string, optionId?: string) {
     const trimmed = text.trim();
     if (!trimmed) return;
 
-    const turn = advance(state, trimmed, optionId);
-    const userMessage: TalkItOutMessage = { id: makeId(), speaker: 'user', text: trimmed };
-    const replies = turn.messages.map((message) => ({ ...message, id: makeId() }));
+    const current = sessionRef.current;
+    const turn = advance(current.conversation, trimmed, optionId);
+    store.dispatch((state, ctx) => applyDiscoveryConversation(state, ctx, turn.state));
 
-    setMessages((prev) => [...prev, userMessage, ...replies]);
-    setState(turn.state);
-    setQuickReplies(turn.quickReplies);
+    counterRef.current += 1;
+    const userMessage: TalkItOutMessage = { id: `msg-${counterRef.current}`, speaker: 'user', text: trimmed };
+    update({
+      recordId: store.getSnapshot().state?.discovery?.id ?? null,
+      conversation: turn.state,
+      quickReplies: turn.quickReplies,
+      messages: [...current.messages, userMessage, ...withIds(turn.messages)],
+    });
   }
 
   function restart() {
-    setMessages([{ ...createOpeningMessage(), id: makeId() }]);
-    setState(createInitialState());
-    setQuickReplies(openingQuickReplies());
+    store.dispatch((state) => clearDiscovery(state));
+    update(startFrom(null));
   }
 
   const value: TalkItOutContextValue = {
-    messages,
-    quickReplies,
-    canRestart: messages.length > 1,
+    messages: session.messages,
+    quickReplies: session.quickReplies,
+    canRestart: session.messages.length > 1,
     sendMessage: (text) => submit(text),
     selectQuickReply: (option) => submit(option.label, option.id),
     restart,
