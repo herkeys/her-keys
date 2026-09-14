@@ -124,7 +124,9 @@ function refineHypothesis(state: ConversationState, userText: string, optionId?:
     state: {
       ...state,
       stage: 'refining',
-      hypothesis: { statement: branch.refinedHypothesis, confidence: 'likely' },
+      // Still only possible: one answer in conversation is self-report, not the
+      // behavioral evidence a likely pattern needs (HER_KEYS_PRODUCT.md section 15).
+      hypothesis: { statement: branch.refinedHypothesis, confidence: 'possible' },
       evidence: [...state.evidence, recordEvidence(question, option, branch.evidence)],
       pendingQuestion: branch.followUp,
     },
@@ -164,7 +166,7 @@ function concludeDiscovery(state: ConversationState, userText: string, optionId?
       evidence,
       pendingQuestion: null,
       result,
-      hypothesis: { statement: result.summary, confidence: 'likely' },
+      hypothesis: { statement: result.summary, confidence: 'possible' },
     },
     quickReplies: [],
   };

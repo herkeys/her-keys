@@ -52,9 +52,15 @@ export default function ProfileResult() {
         </AppText>
       </Card>
 
-      <Button label="Show me my day" onPress={() => router.replace('/(app)/today')} />
+      <Button label="Show me my day" onPress={showMyDay} />
     </Screen>
   );
+}
+
+/** Onboarding is finished, so clear it from history — Back from Today should never land inside it. */
+function showMyDay() {
+  if (router.canDismiss()) router.dismissAll();
+  router.replace('/(app)/today');
 }
 
 const styles = StyleSheet.create({

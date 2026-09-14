@@ -10,90 +10,102 @@ export function TalkItOutView({ showHeader = false }: { showHeader?: boolean }) 
   const [draft, setDraft] = useState('');
   const [voiceNoteVisible, setVoiceNoteVisible] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
+  const frameRef = useRef<View>(null);
+  const [screenTop, setScreenTop] = useState(0);
 
   function handleSend() {
     sendMessage(draft);
     setDraft('');
   }
 
+  // KeyboardAvoidingView compares the keyboard's position on screen with its
+  // own position inside its parent, so it has to be told how far down the
+  // screen it starts — below the modal header, or below the status bar on the
+  // tab. Without that the composer stays under the Android keyboard.
+  function measureScreenTop() {
+    frameRef.current?.measure((_x, _y, _width, _height, _pageX, pageY) => setScreenTop(pageY));
+  }
+
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-    >
-      <ScrollView
-        ref={scrollRef}
-        style={styles.messages}
-        contentContainerStyle={styles.messagesContent}
-        showsVerticalScrollIndicator={false}
-        // A reply can be taller than the viewport, so keep the newest turn in view.
-        onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
+    <View ref={frameRef} style={styles.container} onLayout={measureScreenTop}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : screenTop}
       >
-        {showHeader && (
-          <View style={styles.header}>
-            <AppText variant="hero">Talk it out</AppText>
+        <ScrollView
+          ref={scrollRef}
+          style={styles.messages}
+          contentContainerStyle={styles.messagesContent}
+          showsVerticalScrollIndicator={false}
+          // A reply can be taller than the viewport, so keep the newest turn in view.
+          onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
+        >
+          {showHeader && (
+            <View style={styles.header}>
+              <AppText variant="hero">Talk it out</AppText>
+            </View>
+          )}
+
+          {messages.map((message, index) => (
+            <Bubble key={message.id} message={message} previous={messages[index - 1]} />
+          ))}
+
+          {quickReplies.length > 0 && (
+            <View style={styles.quickReplies}>
+              {quickReplies.map((option) => (
+                <Button
+                  key={option.id}
+                  label={option.label}
+                  variant="secondary"
+                  size="sm"
+                  onPress={() => selectQuickReply(option)}
+                  style={styles.quickReply}
+                />
+              ))}
+            </View>
+          )}
+        </ScrollView>
+
+        <View style={styles.composerWrap}>
+          {canRestart && (
+            <View style={styles.restartRow}>
+              <Button label="Start over" variant="ghost" size="sm" onPress={restart} />
+            </View>
+          )}
+
+          <View style={styles.composer}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Voice input"
+              accessibilityHint="Prototype only — Her Keys is not recording"
+              onPress={() => setVoiceNoteVisible((v) => !v)}
+              style={({ pressed }) => [styles.voiceButton, pressed ? styles.pressed : null]}
+            >
+              <AppText variant="caption" color={colors.accent}>
+                Voice
+              </AppText>
+            </Pressable>
+            <TextInput
+              value={draft}
+              onChangeText={setDraft}
+              placeholder={quickReplies.length > 0 ? 'Or answer in your own words…' : "What's going on?"}
+              placeholderTextColor={colors.textTertiary}
+              style={styles.input}
+              multiline
+              accessibilityLabel="Message to Her Keys"
+            />
+            <Button label="Send" size="sm" onPress={handleSend} disabled={!draft.trim()} />
           </View>
-        )}
 
-        {messages.map((message, index) => (
-          <Bubble key={message.id} message={message} previous={messages[index - 1]} />
-        ))}
-
-        {quickReplies.length > 0 && (
-          <View style={styles.quickReplies}>
-            {quickReplies.map((option) => (
-              <Button
-                key={option.id}
-                label={option.label}
-                variant="secondary"
-                size="sm"
-                onPress={() => selectQuickReply(option)}
-                style={styles.quickReply}
-              />
-            ))}
-          </View>
-        )}
-      </ScrollView>
-
-      <View style={styles.composerWrap}>
-        {canRestart && (
-          <View style={styles.restartRow}>
-            <Button label="Start over" variant="ghost" size="sm" onPress={restart} />
-          </View>
-        )}
-
-        <View style={styles.composer}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Voice input"
-            accessibilityHint="Prototype only — Her Keys is not recording"
-            onPress={() => setVoiceNoteVisible((v) => !v)}
-            style={({ pressed }) => [styles.voiceButton, pressed ? styles.pressed : null]}
-          >
-            <AppText variant="caption" color={colors.accent}>
-              Voice
-            </AppText>
-          </Pressable>
-          <TextInput
-            value={draft}
-            onChangeText={setDraft}
-            placeholder={quickReplies.length > 0 ? 'Or answer in your own words…' : "What's going on?"}
-            placeholderTextColor={colors.textTertiary}
-            style={styles.input}
-            multiline
-            accessibilityLabel="Message to Her Keys"
-          />
-          <Button label="Send" size="sm" onPress={handleSend} disabled={!draft.trim()} />
+          <AppText variant="micro" color={colors.textTertiary} style={styles.disclaimer}>
+            {voiceNoteVisible
+              ? 'Voice arrives in a later build — nothing is being recorded. Typing works for now.'
+              : 'Prototype conversation — responses are scripted for this build.'}
+          </AppText>
         </View>
-
-        <AppText variant="micro" color={colors.textTertiary} style={styles.disclaimer}>
-          {voiceNoteVisible
-            ? 'Voice arrives in a later build — nothing is being recorded. Typing works for now.'
-            : 'Prototype conversation — responses are scripted for this build.'}
-        </AppText>
-      </View>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 

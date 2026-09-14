@@ -1,6 +1,12 @@
 import { Stack } from 'expo-router';
 import { colors } from '../../../src/design/tokens';
 
+// Keeps the hub underneath any Life screen opened from outside this stack
+// (a Today row or a link), so Back and the Life tab can always reach it.
+export const unstable_settings = {
+  initialRouteName: 'index',
+};
+
 export default function LifeLayout() {
   return (
     <Stack

@@ -22,6 +22,8 @@ export interface DailyLoadRecommendation {
   currentBufferMinutes: number;
   /** Buffer in this window if this task moves. */
   projectedBufferMinutes: number;
+  /** Whether moving this task alone brings the window up to the required buffer. */
+  resolvesShortfall: boolean;
   /** The commitment this window runs up against, e.g. "Josie's soccer practice". */
   windowAfterTitle: string;
 }

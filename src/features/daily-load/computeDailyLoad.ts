@@ -23,12 +23,10 @@ function evaluateGap(before: CalendarEventItem, after: CalendarEventItem, tasks:
   const windowEnd = after.startMinutes;
   const rawWindowMinutes = windowEnd - windowStart;
 
+  // Anything scheduled into the window uses up its time, fixed or flexible,
+  // due today or not. Which of those could be moved is a separate question.
   const tasksInWindow = tasks.filter(
-    (t) =>
-      t.commitment === 'flexible' &&
-      t.scheduledStartMinutes != null &&
-      t.scheduledStartMinutes >= windowStart &&
-      t.scheduledStartMinutes < windowEnd
+    (t) => t.scheduledStartMinutes != null && t.scheduledStartMinutes >= windowStart && t.scheduledStartMinutes < windowEnd
   );
 
   const scheduledMinutes = tasksInWindow.reduce((sum, t) => sum + t.durationMinutes, 0);
@@ -36,14 +34,21 @@ function evaluateGap(before: CalendarEventItem, after: CalendarEventItem, tasks:
   return { before, after, windowStart, windowEnd, rawWindowMinutes, tasksInWindow, bufferMinutes: rawWindowMinutes - scheduledMinutes };
 }
 
+/** Only something safe to move that actually frees time can be recommended. */
+function isMovable(task: TaskItem): boolean {
+  return task.commitment === 'flexible' && !task.dueToday && task.durationMinutes > 0;
+}
+
 /**
  * Deterministic Daily Load logic:
- * 1. For every consecutive pair of fixed calendar events today, compute the
- *    EFFECTIVE buffer between them — the raw gap minus whatever flexible
- *    tasks are already scheduled into it. A gap with a lot of raw time can
- *    still be the tightest one once what's actually planned there is
- *    accounted for, so every gap is evaluated this way rather than only the
- *    gap that looks smallest on the calendar alone.
+ * 1. Walk today's calendar events in start order and compute the EFFECTIVE
+ *    buffer in each gap — the raw gap minus whatever tasks are already
+ *    scheduled into it. A gap only opens once every earlier commitment has
+ *    ended, so an event nested inside a longer one never creates time that
+ *    isn't really free. A gap with a lot of raw time can still be the tightest
+ *    one once what's actually planned there is accounted for, so every gap is
+ *    evaluated this way rather than only the gap that looks smallest on the
+ *    calendar alone.
  * 2. The gap with the smallest effective buffer is today's tightest window.
  * 3. If that buffer is under the required threshold, the day is "overloaded".
  * 4. Rank the flexible, not-due-today tasks in that gap by duration (largest
@@ -54,16 +59,20 @@ export function computeDailyLoad(events: CalendarEventItem[], tasks: TaskItem[])
   const sorted = [...events].sort((a, b) => a.startMinutes - b.startMinutes);
 
   let tightest: EvaluatedGap | null = null;
+  // The commitment that runs latest so far; the next gap starts when it ends.
+  let latest = sorted[0];
 
-  for (let i = 0; i < sorted.length - 1; i++) {
-    const before = sorted[i];
-    const after = sorted[i + 1];
-    if (after.startMinutes < before.endMinutes) continue;
+  for (let i = 1; i < sorted.length; i++) {
+    const next = sorted[i];
 
-    const evaluated = evaluateGap(before, after, tasks);
-    if (!tightest || evaluated.bufferMinutes < tightest.bufferMinutes) {
-      tightest = evaluated;
+    if (next.startMinutes >= latest.endMinutes) {
+      const evaluated = evaluateGap(latest, next, tasks);
+      if (!tightest || evaluated.bufferMinutes < tightest.bufferMinutes) {
+        tightest = evaluated;
+      }
     }
+
+    if (next.endMinutes > latest.endMinutes) latest = next;
   }
 
   if (!tightest) {
@@ -81,18 +90,23 @@ export function computeDailyLoad(events: CalendarEventItem[], tasks: TaskItem[])
 
   const shortfall = REQUIRED_TRANSITION_BUFFER_MINUTES - bufferMinutes;
 
-  const candidates: DailyLoadRecommendation[] = [...tasksInWindow]
+  const candidates: DailyLoadRecommendation[] = tasksInWindow
+    .filter(isMovable)
     .sort((a, b) => b.durationMinutes - a.durationMinutes)
-    .map((task) => ({
-      task,
-      observation: `Scheduled in your only gap before ${afterEvent.title}, ${formatTime(windowStart)}–${formatTime(
-        windowEnd
-      )}.`,
-      reason: `${bufferMinutes} minutes is ${shortfall} short of the ${REQUIRED_TRANSITION_BUFFER_MINUTES} you usually need to get there unrushed.`,
-      currentBufferMinutes: bufferMinutes,
-      projectedBufferMinutes: bufferMinutes + task.durationMinutes,
-      windowAfterTitle: afterEvent.title,
-    }));
+    .map((task) => {
+      const projectedBufferMinutes = bufferMinutes + task.durationMinutes;
+      return {
+        task,
+        observation: `Scheduled in your only gap before ${afterEvent.title}, ${formatTime(windowStart)}–${formatTime(
+          windowEnd
+        )}.`,
+        reason: `${bufferMinutes} minutes is ${shortfall} short of the ${REQUIRED_TRANSITION_BUFFER_MINUTES} Her Keys allows by default to get there unrushed.`,
+        currentBufferMinutes: bufferMinutes,
+        projectedBufferMinutes,
+        resolvesShortfall: projectedBufferMinutes >= REQUIRED_TRANSITION_BUFFER_MINUTES,
+        windowAfterTitle: afterEvent.title,
+      };
+    });
 
   return {
     status,

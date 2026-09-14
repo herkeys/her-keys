@@ -5,6 +5,11 @@ export interface DiscoveryBranch {
   evidence: string;
   refinedHypothesis: string;
   followUp: ClarificationQuestion;
+  /**
+   * Every conclusion here is labelled "Possible pattern": a conversation is
+   * self-report, and a likely pattern also needs behavioral evidence
+   * (HER_KEYS_PRODUCT.md section 15).
+   */
   outcomes: Record<string, DiscoveryResult>;
   /** Used when the final answer doesn't change the conclusion. */
   fallbackOutcome: DiscoveryResult;
@@ -111,31 +116,31 @@ const overload: DiscoveryTopic = {
         everything: {
           summary:
             'Your day isn’t consistently overloaded from morning to night. The bottleneck is the 4–7 PM transition, when work, transportation, activities and dinner compete for the same time.',
-          confidenceLabel: 'Likely pattern',
+          confidenceLabel: 'Possible pattern',
           nextStep: 'Don’t reorganize your whole evening today. Choose tomorrow’s dinner before noon.',
         },
         dinner: {
           summary:
             'Dinner is landing at the exact moment the day is tightest, so it competes with pickup and activities instead of following them.',
-          confidenceLabel: 'Likely pattern',
+          confidenceLabel: 'Possible pattern',
           nextStep: 'Choose tomorrow’s dinner before noon, while the decision is cheap.',
         },
         activities: {
           summary:
             'The 4–7 PM window is already spoken for by transport before anything else can start. That reads as a sequencing problem rather than a planning one.',
-          confidenceLabel: 'Likely pattern',
+          confidenceLabel: 'Possible pattern',
           nextStep: 'Put tomorrow’s activity bag by the door tonight.',
         },
         work: {
           summary:
             'The workday is running past pickup, so two responsibilities are happening at the same time instead of one after the other.',
-          confidenceLabel: 'Likely pattern',
+          confidenceLabel: 'Possible pattern',
           nextStep: 'Pick the one work task that has to finish before 3 PM tomorrow, and write it down.',
         },
         errands: {
           summary:
             'Errands are being absorbed into the tightest part of the day rather than the loosest part of it.',
-          confidenceLabel: 'Likely pattern',
+          confidenceLabel: 'Possible pattern',
           nextStep: 'Move one errand to a morning slot tomorrow.',
         },
       },
@@ -164,19 +169,19 @@ const overload: DiscoveryTopic = {
         'kids-out': {
           summary:
             'The morning is carrying the whole household’s launch at once, so your own day starts from behind rather than from zero.',
-          confidenceLabel: 'Likely pattern',
+          confidenceLabel: 'Possible pattern',
           nextStep: 'Tonight, set out one thing that always causes a scramble — shoes, bags or forms.',
         },
         'my-start': {
           summary:
             'The morning isn’t short of time so much as short of a clean start — your first work block begins after the day has already spent you.',
-          confidenceLabel: 'Likely pattern',
+          confidenceLabel: 'Possible pattern',
           nextStep: 'Write down tomorrow’s first work task tonight, so morning-you doesn’t have to choose.',
         },
         'nothing-ready': {
           summary:
             'The morning is absorbing decisions that could have been made the night before, which is why it feels heavier than it looks.',
-          confidenceLabel: 'Likely pattern',
+          confidenceLabel: 'Possible pattern',
           nextStep: 'Pick one thing to set out tonight. Just one.',
         },
       },
@@ -205,19 +210,19 @@ const overload: DiscoveryTopic = {
         meetings: {
           summary:
             'Meetings are running past their edges, so every later block starts late. The afternoon is inheriting the morning’s overrun.',
-          confidenceLabel: 'Likely pattern',
+          confidenceLabel: 'Possible pattern',
           nextStep: 'Put a 10-minute gap after tomorrow’s longest meeting.',
         },
         admin: {
           summary:
             'Small admin is expanding into the middle of the day, which is when it’s most expensive — everything after it shifts.',
-          confidenceLabel: 'Likely pattern',
+          confidenceLabel: 'Possible pattern',
           nextStep: 'Give messages one 15-minute slot tomorrow instead of all day.',
         },
         errands: {
           summary:
             'Midday errands are costing more than their length, because they push the rest of the day back with them.',
-          confidenceLabel: 'Likely pattern',
+          confidenceLabel: 'Possible pattern',
           nextStep: 'Move tomorrow’s errand to either end of the day, not the middle.',
         },
       },
@@ -245,19 +250,19 @@ const overload: DiscoveryTopic = {
         tidying: {
           summary:
             'The evening is absorbing the day’s leftovers, so it reads as the tiring part when it’s really the collection point.',
-          confidenceLabel: 'Likely pattern',
+          confidenceLabel: 'Possible pattern',
           nextStep: 'Reset one surface tonight — the counter, not the house.',
         },
         paperwork: {
           summary:
             'Administrative work is landing in the lowest-energy hour of your day, which is likely why it keeps moving rather than getting done.',
-          confidenceLabel: 'Likely pattern',
+          confidenceLabel: 'Possible pattern',
           nextStep: 'Move one piece of paperwork to a morning slot tomorrow.',
         },
         bedtime: {
           summary:
             'Bedtime is arriving while the day is still open, so two things are running at once instead of in sequence.',
-          confidenceLabel: 'Likely pattern',
+          confidenceLabel: 'Possible pattern',
           nextStep: 'Pick one thing to finish before bedtime starts tomorrow.',
         },
       },
@@ -317,19 +322,19 @@ const household: DiscoveryTopic = {
         paper: {
           summary:
             'The pile is mostly paper, which means it isn’t a tidying problem — it’s a decision backlog sitting in a visible place.',
-          confidenceLabel: 'Likely pattern',
+          confidenceLabel: 'Possible pattern',
           nextStep: 'Pull only today’s mail out of the pile. Leave the rest.',
         },
         school: {
           summary:
             'School items are arriving daily but have no home, so the same handful of things gets re-sorted every evening.',
-          confidenceLabel: 'Likely pattern',
+          confidenceLabel: 'Possible pattern',
           nextStep: 'Put one basket by the door for school bags tonight.',
         },
         everything: {
           summary:
             'One surface is doing the work of several systems, which is why clearing it never holds for long.',
-          confidenceLabel: 'Likely pattern',
+          confidenceLabel: 'Possible pattern',
           nextStep: 'Clear one category off that surface — not the whole surface.',
         },
       },
@@ -357,19 +362,19 @@ const household: DiscoveryTopic = {
         'after-school': {
           summary:
             'The spread is concentrated in one part of the day, which makes it a doorway problem rather than a whole-house problem.',
-          confidenceLabel: 'Likely pattern',
+          confidenceLabel: 'Possible pattern',
           nextStep: 'Put one basket by the door before pickup tomorrow.',
         },
         weekends: {
           summary:
             'Weekends are when the house is most used and least reset, so Monday starts from a deficit.',
-          confidenceLabel: 'Likely pattern',
+          confidenceLabel: 'Possible pattern',
           nextStep: 'Reset one shared surface on Sunday evening.',
         },
         'all-week': {
           summary:
             'Nothing is catching items at the point they enter, so every room slowly accumulates instead of one doing it.',
-          confidenceLabel: 'Likely pattern',
+          confidenceLabel: 'Possible pattern',
           nextStep: 'Choose the single doorway most things come through, and put one basket there.',
         },
       },
@@ -397,19 +402,19 @@ const household: DiscoveryTopic = {
         bags: {
           summary:
             'Bags and shoes are arriving at the same door every day with nowhere to land, so they end up spread through the rooms beyond it.',
-          confidenceLabel: 'Likely pattern',
+          confidenceLabel: 'Possible pattern',
           nextStep: 'Put one basket by the door for backpacks tonight.',
         },
         sports: {
           summary:
             'Sports gear moves in and out on a schedule, so it needs a staging spot rather than storage.',
-          confidenceLabel: 'Likely pattern',
+          confidenceLabel: 'Possible pattern',
           nextStep: 'Pick one spot by the door for tomorrow’s kit, and put it there tonight.',
         },
         papers: {
           summary:
             'School paper is arriving daily and getting handled more than once, which is what makes it feel constant.',
-          confidenceLabel: 'Likely pattern',
+          confidenceLabel: 'Possible pattern',
           nextStep: 'Put one tray where school paper lands, and put today’s in it.',
         },
       },
@@ -469,19 +474,19 @@ const money: DiscoveryTopic = {
         evening: {
           summary:
             'Financial admin is landing in your lowest-energy hour, which is likely why it keeps getting postponed rather than done.',
-          confidenceLabel: 'Likely pattern',
+          confidenceLabel: 'Possible pattern',
           nextStep: 'Open your banking app once tomorrow morning. Just look at the balance.',
         },
         weekend: {
           summary:
             'Money is being handled in the time you have least protection around, so it competes with everything else you were hoping to do.',
-          confidenceLabel: 'Likely pattern',
+          confidenceLabel: 'Possible pattern',
           nextStep: 'Open your banking app tomorrow morning and note the balance. Nothing else.',
         },
         whenever: {
           summary:
             'Without a set moment, the decision to look becomes its own task — which is usually the part that gets avoided.',
-          confidenceLabel: 'Likely pattern',
+          confidenceLabel: 'Possible pattern',
           nextStep: 'Pick one fixed time this week to look. Write the time down, not the task.',
         },
       },
@@ -509,19 +514,19 @@ const money: DiscoveryTopic = {
         'whats-left': {
           summary:
             'The uncertainty is about headroom, not arithmetic — which is a much smaller question than it feels like.',
-          confidenceLabel: 'Likely pattern',
+          confidenceLabel: 'Possible pattern',
           nextStep: 'Open your checking account and write down the current balance.',
         },
         'whats-due': {
           summary:
             'The pressure is coming from timing rather than totals — not knowing what lands next is doing most of the work.',
-          confidenceLabel: 'Likely pattern',
+          confidenceLabel: 'Possible pattern',
           nextStep: 'Write down the next single bill and its date. One line.',
         },
         'where-it-goes': {
           summary:
             'The gap is in visibility after the fact, which is a different problem from not having enough.',
-          confidenceLabel: 'Likely pattern',
+          confidenceLabel: 'Possible pattern',
           nextStep: 'Look at yesterday’s transactions only. Nothing older.',
         },
       },
@@ -549,19 +554,19 @@ const money: DiscoveryTopic = {
         monthly: {
           summary:
             'This is a recurring decision rather than a recurring crisis, which means it can be settled as a rule once instead of remade each time.',
-          confidenceLabel: 'Likely pattern',
+          confidenceLabel: 'Possible pattern',
           nextStep: 'Write down which bill always goes first. One line, once.',
         },
         weekly: {
           summary:
             'A judgment call is repeating every week, and repeated decisions cost more than the task itself.',
-          confidenceLabel: 'Likely pattern',
+          confidenceLabel: 'Possible pattern',
           nextStep: 'Decide the order once this week and write it where you’ll see it.',
         },
         constantly: {
           summary:
             'The decision is running continuously rather than at set points, which keeps it in your head all week.',
-          confidenceLabel: 'Likely pattern',
+          confidenceLabel: 'Possible pattern',
           nextStep: 'Pick one fixed day for money decisions. Write the day down.',
         },
       },
@@ -620,19 +625,19 @@ const weekend: DiscoveryTopic = {
         waking: {
           summary:
             'The day starts already owing something, so it never gets a clean beginning — that’s a backlog problem, not a weekend problem.',
-          confidenceLabel: 'Likely pattern',
+          confidenceLabel: 'Possible pattern',
           nextStep: 'Start one load on Saturday instead. One.',
         },
         afternoon: {
           summary:
             'The weight builds as the day runs out, which suggests the list is bigger than the hours rather than the task being hard.',
-          confidenceLabel: 'Likely pattern',
+          confidenceLabel: 'Possible pattern',
           nextStep: 'Pick the one thing that actually has to be done before Monday.',
         },
         evening: {
           summary:
             'The heaviness is arriving with Monday rather than with the chores — it’s anticipation, not workload.',
-          confidenceLabel: 'Likely pattern',
+          confidenceLabel: 'Possible pattern',
           nextStep: 'Write down Monday’s first task on Sunday afternoon, then stop.',
         },
       },
@@ -660,19 +665,19 @@ const weekend: DiscoveryTopic = {
         school: {
           summary:
             'School paperwork arrives on weekdays but gets handled at weekends, so it spends the week in your head.',
-          confidenceLabel: 'Likely pattern',
+          confidenceLabel: 'Possible pattern',
           nextStep: 'Handle the next school form the day it arrives, not on Sunday.',
         },
         money: {
           summary:
             'Money admin is landing on the day with the least protection around it, so it competes with rest.',
-          confidenceLabel: 'Likely pattern',
+          confidenceLabel: 'Possible pattern',
           nextStep: 'Move one money task to a weekday morning.',
         },
         legal: {
           summary:
             'Official paperwork carries more weight per item, so a small number of documents can dominate a whole day.',
-          confidenceLabel: 'Likely pattern',
+          confidenceLabel: 'Possible pattern',
           nextStep: 'Open the folder and note what the next deadline actually is.',
         },
       },
@@ -700,19 +705,19 @@ const weekend: DiscoveryTopic = {
         calendar: {
           summary:
             'One day is carrying the full weight of the week ahead, which is why it feels disproportionate to what’s actually on it.',
-          confidenceLabel: 'Likely pattern',
+          confidenceLabel: 'Possible pattern',
           nextStep: 'Look at Monday only. Leave the rest of the week alone.',
         },
         meals: {
           summary:
             'Meal decisions for a whole week are being made in one sitting, which is a lot of decisions for one afternoon.',
-          confidenceLabel: 'Likely pattern',
+          confidenceLabel: 'Possible pattern',
           nextStep: 'Decide Monday’s dinner. Only Monday’s.',
         },
         logistics: {
           summary:
             'The hard part is coordination rather than time — who goes where is a dependency problem, and those don’t get easier by starting earlier.',
-          confidenceLabel: 'Likely pattern',
+          confidenceLabel: 'Possible pattern',
           nextStep: 'Write down the one journey next week you’re least sure about.',
         },
       },

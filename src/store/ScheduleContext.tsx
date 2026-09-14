@@ -41,7 +41,7 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
     if (!activeCandidate) return;
     setAppliedRecommendation(activeCandidate);
     setTasks((prev) =>
-      prev.map((t) => (t.id === activeCandidate.task.id ? { ...t, scheduledStartMinutes: undefined, dueToday: false } : t))
+      prev.map((t) => (t.id === activeCandidate.task.id ? { ...t, scheduledStartMinutes: undefined } : t))
     );
     setDecision('moved');
   }

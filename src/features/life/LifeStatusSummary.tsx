@@ -28,7 +28,9 @@ export function LifeStatusSummary() {
           label: s.label,
           value: s.value,
           needsAttention: s.needsAttention,
-          onPress: () => router.push(s.route),
+          // The Life stack may not exist yet when this is tapped from Today;
+          // the anchor loads the hub beneath the screen instead of stranding it.
+          onPress: () => router.push(s.route, { withAnchor: true }),
         }))}
       />
     </View>

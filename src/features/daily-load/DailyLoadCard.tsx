@@ -16,7 +16,10 @@ export function DailyLoadCard() {
         </AppText>
         <AppText variant="title" color={colors.textSecondary} style={styles.impact}>
           That window now has {appliedRecommendation.projectedBufferMinutes} minutes instead of{' '}
-          {appliedRecommendation.currentBufferMinutes} — enough room before {appliedRecommendation.windowAfterTitle}.
+          {appliedRecommendation.currentBufferMinutes} —{' '}
+          {appliedRecommendation.resolvesShortfall
+            ? `enough room before ${appliedRecommendation.windowAfterTitle}.`
+            : `better, but still short of the ${assessment.requiredBufferMinutes} before ${appliedRecommendation.windowAfterTitle}.`}
         </AppText>
       </Card>
     );
