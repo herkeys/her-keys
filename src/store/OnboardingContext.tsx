@@ -23,7 +23,7 @@ interface OnboardingContextValue {
   toggleStruggle: (optionId: string) => void;
   recordStep: (step: OnboardingStep) => void;
   /** Saves completion before the app opens up; resolves once it has. */
-  complete: () => Promise<void>;
+  complete: () => Promise<boolean>;
   stepAccess: Record<OnboardingStep, boolean>;
 }
 

@@ -62,7 +62,11 @@ export default function DevToolsScreen() {
           setNote(
             done
               ? 'Demo household restored for today. Onboarding starts again.'
-              : 'Reset is unavailable while data from a newer app version is on this device.'
+              : snapshot.recovery?.reason === 'future_version'
+                ? 'Reset is unavailable while data from a newer app version is on this device.'
+                : snapshot.recovery?.reason === 'mode_mismatch' && snapshot.persistence === 'disabled'
+                  ? 'Reset is unavailable because this demo session is protecting real-user data on this device.'
+                : 'Reset could not clear stored data. Nothing was changed; try again.'
           );
         }}
       />

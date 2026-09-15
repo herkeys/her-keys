@@ -3,6 +3,7 @@ import { describe, test } from 'node:test';
 import { AppStateSchema } from '../src/domain/state.ts';
 import { STORAGE_KEYS } from '../src/persistence/appStateRepository.ts';
 import { CURRENT_SCHEMA_VERSION, decodeStoredState, encodeStoredState, migrateStoredState } from '../src/persistence/envelope.ts';
+import { MAX_WRITE_SEQUENCE } from '../src/persistence/writeQueue.ts';
 import { demoState, harness, onboardedState, rawEnvelope, stored } from './support/fixtures.mjs';
 
 const reasonOf = (raw) => {
@@ -42,6 +43,7 @@ describe('Storage envelope', () => {
       [JSON.stringify({ schemaVersion: 1, data: state }), 'invalid_envelope'],
       [JSON.stringify({ schemaVersion: 1, appVersion: 'x', savedAt: 'yesterday', writeSeq: 1, data: state }), 'invalid_envelope'],
       [JSON.stringify({ schemaVersion: 1, appVersion: 'x', savedAt: '2026-09-16T12:00:00.000Z', writeSeq: 1 }), 'invalid_envelope'],
+      [JSON.stringify({ schemaVersion: 1, appVersion: 'x', savedAt: '2026-09-16T12:00:00.000Z', writeSeq: MAX_WRITE_SEQUENCE + 1, data: state }), 'invalid_envelope'],
       [rawEnvelope({ ...state, children: undefined }), 'invalid_state'],
       [rawEnvelope({ household: state.household }), 'invalid_state'],
       [rawEnvelope({ ...state, tasks: [...state.tasks, state.tasks[0]] }), 'integrity_violation'],
@@ -135,5 +137,18 @@ describe('Repository', () => {
     const h = harness({ initial: { [STORAGE_KEYS.primary]: stored(demoState()), [STORAGE_KEYS.corrupt]: '{}', [STORAGE_KEYS.future]: future } });
     await h.repository.resetAppState();
     assert.deepEqual(h.storage.contents(), { [STORAGE_KEYS.future]: future });
+  });
+
+  test('a diagnostic-cleanup failure cannot delete the canonical household', async () => {
+    const primary = stored(onboardedState());
+    const h = harness({ initial: { [STORAGE_KEYS.primary]: primary, [STORAGE_KEYS.corrupt]: '{}' } });
+    const remove = h.storage.remove.bind(h.storage);
+    h.storage.remove = async (key) => {
+      if (key === STORAGE_KEYS.corrupt) throw new Error('simulated diagnostic cleanup failure');
+      await remove(key);
+    };
+
+    await assert.rejects(h.repository.resetAppState(), /diagnostic cleanup failure/);
+    assert.equal(h.storage.contents()[STORAGE_KEYS.primary], primary);
   });
 });

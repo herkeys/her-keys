@@ -109,8 +109,10 @@ export function createAppStateRepository(options: RepositoryOptions): AppStateRe
     },
 
     async resetAppState() {
-      await storage.remove(STORAGE_KEYS.primary);
+      // Diagnostic cleanup is secondary. Do it first so its failure can never
+      // delete the canonical household while leaving reset incomplete.
       if (options.quarantineCorruptState) await storage.remove(STORAGE_KEYS.corrupt);
+      await storage.remove(STORAGE_KEYS.primary);
     },
   };
 }

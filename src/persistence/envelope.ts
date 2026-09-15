@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { AppStateSchema, validateAppState, type AppState } from '../domain/state';
+import { MAX_WRITE_SEQUENCE } from './writeQueue';
 
 /**
  * How household state sits on disk:
@@ -33,7 +34,7 @@ const EnvelopeSchema = z.strictObject({
   schemaVersion: z.number().int(),
   appVersion: z.string().min(1).max(40),
   savedAt: z.iso.datetime(),
-  writeSeq: z.number().int().min(0),
+  writeSeq: z.number().int().min(0).max(MAX_WRITE_SEQUENCE),
   data: z.unknown().refine((value) => value !== undefined, { message: 'Missing data' }),
 });
 
@@ -121,13 +122,14 @@ export function encodeStoredState(state: AppState, meta: { appVersion: string; s
   const validated = validateAppState(state);
   if (!validated.ok) throw new Error(`Refusing to store invalid state (${validated.reason}): ${validated.issues.join('; ')}`);
 
-  return JSON.stringify({
+  const envelope = EnvelopeSchema.parse({
     schemaVersion: CURRENT_SCHEMA_VERSION,
     appVersion: meta.appVersion,
     savedAt: meta.savedAt,
     writeSeq: meta.writeSeq,
     data: validated.state,
   });
+  return JSON.stringify(envelope);
 }
 
 function invalid(reason: InvalidReason, issues: string[] = []): DecodedState {

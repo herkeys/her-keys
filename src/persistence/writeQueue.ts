@@ -22,7 +22,8 @@ export interface WriteQueueStatus {
 }
 
 export interface WriteQueue<T> {
-  enqueue(value: T): void;
+  /** The sequence assigned to this value, or null when persistence is disabled. */
+  enqueue(value: T): number | null;
   flush(): Promise<void>;
   /** Continue numbering after a sequence already on disk. Call before the first enqueue. */
   startAfter(seq: number): void;
@@ -35,7 +36,12 @@ export interface WriteQueue<T> {
 interface Job<T> {
   value: T;
   seq: number;
+  /** Session-local ordering stays monotonic even when the persisted sequence wraps. */
+  order: number;
 }
+
+/** A bounded, JSON-safe persisted counter. Ordering within a running queue uses `Job.order`. */
+export const MAX_WRITE_SEQUENCE = 2_147_483_647;
 
 export function createWriteQueue<T>({
   write,
@@ -51,6 +57,8 @@ export function createWriteQueue<T>({
   let enabled = true;
   let lastSeq = 0;
   let committedSeq = 0;
+  let lastOrder = 0;
+  let committedOrder = 0;
   let consecutiveFailedCycles = 0;
   let attempts = 0;
   let degraded = false;
@@ -61,7 +69,8 @@ export function createWriteQueue<T>({
     attempts += 1;
     try {
       await write(job.value, job.seq);
-      committedSeq = Math.max(committedSeq, job.seq);
+      committedSeq = job.seq;
+      committedOrder = job.order;
       return true;
     } catch {
       return false;
@@ -73,7 +82,7 @@ export function createWriteQueue<T>({
       while (pending) {
         const job: Job<T> = pending;
         pending = null;
-        if (job.seq <= committedSeq) continue;
+        if (job.order <= committedOrder) continue;
 
         let saved = await attempt(job);
         if (!saved) {
@@ -94,10 +103,12 @@ export function createWriteQueue<T>({
 
   return {
     enqueue(value) {
-      if (!enabled) return;
-      lastSeq += 1;
-      pending = { value, seq: lastSeq };
+      if (!enabled) return null;
+      lastSeq = lastSeq >= MAX_WRITE_SEQUENCE ? 1 : lastSeq + 1;
+      lastOrder += 1;
+      pending = { value, seq: lastSeq, order: lastOrder };
       running ??= drain();
+      return lastSeq;
     },
     async flush() {
       while (running) await running;

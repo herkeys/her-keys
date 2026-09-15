@@ -57,11 +57,11 @@ export interface AppStore {
   hydrate(): Promise<void>;
   /** Apply a change now and save it in the background. */
   dispatch(transition: Transition): void;
-  /** Save a change before showing it — for moments like finishing onboarding. Never waits past one retry. */
-  commit(transition: Transition): Promise<void>;
+  /** Save a change before showing it. False means both attempts failed and the change was not shown. */
+  commit(transition: Transition): Promise<boolean>;
   /** Pick up a new logical day if midnight has passed. */
   refreshDay(): void;
-  /** Resolves false when a reset isn't allowed (this session holds a newer app's data). */
+  /** Resolves false when reset could destroy state this session deliberately preserved. */
   reset(): Promise<boolean>;
   flush(): Promise<void>;
   /** Stop writing for the rest of the session (used after simulating stored-state damage). */
@@ -94,7 +94,7 @@ export function createAppStore(options: AppStoreOptions): AppStore {
   };
   const listeners = new Set<() => void>();
   let hydration: Promise<void> | null = null;
-  let committing: Promise<void> | null = null;
+  let committing: Promise<boolean> | null = null;
 
   const queue = createWriteQueue<AppState>({
     write: async (state, seq) => {
@@ -118,8 +118,8 @@ export function createAppStore(options: AppStoreOptions): AppStore {
   const todayFor = (state: AppState) => logicalDateAt(now(), state.user.timezone);
   const freshState = () => initialStateFor(options.mode, { nowMs: now(), timeZone: timeZone() });
 
-  function persist(state: AppState) {
-    if (snapshot.persistence === 'enabled') queue.enqueue(state);
+  function persist(state: AppState): number | null {
+    return snapshot.persistence === 'enabled' ? queue.enqueue(state) : null;
   }
 
   async function runHydration() {
@@ -147,12 +147,18 @@ export function createAppStore(options: AppStoreOptions): AppStore {
         break;
       case 'loaded':
         queue.startAfter(outcome.writeSeq);
-        if (outcome.state.origin === 'demo' && options.mode === 'empty') {
-          // A build for real users never shows the fictional household, even if a demo build ran before it.
+        if (outcome.state.origin !== options.mode) {
+          // A build never adopts state from the other data mode. This prevents both
+          // fictional data entering a real-user session and real data entering a demo session.
           state = freshState();
           status = 'recovery';
           recovery = { reason: 'mode_mismatch', quarantined: false };
           changed = true;
+          if (outcome.state.origin === 'empty') {
+            // Demo tooling may run on a device that holds real-user state. Show a
+            // fresh demo in memory, but never replace or reset the real household.
+            persistence = 'disabled';
+          }
         } else {
           ({ state, repairs } = repairCatalogReferences(outcome.state));
           changed = repairs.length > 0;
@@ -228,14 +234,22 @@ export function createAppStore(options: AppStoreOptions): AppStore {
     commit(transition) {
       if (committing) return committing;
       const { state, today } = snapshot;
-      if (!state || !today) return Promise.resolve();
+      if (!state || !today) return Promise.resolve(false);
       const next = transition(state, contextFor(today));
-      if (next === state) return Promise.resolve();
+      if (next === state) return Promise.resolve(true);
 
       committing = (async () => {
-        persist(next);
+        const seq = persist(next);
+        // A future-version/read-failed recovery session is deliberately memory-only,
+        // but must remain usable. There is no storage claim to wait for in that case.
+        if (seq === null) {
+          publish({ state: next });
+          return true;
+        }
         await queue.flush();
+        if (queue.status().committedSeq !== seq) return false;
         publish({ state: next });
+        return true;
       })().finally(() => {
         committing = null;
       });
@@ -254,11 +268,15 @@ export function createAppStore(options: AppStoreOptions): AppStore {
     },
 
     async reset() {
-      // A session holding a newer app's data must not overwrite it, even on request.
-      if (snapshot.recovery?.reason === 'future_version') return false;
+      // A memory-only recovery session must not overwrite state it is preserving.
+      if (snapshot.persistence === 'disabled') return false;
 
       await queue.flush();
-      await options.repository.resetAppState();
+      try {
+        await options.repository.resetAppState();
+      } catch {
+        return false;
+      }
       queue.enable();
 
       const state = freshState();

@@ -5,8 +5,9 @@ import { approveDailyLoadMove, dailyLoadDecisionFor } from '../src/domain/dailyL
 import { completeOnboarding, toggleOnboardingOption } from '../src/domain/onboarding.ts';
 import { completeOneMove, oneMoveForDay, resolveOneMoveForToday } from '../src/domain/oneMove.ts';
 import { projectStateDay } from '../src/domain/projectDay.ts';
-import { DAY, NEXT_DAY, STORAGE_KEYS, demoState, harness, launch, nyMs, onboardedState, rawEnvelope, stored } from './support/fixtures.mjs';
+import { DAY, NEXT_DAY, STORAGE_KEYS, TZ, demoState, harness, launch, nyMs, onboardedState, rawEnvelope, stored } from './support/fixtures.mjs';
 import { finishOnboarding } from './support/store.mjs';
+import { createEmptyState } from '../src/state/initialState.ts';
 
 const categoryName = (data, id) => data.categories.find((c) => c.id === id).name;
 
@@ -101,6 +102,30 @@ describe('Hydration lifecycle', () => {
     assert.notEqual(h.readPrimary().data.onboarding.completedAt, null);
     assert.notEqual(store.getSnapshot().state.onboarding.completedAt, null);
   });
+
+  test('a commit that exhausts its retry is not shown as completed', async () => {
+    let failing = true;
+    let state = demoState();
+    for (const [group, id] of [['goals', 'calmer-household'], ['strengths', 'cooking'], ['struggles', 'overcommitting']]) {
+      state = toggleOnboardingOption(state, group, id);
+    }
+    const h = harness({
+      initial: { [STORAGE_KEYS.primary]: stored(state) },
+      storageOptions: { failWrite: (key) => key === STORAGE_KEYS.primary && failing },
+    });
+    const store = await launch(h);
+
+    const failed = await store.commit((current, ctx) => resolveOneMoveForToday(completeOnboarding(current, ctx), ctx));
+    assert.equal(failed, false);
+    assert.equal(store.getSnapshot().state.onboarding.completedAt, null);
+    assert.equal(h.readPrimary().data.onboarding.completedAt, null);
+
+    failing = false;
+    const retried = await store.commit((current, ctx) => resolveOneMoveForToday(completeOnboarding(current, ctx), ctx));
+    assert.equal(retried, true);
+    assert.notEqual(store.getSnapshot().state.onboarding.completedAt, null);
+    assert.notEqual(h.readPrimary().data.onboarding.completedAt, null);
+  });
 });
 
 describe('Recovery from unusable stored state', () => {
@@ -169,6 +194,18 @@ describe('Recovery from unusable stored state', () => {
     assert.equal(state.origin, 'empty');
     assert.deepEqual([state.user.displayName, state.household.displayName, state.children, state.events, state.tasks], [null, null, [], [], []]);
     assert.doesNotMatch(JSON.stringify(h.readPrimary()), /Maren|Josie|Ellis/);
+  });
+
+  test('a demo build never treats an empty-mode household as its demo fixture', async () => {
+    const h = harness({ initial: { [STORAGE_KEYS.primary]: stored(createEmptyState(TZ)) }, mode: 'demo' });
+    const { status, recovery, state, persistence } = (await launch(h)).getSnapshot();
+
+    assert.equal(status, 'recovery');
+    assert.deepEqual(recovery, { reason: 'mode_mismatch', quarantined: false });
+    assert.equal(state.origin, 'demo');
+    assert.equal(state.user.displayName, 'Maren Ellis');
+    assert.equal(state.children.length, 2);
+    assert.deepEqual([persistence, h.readPrimary().data.origin], ['disabled', 'empty']);
   });
 
   test('answers the app no longer offers are let go without discarding the household', async () => {
@@ -245,6 +282,18 @@ describe('Demo reset', () => {
     assert.equal(today, NEXT_DAY);
     assert.equal(projectStateDay(state, NEXT_DAY).events.length, 4);
     assert.equal(projectStateDay(state, DAY).events.length, 0);
+  });
+
+  test('a storage removal failure leaves current memory in place and is reported without rejecting', async () => {
+    const h = harness({ initial: { [STORAGE_KEYS.primary]: stored(onboardedState()) } });
+    const store = await launch(h);
+    const before = store.getSnapshot().state;
+    h.repository.resetAppState = async () => {
+      throw new Error('simulated remove failure');
+    };
+
+    assert.equal(await store.reset(), false);
+    assert.equal(store.getSnapshot().state, before);
   });
 });
 

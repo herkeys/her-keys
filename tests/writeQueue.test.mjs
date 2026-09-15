@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
-import { createWriteQueue } from '../src/persistence/writeQueue.ts';
+import { MAX_WRITE_SEQUENCE, createWriteQueue } from '../src/persistence/writeQueue.ts';
 
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -51,6 +51,22 @@ describe('Write queue', () => {
     queue.enqueue('next');
     await queue.flush();
     assert.deepEqual(seqs, [42]);
+  });
+
+  test('sequence rollover cannot strand flush or suppress later writes', async () => {
+    const written = [];
+    const queue = createWriteQueue({ write: async (value, seq) => void written.push([value, seq]) });
+    queue.startAfter(MAX_WRITE_SEQUENCE - 1);
+
+    queue.enqueue('at-boundary');
+    await queue.flush();
+    queue.enqueue('after-boundary');
+    await queue.flush();
+
+    assert.deepEqual(written, [
+      ['at-boundary', MAX_WRITE_SEQUENCE],
+      ['after-boundary', 1],
+    ]);
   });
 
   test('a failed write is retried once straight away', async () => {
