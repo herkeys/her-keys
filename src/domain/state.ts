@@ -23,7 +23,7 @@ export type SystemRole = (typeof SYSTEM_ROLES)[number];
 export const VISIBILITY_SCOPES = ['personal', 'household', 'child', 'coparent-shared', 'professional'] as const;
 export type VisibilityScope = (typeof VISIBILITY_SCOPES)[number];
 
-export const ONBOARDING_STEPS = ['goals', 'strengths', 'struggles', 'talk-it-out', 'profile'] as const;
+export const ONBOARDING_STEPS = ['goals', 'strengths', 'struggles', 'talk-it-out', 'profile', 'plus'] as const;
 export type OnboardingStep = (typeof ONBOARDING_STEPS)[number];
 
 /** Letters, digits and `._:-`, starting with a letter or digit — never `__proto__` or similar. */

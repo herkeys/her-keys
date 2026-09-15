@@ -31,7 +31,14 @@ export function onboardingStepAccess(onboarding: Onboarding): Record<OnboardingS
   const hasGoals = onboarding.goalIds.length > 0;
   const hasStrengths = hasGoals && onboarding.strengthIds.length > 0;
   const hasStruggles = hasStrengths && onboarding.struggleIds.length > 0;
-  return { goals: true, strengths: hasGoals, struggles: hasStrengths, 'talk-it-out': hasStruggles, profile: hasStruggles };
+  return {
+    goals: true,
+    strengths: hasGoals,
+    struggles: hasStrengths,
+    'talk-it-out': hasStruggles,
+    profile: hasStruggles,
+    plus: hasStruggles,
+  };
 }
 
 /** Remembers the furthest step reached. Going back doesn't rewind it, so there's nothing to write. */
@@ -44,10 +51,17 @@ export function recordOnboardingStep(state: AppState, step: OnboardingStep): App
   return { ...state, onboarding: { ...onboarding, lastStep: step } };
 }
 
+/**
+ * Completion is a household-side fact only: it records that onboarding
+ * finished, never why (a purchase, a restore, or continuing without Plus
+ * under the soft paywall policy). Which resolutions may call this at all is
+ * decided in `src/monetization/entitlement.ts` (`canResolveOnboardingPlus`),
+ * not here — this function has no entitlement parameter to remove.
+ */
 export function completeOnboarding(state: AppState, ctx: TransitionContext): AppState {
   const { onboarding } = state;
-  if (isOnboardingComplete(onboarding) || !onboardingStepAccess(onboarding).profile) return state;
-  return { ...state, onboarding: { ...onboarding, lastStep: 'profile', completedAt: toInstant(ctx.nowMs) } };
+  if (isOnboardingComplete(onboarding) || !onboardingStepAccess(onboarding).plus) return state;
+  return { ...state, onboarding: { ...onboarding, lastStep: 'plus', completedAt: toInstant(ctx.nowMs) } };
 }
 
 /** Where to pick up on relaunch: the furthest step reached that can still be opened, or null to start at Welcome. */

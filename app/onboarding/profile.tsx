@@ -1,13 +1,12 @@
+import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
-import { useState } from 'react';
 import { AppText, Button, Card, Overline, Screen, Tag } from '../../src/design/components';
 import { colors, radius, spacing } from '../../src/design/tokens';
 import { buildOperatingProfile } from '../../src/features/onboarding/buildOperatingProfile';
 import { useOnboarding } from '../../src/store/OnboardingContext';
 
 export default function ProfileResult() {
-  const { answers, complete } = useOnboarding();
-  const [completionError, setCompletionError] = useState(false);
+  const { answers, recordStep } = useOnboarding();
   const profile = buildOperatingProfile(answers);
 
   return (
@@ -53,17 +52,12 @@ export default function ProfileResult() {
         </AppText>
       </Card>
 
-      {/* Completion is saved first; the root guards then close onboarding and open the app, taking onboarding out of history. */}
-      {completionError && (
-        <AppText variant="bodySm" color={colors.textSecondary} style={styles.completionError} accessibilityRole="alert">
-          Her Keys couldn’t save that yet. Your setup is still here — try again.
-        </AppText>
-      )}
+      {/* One step left: Her Keys+. Onboarding itself isn't marked complete until that step resolves. */}
       <Button
-        label="Show me my day"
-        onPress={async () => {
-          setCompletionError(false);
-          if (!(await complete())) setCompletionError(true);
+        label="Continue"
+        onPress={() => {
+          recordStep('plus');
+          router.push('/onboarding/plus');
         }}
       />
     </Screen>
@@ -86,5 +80,4 @@ const styles = StyleSheet.create({
   insightDetail: { marginTop: spacing.sm },
   learning: { marginTop: spacing.lg, marginBottom: spacing.xxl },
   learningText: { marginTop: spacing.sm },
-  completionError: { marginBottom: spacing.md },
 });

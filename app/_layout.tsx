@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { colors } from '../src/design/tokens';
 import { canOpenScreen, isSettled, type RootScreen } from '../src/domain/routeAccess';
+import { RevenueCatProvider } from '../src/monetization/RevenueCatProvider';
 import { AppStateProvider, useStoreSnapshot } from '../src/store/AppStateProvider';
 import { appStore, internalTools } from '../src/store/appStoreInstance';
 import { OnboardingProvider } from '../src/store/OnboardingContext';
@@ -20,9 +21,11 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <AppStateProvider store={appStore}>
-        <RootNavigator />
-      </AppStateProvider>
+      <RevenueCatProvider>
+        <AppStateProvider store={appStore}>
+          <RootNavigator />
+        </AppStateProvider>
+      </RevenueCatProvider>
     </SafeAreaProvider>
   );
 }
@@ -77,6 +80,9 @@ function RootNavigator() {
               </Stack.Protected>
               <Stack.Protected guard={allow('onboarding/profile')}>
                 <Stack.Screen name="onboarding/profile" />
+              </Stack.Protected>
+              <Stack.Protected guard={allow('onboarding/plus')}>
+                <Stack.Screen name="onboarding/plus" />
               </Stack.Protected>
               <Stack.Protected guard={allow('(app)')}>
                 <Stack.Screen name="(app)" />

@@ -21,6 +21,7 @@ export const ROOT_SCREEN_GUARDS = {
   'onboarding/struggles': { onboardingStep: 'struggles' },
   'onboarding/talk-it-out': { onboardingStep: 'talk-it-out' },
   'onboarding/profile': { onboardingStep: 'profile' },
+  'onboarding/plus': { onboardingStep: 'plus' },
   '(app)': 'app',
   'talk-it-out': 'app',
   'dev-tools': 'internal',
