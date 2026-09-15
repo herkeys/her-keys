@@ -2,7 +2,15 @@ import { useState } from 'react';
 import { StyleSheet } from 'react-native';
 import { AppText, Button, Card, Overline, Screen } from '../src/design/components';
 import { colors, spacing } from '../src/design/tokens';
-import { addCategory, categoryWithRole, renameCategory } from '../src/domain/categories';
+import {
+  addCategory,
+  archiveCategory,
+  categoriesInOrder,
+  categoryWithRole,
+  renameCategory,
+  reorderCategories,
+  restoreCategory,
+} from '../src/domain/categories';
 import type { SimulatedDamage } from '../src/persistence/damageSimulation';
 import { useAppStore, useStoreSnapshot } from '../src/store/AppStateProvider';
 import { dataMode, simulateDamage } from '../src/store/appStoreInstance';
@@ -26,6 +34,9 @@ export default function DevToolsScreen() {
   const snapshot = useStoreSnapshot();
   const [note, setNote] = useState<string | null>(null);
   const kids = snapshot.state ? categoryWithRole(snapshot.state, 'kids') : null;
+  const home = snapshot.state ? categoryWithRole(snapshot.state, 'home') : null;
+  const categories = snapshot.state ? categoriesInOrder(snapshot.state, { includeArchived: true }) : [];
+  const customCategory = categories.find((category) => category.systemRole === null) ?? null;
 
   const rows: Array<[string, string]> = [
     ['Data mode', dataMode],
@@ -72,12 +83,19 @@ export default function DevToolsScreen() {
       />
 
       <Overline style={styles.section}>Household categories</Overline>
+      <Card tone="subtle" style={styles.categoryList}>
+        {categories.map((category) => (
+          <AppText key={category.id} variant="bodySm" color={colors.textSecondary}>
+            {category.sortOrder}: {category.name} · id={category.id} · role={category.systemRole ?? 'none'} · {category.status}
+          </AppText>
+        ))}
+      </Card>
       {kids && (
         <>
           <Button
-            label="Rename the kids category to “Children”"
+            label="Rename the kids category to “Family”"
             variant="secondary"
-            onPress={() => store.dispatch((state) => renameCategory(state, kids.id, 'Children'))}
+            onPress={() => store.dispatch((state) => renameCategory(state, kids.id, 'Family'))}
           />
           <Button
             label="Rename it back to “Kids”"
@@ -91,8 +109,42 @@ export default function DevToolsScreen() {
         label="Add a “Pets” category"
         variant="secondary"
         style={styles.spaced}
-        onPress={() => store.dispatch((state, ctx) => addCategory(state, ctx, { name: 'Pets', scope: 'household' }))}
+        onPress={() =>
+          store.dispatch((state, ctx) =>
+            state.categories.some((category) => category.systemRole === null)
+              ? state
+              : addCategory(state, ctx, { name: 'Pets', scope: 'household' })
+          )
+        }
       />
+      {customCategory && (
+        <Button
+          label="Move “Pets” to the first position"
+          variant="secondary"
+          style={styles.spaced}
+          onPress={() =>
+            store.dispatch((state) => {
+              const ordered = categoriesInOrder(state, { includeArchived: true }).map((category) => category.id);
+              return reorderCategories(state, [customCategory.id, ...ordered.filter((id) => id !== customCategory.id)]);
+            })
+          }
+        />
+      )}
+      {home?.status === 'active' ? (
+        <Button
+          label="Archive the home category"
+          variant="secondary"
+          style={styles.spaced}
+          onPress={() => store.dispatch((state) => archiveCategory(state, home.id))}
+        />
+      ) : home ? (
+        <Button
+          label="Restore the home category"
+          variant="secondary"
+          style={styles.spaced}
+          onPress={() => store.dispatch((state) => restoreCategory(state, home.id))}
+        />
+      ) : null}
 
       <Overline style={styles.section}>Stored-state damage — loads on next launch</Overline>
       {DAMAGE.map(({ kind, label }) => (
@@ -114,5 +166,6 @@ const styles = StyleSheet.create({
   card: { marginTop: spacing.md, marginBottom: spacing.lg, gap: spacing.xs },
   note: { marginBottom: spacing.lg },
   section: { marginTop: spacing.xxl, marginBottom: spacing.md },
+  categoryList: { marginBottom: spacing.lg, gap: spacing.xs },
   spaced: { marginTop: spacing.sm },
 });
