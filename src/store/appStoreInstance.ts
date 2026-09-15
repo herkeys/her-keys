@@ -1,5 +1,6 @@
 import Constants from 'expo-constants';
 import { diagnosticsEnabled, internalToolsEnabled, resolveDataMode } from '../config/dataMode';
+import { checkTimeZoneSupport } from '../domain/logicalDay';
 import type { AppState } from '../domain/state';
 import { asyncStorageAdapter } from '../persistence/asyncStorageAdapter';
 import { createAppStateRepository } from '../persistence/appStateRepository';
@@ -19,6 +20,9 @@ export const appStore = createAppStore({
     appVersion: Constants.expoConfig?.version ?? 'unknown',
     now: Date.now,
     quarantineCorruptState: diagnosticsEnabled(__DEV__, configuredTools),
+    onTiming: __DEV__
+      ? (phase, ms) => console.info(`[herkeys] ${JSON.stringify({ type: 'storage_timing', phase, ms: Math.round(ms * 10) / 10 })}`)
+      : undefined,
   }),
   mode: dataMode,
   report: __DEV__ ? reportDiagnostic : undefined,
@@ -28,6 +32,9 @@ export const appStore = createAppStore({
 function reportDiagnostic(event: StoreDiagnostic) {
   console.info(`[herkeys] ${JSON.stringify(event)}`);
 }
+
+// The logical day depends on the engine's timezone data; prove it on every development launch.
+if (__DEV__) console.info(`[herkeys] ${JSON.stringify({ type: 'timezone_support', ...checkTimeZoneSupport() })}`);
 
 /** Internal tools only: overwrite stored state and stop this session writing, so the next launch loads the damage. */
 export async function simulateDamage(kind: SimulatedDamage, current: AppState | null): Promise<void> {

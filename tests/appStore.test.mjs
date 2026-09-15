@@ -142,7 +142,7 @@ describe('Recovery from unusable stored state', () => {
     assert.deepEqual([snapshot.persistence, snapshot.persistenceDegraded], ['disabled', true]);
 
     store.dispatch((state) => toggleOnboardingOption(state, 'goals', 'calmer-household'));
-    await store.reset();
+    assert.equal(await store.reset(), false, 'reset is refused rather than overwriting newer data');
     await store.flush();
 
     assert.equal(h.primaryWrites().length, 0);

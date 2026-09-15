@@ -58,8 +58,12 @@ export default function DevToolsScreen() {
       <Button
         label="Reset demo data"
         onPress={async () => {
-          await store.reset();
-          setNote('Demo household restored for today. Onboarding starts again.');
+          const done = await store.reset();
+          setNote(
+            done
+              ? 'Demo household restored for today. Onboarding starts again.'
+              : 'Reset is unavailable while data from a newer app version is on this device.'
+          );
         }}
       />
 

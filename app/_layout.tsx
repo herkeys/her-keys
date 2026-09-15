@@ -52,7 +52,8 @@ function RootNavigator() {
         <OneMoveProvider>
           <TalkItOutProvider>
             <Stack
-              initialRouteName="index"
+              // Welcome anchors onboarding only while it can be opened; otherwise the first allowed screen leads.
+              initialRouteName={allow('index') ? 'index' : undefined}
               screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}
             >
               <Stack.Protected guard={allow('index')}>

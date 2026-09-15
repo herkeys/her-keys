@@ -45,6 +45,7 @@ export type Transition = (state: AppState, ctx: TransitionContext) => AppState;
 
 export type StoreDiagnostic =
   | { type: 'hydrated'; outcome: LoadOutcome['kind']; ms: number }
+  | { type: 'saved'; seq: number; ms: number }
   | { type: 'recovered'; reason: RecoveryReason; quarantined: boolean }
   | { type: 'repaired'; repairs: string[] }
   | { type: 'persistence_degraded' };
@@ -60,7 +61,8 @@ export interface AppStore {
   commit(transition: Transition): Promise<void>;
   /** Pick up a new logical day if midnight has passed. */
   refreshDay(): void;
-  reset(): Promise<void>;
+  /** Resolves false when a reset isn't allowed (this session holds a newer app's data). */
+  reset(): Promise<boolean>;
   flush(): Promise<void>;
   /** Stop writing for the rest of the session (used after simulating stored-state damage). */
   suspendPersistence(): void;
@@ -95,7 +97,11 @@ export function createAppStore(options: AppStoreOptions): AppStore {
   let committing: Promise<void> | null = null;
 
   const queue = createWriteQueue<AppState>({
-    write: (state, seq) => options.repository.saveAppState(state, seq),
+    write: async (state, seq) => {
+      const started = preciseNow();
+      await options.repository.saveAppState(state, seq);
+      report({ type: 'saved', seq, ms: round(preciseNow() - started) });
+    },
     onStatusChange: (status) => {
       if (status.degraded === snapshot.persistenceDegraded) return;
       publish({ persistenceDegraded: status.degraded });
@@ -117,7 +123,7 @@ export function createAppStore(options: AppStoreOptions): AppStore {
   }
 
   async function runHydration() {
-    const started = now();
+    const started = preciseNow();
     publish({ status: 'hydrating' });
 
     let outcome: LoadOutcome;
@@ -180,7 +186,7 @@ export function createAppStore(options: AppStoreOptions): AppStore {
     changed ||= resolved !== state;
     state = resolved;
 
-    const hydrationMs = now() - started;
+    const hydrationMs = round(preciseNow() - started);
     publish({
       status,
       state,
@@ -249,7 +255,7 @@ export function createAppStore(options: AppStoreOptions): AppStore {
 
     async reset() {
       // A session holding a newer app's data must not overwrite it, even on request.
-      if (snapshot.recovery?.reason === 'future_version') return;
+      if (snapshot.recovery?.reason === 'future_version') return false;
 
       await queue.flush();
       await options.repository.resetAppState();
@@ -267,6 +273,7 @@ export function createAppStore(options: AppStoreOptions): AppStore {
       });
       persist(state);
       await queue.flush();
+      return true;
     },
 
     flush: () => queue.flush(),
@@ -277,6 +284,10 @@ export function createAppStore(options: AppStoreOptions): AppStore {
     },
   };
 }
+
+/** Durations use the high-resolution clock; the injected `now` stays the source of recorded timestamps. */
+const preciseNow = () => globalThis.performance?.now() ?? Date.now();
+const round = (ms: number) => Math.round(ms * 10) / 10;
 
 function sequentialIds(now: () => number): (prefix: string) => string {
   let counter = 0;

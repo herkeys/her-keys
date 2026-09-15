@@ -93,4 +93,11 @@ describe('Route access', () => {
     }
     assert.equal((layout.match(/<Stack\.Screen /g) ?? []).length, SCREENS.length, 'no unguarded root screens');
   });
+
+  test('the root stack never names a guarded screen as its fixed initial route', () => {
+    // A fixed initialRouteName breaks every launch where that screen's guard is closed.
+    const layout = readFileSync('app/_layout.tsx', 'utf8');
+    assert.doesNotMatch(layout, /initialRouteName="/);
+    assert.match(layout, /initialRouteName=\{allow\('index'\) \? 'index' : undefined\}/);
+  });
 });
