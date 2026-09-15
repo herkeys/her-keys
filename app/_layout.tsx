@@ -14,6 +14,10 @@ import { TalkItOutProvider } from '../src/store/TalkItOutContext';
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  useEffect(() => {
+    if (__DEV__) console.info('[herkeys] root-mounted');
+  }, []);
+
   return (
     <SafeAreaProvider>
       <AppStateProvider store={appStore}>
