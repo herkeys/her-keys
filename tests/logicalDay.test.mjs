@@ -40,7 +40,25 @@ describe('Logical day', () => {
 });
 
 describe('Projecting stored facts onto a day', () => {
-  const event = (id, startsAt, endsAt) => ({ id, title: id, categoryId: 'cat-kids', subjectMemberId: null, startsAt, endsAt, location: null, scope: 'household' });
+  const event = (id, startsAt, endsAt) => ({
+    id,
+    title: id,
+    categoryId: 'cat-kids',
+    subjectMemberId: null,
+    startsAt,
+    endsAt,
+    location: null,
+    notes: null,
+    commitment: 'fixed',
+    status: 'active',
+    travelMinutesBefore: null,
+    travelMinutesAfter: null,
+    preparationMinutes: null,
+    source: 'user',
+    createdAt: null,
+    updatedAt: null,
+    scope: 'household',
+  });
   const task = (id, overrides) => ({
     id,
     title: id,
@@ -50,6 +68,11 @@ describe('Projecting stored facts onto a day', () => {
     commitment: 'flexible',
     dueDate: null,
     plan: { kind: 'unplanned' },
+    notes: null,
+    status: 'open',
+    completedAt: null,
+    createdAt: null,
+    updatedAt: null,
     scope: 'household',
     ...overrides,
   });

@@ -49,6 +49,14 @@ export function addDays(date: LocalDate, days: number): LocalDate {
   return formatLocalDate({ year: shifted.getUTCFullYear(), month: shifted.getUTCMonth() + 1, day: shifted.getUTCDate() });
 }
 
+/** Whole calendar days from `from` to `to` (negative when `to` is earlier). */
+export function daysBetween(from: LocalDate, to: LocalDate): number {
+  const a = parseLocalDate(from);
+  const b = parseLocalDate(to);
+  const msPerDay = 24 * 60 * 60 * 1000;
+  return Math.round((Date.UTC(b.year, b.month - 1, b.day) - Date.UTC(a.year, a.month - 1, a.day)) / msPerDay);
+}
+
 /** Same month and day `years` later (or earlier); 29 February falls back to the 28th when it has to. */
 export function addYears(date: LocalDate, years: number): LocalDate {
   const { year, month, day } = parseLocalDate(date);

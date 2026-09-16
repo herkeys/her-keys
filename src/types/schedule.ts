@@ -15,6 +15,12 @@ export interface CalendarEventItem {
   /** Who the event concerns, when one person does. */
   subjectMemberId: string | null;
   location?: string;
+  /** FIXED can never be moved by a recommendation; only FLEXIBLE can. */
+  commitment: CommitmentType;
+  /** User-entered only — never computed, so a transition conflict is never invented from absence. */
+  travelMinutesBefore?: number;
+  travelMinutesAfter?: number;
+  preparationMinutes?: number;
 }
 
 export interface TaskItem {
@@ -24,6 +30,8 @@ export interface TaskItem {
   commitment: CommitmentType;
   /** Due on this day or already overdue. */
   dueToday: boolean;
+  /** Days past its due date; 0 when not overdue or when it has no due date. Reporting only — `dueToday` already governs movability. */
+  daysOverdue: number;
   scheduledStartMinutes?: number;
   categoryId: string;
   subjectMemberId: string | null;

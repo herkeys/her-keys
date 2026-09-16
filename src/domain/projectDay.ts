@@ -1,6 +1,7 @@
 import type { CalendarEventItem, TaskItem } from '../types';
 import {
   addDays,
+  daysBetween,
   epochMsOf,
   logicalDateAt,
   wallClockMinutesAt,
@@ -34,6 +35,7 @@ export function projectDay(source: ScheduleSource, date: LocalDate): DayView {
 
   const events: CalendarEventItem[] = [];
   for (const event of source.events) {
+    if (event.status !== 'active') continue;
     const start = epochMsOf(event.startsAt);
     const end = epochMsOf(event.endsAt);
     if (start >= dayEnd || end <= dayStart) continue;
@@ -45,12 +47,17 @@ export function projectDay(source: ScheduleSource, date: LocalDate): DayView {
       endMinutes: end >= dayEnd ? 24 * 60 : wallClockMinutesAt(end, timeZone),
       categoryId: event.categoryId,
       subjectMemberId: event.subjectMemberId,
+      commitment: event.commitment,
       ...(event.location !== null ? { location: event.location } : {}),
+      ...(event.travelMinutesBefore !== null ? { travelMinutesBefore: event.travelMinutesBefore } : {}),
+      ...(event.travelMinutesAfter !== null ? { travelMinutesAfter: event.travelMinutesAfter } : {}),
+      ...(event.preparationMinutes !== null ? { preparationMinutes: event.preparationMinutes } : {}),
     });
   }
 
   const tasks: TaskItem[] = [];
   for (const task of source.tasks) {
+    if (task.status !== 'open') continue;
     const due = task.dueDate !== null && task.dueDate <= date;
     const plan = task.plan;
     const timedToday = plan.kind === 'timed' && logicalDateAt(epochMsOf(plan.startsAt), timeZone) === date;
@@ -63,6 +70,7 @@ export function projectDay(source: ScheduleSource, date: LocalDate): DayView {
       durationMinutes: task.durationMinutes,
       commitment: task.commitment,
       dueToday: due,
+      daysOverdue: task.dueDate !== null && task.dueDate < date ? daysBetween(task.dueDate, date) : 0,
       categoryId: task.categoryId,
       subjectMemberId: task.subjectMemberId,
       ...(timedToday && plan.kind === 'timed' ? { scheduledStartMinutes: wallClockMinutesAt(epochMsOf(plan.startsAt), timeZone) } : {}),
