@@ -7,3 +7,4 @@ export * from './Divider';
 export * from './ChipToggle';
 export * from './SegmentBar';
 export * from './StatusList';
+export * from './TextField';

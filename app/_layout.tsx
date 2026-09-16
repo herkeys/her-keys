@@ -90,6 +90,12 @@ function RootNavigator() {
               <Stack.Protected guard={allow('talk-it-out')}>
                 <Stack.Screen name="talk-it-out" options={{ presentation: 'modal', headerShown: true, title: 'Talk It Out' }} />
               </Stack.Protected>
+              <Stack.Protected guard={allow('event-editor')}>
+                <Stack.Screen name="event-editor" options={{ presentation: 'modal', headerShown: true, title: 'Event' }} />
+              </Stack.Protected>
+              <Stack.Protected guard={allow('task-editor')}>
+                <Stack.Screen name="task-editor" options={{ presentation: 'modal', headerShown: true, title: 'Task' }} />
+              </Stack.Protected>
               <Stack.Protected guard={allow('dev-tools')}>
                 <Stack.Screen name="dev-tools" options={{ headerShown: true, title: 'Internal tools' }} />
               </Stack.Protected>

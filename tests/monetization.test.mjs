@@ -185,7 +185,7 @@ describe('Onboarding: Her Keys+ is the final step', () => {
     store = await launch(h);
     assert.equal(onboardingResumeStep(store.getSnapshot().state.onboarding), null);
     for (const screen of Object.keys(ROOT_SCREEN_GUARDS)) {
-      if (screen === '(app)' || screen === 'talk-it-out') continue;
+      if (screen === '(app)' || screen === 'talk-it-out' || screen === 'event-editor' || screen === 'task-editor') continue;
       if (screen === 'dev-tools') continue;
       assert.equal(canOpenScreen(screen, accessFor(store)), false, `${screen} must stay closed after completion`);
     }

@@ -1,6 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 import { AppText, Card, Overline } from '../../design/components';
 import { colors, spacing } from '../../design/tokens';
+import { CategoryTaskList } from '../life/CategoryTaskList';
 import { useHousehold } from '../../store/useHousehold';
 
 export function HomeOverview() {
@@ -10,7 +11,10 @@ export function HomeOverview() {
 
   return (
     <View>
-      <Overline style={styles.label}>Running in the background</Overline>
+      <Overline style={styles.label}>On your list</Overline>
+      <CategoryTaskList categoryId={homeCategoryId} emptyLabel="Nothing home-related on your list today." />
+
+      <Overline style={styles.labelSpaced}>Running in the background</Overline>
       <View style={styles.list}>
         {homeSystems.map((system) => (
           <Card key={system.id} tone="surface">
@@ -30,6 +34,7 @@ export function HomeOverview() {
 
 const styles = StyleSheet.create({
   label: { marginBottom: spacing.md },
+  labelSpaced: { marginTop: spacing.xxl, marginBottom: spacing.md },
   list: { gap: spacing.md },
   description: { marginTop: spacing.xs },
   note: { marginTop: spacing.xl },

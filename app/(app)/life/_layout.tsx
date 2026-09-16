@@ -33,6 +33,7 @@ export default function LifeLayout() {
       <Stack.Screen name="money" options={{ title: titleFor('money', 'Money') }} />
       <Stack.Screen name="meals" options={{ title: titleFor('meals', 'Meals') }} />
       <Stack.Screen name="work" options={{ title: titleFor('work', 'Work') }} />
+      <Stack.Screen name="needs-me" options={{ title: 'Needs Me' }} />
     </Stack>
   );
 }

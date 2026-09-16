@@ -24,6 +24,8 @@ export const ROOT_SCREEN_GUARDS = {
   'onboarding/plus': { onboardingStep: 'plus' },
   '(app)': 'app',
   'talk-it-out': 'app',
+  'event-editor': 'app',
+  'task-editor': 'app',
   'dev-tools': 'internal',
 } as const satisfies Record<string, Guard>;
 
@@ -66,6 +68,8 @@ export function rootScreenForPath(path: string): RootScreen | null {
   const [first, second] = segments;
   if (APP_TAB_ROUTES.has(first)) return '(app)';
   if (first === 'talk-it-out' && segments.length === 1) return 'talk-it-out';
+  if (first === 'event-editor' && segments.length === 1) return 'event-editor';
+  if (first === 'task-editor' && segments.length === 1) return 'task-editor';
   if (first === 'dev-tools' && segments.length === 1) return 'dev-tools';
   if (first === 'onboarding' && segments.length === 2) {
     const screen = `onboarding/${second}`;

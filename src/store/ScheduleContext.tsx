@@ -1,7 +1,15 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
 import { approveDailyLoadMove, dailyLoadDecisionFor, keepDailyLoadPlan, type AppliedMove } from '../domain/dailyLoadDecisions';
+import { assessDailyLoadIssues, type DailyLoadIssues } from '../domain/dailyLoadIssues';
 import { loadTierOf, type LoadTier } from '../domain/loadTier';
 import { projectDay } from '../domain/projectDay';
+import {
+  approveDropTask,
+  approveMoveEvent,
+  approveProtectItem,
+  approveShortenTask,
+  keepCapacityPlan,
+} from '../domain/recommendationActions';
 import { computeDailyLoad } from '../features/daily-load/computeDailyLoad';
 import type { CalendarEventItem, DailyLoadAssessment, DailyLoadDecision, TaskItem } from '../types';
 import { useAppStore, useHouseholdState } from './AppStateProvider';
@@ -10,6 +18,7 @@ interface ScheduleContextValue {
   events: CalendarEventItem[];
   tasks: TaskItem[];
   assessment: DailyLoadAssessment;
+  issues: DailyLoadIssues;
   loadTier: LoadTier;
   decision: DailyLoadDecision;
   candidateIndex: number;
@@ -17,6 +26,12 @@ interface ScheduleContextValue {
   showNextCandidate: () => void;
   moveRecommendedTask: () => void;
   keepAsPlanned: () => void;
+  /** These four persist before resolving — the caller only shows success once the write has actually landed. */
+  moveEvent: (eventId: string) => Promise<boolean>;
+  dropTask: (taskId: string) => Promise<boolean>;
+  shortenTask: (taskId: string) => Promise<boolean>;
+  keepCapacity: () => Promise<boolean>;
+  protectItem: (target: { targetType: 'task' | 'event'; targetId: string }) => Promise<boolean>;
 }
 
 const ScheduleContext = createContext<ScheduleContextValue | null>(null);
@@ -38,6 +53,7 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
     [state.events, state.tasks, state.user.timezone, today]
   );
   const assessment = useMemo(() => computeDailyLoad(day.events, day.tasks), [day]);
+  const issues = useMemo(() => assessDailyLoadIssues(day.events, day.tasks, assessment), [day, assessment]);
   const { decision, appliedMove } = useMemo(() => dailyLoadDecisionFor(state, today), [state, today]);
 
   // Candidates change after a move or on a new day, so the index can never point past the end (HK-AUDIT-037).
@@ -49,6 +65,7 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
     events: day.events,
     tasks: day.tasks,
     assessment,
+    issues,
     loadTier: loadTierOf(assessment),
     decision,
     candidateIndex: activeIndex,
@@ -62,6 +79,11 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
     keepAsPlanned: () => {
       store.dispatch((current, ctx) => keepDailyLoadPlan(current, ctx, activeCandidate?.task.id ?? null));
     },
+    moveEvent: (eventId) => store.commit((current, ctx) => approveMoveEvent(current, ctx, eventId)),
+    dropTask: (taskId) => store.commit((current, ctx) => approveDropTask(current, ctx, taskId)),
+    shortenTask: (taskId) => store.commit((current, ctx) => approveShortenTask(current, ctx, taskId)),
+    keepCapacity: () => store.commit((current, ctx) => keepCapacityPlan(current, ctx)),
+    protectItem: (target) => store.commit((current, ctx) => approveProtectItem(current, ctx, target)),
   };
 
   return <ScheduleContext.Provider value={value}>{children}</ScheduleContext.Provider>;

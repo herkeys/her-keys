@@ -1,33 +1,18 @@
 import { StyleSheet, View } from 'react-native';
-import { AppText, Overline, StatusList } from '../../design/components';
-import { colors, spacing } from '../../design/tokens';
-import { useSchedule } from '../../store/ScheduleContext';
+import { Overline, StatusList } from '../../design/components';
+import { spacing } from '../../design/tokens';
+import { CategoryTaskList } from '../life/CategoryTaskList';
 import { useHousehold } from '../../store/useHousehold';
 
 export function MoneyOverview() {
-  const { tasks } = useSchedule();
   const { systems, categoryIdForRole } = useHousehold();
   const moneyCategoryId = categoryIdForRole('money');
-  const moneyTasks = tasks.filter((t) => t.categoryId === moneyCategoryId);
   const moneySystems = systems.filter((s) => s.categoryId === moneyCategoryId);
 
   return (
     <View>
       <Overline style={styles.label}>Needs a decision</Overline>
-      {moneyTasks.length > 0 ? (
-        <StatusList
-          items={moneyTasks.map((task) => ({
-            key: task.id,
-            label: task.title,
-            value: task.dueToday ? 'Due today' : 'Flexible',
-            needsAttention: task.dueToday,
-          }))}
-        />
-      ) : (
-        <AppText variant="body" color={colors.textSecondary}>
-          Nothing financial needs attention today.
-        </AppText>
-      )}
+      <CategoryTaskList categoryId={moneyCategoryId} emptyLabel="Nothing financial needs attention today." />
 
       <Overline style={styles.labelSpaced}>Running without you</Overline>
       <StatusList items={moneySystems.map((s) => ({ key: s.id, label: s.name, value: 'Working' }))} />

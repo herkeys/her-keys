@@ -1,6 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 import { AppText, Overline, StatusList } from '../../design/components';
 import { colors, spacing } from '../../design/tokens';
+import { CategoryTaskList } from '../life/CategoryTaskList';
 import { useSchedule } from '../../store/ScheduleContext';
 import { useHousehold } from '../../store/useHousehold';
 import { formatTime } from '../daily-load/computeDailyLoad';
@@ -27,6 +28,10 @@ export function WorkOverview() {
           Nothing on the work calendar today.
         </AppText>
       )}
+
+      <Overline style={styles.labelSpaced}>On your list</Overline>
+      <CategoryTaskList categoryId={workCategoryId} emptyLabel="Nothing work-related on your list today." />
+
       <AppText variant="caption" color={colors.textTertiary} style={styles.note}>
         Work hours shape how much room the rest of the day has.
       </AppText>
@@ -36,5 +41,6 @@ export function WorkOverview() {
 
 const styles = StyleSheet.create({
   label: { marginBottom: spacing.md },
+  labelSpaced: { marginTop: spacing.xxl, marginBottom: spacing.md },
   note: { marginTop: spacing.xl },
 });

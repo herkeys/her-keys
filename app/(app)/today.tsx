@@ -8,13 +8,16 @@ import { OneMoveCard } from '../../src/features/one-move/OneMoveCard';
 import { TalkItOutEntry } from '../../src/features/talk-it-out/TalkItOutEntry';
 import { describeDayState } from '../../src/features/today/dayState';
 import { weekdayName } from '../../src/features/today/formatDay';
+import { HandledLedger } from '../../src/features/today/HandledLedger';
+import { NeedsMeChip } from '../../src/features/today/NeedsMeChip';
 import { PersistenceNotice } from '../../src/features/today/PersistenceNotice';
 import { TimelineList } from '../../src/features/today/TimelineList';
+import { TomorrowPreview } from '../../src/features/today/TomorrowPreview';
 import { useSchedule } from '../../src/store/ScheduleContext';
 import { useHousehold } from '../../src/store/useHousehold';
 
 export default function TodayScreen() {
-  const { assessment, decision } = useSchedule();
+  const { assessment, decision, events, tasks } = useSchedule();
   const { firstName, today } = useHousehold();
 
   return (
@@ -33,10 +36,18 @@ export default function TodayScreen() {
       <LoadMeter />
       <DailyLoadCard />
       <OneMoveCard />
+      <NeedsMeChip />
       <LifeStatusSummary />
 
-      <Overline style={styles.sectionLabel}>Today’s shape</Overline>
-      <TimelineList />
+      {(events.length > 0 || tasks.length > 0) && (
+        <>
+          <Overline style={styles.sectionLabel}>Today’s shape</Overline>
+          <TimelineList />
+        </>
+      )}
+
+      <TomorrowPreview />
+      <HandledLedger />
 
       <TalkItOutEntry />
     </Screen>
