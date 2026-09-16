@@ -118,7 +118,7 @@ No change to the write-serialization, hydration, mode-isolation, or corrupt-stat
 
 ## 10. Test results
 
-**250/250 tests passing** (168 pre-existing + 82 new/extended), typecheck clean, across 6 logical commits:
+**248/248 tests passing** (168 pre-existing + 80 new/extended), typecheck clean, across 6 logical commits:
 
 1. `241cd76` — schema v2 + migration + CRUD + tests (194 tests)
 2. `7a566d1` — Daily Load issues + recommendation engine + tests (231 tests)
@@ -132,7 +132,7 @@ Every existing Build 1/2/2.5 test passes with its original intent preserved; a h
 | Command | Result |
 |---|---|
 | `npm run typecheck` | **PASS** |
-| `npm test` | **PASS — 250/250 tests, 50 suites** |
+| `npm test` | **PASS — 248/248 tests, 50 suites** |
 | `npx expo-doctor` | **20/21 — 1 pre-existing failure** (expo patch version 57.0.22 vs. expected 57.0.23; unrelated to this build, present before it) |
 | `npx expo export --platform android` | **PASS — 1,474 modules, 5,253,387-byte Hermes bundle** (was 1,455 modules / 5,180,575 bytes before this build; +19 modules / +72,812 bytes is the new domain and UI code) |
 
@@ -169,7 +169,7 @@ No observations from these steps are claimed here — none were made.
 
 ## 12. IMPLEMENTED / TESTED / DEFERRED / NOT_EXECUTED
 
-**IMPLEMENTED & TESTED** (unit-level, 250/250 passing): schema v2 + migration; real event/task/Needs Me CRUD; Daily Load issue detection (overlap, transition conflict raw + travel-aware, capacity pressure, tight window, overdue); MOVE (task + event)/DROP/SHORTEN/PROTECT recommendation actions; One Move on real data; Tomorrow Preview.
+**IMPLEMENTED & TESTED** (unit-level, 248/248 passing): schema v2 + migration; real event/task/Needs Me CRUD; Daily Load issue detection (overlap, transition conflict raw + travel-aware, capacity pressure, tight window, overdue); MOVE (task + event)/DROP/SHORTEN/PROTECT recommendation actions; One Move on real data; Tomorrow Preview.
 
 **IMPLEMENTED, not independently unit-tested** (no React rendering harness exists in this codebase — matches the existing pattern for all prior UI, verified by code review instead): `EventForm`, `TaskForm`, `CategoryTaskList`, `NeedsMeQuickAdd`/`NeedsMeList`/`NeedsMeChip`, `HandledLedger`, `TomorrowPreview` UI, the rewritten `DailyLoadCard`, `ScheduleContext` extension.
 
@@ -207,4 +207,4 @@ Three concepts this build introduces aren't named in the canonical product docum
 
 **Can a real mother enter the obligations of an ordinary Wednesday and have Her Keys tell her something specific, correct, and useful that she would otherwise have had to mentally figure out herself?**
 
-Structurally, yes, and it's covered by tests exercising exactly this path: she can add a fixed pickup and a fixed soccer practice with a genuine transition problem (raw or travel-aware), and Daily Load names the two real commitments and the real minutes short, recommends moving a specific flexible item (never the fixed ones), and that recommendation persists correctly when accepted. She can capture "Call insurance" in three seconds without picking a category. She gets One Move sourced from her own actual list, not a stranger's. She sees a factual line about tomorrow. All of this is proven at the unit level (250 tests) against real domain logic, not mocked. It has **not** been proven by a human tapping through the real app on a device this session — that remains the one honest gap, tracked in §11.
+Structurally, yes, and it's covered by tests exercising exactly this path: she can add a fixed pickup and a fixed soccer practice with a genuine transition problem (raw or travel-aware), and Daily Load names the two real commitments and the real minutes short, recommends moving a specific flexible item (never the fixed ones), and that recommendation persists correctly when accepted. She can capture "Call insurance" in three seconds without picking a category. She gets One Move sourced from her own actual list, not a stranger's. She sees a factual line about tomorrow. All of this is proven at the unit level (248 tests) against real domain logic, not mocked. It has **not** been proven by a human tapping through the real app on a device this session — that remains the one honest gap, tracked in §11.
