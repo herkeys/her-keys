@@ -5,6 +5,8 @@ import { addDays, toInstant, type LocalDate } from './logicalDay';
 import { projectStateDay } from './projectDay';
 import type { ActionRecord, AppState, KeepPlanAction, MoveTaskAction, TaskPlan } from './state';
 
+type DailyLoadTransitionAction = MoveTaskAction | KeepPlanAction;
+
 /**
  * A Daily Load decision is stored as what she accepted — the task's new plan
  * plus a typed action record — never as the analysis that led to it. The
@@ -26,11 +28,11 @@ export interface DailyLoadDecisionView {
   appliedMove: AppliedMove | null;
 }
 
-function isDailyLoadAction(action: ActionRecord): boolean {
+function isDailyLoadAction(action: ActionRecord): action is DailyLoadTransitionAction {
   return action.type === 'daily_load.move_task' || action.type === 'daily_load.keep_plan';
 }
 
-function latestDecision(state: AppState, date: LocalDate): ActionRecord | null {
+function latestDecision(state: AppState, date: LocalDate): DailyLoadTransitionAction | null {
   for (let index = state.actions.length - 1; index >= 0; index--) {
     const action = state.actions[index];
     if (action.logicalDate === date && isDailyLoadAction(action)) return action;

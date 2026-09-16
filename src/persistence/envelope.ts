@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { AppStateSchema, validateAppState, type AppState } from '../domain/state';
+import { isValidV1AppState } from './legacySchemas';
 import { MAX_WRITE_SEQUENCE } from './writeQueue';
 
 /**
@@ -12,7 +13,7 @@ import { MAX_WRITE_SEQUENCE } from './writeQueue';
  * an app update never has to throw a household away.
  */
 
-export const CURRENT_SCHEMA_VERSION = 1;
+export const CURRENT_SCHEMA_VERSION = 2;
 
 export type InvalidReason =
   | 'malformed_json'
@@ -48,10 +49,56 @@ export interface MigrationPlan {
   validators: ReadonlyMap<number, (data: unknown) => boolean>;
 }
 
+/**
+ * Build 3 — events and tasks gain fields the v1 shape never had. None of them
+ * can be known for data that predates the field, so every backfill is either
+ * `null` (unknown) or the most conservative real value: a pre-existing event's
+ * `commitment` becomes `'fixed'` rather than assumed movable, and it's tagged
+ * `source: 'demo'` because only the demo seed ever produced an event before
+ * Build 3 shipped real event capture.
+ */
+function migrateV1ToV2(data: unknown): unknown {
+  const v1 = data as {
+    events: Array<Record<string, unknown>>;
+    tasks: Array<Record<string, unknown>>;
+    oneMoves: Array<Record<string, unknown>>;
+    [key: string]: unknown;
+  };
+
+  return {
+    ...v1,
+    events: v1.events.map((event) => ({
+      ...event,
+      commitment: 'fixed',
+      status: 'active',
+      notes: null,
+      travelMinutesBefore: null,
+      travelMinutesAfter: null,
+      preparationMinutes: null,
+      source: 'demo',
+      createdAt: null,
+      updatedAt: null,
+    })),
+    tasks: v1.tasks.map((task) => ({
+      ...task,
+      status: 'open',
+      notes: null,
+      completedAt: null,
+      createdAt: null,
+      updatedAt: null,
+    })),
+    oneMoves: v1.oneMoves.map((record) => ({ ...record, targetType: 'catalog' })),
+    needsMe: [],
+  };
+}
+
 export const migrationPlan: MigrationPlan = {
   currentVersion: CURRENT_SCHEMA_VERSION,
-  migrations: new Map(),
-  validators: new Map([[1, (data: unknown) => AppStateSchema.safeParse(data).success]]),
+  migrations: new Map([[1, migrateV1ToV2]]),
+  validators: new Map([
+    [1, isValidV1AppState],
+    [2, (data: unknown) => AppStateSchema.safeParse(data).success],
+  ]),
 };
 
 export function migrateStoredState(

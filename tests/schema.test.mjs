@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 import { approveDailyLoadMove } from '../src/domain/dailyLoadDecisions.ts';
 import { validateAppState } from '../src/domain/state.ts';
-import { decodeStoredState } from '../src/persistence/envelope.ts';
+import { CURRENT_SCHEMA_VERSION, decodeStoredState } from '../src/persistence/envelope.ts';
 import { createEmptyState } from '../src/state/initialState.ts';
 import { TZ, ctx, demoState, onboardedState } from './support/fixtures.mjs';
 
@@ -63,7 +63,7 @@ describe('Schema v1 validation', () => {
 
   test('a stored __proto__ key is rejected and never reaches Object.prototype', () => {
     const state = demoState();
-    const raw = `{"schemaVersion":1,"appVersion":"t","savedAt":"2026-09-16T12:00:00.000Z","writeSeq":1,"data":{"__proto__":{"polluted":true},${JSON.stringify(state).slice(1)}}`;
+    const raw = `{"schemaVersion":${CURRENT_SCHEMA_VERSION},"appVersion":"t","savedAt":"2026-09-16T12:00:00.000Z","writeSeq":1,"data":{"__proto__":{"polluted":true},${JSON.stringify(state).slice(1)}}`;
     const decoded = decodeStoredState(raw);
 
     assert.equal(decoded.kind, 'invalid');

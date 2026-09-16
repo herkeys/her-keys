@@ -157,7 +157,7 @@ describe('Recovery from unusable stored state', () => {
   }
 
   test('a newer schema version is left untouched: no primary writes for the whole session', async () => {
-    const newer = rawEnvelope({ writtenBy: 'a newer app' }, 2);
+    const newer = rawEnvelope({ writtenBy: 'a newer app' }, 99);
     const h = harness({ initial: { [STORAGE_KEYS.primary]: newer } });
     const store = await launch(h);
     const snapshot = store.getSnapshot();

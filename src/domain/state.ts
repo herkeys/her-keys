@@ -45,6 +45,10 @@ const Scope = z.enum(VISIBILITY_SCOPES);
 
 const Minutes = z.number().int().min(-1440).max(1440);
 
+const TravelMinutes = z.number().int().min(0).max(240).nullable();
+
+const Notes = z.string().max(1000).nullable();
+
 export const HouseholdSchema = z.strictObject({
   id: Id,
   displayName: z.string().max(80).nullable(),
@@ -84,6 +88,17 @@ export const CalendarEventSchema = z
     startsAt: InstantSchema,
     endsAt: InstantSchema,
     location: z.string().max(200).nullable(),
+    notes: Notes,
+    /** FIXED can never be moved by a recommendation; only FLEXIBLE can. */
+    commitment: z.enum(['fixed', 'flexible']),
+    /** Removed rather than deleted, so a past action record can still name it. */
+    status: z.enum(['active', 'removed']),
+    travelMinutesBefore: TravelMinutes,
+    travelMinutesAfter: TravelMinutes,
+    preparationMinutes: TravelMinutes,
+    source: z.enum(['user', 'demo']),
+    createdAt: InstantSchema.nullable(),
+    updatedAt: InstantSchema.nullable(),
     scope: Scope,
   })
   .refine((event) => Date.parse(event.endsAt) > Date.parse(event.startsAt), {
@@ -97,17 +112,28 @@ export const TaskPlanSchema = z.discriminatedUnion('kind', [
   z.strictObject({ kind: z.literal('timed'), startsAt: InstantSchema }),
 ]);
 
-export const TaskSchema = z.strictObject({
-  id: Id,
-  title: NonBlank(200),
-  categoryId: Id,
-  subjectMemberId: Id.nullable(),
-  durationMinutes: z.number().int().min(0).max(1440),
-  commitment: z.enum(['fixed', 'flexible']),
-  dueDate: LocalDateSchema.nullable(),
-  plan: TaskPlanSchema,
-  scope: Scope,
-});
+export const TaskSchema = z
+  .strictObject({
+    id: Id,
+    title: NonBlank(200),
+    categoryId: Id,
+    subjectMemberId: Id.nullable(),
+    durationMinutes: z.number().int().min(0).max(1440),
+    commitment: z.enum(['fixed', 'flexible']),
+    dueDate: LocalDateSchema.nullable(),
+    plan: TaskPlanSchema,
+    notes: Notes,
+    status: z.enum(['open', 'completed', 'archived']),
+    completedAt: InstantSchema.nullable(),
+    createdAt: InstantSchema.nullable(),
+    updatedAt: InstantSchema.nullable(),
+    scope: Scope,
+  })
+  .superRefine((task, ctx) => {
+    if ((task.status === 'completed') !== (task.completedAt !== null)) {
+      ctx.addIssue({ code: 'custom', message: 'completedAt must be set exactly when completed', path: ['completedAt'] });
+    }
+  });
 
 export const HouseholdSystemSchema = z.strictObject({
   id: Id,
@@ -140,6 +166,8 @@ export const OneMoveRecordSchema = z
     forDate: LocalDateSchema,
     /** The catalog move offered; null when nothing was offered because the day was already overloaded. */
     targetId: Id.nullable(),
+    /** Which list `targetId` looks up in — the hardcoded demo catalog, or a real task/Needs Me item. */
+    targetType: z.enum(['catalog', 'task', 'needsMe']),
     status: z.enum(['selected', 'completed', 'withheld']),
     decidedAt: InstantSchema,
     completedAt: InstantSchema.nullable(),
@@ -153,6 +181,21 @@ export const OneMoveRecordSchema = z
       ctx.addIssue({ code: 'custom', message: 'completedAt must be set exactly when completed', path: ['completedAt'] });
     }
   });
+
+/**
+ * A low-friction capture for something entering her head that she hasn't
+ * organized yet — a title is all it needs. Category and due date are add-ons
+ * for later, never required at capture time.
+ */
+export const NeedsMeItemSchema = z.strictObject({
+  id: Id,
+  title: NonBlank(200),
+  status: z.enum(['open', 'resolved']),
+  dueDate: LocalDateSchema.nullable(),
+  categoryId: Id.nullable(),
+  createdAt: InstantSchema,
+  scope: z.literal('personal'),
+});
 
 /** Structured Talk It Out state only: which topic, and which scripted answer to which question. Never her words. */
 export const DiscoveryRecordSchema = z.strictObject({
@@ -200,7 +243,74 @@ export const KeepPlanActionSchema = z.strictObject({
   reason: z.strictObject({ ...TransitionWindow, recommendedTaskId: Id.nullable() }),
 });
 
-export const ActionRecordSchema = z.discriminatedUnion('type', [MoveTaskActionSchema, KeepPlanActionSchema]);
+/** Moving a flexible event works like moving a task, but the "before"/"after" are its own start and end. */
+export const MoveEventActionSchema = z.strictObject({
+  ...actionBase,
+  type: z.literal('daily_load.move_event'),
+  approval: z.literal('approved'),
+  targetId: Id,
+  reason: z.strictObject({ ...TransitionWindow }),
+  before: z.strictObject({ startsAt: InstantSchema, endsAt: InstantSchema }),
+  after: z.strictObject({ startsAt: InstantSchema, endsAt: InstantSchema }),
+});
+
+const CapacityReason = {
+  code: z.literal('capacity_pressure'),
+  totalAvailableMinutes: Minutes,
+  totalFlexibleNeededMinutes: Minutes,
+  shortfallMinutes: Minutes,
+};
+
+export const DropTaskActionSchema = z.strictObject({
+  ...actionBase,
+  type: z.literal('daily_load.drop_task'),
+  approval: z.literal('approved'),
+  targetId: Id,
+  reason: z.strictObject({ ...CapacityReason }),
+  before: z.strictObject({ status: z.literal('open') }),
+  after: z.strictObject({ status: z.literal('archived') }),
+});
+
+export const ShortenTaskActionSchema = z.strictObject({
+  ...actionBase,
+  type: z.literal('daily_load.shorten_task'),
+  approval: z.literal('approved'),
+  targetId: Id,
+  reason: z.strictObject({ ...CapacityReason }),
+  before: z.strictObject({ durationMinutes: z.number().int().min(0).max(1440) }),
+  after: z.strictObject({ durationMinutes: z.number().int().min(0).max(1440) }),
+});
+
+export const KeepCapacityPlanActionSchema = z.strictObject({
+  ...actionBase,
+  type: z.literal('daily_load.keep_capacity_plan'),
+  approval: z.literal('declined'),
+  /** No single commitment to point at — the pressure is the day's flexible workload as a whole. */
+  targetId: z.null(),
+  reason: z.strictObject({ ...CapacityReason, consideredTaskId: Id.nullable() }),
+});
+
+/** Converts a flexible task or event to fixed: Her Keys will never again suggest moving, shortening or dropping it. */
+export const ProtectItemActionSchema = z.strictObject({
+  ...actionBase,
+  type: z.literal('daily_load.protect_item'),
+  approval: z.literal('approved'),
+  targetType: z.enum(['task', 'event']),
+  targetId: Id,
+  reason: z.strictObject({ code: z.literal('user_requested_protection') }),
+  before: z.strictObject({ commitment: z.literal('flexible') }),
+  after: z.strictObject({ commitment: z.literal('fixed') }),
+});
+
+export const ActionRecordSchema = z.discriminatedUnion('type', [
+  MoveTaskActionSchema,
+  KeepPlanActionSchema,
+  MoveEventActionSchema,
+  DropTaskActionSchema,
+  ShortenTaskActionSchema,
+  KeepCapacityPlanActionSchema,
+  ProtectItemActionSchema,
+]);
 
 export const AppStateSchema = z.strictObject({
   /** Whether this state began as the fictional demo household or as a real, empty one. */
@@ -215,6 +325,7 @@ export const AppStateSchema = z.strictObject({
   meals: z.array(MealPlanEntrySchema).max(1000),
   onboarding: OnboardingSchema,
   oneMoves: z.array(OneMoveRecordSchema).max(4000),
+  needsMe: z.array(NeedsMeItemSchema).max(1000),
   discovery: DiscoveryRecordSchema.nullable(),
   actions: z.array(ActionRecordSchema).max(10_000),
 });
@@ -230,9 +341,15 @@ export type HouseholdSystem = z.infer<typeof HouseholdSystemSchema>;
 export type MealPlanEntry = z.infer<typeof MealPlanEntrySchema>;
 export type Onboarding = z.infer<typeof OnboardingSchema>;
 export type OneMoveRecord = z.infer<typeof OneMoveRecordSchema>;
+export type NeedsMeItem = z.infer<typeof NeedsMeItemSchema>;
 export type DiscoveryRecord = z.infer<typeof DiscoveryRecordSchema>;
 export type MoveTaskAction = z.infer<typeof MoveTaskActionSchema>;
 export type KeepPlanAction = z.infer<typeof KeepPlanActionSchema>;
+export type MoveEventAction = z.infer<typeof MoveEventActionSchema>;
+export type DropTaskAction = z.infer<typeof DropTaskActionSchema>;
+export type ShortenTaskAction = z.infer<typeof ShortenTaskActionSchema>;
+export type KeepCapacityPlanAction = z.infer<typeof KeepCapacityPlanActionSchema>;
+export type ProtectItemAction = z.infer<typeof ProtectItemActionSchema>;
 export type ActionRecord = z.infer<typeof ActionRecordSchema>;
 export type AppState = z.infer<typeof AppStateSchema>;
 export type DataOrigin = AppState['origin'];
@@ -277,6 +394,7 @@ export function findIntegrityProblems(state: AppState): string[] {
   const categoryIds = new Set(state.categories.map((category) => category.id));
   const taskIds = new Set(state.tasks.map((task) => task.id));
   const eventIds = new Set(state.events.map((event) => event.id));
+  const needsMeIds = new Set(state.needsMe.map((item) => item.id));
 
   requireUnique('member id', [state.user.id, ...state.children.map((child) => child.id)]);
   requireUnique('category id', state.categories.map((category) => category.id));
@@ -289,6 +407,7 @@ export function findIntegrityProblems(state: AppState): string[] {
   requireUnique('meal id', state.meals.map((meal) => meal.id));
   requireUnique('One Move date', state.oneMoves.map((record) => record.forDate));
   requireUnique('One Move id', state.oneMoves.map((record) => record.id));
+  requireUnique('needs-me id', state.needsMe.map((item) => item.id));
   requireUnique('action id', state.actions.map((action) => action.id));
   requireUnique('goal', state.onboarding.goalIds);
   requireUnique('strength', state.onboarding.strengthIds);
@@ -325,9 +444,27 @@ export function findIntegrityProblems(state: AppState): string[] {
   for (const system of state.systems) checkCategory('system', system);
   for (const meal of state.meals) checkCategory('meal', meal);
 
+  for (const item of state.needsMe) {
+    if (item.categoryId !== null && !categoryIds.has(item.categoryId)) {
+      problems.push(`needs-me ${item.id} references missing category ${item.categoryId}`);
+    }
+  }
+
+  for (const record of state.oneMoves) {
+    if (record.targetId === null) continue;
+    if (record.targetType === 'task' && !taskIds.has(record.targetId)) {
+      problems.push(`One Move ${record.id} references missing task ${record.targetId}`);
+    }
+    if (record.targetType === 'needsMe' && !needsMeIds.has(record.targetId)) {
+      problems.push(`One Move ${record.id} references missing needs-me item ${record.targetId}`);
+    }
+  }
+
   for (const action of state.actions) {
-    if (!eventIds.has(action.reason.windowBeforeEventId) || !eventIds.has(action.reason.windowAfterEventId)) {
-      problems.push(`action ${action.id} references a missing event`);
+    if (action.type === 'daily_load.move_task' || action.type === 'daily_load.keep_plan' || action.type === 'daily_load.move_event') {
+      if (!eventIds.has(action.reason.windowBeforeEventId) || !eventIds.has(action.reason.windowAfterEventId)) {
+        problems.push(`action ${action.id} references a missing event`);
+      }
     }
     if (action.type === 'daily_load.move_task' && !taskIds.has(action.targetId)) {
       problems.push(`action ${action.id} references missing task ${action.targetId}`);
@@ -337,6 +474,22 @@ export function findIntegrityProblems(state: AppState): string[] {
       if (action.reason.recommendedTaskId !== null && !taskIds.has(action.reason.recommendedTaskId)) {
         problems.push(`action ${action.id} references missing task ${action.reason.recommendedTaskId}`);
       }
+    }
+    if (action.type === 'daily_load.move_event' && !eventIds.has(action.targetId)) {
+      problems.push(`action ${action.id} references missing event ${action.targetId}`);
+    }
+    if (action.type === 'daily_load.drop_task' && !taskIds.has(action.targetId)) {
+      problems.push(`action ${action.id} references missing task ${action.targetId}`);
+    }
+    if (action.type === 'daily_load.shorten_task' && !taskIds.has(action.targetId)) {
+      problems.push(`action ${action.id} references missing task ${action.targetId}`);
+    }
+    if (action.type === 'daily_load.keep_capacity_plan' && action.reason.consideredTaskId !== null && !taskIds.has(action.reason.consideredTaskId)) {
+      problems.push(`action ${action.id} references missing task ${action.reason.consideredTaskId}`);
+    }
+    if (action.type === 'daily_load.protect_item') {
+      const exists = action.targetType === 'task' ? taskIds.has(action.targetId) : eventIds.has(action.targetId);
+      if (!exists) problems.push(`action ${action.id} references missing ${action.targetType} ${action.targetId}`);
     }
   }
 

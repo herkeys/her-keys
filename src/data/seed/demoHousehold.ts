@@ -36,17 +36,18 @@ interface EventTemplate {
   startMinutes: number;
   endMinutes: number;
   location: string | null;
+  commitment: 'fixed' | 'flexible';
   scope: VisibilityScope;
 }
 
 const eventTemplates: EventTemplate[] = [
-  { id: 'evt-1', title: 'Team status call', categoryId: category.work, subjectMemberId: DEMO_USER_ID, dayOffset: 0, startMinutes: at(9), endMinutes: at(9, 30), location: null, scope: 'professional' },
-  { id: 'evt-2', title: 'Pick up Josie & Theo', categoryId: category.kids, subjectMemberId: DEMO_USER_ID, dayOffset: 0, startMinutes: at(15), endMinutes: at(15, 15), location: 'Lincoln Elementary', scope: 'household' },
-  { id: 'evt-3', title: "Josie's soccer practice", categoryId: category.kids, subjectMemberId: 'child-1', dayOffset: 0, startMinutes: at(16, 30), endMinutes: at(17, 30), location: 'Riverside Field', scope: 'child' },
-  { id: 'evt-4', title: 'Dinner', categoryId: category.meals, subjectMemberId: DEMO_USER_ID, dayOffset: 0, startMinutes: at(18, 30), endMinutes: at(19, 15), location: null, scope: 'household' },
+  { id: 'evt-1', title: 'Team status call', categoryId: category.work, subjectMemberId: DEMO_USER_ID, dayOffset: 0, startMinutes: at(9), endMinutes: at(9, 30), location: null, commitment: 'fixed', scope: 'professional' },
+  { id: 'evt-2', title: 'Pick up Josie & Theo', categoryId: category.kids, subjectMemberId: DEMO_USER_ID, dayOffset: 0, startMinutes: at(15), endMinutes: at(15, 15), location: 'Lincoln Elementary', commitment: 'fixed', scope: 'household' },
+  { id: 'evt-3', title: "Josie's soccer practice", categoryId: category.kids, subjectMemberId: 'child-1', dayOffset: 0, startMinutes: at(16, 30), endMinutes: at(17, 30), location: 'Riverside Field', commitment: 'fixed', scope: 'child' },
+  { id: 'evt-4', title: 'Dinner', categoryId: category.meals, subjectMemberId: DEMO_USER_ID, dayOffset: 0, startMinutes: at(18, 30), endMinutes: at(19, 15), location: null, commitment: 'flexible', scope: 'household' },
 ];
 
-interface TaskTemplate extends Omit<Task, 'dueDate' | 'plan'> {
+interface TaskTemplate extends Omit<Task, 'dueDate' | 'plan' | 'status' | 'notes' | 'completedAt' | 'createdAt' | 'updatedAt'> {
   dueDayOffset: number | null;
   timed: { dayOffset: number; startMinutes: number } | null;
 }
@@ -83,12 +84,25 @@ export function materializeDemoState({ anchorDate, timeZone }: { anchorDate: Loc
     ...event,
     startsAt: instantOn(dayOffset, startMinutes),
     endsAt: instantOn(dayOffset, endMinutes),
+    status: 'active',
+    notes: null,
+    travelMinutesBefore: null,
+    travelMinutesAfter: null,
+    preparationMinutes: null,
+    source: 'demo',
+    createdAt: null,
+    updatedAt: null,
   }));
 
   const tasks: Task[] = taskTemplates.map(({ dueDayOffset, timed, ...task }) => ({
     ...task,
     dueDate: dueDayOffset === null ? null : addDays(anchorDate, dueDayOffset),
     plan: timed ? { kind: 'timed', startsAt: instantOn(timed.dayOffset, timed.startMinutes) } : { kind: 'unplanned' },
+    status: 'open',
+    notes: null,
+    completedAt: null,
+    createdAt: null,
+    updatedAt: null,
   }));
 
   // Birth dates that make each child the scripted age on the anchor day.
@@ -117,6 +131,7 @@ export function materializeDemoState({ anchorDate, timeZone }: { anchorDate: Loc
     meals,
     onboarding: initialOnboarding(),
     oneMoves: [],
+    needsMe: [],
     discovery: null,
     actions: [],
   };

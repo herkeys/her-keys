@@ -20,6 +20,7 @@ export function createEmptyState(timeZone: string): AppState {
     meals: [],
     onboarding: initialOnboarding(),
     oneMoves: [],
+    needsMe: [],
     discovery: null,
     actions: [],
   };

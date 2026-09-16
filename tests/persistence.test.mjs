@@ -70,9 +70,30 @@ describe('Migration seam', () => {
     ]),
   });
 
-  test('schema v1 is current, so v1 data passes through untouched', () => {
+  test('schema v2 is current, so v2 data passes through untouched', () => {
     const state = demoState();
-    assert.deepEqual(migrateStoredState(1, state), { ok: true, data: state });
+    assert.deepEqual(migrateStoredState(2, state), { ok: true, data: state });
+  });
+
+  test('v1 data is migrated to v2 with conservative, honest backfills', () => {
+    const v1Event = { id: 'evt-1', title: 'Team status call', categoryId: 'cat-work', subjectMemberId: 'user-1', startsAt: '2026-09-16T13:00:00.000Z', endsAt: '2026-09-16T13:30:00.000Z', location: null, scope: 'professional' };
+    const v1Task = { id: 'task-1', title: 'Pay orthodontist invoice', categoryId: 'cat-money', subjectMemberId: null, durationMinutes: 10, commitment: 'flexible', dueDate: null, plan: { kind: 'unplanned' }, scope: 'household' };
+    const v1OneMove = { id: 'onemove-2026-09-16', forDate: '2026-09-16', targetId: 'one-move-1', status: 'selected', decidedAt: '2026-09-16T13:00:00.000Z', completedAt: null, scope: 'personal' };
+    const v1State = { ...demoState(), events: [v1Event], tasks: [v1Task], oneMoves: [v1OneMove] };
+    delete v1State.needsMe;
+
+    const migrated = migrateStoredState(1, v1State);
+    assert.equal(migrated.ok, true);
+    // A pre-existing event's commitment is never assumed movable, whatever it actually was.
+    assert.equal(migrated.data.events[0].commitment, 'fixed');
+    assert.equal(migrated.data.events[0].status, 'active');
+    assert.equal(migrated.data.events[0].source, 'demo');
+    assert.equal(migrated.data.events[0].createdAt, null);
+    assert.equal(migrated.data.tasks[0].status, 'open');
+    assert.equal(migrated.data.tasks[0].createdAt, null);
+    assert.equal(migrated.data.oneMoves[0].targetType, 'catalog');
+    assert.deepEqual(migrated.data.needsMe, []);
+    assert.equal(AppStateSchema.safeParse(migrated.data).success, true);
   });
 
   test('older data is carried forward one validated step at a time', () => {
@@ -118,12 +139,12 @@ describe('Repository', () => {
   });
 
   test('newer-version state is preserved and never replaced by an older copy', async () => {
-    const newer = rawEnvelope({ v: 3 }, 3);
-    const h = harness({ initial: { [STORAGE_KEYS.primary]: rawEnvelope({ v: 2 }, 2), [STORAGE_KEYS.future]: newer } });
+    const newer = rawEnvelope({ v: 100 }, 100);
+    const h = harness({ initial: { [STORAGE_KEYS.primary]: rawEnvelope({ v: 99 }, 99), [STORAGE_KEYS.future]: newer } });
 
-    assert.deepEqual(await h.repository.loadAppState(), { kind: 'future_version', storedVersion: 2, preserved: true });
+    assert.deepEqual(await h.repository.loadAppState(), { kind: 'future_version', storedVersion: 99, preserved: true });
     assert.equal(h.storage.contents()[STORAGE_KEYS.future], newer);
-    assert.equal(h.storage.contents()[STORAGE_KEYS.primary], rawEnvelope({ v: 2 }, 2));
+    assert.equal(h.storage.contents()[STORAGE_KEYS.primary], rawEnvelope({ v: 99 }, 99));
   });
 
   test('a storage read failure is reported without discarding anything', async () => {

@@ -7,7 +7,7 @@ import { materializeDemoState } from '../../src/data/seed/demoHousehold.ts';
 import { completeOnboarding, toggleOnboardingOption } from '../../src/domain/onboarding.ts';
 import { resolveOneMoveForToday } from '../../src/domain/oneMove.ts';
 import { createAppStateRepository, STORAGE_KEYS } from '../../src/persistence/appStateRepository.ts';
-import { encodeStoredState } from '../../src/persistence/envelope.ts';
+import { CURRENT_SCHEMA_VERSION, encodeStoredState } from '../../src/persistence/envelope.ts';
 import { createMemoryStorage } from '../../src/persistence/storageAdapter.ts';
 import { createAppStore } from '../../src/state/appStore.ts';
 
@@ -54,8 +54,8 @@ export function startEventAt(state, eventId, hour, minute = 0) {
 export const stored = (state, writeSeq = 1) =>
   encodeStoredState(state, { appVersion: '1.0.0-test', savedAt: '2026-09-16T12:00:00.000Z', writeSeq });
 
-/** Raw envelope text without the encoder's validation — for hostile states. */
-export const rawEnvelope = (data, schemaVersion = 1) =>
+/** Raw envelope text without the encoder's validation — for hostile states. Defaults to the current schema version. */
+export const rawEnvelope = (data, schemaVersion = CURRENT_SCHEMA_VERSION) =>
   JSON.stringify({ schemaVersion, appVersion: '1.0.0-test', savedAt: '2026-09-16T12:00:00.000Z', writeSeq: 1, data });
 
 export function harness({ initial = {}, storageOptions = {}, mode = 'demo', quarantine = true, now = MORNING } = {}) {

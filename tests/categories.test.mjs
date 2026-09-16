@@ -71,7 +71,7 @@ describe('Household categories', () => {
       ...state,
       tasks: [
         ...state.tasks,
-        { id: 'task-vet', title: 'Call the vet', categoryId: pets.id, subjectMemberId: null, durationMinutes: 5, commitment: 'fixed', dueDate: DAY, plan: { kind: 'unplanned' }, scope: 'household' },
+        { id: 'task-vet', title: 'Call the vet', categoryId: pets.id, subjectMemberId: null, durationMinutes: 5, commitment: 'fixed', dueDate: DAY, plan: { kind: 'unplanned' }, notes: null, status: 'open', completedAt: null, createdAt: null, updatedAt: null, scope: 'household' },
       ],
     };
     assert.equal(validateAppState(state).ok, true);

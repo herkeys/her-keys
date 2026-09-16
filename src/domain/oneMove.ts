@@ -61,6 +61,7 @@ export function resolveOneMoveForToday(state: AppState, ctx: TransitionContext):
     id: oneMoveRecordId(ctx.today),
     forDate: ctx.today,
     targetId: withheld ? null : candidate.id,
+    targetType: 'catalog',
     status: withheld ? 'withheld' : 'selected',
     decidedAt: toInstant(ctx.nowMs),
     completedAt: null,
