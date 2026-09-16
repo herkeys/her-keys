@@ -22,7 +22,7 @@ import { computeDailyLoad } from '../src/features/daily-load/computeDailyLoad.ts
 import { describeLoad } from '../src/features/daily-load/describeLoad.ts';
 import { describeDayState } from '../src/features/today/dayState.ts';
 import { createEmptyState } from '../src/state/initialState.ts';
-import { DAY, NEXT_DAY, TZ, ctx } from './support/fixtures.mjs';
+import { DAY, NEXT_DAY, TZ, ctx, onboardedState } from './support/fixtures.mjs';
 
 const at = (hour, minute = 0) => toInstant(zonedTimeToEpochMs(DAY, hour * 60 + minute, TZ));
 
@@ -358,6 +358,21 @@ describe('Build 3 audit — one timing decision per day, events included (B3-AUD
     assert.deepEqual([view.decision, view.appliedMove.eventTitle, view.appliedMove.overlapped], ['moved', 'Errand', false]);
     assert.equal(approveMoveEvent(moved, ctx(), idOf(state, 'Pharmacy')), moved);
     assert.equal(keepDailyLoadPlan(moved, ctx(), null), moved);
+  });
+
+  test('keeping the plan is the day’s decision too: nothing is recorded or moved on top of it, though the day stays tight', () => {
+    const state = squeezed();
+    const kept = keepDailyLoadPlan(state, ctx(), null);
+    assert.equal(dailyLoadDecisionFor(kept, DAY).decision, 'kept');
+    assert.notEqual(verdict(kept).issues.focus, null, 'the squeeze is still there after keeping the plan');
+    assert.equal(keepDailyLoadPlan(kept, ctx(), null), kept, 'a second keep adds nothing');
+    assert.equal(approveMoveEvent(kept, ctx(), idOf(state, 'Errand')), kept);
+    assert.equal(approveDailyLoadMove(kept, ctx(), idOf(state, 'Call back')), kept);
+
+    // The seeded day stays tight after a keep, with its task still a live candidate: only the gate refuses the move.
+    const keptDemo = keepDailyLoadPlan(onboardedState(), ctx(), 'task-2');
+    assert.ok(verdict(keptDemo).issues.focus.candidates.some((c) => c.task.id === 'task-2'));
+    assert.equal(approveDailyLoadMove(keptDemo, ctx(), 'task-2'), keptDemo);
   });
 
   test('after a task move, an event move is refused the same day', () => {
