@@ -1,10 +1,12 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { AppText, Button, ChipToggle, Overline, Screen, TextField } from '../../design/components';
 import { colors, spacing } from '../../design/tokens';
 import { addEvent, removeEvent, updateEvent } from '../../domain/events';
 import { epochMsOf, isLocalDate, logicalDateAt, toInstant, wallClockMinutesAt, zonedTimeToEpochMs } from '../../domain/logicalDay';
+import { FIELD_LIMITS } from '../../domain/state';
+import type { Transition } from '../../state/appStore';
 import { useAppStore, useHouseholdState } from '../../store/AppStateProvider';
 import { useHousehold } from '../../store/useHousehold';
 
@@ -20,11 +22,12 @@ function minutesOfTimeString(time: string): number {
   return hour * 60 + minute;
 }
 
-/** An empty string, or a non-negative whole number of minutes — never anything invented in between. */
+/** An empty string, or a whole number of minutes the store accepts — never anything invented in between. */
 function parseOptionalMinutes(value: string): { ok: true; minutes: number | null } | { ok: false } {
   if (value.trim() === '') return { ok: true, minutes: null };
   if (!/^\d+$/.test(value.trim())) return { ok: false };
-  return { ok: true, minutes: Number(value.trim()) };
+  const minutes = Number(value.trim());
+  return minutes <= FIELD_LIMITS.travelMinutes ? { ok: true, minutes } : { ok: false };
 }
 
 export function EventForm({ eventId }: { eventId?: string }) {
@@ -45,8 +48,21 @@ export function EventForm({ eventId }: { eventId?: string }) {
   const [preparation, setPreparation] = useState(existing?.preparationMinutes?.toString() ?? '');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // A second tap in the same frame would otherwise save twice before `busy` renders.
+  const inFlight = useRef(false);
 
-  const onSave = async () => {
+  const save = async (transition: Transition) => {
+    if (inFlight.current) return;
+    inFlight.current = true;
+    setBusy(true);
+    const saved = await store.commit(transition);
+    inFlight.current = false;
+    setBusy(false);
+    if (saved) router.back();
+    else setError('Her Keys couldn’t save that yet. Try again.');
+  };
+
+  const onSave = () => {
     if (title.trim().length === 0) return setError('Give it a title.');
     if (!categoryId) return setError('Choose a category.');
     if (!isLocalDate(date)) return setError('Date should look like YYYY-MM-DD.');
@@ -55,15 +71,16 @@ export function EventForm({ eventId }: { eventId?: string }) {
     const before = parseOptionalMinutes(travelBefore);
     const after = parseOptionalMinutes(travelAfter);
     const prep = parseOptionalMinutes(preparation);
-    if (!before.ok || !after.ok || !prep.ok) return setError('Travel and preparation minutes should be whole numbers, or left blank.');
+    if (!before.ok || !after.ok || !prep.ok) {
+      return setError(`Travel and preparation minutes should be whole numbers up to ${FIELD_LIMITS.travelMinutes}, or left blank.`);
+    }
 
     const startsAt = toInstant(zonedTimeToEpochMs(date, minutesOfTimeString(startTime), state.user.timezone));
     const endsAt = toInstant(zonedTimeToEpochMs(date, minutesOfTimeString(endTime), state.user.timezone));
     if (epochMsOf(endsAt) <= epochMsOf(startsAt)) return setError('The event needs to end after it starts.');
 
     setError(null);
-    setBusy(true);
-    const input = {
+    const edits = {
       title: title.trim(),
       categoryId,
       commitment,
@@ -73,28 +90,26 @@ export function EventForm({ eventId }: { eventId?: string }) {
       travelMinutesBefore: before.minutes,
       travelMinutesAfter: after.minutes,
       preparationMinutes: prep.minutes,
-      scope: 'household' as const,
     };
-    const saved = existing
-      ? await store.commit((current, ctx) => updateEvent(current, ctx, existing.id, input))
-      : await store.commit((current, ctx) => addEvent(current, ctx, input));
-    setBusy(false);
-    if (saved) router.back();
-    else setError('Her Keys couldn’t save that yet. Try again.');
+    // An edit keeps the event's own visibility scope; only a new event gets one.
+    if (existing) return save((current, ctx) => updateEvent(current, ctx, existing.id, edits));
+    return save((current, ctx) => addEvent(current, ctx, { ...edits, scope: 'household' }));
   };
 
-  const onRemove = async () => {
-    if (!existing) return;
-    setBusy(true);
-    const saved = await store.commit((current, ctx) => removeEvent(current, ctx, existing.id));
-    setBusy(false);
-    if (saved) router.back();
-    else setError('Her Keys couldn’t save that yet. Try again.');
+  const onRemove = () => {
+    if (existing) void save((current, ctx) => removeEvent(current, ctx, existing.id));
   };
 
   return (
     <Screen>
-      <TextField label="Title" value={title} onChangeText={setTitle} placeholder="Pick up prescription" autoFocus />
+      <TextField
+        label="Title"
+        value={title}
+        onChangeText={setTitle}
+        placeholder="Pick up prescription"
+        autoFocus
+        maxLength={FIELD_LIMITS.titleLength}
+      />
 
       <Overline style={styles.label}>Category</Overline>
       <View style={styles.chipRow}>
@@ -114,19 +129,19 @@ export function EventForm({ eventId }: { eventId?: string }) {
 
       <View style={styles.row}>
         <View style={styles.rowItem}>
-          <TextField label="Date (YYYY-MM-DD)" value={date} onChangeText={setDate} placeholder={today} />
+          <TextField label="Date (YYYY-MM-DD)" value={date} onChangeText={setDate} placeholder={today} maxLength={10} />
         </View>
       </View>
       <View style={styles.row}>
         <View style={styles.rowItem}>
-          <TextField label="Start (HH:MM)" value={startTime} onChangeText={setStartTime} placeholder="09:00" />
+          <TextField label="Start (HH:MM)" value={startTime} onChangeText={setStartTime} placeholder="09:00" maxLength={5} />
         </View>
         <View style={styles.rowItem}>
-          <TextField label="End (HH:MM)" value={endTime} onChangeText={setEndTime} placeholder="09:30" />
+          <TextField label="End (HH:MM)" value={endTime} onChangeText={setEndTime} placeholder="09:30" maxLength={5} />
         </View>
       </View>
 
-      <TextField label="Location (optional)" value={location} onChangeText={setLocation} placeholder="Lincoln Elementary" />
+      <TextField label="Location (optional)" value={location} onChangeText={setLocation} placeholder="Lincoln Elementary" maxLength={FIELD_LIMITS.locationLength} />
 
       <Overline style={styles.label}>Travel and preparation (optional)</Overline>
       <AppText variant="caption" color={colors.textTertiary} style={styles.hint}>
@@ -134,16 +149,16 @@ export function EventForm({ eventId }: { eventId?: string }) {
       </AppText>
       <View style={styles.row}>
         <View style={styles.rowItem}>
-          <TextField label="Travel before (min)" value={travelBefore} onChangeText={setTravelBefore} keyboardType="number-pad" />
+          <TextField label="Travel before (min)" value={travelBefore} onChangeText={setTravelBefore} keyboardType="number-pad" maxLength={3} />
         </View>
         <View style={styles.rowItem}>
-          <TextField label="Travel after (min)" value={travelAfter} onChangeText={setTravelAfter} keyboardType="number-pad" />
+          <TextField label="Travel after (min)" value={travelAfter} onChangeText={setTravelAfter} keyboardType="number-pad" maxLength={3} />
         </View>
       </View>
-      <TextField label="Preparation (min)" value={preparation} onChangeText={setPreparation} keyboardType="number-pad" />
+      <TextField label="Preparation (min)" value={preparation} onChangeText={setPreparation} keyboardType="number-pad" maxLength={3} />
 
       {error && (
-        <AppText variant="bodySm" color={colors.attention} style={styles.error}>
+        <AppText variant="bodySm" color={colors.attention} style={styles.error} accessibilityRole="alert">
           {error}
         </AppText>
       )}

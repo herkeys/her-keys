@@ -26,7 +26,7 @@ export function KidsOverview() {
       />
 
       <Overline style={styles.labelSpaced}>On your list</Overline>
-      <CategoryTaskList categoryId={kidsCategoryId} emptyLabel="Nothing kids-related on your list today." />
+      <CategoryTaskList categoryId={kidsCategoryId} emptyLabel="Nothing kids-related on your list." />
 
       <AppText variant="caption" color={colors.textTertiary} style={styles.note}>
         Kids feeds the same picture Her Keys uses on Today.

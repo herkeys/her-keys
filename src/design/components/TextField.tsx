@@ -11,10 +11,12 @@ interface TextFieldProps {
   keyboardType?: KeyboardTypeOptions;
   multiline?: boolean;
   autoFocus?: boolean;
+  /** The most characters the stored field accepts, so typing can't run past what can be saved. */
+  maxLength?: number;
 }
 
 /** The one text-entry primitive Build 3's forms need — a labeled, accessible input, plain and keyboard-safe. */
-export function TextField({ label, value, onChangeText, placeholder, error, keyboardType, multiline, autoFocus }: TextFieldProps) {
+export function TextField({ label, value, onChangeText, placeholder, error, keyboardType, multiline, autoFocus, maxLength }: TextFieldProps) {
   return (
     <View style={styles.wrap}>
       <Overline style={styles.label}>{label}</Overline>
@@ -26,6 +28,7 @@ export function TextField({ label, value, onChangeText, placeholder, error, keyb
         keyboardType={keyboardType}
         multiline={multiline}
         autoFocus={autoFocus}
+        maxLength={maxLength}
         accessibilityLabel={label}
         style={[styles.input, multiline ? styles.multiline : null, error ? styles.inputError : null]}
       />

@@ -12,7 +12,7 @@ export function HomeOverview() {
   return (
     <View>
       <Overline style={styles.label}>On your list</Overline>
-      <CategoryTaskList categoryId={homeCategoryId} emptyLabel="Nothing home-related on your list today." />
+      <CategoryTaskList categoryId={homeCategoryId} emptyLabel="Nothing home-related on your list." />
 
       <Overline style={styles.labelSpaced}>Running in the background</Overline>
       <View style={styles.list}>

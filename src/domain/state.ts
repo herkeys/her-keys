@@ -26,6 +26,19 @@ export type VisibilityScope = (typeof VISIBILITY_SCOPES)[number];
 export const ONBOARDING_STEPS = ['goals', 'strengths', 'struggles', 'talk-it-out', 'profile', 'plus'] as const;
 export type OnboardingStep = (typeof ONBOARDING_STEPS)[number];
 
+/**
+ * Upper bounds the stored shape enforces. Capture screens read the same
+ * numbers so they can refuse an entry up front instead of offering a save the
+ * store would reject.
+ */
+export const FIELD_LIMITS = {
+  titleLength: 200,
+  locationLength: 200,
+  notesLength: 1000,
+  durationMinutes: 1440,
+  travelMinutes: 240,
+} as const;
+
 /** Letters, digits and `._:-`, starting with a letter or digit — never `__proto__` or similar. */
 const ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
 
@@ -45,9 +58,13 @@ const Scope = z.enum(VISIBILITY_SCOPES);
 
 const Minutes = z.number().int().min(-1440).max(1440);
 
-const TravelMinutes = z.number().int().min(0).max(240).nullable();
+const TravelMinutes = z.number().int().min(0).max(FIELD_LIMITS.travelMinutes).nullable();
 
-const Notes = z.string().max(1000).nullable();
+const Notes = z.string().max(FIELD_LIMITS.notesLength).nullable();
+
+const Title = NonBlank(FIELD_LIMITS.titleLength);
+
+const DurationMinutes = z.number().int().min(0).max(FIELD_LIMITS.durationMinutes);
 
 export const HouseholdSchema = z.strictObject({
   id: Id,
@@ -82,12 +99,12 @@ export const HouseholdCategorySchema = z.strictObject({
 export const CalendarEventSchema = z
   .strictObject({
     id: Id,
-    title: NonBlank(200),
+    title: Title,
     categoryId: Id,
     subjectMemberId: Id.nullable(),
     startsAt: InstantSchema,
     endsAt: InstantSchema,
-    location: z.string().max(200).nullable(),
+    location: z.string().max(FIELD_LIMITS.locationLength).nullable(),
     notes: Notes,
     /** FIXED can never be moved by a recommendation; only FLEXIBLE can. */
     commitment: z.enum(['fixed', 'flexible']),
@@ -115,10 +132,10 @@ export const TaskPlanSchema = z.discriminatedUnion('kind', [
 export const TaskSchema = z
   .strictObject({
     id: Id,
-    title: NonBlank(200),
+    title: Title,
     categoryId: Id,
     subjectMemberId: Id.nullable(),
-    durationMinutes: z.number().int().min(0).max(1440),
+    durationMinutes: DurationMinutes,
     commitment: z.enum(['fixed', 'flexible']),
     dueDate: LocalDateSchema.nullable(),
     plan: TaskPlanSchema,
@@ -189,7 +206,7 @@ export const OneMoveRecordSchema = z
  */
 export const NeedsMeItemSchema = z.strictObject({
   id: Id,
-  title: NonBlank(200),
+  title: Title,
   status: z.enum(['open', 'resolved']),
   dueDate: LocalDateSchema.nullable(),
   categoryId: Id.nullable(),
@@ -277,8 +294,8 @@ export const ShortenTaskActionSchema = z.strictObject({
   approval: z.literal('approved'),
   targetId: Id,
   reason: z.strictObject({ ...CapacityReason }),
-  before: z.strictObject({ durationMinutes: z.number().int().min(0).max(1440) }),
-  after: z.strictObject({ durationMinutes: z.number().int().min(0).max(1440) }),
+  before: z.strictObject({ durationMinutes: DurationMinutes }),
+  after: z.strictObject({ durationMinutes: DurationMinutes }),
 });
 
 export const KeepCapacityPlanActionSchema = z.strictObject({

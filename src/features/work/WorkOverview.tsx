@@ -30,7 +30,7 @@ export function WorkOverview() {
       )}
 
       <Overline style={styles.labelSpaced}>On your list</Overline>
-      <CategoryTaskList categoryId={workCategoryId} emptyLabel="Nothing work-related on your list today." />
+      <CategoryTaskList categoryId={workCategoryId} emptyLabel="Nothing work-related on your list." />
 
       <AppText variant="caption" color={colors.textTertiary} style={styles.note}>
         Work hours shape how much room the rest of the day has.

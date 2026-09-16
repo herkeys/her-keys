@@ -12,7 +12,7 @@ export function MoneyOverview() {
   return (
     <View>
       <Overline style={styles.label}>Needs a decision</Overline>
-      <CategoryTaskList categoryId={moneyCategoryId} emptyLabel="Nothing financial needs attention today." />
+      <CategoryTaskList categoryId={moneyCategoryId} emptyLabel="Nothing financial on your list." />
 
       <Overline style={styles.labelSpaced}>Running without you</Overline>
       <StatusList items={moneySystems.map((s) => ({ key: s.id, label: s.name, value: 'Working' }))} />

@@ -2,34 +2,37 @@ import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { AppText, Button, StatusList } from '../../design/components';
 import { colors, spacing } from '../../design/tokens';
-import { useSchedule } from '../../store/ScheduleContext';
+import { openTasksInCategory } from '../../domain/taskLists';
+import { useHouseholdState } from '../../store/AppStateProvider';
+import { needsAttention, openTaskLabel } from './openTaskLabel';
 
 interface CategoryTaskListProps {
   categoryId: string | null;
-  /** Shown when there's nothing on today's radar for this category. */
+  /** Shown when nothing in this category is open. */
   emptyLabel: string;
 }
 
 /**
  * The one shared "tasks for this category" block every Life sub-screen uses:
- * today's open tasks in the category, press-to-edit, with a quick "Add task"
- * pre-filled to the same category. The same list Daily Load reads — no
- * separate source of truth for what's on her list today.
+ * every open task in the category — due or overdue first, then upcoming, then
+ * the ones with no date — press-to-edit, with a quick "Add task" pre-filled to
+ * the same category. Today and Daily Load still read only today's slice; this
+ * list is where everything else she has saved stays reachable.
  */
 export function CategoryTaskList({ categoryId, emptyLabel }: CategoryTaskListProps) {
-  const { tasks } = useSchedule();
-  const items = categoryId ? tasks.filter((task) => task.categoryId === categoryId) : [];
+  const { state, today } = useHouseholdState();
+  const entries = categoryId ? openTasksInCategory(state, categoryId, today) : [];
 
   return (
     <View>
-      {items.length > 0 ? (
+      {entries.length > 0 ? (
         <StatusList
-          items={items.map((task) => ({
-            key: task.id,
-            label: task.title,
-            value: task.dueToday ? 'Due today' : 'Flexible',
-            needsAttention: task.dueToday,
-            onPress: () => router.push({ pathname: '/task-editor', params: { taskId: task.id } }),
+          items={entries.map((entry) => ({
+            key: entry.task.id,
+            label: entry.task.title,
+            value: openTaskLabel(entry, today),
+            needsAttention: needsAttention(entry),
+            onPress: () => router.push({ pathname: '/task-editor', params: { taskId: entry.task.id } }),
           }))}
         />
       ) : (

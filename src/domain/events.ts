@@ -1,6 +1,7 @@
 import type { TransitionContext } from './context';
 import { toInstant } from './logicalDay';
 import type { CalendarEvent, AppState, VisibilityScope } from './state';
+import { pickFields } from './tasks';
 
 /**
  * Real event capture. FIXED vs FLEXIBLE is her own call at capture time —
@@ -48,29 +49,30 @@ export function addEvent(state: AppState, ctx: TransitionContext, input: AddEven
   return { ...state, events: [...state.events, event] };
 }
 
-export type UpdateEventInput = Partial<
-  Pick<
-    CalendarEvent,
-    | 'title'
-    | 'categoryId'
-    | 'subjectMemberId'
-    | 'startsAt'
-    | 'endsAt'
-    | 'location'
-    | 'notes'
-    | 'commitment'
-    | 'travelMinutesBefore'
-    | 'travelMinutesAfter'
-    | 'preparationMinutes'
-  >
->;
+const EDITABLE_EVENT_FIELDS = [
+  'title',
+  'categoryId',
+  'subjectMemberId',
+  'startsAt',
+  'endsAt',
+  'location',
+  'notes',
+  'commitment',
+  'travelMinutesBefore',
+  'travelMinutesAfter',
+  'preparationMinutes',
+] as const;
 
+export type UpdateEventInput = Partial<Pick<CalendarEvent, (typeof EDITABLE_EVENT_FIELDS)[number]>>;
+
+/** Only the editable fields are taken from the patch — an edit never rewrites an event's visibility scope, status, source or history. */
 export function updateEvent(state: AppState, ctx: TransitionContext, eventId: string, patch: UpdateEventInput): AppState {
   const current = state.events.find((event) => event.id === eventId);
   if (!current) return state;
+  const edits = pickFields(patch, EDITABLE_EVENT_FIELDS);
   return {
     ...state,
-    events: state.events.map((event) => (event.id === eventId ? { ...event, ...patch, updatedAt: toInstant(ctx.nowMs) } : event)),
+    events: state.events.map((event) => (event.id === eventId ? { ...event, ...edits, updatedAt: toInstant(ctx.nowMs) } : event)),
   };
 }
 

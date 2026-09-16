@@ -43,17 +43,30 @@ export function addTask(state: AppState, ctx: TransitionContext, input: AddTaskI
   return { ...state, tasks: [...state.tasks, task] };
 }
 
-export type UpdateTaskInput = Partial<
-  Pick<Task, 'title' | 'categoryId' | 'subjectMemberId' | 'durationMinutes' | 'commitment' | 'dueDate' | 'plan' | 'notes'>
->;
+const EDITABLE_TASK_FIELDS = ['title', 'categoryId', 'subjectMemberId', 'durationMinutes', 'commitment', 'dueDate', 'plan', 'notes'] as const;
 
+export type UpdateTaskInput = Partial<Pick<Task, (typeof EDITABLE_TASK_FIELDS)[number]>>;
+
+/**
+ * Only the editable fields are taken from the patch, whatever else the caller
+ * passed — an edit never rewrites a task's visibility scope, status or history.
+ */
 export function updateTask(state: AppState, ctx: TransitionContext, taskId: string, patch: UpdateTaskInput): AppState {
   const current = state.tasks.find((task) => task.id === taskId);
   if (!current) return state;
+  const edits = pickFields(patch, EDITABLE_TASK_FIELDS);
   return {
     ...state,
-    tasks: state.tasks.map((task) => (task.id === taskId ? { ...task, ...patch, updatedAt: toInstant(ctx.nowMs) } : task)),
+    tasks: state.tasks.map((task) => (task.id === taskId ? { ...task, ...edits, updatedAt: toInstant(ctx.nowMs) } : task)),
   };
+}
+
+export function pickFields<T extends object, K extends keyof T>(patch: T, fields: readonly K[]): Partial<Pick<T, K>> {
+  const picked: Partial<Pick<T, K>> = {};
+  for (const field of fields) {
+    if (Object.prototype.hasOwnProperty.call(patch, field) && patch[field] !== undefined) picked[field] = patch[field];
+  }
+  return picked;
 }
 
 export function completeTask(state: AppState, ctx: TransitionContext, taskId: string): AppState {
@@ -68,10 +81,14 @@ export function completeTask(state: AppState, ctx: TransitionContext, taskId: st
   };
 }
 
-/** Intentional removal, kept rather than deleted: a past action record can still name it. */
+/**
+ * Intentional removal, kept rather than deleted: a past action record can
+ * still name it. Only an open task can be removed — a completed one keeps its
+ * completion (an archived task carries no completion time).
+ */
 export function archiveTask(state: AppState, ctx: TransitionContext, taskId: string): AppState {
   const current = state.tasks.find((task) => task.id === taskId);
-  if (!current || current.status === 'archived') return state;
+  if (!current || current.status !== 'open') return state;
   return {
     ...state,
     tasks: state.tasks.map((task) => (task.id === taskId ? { ...task, status: 'archived', updatedAt: toInstant(ctx.nowMs) } : task)),

@@ -21,10 +21,8 @@ export function NeedsMeList() {
 
   const onResolve = (id: string) => store.dispatch((current) => resolveNeedsMeItem(current, id));
 
-  const onPromote = async (id: string, title: string) => {
-    await store.commit((current) => resolveNeedsMeItem(current, id));
-    router.push({ pathname: '/task-editor', params: { title } });
-  };
+  // The item stays open until the task is actually saved; the editor resolves it in the same change.
+  const onPromote = (id: string) => router.push({ pathname: '/task-editor', params: { needsMeId: id } });
 
   return (
     <View style={styles.list}>
@@ -32,8 +30,21 @@ export function NeedsMeList() {
         <Card key={item.id} tone="surface" style={styles.card}>
           <AppText variant="title">{item.title}</AppText>
           <View style={styles.row}>
-            <Button label="Promote to task" size="sm" onPress={() => onPromote(item.id, item.title)} style={styles.button} />
-            <Button label="Resolved" variant="ghost" size="sm" onPress={() => onResolve(item.id)} style={styles.button} />
+            <Button
+              label="Promote to task"
+              size="sm"
+              onPress={() => onPromote(item.id)}
+              accessibilityHint={`Opens a new task for “${item.title}”`}
+              style={styles.button}
+            />
+            <Button
+              label="Resolved"
+              variant="ghost"
+              size="sm"
+              onPress={() => onResolve(item.id)}
+              accessibilityHint={`Marks “${item.title}” as resolved`}
+              style={styles.button}
+            />
           </View>
         </Card>
       ))}

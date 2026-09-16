@@ -2,14 +2,16 @@ import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { AppText, Overline, Screen, StatusList } from '../../../src/design/components';
 import { colors, spacing } from '../../../src/design/tokens';
+import { openTasksWithoutList } from '../../../src/domain/taskLists';
 import { NeedsMeQuickAdd } from '../../../src/features/life/NeedsMeQuickAdd';
 import { useLifeStatus } from '../../../src/features/life/useLifeStatus';
 import { useHouseholdState } from '../../../src/store/AppStateProvider';
 
 export default function LifeHub() {
   const statuses = useLifeStatus();
-  const { state } = useHouseholdState();
+  const { state, today } = useHouseholdState();
   const openNeedsMe = state.needsMe.filter((item) => item.status === 'open');
+  const otherOpenTasks = openTasksWithoutList(state, today).length;
 
   return (
     <Screen>
@@ -32,6 +34,17 @@ export default function LifeHub() {
             needsAttention: s.needsAttention,
             onPress: () => router.push(s.route),
           })),
+          // One row, not a list: everything saved in a category without its own screen stays reachable.
+          ...(otherOpenTasks > 0
+            ? [
+                {
+                  key: 'other-tasks',
+                  label: 'Other open tasks',
+                  value: `${otherOpenTasks} open`,
+                  onPress: () => router.push('/life/other-tasks'),
+                },
+              ]
+            : []),
           {
             key: 'needs-me',
             label: 'Needs Me',

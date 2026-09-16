@@ -1,83 +1,96 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { AppText, Button, ChipToggle, Overline, Screen, TextField } from '../../design/components';
 import { colors, spacing } from '../../design/tokens';
 import { isLocalDate } from '../../domain/logicalDay';
+import { promoteNeedsMeItem, promotionDefaults } from '../../domain/needsMe';
+import { FIELD_LIMITS } from '../../domain/state';
 import { archiveTask, completeTask, updateTask, addTask } from '../../domain/tasks';
+import type { Transition } from '../../state/appStore';
 import { useAppStore, useHouseholdState } from '../../store/AppStateProvider';
 import { useHousehold } from '../../store/useHousehold';
 
 export function TaskForm({
   taskId,
   initialCategoryId,
-  initialTitle,
+  needsMeId,
 }: {
   taskId?: string;
   initialCategoryId?: string;
-  initialTitle?: string;
+  /** Promoting a Needs Me item: its details prefill the form, and it is resolved only when this task is saved. */
+  needsMeId?: string;
 }) {
   const store = useAppStore();
   const { state } = useHouseholdState();
   const { categories } = useHousehold();
   const existing = taskId ? (state.tasks.find((task) => task.id === taskId) ?? null) : null;
+  const promotion = !existing && needsMeId ? promotionDefaults(state, needsMeId) : null;
 
-  const [title, setTitle] = useState(existing?.title ?? initialTitle ?? '');
-  const [categoryId, setCategoryId] = useState(existing?.categoryId ?? initialCategoryId ?? categories[0]?.id ?? '');
+  const [title, setTitle] = useState(existing?.title ?? promotion?.title ?? '');
+  const [categoryId, setCategoryId] = useState(existing?.categoryId ?? promotion?.categoryId ?? initialCategoryId ?? categories[0]?.id ?? '');
   const [commitment, setCommitment] = useState<'fixed' | 'flexible'>(existing?.commitment ?? 'flexible');
-  const [dueDate, setDueDate] = useState(existing?.dueDate ?? '');
+  const [dueDate, setDueDate] = useState(existing?.dueDate ?? promotion?.dueDate ?? '');
   const [durationMinutes, setDurationMinutes] = useState(existing ? String(existing.durationMinutes) : '15');
   const [notes, setNotes] = useState(existing?.notes ?? '');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // A second tap in the same frame would otherwise save twice before `busy` renders.
+  const inFlight = useRef(false);
 
-  const onSave = async () => {
+  const save = async (transition: Transition) => {
+    if (inFlight.current) return;
+    inFlight.current = true;
+    setBusy(true);
+    const saved = await store.commit(transition);
+    inFlight.current = false;
+    setBusy(false);
+    if (saved) router.back();
+    else setError('Her Keys couldn’t save that yet. Try again.');
+  };
+
+  const onSave = () => {
     if (title.trim().length === 0) return setError('Give it a title.');
     if (!categoryId) return setError('Choose a category.');
     if (dueDate.trim() !== '' && !isLocalDate(dueDate.trim())) return setError('Due date should look like YYYY-MM-DD, or be left blank.');
     const duration = Number(durationMinutes);
-    if (!Number.isInteger(duration) || duration < 0) return setError('Estimated minutes should be a whole number.');
+    if (!/^\d+$/.test(durationMinutes.trim()) || !Number.isInteger(duration) || duration > FIELD_LIMITS.durationMinutes) {
+      return setError(`Estimated minutes should be a whole number from 0 to ${FIELD_LIMITS.durationMinutes}.`);
+    }
 
     setError(null);
-    setBusy(true);
-    const input = {
+    const edits = {
       title: title.trim(),
       categoryId,
       commitment,
       dueDate: dueDate.trim() || null,
       durationMinutes: duration,
       notes: notes.trim() || null,
-      scope: 'household' as const,
     };
-    const saved = existing
-      ? await store.commit((current, ctx) => updateTask(current, ctx, existing.id, input))
-      : await store.commit((current, ctx) => addTask(current, ctx, input));
-    setBusy(false);
-    if (saved) router.back();
-    else setError('Her Keys couldn’t save that yet. Try again.');
+    if (existing) return save((current, ctx) => updateTask(current, ctx, existing.id, edits));
+    const input = { ...edits, scope: 'household' as const };
+    if (promotion && needsMeId) return save((current, ctx) => promoteNeedsMeItem(current, ctx, needsMeId, input));
+    return save((current, ctx) => addTask(current, ctx, input));
   };
 
-  const onComplete = async () => {
-    if (!existing) return;
-    setBusy(true);
-    const saved = await store.commit((current, ctx) => completeTask(current, ctx, existing.id));
-    setBusy(false);
-    if (saved) router.back();
-    else setError('Her Keys couldn’t save that yet. Try again.');
+  const onComplete = () => {
+    if (existing) void save((current, ctx) => completeTask(current, ctx, existing.id));
   };
 
-  const onArchive = async () => {
-    if (!existing) return;
-    setBusy(true);
-    const saved = await store.commit((current, ctx) => archiveTask(current, ctx, existing.id));
-    setBusy(false);
-    if (saved) router.back();
-    else setError('Her Keys couldn’t save that yet. Try again.');
+  const onArchive = () => {
+    if (existing) void save((current, ctx) => archiveTask(current, ctx, existing.id));
   };
 
   return (
     <Screen>
-      <TextField label="Title" value={title} onChangeText={setTitle} placeholder="Return library books" autoFocus />
+      <TextField
+        label="Title"
+        value={title}
+        onChangeText={setTitle}
+        placeholder="Return library books"
+        autoFocus
+        maxLength={FIELD_LIMITS.titleLength}
+      />
 
       <Overline style={styles.label}>Category</Overline>
       <View style={styles.chipRow}>
@@ -92,12 +105,12 @@ export function TaskForm({
         <ChipToggle label="Fixed" selected={commitment === 'fixed'} onPress={() => setCommitment('fixed')} />
       </View>
 
-      <TextField label="Due date (optional, YYYY-MM-DD)" value={dueDate} onChangeText={setDueDate} placeholder="No due date" />
-      <TextField label="Estimated minutes" value={durationMinutes} onChangeText={setDurationMinutes} keyboardType="number-pad" />
-      <TextField label="Notes (optional)" value={notes} onChangeText={setNotes} multiline />
+      <TextField label="Due date (optional, YYYY-MM-DD)" value={dueDate} onChangeText={setDueDate} placeholder="No due date" maxLength={10} />
+      <TextField label="Estimated minutes" value={durationMinutes} onChangeText={setDurationMinutes} keyboardType="number-pad" maxLength={4} />
+      <TextField label="Notes (optional)" value={notes} onChangeText={setNotes} multiline maxLength={FIELD_LIMITS.notesLength} />
 
       {error && (
-        <AppText variant="bodySm" color={colors.attention} style={styles.error}>
+        <AppText variant="bodySm" color={colors.attention} style={styles.error} accessibilityRole="alert">
           {error}
         </AppText>
       )}
