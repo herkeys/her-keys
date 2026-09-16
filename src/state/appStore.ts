@@ -4,7 +4,7 @@ import type { TransitionContext } from '../domain/context';
 import { deviceTimeZone, logicalDateAt, type LocalDate } from '../domain/logicalDay';
 import { resolveOneMoveForToday } from '../domain/oneMove';
 import type { HydrationStatus } from '../domain/routeAccess';
-import type { AppState } from '../domain/state';
+import { validateAppState, type AppState } from '../domain/state';
 import type { AppStateRepository, LoadOutcome } from '../persistence/appStateRepository';
 import type { InvalidReason } from '../persistence/envelope';
 import { createWriteQueue } from '../persistence/writeQueue';
@@ -55,9 +55,14 @@ export interface AppStore {
   subscribe(listener: () => void): () => void;
   /** Loads once; calling again returns the same promise. */
   hydrate(): Promise<void>;
-  /** Apply a change now and save it in the background. */
+  /** Apply a change now and save it in the background. While a commit is saving, the change waits its turn instead of being dropped. */
   dispatch(transition: Transition): void;
-  /** Save a change before showing it. False means both attempts failed and the change was not shown. */
+  /**
+   * Save a change before showing it. Commits run one after another, each
+   * against the state the previous one left, and each resolves with its own
+   * outcome. False means the change was not shown: both write attempts
+   * failed, or the change would produce a state Her Keys refuses to store.
+   */
   commit(transition: Transition): Promise<boolean>;
   /** Pick up a new logical day if midnight has passed. */
   refreshDay(): void;
@@ -94,7 +99,22 @@ export function createAppStore(options: AppStoreOptions): AppStore {
   };
   const listeners = new Set<() => void>();
   let hydration: Promise<void> | null = null;
-  let committing: Promise<boolean> | null = null;
+  // Commits (and anything that must not interleave with one) run in order on
+  // this chain. `serialized` counts work that is queued or running on it.
+  let chain: Promise<unknown> = Promise.resolve();
+  let serialized = 0;
+
+  function inTurn<T>(work: () => T | Promise<T>): Promise<T> {
+    serialized += 1;
+    const run = chain.then(work);
+    chain = run.then(
+      () => undefined,
+      () => undefined
+    );
+    return run.finally(() => {
+      serialized -= 1;
+    });
+  }
 
   const queue = createWriteQueue<AppState>({
     write: async (state, seq) => {
@@ -120,6 +140,50 @@ export function createAppStore(options: AppStoreOptions): AppStore {
 
   function persist(state: AppState): number | null {
     return snapshot.persistence === 'enabled' ? queue.enqueue(state) : null;
+  }
+
+  /**
+   * Today's One Move is decided the moment there is something to decide from,
+   * not only at launch or midnight — so a real household's first capture gets
+   * its move without a restart. An existing decision is never touched here.
+   */
+  function withTodaysOneMove(next: AppState, ctx: TransitionContext): AppState {
+    return next.oneMoves.some((record) => record.forDate === ctx.today) ? next : resolveOneMoveForToday(next, ctx);
+  }
+
+  function applyNow(transition: Transition): void {
+    const { state, today } = snapshot;
+    if (!state || !today) return;
+    const ctx = contextFor(today);
+    const changed = transition(state, ctx);
+    if (changed === state) return;
+    const next = withTodaysOneMove(changed, ctx);
+    publish({ state: next });
+    persist(next);
+  }
+
+  async function commitNow(transition: Transition): Promise<boolean> {
+    const { state, today } = snapshot;
+    if (!state || !today) return false;
+    const ctx = contextFor(today);
+    const changed = transition(state, ctx);
+    if (changed === state) return true;
+    const next = withTodaysOneMove(changed, ctx);
+    // A change the store would refuse to write is refused here, before it is
+    // queued — it is not a storage failure and must not look like one.
+    if (!validateAppState(next).ok) return false;
+
+    const seq = persist(next);
+    // A future-version/read-failed recovery session is deliberately memory-only,
+    // but must remain usable. There is no storage claim to wait for in that case.
+    if (seq === null) {
+      publish({ state: next });
+      return true;
+    }
+    await queue.flush();
+    if (queue.status().committedSeq !== seq) return false;
+    publish({ state: next });
+    return true;
   }
 
   async function runHydration() {
@@ -223,42 +287,22 @@ export function createAppStore(options: AppStoreOptions): AppStore {
     },
 
     dispatch(transition) {
-      const { state, today } = snapshot;
-      if (!state || !today || committing) return;
-      const next = transition(state, contextFor(today));
-      if (next === state) return;
-      publish({ state: next });
-      persist(next);
+      // While a commit is saving, its change isn't shown yet. Applying this one
+      // now would be overwritten when the commit publishes, so it waits its turn.
+      if (serialized > 0) {
+        void inTurn(() => applyNow(transition));
+        return;
+      }
+      applyNow(transition);
     },
 
     commit(transition) {
-      if (committing) return committing;
-      const { state, today } = snapshot;
-      if (!state || !today) return Promise.resolve(false);
-      const next = transition(state, contextFor(today));
-      if (next === state) return Promise.resolve(true);
-
-      committing = (async () => {
-        const seq = persist(next);
-        // A future-version/read-failed recovery session is deliberately memory-only,
-        // but must remain usable. There is no storage claim to wait for in that case.
-        if (seq === null) {
-          publish({ state: next });
-          return true;
-        }
-        await queue.flush();
-        if (queue.status().committedSeq !== seq) return false;
-        publish({ state: next });
-        return true;
-      })().finally(() => {
-        committing = null;
-      });
-      return committing;
+      return inTurn(() => commitNow(transition));
     },
 
     refreshDay() {
       const { state, today } = snapshot;
-      if (!state || !today || committing) return;
+      if (!state || !today || serialized > 0) return;
       const current = todayFor(state);
       if (current === today) return;
 
@@ -267,31 +311,33 @@ export function createAppStore(options: AppStoreOptions): AppStore {
       if (next !== state) persist(next);
     },
 
-    async reset() {
-      // A memory-only recovery session must not overwrite state it is preserving.
-      if (snapshot.persistence === 'disabled') return false;
+    reset() {
+      return inTurn(async () => {
+        // A memory-only recovery session must not overwrite state it is preserving.
+        if (snapshot.persistence === 'disabled') return false;
 
-      await queue.flush();
-      try {
-        await options.repository.resetAppState();
-      } catch {
-        return false;
-      }
-      queue.enable();
+        await queue.flush();
+        try {
+          await options.repository.resetAppState();
+        } catch {
+          return false;
+        }
+        queue.enable();
 
-      const state = freshState();
-      publish({
-        status: 'ready',
-        state,
-        today: todayFor(state),
-        recovery: null,
-        persistence: 'enabled',
-        persistenceDegraded: false,
-        diagnostics: { ...snapshot.diagnostics, repairs: [] },
+        const state = freshState();
+        publish({
+          status: 'ready',
+          state,
+          today: todayFor(state),
+          recovery: null,
+          persistence: 'enabled',
+          persistenceDegraded: false,
+          diagnostics: { ...snapshot.diagnostics, repairs: [] },
+        });
+        persist(state);
+        await queue.flush();
+        return true;
       });
-      persist(state);
-      await queue.flush();
-      return true;
     },
 
     flush: () => queue.flush(),
