@@ -2,7 +2,7 @@
 
 **Branch:** `build/03-real-life-daily-load`
 **Base SHA:** `a546ec274709d503d43bd18f5a9185a66caf594d` (Build 2.5 monetization foundation)
-**Final SHA:** `3cf331e16d4fbef25b9066957b4a46c5e41db025` (code) — this documentation commit follows it; see repository log for the exact hash including this file.
+**Final SHA:** `8312372682e829814c90afa96e38db027cabe979` (this documentation commit; `3cf331e16d4fbef25b9066957b4a46c5e41db025` is the last code commit it documents)
 **Not pushed. No PR. No merge.**
 
 ---
