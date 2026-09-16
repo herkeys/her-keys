@@ -9,6 +9,6 @@ export interface OneMoveItem {
   observation: string;
   action: string;
   effect: OneMoveEffect;
-  /** Kept small on purpose — a One Move should read as doable right now. */
-  estimatedMinutes: number;
+  /** Kept small on purpose — a One Move should read as doable right now. Absent rather than guessed when there's no real estimate behind it (a Needs Me item, for instance). */
+  estimatedMinutes?: number;
 }

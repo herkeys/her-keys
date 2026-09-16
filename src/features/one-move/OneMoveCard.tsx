@@ -46,9 +46,11 @@ export function OneMoveCard() {
     <Card tone="accent" style={styles.card}>
       <View style={styles.header}>
         <Overline color={colors.accent}>One move</Overline>
-        <AppText variant="micro" color={colors.textTertiary}>
-          ABOUT {move.estimatedMinutes} MINUTES
-        </AppText>
+        {move.estimatedMinutes != null && (
+          <AppText variant="micro" color={colors.textTertiary}>
+            ABOUT {move.estimatedMinutes} MINUTES
+          </AppText>
+        )}
       </View>
 
       <AppText variant="title" style={styles.action}>
