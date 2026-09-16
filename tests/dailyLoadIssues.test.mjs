@@ -43,9 +43,22 @@ describe('Direct overlap', () => {
     assert.deepEqual([issues[0].eventAId, issues[0].eventBId, issues[0].overlapMinutes], ['a', 'b', 30]);
   });
 
-  test('a flexible event overlapping a fixed one is not a direct-overlap issue — nothing here can be safely automated only for two fixed items', () => {
+  // Owner decision in the Build 3 audit (B3-AUD-006): a double booking is flagged whatever the commitments are;
+  // only the flexible side of a fixed/flexible pair is ever offered for a move.
+  test('a flexible event overlapping a fixed one is an overlap, and only the flexible side is movable', () => {
     const issues = detectOverlaps([event('a', at(15), at(16), { commitment: 'fixed' }), event('b', at(15, 30), at(16), { commitment: 'flexible' })]);
-    assert.deepEqual(issues, []);
+    assert.equal(issues.length, 1);
+    assert.deepEqual([issues[0].overlapMinutes, issues[0].movableEventId], [30, 'b']);
+  });
+
+  test('two fixed, or two flexible, overlapping commitments are a notice with nothing to move', () => {
+    const fixedPair = detectOverlaps([event('a', at(15), at(16)), event('b', at(15, 30), at(16, 30))]);
+    const flexiblePair = detectOverlaps([
+      event('a', at(15), at(16), { commitment: 'flexible' }),
+      event('b', at(15, 30), at(16, 30), { commitment: 'flexible' }),
+    ]);
+    assert.equal(fixedPair[0].movableEventId, null);
+    assert.equal(flexiblePair[0].movableEventId, null);
   });
 
   test('back-to-back (touching, not overlapping) commitments are not flagged', () => {
@@ -155,11 +168,14 @@ describe('Capacity pressure', () => {
     assert.equal(detectCapacityPressure(events, tasks), null);
   });
 
-  test('due-today minutes are excluded from demand the same way `computeDailyLoad` already excludes them from candidates', () => {
+  // Owner decision in the Build 3 audit (B3-AUD-007): today's whole workload counts; the drop/shorten
+  // target stays limited to flexible work that isn't due today, exactly like `computeDailyLoad`'s candidates.
+  test('due-today minutes count toward demand, but a due-today task is never named to drop or shorten', () => {
     const dayWindow = CAPACITY_DAY_END_MINUTES - CAPACITY_DAY_START_MINUTES;
     const events = [event('work', CAPACITY_DAY_START_MINUTES, CAPACITY_DAY_START_MINUTES + dayWindow - 30)];
     const tasks = [task('due-today-big', { durationMinutes: 200, dueToday: true })];
-    assert.equal(detectCapacityPressure(events, tasks), null);
+    const issue = detectCapacityPressure(events, tasks);
+    assert.deepEqual([issue.availableMinutes, issue.neededMinutes, issue.pressureMinutes, issue.largestTaskId], [30, 200, 170, null]);
   });
 
   test('a fixed commitment consumes its own entered travel and preparation minutes from the window too', () => {

@@ -1,9 +1,6 @@
-import { assessDailyLoadIssues } from './dailyLoadIssues';
-import { latestTransitionDecision } from './dailyLoadDecisions';
+import { decisionWindowFor, latestTransitionDecision, todaysIssues } from './dailyLoadDecisions';
 import type { TransitionContext } from './context';
 import { addDays, epochMsOf, toInstant, wallClockMinutesAt, zonedTimeToEpochMs, type LocalDate } from './logicalDay';
-import { computeDailyLoad } from '../features/daily-load/computeDailyLoad';
-import { projectStateDay } from './projectDay';
 import type {
   ActionRecord,
   AppState,
@@ -22,22 +19,16 @@ import type {
  * faking either would mean claiming an execution capability Her Keys doesn't
  * have.
  *
- * Every function here re-validates against a freshly computed assessment of
- * the CURRENT state before doing anything, exactly like
- * `dailyLoadDecisions.ts` — a stale screen can never move, drop, shorten or
- * protect something that is no longer the live issue.
+ * Every function here re-validates against a freshly computed verdict for the
+ * CURRENT state before doing anything, exactly like `dailyLoadDecisions.ts` —
+ * a stale screen can never move, drop or shorten something that is no longer
+ * what Today is showing.
  */
 
 const MINIMUM_TASK_MINUTES = 15;
 const CAPACITY_ACTION_TYPES = new Set(['daily_load.drop_task', 'daily_load.shorten_task', 'daily_load.keep_capacity_plan']);
 
-function assessToday(state: AppState, ctx: TransitionContext) {
-  const day = projectStateDay(state, ctx.today);
-  const assessment = computeDailyLoad(day.events, day.tasks);
-  return { day, assessment, issues: assessDailyLoadIssues(day.events, day.tasks, assessment) };
-}
-
-/** One capacity-pressure decision per logical day, independent of the transition-buffer gate — they are different issues. */
+/** One capacity-pressure decision per logical day, independent of the timing gate — they are different issues. */
 function latestCapacityDecision(state: AppState, date: LocalDate): ActionRecord | null {
   for (let index = state.actions.length - 1; index >= 0; index--) {
     const action = state.actions[index];
@@ -46,19 +37,34 @@ function latestCapacityDecision(state: AppState, date: LocalDate): ActionRecord 
   return null;
 }
 
+/** The capacity verdict, but only while it is the one Today is showing. */
+function liveCapacityPressure(state: AppState, ctx: TransitionContext) {
+  const primary = todaysIssues(state, ctx.today).primary;
+  return primary?.kind === 'capacity_pressure' ? primary : null;
+}
+
+/** Whether Her Keys can shorten a task by anything at all without going under the 15-minute floor. */
+export function canShortenTask(durationMinutes: number): boolean {
+  return durationMinutes > MINIMUM_TASK_MINUTES;
+}
+
 /**
- * Moves a FLEXIBLE event bounding today's tightest transition to the same
- * time tomorrow, preserving its duration exactly (DST-safe: the new start is
- * computed from tomorrow's wall clock, not by adding 24 hours). Shares the
- * existing transition-buffer gate with task moves — resolving the same
- * tightest-window issue with a different kind of item is still one decision.
+ * Moves a FLEXIBLE event to the same time tomorrow, preserving its duration
+ * exactly (DST-safe: the new start is computed from tomorrow's wall clock, not
+ * by adding 24 hours). Only the event Today is offering qualifies: one that
+ * would widen the transition the verdict names, or the flexible side of an
+ * overlap with a fixed commitment. Shares the one-decision-per-day gate with
+ * task moves and keeping the plan.
  */
 export function approveMoveEvent(state: AppState, ctx: TransitionContext, eventId: string): AppState {
   if (latestTransitionDecision(state, ctx.today)) return state;
 
-  const { assessment } = assessToday(state, ctx);
-  const { gap } = assessment;
-  if (!gap || (eventId !== gap.beforeEventId && eventId !== gap.afterEventId)) return state;
+  const issues = todaysIssues(state, ctx.today);
+  const window = decisionWindowFor(issues);
+  const offered = issues.focus
+    ? issues.focus.movableEventIds.includes(eventId)
+    : issues.primary?.kind === 'overlap' && issues.primary.movableEventId === eventId;
+  if (!window || !offered) return state;
 
   const event = state.events.find((e) => e.id === eventId);
   if (!event || event.status !== 'active' || event.commitment !== 'flexible') return state;
@@ -81,10 +87,10 @@ export function approveMoveEvent(state: AppState, ctx: TransitionContext, eventI
     targetId: event.id,
     reason: {
       code: 'transition_buffer_shortfall',
-      windowBeforeEventId: gap.beforeEventId,
-      windowAfterEventId: gap.afterEventId,
-      bufferMinutes: assessment.bufferMinutes,
-      requiredBufferMinutes: assessment.requiredBufferMinutes,
+      windowBeforeEventId: window.windowBeforeEventId,
+      windowAfterEventId: window.windowAfterEventId,
+      bufferMinutes: window.bufferMinutes,
+      requiredBufferMinutes: window.requiredBufferMinutes,
     },
     before: { startsAt: event.startsAt, endsAt: event.endsAt },
     after,
@@ -98,13 +104,12 @@ export function approveMoveEvent(state: AppState, ctx: TransitionContext, eventI
   };
 }
 
-/** Archives the exact task the current capacity-pressure verdict names — never an arbitrary other flexible task. */
+/** Archives the exact task the current capacity-pressure verdict names — never an arbitrary other task, and never one that is fixed or due today. */
 export function approveDropTask(state: AppState, ctx: TransitionContext, taskId: string): AppState {
   if (latestCapacityDecision(state, ctx.today)) return state;
 
-  const { issues } = assessToday(state, ctx);
-  const pressure = issues.capacityPressure;
-  if (!pressure || pressure.largestTaskId !== taskId) return state;
+  const pressure = liveCapacityPressure(state, ctx);
+  if (!pressure || pressure.largestTaskId === null || pressure.largestTaskId !== taskId) return state;
 
   const task = state.tasks.find((t) => t.id === taskId);
   if (!task || task.status !== 'open') return state;
@@ -118,6 +123,7 @@ export function approveDropTask(state: AppState, ctx: TransitionContext, taskId:
     source: 'her_keys_recommendation',
     approval: 'approved',
     targetId: task.id,
+    // `totalFlexibleNeededMinutes` keeps its stored name; it holds today's whole task demand (see `detectCapacityPressure`).
     reason: { code: 'capacity_pressure', totalAvailableMinutes: pressure.availableMinutes, totalFlexibleNeededMinutes: pressure.neededMinutes, shortfallMinutes: pressure.pressureMinutes },
     before: { status: 'open' },
     after: { status: 'archived' },
@@ -135,9 +141,8 @@ export function approveDropTask(state: AppState, ctx: TransitionContext, taskId:
 export function approveShortenTask(state: AppState, ctx: TransitionContext, taskId: string): AppState {
   if (latestCapacityDecision(state, ctx.today)) return state;
 
-  const { issues } = assessToday(state, ctx);
-  const pressure = issues.capacityPressure;
-  if (!pressure || pressure.largestTaskId !== taskId) return state;
+  const pressure = liveCapacityPressure(state, ctx);
+  if (!pressure || pressure.largestTaskId === null || pressure.largestTaskId !== taskId) return state;
 
   const task = state.tasks.find((t) => t.id === taskId);
   if (!task || task.status !== 'open') return state;
@@ -171,8 +176,7 @@ export function approveShortenTask(state: AppState, ctx: TransitionContext, task
 export function keepCapacityPlan(state: AppState, ctx: TransitionContext): AppState {
   if (latestCapacityDecision(state, ctx.today)) return state;
 
-  const { issues } = assessToday(state, ctx);
-  const pressure = issues.capacityPressure;
+  const pressure = liveCapacityPressure(state, ctx);
   if (!pressure) return state;
 
   const action: KeepCapacityPlanAction = {

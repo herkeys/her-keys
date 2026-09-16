@@ -1,11 +1,15 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { AppText, Button, Card, Overline, Tag } from '../../design/components';
 import { colors, spacing } from '../../design/tokens';
+import { CAPACITY_DAY_END_MINUTES, CAPACITY_DAY_START_MINUTES } from '../../domain/dailyLoadIssues';
+import { canShortenTask } from '../../domain/recommendationActions';
 import { useHouseholdState } from '../../store/AppStateProvider';
 import { useSchedule } from '../../store/ScheduleContext';
+import { formatTime } from './computeDailyLoad';
 
 const CAPACITY_ACTION_TYPES = new Set(['daily_load.drop_task', 'daily_load.shorten_task', 'daily_load.keep_capacity_plan']);
+const DAY_WINDOW = `${formatTime(CAPACITY_DAY_START_MINUTES)} and ${formatTime(CAPACITY_DAY_END_MINUTES)}`;
 
 /** Household has never had anything entered at all — a different moment than "today happens to be light." */
 function useIsHouseholdEverEmpty(): boolean {
@@ -15,19 +19,50 @@ function useIsHouseholdEverEmpty(): boolean {
 
 export function DailyLoadCard() {
   const schedule = useSchedule();
-  const { events, tasks, assessment, issues, decision, candidateIndex, appliedMove, showNextCandidate, moveRecommendedTask, keepAsPlanned, moveEvent, dropTask, shortenTask, keepCapacity, protectItem } = schedule;
+  const { events, tasks, issues, decision, candidates, candidateIndex, appliedMove, showNextCandidate, moveRecommendedTask, keepAsPlanned, moveEvent, dropTask, shortenTask, keepCapacity, protectItem } = schedule;
   const { state, today } = useHouseholdState();
   const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<string | null>(null);
+  // A second tap in the same frame would otherwise run an action twice before `busy` renders.
+  const inFlight = useRef(false);
   const everEmpty = useIsHouseholdEverEmpty();
 
   const run = async (action: () => Promise<boolean>) => {
+    if (inFlight.current) return;
+    inFlight.current = true;
     setBusy(true);
-    await action();
-    setBusy(false);
+    setNote(null);
+    try {
+      if (!(await action())) setNote('Her Keys couldn’t save that yet. Nothing changed — try again.');
+    } finally {
+      inFlight.current = false;
+      setBusy(false);
+    }
   };
 
-  // What she approved for the transition-buffer issue, as recorded at the time; the rest of Today recomputes from the moved task.
+  const failureNote = note && (
+    <AppText variant="bodySm" color={colors.attention} style={styles.note} accessibilityRole="alert">
+      {note}
+    </AppText>
+  );
+
+  // What she approved for the timing verdict, as recorded at the time; the rest of Today recomputes from the moved item.
   if (decision === 'moved' && appliedMove) {
+    if ('eventTitle' in appliedMove) {
+      return (
+        <Card tone="success" style={styles.card}>
+          <Tag label="Adjusted" tone="success" />
+          <AppText variant="headline" style={styles.headline}>
+            “{appliedMove.eventTitle}” moved to tomorrow.
+          </AppText>
+          <AppText variant="title" color={colors.textSecondary} style={styles.impact}>
+            {appliedMove.overlapped
+              ? `It no longer runs into “${appliedMove.otherTitle}” today.`
+              : `It no longer sits in the tight spot next to “${appliedMove.otherTitle}” today.`}
+          </AppText>
+        </Card>
+      );
+    }
     return (
       <Card tone="success" style={styles.card}>
         <Tag label="Adjusted" tone="success" />
@@ -80,6 +115,34 @@ export function DailyLoadCard() {
   const primary = issues.primary;
 
   if (primary?.kind === 'overlap') {
+    const movable = primary.movableEventId === null ? null : events.find((event) => event.id === primary.movableEventId) ?? null;
+    if (movable) {
+      return (
+        <Card tone="attention" raised style={styles.card}>
+          <Tag label="Needs you" tone="attention" />
+          <AppText variant="headline" style={styles.headline}>
+            “{primary.eventATitle}” and “{primary.eventBTitle}” overlap.
+          </AppText>
+          <AppText variant="title" color={colors.textSecondary} style={styles.impact}>
+            They overlap by {primary.overlapMinutes} minutes. “{movable.title}” is flexible, so Her Keys can move it to tomorrow.
+          </AppText>
+          {failureNote}
+          <Button label="Move it to tomorrow" onPress={() => run(() => moveEvent(movable.id))} disabled={busy} style={styles.primaryButton} />
+          <View style={styles.secondaryRow}>
+            <Button label="Keep today as planned" variant="ghost" size="sm" onPress={keepAsPlanned} disabled={busy} style={styles.secondaryButton} />
+            <Button
+              label="Protect it"
+              variant="ghost"
+              size="sm"
+              onPress={() => run(() => protectItem({ targetType: 'event', targetId: movable.id }))}
+              disabled={busy}
+              style={styles.secondaryButton}
+            />
+          </View>
+        </Card>
+      );
+    }
+    const bothFixed = primary.eventACommitment === 'fixed' && primary.eventBCommitment === 'fixed';
     return (
       <Card tone="attention" raised style={styles.card}>
         <Tag label="Needs your attention" tone="attention" />
@@ -87,7 +150,9 @@ export function DailyLoadCard() {
           “{primary.eventATitle}” and “{primary.eventBTitle}” overlap.
         </AppText>
         <AppText variant="title" color={colors.textSecondary} style={styles.impact}>
-          They overlap by {primary.overlapMinutes} minutes, and both are fixed commitments — Her Keys can’t move either one automatically.
+          {bothFixed
+            ? `They overlap by ${primary.overlapMinutes} minutes, and both are fixed commitments — Her Keys can’t move either one automatically.`
+            : `They overlap by ${primary.overlapMinutes} minutes. Both are flexible, so either one could change — Her Keys won’t pick between them for you.`}
         </AppText>
       </Card>
     );
@@ -112,21 +177,25 @@ export function DailyLoadCard() {
           <AppText variant="headline" style={styles.headline}>
             Today’s workload was adjusted.
           </AppText>
+          <AppText variant="body" color={colors.textSecondary} style={styles.impact}>
+            It still asks about {primary.pressureMinutes} minutes more than the day holds.
+          </AppText>
         </Card>
       );
     }
 
+    const target = primary.largestTaskId;
     return (
       <Card tone="attention" raised style={styles.card}>
-        <Tag label="Needs you" tone="attention" />
+        <Tag label={target ? 'Needs you' : 'Needs your attention'} tone="attention" />
         <AppText variant="headline" style={styles.headline}>
-          Today has more flexible work than time.
+          Today has more work than time.
         </AppText>
         <View style={styles.reasoning}>
           <View style={styles.reasonBlock}>
             <Overline color={colors.attention}>What Her Keys noticed</Overline>
             <AppText variant="bodySm" color={colors.textSecondary}>
-              Your flexible tasks need about {primary.neededMinutes} minutes today, and about {primary.availableMinutes} are left in the day.
+              Today’s tasks need about {primary.neededMinutes} minutes, and your calendar leaves about {primary.availableMinutes} between {DAY_WINDOW}.
             </AppText>
           </View>
           <View style={styles.reasonBlock}>
@@ -138,28 +207,37 @@ export function DailyLoadCard() {
           <View style={styles.reasonBlock}>
             <Overline color={colors.attention}>What Her Keys recommends</Overline>
             <AppText variant="bodySm" color={colors.textSecondary}>
-              Shorten or drop “{primary.largestTaskTitle}”.
+              {target
+                ? canShortenTask(primary.largestTaskMinutes ?? 0)
+                  ? `Shorten or drop “${primary.largestTaskTitle}”.`
+                  : `Drop “${primary.largestTaskTitle}” for today.`
+                : 'Everything left on today’s list is due today or fixed, so Her Keys won’t drop or shorten any of it. Consider what else could give.'}
             </AppText>
           </View>
         </View>
 
-        <View style={styles.secondaryRow}>
-          <Button label="Shorten it" onPress={() => run(() => shortenTask(primary.largestTaskId!))} disabled={busy} style={styles.secondaryButton} />
-          <Button label="Drop it" variant="secondary" onPress={() => run(() => dropTask(primary.largestTaskId!))} disabled={busy} style={styles.secondaryButton} />
-        </View>
-        <View style={styles.secondaryRow}>
-          <Button label="Keep as planned" variant="ghost" size="sm" onPress={() => run(keepCapacity)} disabled={busy} style={styles.secondaryButton} />
-          {primary.largestTaskId && (
-            <Button
-              label="Protect it"
-              variant="ghost"
-              size="sm"
-              onPress={() => run(() => protectItem({ targetType: 'task', targetId: primary.largestTaskId! }))}
-              disabled={busy}
-              style={styles.secondaryButton}
-            />
-          )}
-        </View>
+        {failureNote}
+        {target && (
+          <>
+            <View style={styles.secondaryRow}>
+              {canShortenTask(primary.largestTaskMinutes ?? 0) && (
+                <Button label="Shorten it" onPress={() => run(() => shortenTask(target))} disabled={busy} style={styles.secondaryButton} />
+              )}
+              <Button label="Drop it" variant="secondary" onPress={() => run(() => dropTask(target))} disabled={busy} style={styles.secondaryButton} />
+            </View>
+            <View style={styles.secondaryRow}>
+              <Button label="Keep as planned" variant="ghost" size="sm" onPress={() => run(keepCapacity)} disabled={busy} style={styles.secondaryButton} />
+              <Button
+                label="Protect it"
+                variant="ghost"
+                size="sm"
+                onPress={() => run(() => protectItem({ targetType: 'task', targetId: target }))}
+                disabled={busy}
+                style={styles.secondaryButton}
+              />
+            </View>
+          </>
+        )}
       </Card>
     );
   }
@@ -178,7 +256,8 @@ export function DailyLoadCard() {
     );
   }
 
-  if (!primary) {
+  const focus = issues.focus;
+  if (!primary || !focus) {
     return (
       <Card tone="success" style={styles.card}>
         <Tag label="Nothing needs moving" tone="success" />
@@ -192,25 +271,25 @@ export function DailyLoadCard() {
     );
   }
 
-  // transition_conflict or tight_window: the tightest gap, from computeDailyLoad's own candidates, plus a flexible boundary event if no task candidate exists.
-  const candidate = assessment.candidates[candidateIndex];
-  const flexibleBoundaryEvent =
-    !candidate && assessment.gap
-      ? [
-          events.find((e) => e.id === assessment.gap!.beforeEventId),
-          events.find((e) => e.id === assessment.gap!.afterEventId),
-        ].find((e) => e?.commitment === 'flexible')
-      : undefined;
+  // transition_conflict or tight_window: always the window the verdict names.
+  const verdict = focus.issue;
+  const travel = verdict.kind === 'transition_conflict' && verdict.source === 'travel_aware' ? verdict.travelMinutesUsed : 0;
+  const squeeze =
+    travel > 0
+      ? `Counting the ${travel} minutes of travel and preparation you entered, only ${verdict.bufferMinutes} minutes sit between ${verdict.beforeTitle} and ${verdict.afterTitle}`
+      : `Only ${verdict.bufferMinutes} minutes sit between ${verdict.beforeTitle} and ${verdict.afterTitle}`;
+  const candidate = candidates[candidateIndex] ?? null;
+  const flexibleEvent = candidate ? null : (events.find((event) => focus.movableEventIds.includes(event.id)) ?? null);
 
-  if (!candidate && !flexibleBoundaryEvent) {
+  if (!candidate && !flexibleEvent) {
     return (
       <Card tone="attention" raised style={styles.card}>
-        <Tag label={primary.kind === 'tight_window' ? 'Tight window' : 'Tight day ahead'} tone="attention" />
+        <Tag label={verdict.kind === 'tight_window' ? 'Tight window' : 'Tight day ahead'} tone="attention" />
         <AppText variant="headline" style={styles.headline}>
           Leave a few minutes early this afternoon.
         </AppText>
         <AppText variant="title" color={colors.textSecondary} style={styles.impact}>
-          Only {primary.bufferMinutes} minutes sit between {primary.beforeTitle} and {primary.afterTitle}, and nothing flexible is scheduled there to move.
+          {squeeze}, and nothing flexible is scheduled there to move.
         </AppText>
         <View style={styles.secondaryRow}>
           <Button label="Got it" variant="ghost" size="sm" onPress={keepAsPlanned} style={styles.secondaryButton} />
@@ -219,24 +298,25 @@ export function DailyLoadCard() {
     );
   }
 
-  if (!candidate && flexibleBoundaryEvent) {
+  if (!candidate && flexibleEvent) {
     return (
       <Card tone="attention" raised style={styles.card}>
         <Tag label="Needs you" tone="attention" />
         <AppText variant="headline" style={styles.headline}>
-          Move “{flexibleBoundaryEvent.title}” to tomorrow.
+          Move “{flexibleEvent.title}” to tomorrow.
         </AppText>
         <AppText variant="title" color={colors.textSecondary} style={styles.impact}>
-          Only {primary.bufferMinutes} minutes sit between {primary.beforeTitle} and {primary.afterTitle}.
+          {squeeze}.
         </AppText>
-        <Button label="Move it to tomorrow" onPress={() => run(() => moveEvent(flexibleBoundaryEvent.id))} disabled={busy} />
+        {failureNote}
+        <Button label="Move it to tomorrow" onPress={() => run(() => moveEvent(flexibleEvent.id))} disabled={busy} />
         <View style={styles.secondaryRow}>
-          <Button label="Keep today as planned" variant="ghost" size="sm" onPress={keepAsPlanned} style={styles.secondaryButton} />
+          <Button label="Keep today as planned" variant="ghost" size="sm" onPress={keepAsPlanned} disabled={busy} style={styles.secondaryButton} />
           <Button
             label="Protect it"
             variant="ghost"
             size="sm"
-            onPress={() => run(() => protectItem({ targetType: 'event', targetId: flexibleBoundaryEvent.id }))}
+            onPress={() => run(() => protectItem({ targetType: 'event', targetId: flexibleEvent.id }))}
             disabled={busy}
             style={styles.secondaryButton}
           />
@@ -244,6 +324,8 @@ export function DailyLoadCard() {
       </Card>
     );
   }
+
+  if (!candidate) return null;
 
   return (
     <Card tone="attention" raised style={styles.card}>
@@ -271,16 +353,18 @@ export function DailyLoadCard() {
         </View>
       </View>
 
+      {failureNote}
       <Button
         label="Move it to tomorrow"
         onPress={moveRecommendedTask}
+        disabled={busy}
         accessibilityHint={`Moves ${candidate.task.title} to tomorrow and frees ${candidate.task.durationMinutes} minutes today`}
       />
       <View style={styles.secondaryRow}>
-        {assessment.candidates.length > 1 && (
+        {candidates.length > 1 && (
           <Button label="Show another option" variant="ghost" size="sm" onPress={showNextCandidate} style={styles.secondaryButton} />
         )}
-        <Button label="Keep today as planned" variant="ghost" size="sm" onPress={keepAsPlanned} style={styles.secondaryButton} />
+        <Button label="Keep today as planned" variant="ghost" size="sm" onPress={keepAsPlanned} disabled={busy} style={styles.secondaryButton} />
         <Button
           label="Protect it"
           variant="ghost"
@@ -298,6 +382,8 @@ const styles = StyleSheet.create({
   card: { marginBottom: spacing.xxl },
   headline: { marginTop: spacing.md },
   impact: { marginTop: spacing.sm },
+  note: { marginTop: spacing.md },
+  primaryButton: { marginTop: spacing.lg },
   reasoning: {
     marginTop: spacing.xl,
     paddingTop: spacing.lg,

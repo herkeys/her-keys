@@ -17,7 +17,7 @@ import { useSchedule } from '../../src/store/ScheduleContext';
 import { useHousehold } from '../../src/store/useHousehold';
 
 export default function TodayScreen() {
-  const { assessment, decision, events, tasks } = useSchedule();
+  const { assessment, decision, events, issues, tasks } = useSchedule();
   const { firstName, today } = useHousehold();
 
   return (
@@ -28,7 +28,7 @@ export default function TodayScreen() {
           {firstName ? `Hi, ${firstName}` : 'Hi there'}
         </AppText>
         <AppText variant="title" color={colors.textSecondary} style={styles.state}>
-          {describeDayState(assessment, decision)}
+          {describeDayState(assessment, decision, issues)}
         </AppText>
         <PersistenceNotice />
       </View>

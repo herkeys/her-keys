@@ -1,3 +1,4 @@
+import type { DailyLoadIssues } from '../../domain/dailyLoadIssues';
 import { loadTierOf, type LoadTier } from '../../domain/loadTier';
 import type { CalendarEventItem, DailyLoadAssessment, LoadEstimate, LoadLevel, TaskItem } from '../../types';
 
@@ -15,12 +16,23 @@ const BUSY_SHARE = 0.25;
 export function describeLoad(
   events: CalendarEventItem[],
   tasks: TaskItem[],
-  assessment: DailyLoadAssessment
+  assessment: DailyLoadAssessment,
+  issues?: DailyLoadIssues
 ): LoadEstimate {
   const committedShare = shareOfDayCommitted(events, tasks);
-  const level = pickLevel(loadTierOf(assessment), committedShare);
+  // The same verdict the Daily Load card shows, when it's available.
+  const level = pickLevel(issues ? issues.tier : loadTierOf(assessment), committedShare);
+  const copy = copyFor(level);
+  const reason = issues?.primary?.kind;
+  // "Full" names what makes it full; the transition wording only fits a transition.
+  const caption =
+    level === 'full' && reason === 'overlap'
+      ? 'Two commitments overlap.'
+      : level === 'full' && reason === 'capacity_pressure'
+        ? 'More work than time today.'
+        : copy.caption;
 
-  return { level, ...copyFor(level), filled: filledFor(level), total: SEGMENTS };
+  return { level, label: copy.label, caption, filled: filledFor(level), total: SEGMENTS };
 }
 
 /** The load tier owns the thresholds; the meter only adds how busy an open day looks. */

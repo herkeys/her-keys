@@ -5,8 +5,8 @@ import { useSchedule } from '../../store/ScheduleContext';
 import { describeLoad } from './describeLoad';
 
 export function LoadMeter() {
-  const { events, tasks, assessment } = useSchedule();
-  const load = describeLoad(events, tasks, assessment);
+  const { events, tasks, assessment, issues } = useSchedule();
+  const load = describeLoad(events, tasks, assessment, issues);
   const tone = load.level === 'tight' || load.level === 'full' ? 'attention' : 'accent';
   const valueColor = tone === 'attention' ? colors.attention : colors.accent;
 

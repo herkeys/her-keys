@@ -30,7 +30,9 @@ export function tomorrowPreview(state: AppState, ctx: TransitionContext): Tomorr
   const issues = assessDailyLoadIssues(day.events, day.tasks, assessment);
 
   const fixedCommitmentCount = day.events.filter((event) => event.commitment === 'fixed').length;
-  const dueTaskCount = day.tasks.filter((task) => task.dueToday).length;
+  // Due exactly tomorrow. Tomorrow's projection also carries everything already
+  // overdue (and today's still-open items, overdue by then); those aren't "due tomorrow".
+  const dueTaskCount = day.tasks.filter((task) => task.dueToday && task.daysOverdue === 0).length;
 
   const tightTransition =
     issues.transitionConflict || issues.tightWindow
