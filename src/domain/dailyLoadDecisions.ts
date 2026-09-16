@@ -32,6 +32,16 @@ function isDailyLoadAction(action: ActionRecord): action is DailyLoadTransitionA
   return action.type === 'daily_load.move_task' || action.type === 'daily_load.keep_plan';
 }
 
+/**
+ * The tested one-decision-per-logical-day gate for the transition-buffer
+ * issue. Exported so a new candidate item TYPE (a flexible event, resolving
+ * the exact same tightest-window issue a flexible task would) shares this
+ * gate rather than getting its own — it's the same issue, not a new one.
+ */
+export function latestTransitionDecision(state: AppState, date: LocalDate): DailyLoadTransitionAction | null {
+  return latestDecision(state, date);
+}
+
 function latestDecision(state: AppState, date: LocalDate): DailyLoadTransitionAction | null {
   for (let index = state.actions.length - 1; index >= 0; index--) {
     const action = state.actions[index];
