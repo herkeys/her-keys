@@ -4,6 +4,8 @@ Audit date: 2026-09-16 (America/New_York)
 
 Final verdict: **REPAIRED_CONTINUE_BUILDING**
 
+Runtime certification: **PASS** — `RUNTIME_CERTIFIED`. The full 18-phase runtime certification pass ran on 2026-09-16 on clean Android emulators; see [Runtime certification](#runtime-certification).
+
 ## Source authority
 
 | Item | Verified value |
@@ -31,15 +33,19 @@ Final verdict: **REPAIRED_CONTINUE_BUILDING**
 | P3 | 10 | 10 | — | 0 |
 | **P0–P3** | **21** | **21** | — | **0** |
 | P4 | 10 | 1 | 9 | — |
-| P5 | 10 | 2 | 8 | — |
-| P6 | 3 | 0 | 3 | — |
+| P5 | 12 | 2 | 10 | — |
+| P6 | 4 | 0 | 4 | — |
 | P7 | 2 | 0 | 2 | — |
 | P8 | 2 | 0 | 2 | — |
 | P9 | 2 | 0 | 2 | — |
 | P10 | 1 | 0 | 1 | — |
-| **P4–P10** | **30** | **3** | **27** | — |
+| **P4–P10** | **33** | **3** | **30** | — |
 
-Every P0–P3 repair has regression coverage. 27 of 27 mutants were killed. The runtime smoke was **executed** on the emulator: 20 of 20 steps passed.
+Every P0–P3 repair has regression coverage. 27 of 27 mutants were killed.
+
+Runtime was tested twice:
+- **First pass (hostile audit):** 20 of 20 smoke steps passed.
+- **Runtime certification pass:** no P0–P3 defects. It added three deferred findings (B3-AUD-052 to -054) and re-observed several existing ones.
 
 ## Baseline (reproduced before any change)
 
@@ -145,6 +151,9 @@ Four repairs changed product behavior, so they were put to the owner before impl
 | B3-AUD-049 | P9 | Governance | Build 2, 2.5 and 3 exist only on this machine | DEFERRED |
 | B3-AUD-050 | P9 | Tooling | Emulator screen capture went black mid-session | DEFERRED |
 | B3-AUD-051 | P10 | Schema | `totalFlexibleNeededMinutes` now holds all of today's demand | DEFERRED |
+| B3-AUD-052 | P5 | Categories | No in-app way to create, rename, archive or restore categories; only fixed demo internal-tool actions exist | DEFERRED (runtime pass) |
+| B3-AUD-053 | P5 | Today | After today's timing decision, a remaining conflict between fixed events is not named on the card | DEFERRED (runtime pass) |
+| B3-AUD-054 | P6 | Life / Kids | Kids "Today" section is an empty heading in real households; Kids events without a child are never listed there | DEFERRED (runtime pass) |
 
 ## P0–P3 repairs
 
@@ -417,7 +426,7 @@ Four repairs changed product behavior, so they were put to the owner before impl
 ### B3-AUD-041 — P5 — Web target still can't render (carried forward)
 
 - **Location:** `package.json` `web` script; the `web` entry in `.claude/launch.json` (HK-AUDIT-028).
-- **Impact:** `react-native-web` isn't installed, so the Build 3 report's web fallback failed to render and there is still no browser-based way to exercise the UI. This audit didn't re-test web; the runtime smoke used Android.
+- **Impact:** `react-native-web` isn't installed, so the Build 3 report's web fallback failed to render and there is still no browser-based way to exercise the UI. The runtime certification pass observed it directly: when Metro started, the Browser pane's request for a web bundle failed with `Unable to resolve "react-native-web/dist/exports/StyleSheet"`. The Android app was unaffected.
 - **Recommended fix:** add web support, or remove the `web` script and launch entry until web is a target.
 - **Gate:** tooling cleanup.
 
@@ -496,6 +505,38 @@ Four repairs changed product behavior, so they were put to the owner before impl
 - **Recommended fix:** rename at schema v3.
 - **Gate:** schema v3.
 
+### B3-AUD-052 — P5 — No in-app category management (runtime pass)
+
+- **Location:**
+  - `app/dev-tools.tsx`: the only caller of `addCategory`, `renameCategory`, `archiveCategory` and `restoreCategory`.
+  - `src/domain/categories.ts`: the domain functions, which exist and are tested.
+- **Impact:**
+  - A real household can't create, rename, archive or restore a category.
+  - The demo-only internal tools offer fixed actions: add "Pets", rename Kids ↔ "Family", move Pets first, archive or restore Home.
+  - So certification Phase 12's exact steps (rename Pets → "Pet Care", archive and restore Pets) can't be done through the app. The identity guarantee was certified with the nearest supported actions instead.
+- **Recommended fix:** a category management screen built on the existing domain functions (new UI — owner/design decision).
+- **Gate:** before real users are told they can customise categories.
+
+### B3-AUD-053 — P5 — A remaining fixed-only conflict is not named after the day's decision (runtime pass)
+
+- **Location:** `src/features/daily-load/DailyLoadCard.tsx` ("Adjusted" and "Kept as planned" branches); `src/domain/dailyLoadDecisions.ts` (one timing decision per day).
+- **Impact:**
+  - In the certification scenario, moving the flexible errand resolved the overlap.
+  - Work (ends 4:30 PM) → Soccer pickup (4:50 PM, with 25 minutes of travel and 5 of preparation) is still 10 minutes short.
+  - Today says "One change made. Today is still tight.", and the meter reads Full. The card only reports the move, though, and never names the remaining Work → pickup squeeze.
+  - Nothing false is shown, but the one conflict she can still act on (leave early) goes unnamed.
+- **Recommended fix:** product decision — after the day's decision, show a notice-only line for any remaining conflict that has nothing movable.
+- **Gate:** next Daily Load build.
+
+### B3-AUD-054 — P6 — Kids "Today" section is empty in real households (runtime pass)
+
+- **Location:** `src/features/kids/KidsOverview.tsx` (the "Today" section lists `children`). The layout predates Build 3.
+- **Impact:**
+  - Real households have no children recorded, so the Kids screen shows a "TODAY" heading with nothing under it.
+  - Kids events without a child attached (e.g. "Soccer pickup") are never listed there. They still appear on Today and Calendar, and Daily Load reads them.
+- **Recommended fix:** list today's Kids-category events, or hide the heading when there is nothing to show.
+- **Gate:** next Life UI pass.
+
 ## Phase coverage
 
 - **Schema / migration (Phase 3).** Seven envelopes written by the Build 2.5 store itself (`tests/fixtures/build25-v1-envelopes.json`) migrate losslessly. Ten untouched sections are byte-identical. Events become fixed, tasks open, timestamps null, One Moves catalog. There is no double migration; loading writes nothing, and the first write lands as v2 with the sequence continued. Demo/real isolation holds in both directions. Partial, unknown, mixed-version, malformed, fractional and absurd v1 input fails closed; broken relationships are integrity violations; v1 data labelled v2 is invalid; v3 is preserved. No P0–P3 found.
@@ -559,7 +600,9 @@ Result counts are failing tests: out of 335 in the main run, and out of 336 in t
 
 \* M9 survived the first run: the existing checks only requested a second decision on a day the first one had already resolved. A test that keeps the day tight after a keep was added (commit `264357d`); M9, M26 and M27 were then killed.
 
-## Runtime certification — EXECUTED
+## Runtime smoke — first pass (hostile audit, EXECUTED)
+
+This section records the audit's original 20-step smoke. The dedicated certification pass follows in [Runtime certification](#runtime-certification).
 
 - **Device:** `emulator-5554`, AVD `Pixel_8_Pro`, API 37.
 - **Runtime:** Expo Go 57.0.9; Metro via `.claude/launch.json` `metro-expo-go` (`expo start --go --clear`).
@@ -597,6 +640,246 @@ Result counts are failing tests: out of 335 in the main run, and out of 336 in t
 - runtime day rollover and DST;
 - iOS, TalkBack and large fonts.
 
+## Runtime certification
+
+**Status: NOT_EXECUTED → PASS. Verdict: `RUNTIME_CERTIFIED`** (no runtime repairs were needed).
+
+### Setup
+
+| Item | Value |
+| --- | --- |
+| Date / time | 2026-09-16, 18:37–20:20 EDT |
+| Source under test | `93277ea` on `audit/build3-hostile`. App source is identical to the audited `264357d`; the two later commits only add this document and the launch config. The owner approved testing at this SHA. |
+| Emulators | Two clean AVDs created for this pass from the existing Pixel 8 Pro profile: `HerKeys_Runtime` (A) and `HerKeys_Runtime_B` (B). `Pixel_8_Pro` was left untouched. |
+| Device | Model `sdk_gphone16k_x86_64` (Pixel 8 Pro profile); Android 17 (API 37); Google APIs Play Store 16 KB image; x86_64; 2 GB RAM; software GPU (`swiftshader_indirect`) so screenshots are reliable; timezone America/New_York |
+| Launch mode | **Expo Go 57.0.9** (not a development client). The APK was copied from the existing emulator; nothing was downloaded. |
+| How the app ran | Metro via `.claude/launch.json` `metro-expo-go` (`npx expo start --go --clear --port 8081`), plus `adb reverse tcp:8081 tcp:8081`, then `am start -d exp://127.0.0.1:8081`. Internal tools were opened with `exp://127.0.0.1:8081/--/dev-tools`. |
+| Data mode | A temporary, git-ignored `.env` (`EXPO_PUBLIC_HERKEYS_DATA_MODE=empty`, or `demo` for Phases 12–13), removed afterwards |
+| Driver | adb + `uiautomator` dumps; taps at UI-tree bounds |
+| Evidence | UI-tree text, `[herkeys]` diagnostics in logcat, Metro logs, and the screenshots in [`build3-runtime/`](build3-runtime/) |
+
+**Why two emulators:**
+- **A** — clean start for the main flow, with no leftover household (the app has no supported empty-mode reset).
+- **B** — Phase 7. Her Keys allows one timing decision per logical day, so a rejection can't follow Phase 6's acceptance on the same day in the same household. Emulator B also hosted Phase 12 in demo mode (where changes persist) and the removal part of Phase 10.
+
+### Phase results
+
+| Phase | Result | Evidence |
+| --- | --- | --- |
+| 0 Source authority | PASS (owner-approved deviation) | Branch `audit/build3-hostile`, tree clean. HEAD was `93277ea`, not `264357d`: two later commits touch only this document and `.claude/launch.json`. The owner chose to proceed. |
+| 1 Emulator readiness | PASS | Boot complete; Expo Go installed; Metro connected. The first launch attempt failed with "Failed to download remote update" only because Metro was still building its cache (a tooling timing issue); the relaunch was clean. |
+| 2 Baseline validation | PASS | TypeScript exit 0; 336/336 tests (73 suites); Expo Doctor 20/21 (known `expo` patch drift); Android export PASS, 1,479 modules (run with the empty-mode `.env`) |
+| 3 Fresh real household | PASS | See [Phase 3 details](#phase-3-details). [p3-05](build3-runtime/p3-05-today-empty.png) |
+| 4 Real calendar data | PASS | See [Phase 4 details](#phase-4-details). |
+| 5 Daily Load verdict | PASS | See [Phase 5 details](#phase-5-details). [p5-01](build3-runtime/p5-01-today.png) |
+| 6 Accept recommendation | PASS | See [Phase 6 details](#phase-6-details). [p6-02](build3-runtime/p6-02-ledger.png) |
+| 7 Rejection path | PASS (emulator B) | See [Phase 7 details](#phase-7-details). [p7-02](build3-runtime/p7-02-kept.png) |
+| 8 Real task flow | PASS | See [Phase 8 details](#phase-8-details). [p8-06](build3-runtime/p8-06-today-done.png) |
+| 9 Needs Me | PASS (classification via promotion) | See [Phase 9 details](#phase-9-details). [p9-04](build3-runtime/p9-04-kids-promoted.png) |
+| 10 One Move | PASS | See [Phase 10 details](#phase-10-details). [p10-03](build3-runtime/p10-03-after-restart.png) |
+| 11 Tomorrow Preview | PASS | See [Phase 11 details](#phase-11-details). [p11-02](build3-runtime/p11-02-tomorrow.png) |
+| 12 Custom category | PASS (nearest supported actions; B3-AUD-052) | See [Phase 12 details](#phase-12-details). [p12-04](build3-runtime/p12-04-tools-after-restart.png) |
+| 13 Demo / real isolation | PASS | See [Phase 13 details](#phase-13-details). [p13-01](build3-runtime/p13-01-demo-today.png), [p13-04](build3-runtime/p13-04-real-restored.png) |
+| 14 RevenueCat regression | PASS | See [Phase 14 details](#phase-14-details). [p14-02](build3-runtime/p14-02-restore.png) |
+| 15 Failure / edge observation | PASS | See [Phase 15 details](#phase-15-details). |
+| 16 Defect policy | No P0–P3 found; no repairs | Three new deferred findings (B3-AUD-052 to -054); several existing ones re-observed |
+| 17 Final validation | PASS | See [Runtime certification final validation](#runtime-certification-final-validation). |
+
+#### Phase 3 details
+
+- Emulator A launched to `hydrated: empty` (a fresh store) and showed the welcome screen.
+- There were no demo facts on Today, Calendar or Life.
+- Onboarding: the three Life Systems Audit questions, Talk It Out, the Life Operating Profile, and Her Keys+.
+- A relaunch mid-onboarding resumed at "4 of 4".
+- After completion, a relaunch opened Today ("Hi there", "Nothing entered yet.").
+- A valid relaunch wrote nothing.
+
+#### Phase 4 details
+
+The three events, as saved (each checked in its editor):
+
+| Event | Time | Category | Commitment | Travel / prep |
+| --- | --- | --- | --- | --- |
+| Work | 09:00–16:30 | Work | Fixed | none |
+| Soccer pickup | 16:50–17:15 | Kids | Fixed | 25 min travel before, 5 min preparation |
+| Return library books | 16:30–17:00 | Home | Flexible | none |
+
+- Events have no separate duration field; the errand's 30 minutes come from its time span.
+- Each event was listed once.
+- A deliberate double tap on "Add event" produced one event and one save.
+- All three were still present after a relaunch.
+
+#### Phase 5 details
+
+- Header: "Two of today's commitments overlap."
+- Meter: "Full — Two commitments overlap."
+- Card: "“Return library books” and “Soccer pickup” overlap." The detail read: "They overlap by 10 minutes. “Return library books” is flexible, so Her Keys can move it to tomorrow."
+- Actions offered: Move it to tomorrow / Keep today as planned / Protect it.
+- The overlap is real (errand 4:30–5:00, pickup 4:50–5:15) and nothing was invented. Only the flexible errand is targeted; neither fixed event is.
+- The Work → Soccer pickup travel squeeze (20 min gap vs 25 + 5 entered) ranks below an overlap by design. It isn't the headline here; see B3-AUD-053.
+
+#### Phase 6 details
+
+- **Before accepting:** no "Handled by Her Keys" section existed.
+- **After "Move it to tomorrow":**
+  - The save landed (seq 17, 8.2 ms) and the card switched to "Adjusted — “Return library books” moved to tomorrow. It no longer runs into “Soccer pickup” today." The header read "One change made. Today is still tight."
+  - Today's calendar showed only Work and Soccer pickup.
+  - Both fixed events kept their category, commitment, date and times.
+  - The ledger showed one entry: "“Return library books” moved to tomorrow · Today, 7:18 PM · approved by you", with Undo.
+- **After a full restart:**
+  - The Adjusted card and the single ledger entry were unchanged.
+  - There were no saves on load and no duplicate action.
+  - Daily Load recomputed from the new state (meter Full, from the remaining Work → pickup squeeze).
+- **Limitation:** the moved errand can't be opened in the UI because Calendar is today-only (B3-AUD-032). Its change was confirmed through Today, the ledger and the Adjusted card.
+
+#### Phase 7 details
+
+- A fresh real household on emulator B, with the identical scenario, produced the identical overlap recommendation.
+- **"Keep today as planned":**
+  - One save: the keep decision itself.
+  - The card read "Kept as planned — Today stays as you had it."
+  - The errand was unchanged (today, 16:30–17:00, Flexible, Home).
+  - No "Handled by Her Keys" entry and no "Adjusted" card appeared.
+- **After a restart:** the same "Kept as planned" state, and still no ledger entry or move.
+
+#### Phase 8 details
+
+- **"Pay soccer registration":** Kids, due 2026-09-16, 15 minutes.
+  - Listed as "Due today", and Life showed "Kids: 1 thing due today".
+  - One Move picked it at once ("About 15 minutes").
+  - Still present after restart.
+  - "Mark done" from its list removed it. One Move then read "Done. That's enough for today."
+  - After a restart the task stayed completed and was not offered again.
+- **"Schedule furnace inspection":** Home, no due date.
+  - Listed only in Home, as "No date".
+  - It was absent from Today and One Move, with no urgency shown and no crash.
+
+#### Phase 9 details
+
+- "Alexa needs poster board Thursday" was captured from Life with no category required.
+- A double tap produced one save and "Needs Me: 1 captured".
+- A whitespace-only entry kept Capture disabled; three taps made no saves.
+- The item persisted across restart.
+- Backing out of "Promote to task" left it in the inbox.
+- There is no screen for classifying a Needs Me item (B3-AUD-034), so the category and due date were added by promoting it: Kids, due 2026-09-17, 20 minutes.
+- After restart the task showed under Kids as "Due tomorrow", and Needs Me was empty.
+
+#### Phase 10 details
+
+- **Emulator A:** One Move took a real task ("Pay soccer registration") and, once it was completed, showed "Done". It never offered the completed task again, including after restart.
+- **Emulator B:**
+  - Two due-today Kids tasks; One Move selected "Buy team snacks" (10 min).
+  - After "Remove task", One Move read "No One Move today", and the removed task appeared nowhere.
+  - After restart the move was replaced by the remaining real task, "Sign permission slip" (5 min).
+  - "I did it" completed it and showed "Done"; it was unchanged after restart.
+- No fabricated item appeared.
+- Both days were overloaded; the ≤15-minute tasks were still offered by design (B3-AUD-031).
+
+#### Phase 11 details
+
+- Added on 2026-09-17: "School drop-off" (08:00–08:30, fixed, Kids) and "Dentist appointment" (08:45–09:15, fixed, Home).
+- Before these events, the Tomorrow line read "1 thing due tomorrow." (the promoted task). Afterwards it read "Dentist appointment leaves 15 minutes after School drop-off."
+- Viewing Today and restarting caused 0 saves: no ledger entry, no completion, no auto-accept, no demo data.
+- The same line appeared after restart.
+- Future events can't be opened in Calendar (B3-AUD-032).
+
+#### Phase 12 details
+
+Run on emulator B in a fresh demo household, where persistence is enabled.
+
+- "Pets" was added (`cat-mu4rdg02-1o5l3`, no role).
+  - A Pets task, "Book vet checkup", appeared under "Other open tasks" as "No date · Pets".
+  - A Pets event, "Vet appointment" (20:30–21:00, fixed), showed Pets selected in its editor.
+- **Rename:** Kids → "Family" kept `cat-kids` and role `kids`. The Life row became "Family: 1 scheduled…", and "Pick up Josie & Theo" showed Family selected.
+- **Reorder:** Pets moved to first place.
+- **Archive Home:** the Home row disappeared, and its task moved to "Other open tasks" labelled "Planned for today · Home".
+- **Restore Home:** the Home row returned.
+- **After restart:** the order (Pets, Family, Home active…) and every reference persisted.
+- Identity is the id throughout. The display name was never used to link records.
+
+#### Phase 13 details
+
+Emulator A, with Metro switched to demo mode while the real household was stored.
+
+- **Demo session:**
+  - The app logged `recovered: mode_mismatch`; internal tools showed `Persistence: disabled, degraded`.
+  - Onboarding ran in memory only.
+  - Today showed only Ellis data ("Hi, Maren"; Team status call, Josie's soccer practice…). "Return library books" is the demo seed's own task.
+  - Real items (Soccer pickup, Dentist appointment, School drop-off, the poster-board and furnace tasks) were absent.
+  - "Reset demo data" was refused: "Reset is unavailable because this demo session is protecting real-user data on this device."
+  - 0 saves during the whole demo session.
+- **Back in empty mode:** the real household loaded unchanged ("Hi there", the Adjusted card, One Move done, Work and Soccer pickup), with no demo facts.
+
+#### Phase 14 details
+
+- Onboarding's Her Keys+ step rendered.
+- "See Her Keys+" logged `paywall_presented onboarding_complete → unavailable` and hid itself.
+- "Restore purchases" showed "Her Keys couldn't check for previous purchases right now." with no crash.
+- "Continue without Her Keys+" completed onboarding.
+- Systems → "Learn about Her Keys+" logged `systems_upgrade → unavailable` with no crash; it gives no feedback (B3-AUD-039).
+- Every core flow stayed usable under Expo Go's RevenueCat Preview API mode.
+
+#### Phase 15 details
+
+- **Logcat, both emulators:**
+  - 0 `FATAL EXCEPTION` lines and 0 `AndroidRuntime` errors.
+  - 7 `ANR in` lines, all Google system apps during first cold boot (gms, dialer, bard); none in Expo Go.
+  - The only app warnings were "Cannot connect to Expo CLI", during the deliberate Metro restarts.
+- No red screen, no duplicate-key warning, and no unhandled rejection.
+- No storage error and no `degraded` flag outside the intended demo memory-only session.
+- No route errors and no stale UI after changes.
+- Each double-tap test produced a single record.
+- Save timing (software-GPU emulators):
+  - **Emulator A:** 6–219 ms, except its first two writes (3.0 s and 6.1 s).
+  - **Emulator B:** up to 3.0 s in the first five minutes after its cold boot, while the system-app ANRs above were happening; 7–467 ms afterwards.
+  - No save failed, and nothing was lost.
+  - These are emulator timings, not device performance.
+- Metro: "No server errors found" on the final server. The first server logged the Browser pane's failed web bundle (B3-AUD-041).
+
+### Re-observed deferred findings
+
+- **B3-AUD-027:** "Her Keys will watch how the afternoon actually goes" was shown at 8:12 PM.
+- **B3-AUD-032:** tomorrow's events and the moved errand can't be opened.
+- **B3-AUD-034:** there is no Needs Me classification screen.
+- **B3-AUD-039:** the Systems Her Keys+ button is silent.
+- **B3-AUD-040:** the promotion editor pre-selects the first category (Kids).
+- **B3-AUD-041:** the web bundle failed.
+
+### Runtime defects, repairs and tests
+
+- **Defects:** P0 0, P1 0, P2 0, P3 0. Deferred: B3-AUD-052 (P5), B3-AUD-053 (P5), B3-AUD-054 (P6).
+- **Repairs:** none needed.
+- **Regression tests added:** none, since there were no repairs; the suite stays at 336.
+
+### Runtime certification final validation
+
+Run at `93277ea` without `.env`, after the smoke.
+
+| Check | Result |
+| --- | --- |
+| TypeScript | PASS |
+| Tests | **336/336, 73 suites** |
+| Expo Doctor | 20/21 (known `expo` 57.0.22 vs ~57.0.23 drift) |
+| Android export | PASS, 1,479 modules, 5,274,097-byte bundle `entry-219769ab…hbc` |
+
+The bundle has the same content hash as the earlier 5,274,096-byte export; the one-byte difference is the Hermes packaging variance noted at baseline.
+
+**Final runtime verdict:** `RUNTIME_CERTIFIED`. Build 3 works end to end on an Android 17 emulator in Expo Go.
+
+That covers:
+- real-household onboarding;
+- event, task and Needs Me capture;
+- the Daily Load verdict, with accept and reject;
+- the ledger, One Move and Tomorrow Preview;
+- category identity, demo/real isolation and the RevenueCat fallbacks.
+
+**Still not certified:**
+- a native development or release build;
+- a real RevenueCat purchase;
+- iOS;
+- runtime day rollover and DST;
+- TalkBack.
+
 ## Final validation (at `264357d`)
 
 | Check | Result |
@@ -619,9 +902,10 @@ Audit commits on `audit/build3-hostile` (nothing pushed, merged or opened as a P
 5. `c8dcbd9` audit: make Daily Load verdicts, decisions and Undo match reality (B3-AUD-005..-010, -012..-016, -021)
 6. `264357d` audit: prove the one-decision gate itself refuses a second timing decision
 7. `4da65e0` audit: add the Expo Go Metro launch configuration used for the runtime smoke
-8. this document (the final audit commit)
+8. `93277ea` docs: record Build 3 hostile audit
+9. this runtime certification update, with its screenshots in `docs/audits/build3-runtime/` (the final commit)
 
-Commits 1–6 were each checked out on their own; each typechecks and passes its suite (261 → 271 → 287 → 297 → 335 → 336 tests). Commits 7 and 8 change no source. Source diff against `62990ab`: 38 app/source files (+1,385 / −540); tests: 8 files (+1,386 / −4).
+Commits 1–6 were each checked out on their own; each typechecks and passes its suite (261 → 271 → 287 → 297 → 335 → 336 tests). Commits 7–9 change no source. Source diff against `62990ab`: 38 app/source files (+1,385 / −540); tests: 8 files (+1,386 / −4).
 
 ## Remaining release gates
 
@@ -630,6 +914,8 @@ Commits 1–6 were each checked out on their own; each typechecks and passes its
 - **B3-AUD-029, B3-AUD-030, B3-AUD-036:** transition and overlap rules for real calendars before calendar import.
 - **B3-AUD-028, B3-AUD-031, B3-AUD-033:** capacity time-awareness, default durations and carry-forward — product decisions for the next Daily Load build.
 - **B3-AUD-032:** a way to see and fix future events.
+- **B3-AUD-052, B3-AUD-053:** in-app category management, and naming a remaining fixed-only conflict after the day's decision (from the runtime pass).
+- **Runtime not yet certified:** a native development or release build, iOS, runtime day rollover/DST, and TalkBack.
 - Carried forward:
   - a development/native build with real RevenueCat Test Store purchase and restore (Build 2.5 §15);
   - HK-AUDIT-012 (Talk It Out safety routing);
@@ -641,5 +927,8 @@ Commits 1–6 were each checked out on their own; each typechecks and passes its
 **REPAIRED_CONTINUE_BUILDING**
 
 - P0: 0. P1: 4. P2: 7. P3: 10. All 21 repaired, each with regression coverage and a killed mutant where the defect is logic.
-- P4–P10: 30 (3 fixed alongside, 27 deferred with location, impact, fix and gate).
-- Runtime certification was executed on the emulator; every step passed.
+- P4–P10: 33 (3 fixed alongside, 30 deferred with location, impact, fix and gate).
+- Runtime certification: **PASS (`RUNTIME_CERTIFIED`)**.
+  - All 18 phases were executed on clean Android 17 emulators in Expo Go.
+  - No P0–P3 runtime defects were found, so no repairs were needed.
+  - Three deviations are explained in [Runtime certification](#runtime-certification): Phase 7 ran on a second emulator, Phase 9 classified the item by promoting it, and Phase 12 used the nearest supported category actions.
