@@ -4,7 +4,7 @@ The master contract for Build 4. Detailed discovery, the state census, the appro
 
 | | |
 |---|---|
-| Status | **In progress.** Phase 0 complete (Checkpoint #1 approved subject to addendum). Phase 1 in progress and not complete |
+| Status | **In progress.** Phase 0 complete (Checkpoint #1 approved subject to addendum). **PHASE 1 = COMPLETE** (`docs/builds/BUILD4_PHASE1_COMPLETION.md`), awaiting owner review |
 | Source authority | Build 3, certified: `bab9773226e3b81928af04d5a303596b16502710` |
 | Branch | `build/04-cloud-identity-sync`, local only. No push, PR or merge without explicit owner authorization |
 | Product document | `HER_KEYS_PRODUCT.md` stays canonical and is not rewritten during implementation (B4-P0-070). This file records newer architecture. A revision is recommended at the Build 4 hostile audit |
@@ -98,7 +98,7 @@ Phase numbers follow the original Build 4 execution prompt. The master implement
 | 0 / 0A | Preflight and state census | **Complete** |
 | Checkpoint #1 | Architecture checkpoint | **Approved**, subject to the owner addendum |
 | Repo authority repair | Materialize Phase 0 decisions (this file and the checkpoint record) | Written, **uncommitted** |
-| 1 | Repo-owned Supabase baseline (Staging-only) | **In progress, not complete** |
+| 1 | Repo-owned Supabase baseline (Staging-only) | **PHASE 1 = COMPLETE**. Baseline `20260919230054`, Staging history reconciled, local parity exact |
 | SD4 | Cloud schema design gate | Not started. Blocked until these documents are accepted and Phase 1 completes |
 | 2 | Local persistence schema v3 | Not started |
 | 3 | Environment configuration | Not started |

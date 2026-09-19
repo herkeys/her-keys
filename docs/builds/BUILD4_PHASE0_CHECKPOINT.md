@@ -9,7 +9,7 @@
 | Source authority | Build 3 certified `bab9773226e3b81928af04d5a303596b16502710` |
 | Branch | `build/04-cloud-identity-sync` (local; not pushed) |
 | Checkpoint #1 | Owner **APPROVED**, subject to the owner addendum (section 19) |
-| Phase 1 | **IN PROGRESS / NOT COMPLETE** (section 20.2 and Appendix B) |
+| Phase 1 | **PHASE 1 = COMPLETE** (`docs/builds/BUILD4_PHASE1_COMPLETION.md`), awaiting owner review |
 
 > **Read this first.** Phase 1 baseline capture must complete before SD4 (the cloud schema design gate) can use the repo baseline as database authority. Nothing in this document is a repo-owned database baseline. The catalog observations in section 5 were made by read-only inspection during Phase 0 and Phase 1 discovery. They do not substitute for Phase 1 completion.
 
