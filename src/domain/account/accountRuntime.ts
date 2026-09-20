@@ -27,6 +27,7 @@ import type { CloudAccountClient } from './cloudClient';
 import { toAccountId, type AccountId, type AccountSession, type AuthProvider } from './identity';
 import type { ProviderRegistry } from './provider';
 import type { SecureSessionStore } from './secureSession';
+import { namespaceFromClaim } from '../sync/claimSeam';
 
 /**
  * THE ACCOUNT ORCHESTRATOR.
@@ -306,7 +307,18 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
         kind,
         idMap: outcome.idMap,
       };
-      options.identity.set({ binding, receipt: null, quarantine: options.identity.current().quarantine });
+      // The sync namespace is born here, from the claim's own id map. Sync
+      // adopts what claim established rather than rediscovering the cloud by
+      // guessing, which is what stops the first sync re-creating the rows the
+      // claim just made (B4-BACKEND-03 section 8).
+      const sync = namespaceFromClaim({
+        state: options.localState(),
+        accountId: session.accountId,
+        householdId: outcome.householdId,
+        deviceId: options.deviceId ?? session.accountId,
+        idMap: outcome.idMap,
+      });
+      options.identity.set({ binding, receipt: null, quarantine: options.identity.current().quarantine, sync });
 
       if (!(await safeSave(options, report))) {
         // The server committed but we could not write it down. Stay unbound and

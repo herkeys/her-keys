@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { SyncNamespaceSchema } from '../sync/syncTypes';
 import type { AccountId } from './identity';
 
 /**
@@ -79,6 +80,16 @@ export const IdentityRecordSchema = z.strictObject({
   binding: AccountBindingSchema.nullable(),
   receipt: ClaimReceiptSchema.nullable(),
   quarantine: QuarantineSchema.nullable(),
+  /**
+   * The sync namespace for the bound account. It lives beside the binding
+   * because both describe the same relationship: who this household belongs to,
+   * and how far that relationship has got. It holds no credential.
+   *
+   * Null on an unbound device, and null for the OTHER account when one is
+   * quarantined -- a namespace is never shared, so there is nothing for a second
+   * account to inherit.
+   */
+  sync: SyncNamespaceSchema.nullable().default(null),
 });
 
 export type AccountBinding = z.infer<typeof AccountBindingSchema>;
@@ -87,7 +98,7 @@ export type Quarantine = z.infer<typeof QuarantineSchema>;
 export type IdentityRecord = z.infer<typeof IdentityRecordSchema>;
 
 /** What a never-bound device carries. Also what a v2 household becomes on upgrade. */
-export const UNBOUND_IDENTITY: IdentityRecord = { binding: null, receipt: null, quarantine: null };
+export const UNBOUND_IDENTITY: IdentityRecord = { binding: null, receipt: null, quarantine: null, sync: null };
 
 export function isUnbound(identity: IdentityRecord): boolean {
   return identity.binding === null;

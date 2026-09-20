@@ -1,0 +1,361 @@
+import { z } from 'zod';
+
+/**
+ * The sync vocabulary.
+ *
+ * Deliberately small. Sync is metadata about the one canonical household state,
+ * not a second model of it — there is no SyncState, CloudState or
+ * RemoteHousehold shadowing `AppState`. Everything here answers "what has this
+ * device told the cloud, and what has it heard back?", and nothing here is a
+ * product fact.
+ */
+
+/**
+ * The entity kinds that actually travel, from the participation matrix. Each
+ * maps one local collection to one cloud table.
+ *
+ * Absent on purpose: `households` and `household_members` are claim-only
+ * (B4-P0-019 — "ordinary client sync can never create, change or remove a
+ * membership"); `change_log` is transport; `account_claims` is server-only.
+ */
+export const SYNC_ENTITY_KINDS = [
+  'category',
+  'event',
+  'task',
+  'system',
+  'meal',
+  'needsMe',
+  'oneMove',
+  'discovery',
+  'onboarding',
+  'action',
+] as const;
+export type SyncEntityKind = (typeof SYNC_ENTITY_KINDS)[number];
+
+/**
+ * Kinds that carry a local/cloud mapping but never travel through the sync
+ * queue. Claim creates them and claim alone: `household_members` and
+ * `households` have no client write grant at all. The mapping still matters,
+ * because a child-scoped task has to resolve its subject to a cloud uuid.
+ */
+export const MAPPING_ONLY_KINDS = ['member', 'household'] as const;
+export type MappingOnlyKind = (typeof MAPPING_ONLY_KINDS)[number];
+
+export type MappedKind = SyncEntityKind | MappingOnlyKind;
+
+/** Cloud table per kind. The matrix, executable. */
+export const CLOUD_TABLE: Record<SyncEntityKind, string> = {
+  category: 'household_categories',
+  event: 'events',
+  task: 'tasks',
+  system: 'household_systems',
+  meal: 'meal_plan_entries',
+  needsMe: 'needs_me_items',
+  oneMove: 'one_move_records',
+  discovery: 'discovery_records',
+  onboarding: 'onboarding_state',
+  action: 'action_records',
+};
+
+/**
+ * The column that carries a row's cloud identity.
+ *
+ * `onboarding_state` has no surrogate key -- its identity is
+ * (household_id, profile_id) -- which is why `log_row_change` records its
+ * `profile_id` as the entity id. Fetching it by `id` would ask for a column
+ * that does not exist.
+ */
+export const IDENTITY_COLUMN: Record<SyncEntityKind, string> = {
+  category: 'id',
+  event: 'id',
+  task: 'id',
+  system: 'id',
+  meal: 'id',
+  needsMe: 'id',
+  oneMove: 'id',
+  discovery: 'id',
+  onboarding: 'profile_id',
+  action: 'id',
+};
+
+/**
+ * Which operations each kind may ever produce.
+ *
+ * `action` is insert-only: the ledger has no UPDATE or DELETE grant and the
+ * `forbid_ledger_mutation` trigger binds even the table owner. Local trimming at
+ * the 10,000 cap is cache eviction and must never emit a cloud delete
+ * (SD4-021) — which is true here by construction, because no path produces one.
+ *
+ * `discovery` is the only kind with a tombstone, and it is a soft one:
+ * `deleted_at`, an UPDATE. Every other kind has no DELETE policy and no DELETE
+ * privilege, so this wave does not invent removal for them.
+ */
+export const ALLOWED_OPS: Record<SyncEntityKind, readonly SyncOp[]> = {
+  category: ['create', 'update'],
+  event: ['create', 'update'],
+  task: ['create', 'update'],
+  system: ['create', 'update'],
+  meal: ['create', 'update'],
+  needsMe: ['create', 'update'],
+  oneMove: ['create', 'update'],
+  discovery: ['create', 'update', 'tombstone'],
+  onboarding: ['create', 'update'],
+  action: ['create'],
+};
+
+/**
+ * The columns `authenticated` may actually UPDATE, per kind.
+ *
+ * Extracted from `information_schema.column_privileges`, not guessed. Sending a
+ * column outside this set is refused with 42501, which the transport would then
+ * have to classify as "forbidden" -- turning a perfectly ordinary edit into
+ * permanent failure evidence. The narrower list is the contract, so the client
+ * sends what it is allowed to send.
+ *
+ * `action` has an empty list on purpose: the ledger is immutable and has no
+ * UPDATE grant at all.
+ */
+export const UPDATABLE_COLUMNS: Record<SyncEntityKind, readonly string[]> = {
+  category: ['name', 'origin_updated_at', 'sort_order', 'status', 'subject_member_id', 'system_role'],
+  event: ['category_id', 'commitment', 'ends_at', 'location', 'notes', 'origin_updated_at',
+          'preparation_minutes', 'scope', 'starts_at', 'status', 'subject_member_id', 'title',
+          'travel_minutes_after', 'travel_minutes_before'],
+  task: ['category_id', 'commitment', 'completed_at', 'due_date', 'duration_minutes', 'notes',
+         'origin_updated_at', 'plan_kind', 'planned_date', 'planned_starts_at', 'scope', 'status',
+         'subject_member_id', 'title'],
+  system: ['category_id', 'description', 'name', 'origin_updated_at', 'scope', 'subject_member_id'],
+  meal: ['category_id', 'meal_date', 'origin_updated_at', 'scope', 'subject_member_id', 'title'],
+  needsMe: ['category_id', 'due_date', 'status', 'title'],
+  oneMove: ['cleared_at', 'completed_at', 'decided_at', 'status', 'target_needs_me_id',
+            'target_task_id', 'target_type'],
+  discovery: ['deleted_at', 'local_id', 'topic_id'],
+  onboarding: ['completed_at', 'goal_ids', 'last_step', 'strength_ids', 'struggle_ids'],
+  action: [],
+};
+
+/** The row an UPDATE may carry: the projected row, narrowed to the grant. */
+export function updatablePatch(kind: SyncEntityKind, row: Record<string, unknown>): Record<string, unknown> {
+  const patch: Record<string, unknown> = {};
+  for (const column of UPDATABLE_COLUMNS[kind]) {
+    if (column in row) patch[column] = row[column];
+  }
+  return patch;
+}
+
+export const SYNC_OPS = ['create', 'update', 'tombstone'] as const;
+export type SyncOp = (typeof SYNC_OPS)[number];
+
+/**
+ * Dependency rank. Lower ranks are pushed first, because a task cannot reference
+ * a category the cloud has never seen and an action cannot reference either.
+ * Explicit, because relying on object iteration order would be relying on an
+ * accident.
+ */
+export const DEPENDENCY_RANK: Record<SyncEntityKind, number> = {
+  category: 0,
+  task: 1,
+  needsMe: 1,
+  event: 1,
+  system: 1,
+  meal: 1,
+  discovery: 1,
+  onboarding: 1,
+  oneMove: 2,
+  action: 3,
+};
+
+// ---------------------------------------------------------------- bounds ----
+/**
+ * Technical parameters, not product decisions. Nothing in the frozen authority
+ * fixes a number — only that the queue and the evidence store are bounded — so
+ * these are named here and documented rather than scattered as literals.
+ */
+
+/** Pending outbound work items per account namespace. */
+export const MAX_QUEUE_ITEMS = 500;
+
+/**
+ * Unresolved conflict/failure records per namespace. Unresolved evidence is
+ * NEVER discarded to make room; reaching this bound is a backlog condition.
+ */
+export const MAX_UNRESOLVED_EVIDENCE = 200;
+
+/** Change-log rows per pull round trip. A multi-year household is many batches. */
+export const PULL_BATCH_SIZE = 200;
+
+// ------------------------------------------------------------- mappings ----
+const Uuid = z.string().regex(
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+  { message: 'Expected a UUID' }
+);
+const Instant = z.iso.datetime();
+
+/**
+ * What this device knows about one synchronized row.
+ *
+ * `revision` is the server revision this device last SAW — the base for the next
+ * CAS. It is not the pull cursor and never acts as one; conflating the two is
+ * how writes get lost (SD4-012).
+ */
+export const MappingSchema = z.strictObject({
+  kind: z.enum([...SYNC_ENTITY_KINDS, ...MAPPING_ONLY_KINDS]),
+  localId: z.string().max(128),
+  cloudId: Uuid,
+  revision: z.number().int().min(0),
+});
+export type Mapping = z.infer<typeof MappingSchema>;
+
+/** `kind:localId`. Two kinds may legitimately mint the same local id string. */
+export function mappingKey(kind: MappedKind, localId: string): string {
+  return `${kind}:${localId}`;
+}
+
+// ----------------------------------------------------------------- queue ----
+export const QueueItemSchema = z.strictObject({
+  /** Stable local work identity. Not a cloud concept: cloud idempotency is the local_id constraint plus base revision. */
+  id: z.string().max(128),
+  kind: z.enum(SYNC_ENTITY_KINDS),
+  localId: z.string().max(128),
+  op: z.enum(SYNC_OPS),
+  /**
+   * The server revision this work is based on, captured when the FIRST pending
+   * edit for this row was queued. Later edits before a successful push do not
+   * move it — that is what stops three offline edits turning into two
+   * self-inflicted stale conflicts.
+   */
+  baseRevision: z.number().int().min(0).nullable(),
+  /** Earliest enqueue order, preserved across coalescing. */
+  order: z.number().int().min(0),
+  enqueuedAt: Instant,
+  attempts: z.number().int().min(0).max(10_000),
+  lastAttemptAt: Instant.nullable(),
+  /** Why the last attempt did not settle. Never a stack trace. */
+  lastError: z.string().max(400).nullable(),
+});
+export type QueueItem = z.infer<typeof QueueItemSchema>;
+
+/**
+ * No payload is stored on the queue item, and that is the whole coalescing
+ * design. The row is read from canonical local state at push time, so the
+ * LATEST local intent is what goes out, while `baseRevision` and `order` keep
+ * the original CAS base and the original position. One logical row therefore has
+ * at most one pending work item, and edits 1, 2 and 3 cannot fight each other.
+ */
+
+// -------------------------------------------------------------- evidence ----
+export const EVIDENCE_KINDS = [
+  /** The server row moved past our base revision. Her intent is kept, unapplied. */
+  'cas-conflict',
+  /** A uniqueness invariant that represents a competing valid decision, not malformed input. */
+  'domain-conflict',
+  /** Pull brought a tombstone for a row with unacknowledged local intent. */
+  'tombstone-conflict',
+  /** Another install already owns this local id. Two entities, never merged. */
+  'identity-collision',
+  /** The server refused the content itself. Retrying will be refused again. */
+  'validation-failure',
+  /** RLS or a grant said no. Permanent until something else changes. */
+  'forbidden',
+  /** A dependency can never resolve, so the work can never be valid. */
+  'unresolvable-dependency',
+] as const;
+export type EvidenceKind = (typeof EVIDENCE_KINDS)[number];
+
+/**
+ * What was attempted, against what, and what happened.
+ *
+ * Deliberately not a transcript. Enough to answer the five questions a person
+ * resolving it would ask, and nothing that would turn the evidence store into a
+ * debug log.
+ */
+export const SyncEvidenceSchema = z.strictObject({
+  id: z.string().max(128),
+  evidence: z.enum(EVIDENCE_KINDS),
+  kind: z.enum(SYNC_ENTITY_KINDS),
+  localId: z.string().max(128),
+  cloudId: Uuid.nullable(),
+  attemptedOp: z.enum(SYNC_OPS),
+  baseRevision: z.number().int().min(0).nullable(),
+  serverRevision: z.number().int().min(0).nullable(),
+  detail: z.string().max(400),
+  recordedAt: Instant,
+  resolved: z.boolean(),
+});
+export type SyncEvidence = z.infer<typeof SyncEvidenceSchema>;
+
+// ------------------------------------------------------------- lifecycle ----
+export const HYDRATION_STATES = ['unhydrated', 'hydrating', 'ready'] as const;
+export type HydrationState = (typeof HYDRATION_STATES)[number];
+
+export const SYNC_PHASES = [
+  'idle',
+  'hydrating',
+  'pulling',
+  'pushing',
+  'offline',
+  'backlog',
+  'conflicted',
+  'error',
+] as const;
+export type SyncPhase = (typeof SYNC_PHASES)[number];
+
+/**
+ * The per-account sync namespace, stored beside the identity block in the v3
+ * envelope. It holds no credential: tokens live behind the secure-session
+ * boundary and never reach household storage (B4-P0-013).
+ */
+export const SyncNamespaceSchema = z.strictObject({
+  accountId: Uuid,
+  householdId: Uuid,
+  /**
+   * Per INSTALL, not per account. Two devices of one account must differ, or
+   * SD4-006 cannot tell a lost acknowledgement from a genuine collision.
+   */
+  deviceId: Uuid,
+  hydration: z.enum(HYDRATION_STATES),
+  /** The last cursor whose batch is DURABLE. Never the highest cursor seen. */
+  cursor: z.string().max(40),
+  lastSyncedAt: Instant.nullable(),
+  mappings: z.record(z.string().max(160), MappingSchema),
+  queue: z.array(QueueItemSchema).max(MAX_QUEUE_ITEMS),
+  evidence: z.array(SyncEvidenceSchema).max(MAX_UNRESOLVED_EVIDENCE * 4),
+  /** Set when the queue or the evidence store is full. Work stops before intent is lost. */
+  backlog: z.boolean(),
+});
+export type SyncNamespace = z.infer<typeof SyncNamespaceSchema>;
+
+export function emptyNamespace(input: {
+  accountId: string;
+  householdId: string;
+  deviceId: string;
+}): SyncNamespace {
+  return {
+    accountId: input.accountId,
+    householdId: input.householdId,
+    deviceId: input.deviceId,
+    hydration: 'unhydrated',
+    // '0' is xid8 zero: everything ever committed is after it.
+    cursor: '0',
+    lastSyncedAt: null,
+    mappings: {},
+    queue: [],
+    evidence: [],
+    backlog: false,
+  };
+}
+
+/**
+ * The one signal the product surfaces (B4-BE03 addendum I): unresolved intent
+ * exists. No revisions, no queue ids, no cursors, no database errors.
+ */
+export function needsSyncAttention(namespace: SyncNamespace | null): boolean {
+  return namespace !== null && (namespace.backlog || unresolvedEvidence(namespace).length > 0);
+}
+
+export function needsSyncAttentionCount(namespace: SyncNamespace | null): number {
+  return namespace === null ? 0 : unresolvedEvidence(namespace).length;
+}
+
+export function unresolvedEvidence(namespace: SyncNamespace): SyncEvidence[] {
+  return namespace.evidence.filter((entry) => !entry.resolved);
+}

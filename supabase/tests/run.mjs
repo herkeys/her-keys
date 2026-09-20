@@ -383,6 +383,10 @@ try {
   }
   envC(only);
   if (!only) await clientPayloadIntegration();
+  if (!only) {
+    const { syncIntegration } = await import(`file://${join(HERE, 'sync-integration.mjs')}`);
+    await syncIntegration(check, psql);
+  }
 } catch (err) {
   console.error(`\nHARNESS ERROR: ${err.message}`);
   process.exit(1);
