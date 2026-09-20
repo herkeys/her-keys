@@ -1,5 +1,11 @@
 {
   "artifact": "build4-local-fingerprint",
+  "superseded_by": {
+    "artifact": "build4-foundation-local-fingerprint.json",
+    "reconciliation": "build4-foundation-reconciliation.json",
+    "as_of": "B4-FOUNDATION-BUILDOUT-01",
+    "note": "SUPERSEDED, NOT DELETED. Every digest in this file remains the true fingerprint of the schema as it stood before that buildout, and is the 'before' side of its reconciliation. Do not verify current state against this file."
+  },
   "scope": "LOCAL DISPOSABLE DATABASE ONLY",
   "not_staging": true,
   "not_production": true,

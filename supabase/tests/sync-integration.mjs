@@ -59,7 +59,7 @@ export async function syncIntegration(check, psql) {
 
 async function load() {
   const at = (p) => `file://${join(REPO, 'src', ...p)}`;
-  const [types, queue, claimSeam, push, pull, coordinator, apply, projection, transport, initial, rules, specs, rich, auth, resp, struct, tasksOps, state] = await Promise.all([
+  const [types, queue, claimSeam, push, pull, coordinator, apply, projection, transport, initial, rules, specs, rich, auth, resp, struct, tasksOps, state, interp] = await Promise.all([
     import(at(['domain', 'sync', 'syncTypes.ts'])),
     import(at(['domain', 'sync', 'queue.ts'])),
     import(at(['domain', 'sync', 'claimSeam.ts'])),
@@ -78,8 +78,9 @@ async function load() {
     import(at(['domain', 'structure.ts'])),
     import(at(['domain', 'tasks.ts'])),
     import(at(['domain', 'state.ts'])),
+    import(at(['domain', 'interpretations.ts'])),
   ]);
-  return { types, queue, claimSeam, push, pull, coordinator, apply, projection, transport, initial, rules, specs, rich, auth, resp, struct, tasksOps, state };
+  return { types, queue, claimSeam, push, pull, coordinator, apply, projection, transport, initial, rules, specs, rich, auth, resp, struct, tasksOps, state, interp };
 }
 
 const TZ = 'America/Chicago';
@@ -793,8 +794,8 @@ async function journeyFoundation(check, m, accountId, strangerId, psql) {
     transport: m.transport.createSupabaseSyncTransport(clientFor(accountId)),
   });
   for (let pass = 0; pass < 3; pass += 1) await b.coordinator.request('foreground');
-  check('sync: F6. the second device hydrated and is ready, with nothing waiting to send',
-    b.namespace().hydration === 'ready' || b.namespace().cursor !== '0', `hydration=${b.namespace().hydration} queue=${b.namespace().queue.length}`);
+  check('sync: F6. the second device hydrated: its cursor moved past zero and nothing is waiting to send',
+    b.namespace().cursor !== '0' && b.namespace().queue.length === 0, `cursor=${b.namespace().cursor} queue=${b.namespace().queue.length}`);
   check('sync: F7. hydrating produced no outbound work and no conflict', b.namespace().queue.length === 0 && m.types.needsSyncAttentionCount(b.namespace()) === 0,
     `queue=${b.namespace().queue.length} unresolved=${m.types.needsSyncAttentionCount(b.namespace())}`);
 
@@ -967,6 +968,49 @@ async function journeyFoundationConflicts(check, m, accountId, psql) {
     to_type: 'task', to_task_id: (await cloudIdOf(client, 'tasks', householdId, sa.tasks[0].id)), status: 'active', profile_id: accountId,
     producer: 'user-action', scope: 'personal', origin_created_at: new Date().toISOString(), origin_updated_at: new Date().toISOString() } });
   check('sync: G11. a cycle sent straight at the database is refused by the database', Boolean(direct.error), direct.error?.message?.slice(0, 80) ?? 'accepted');
+
+  // --- THE SAME DOCUMENT, FORWARDED ON TWO DEVICES: one entity, adopted — not a conflict ---------------------
+  // Both devices record an artifact with the SAME digest while offline from each other. The cloud keeps one (a document is
+  // stored once, by digest). The device that arrives second must not lose anything or raise a conflict: its local artifact
+  // simply BECOMES the cloud's, keeps its local id, and whatever names it keeps naming it.
+  const digest = 'd'.repeat(64);
+  const ra = m.interp.recordArtifact(a.state(), at(), { kind: 'email', origin: 'user-submitted', provider: 'forward', contentDigest: digest });
+  a.setState(ra.state);
+  a.enqueue('sourceArtifact', ra.artifact.id, 'create');
+  const rb = m.interp.recordArtifact(b.state(), atB(), { kind: 'email', origin: 'user-submitted', provider: 'forward', contentDigest: digest });
+  const withReading = m.interp.proposeInterpretation(rb.state, atB(), { artifactId: rb.artifact.id, proposedKind: 'task', title: 'Pay the fee from the email' });
+  b.setState(withReading);
+  b.enqueue('sourceArtifact', rb.artifact.id, 'create');
+  b.enqueue('interpretation', withReading.interpretations[0].id, 'create');
+  await a.coordinator.request('manual');
+  await b.coordinator.request('manual');
+  await b.coordinator.request('manual');
+  const { data: artifacts } = await client.from('source_artifacts').select('id,local_id').eq('household_id', householdId).eq('content_digest', digest);
+  check('sync: G12. one document forwarded from two devices is ONE artifact in the cloud', (artifacts ?? []).length === 1, `${(artifacts ?? []).length} artifacts`);
+  check('sync: G13. the second device kept its own local id and now maps it to the cloud row the first created',
+    (artifacts ?? []).length === 1 && b.namespace().mappings[`sourceArtifact:${rb.artifact.id}`]?.cloudId === artifacts[0].id,
+    b.namespace().mappings[`sourceArtifact:${rb.artifact.id}`]?.cloudId ?? 'unmapped');
+  check('sync: G14. and no conflict was raised for it: nothing competed', !b.namespace().evidence.some((e) => e.kind === 'sourceArtifact'),
+    b.namespace().evidence.filter((e) => e.kind === 'sourceArtifact').map((e) => e.evidence).join(','));
+  const { data: readings } = await client.from('interpretations').select('artifact_id,source_artifact_id').eq('household_id', householdId);
+  check('sync: G15. the reading that named the adopted artifact reached the cloud naming THE cloud artifact',
+    (readings ?? []).length === 1 && readings[0].artifact_id === artifacts?.[0]?.id && readings[0].source_artifact_id === artifacts?.[0]?.id && b.namespace().queue.length === 0,
+    JSON.stringify(readings));
+
+  // --- ONE CAPACITY PROFILE PER PERSON: two devices set it before either has seen the other ----------------------
+  a.setState(m.struct.setCapacity(a.state(), at(), { dayEndMinutes: 20 * 60 }));
+  a.enqueue('capacity', 'capacity', 'create');
+  b.setState(m.struct.setCapacity(b.state(), atB(), { dayEndMinutes: 18 * 60 }));
+  b.enqueue('capacity', 'capacity', 'create');
+  await a.coordinator.request('manual');
+  await b.coordinator.request('manual');
+  const { data: caps } = await client.from('capacity_profiles').select('day_end_minutes').eq('household_id', householdId);
+  check('sync: G16. the cloud holds ONE capacity profile for her', (caps ?? []).length === 1 && caps[0].day_end_minutes === 1200, JSON.stringify(caps));
+  check('sync: G17. the device that lost holds the authoritative profile, and kept its own setting as evidence',
+    b.state().capacity?.dayEndMinutes === 1200 && b.namespace().evidence.some((e) => e.kind === 'capacity' && !e.resolved),
+    `dayEnd=${b.state().capacity?.dayEndMinutes} evidence=${b.namespace().evidence.filter((e) => e.kind === 'capacity').length}`);
+  check('sync: G18. and both devices are quiet afterwards: nothing left waiting, state valid',
+    a.namespace().queue.length === 0 && b.namespace().queue.length === 0 && m.state.validateAppState(b.state()).ok);
 }
 
 async function cloudIdOf(client, table, householdId, localId) {

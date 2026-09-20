@@ -1,0 +1,95 @@
+{
+  "tool": "herkeys-schema-fingerprint",
+  "toolVersion": 1,
+  "label": "Build 4 LOCAL schema after B4-FOUNDATION-BUILDOUT-01 (18 foundation tables, stored provenance, explicit household context, claim v2). LOCAL ONLY: not Staging, not Production, authorizes no remote apply.",
+  "searchPath": "''",
+  "scope": [
+    "public",
+    "private"
+  ],
+  "dimensions": {
+    "columns": {
+      "items": 713,
+      "digest": "b679afa15f11e3e18f2cda2f789dc3c7"
+    },
+    "constraints": {
+      "items": 678,
+      "digest": "4173c0b444c59abde08203b153e5c893"
+    },
+    "functions": {
+      "items": 27,
+      "digest": "32b7266b4749447bbb06d1ad3122294f"
+    },
+    "indexes": {
+      "items": 284,
+      "digest": "7dcfc54f3ff8ab1e3102e937caffd51f"
+    },
+    "info.event_triggers": {
+      "items": 7,
+      "digest": "460fef42355350673d98786b2395e9f7"
+    },
+    "info.extensions": {
+      "items": 6,
+      "digest": "7d12895eecbafc55a6fb3f91e7ce78b7"
+    },
+    "policies": {
+      "items": 85,
+      "digest": "20fa34345c0e4e530506aad4c23a315f"
+    },
+    "privileges.columns": {
+      "items": 719,
+      "digest": "973b927d74b1a222e3bc3147257d39fc"
+    },
+    "privileges.default_acl": {
+      "items": 7,
+      "digest": "84cba4e765aaa559cf174135e54549ff"
+    },
+    "privileges.effective": {
+      "items": 309,
+      "digest": "39dfa952fdc247aa7124a8efa21763c6"
+    },
+    "privileges.functions": {
+      "items": 53,
+      "digest": "8775bb50208682d596a25715ef7fd642"
+    },
+    "privileges.relations": {
+      "items": 587,
+      "digest": "6dcc6008d4f6c463d266c44a5345f816"
+    },
+    "privileges.schemas": {
+      "items": 10,
+      "digest": "eda0330fda8cc1898fa30c327ab67768"
+    },
+    "relations": {
+      "items": 35,
+      "digest": "d96433fa6acf2a1c49f23c5a2afecccc"
+    },
+    "schemas": {
+      "items": 2,
+      "digest": "0e57bd8fd092941a34193a365f9fd211"
+    },
+    "triggers": {
+      "items": 104,
+      "digest": "3349217a986a8890446692fc1f918324"
+    }
+  },
+  "gating": {
+    "items": 3613,
+    "digest": "199ed4d4c1b37cd654b5853e91cbde27"
+  },
+  "supersedes": "build4-local-fingerprint.json (current_local_gating_digest d2b319d0253613d6a5c1dd36ef906da6 / 1300 facts) — kept unchanged as history",
+  "captured_from": "supabase db reset --local, then the UNMODIFIED Phase 1 tool SQL via psql against the local `postgres` database",
+  "shipping_migration": {
+    "file": "supabase/migrations/20260919231500_build4_cloud_schema.sql",
+    "convention": "sha256 of the WORKING-TREE file (CRLF on this machine); the git blob is LF-normalised and hashes differently",
+    "sha256_before_buildout": "275e9d1cd81a3d4361715a6d91a084ad95de2ccbd83c67f56e6ca0d3143e8436",
+    "sha256_before_buildout_reverified": "275e9d1cd81a3d4361715a6d91a084ad95de2ccbd83c67f56e6ca0d3143e8436",
+    "sha256_after_buildout": "1e9169de4cf21c46e2167089328de94ce07cb1fcf005c0461dece1b28ec8a7cb",
+    "sha256_after_buildout_lf_blob": "7582e5e6db96b97385a2d9509fd14b40a1dec8af4c52f05e098f77c6567fd4dc",
+    "baseline_migration_sha256_unchanged": "8bc38d66fcffbb9fa83502329bd4738a53a8446dd5ce89327013751872f8f16f"
+  },
+  "tool_hashes": {
+    "supabase/tools/schema-lines.sql": "1b159be53544cabf94d0893ac728561c9d6df7d8c23a599e29d8099ff7945a6b",
+    "supabase/tools/schema-fingerprint.mjs": "5ba8c323f4f7e678d3a89da6de806f1f1315e95f073ac6e5769239772d2a1379"
+  }
+}

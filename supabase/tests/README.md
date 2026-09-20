@@ -47,6 +47,7 @@ post-migration security tests must never share one.
 | **ENV A** | empty apply | baseline + Build 4 on an empty surface; must succeed. Also runs a *poisoned* migration to prove a late failure rolls the whole restructuring back |
 | **ENV B1** | interlock attack | a protected application table holds a row; the migration must **abort** with no partial state |
 | **ENV B2** | interlock attack | `auth.users` holds a row; same requirement |
+| **ENV B3** | interlock attack | a FOUNDATION table (`goals`) holds a row on an already-migrated database; a re-run must abort naming it, with the row and all 34 tables intact (B4-FOUNDATION-BUILDOUT-01) |
 | **ENV C** | post-apply security | migrate **while empty**, *then* insert synthetic users and fixtures, *then* run the numbered suites |
 
 **ENV C is never re-migrated after it is populated.** A harness that tried to
@@ -126,9 +127,14 @@ because any file can be run alone.
 | `30-child-subject.sql` | NHR-01 rules 1–3, both write and membership-mutation directions |
 | `40-server-columns.sql` | server-owned columns refused by privilege, not corrected by trigger |
 | `50-privileges.sql` | three-layer PUBLIC/anon posture, load-bearing grants, platform untouched |
+| `56-provenance.sql` | B4-FE01-001/-005: no row without a producer (all nine tables), closed vocabularies, demo-seed refused, confidence exactly for claims, lineage bound to household and owner, a client can move confidence and nothing about where a row came from |
+| `57-foundation-rls.sql` | the 18 foundation tables' access model: catalog claims (RLS, no anon, no client DELETE, evidence un-updatable, executions/outcomes un-insertable, no credential column) and real roles (owner, same-household member, stranger, anon) |
+| `58-foundation-integrity.sql` | 130+ constraint cases asserted by REASON: typed references, exact money, child proof, cycles, one live owner, one answer per intent, set-once revoke/retract, decided freeze, pattern/recurrence/observation/external/capacity rules |
+| `61-household-context.sql` | `resolve_household_context` and `sync_pull`: named, single, ambiguous, foreign, none, anon; the LIMIT-1 function is gone |
 | `60-trusted-context.sql` | NHR-06 attacks on `is_trusted_server_context()` |
 | `70-claim-bootstrap.sql` | bootstrap, claim, idempotent retry, demo refusal, conflict evidence |
 | `72-claim-closure.sql` | B4-BE02-OR-001 dependency closure: targeted historical One Moves, child/category closure, server-enforced boundedness, retry identity, divergent-retry refusal, rollback census |
+| `73-claim-v2.sql` | claim payload version 2: v1 refused, provenance required, demo refused, artifact closure and extras, external artifacts refused, facets and exact value carried, retry/replay/divergence, all-or-nothing |
 | `74-sync-push.sql` | B4-BE03-OR-001: SD4-006 push identity — create, same-install replay, cross-install local_id collision, server-owned columns, RLS and allow-list |
 | `80-revision-cas.sql` | optimistic concurrency; revision is not the cursor |
 | `90-change-cursor.sql` | change_log, committed_xid, snapshot barrier |
@@ -136,13 +142,22 @@ because any file can be run alone.
 | `95-action-records.sql` | immutability, cloud-uuid references, payload bounds |
 | `99-fail-closed.sql` | the assertion detects breakage and does not false-positive on platform objects |
 
-Two further sections live in `run.mjs` rather than in a `.sql` file, because
-they exercise the CLIENT against the server:
+**Test-only defaults.** `helpers/05-test-defaults.sql` gives `producer` a default of `user-action` in ENV C ONLY, so the older
+suites can insert plain fixtures. The shipped schema has no such default (ENV A asserts it), and `56-provenance.sql` drops the default
+inside its own transaction to prove the real behaviour. `helpers/01-test-helpers.sql` adds `herkeys_test.error_of` and
+`herkeys_test.ins`, which report WHY a statement was refused so the foundation suites assert on the reason.
+
+Three further sections live in `run.mjs` rather than in a `.sql` file, because
+they exercise the CLIENT against the server or need two artifacts compared:
+
+- **authorization parity** (`authorization-parity.mjs`) — 25 cases run through `executionAuthorization()` in TypeScript AND
+  `guard_execution_authorization()` in the database; the same verdict, with the same named reason, is required of both.
 
 - **client payload -> real RPC** — the real `buildClaimPayload` output fed to the
   real claim RPC, so a drift between the two sides fails here rather than on a
   device.
-- **sync engine** (`sync-integration.mjs`) — four multi-device journeys over real
+- **sync engine** (`sync-integration.mjs`) — six multi-device journeys (the last two are the foundation: one device writes 21 kinds and a
+  fresh second device hydrates identically; two devices deciding the same intent / owner / half-cycle offline keep one answer and the loser as evidence) over real
   HTTP, real PostgREST, real RLS, real CAS, real change_log and the real snapshot
   barrier. Each simulated device has its own persisted blob, queue, cursor,
   mappings, `origin_device_id` and coordinator, and shares nothing in memory.

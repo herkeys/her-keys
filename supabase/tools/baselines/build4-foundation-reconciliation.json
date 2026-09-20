@@ -1,0 +1,750 @@
+{
+  "artifact": "build4-foundation-reconciliation",
+  "method": "supabase/tools/reconcile-foundation.mjs over two --mode detail captures of the SAME environment (pre-buildout migration vs post-buildout migration), both applied in the authoritative CRLF form",
+  "result": {
+    "added": 2350,
+    "removed": 37,
+    "net": 2313,
+    "explained": 2387,
+    "unexplained": 0
+  },
+  "dimensions": [
+    {
+      "dimension": "columns",
+      "before": 219,
+      "after": 713,
+      "added": 509,
+      "removed": 15,
+      "explained": 524,
+      "unexplained": 0
+    },
+    {
+      "dimension": "constraints",
+      "before": 191,
+      "after": 678,
+      "added": 492,
+      "removed": 5,
+      "explained": 497,
+      "unexplained": 0
+    },
+    {
+      "dimension": "functions",
+      "before": 20,
+      "after": 27,
+      "added": 15,
+      "removed": 8,
+      "explained": 23,
+      "unexplained": 0
+    },
+    {
+      "dimension": "indexes",
+      "before": 82,
+      "after": 284,
+      "added": 202,
+      "removed": 0,
+      "explained": 202,
+      "unexplained": 0
+    },
+    {
+      "dimension": "policies",
+      "before": 39,
+      "after": 85,
+      "added": 46,
+      "removed": 0,
+      "explained": 46,
+      "unexplained": 0
+    },
+    {
+      "dimension": "privileges.columns",
+      "before": 192,
+      "after": 719,
+      "added": 528,
+      "removed": 1,
+      "explained": 529,
+      "unexplained": 0
+    },
+    {
+      "dimension": "privileges.default_acl",
+      "before": 4,
+      "after": 4,
+      "added": 0,
+      "removed": 0,
+      "explained": 0,
+      "unexplained": 0
+    },
+    {
+      "dimension": "privileges.effective",
+      "before": 159,
+      "after": 309,
+      "added": 153,
+      "removed": 3,
+      "explained": 156,
+      "unexplained": 0
+    },
+    {
+      "dimension": "privileges.functions",
+      "before": 40,
+      "after": 53,
+      "added": 18,
+      "removed": 5,
+      "explained": 23,
+      "unexplained": 0
+    },
+    {
+      "dimension": "privileges.relations",
+      "before": 281,
+      "after": 587,
+      "added": 306,
+      "removed": 0,
+      "explained": 306,
+      "unexplained": 0
+    },
+    {
+      "dimension": "privileges.schemas",
+      "before": 6,
+      "after": 6,
+      "added": 0,
+      "removed": 0,
+      "explained": 0,
+      "unexplained": 0
+    },
+    {
+      "dimension": "relations",
+      "before": 17,
+      "after": 35,
+      "added": 18,
+      "removed": 0,
+      "explained": 18,
+      "unexplained": 0
+    },
+    {
+      "dimension": "schemas",
+      "before": 2,
+      "after": 2,
+      "added": 0,
+      "removed": 0,
+      "explained": 0,
+      "unexplained": 0
+    },
+    {
+      "dimension": "triggers",
+      "before": 41,
+      "after": 104,
+      "added": 63,
+      "removed": 0,
+      "explained": 63,
+      "unexplained": 0
+    }
+  ],
+  "objects": [
+    {
+      "object": "action_executions",
+      "authority": "B4-FE01-010",
+      "why": "new table; FE-02 FE-16",
+      "added": {
+        "columns": 24,
+        "constraints": 27,
+        "indexes": 11,
+        "policies": 1,
+        "privileges.effective": 8,
+        "privileges.relations": 17,
+        "relations": 1,
+        "triggers": 4
+      },
+      "removed": {}
+    },
+    {
+      "object": "action_intents",
+      "authority": "B4-FE01-008",
+      "why": "new table; FE-02 FE-13 FE-15",
+      "added": {
+        "columns": 29,
+        "constraints": 28,
+        "indexes": 12,
+        "policies": 2,
+        "privileges.columns": 27,
+        "privileges.effective": 8,
+        "privileges.relations": 17,
+        "relations": 1,
+        "triggers": 3
+      },
+      "removed": {}
+    },
+    {
+      "object": "action_outcomes",
+      "authority": "B4-FE01-011",
+      "why": "new table; FE-16",
+      "added": {
+        "columns": 14,
+        "constraints": 13,
+        "indexes": 6,
+        "policies": 1,
+        "privileges.effective": 8,
+        "privileges.relations": 17,
+        "relations": 1,
+        "triggers": 3
+      },
+      "removed": {}
+    },
+    {
+      "object": "automation_authorities",
+      "authority": "B4-FE01-007",
+      "why": "new table; FE-02 FE-13 FE-14",
+      "added": {
+        "columns": 27,
+        "constraints": 27,
+        "indexes": 7,
+        "policies": 3,
+        "privileges.columns": 24,
+        "privileges.effective": 8,
+        "privileges.relations": 17,
+        "relations": 1,
+        "triggers": 5
+      },
+      "removed": {}
+    },
+    {
+      "object": "behavior_observations",
+      "authority": "B4-FE01-006",
+      "why": "new table; FE-06 FE-12 FE-16 FE-26",
+      "added": {
+        "columns": 26,
+        "constraints": 24,
+        "indexes": 15,
+        "policies": 2,
+        "privileges.columns": 24,
+        "privileges.effective": 8,
+        "privileges.relations": 17,
+        "relations": 1,
+        "triggers": 3
+      },
+      "removed": {}
+    },
+    {
+      "object": "capacity_profiles",
+      "authority": "B4-FE01-016",
+      "why": "new table; FE-07",
+      "added": {
+        "columns": 17,
+        "constraints": 17,
+        "indexes": 6,
+        "policies": 3,
+        "privileges.columns": 18,
+        "privileges.effective": 8,
+        "privileges.relations": 17,
+        "relations": 1,
+        "triggers": 3
+      },
+      "removed": {}
+    },
+    {
+      "object": "change_log",
+      "authority": "B4-FE01-029",
+      "why": "entity_table check widened to the eighteen new tables",
+      "added": {
+        "constraints": 1
+      },
+      "removed": {
+        "constraints": 1
+      }
+    },
+    {
+      "object": "dependencies",
+      "authority": "B4-FE01-017",
+      "why": "new table; FE-10 FE-18",
+      "added": {
+        "columns": 30,
+        "constraints": 29,
+        "indexes": 18,
+        "policies": 3,
+        "privileges.columns": 29,
+        "privileges.effective": 8,
+        "privileges.relations": 17,
+        "relations": 1,
+        "triggers": 4
+      },
+      "removed": {}
+    },
+    {
+      "object": "discovery_records",
+      "authority": "B4-FE01-001",
+      "why": "stored provenance",
+      "added": {
+        "columns": 3,
+        "constraints": 3,
+        "indexes": 1,
+        "privileges.columns": 4
+      },
+      "removed": {}
+    },
+    {
+      "object": "events",
+      "authority": "B4-FE01-001/-015",
+      "why": "stored provenance; commitment facets; events.source retired",
+      "added": {
+        "columns": 15,
+        "constraints": 7,
+        "indexes": 2,
+        "privileges.columns": 16
+      },
+      "removed": {
+        "columns": 7,
+        "constraints": 1,
+        "privileges.columns": 1
+      }
+    },
+    {
+      "object": "evidence_links",
+      "authority": "B4-FE01-024",
+      "why": "new table; FE-19",
+      "added": {
+        "columns": 25,
+        "constraints": 25,
+        "indexes": 16,
+        "policies": 2,
+        "privileges.columns": 23,
+        "privileges.effective": 8,
+        "privileges.relations": 17,
+        "relations": 1,
+        "triggers": 3
+      },
+      "removed": {}
+    },
+    {
+      "object": "external_references",
+      "authority": "B4-FE01-004",
+      "why": "new table; FE-20 FE-21 FE-22",
+      "added": {
+        "columns": 32,
+        "constraints": 32,
+        "indexes": 12,
+        "policies": 3,
+        "privileges.columns": 41,
+        "privileges.effective": 8,
+        "privileges.relations": 17,
+        "relations": 1,
+        "triggers": 3
+      },
+      "removed": {}
+    },
+    {
+      "object": "function bootstrap_account",
+      "authority": "B4-FE01-001",
+      "why": "the rows the server lays down state their provenance",
+      "added": {
+        "functions": 1
+      },
+      "removed": {
+        "functions": 1
+      }
+    },
+    {
+      "object": "function claim_artifact_id",
+      "authority": "B4-FE01-002",
+      "why": "claim v2: an artifact a claimed row names must arrive with the claim",
+      "added": {
+        "functions": 1,
+        "privileges.functions": 1
+      },
+      "removed": {}
+    },
+    {
+      "object": "function claim_local_household",
+      "authority": "B4-FE01-001/-002/-015",
+      "why": "claim payload version 2",
+      "added": {
+        "functions": 1
+      },
+      "removed": {
+        "functions": 1
+      }
+    },
+    {
+      "object": "function claim_result",
+      "authority": "B4-FE01-002",
+      "why": "the id map carries source artifacts",
+      "added": {
+        "functions": 1
+      },
+      "removed": {
+        "functions": 1
+      }
+    },
+    {
+      "object": "function current_household_id",
+      "authority": "B4-FE01-031 / ADR-023",
+      "why": "REMOVED — a coin flip presented as an answer",
+      "added": {},
+      "removed": {
+        "functions": 1,
+        "privileges.effective": 1,
+        "privileges.functions": 2
+      }
+    },
+    {
+      "object": "function enforce_single_column_transition",
+      "authority": "B4-FE01-002/-007",
+      "why": "set-once retract / revoke",
+      "added": {
+        "functions": 1,
+        "privileges.effective": 1,
+        "privileges.functions": 2
+      },
+      "removed": {}
+    },
+    {
+      "object": "function forbid_dependency_cycle",
+      "authority": "B4-FE01-017",
+      "why": "a requirement cycle is never stored",
+      "added": {
+        "functions": 1,
+        "privileges.effective": 1,
+        "privileges.functions": 2
+      },
+      "removed": {}
+    },
+    {
+      "object": "function forbid_ledger_mutation",
+      "authority": "B4-FE01-010",
+      "why": "immutable-ledger message names the table",
+      "added": {
+        "functions": 1
+      },
+      "removed": {
+        "functions": 1
+      }
+    },
+    {
+      "object": "function freeze_decided_interpretation",
+      "authority": "B4-FE01-003",
+      "why": "a decided reading is history",
+      "added": {
+        "functions": 1,
+        "privileges.effective": 1,
+        "privileges.functions": 2
+      },
+      "removed": {}
+    },
+    {
+      "object": "function guard_execution_authorization",
+      "authority": "B4-FE01-010",
+      "why": "the authorization boundary; mirrors executionAuthorization()",
+      "added": {
+        "functions": 1,
+        "privileges.effective": 1,
+        "privileges.functions": 2
+      },
+      "removed": {}
+    },
+    {
+      "object": "function guard_withdrawal",
+      "authority": "B4-FE01-009",
+      "why": "a withdrawal withdraws an approval",
+      "added": {
+        "functions": 1,
+        "privileges.effective": 1,
+        "privileges.functions": 2
+      },
+      "removed": {}
+    },
+    {
+      "object": "function insert_starter_categories",
+      "authority": "B4-FE01-001",
+      "why": "starters are system-derived",
+      "added": {
+        "functions": 1
+      },
+      "removed": {
+        "functions": 1
+      }
+    },
+    {
+      "object": "function resolve_household_context",
+      "authority": "B4-FE01-031 / ADR-023",
+      "why": "explicit household context; replaces the LIMIT-1 current_household_id",
+      "added": {
+        "functions": 1,
+        "privileges.effective": 1,
+        "privileges.functions": 2
+      },
+      "removed": {}
+    },
+    {
+      "object": "function set_child_member_type",
+      "authority": "B4-FE01-014 / NHR-01",
+      "why": "a child is proven a child structurally",
+      "added": {
+        "functions": 1,
+        "privileges.effective": 1,
+        "privileges.functions": 2
+      },
+      "removed": {}
+    },
+    {
+      "object": "function sync_pull",
+      "authority": "B4-FE01-031 / ADR-023",
+      "why": "names its household",
+      "added": {
+        "functions": 1,
+        "privileges.effective": 2,
+        "privileges.functions": 3
+      },
+      "removed": {
+        "functions": 1,
+        "privileges.effective": 2,
+        "privileges.functions": 3
+      }
+    },
+    {
+      "object": "function sync_push",
+      "authority": "B4-FE01-029",
+      "why": "allow-list widened to the foundation tables",
+      "added": {
+        "functions": 1
+      },
+      "removed": {
+        "functions": 1
+      }
+    },
+    {
+      "object": "goals",
+      "authority": "B4-FE01-021",
+      "why": "new table; FE-10",
+      "added": {
+        "columns": 19,
+        "constraints": 16,
+        "indexes": 6,
+        "policies": 3,
+        "privileges.columns": 22,
+        "privileges.effective": 8,
+        "privileges.relations": 17,
+        "relations": 1,
+        "triggers": 3
+      },
+      "removed": {}
+    },
+    {
+      "object": "household_categories",
+      "authority": "B4-FE01-001/-005",
+      "why": "stored provenance",
+      "added": {
+        "columns": 3,
+        "constraints": 3,
+        "indexes": 1,
+        "privileges.columns": 4
+      },
+      "removed": {}
+    },
+    {
+      "object": "household_people",
+      "authority": "B4-FE01-013",
+      "why": "new table; FE-11 FE-23 FE-27",
+      "added": {
+        "columns": 18,
+        "constraints": 16,
+        "indexes": 5,
+        "policies": 3,
+        "privileges.columns": 20,
+        "privileges.effective": 8,
+        "privileges.relations": 17,
+        "relations": 1,
+        "triggers": 3
+      },
+      "removed": {}
+    },
+    {
+      "object": "household_systems",
+      "authority": "B4-FE01-001/-015",
+      "why": "stored provenance; autonomy mode and effort",
+      "added": {
+        "columns": 6,
+        "constraints": 7,
+        "indexes": 2,
+        "privileges.columns": 10
+      },
+      "removed": {}
+    },
+    {
+      "object": "intent_decisions",
+      "authority": "B4-FE01-009",
+      "why": "new table; FE-02 FE-14",
+      "added": {
+        "columns": 16,
+        "constraints": 16,
+        "indexes": 9,
+        "policies": 2,
+        "privileges.columns": 14,
+        "privileges.effective": 8,
+        "privileges.relations": 17,
+        "relations": 1,
+        "triggers": 4
+      },
+      "removed": {}
+    },
+    {
+      "object": "interpretations",
+      "authority": "B4-FE01-003",
+      "why": "new table; FE-04 FE-05",
+      "added": {
+        "columns": 35,
+        "constraints": 35,
+        "indexes": 11,
+        "policies": 3,
+        "privileges.columns": 48,
+        "privileges.effective": 8,
+        "privileges.relations": 17,
+        "relations": 1,
+        "triggers": 5
+      },
+      "removed": {}
+    },
+    {
+      "object": "meal_plan_entries",
+      "authority": "B4-FE01-001/-015",
+      "why": "stored provenance; preparation and energy",
+      "added": {
+        "columns": 5,
+        "constraints": 6,
+        "indexes": 2,
+        "privileges.columns": 8
+      },
+      "removed": {}
+    },
+    {
+      "object": "needs_me_items",
+      "authority": "B4-FE01-001/-027",
+      "why": "stored provenance; composite key for typed references",
+      "added": {
+        "columns": 3,
+        "constraints": 4,
+        "indexes": 2,
+        "privileges.columns": 4
+      },
+      "removed": {}
+    },
+    {
+      "object": "onboarding_state",
+      "authority": "B4-FE01-001",
+      "why": "stored provenance",
+      "added": {
+        "columns": 3,
+        "constraints": 3,
+        "indexes": 1,
+        "privileges.columns": 4
+      },
+      "removed": {}
+    },
+    {
+      "object": "one_move_records",
+      "authority": "B4-FE01-001/-027",
+      "why": "stored provenance; five typed targets; composite target keys",
+      "added": {
+        "columns": 14,
+        "constraints": 9,
+        "indexes": 5,
+        "privileges.columns": 10
+      },
+      "removed": {
+        "columns": 8,
+        "constraints": 3
+      }
+    },
+    {
+      "object": "patterns",
+      "authority": "B4-FE01-023",
+      "why": "new table; FE-26",
+      "added": {
+        "columns": 28,
+        "constraints": 28,
+        "indexes": 12,
+        "policies": 3,
+        "privileges.columns": 30,
+        "privileges.effective": 8,
+        "privileges.relations": 17,
+        "relations": 1,
+        "triggers": 3
+      },
+      "removed": {}
+    },
+    {
+      "object": "recurrence_rules",
+      "authority": "B4-FE01-018",
+      "why": "new table; FE-25",
+      "added": {
+        "columns": 30,
+        "constraints": 28,
+        "indexes": 10,
+        "policies": 3,
+        "privileges.columns": 39,
+        "privileges.effective": 8,
+        "privileges.relations": 17,
+        "relations": 1,
+        "triggers": 3
+      },
+      "removed": {}
+    },
+    {
+      "object": "responsibilities",
+      "authority": "B4-FE01-014",
+      "why": "new table; FE-11 FE-12",
+      "added": {
+        "columns": 34,
+        "constraints": 31,
+        "indexes": 15,
+        "policies": 3,
+        "privileges.columns": 42,
+        "privileges.effective": 8,
+        "privileges.relations": 17,
+        "relations": 1,
+        "triggers": 4
+      },
+      "removed": {}
+    },
+    {
+      "object": "source_artifacts",
+      "authority": "B4-FE01-002",
+      "why": "new table; FE-01 FE-04 FE-05",
+      "added": {
+        "columns": 17,
+        "constraints": 25,
+        "indexes": 6,
+        "policies": 3,
+        "privileges.columns": 14,
+        "privileges.effective": 8,
+        "privileges.relations": 17,
+        "relations": 1,
+        "triggers": 4
+      },
+      "removed": {}
+    },
+    {
+      "object": "system_steps",
+      "authority": "B4-FE01-022",
+      "why": "new table; FE-25",
+      "added": {
+        "columns": 18,
+        "constraints": 17,
+        "indexes": 7,
+        "policies": 3,
+        "privileges.columns": 19,
+        "privileges.effective": 8,
+        "privileges.relations": 17,
+        "relations": 1,
+        "triggers": 3
+      },
+      "removed": {}
+    },
+    {
+      "object": "tasks",
+      "authority": "B4-FE01-001/-015/-020",
+      "why": "stored provenance; commitment facets; exact value",
+      "added": {
+        "columns": 18,
+        "constraints": 15,
+        "indexes": 2,
+        "privileges.columns": 34
+      },
+      "removed": {}
+    }
+  ]
+}

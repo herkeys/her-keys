@@ -15,6 +15,8 @@ schema, including who is allowed to do what?** It is read-only by construction (
 | `schema-lines.sql` | The catalog inspection: one normalized line per schema fact. Single source of truth. |
 | `schema-fingerprint.mjs` | Wraps the SQL (pins `search_path`, hashes each dimension), runs it against a source, compares to an artifact. |
 | `baselines/*.json` | Committed, approved digests. A run is verified against one of these. |
+| `gen-foundation-sql.mjs` | B4-FOUNDATION-BUILDOUT-01. Generates the foundation DDL (18 tables, provenance and facet columns, grants) from `src/domain/sync/foundationSpecs.ts` into two marker-delimited regions of the shipping migration. `--check` fails on any difference, so a hand edit or an unregenerated manifest change cannot ship as drift. |
+| `reconcile-foundation.mjs` | B4-FOUNDATION-BUILDOUT-01. Takes two `--mode detail` captures (before / after, SAME environment) and attributes every added, removed or changed fact to the reason it exists; exits non-zero on an unexplained one. Its output is `baselines/build4-foundation-reconciliation.json`. |
 
 ## What is measured
 
@@ -102,6 +104,13 @@ node supabase/tools/schema-fingerprint.mjs write --source linked --out supabase/
 
 An artifact contains digests, item counts and the tool version only: no data, no secrets,
 no timestamps. Re-running the tool on an unchanged schema produces a byte-identical artifact.
+
+## Superseded baselines
+
+`baselines/build4-local-fingerprint.json` is SUPERSEDED by `baselines/build4-foundation-local-fingerprint.json` (B4-FOUNDATION-BUILDOUT-01) and is kept, unchanged apart
+from a `superseded_by` pointer, as the "before" side of the reconciliation. Verify current state against the newer file; do not verify against a superseded one.
+Two captures are only comparable when both apply the shipping migration in its authoritative form — the working-tree file, CRLF on this machine — because
+function bodies hash their line endings.
 
 ## When to update a baseline
 
