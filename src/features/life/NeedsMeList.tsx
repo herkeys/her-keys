@@ -19,7 +19,7 @@ export function NeedsMeList() {
     );
   }
 
-  const onResolve = (id: string) => store.dispatch((current) => resolveNeedsMeItem(current, id));
+  const onResolve = (id: string) => store.dispatch((current, ctx) => resolveNeedsMeItem(current, id, ctx));
 
   // The item stays open until the task is actually saved; the editor resolves it in the same change.
   const onPromote = (id: string) => router.push({ pathname: '/task-editor', params: { needsMeId: id } });

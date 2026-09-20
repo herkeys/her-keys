@@ -1,6 +1,9 @@
 import type { TransitionContext } from './context';
+import { emptyTaskFacets } from './foundation/commitment';
+import type { Money } from './foundation/money';
 import { provenanceFor, userProvenance, type Provenance } from './foundation/provenance';
 import { toInstant, type LocalDate } from './logicalDay';
+import { appendObservation, plannedDateOf } from './observations';
 import type { AppState, Task, TaskPlan, VisibilityScope } from './state';
 
 /**
@@ -23,6 +26,8 @@ export interface AddTaskInput {
   scope: VisibilityScope;
   /** Where this task really came from. Only a capture the user made is `user-action`, which is the default. */
   provenance?: Provenance;
+  /** What it is worth, exactly. Unknown unless stated. */
+  value?: Money | null;
 }
 
 export function addTask(state: AppState, ctx: TransitionContext, input: AddTaskInput): AppState {
@@ -41,6 +46,8 @@ export function addTask(state: AppState, ctx: TransitionContext, input: AddTaskI
     completedAt: null,
     createdAt: now,
     updatedAt: now,
+    ...emptyTaskFacets(),
+    value: input.value ?? null,
     provenance: provenanceFor(state.origin, input.provenance ?? userProvenance()),
     scope: input.scope,
   };
@@ -59,10 +66,16 @@ export function updateTask(state: AppState, ctx: TransitionContext, taskId: stri
   const current = state.tasks.find((task) => task.id === taskId);
   if (!current) return state;
   const edits = pickFields(patch, EDITABLE_TASK_FIELDS);
-  return {
-    ...state,
-    tasks: state.tasks.map((task) => (task.id === taskId ? { ...task, ...edits, updatedAt: toInstant(ctx.nowMs) } : task)),
-  };
+  const updated = { ...current, ...edits, updatedAt: toInstant(ctx.nowMs) };
+  const next = { ...state, tasks: state.tasks.map((task) => (task.id === taskId ? updated : task)) };
+
+  // Moving something to a LATER day is a deferral. It is what she did to it, so it is hers.
+  const from = plannedDateOf(current, state.user.timezone);
+  const to = plannedDateOf(updated, state.user.timezone);
+  if (current.status === 'open' && from !== null && to !== null && to > from) {
+    return appendObservation(next, ctx, { about: { kind: 'task', id: taskId }, outcome: 'deferred', plannedDate: from, toDate: to });
+  }
+  return next;
 }
 
 export function pickFields<T extends object, K extends keyof T>(patch: T, fields: readonly K[]): Partial<Pick<T, K>> {
@@ -77,12 +90,18 @@ export function completeTask(state: AppState, ctx: TransitionContext, taskId: st
   const current = state.tasks.find((task) => task.id === taskId);
   if (!current || current.status !== 'open') return state;
   const completedAt = toInstant(ctx.nowMs);
-  return {
+  const next: AppState = {
     ...state,
     tasks: state.tasks.map((task) =>
       task.id === taskId ? { ...task, status: 'completed', completedAt, updatedAt: completedAt } : task
     ),
   };
+  // `completedAt` is one mutable timestamp; the observation is the append-only fact that it happened.
+  return appendObservation(next, ctx, {
+    about: { kind: 'task', id: taskId },
+    outcome: 'completed',
+    plannedDate: plannedDateOf(current, state.user.timezone),
+  });
 }
 
 /**
@@ -93,8 +112,13 @@ export function completeTask(state: AppState, ctx: TransitionContext, taskId: st
 export function archiveTask(state: AppState, ctx: TransitionContext, taskId: string): AppState {
   const current = state.tasks.find((task) => task.id === taskId);
   if (!current || current.status !== 'open') return state;
-  return {
+  const next: AppState = {
     ...state,
     tasks: state.tasks.map((task) => (task.id === taskId ? { ...task, status: 'archived', updatedAt: toInstant(ctx.nowMs) } : task)),
   };
+  return appendObservation(next, ctx, {
+    about: { kind: 'task', id: taskId },
+    outcome: 'cancelled',
+    plannedDate: plannedDateOf(current, state.user.timezone),
+  });
 }

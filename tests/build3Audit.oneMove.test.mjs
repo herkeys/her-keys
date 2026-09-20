@@ -110,7 +110,7 @@ describe('Build 3 audit — a done move stays done (B3-AUD-003)', () => {
     let state = { ...decidedDay().state, tasks: [], oneMoves: [] };
     state = captureNeedsMeItem(state, ctx(), { title: 'Call insurance' });
     state = resolveOneMoveForToday(state, ctx());
-    const resolved = resolveNeedsMeItem(state, state.needsMe[0].id);
+    const resolved = resolveNeedsMeItem(state, state.needsMe[0].id, ctx());
     assert.equal(oneMoveForDay(resolved, DAY).status, 'completed');
     assert.equal(resolveOneMoveForToday(resolved, ctx()), resolved);
   });

@@ -9,6 +9,7 @@ import { CURRENT_SCHEMA_VERSION, decodeStoredState, encodeStoredState } from '..
 import { isValidV3AppState } from '../src/persistence/legacySchemasV3.ts';
 import { classifyV3Row } from '../src/persistence/migrateV3ToV4.ts';
 import { UNBOUND_IDENTITY } from '../src/domain/account/binding.ts';
+import { UNKNOWN_FACET, V4_ROOTS, V4_ROW_ADDITIONS } from './support/legacyShapes.mjs';
 
 /**
  * B4-FE01-029 — v3 -> v4, proven against byte-exact v3 envelopes.
@@ -45,11 +46,16 @@ const STAMPED = ['categories', 'events', 'tasks', 'systems', 'meals', 'needsMe',
  * row had is still there and equal, and the only addition is `provenance`. The event
  * `source` flag is the one deliberate retirement — it is subsumed by provenance.
  */
-function assertLossless(before, after, label, { retired = [] } = {}) {
+function assertLossless(before, after, label, { retired = [], collection }) {
   const beforeKeys = Object.keys(before).filter((key) => !retired.includes(key));
   for (const key of beforeKeys) assert.deepEqual(after[key], before[key], `${label}.${key} was not carried across intact`);
-  const added = Object.keys(after).filter((key) => !(key in before));
-  assert.deepEqual(added, ['provenance'], `${label}: the only field v4 may add is provenance (found ${added.join(', ')})`);
+  // v4 may add exactly the fields it declared for this kind: provenance, plus facets that read as "not known".
+  const added = Object.keys(after).filter((key) => !(key in before)).sort();
+  assert.deepEqual(added, [...V4_ROW_ADDITIONS[collection]].sort(), `${label}: v4 added something it did not declare`);
+  for (const key of added.filter((k) => k !== 'provenance')) {
+    assert.equal(after[key], UNKNOWN_FACET(key), `${label}.${key}: a new facet must be honestly unknown, never a guess`);
+  }
+  assert.ok(after.provenance && typeof after.provenance.producer === 'string', `${label} carries provenance`);
 }
 
 describe('v3 fixtures are frozen and genuinely v3', () => {
@@ -92,7 +98,7 @@ describe('every v3 fixture migrates losslessly to v4', () => {
       for (const collection of STAMPED) {
         assert.equal(decoded.state[collection].length, env.data[collection].length, `${name}.${collection} row count`);
         decoded.state[collection].forEach((row, i) =>
-          assertLossless(env.data[collection][i], row, `${name}.${collection}[${i}]`, { retired: collection === 'events' ? ['source'] : [] })
+          assertLossless(env.data[collection][i], row, `${name}.${collection}[${i}]`, { collection, retired: collection === 'events' ? ['source'] : [] })
         );
       }
       for (const collection of ['children', 'actions', 'migrationEvidence']) {
@@ -102,11 +108,14 @@ describe('every v3 fixture migrates losslessly to v4', () => {
       assert.deepEqual(decoded.state.user, env.data.user);
       assert.equal(decoded.state.origin, env.data.origin);
       if (env.data.discovery === null) assert.equal(decoded.state.discovery, null);
-      else assertLossless(env.data.discovery, decoded.state.discovery, `${name}.discovery`);
-      assertLossless(env.data.onboarding, decoded.state.onboarding, `${name}.onboarding`);
+      else assertLossless(env.data.discovery, decoded.state.discovery, `${name}.discovery`, { collection: 'discovery' });
+      assertLossless(env.data.onboarding, decoded.state.onboarding, `${name}.onboarding`, { collection: 'onboarding' });
 
-      // The two new roots start empty: nothing pre-existing can have arrived from an artifact or an external system.
-      assert.deepEqual([decoded.state.sourceArtifacts, decoded.state.externalReferences], [[], []]);
+      // Every root v4 introduced starts empty: nothing pre-existing can have arrived from an artifact, an external
+      // system, a delegation or an authority, so none is inferred.
+      for (const root of V4_ROOTS.filter((r) => r !== 'migrationLineage')) {
+        assert.deepEqual(decoded.state[root], root === 'capacity' ? null : [], `${name}.${root} starts empty`);
+      }
     });
 
     test(`${name}: migration lineage accounts for every classified row exactly once, and is recorded apart from the rows`, () => {

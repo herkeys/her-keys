@@ -1,6 +1,7 @@
 import type { TransitionContext } from './context';
 import { provenanceFor, userProvenance, type Provenance } from './foundation/provenance';
 import { toInstant, type LocalDate } from './logicalDay';
+import { appendObservation } from './observations';
 import type { AppState, NeedsMeItem } from './state';
 import { addTask, type AddTaskInput } from './tasks';
 
@@ -39,10 +40,12 @@ export function updateNeedsMeItem(
   return { ...state, needsMe: state.needsMe.map((item) => (item.id === itemId ? { ...item, ...patch } : item)) };
 }
 
-export function resolveNeedsMeItem(state: AppState, itemId: string): AppState {
+/** Takes the clock because resolving something is behavior worth recording, and a record needs a time. */
+export function resolveNeedsMeItem(state: AppState, itemId: string, ctx: TransitionContext): AppState {
   const current = state.needsMe.find((item) => item.id === itemId);
   if (!current || current.status === 'resolved') return state;
-  return { ...state, needsMe: state.needsMe.map((item) => (item.id === itemId ? { ...item, status: 'resolved' } : item)) };
+  const next: AppState = { ...state, needsMe: state.needsMe.map((item) => (item.id === itemId ? { ...item, status: 'resolved' } : item)) };
+  return appendObservation(next, ctx, { about: { kind: 'needsMe', id: itemId }, outcome: 'completed' });
 }
 
 /**
@@ -51,7 +54,7 @@ export function resolveNeedsMeItem(state: AppState, itemId: string): AppState {
  * item is never marked resolved on the way to an editor she might leave.
  */
 export function promoteNeedsMeItem(state: AppState, ctx: TransitionContext, itemId: string, task: AddTaskInput): AppState {
-  return resolveNeedsMeItem(addTask(state, ctx, task), itemId);
+  return resolveNeedsMeItem(addTask(state, ctx, task), itemId, ctx);
 }
 
 /** The details a promotion starts from: whatever she already attached to the item. */

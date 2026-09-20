@@ -16,7 +16,7 @@ import { addTask } from '../src/domain/tasks.ts';
 import { CURRENT_SCHEMA_VERSION, decodeStoredState, encodeStoredState } from '../src/persistence/envelope.ts';
 import { isValidV1AppState } from '../src/persistence/legacySchemas.ts';
 import { DAY, MORNING, NEXT_DAY, STORAGE_KEYS, harness, launch, nyMs } from './support/fixtures.mjs';
-import { withoutV4Additions } from './support/legacyShapes.mjs';
+import { V4_ROW_ADDITIONS, withoutV4Additions } from './support/legacyShapes.mjs';
 
 const V1 = JSON.parse(readFileSync(new URL('./fixtures/build25-v1-envelopes.json', import.meta.url), 'utf8'));
 const UNCHANGED_SECTIONS = ['origin', 'household', 'user', 'children', 'categories', 'systems', 'meals', 'onboarding', 'discovery', 'actions'];
@@ -24,6 +24,7 @@ const UNCHANGED_SECTIONS = ['origin', 'household', 'user', 'children', 'categori
 const v1Data = (name) => JSON.parse(V1[name]).data;
 /** Every household in this authentic corpus is a demo household, so v4 classifies every row as demo-seed. */
 const DEMO_PROV = { producer: 'demo-seed', artifactId: null, confidence: null };
+const TASK_FACET_KEYS = V4_ROW_ADDITIONS.tasks.filter((key) => key !== 'provenance');
 const decodeValid = (raw) => {
   const decoded = decodeStoredState(raw);
   assert.equal(decoded.kind, 'valid', JSON.stringify(decoded).slice(0, 200));
@@ -58,7 +59,7 @@ describe('Build 3 audit — authentic v1 data migrates without loss', () => {
       // v4 added exactly one thing to these sections — stored provenance. Remove only that and every
       // authentic Build 2.5 byte must still be there: the migration is lossless, not merely non-throwing.
       for (const section of UNCHANGED_SECTIONS) {
-        assert.deepEqual(withoutV4Additions(decoded.state[section]), v1Data(name)[section], `${name}.${section}`);
+        assert.deepEqual(withoutV4Additions(decoded.state[section], section), v1Data(name)[section], `${name}.${section}`);
       }
     }
   });
@@ -67,9 +68,11 @@ describe('Build 3 audit — authentic v1 data migrates without loss', () => {
     for (const name of Object.keys(V1)) {
       const { state } = decodeValid(V1[name]);
       const before = v1Data(name);
+      // What v2 and v3 backfilled is compared with everything v4 ADDED taken off; what v4 added is then
+      // asserted on its own — provenance carries the demo truth, and every new facet is honestly unknown.
       state.events.forEach((event, index) => {
         assert.deepEqual(
-          { ...event },
+          withoutV4Additions(event, 'events'),
           {
             ...before.events[index],
             commitment: 'fixed',
@@ -78,18 +81,24 @@ describe('Build 3 audit — authentic v1 data migrates without loss', () => {
             travelMinutesBefore: null,
             travelMinutesAfter: null,
             preparationMinutes: null,
-            // v1 -> v2 stamped source:'demo'; v3 -> v4 carries that truth into stored provenance.
-            provenance: { producer: 'demo-seed', artifactId: null, confidence: null },
             createdAt: null,
             updatedAt: null,
           },
           `${name} event ${event.id}`
         );
+        // v1 -> v2 stamped source:'demo'; v3 -> v4 carries that truth into stored provenance.
+        assert.deepEqual(event.provenance, DEMO_PROV);
+        assert.equal('source' in event, false);
       });
       state.tasks.forEach((task, index) => {
-        assert.deepEqual(task, { ...before.tasks[index], status: 'open', notes: null, completedAt: null, createdAt: null, updatedAt: null, provenance: DEMO_PROV }, `${name} task ${task.id}`);
+        assert.deepEqual(withoutV4Additions(task, 'tasks'), { ...before.tasks[index], status: 'open', notes: null, completedAt: null, createdAt: null, updatedAt: null }, `${name} task ${task.id}`);
+        assert.deepEqual(task.provenance, DEMO_PROV);
+        assert.ok(TASK_FACET_KEYS.every((key) => task[key] === null), `${name} task ${task.id}: no facet is invented`);
       });
-      state.oneMoves.forEach((record, index) => assert.deepEqual(record, { ...before.oneMoves[index], targetType: 'catalog', provenance: DEMO_PROV }));
+      state.oneMoves.forEach((record, index) => {
+        assert.deepEqual(withoutV4Additions(record, 'oneMoves'), { ...before.oneMoves[index], targetType: 'catalog' });
+        assert.deepEqual(record.provenance, DEMO_PROV);
+      });
       assert.deepEqual(state.needsMe, []);
       // Every One Move in this authentic corpus belongs to a DEMO household, so
       // the v2 -> v3 catalog remediation has nothing to do here. Real Build 2.5
@@ -146,7 +155,7 @@ describe('Build 3 audit — migrated data through a real launch', () => {
     assert.equal(disk.writeSeq, JSON.parse(V1.emptyOnboarded).writeSeq + 1);
     assert.equal(disk.data.origin, 'empty');
     // Losslessly carried: strip only what v4 added and the authentic v1 bytes remain.
-    assert.deepEqual(withoutV4Additions(disk.data.onboarding), v1Data('emptyOnboarded').onboarding);
+    assert.deepEqual(withoutV4Additions(disk.data.onboarding, 'onboarding'), v1Data('emptyOnboarded').onboarding);
     // This is a REAL (non-demo) household, so the backfill classified it by what v3 could prove:
     assert.equal(disk.data.onboarding.provenance.producer, 'onboarding', 'the intake flow wrote it');
     assert.ok(disk.data.categories.every((c) => c.provenance.producer === 'system-derived'), 'a real household untouched by categories keeps only its starter set');

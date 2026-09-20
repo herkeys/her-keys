@@ -1,3 +1,4 @@
+import { emptyEventFacets, emptyMealFacets, emptySystemFacets, emptyTaskFacets } from '../foundation/commitment';
 import { PROVENANCE_SOURCES, legacyProvenance, carriesConfidence, type Provenance, type ProvenanceSource } from '../foundation/provenance';
 import type { AppState } from '../state';
 import type { SyncEntityKind } from './syncTypes';
@@ -122,6 +123,7 @@ export function applyCloudRow(
           completedAt: instant(row.completed_at),
           createdAt: instant(row.origin_created_at),
           updatedAt: instant(row.origin_updated_at),
+          ...emptyTaskFacets(),
           provenance: provenanceFromRow(row, resolve),
           scope: str(row.scope) as never,
         }),
@@ -145,6 +147,7 @@ export function applyCloudRow(
           travelMinutesBefore: row.travel_minutes_before === null ? null : num(row.travel_minutes_before),
           travelMinutesAfter: row.travel_minutes_after === null ? null : num(row.travel_minutes_after),
           preparationMinutes: row.preparation_minutes === null ? null : num(row.preparation_minutes),
+          ...emptyEventFacets(),
           provenance: provenanceFromRow(row, resolve),
           createdAt: instant(row.origin_created_at),
           updatedAt: instant(row.origin_updated_at),
@@ -160,6 +163,7 @@ export function applyCloudRow(
           name: str(row.name),
           description: str(row.description),
           categoryId: resolve(row.category_id as string) ?? str(row.category_id),
+          ...emptySystemFacets(),
           provenance: provenanceFromRow(row, resolve),
           scope: str(row.scope) as never,
         }),
@@ -173,6 +177,7 @@ export function applyCloudRow(
           date: str(row.meal_date),
           title: str(row.title),
           categoryId: resolve(row.category_id as string) ?? str(row.category_id),
+          ...emptyMealFacets(),
           provenance: provenanceFromRow(row, resolve),
           scope: str(row.scope) as never,
         }),

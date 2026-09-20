@@ -84,7 +84,7 @@ Audit numbering is the audit's own matrix row number. `Primitives` reference the
 - SECURITY IMPACT: owner-only RLS; execution/outcome have no client INSERT grant.
 - ACTION/AUTONOMY IMPACT: the whole axis — representation only, no executor.
 - IMPLEMENTATION APPROACH: ADR-007..010.
-- STATUS: NOT STARTED
+- STATUS: IN PROGRESS
 
 ### FE-03 — Universal commitment contract
 - AUDIT ROW: #3
@@ -99,7 +99,7 @@ Audit numbering is the audit's own matrix row number. `Primitives` reference the
 - SECURITY IMPACT: none.
 - ACTION/AUTONOMY IMPACT: feeds consequence.
 - IMPLEMENTATION APPROACH: ADR-014, -015.
-- STATUS: NOT STARTED
+- STATUS: IN PROGRESS
 
 ### FE-04 — Voice-first Talk It Out
 - AUDIT ROW: #4
@@ -144,7 +144,7 @@ Audit numbering is the audit's own matrix row number. `Primitives` reference the
 - SECURITY IMPACT: none.
 - ACTION/AUTONOMY IMPACT: reads intents/decisions/executions.
 - IMPLEMENTATION APPROACH: ADR-018.
-- STATUS: NOT STARTED
+- STATUS: IN PROGRESS
 
 ### FE-07 — Capacity Intelligence
 - AUDIT ROW: #10
@@ -159,7 +159,7 @@ Audit numbering is the audit's own matrix row number. `Primitives` reference the
 - SECURITY IMPACT: owner-only.
 - ACTION/AUTONOMY IMPACT: none.
 - IMPLEMENTATION APPROACH: ADR-015, -025.
-- STATUS: NOT STARTED
+- STATUS: IN PROGRESS
 
 ### FE-08 — Adaptive scheduling
 - AUDIT ROW: #11
@@ -174,7 +174,7 @@ Audit numbering is the audit's own matrix row number. `Primitives` reference the
 - SECURITY IMPACT: none.
 - ACTION/AUTONOMY IMPACT: per-move autonomy uses -007.
 - IMPLEMENTATION APPROACH: ADR-015, -016.
-- STATUS: NOT STARTED
+- STATUS: IN PROGRESS
 
 ### FE-09 — One Move extensibility
 - AUDIT ROW: #12
@@ -189,7 +189,7 @@ Audit numbering is the audit's own matrix row number. `Primitives` reference the
 - SECURITY IMPACT: none.
 - ACTION/AUTONOMY IMPACT: none.
 - IMPLEMENTATION APPROACH: ADR-005, -021.
-- STATUS: NOT STARTED
+- STATUS: IN PROGRESS
 
 ### FE-10 — AI decomposition
 - AUDIT ROW: #13
@@ -204,7 +204,7 @@ Audit numbering is the audit's own matrix row number. `Primitives` reference the
 - SECURITY IMPACT: owner-only.
 - ACTION/AUTONOMY IMPACT: acceptance is an approval.
 - IMPLEMENTATION APPROACH: ADR-012, -016.
-- STATUS: NOT STARTED
+- STATUS: IN PROGRESS
 
 ### FE-11 — Delegation
 - AUDIT ROW: #14
@@ -219,7 +219,7 @@ Audit numbering is the audit's own matrix row number. `Primitives` reference the
 - SECURITY IMPACT: owner-only; membership boundary unchanged.
 - ACTION/AUTONOMY IMPACT: sending a request is an action with consequence (-008).
 - IMPLEMENTATION APPROACH: ADR-019.
-- STATUS: NOT STARTED
+- STATUS: IN PROGRESS
 
 ### FE-12 — Closed-loop responsibility
 - AUDIT ROW: #15
@@ -234,7 +234,7 @@ Audit numbering is the audit's own matrix row number. `Primitives` reference the
 - SECURITY IMPACT: owner-only.
 - ACTION/AUTONOMY IMPACT: escalation is attention intent, not delivery.
 - IMPLEMENTATION APPROACH: ADR-019.
-- STATUS: NOT STARTED
+- STATUS: IN PROGRESS
 
 ### FE-13 — Proactive automation
 - AUDIT ROW: #16
@@ -249,7 +249,7 @@ Audit numbering is the audit's own matrix row number. `Primitives` reference the
 - SECURITY IMPACT: execution requires server-verified authorization.
 - ACTION/AUTONOMY IMPACT: representation-only; nothing executes.
 - IMPLEMENTATION APPROACH: ADR-007..010.
-- STATUS: NOT STARTED
+- STATUS: IN PROGRESS
 
 ### FE-14 — Autonomy / approval model
 - AUDIT ROW: #17
@@ -264,7 +264,7 @@ Audit numbering is the audit's own matrix row number. `Primitives` reference the
 - SECURITY IMPACT: **a permission store** — owner-only, `producer` must be `user-action`, never household-readable.
 - ACTION/AUTONOMY IMPACT: the model itself.
 - IMPLEMENTATION APPROACH: ADR-006, -008.
-- STATUS: NOT STARTED
+- STATUS: IN PROGRESS
 
 ### FE-15 — Action consequence model
 - AUDIT ROW: #18
@@ -279,7 +279,7 @@ Audit numbering is the audit's own matrix row number. `Primitives` reference the
 - SECURITY IMPACT: gates -007.
 - ACTION/AUTONOMY IMPACT: gates autonomy.
 - IMPLEMENTATION APPROACH: ADR-008.
-- STATUS: NOT STARTED
+- STATUS: IN PROGRESS
 
 ### FE-16 — Observe outcome / closed loop
 - AUDIT ROW: #19
@@ -294,7 +294,7 @@ Audit numbering is the audit's own matrix row number. `Primitives` reference the
 - SECURITY IMPACT: no client INSERT grant.
 - ACTION/AUTONOMY IMPACT: closes the loop.
 - IMPLEMENTATION APPROACH: ADR-007.
-- STATUS: NOT STARTED
+- STATUS: IN PROGRESS
 
 ### FE-17 — Smart notifications
 - AUDIT ROW: #20
@@ -309,7 +309,7 @@ Audit numbering is the audit's own matrix row number. `Primitives` reference the
 - SECURITY IMPACT: none.
 - ACTION/AUTONOMY IMPACT: reads -007, -008.
 - IMPLEMENTATION APPROACH: ADR-018.
-- STATUS: NOT STARTED
+- STATUS: IN PROGRESS
 
 ### FE-18 — Cross-domain reasoning
 - AUDIT ROW: #38
@@ -324,7 +324,7 @@ Audit numbering is the audit's own matrix row number. `Primitives` reference the
 - SECURITY IMPACT: none.
 - ACTION/AUTONOMY IMPACT: none.
 - IMPLEMENTATION APPROACH: scenario tests A–D against real relational rows; no JSON bag carries a fact (Addendum 01 A6).
-- STATUS: NOT STARTED
+- STATUS: IN PROGRESS
 
 ### FE-19 — Reasoning explainability
 - AUDIT ROW: #39
@@ -339,7 +339,7 @@ Audit numbering is the audit's own matrix row number. `Primitives` reference the
 - SECURITY IMPACT: owner-only.
 - ACTION/AUTONOMY IMPACT: attaches to intents.
 - IMPLEMENTATION APPROACH: ADR-022.
-- STATUS: NOT STARTED
+- STATUS: IN PROGRESS
 
 ### FE-20 — Calendar OS — external sources
 - AUDIT ROW: #22
@@ -399,7 +399,7 @@ Audit numbering is the audit's own matrix row number. `Primitives` reference the
 - SECURITY IMPACT: no widening; logistics are not a legal-record architecture.
 - ACTION/AUTONOMY IMPACT: requests are actions with consequence.
 - IMPLEMENTATION APPROACH: ADR-006, -019.
-- STATUS: NOT STARTED
+- STATUS: IN PROGRESS
 
 ### FE-24 — Money OS
 - AUDIT ROW: #27
@@ -414,7 +414,7 @@ Audit numbering is the audit's own matrix row number. `Primitives` reference the
 - SECURITY IMPACT: new sensitivity class; owner-only where authority is involved.
 - ACTION/AUTONOMY IMPACT: financial action is the highest consequence class.
 - IMPLEMENTATION APPROACH: ADR-014. No Money OS, bank connectivity or payments.
-- STATUS: NOT STARTED
+- STATUS: IN PROGRESS
 
 ### FE-25 — Household Systems as an engine
 - AUDIT ROW: #32
@@ -429,7 +429,7 @@ Audit numbering is the audit's own matrix row number. `Primitives` reference the
 - SECURITY IMPACT: owner-only.
 - ACTION/AUTONOMY IMPACT: automation level uses the shared mode vocabulary.
 - IMPLEMENTATION APPROACH: ADR-017, -022.
-- STATUS: NOT STARTED
+- STATUS: IN PROGRESS
 
 ### FE-26 — Pattern Intelligence
 - AUDIT ROW: #33
@@ -444,7 +444,7 @@ Audit numbering is the audit's own matrix row number. `Primitives` reference the
 - SECURITY IMPACT: owner-only.
 - ACTION/AUTONOMY IMPACT: a pattern needs approval before acting (`requiresApproval('pattern')`).
 - IMPLEMENTATION APPROACH: ADR-022.
-- STATUS: NOT STARTED
+- STATUS: IN PROGRESS
 
 ### FE-27 — Shared household participation
 - AUDIT ROW: #35
@@ -531,7 +531,8 @@ reversible, fail-closed, lossless, cross-domain-reusable option was chosen.
 - **ADR-011 No content in the canonical store.** A source artifact stores kind, provider, received-at, a SHA-256 digest (dedupe) and an opaque
   `contentRef`. A spoken utterance stores **no transcript**. This resolves the audit's owner-decision tension for voice without weakening the
   conversation boundary.
-- **ADR-012 Candidates are typed drafts.** Outside canonical state, so capture precedes classification while `category_id` stays NOT NULL.
+- **ADR-012 Candidates are typed drafts.** (Stored as `interpretations`: Daily Load already has DERIVED recommendation "candidates" that must
+  never be persisted, and `tests/dailyLoadPersistence.test.mjs` guards that word in stored state. Renaming mine was the right response; loosening the guard was not.) Outside canonical state, so capture precedes classification while `category_id` stays NOT NULL.
   Acceptance creates the real row with `producer = ai-inference` and `confidence = established` (user-confirmed), never `user-action`.
 - **ADR-013 External identity.** `UNIQUE (household, provider, external_account, external_object_id)`; `origin` and `authority` distinguish Her
   Keys-created from externally-created. Server-originated rows use `local_id = ext:<provider>:<hash>`. No token/credential column exists anywhere
@@ -633,7 +634,12 @@ prediction, the actual, and the authority ID.
 |---|---|---|---|
 | J0 | audit banked | `db0989bea6e4672d537a83f3e16e7fa56ed3b378` | done |
 | J1 | this ledger, register, ADRs, predicted delta | `02131234f19066e3fcb3ca95caf26e5ec63f8949` | done |
-| J2 | stored provenance on 9 kinds; local v4 + provable backfill + frozen v3; source artifacts and external references (local); confidence writer | _(this commit)_ | in this commit |
+| J2 | stored provenance on 9 kinds; local v4 + provable backfill + frozen v3; source artifacts and external references (local); confidence writer | `fdb3d7fd87893bd2bee04de3f45092a913c33834` | done |
+| J3 | the complete v4 local shape and its operations: interpretations, behavioral history, authorization/intents/decisions/executions/outcomes, people and responsibility, dependencies, recurrence, goals, system steps, capacity, patterns and evidence, commitment facets, exact money, One Move target registry, attention, briefing inputs, cross-domain related set | _(this commit)_ | in this commit |
+
+J3 consolidates the base prompt's suggested J1–J6: the v4 shape is ONE schema, so its collections land together with the
+operations and tests that give them meaning rather than in six partial states of a single AppState. The remaining checkpoints are the
+cloud schema, sync/claim/household context, acceptance closure and documentation.
 
 The numbering below J1 follows the buildout order (A truth → B action → C shared intelligence → D domain readiness → E durability → F closure); the base
 prompt's suggested numbering is a shape, not a contract.

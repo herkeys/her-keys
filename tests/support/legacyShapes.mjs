@@ -13,40 +13,71 @@
  * `tests/fixtures/v3`), so a bug in `migrateV3ToV4` cannot hide here.
  */
 
-const strip = (row) => {
-  const { provenance: _provenance, ...rest } = row;
+const TASK_FACETS = [
+  'dueAt', 'earliestStartAt', 'latestFinishAt', 'splittable', 'minChunkMinutes', 'preferredTimeOfDay',
+  'energyDemand', 'consequence', 'needsMePersonally', 'travelMinutesBefore', 'travelMinutesAfter',
+  'preparationMinutes', 'value',
+];
+
+/**
+ * Exactly the keys v4 ADDED to each row kind. Kind-aware on purpose: an event already had
+ * `travelMinutesBefore`, a task did not, so stripping by name alone would eat real v3 data.
+ */
+export const V4_ROW_ADDITIONS = {
+  categories: ['provenance'],
+  events: ['provenance', 'energyDemand', 'consequence', 'needsMePersonally', 'value'],
+  tasks: ['provenance', ...TASK_FACETS],
+  systems: ['provenance', 'automationMode', 'effortMinutes', 'energyDemand'],
+  meals: ['provenance', 'prepMinutes', 'energyDemand'],
+  needsMe: ['provenance'],
+  oneMoves: ['provenance'],
+  discovery: ['provenance'],
+  onboarding: ['provenance'],
+};
+
+/** What a facet reads as when it was never known: null everywhere except a system's automation mode. */
+export const UNKNOWN_FACET = (key) => (key === 'automationMode' ? 'manual' : null);
+
+/** Roots v4 introduced. */
+export const V4_ROOTS = [
+  'migrationLineage', 'sourceArtifacts', 'externalReferences', 'interpretations', 'observations', 'authorities',
+  'intents', 'decisions', 'executions', 'outcomes', 'people', 'responsibilities', 'dependencies', 'recurrences',
+  'goals', 'systemSteps', 'capacity', 'patterns', 'evidenceLinks',
+];
+
+const without = (row, keys) => {
+  const rest = { ...row };
+  for (const key of keys) delete rest[key];
   return rest;
 };
 
-/** v4 -> v3: drop stored provenance, restore the event `source` flag, drop the v4 roots. */
-export function toV3Shape(state) {
-  const {
-    migrationLineage: _lineage,
-    sourceArtifacts: _artifacts,
-    externalReferences: _references,
-    ...rest
-  } = state;
-  return {
-    ...rest,
-    categories: state.categories.map(strip),
-    events: state.events.map((event) => {
-      const { provenance, ...others } = event;
-      return { ...others, source: provenance.producer === 'demo-seed' ? 'demo' : 'user' };
-    }),
-    tasks: state.tasks.map(strip),
-    systems: state.systems.map(strip),
-    meals: state.meals.map(strip),
-    needsMe: state.needsMe.map(strip),
-    oneMoves: state.oneMoves.map(strip),
-    discovery: state.discovery === null ? null : strip(state.discovery),
-    onboarding: strip(state.onboarding),
-  };
-}
-
-/** Removes only what v4 ADDED to a section, so a v1/v2 section can be compared to the v1 bytes it came from. */
-export function withoutV4Additions(section) {
-  if (Array.isArray(section)) return section.map(withoutV4Additions);
-  if (section !== null && typeof section === 'object') return strip(section);
+/** Removes only what v4 ADDED to one row of a given collection. */
+export function withoutV4Additions(section, collection) {
+  const keys = V4_ROW_ADDITIONS[collection];
+  // Sections v4 did not touch (household, user, children, actions, origin, ...) have nothing to remove.
+  if (keys === undefined) return section;
+  if (Array.isArray(section)) return section.map((row) => without(row, keys));
+  if (section !== null && typeof section === 'object') return without(section, keys);
   return section;
 }
 
+/** v4 -> v3: drop what v4 added, restore the event `source` flag, drop the v4 roots. */
+export function toV3Shape(state) {
+  const rest = without(state, V4_ROOTS);
+  const strip = (collection) => state[collection].map((row) => without(row, V4_ROW_ADDITIONS[collection]));
+  return {
+    ...rest,
+    categories: strip('categories'),
+    events: state.events.map((event) => ({
+      ...without(event, V4_ROW_ADDITIONS.events),
+      source: event.provenance.producer === 'demo-seed' ? 'demo' : 'user',
+    })),
+    tasks: strip('tasks'),
+    systems: strip('systems'),
+    meals: strip('meals'),
+    needsMe: strip('needsMe'),
+    oneMoves: strip('oneMoves'),
+    discovery: state.discovery === null ? null : without(state.discovery, V4_ROW_ADDITIONS.discovery),
+    onboarding: without(state.onboarding, V4_ROW_ADDITIONS.onboarding),
+  };
+}

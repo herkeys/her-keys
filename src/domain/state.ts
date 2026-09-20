@@ -1,7 +1,27 @@
 import { z } from 'zod';
+import {
+  ActionExecutionSchema,
+  ActionIntentSchema,
+  ActionOutcomeSchema,
+  AutomationAuthoritySchema,
+  IntentDecisionSchema,
+} from './foundation/authorization';
+import { InterpretationSchema } from './foundation/interpretation';
+import { eventFacetFields, mealFacetFields, systemFacetFields, taskFacetFields } from './foundation/commitment';
 import { ExternalReferenceSchema } from './foundation/externalReference';
+import { BehaviorObservationSchema, MAX_LOCAL_OBSERVATIONS } from './foundation/observation';
+import { EvidenceLinkSchema, PatternSchema } from './foundation/pattern';
 import { PROVENANCE_SOURCES, ProvenanceSchema } from './foundation/provenance';
+import { HouseholdPersonSchema, ResponsibilitySchema, isActiveResponsibility } from './foundation/responsibility';
 import { SourceArtifactSchema } from './foundation/sourceArtifact';
+import {
+  CapacityProfileSchema,
+  DependencySchema,
+  GoalSchema,
+  RecurrenceRuleSchema,
+  SystemStepSchema,
+  findDependencyCycle,
+} from './foundation/structure';
 import { refExists } from './foundation/typedRef';
 import { isValidTimeZone } from './logicalDay';
 import {
@@ -11,11 +31,13 @@ import {
   NonBlank,
   OpenCode,
   Scope,
+  SYSTEM_ROLES,
   VISIBILITY_SCOPES,
+  type SystemRole,
   type VisibilityScope,
 } from './schemaPrimitives';
 
-export { VISIBILITY_SCOPES, type VisibilityScope };
+export { SYSTEM_ROLES, VISIBILITY_SCOPES, type SystemRole, type VisibilityScope };
 
 /**
  * The canonical household state Her Keys remembers between sessions — local
@@ -37,9 +59,6 @@ export { VISIBILITY_SCOPES, type VisibilityScope };
  *
  * Persisted JSON is untrusted until it passes `validateAppState`.
  */
-
-export const SYSTEM_ROLES = ['kids', 'home', 'money', 'meals', 'work', 'wellbeing', 'relationships', 'coparenting'] as const;
-export type SystemRole = (typeof SYSTEM_ROLES)[number];
 
 export const ONBOARDING_STEPS = ['goals', 'strengths', 'struggles', 'talk-it-out', 'profile', 'plus'] as const;
 export type OnboardingStep = (typeof ONBOARDING_STEPS)[number];
@@ -115,6 +134,7 @@ export const CalendarEventSchema = z
     travelMinutesBefore: TravelMinutes,
     travelMinutesAfter: TravelMinutes,
     preparationMinutes: TravelMinutes,
+    ...eventFacetFields,
     provenance: ProvenanceSchema,
     createdAt: InstantSchema.nullable(),
     updatedAt: InstantSchema.nullable(),
@@ -146,12 +166,22 @@ export const TaskSchema = z
     completedAt: InstantSchema.nullable(),
     createdAt: InstantSchema.nullable(),
     updatedAt: InstantSchema.nullable(),
+    ...taskFacetFields,
     provenance: ProvenanceSchema,
     scope: Scope,
   })
   .superRefine((task, ctx) => {
     if ((task.status === 'completed') !== (task.completedAt !== null)) {
       ctx.addIssue({ code: 'custom', message: 'completedAt must be set exactly when completed', path: ['completedAt'] });
+    }
+    if (task.earliestStartAt !== null && task.latestFinishAt !== null && Date.parse(task.earliestStartAt) > Date.parse(task.latestFinishAt)) {
+      ctx.addIssue({ code: 'custom', message: 'a scheduling window opens before it closes', path: ['latestFinishAt'] });
+    }
+    if (task.minChunkMinutes !== null && task.splittable !== true) {
+      ctx.addIssue({ code: 'custom', message: 'a minimum chunk belongs to a task that can be split', path: ['minChunkMinutes'] });
+    }
+    if (task.minChunkMinutes !== null && task.minChunkMinutes > task.durationMinutes) {
+      ctx.addIssue({ code: 'custom', message: 'a chunk cannot be longer than the whole task', path: ['minChunkMinutes'] });
     }
   });
 
@@ -160,6 +190,7 @@ export const HouseholdSystemSchema = z.strictObject({
   name: NonBlank(120),
   description: z.string().max(500),
   categoryId: Id,
+  ...systemFacetFields,
   provenance: ProvenanceSchema,
   scope: Scope,
 });
@@ -169,6 +200,7 @@ export const MealPlanEntrySchema = z.strictObject({
   date: LocalDateSchema,
   title: NonBlank(200),
   categoryId: Id,
+  ...mealFacetFields,
   provenance: ProvenanceSchema,
   scope: Scope,
 });
@@ -183,14 +215,21 @@ export const OnboardingSchema = z.strictObject({
   scope: z.literal('personal'),
 });
 
+export const ONE_MOVE_TARGET_TYPES = ['catalog', 'task', 'needsMe', 'event', 'system', 'responsibility'] as const;
+export type OneMoveTargetType = (typeof ONE_MOVE_TARGET_TYPES)[number];
+
 export const OneMoveRecordSchema = z
   .strictObject({
     id: Id,
     forDate: LocalDateSchema,
     /** The catalog move offered; null when nothing was offered because the day was already overloaded. */
     targetId: Id.nullable(),
-    /** Which list `targetId` looks up in — the hardcoded demo catalog, or a real task/Needs Me item. */
-    targetType: z.enum(['catalog', 'task', 'needsMe']),
+    /**
+     * Which list `targetId` looks up in — the hardcoded demo catalog, or a real row. The kinds beyond
+     * task and Needs Me are registered through the typed-reference convention (ADR-005/021): the
+     * selection engine does not choose them yet, but the stored shape can hold one without a rewrite.
+     */
+    targetType: z.enum(ONE_MOVE_TARGET_TYPES),
     status: z.enum(['selected', 'completed', 'withheld']),
     decidedAt: InstantSchema,
     completedAt: InstantSchema.nullable(),
@@ -430,6 +469,28 @@ export const AppStateSchema = z.strictObject({
   sourceArtifacts: z.array(SourceArtifactSchema).max(5000),
   /** The identity of objects in external systems (B4-FE01-004). Never a credential. */
   externalReferences: z.array(ExternalReferenceSchema).max(10_000),
+  /** Her Keys' typed readings of source artifacts, awaiting her decision (B4-FE01-003). Outside canonical state on purpose. */
+  interpretations: z.array(InterpretationSchema).max(5000),
+  /** What she actually does — append-only meaningful outcomes (B4-FE01-006). */
+  observations: z.array(BehaviorObservationSchema).max(MAX_LOCAL_OBSERVATIONS),
+  /** What she has said Her Keys may do without asking (B4-FE01-007). A permission store: owner-only. */
+  authorities: z.array(AutomationAuthoritySchema).max(500),
+  /** What Her Keys would like to do, and its decisions, executions and outcomes (B4-FE01-009..012). Append-only. */
+  intents: z.array(ActionIntentSchema).max(5000),
+  decisions: z.array(IntentDecisionSchema).max(5000),
+  /** Written only by the trusted server boundary; a client only ever pulls these. */
+  executions: z.array(ActionExecutionSchema).max(5000),
+  outcomes: z.array(ActionOutcomeSchema).max(10_000),
+  /** People in her life who are not accounts (B4-FE01-013). Not household members. */
+  people: z.array(HouseholdPersonSchema).max(200),
+  responsibilities: z.array(ResponsibilitySchema).max(5000),
+  dependencies: z.array(DependencySchema).max(10_000),
+  recurrences: z.array(RecurrenceRuleSchema).max(2000),
+  goals: z.array(GoalSchema).max(500),
+  systemSteps: z.array(SystemStepSchema).max(5000),
+  capacity: CapacityProfileSchema.nullable(),
+  patterns: z.array(PatternSchema).max(2000),
+  evidenceLinks: z.array(EvidenceLinkSchema).max(20_000),
 });
 
 export type Household = z.infer<typeof HouseholdSchema>;
@@ -527,6 +588,21 @@ export function findIntegrityProblems(state: AppState): string[] {
     state.externalReferences.map((ref) => `${ref.provider}|${ref.externalAccount}|${ref.externalObjectId}`)
   );
   requireUnique('migration lineage id', state.migrationLineage.map((entry) => entry.id));
+  requireUnique('interpretation id', state.interpretations.map((row) => row.id));
+  requireUnique('observation id', state.observations.map((row) => row.id));
+  requireUnique('authority id', state.authorities.map((row) => row.id));
+  requireUnique('intent id', state.intents.map((row) => row.id));
+  requireUnique('decision id', state.decisions.map((row) => row.id));
+  requireUnique('execution id', state.executions.map((row) => row.id));
+  requireUnique('outcome id', state.outcomes.map((row) => row.id));
+  requireUnique('person id', state.people.map((row) => row.id));
+  requireUnique('responsibility id', state.responsibilities.map((row) => row.id));
+  requireUnique('dependency id', state.dependencies.map((row) => row.id));
+  requireUnique('recurrence id', state.recurrences.map((row) => row.id));
+  requireUnique('goal id', state.goals.map((row) => row.id));
+  requireUnique('system step id', state.systemSteps.map((row) => row.id));
+  requireUnique('pattern id', state.patterns.map((row) => row.id));
+  requireUnique('evidence link id', state.evidenceLinks.map((row) => row.id));
 
   for (const category of state.categories) {
     if (category.householdId !== state.household.id) {
@@ -571,6 +647,11 @@ export function findIntegrityProblems(state: AppState): string[] {
     }
     if (record.targetType === 'needsMe' && !needsMeIds.has(record.targetId)) {
       problems.push(`One Move ${record.id} references missing needs-me item ${record.targetId}`);
+    }
+    if (record.targetType === 'event' || record.targetType === 'system' || record.targetType === 'responsibility') {
+      if (!refExists(state, { kind: record.targetType, id: record.targetId })) {
+        problems.push(`One Move ${record.id} references missing ${record.targetType} ${record.targetId}`);
+      }
     }
   }
 
@@ -625,8 +706,158 @@ export function findIntegrityProblems(state: AppState): string[] {
   if (state.discovery !== null) checkArtifact('discovery', state.discovery);
   checkArtifact('onboarding', { id: 'onboarding', provenance: state.onboarding.provenance });
 
-  // ---- external identity.
+  for (const row of state.interpretations) checkArtifact('interpretation', row);
+  for (const row of state.observations) checkArtifact('observation', row);
+  for (const row of state.authorities) checkArtifact('authority', row);
+  for (const row of state.intents) checkArtifact('intent', row);
+  for (const row of state.decisions) checkArtifact('decision', row);
+  for (const row of state.executions) checkArtifact('execution', row);
+  for (const row of state.outcomes) checkArtifact('outcome', row);
+  for (const row of state.people) checkArtifact('person', row);
+  for (const row of state.responsibilities) checkArtifact('responsibility', row);
+  for (const row of state.dependencies) checkArtifact('dependency', row);
+  for (const row of state.recurrences) checkArtifact('recurrence', row);
+  for (const row of state.goals) checkArtifact('goal', row);
+  for (const row of state.systemSteps) checkArtifact('system step', row);
+  for (const row of state.patterns) checkArtifact('pattern', row);
+  for (const row of state.evidenceLinks) checkArtifact('evidence link', row);
+  if (state.capacity !== null) checkArtifact('capacity', { id: 'capacity', provenance: state.capacity.provenance });
+
   const referenceIds = new Set(state.externalReferences.map((ref) => ref.id));
+
+  // ---- typed references resolve, by kind.
+  const requireRef = (label: string, id: string, ref: { kind: string; id: string }) => {
+    if (!refExists(state, ref as never)) problems.push(`${label} ${id} references missing ${ref.kind} ${ref.id}`);
+  };
+  const requireIn = (label: string, id: string, what: string, set: Set<string>, value: string | null) => {
+    if (value !== null && !set.has(value)) problems.push(`${label} ${id} references missing ${what} ${value}`);
+  };
+
+  const interpretationIds = new Set(state.interpretations.map((row) => row.id));
+  for (const reading of state.interpretations) {
+    requireIn('interpretation', reading.id, 'source artifact', artifactIds, reading.artifactId);
+    requireIn('interpretation', reading.id, 'interpretation', interpretationIds, reading.supersedesId);
+    if (reading.supersedesId === reading.id) problems.push(`interpretation ${reading.id} supersedes itself`);
+    if (reading.acceptedRef !== null) requireRef('interpretation', reading.id, reading.acceptedRef);
+    if (reading.subjectMemberId !== null && !childIds.has(reading.subjectMemberId)) {
+      problems.push(`interpretation ${reading.id} references missing child ${reading.subjectMemberId}`);
+    }
+  }
+
+  // A One Move that was CLEARED is physically removed locally, while the cloud keeps it as status `cleared`, so the
+  // observation that it happened is allowed to outlive its row. Every other subject must still exist.
+  for (const observation of state.observations) {
+    if (observation.about.kind !== 'oneMove') requireRef('observation', observation.id, observation.about);
+  }
+
+  const authorityIds = new Set(state.authorities.map((row) => row.id));
+  for (const authority of state.authorities) {
+    requireIn('authority', authority.id, 'category', categoryIds, authority.categoryId);
+    if (authority.subjectMemberId !== null && !childIds.has(authority.subjectMemberId)) {
+      problems.push(`authority ${authority.id} references missing child ${authority.subjectMemberId}`);
+    }
+  }
+
+  const intentIds = new Set(state.intents.map((row) => row.id));
+  for (const intent of state.intents) if (intent.about !== null) requireRef('intent', intent.id, intent.about);
+
+  const decisionIds = new Set(state.decisions.map((row) => row.id));
+  const decidedIntents = new Map<string, { answered: number; withdrawn: number }>();
+  for (const decision of state.decisions) {
+    requireIn('decision', decision.id, 'intent', intentIds, decision.intentId);
+    requireIn('decision', decision.id, 'authority', authorityIds, decision.authorityId);
+    const tally = decidedIntents.get(decision.intentId) ?? { answered: 0, withdrawn: 0 };
+    if (decision.decision === 'withdrawn') tally.withdrawn += 1;
+    else tally.answered += 1;
+    decidedIntents.set(decision.intentId, tally);
+  }
+  // One answer per intent — two devices approving one intent collide here, as they do in the cloud.
+  for (const [intentId, tally] of decidedIntents) {
+    if (tally.answered > 1) problems.push(`intent ${intentId} has more than one decision`);
+    if (tally.withdrawn > 1) problems.push(`intent ${intentId} was withdrawn more than once`);
+    if (tally.withdrawn > 0 && !state.decisions.some((d) => d.intentId === intentId && d.decision === 'approved')) {
+      problems.push(`intent ${intentId} was withdrawn without ever being approved`);
+    }
+  }
+
+  const executionIds = new Set(state.executions.map((row) => row.id));
+  const attempts = new Set<string>();
+  for (const execution of state.executions) {
+    requireIn('execution', execution.id, 'intent', intentIds, execution.intentId);
+    requireIn('execution', execution.id, 'decision', decisionIds, execution.decisionId);
+    requireIn('execution', execution.id, 'authority', authorityIds, execution.authorityId);
+    requireIn('execution', execution.id, 'external reference', referenceIds, execution.externalReferenceId);
+    requireIn('execution', execution.id, 'execution', executionIds, execution.compensatesExecutionId);
+    const key = `${execution.intentId}#${execution.attempt}`;
+    if (attempts.has(key)) problems.push(`intent ${execution.intentId} has two attempt ${execution.attempt}`);
+    attempts.add(key);
+  }
+  for (const ref of state.externalReferences) requireIn('external reference', ref.id, 'execution', executionIds, ref.writeExecutionId);
+  for (const outcome of state.outcomes) requireIn('outcome', outcome.id, 'execution', executionIds, outcome.executionId);
+
+  const personIds = new Set(state.people.map((row) => row.id));
+  const activeAbout = new Set<string>();
+  for (const responsibility of state.responsibilities) {
+    requireRef('responsibility', responsibility.id, responsibility.about);
+    requireIn('responsibility', responsibility.id, 'person', personIds, responsibility.responsiblePersonId);
+    if (responsibility.responsibleChildId !== null && !childIds.has(responsibility.responsibleChildId)) {
+      problems.push(`responsibility ${responsibility.id} references missing child ${responsibility.responsibleChildId}`);
+    }
+    requireIn('responsibility', responsibility.id, 'responsibility', new Set(state.responsibilities.map((r) => r.id)), responsibility.previousResponsibilityId);
+    if (isActiveResponsibility(responsibility)) {
+      const key = `${responsibility.about.kind}:${responsibility.about.id}`;
+      if (activeAbout.has(key)) problems.push(`${key} has more than one live responsibility`);
+      activeAbout.add(key);
+    }
+  }
+
+  const liveEdges = new Set<string>();
+  for (const dependency of state.dependencies) {
+    requireRef('dependency', dependency.id, dependency.from);
+    requireRef('dependency', dependency.id, dependency.to);
+    if (dependency.status === 'active') {
+      const key = `${dependency.relation}|${dependency.from.kind}:${dependency.from.id}|${dependency.to.kind}:${dependency.to.id}`;
+      if (liveEdges.has(key)) problems.push(`dependency ${key} is recorded twice`);
+      liveEdges.add(key);
+    }
+  }
+  const cycle = findDependencyCycle(state.dependencies);
+  if (cycle !== null) problems.push(`dependencies form a cycle: ${cycle.map((ref) => `${ref.kind}:${ref.id}`).join(' -> ')}`);
+
+  const liveRecurrence = new Set<string>();
+  for (const rule of state.recurrences) {
+    requireRef('recurrence', rule.id, rule.about);
+    if (rule.status === 'active') {
+      const key = `${rule.about.kind}:${rule.about.id}`;
+      if (liveRecurrence.has(key)) problems.push(`${key} has more than one active recurrence rule`);
+      liveRecurrence.add(key);
+    }
+  }
+
+  for (const goal of state.goals) requireIn('goal', goal.id, 'category', categoryIds, goal.categoryId);
+
+  const systemIds = new Set(state.systems.map((system) => system.id));
+  const stepPositions = new Set<string>();
+  for (const step of state.systemSteps) {
+    requireIn('system step', step.id, 'system', systemIds, step.systemId);
+    const key = `${step.systemId}#${step.position}`;
+    if (stepPositions.has(key)) problems.push(`system ${step.systemId} has two steps at position ${step.position}`);
+    stepPositions.add(key);
+  }
+
+  for (const pattern of state.patterns) {
+    if (pattern.about !== null) requireRef('pattern', pattern.id, pattern.about);
+    requireIn('pattern', pattern.id, 'category', categoryIds, pattern.categoryId);
+  }
+
+  const patternIds = new Set(state.patterns.map((row) => row.id));
+  for (const link of state.evidenceLinks) {
+    if (link.for.kind !== 'oneMove') requireRef('evidence link', link.id, link.for);
+    requireRef('evidence link', link.id, link.support);
+    void patternIds;
+  }
+
+  // ---- external identity.
   for (const artifact of state.sourceArtifacts) {
     if (artifact.externalReferenceId !== null && !referenceIds.has(artifact.externalReferenceId)) {
       problems.push(`source artifact ${artifact.id} names missing external reference ${artifact.externalReferenceId}`);

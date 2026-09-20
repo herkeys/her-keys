@@ -5,6 +5,9 @@ import { provenanceFor, systemProvenance } from './foundation/provenance';
 import { loadTierForDay } from './loadTier';
 import { toInstant, type LocalDate } from './logicalDay';
 import { resolveNeedsMeItem } from './needsMe';
+import { consequenceRank } from './foundation/authorization';
+import { appendObservation } from './observations';
+import { addEvidence } from './patterns';
 import { isOnboardingComplete } from './onboarding';
 import { projectStateDay } from './projectDay';
 import type { AppState, NeedsMeItem, OneMoveRecord, Task } from './state';
@@ -67,23 +70,75 @@ function needsMeAsOneMoveItem(item: NeedsMeItem): OneMoveItem {
   };
 }
 
-function targetOf(
-  state: AppState,
-  targetType: OneMoveRecord['targetType'],
-  targetId: string
-): { item: OneMoveItem; standing: TargetStanding } | null {
+type ResolvedTarget = { item: OneMoveItem; standing: TargetStanding };
+type TargetAdapter = (state: AppState, id: string) => ResolvedTarget | null;
+
+/**
+ * THE ONE MOVE TARGET REGISTRY (B4-FE01-028, ADR-021).
+ *
+ * A target kind is registered here ONCE: how to find it, how to present it as a
+ * One Move, and where it stands now. Selection and persistence read the registry, so a
+ * new kind is one adapter — not an edit in each of a column, a foreign key, two CHECK
+ * rewrites and three client sites. The stored shape already holds all five kinds; the
+ * SELECTION engine still only chooses tasks and Needs Me items, which is a product
+ * decision and not a storage limit.
+ *
+ * Typed, never polymorphic: a kind with no adapter resolves to nothing. It is never
+ * quietly read as a different kind — that misreading is what created the legacy catalog
+ * One Moves in the first place.
+ */
+const TARGET_ADAPTERS: Record<Exclude<OneMoveRecord['targetType'], 'catalog'>, TargetAdapter> = {
+  task: (state, id) => {
+    const task = state.tasks.find((t) => t.id === id);
+    if (!task) return null;
+    return { item: taskAsOneMoveItem(task), standing: task.status === 'open' ? 'open' : task.status === 'completed' ? 'done' : 'gone' };
+  },
+  needsMe: (state, id) => {
+    const item = state.needsMe.find((n) => n.id === id);
+    if (!item) return null;
+    return { item: needsMeAsOneMoveItem(item), standing: item.status === 'open' ? 'open' : 'done' };
+  },
+  event: (state, id) => {
+    const event = state.events.find((e) => e.id === id);
+    if (!event) return null;
+    const minutes = Math.round((Date.parse(event.endsAt) - Date.parse(event.startsAt)) / 60_000);
+    return {
+      item: { id: event.id, observation: 'On your calendar.', action: event.title, effect: 'adds_work', estimatedMinutes: Number.isFinite(minutes) ? minutes : undefined },
+      standing: event.status === 'active' ? 'open' : 'gone',
+    };
+  },
+  system: (state, id) => {
+    const system = state.systems.find((s) => s.id === id);
+    if (!system) return null;
+    return { item: { id: system.id, observation: 'One of your routines.', action: system.name, effect: 'adds_work', estimatedMinutes: system.effortMinutes ?? undefined }, standing: 'open' };
+  },
+  responsibility: (state, id) => {
+    const handoff = state.responsibilities.find((r) => r.id === id);
+    if (!handoff) return null;
+    const live = handoff.state === 'requested' || handoff.state === 'acknowledged' || handoff.state === 'declined' || handoff.state === 'returned';
+    return { item: { id: handoff.id, observation: 'You asked someone to take this.', action: 'Check that this is covered', effect: 'reduces_load' }, standing: live ? 'open' : 'done' };
+  },
+};
+
+function targetOf(state: AppState, targetType: OneMoveRecord['targetType'], targetId: string): ResolvedTarget | null {
   if (targetType === 'catalog') {
     const move = findOneMove(oneMoveCatalogFor(state.origin), targetId);
     return move ? { item: move, standing: 'open' } : null;
   }
-  if (targetType === 'task') {
-    const task = state.tasks.find((t) => t.id === targetId);
-    if (!task) return null;
-    return { item: taskAsOneMoveItem(task), standing: task.status === 'open' ? 'open' : task.status === 'completed' ? 'done' : 'gone' };
-  }
-  const item = state.needsMe.find((n) => n.id === targetId);
-  if (!item) return null;
-  return { item: needsMeAsOneMoveItem(item), standing: item.status === 'open' ? 'open' : 'done' };
+  return TARGET_ADAPTERS[targetType]?.(state, targetId) ?? null;
+}
+
+/** The structured reasons a real target was chosen, from the same facts the pool selection used. */
+function evidenceCodesFor(state: AppState, record: OneMoveRecord, date: LocalDate): string[] {
+  if (record.targetId === null) return [];
+  if (record.targetType === 'needsMe') return ['oldest_open'];
+  if (record.targetType !== 'task') return [];
+  const task = state.tasks.find((t) => t.id === record.targetId);
+  if (!task) return [];
+  const codes = ['todays_radar'];
+  if (task.dueDate !== null && task.dueDate <= date) codes.push('deadline');
+  if (task.consequence !== null && consequenceRank(task.consequence) >= consequenceRank('high')) codes.push('consequence');
+  return codes;
 }
 
 /**
@@ -143,6 +198,13 @@ export function resolveOneMoveForToday(state: AppState, ctx: TransitionContext):
   const existing = state.oneMoves.find((r) => r.forDate === ctx.today);
   if (existing && decisionStands(state, existing)) return state;
 
+  // An unfinished move that lost its target is CLEARED. Build 3 removes the local record, so the fact that it
+  // happened is kept as an observation, which is allowed to outlive its row (the cloud keeps it as `cleared`).
+  const cleared = (next: AppState): AppState =>
+    existing && existing.status === 'selected'
+      ? appendObservation(next, ctx, { about: { kind: 'oneMove', id: existing.id }, outcome: 'cleared', provenance: systemProvenance() })
+      : next;
+
   const pool = candidatePoolFor(state, ctx.today);
   const history = state.oneMoves.filter((r) => r !== existing);
   const alreadyDone = new Set(
@@ -150,7 +212,7 @@ export function resolveOneMoveForToday(state: AppState, ctx: TransitionContext):
   );
   const candidate = pool.find((c) => !alreadyDone.has(`${c.targetType}:${c.item.id}`));
 
-  if (!candidate) return existing ? { ...state, oneMoves: history } : state;
+  if (!candidate) return existing ? cleared({ ...state, oneMoves: history }) : state;
 
   const withheld = candidate.item.effect === 'adds_work' && loadTierForDay(state, ctx.today) === 'overloaded';
   const record: OneMoveRecord = {
@@ -166,7 +228,19 @@ export function resolveOneMoveForToday(state: AppState, ctx: TransitionContext):
     scope: 'personal',
   };
 
-  return { ...state, oneMoves: [...history, record] };
+  const decided = appendObservation(cleared({ ...state, oneMoves: [...history, record] }), ctx, {
+    about: { kind: 'oneMove', id: record.id },
+    outcome: withheld ? 'withheld' : 'selected',
+    provenance: systemProvenance(),
+  });
+  // "Why this One Move?" gets a structured answer: each code names the row that supports it.
+  return record.targetType === 'task' || record.targetType === 'needsMe'
+    ? evidenceCodesFor(decided, record, ctx.today).reduce(
+        (next, code) =>
+          addEvidence(next, ctx, { for: { kind: 'oneMove', id: record.id }, support: { kind: record.targetType as 'task' | 'needsMe', id: record.targetId as string }, code }),
+        decided
+      )
+    : decided;
 }
 
 /**
@@ -186,6 +260,6 @@ export function completeOneMove(state: AppState, ctx: TransitionContext): AppSta
     oneMoves: state.oneMoves.map((r) => (r === record ? { ...r, status: 'completed', completedAt: toInstant(ctx.nowMs) } : r)),
   };
   if (target.standing === 'open' && record.targetType === 'task') next = completeTask(next, ctx, record.targetId);
-  if (target.standing === 'open' && record.targetType === 'needsMe') next = resolveNeedsMeItem(next, record.targetId);
-  return next;
+  if (target.standing === 'open' && record.targetType === 'needsMe') next = resolveNeedsMeItem(next, record.targetId, ctx);
+  return appendObservation(next, ctx, { about: { kind: 'oneMove', id: record.id }, outcome: 'completed' });
 }

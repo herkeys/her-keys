@@ -2,6 +2,17 @@ import type { ProvenanceSource } from '../domain/foundation/provenance';
 import { BACKFILL_COLLECTIONS, type BackfillCollection } from '../domain/state';
 
 /**
+ * Collections and roots v4 introduces. A v3 household cannot have anything in them — nothing
+ * in v3 could produce an artifact, an observation, a delegation or an authority — so each is
+ * empty, never inferred.
+ */
+export const V4_EMPTY_COLLECTIONS = [
+  'sourceArtifacts', 'externalReferences', 'interpretations', 'observations', 'authorities', 'intents', 'decisions',
+  'executions', 'outcomes', 'people', 'responsibilities', 'dependencies', 'recurrences', 'goals', 'systemSteps',
+  'patterns', 'evidenceLinks',
+] as const;
+
+/**
  * v3 -> v4 — B4-FE01-029, the provenance backfill (ADR-004, ledger section 6).
  *
  * v3 stored no provenance; the reasoning layer worked it out from the KIND of
@@ -131,8 +142,8 @@ export function migrateV3ToV4(data: unknown): unknown {
     oneMoves: withProvenance('oneMoves', v3.oneMoves),
     discovery: v3.discovery === null ? null : { ...v3.discovery, provenance: stamp(classify('discovery', v3.discovery)) },
     onboarding: { ...v3.onboarding, provenance: stamp(classify('onboarding', v3.onboarding)) },
-    sourceArtifacts: [],
-    externalReferences: [],
+    ...Object.fromEntries(V4_EMPTY_COLLECTIONS.map((collection) => [collection, []])),
+    capacity: null,
   };
 
   // Deterministic order: the collection order, then insertion order within it.

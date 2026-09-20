@@ -1,6 +1,7 @@
 import { decisionWindowFor, latestTransitionDecision, todaysIssues } from './dailyLoadDecisions';
 import type { TransitionContext } from './context';
-import { addDays, epochMsOf, toInstant, wallClockMinutesAt, zonedTimeToEpochMs, type LocalDate } from './logicalDay';
+import { addDays, epochMsOf, logicalDateAt, toInstant, wallClockMinutesAt, zonedTimeToEpochMs, type LocalDate } from './logicalDay';
+import { appendObservation, plannedDateOf } from './observations';
 import type {
   ActionRecord,
   AppState,
@@ -97,11 +98,17 @@ export function approveMoveEvent(state: AppState, ctx: TransitionContext, eventI
     scope: 'personal',
   };
 
-  return {
+  const moved: AppState = {
     ...state,
     events: state.events.map((e) => (e.id === event.id ? { ...e, ...after, updatedAt: toInstant(ctx.nowMs) } : e)),
     actions: [...state.actions, action],
   };
+  return appendObservation(moved, ctx, {
+    about: { kind: 'event', id: event.id },
+    outcome: 'rescheduled',
+    plannedDate: logicalDateAt(startMs, state.user.timezone),
+    toDate: logicalDateAt(newStartMs, state.user.timezone),
+  });
 }
 
 /** Archives the exact task the current capacity-pressure verdict names — never an arbitrary other task, and never one that is fixed or due today. */
@@ -130,11 +137,16 @@ export function approveDropTask(state: AppState, ctx: TransitionContext, taskId:
     scope: 'personal',
   };
 
-  return {
+  const dropped: AppState = {
     ...state,
     tasks: state.tasks.map((t) => (t.id === taskId ? { ...t, status: 'archived', updatedAt: toInstant(ctx.nowMs) } : t)),
     actions: [...state.actions, action],
   };
+  return appendObservation(dropped, ctx, {
+    about: { kind: 'task', id: taskId },
+    outcome: 'skipped',
+    plannedDate: plannedDateOf(task, state.user.timezone),
+  });
 }
 
 /** Shortens the named task by exactly the shortfall the verdict reports, never below a 15-minute floor. */

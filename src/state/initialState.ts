@@ -27,6 +27,22 @@ export function createEmptyState(timeZone: string): AppState {
     migrationLineage: [],
     sourceArtifacts: [],
     externalReferences: [],
+    interpretations: [],
+    observations: [],
+    authorities: [],
+    intents: [],
+    decisions: [],
+    executions: [],
+    outcomes: [],
+    people: [],
+    responsibilities: [],
+    dependencies: [],
+    recurrences: [],
+    goals: [],
+    systemSteps: [],
+    capacity: null,
+    patterns: [],
+    evidenceLinks: [],
   };
 }
 

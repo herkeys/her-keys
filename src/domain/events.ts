@@ -1,6 +1,9 @@
 import type { TransitionContext } from './context';
+import { emptyEventFacets } from './foundation/commitment';
+import type { Money } from './foundation/money';
 import { provenanceFor, userProvenance, type Provenance } from './foundation/provenance';
 import { toInstant } from './logicalDay';
+import { appendObservation } from './observations';
 import type { CalendarEvent, AppState, VisibilityScope } from './state';
 import { pickFields } from './tasks';
 
@@ -26,6 +29,8 @@ export interface AddEventInput {
   scope: VisibilityScope;
   /** Where this event really came from. A user capture is `user-action`, which is the default. */
   provenance?: Provenance;
+  /** What attending costs or earns, exactly. Unknown unless stated. */
+  value?: Money | null;
 }
 
 export function addEvent(state: AppState, ctx: TransitionContext, input: AddEventInput): AppState {
@@ -44,6 +49,8 @@ export function addEvent(state: AppState, ctx: TransitionContext, input: AddEven
     travelMinutesBefore: input.travelMinutesBefore ?? null,
     travelMinutesAfter: input.travelMinutesAfter ?? null,
     preparationMinutes: input.preparationMinutes ?? null,
+    ...emptyEventFacets(),
+    value: input.value ?? null,
     provenance: provenanceFor(state.origin, input.provenance ?? userProvenance()),
     createdAt: now,
     updatedAt: now,
@@ -83,10 +90,11 @@ export function updateEvent(state: AppState, ctx: TransitionContext, eventId: st
 export function removeEvent(state: AppState, ctx: TransitionContext, eventId: string): AppState {
   const current = state.events.find((event) => event.id === eventId);
   if (!current || current.status === 'removed') return state;
-  return {
+  const next: AppState = {
     ...state,
     events: state.events.map((event) =>
       event.id === eventId ? { ...event, status: 'removed', updatedAt: toInstant(ctx.nowMs) } : event
     ),
   };
+  return appendObservation(next, ctx, { about: { kind: 'event', id: eventId }, outcome: 'cancelled' });
 }

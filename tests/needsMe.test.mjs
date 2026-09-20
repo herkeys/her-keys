@@ -50,7 +50,7 @@ describe('Needs Me inbox', () => {
   test('resolve marks it done without deleting the record', () => {
     const captured = captureNeedsMeItem(empty(), ctx(), { title: 'Ayden home Friday' });
     const id = captured.needsMe[0].id;
-    const resolved = resolveNeedsMeItem(captured, id);
+    const resolved = resolveNeedsMeItem(captured, id, ctx());
 
     assert.equal(resolved.needsMe[0].status, 'resolved');
     assert.equal(resolved.needsMe.length, 1);
@@ -60,10 +60,10 @@ describe('Needs Me inbox', () => {
   test('resolving twice, or an unknown item, changes nothing further', () => {
     const captured = captureNeedsMeItem(empty(), ctx(), { title: 'x' });
     const id = captured.needsMe[0].id;
-    const resolvedOnce = resolveNeedsMeItem(captured, id);
-    assert.equal(resolveNeedsMeItem(resolvedOnce, id), resolvedOnce);
+    const resolvedOnce = resolveNeedsMeItem(captured, id, ctx());
+    assert.equal(resolveNeedsMeItem(resolvedOnce, id, ctx()), resolvedOnce);
     const state = empty();
-    assert.equal(resolveNeedsMeItem(state, 'needsme-missing'), state);
+    assert.equal(resolveNeedsMeItem(state, 'needsme-missing', ctx()), state);
   });
 
   test('a category, once assigned, must be a real reference — integrity is still enforced', () => {

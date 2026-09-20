@@ -26,6 +26,9 @@ export const InstantSchema = z.iso.datetime().refine((value) => {
 
 export const NonBlank = (max: number) => z.string().max(max).refine((value) => value.trim().length > 0, { message: 'Must not be blank' });
 
+export const SYSTEM_ROLES = ['kids', 'home', 'money', 'meals', 'work', 'wellbeing', 'relationships', 'coparenting'] as const;
+export type SystemRole = (typeof SYSTEM_ROLES)[number];
+
 export const VISIBILITY_SCOPES = ['personal', 'household', 'child', 'coparent-shared', 'professional'] as const;
 export type VisibilityScope = (typeof VISIBILITY_SCOPES)[number];
 

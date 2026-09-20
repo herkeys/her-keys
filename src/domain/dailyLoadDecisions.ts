@@ -3,6 +3,7 @@ import type { DailyLoadDecision } from '../types';
 import type { TransitionContext } from './context';
 import { assessDailyLoadIssues, type DailyLoadIssues } from './dailyLoadIssues';
 import { addDays, toInstant, type LocalDate } from './logicalDay';
+import { appendObservation, plannedDateOf } from './observations';
 import { projectStateDay } from './projectDay';
 import type { ActionRecord, AppState, KeepPlanAction, MoveEventAction, MoveTaskAction, TaskPlan } from './state';
 
@@ -167,11 +168,18 @@ export function approveDailyLoadMove(state: AppState, ctx: TransitionContext, ta
     scope: 'personal',
   };
 
-  return {
+  const moved: AppState = {
     ...state,
     tasks: state.tasks.map((t) => (t.id === task.id ? { ...t, plan: after } : t)),
     actions: [...state.actions, action],
   };
+  // The ledger holds her DECISION; the observation holds what became of the task: it was put off a day.
+  return appendObservation(moved, ctx, {
+    about: { kind: 'task', id: task.id },
+    outcome: 'deferred',
+    plannedDate: plannedDateOf(task, state.user.timezone),
+    toDate: after.date,
+  });
 }
 
 /**
