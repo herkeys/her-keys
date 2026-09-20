@@ -67,6 +67,10 @@ node supabase/tools/schema-fingerprint.mjs run --source linked
 # Verify any source against the committed approved baseline (exit 0 = match, 1 = mismatch)
 node supabase/tools/schema-fingerprint.mjs verify --source local --against supabase/tools/baselines/<file>.json
 
+# KNOWN LIMIT (B4-FOUNDATION-BUILDOUT-01, OBS-002): with Supabase CLI 2.109.1, `--source local` fails with "cannot insert multiple commands into a
+# prepared statement", because `supabase db query` no longer accepts the tool's multi-statement SQL. The tool is locked and unchanged. Run the tool's own
+# SQL through psql in the local container instead (`node -e` importing `buildSql`, as BUILD4_BE02_CLAIM_CORRECTION.md describes) and compare the rows.
+
 # Rows captured elsewhere (for example the MCP result saved to a file)
 node supabase/tools/schema-fingerprint.mjs verify --source json:rows.json --against supabase/tools/baselines/<file>.json
 

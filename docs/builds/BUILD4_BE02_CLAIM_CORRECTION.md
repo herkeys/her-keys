@@ -12,6 +12,16 @@ decision row; both satisfy requirements SD4 already approved.
 | Evidence commit (bookkeeping only) | `59c1e2c0e894718bbc8ec99f52aec9ecb34307b5` |
 | Scope | LOCAL ONLY. No Staging, no Production, no remote command, no credential |
 
+> **ATTESTATION UPDATE — B4-FOUNDATION-BUILDOUT-01.** The values below labelled **CURRENT** were current as of this wave (B4-BACKEND-02). The shipping migration and the local fingerprint have moved on. The chain continues here; the body is **kept unchanged** as history.
+
+| | PRE-B4-FOUNDATION-BUILDOUT-01 | CURRENT (as of B4-FOUNDATION-BUILDOUT-01) |
+|---|---|---|
+| Shipping migration SHA-256 (working-tree form) | `9feac67283896d310ed4239776dcd10f3d624cc57be742683e8fa5de35e06b86` (this wave's value), then `529e3891…` (B4-BE03), then `275e9d1cd81a3d4361715a6d91a084ad95de2ccbd83c67f56e6ca0d3143e8436` | **`1e9169de4cf21c46e2167089328de94ce07cb1fcf005c0461dece1b28ec8a7cb`** |
+| Local gating digest | `0fc7b9bf380faaf9fa20b4859e8adf6d` / 1294 (this wave), then `db619120…` / 1300 (B4-BE03), then `d2b319d0253613d6a5c1dd36ef906da6` / 1300 | **`199ed4d4c1b37cd654b5853e91cbde27` / 3613** |
+| Claim payload | `claimPayloadVersion` 1 | **2**: every claimed row states its provenance, a task carries its commitment facets and exact value, and the source artifacts the rows were read from travel with them. Version 1 is refused |
+| OR-001 (dependency closure) and OR-002 (catalog One Moves) | in force | both **still in force under version 2**; the closure now also covers source artifacts (`supabase/tests/73-claim-v2.sql`) |
+| Baseline migration | `8bc38d66…` | unchanged |
+
 ---
 
 # B4-BE02-OR-001 — CLAIM-ONE-MOVE-DEPENDENCY-CLOSURE

@@ -11,6 +11,8 @@
 | J0 (audit banked) | `db0989bea6e4672d537a83f3e16e7fa56ed3b378` |
 | SD4 | **CLOSED** — not reopened. New structures derive authority from the audit and this buildout (`B4-FE01-xxx`) |
 | Remote commands | **NONE** |
+| Completion | **COMPLETE.** 27 of 27 rows VERIFIED: ACCEPTED 11, EXTENSION 16, STOPPED 0 (§13). Success under Addendum 01 A7 |
+| Hostile audit | **Not started, by instruction.** This wave ends at a verified foundation |
 
 ## 0. Entry gate (verified mechanically before any change)
 
@@ -56,6 +58,12 @@ primitives below; none is reclassified here and none is built as a module.
 
 Audit numbering is the audit's own matrix row number. `Primitives` reference the authority IDs in §4.
 
+`CURRENT GAP` records the gap as it stood at entry and is kept as history. `STATUS`, `FINAL CLASSIFICATION` and `EVIDENCE` record how each row closed.
+
+**Classification rule (applied identically to all 27).** `ACCEPTED`: the row's deliverable is a primitive, contract or boundary that is complete in itself and that later features consume unchanged. `EXTENSION`: the row names a user-facing feature (an engine, an ingestion channel, a workflow, a screen) that the completed primitives now carry; building it is additive future work with no foundation gap behind it. Both mean the foundation is complete. Neither means a feature was built.
+
+**Evidence key.** `A1` / `A2` / `A3` = `tests/foundationAcceptance.test.mjs` / `…2` / `…3`, the row's future-shaped test. `SPEC` = `tests/foundationSpecs.test.mjs` (the manifest, the generator, drift). `RT` = `tests/foundationRoundtrip.test.mjs` (projection in both directions, all 18 kinds). `SQL nn` = `supabase/tests/nn-*.sql`. `PARITY` = `supabase/tests/authorization-parity.mjs` (25 cases through both the TypeScript and the SQL statement of the rule). `F1-F16`, `G1-G18`, `H1-H4` = the journeys against the real local Supabase in `supabase/tests/sync-integration.mjs` (F: one device writes, a second hydrates identically, the server writes and both pull, a stranger reads nothing; G: two devices diverge offline; H: a permission she withdraws). `tokenBoundary` = `tests/tokenBoundary.test.mjs`. `RECON` = `supabase/tools/baselines/build4-foundation-reconciliation.json`, which attributes every changed catalog fact to the object and authority that required it.
+
 ### FE-01 — Stored provenance / source identity
 - AUDIT ROW: #1
 - AUDIT CAPABILITY: Stored provenance / source identity
@@ -69,7 +77,9 @@ Audit numbering is the audit's own matrix row number. `Primitives` reference the
 - SECURITY IMPACT: none new; `producer`/`source_artifact_id` are never client-UPDATEable.
 - ACTION/AUTONOMY IMPACT: none.
 - IMPLEMENTATION APPROACH: ADR-001..004.
-- STATUS: IN PROGRESS
+- STATUS: VERIFIED
+- FINAL CLASSIFICATION: ACCEPTED
+- EVIDENCE: A1 FE-01 · SQL 56 (producer is stored and never defaulted; demo-seed refused; confidence only where an inference exists) · SQL 73 (claim v2 carries provenance) · F3, F8, F16 · RECON: 9 existing tables gained provenance
 
 ### FE-02 — Action authorization, consequence & outcome
 - AUDIT ROW: #2
@@ -84,7 +94,9 @@ Audit numbering is the audit's own matrix row number. `Primitives` reference the
 - SECURITY IMPACT: owner-only RLS; execution/outcome have no client INSERT grant.
 - ACTION/AUTONOMY IMPACT: the whole axis — representation only, no executor.
 - IMPLEMENTATION APPROACH: ADR-007..010.
-- STATUS: IN PROGRESS
+- STATUS: VERIFIED
+- FINAL CLASSIFICATION: ACCEPTED
+- EVIDENCE: A1 FE-02 · SQL 57 (no client INSERT grant on executions or outcomes) · SQL 58 §6-7 · PARITY (TS and SQL agree on all 25 authorization cases) · F10-F13 · G1-G6 · H1-H4 · RECON: action_intents, intent_decisions, action_executions, action_outcomes, automation_authorities
 
 ### FE-03 — Universal commitment contract
 - AUDIT ROW: #3
@@ -99,7 +111,9 @@ Audit numbering is the audit's own matrix row number. `Primitives` reference the
 - SECURITY IMPACT: none.
 - ACTION/AUTONOMY IMPACT: feeds consequence.
 - IMPLEMENTATION APPROACH: ADR-014, -015.
-- STATUS: IN PROGRESS
+- STATUS: VERIFIED
+- FINAL CLASSIFICATION: ACCEPTED
+- EVIDENCE: A1 FE-03 · SPEC and RT (the facets project in both directions) · F4-F5 (an exact value; an unanswered facet is NULL, never a plausible default) · RECON: tasks, events, meal_plan_entries, household_systems
 
 ### FE-04 — Voice-first Talk It Out
 - AUDIT ROW: #4
@@ -108,13 +122,15 @@ Audit numbering is the audit's own matrix row number. `Primitives` reference the
 - CURRENT GAP: a matched topic yields at most two scripted answers; one messy sentence producing a task, a bill, a worry and a deadline has nowhere to land and nothing links them to the sentence.
 - MISSING PRIMITIVE(S): B4-FE01-002, -003, -005
 - DOMAIN IMPACT: source artifact (utterance), structured candidates, clarification state, correction, reprocessing.
-- LOCAL-PERSISTENCE IMPACT: `sourceArtifacts[]`, `candidates[]`.
-- CLOUD/SCHEMA IMPACT: `source_artifacts`, `candidates`.
+- LOCAL-PERSISTENCE IMPACT: `sourceArtifacts[]`, `interpretations[]`.
+- CLOUD/SCHEMA IMPACT: `source_artifacts`, `interpretations`.
 - SYNC IMPACT: 2 push+pull kinds.
 - SECURITY IMPACT: owner-only; **no transcript is stored** (ADR-011).
 - ACTION/AUTONOMY IMPACT: accepting a candidate is a user decision.
 - IMPLEMENTATION APPROACH: ADR-011, -012.
-- STATUS: IN PROGRESS
+- STATUS: VERIFIED
+- FINAL CLASSIFICATION: EXTENSION
+- EVIDENCE: A1 FE-04 · SQL 58 §8 (digest, arrival provenance, retraction) · F2-F3, F8 · tokenBoundary (no credential and no transcript anywhere) · RECON: source_artifacts, interpretations
 
 ### FE-05 — Life Inbox / multi-source ingestion
 - AUDIT ROW: #5
@@ -129,7 +145,9 @@ Audit numbering is the audit's own matrix row number. `Primitives` reference the
 - SECURITY IMPACT: new data class (email/document metadata); content is never stored.
 - ACTION/AUTONOMY IMPACT: confirmation gate.
 - IMPLEMENTATION APPROACH: ADR-011, -012, -013.
-- STATUS: IN PROGRESS
+- STATUS: VERIFIED
+- FINAL CLASSIFICATION: EXTENSION
+- EVIDENCE: A1 FE-05 · SQL 58 §8-9 · G12-G15 (one document forwarded from two devices is ONE artifact, adopted rather than conflicted) · RECON: source_artifacts, interpretations
 
 ### FE-06 — Daily briefing — full ritual
 - AUDIT ROW: #8
@@ -144,7 +162,9 @@ Audit numbering is the audit's own matrix row number. `Primitives` reference the
 - SECURITY IMPACT: none.
 - ACTION/AUTONOMY IMPACT: reads intents/decisions/executions.
 - IMPLEMENTATION APPROACH: ADR-018.
-- STATUS: IN PROGRESS
+- STATUS: VERIFIED
+- FINAL CLASSIFICATION: EXTENSION
+- EVIDENCE: A1 FE-06 · derived and LOCAL-ONLY: it has no stored or synced state of its own, so hydration and reconciliation have nothing to add; it reads rows that F8 proves hydrate identically
 
 ### FE-07 — Capacity Intelligence
 - AUDIT ROW: #10
@@ -159,7 +179,9 @@ Audit numbering is the audit's own matrix row number. `Primitives` reference the
 - SECURITY IMPACT: owner-only.
 - ACTION/AUTONOMY IMPACT: none.
 - IMPLEMENTATION APPROACH: ADR-015, -025.
-- STATUS: IN PROGRESS
+- STATUS: VERIFIED
+- FINAL CLASSIFICATION: EXTENSION
+- EVIDENCE: A1 FE-07 · SQL 58 §14 · F8 · G16-G18 (one capacity profile per person; the loser keeps its setting as evidence) · RECON: capacity_profiles, task facets
 
 ### FE-08 — Adaptive scheduling
 - AUDIT ROW: #11
@@ -174,7 +196,9 @@ Audit numbering is the audit's own matrix row number. `Primitives` reference the
 - SECURITY IMPACT: none.
 - ACTION/AUTONOMY IMPACT: per-move autonomy uses -007.
 - IMPLEMENTATION APPROACH: ADR-015, -016.
-- STATUS: IN PROGRESS
+- STATUS: VERIFIED
+- FINAL CLASSIFICATION: EXTENSION
+- EVIDENCE: A1 FE-08 · RT · SQL 58 §5 · G9-G11 · F5 · RECON: dependencies, task and event facets
 
 ### FE-09 — One Move extensibility
 - AUDIT ROW: #12
@@ -189,7 +213,9 @@ Audit numbering is the audit's own matrix row number. `Primitives` reference the
 - SECURITY IMPACT: none.
 - ACTION/AUTONOMY IMPACT: none.
 - IMPLEMENTATION APPROACH: ADR-005, -021.
-- STATUS: IN PROGRESS
+- STATUS: VERIFIED
+- FINAL CLASSIFICATION: ACCEPTED
+- EVIDENCE: A1 FE-09 · SQL 58 §1 (typed references are composite foreign keys that prove one household) · SPEC (one registry drives the DDL, the sync wiring and the projection) · PW-001 · RECON: one_move_records
 
 ### FE-10 — AI decomposition
 - AUDIT ROW: #13
@@ -204,7 +230,9 @@ Audit numbering is the audit's own matrix row number. `Primitives` reference the
 - SECURITY IMPACT: owner-only.
 - ACTION/AUTONOMY IMPACT: acceptance is an approval.
 - IMPLEMENTATION APPROACH: ADR-012, -016.
-- STATUS: IN PROGRESS
+- STATUS: VERIFIED
+- FINAL CLASSIFICATION: EXTENSION
+- EVIDENCE: A2 FE-10 · SQL 58 §5 and §14 · G9-G11 (a requirement cycle is never stored, by a device or by the database) · F8 · RECON: goals, dependencies
 
 ### FE-11 — Delegation
 - AUDIT ROW: #14
@@ -219,7 +247,9 @@ Audit numbering is the audit's own matrix row number. `Primitives` reference the
 - SECURITY IMPACT: owner-only; membership boundary unchanged.
 - ACTION/AUTONOMY IMPACT: sending a request is an action with consequence (-008).
 - IMPLEMENTATION APPROACH: ADR-019.
-- STATUS: IN PROGRESS
+- STATUS: VERIFIED
+- FINAL CLASSIFICATION: EXTENSION
+- EVIDENCE: A2 FE-11 · SQL 58 §3 (a child is proven a child) · SQL 57 (owner-only; the membership boundary is untouched) · G7-G8 · RECON: household_people, responsibilities
 
 ### FE-12 — Closed-loop responsibility
 - AUDIT ROW: #15
@@ -234,7 +264,9 @@ Audit numbering is the audit's own matrix row number. `Primitives` reference the
 - SECURITY IMPACT: owner-only.
 - ACTION/AUTONOMY IMPACT: escalation is attention intent, not delivery.
 - IMPLEMENTATION APPROACH: ADR-019.
-- STATUS: IN PROGRESS
+- STATUS: VERIFIED
+- FINAL CLASSIFICATION: EXTENSION
+- EVIDENCE: A2 FE-12 · SQL 58 §4 (one live owner; the handoff lifecycle) · G7-G8 · A3 scenario D · RECON: responsibilities
 
 ### FE-13 — Proactive automation
 - AUDIT ROW: #16
@@ -249,7 +281,9 @@ Audit numbering is the audit's own matrix row number. `Primitives` reference the
 - SECURITY IMPACT: execution requires server-verified authorization.
 - ACTION/AUTONOMY IMPACT: representation-only; nothing executes.
 - IMPLEMENTATION APPROACH: ADR-007..010.
-- STATUS: IN PROGRESS
+- STATUS: VERIFIED
+- FINAL CLASSIFICATION: EXTENSION
+- EVIDENCE: A2 FE-13 · PARITY · F10-F13 (an execution is written by the server; a device cannot forge one) · tokenBoundary · RECON: action_executions, action_outcomes
 
 ### FE-14 — Autonomy / approval model
 - AUDIT ROW: #17
@@ -264,7 +298,9 @@ Audit numbering is the audit's own matrix row number. `Primitives` reference the
 - SECURITY IMPACT: **a permission store** — owner-only, `producer` must be `user-action`, never household-readable.
 - ACTION/AUTONOMY IMPACT: the model itself.
 - IMPLEMENTATION APPROACH: ADR-006, -008.
-- STATUS: IN PROGRESS
+- STATUS: VERIFIED
+- FINAL CLASSIFICATION: ACCEPTED
+- EVIDENCE: A2 FE-14 · SQL 58 §7 (only she grants; a financial grant is bounded; it is only ever revoked) · PARITY · H1-H4 (a revocation reaches every device; PD-001) · RECON: automation_authorities
 
 ### FE-15 — Action consequence model
 - AUDIT ROW: #18
@@ -279,7 +315,9 @@ Audit numbering is the audit's own matrix row number. `Primitives` reference the
 - SECURITY IMPACT: gates -007.
 - ACTION/AUTONOMY IMPACT: gates autonomy.
 - IMPLEMENTATION APPROACH: ADR-008.
-- STATUS: IN PROGRESS
+- STATUS: VERIFIED
+- FINAL CLASSIFICATION: ACCEPTED
+- EVIDENCE: A2 FE-15 · SPEC (the manifest's closed vocabularies and the migration's CHECKs cannot drift) · PARITY (consequence and boundary compared, TS against SQL) · RECON: action_intents, automation_authorities
 
 ### FE-16 — Observe outcome / closed loop
 - AUDIT ROW: #19
@@ -294,7 +332,9 @@ Audit numbering is the audit's own matrix row number. `Primitives` reference the
 - SECURITY IMPACT: no client INSERT grant.
 - ACTION/AUTONOMY IMPACT: closes the loop.
 - IMPLEMENTATION APPROACH: ADR-007.
-- STATUS: IN PROGRESS
+- STATUS: VERIFIED
+- FINAL CLASSIFICATION: ACCEPTED
+- EVIDENCE: A2 FE-16 · SQL 57 (append-only; pull-only) · F10-F11 (server-written rows reach both devices and the lifecycle derives from them) · RECON: action_executions, action_outcomes
 
 ### FE-17 — Smart notifications
 - AUDIT ROW: #20
@@ -309,7 +349,9 @@ Audit numbering is the audit's own matrix row number. `Primitives` reference the
 - SECURITY IMPACT: none.
 - ACTION/AUTONOMY IMPACT: reads -007, -008.
 - IMPLEMENTATION APPROACH: ADR-018.
-- STATUS: IN PROGRESS
+- STATUS: VERIFIED
+- FINAL CLASSIFICATION: EXTENSION
+- EVIDENCE: A2 FE-17 · derived and LOCAL-ONLY: no delivery channel, token or schedule exists in stored state · tokenBoundary
 
 ### FE-18 — Cross-domain reasoning
 - AUDIT ROW: #38
@@ -324,7 +366,9 @@ Audit numbering is the audit's own matrix row number. `Primitives` reference the
 - SECURITY IMPACT: none.
 - ACTION/AUTONOMY IMPACT: none.
 - IMPLEMENTATION APPROACH: scenario tests A–D against real relational rows; no JSON bag carries a fact (Addendum 01 A6).
-- STATUS: IN PROGRESS
+- STATUS: VERIFIED
+- FINAL CLASSIFICATION: ACCEPTED
+- EVIDENCE: A2 FE-18 · A3 scenarios A-D and the no-JSON-bag test (every foundation field is a typed scalar, a typed reference or a typed structure) · F8
 
 ### FE-19 — Reasoning explainability
 - AUDIT ROW: #39
@@ -339,7 +383,9 @@ Audit numbering is the audit's own matrix row number. `Primitives` reference the
 - SECURITY IMPACT: owner-only.
 - ACTION/AUTONOMY IMPACT: attaches to intents.
 - IMPLEMENTATION APPROACH: ADR-022.
-- STATUS: IN PROGRESS
+- STATUS: VERIFIED
+- FINAL CLASSIFICATION: ACCEPTED
+- EVIDENCE: A3 FE-19 · SQL 58 §14 and SQL 57 (evidence links are append-only; the code vocabulary is open but format-checked) · F8 · RECON: evidence_links
 
 ### FE-20 — Calendar OS — external sources
 - AUDIT ROW: #22
@@ -354,7 +400,9 @@ Audit numbering is the audit's own matrix row number. `Primitives` reference the
 - SECURITY IMPACT: **no credential column anywhere**; enforced by a source-scan test (ADR-013).
 - ACTION/AUTONOMY IMPACT: external writes are actions (-011).
 - IMPLEMENTATION APPROACH: ADR-013.
-- STATUS: IN PROGRESS
+- STATUS: VERIFIED
+- FINAL CLASSIFICATION: EXTENSION
+- EVIDENCE: A3 FE-20 · SQL 58 §13 (an external identity is unique; who wrote it is stored) · tokenBoundary · RECON: external_references
 
 ### FE-21 — External integration identity
 - AUDIT ROW: #23
@@ -369,7 +417,9 @@ Audit numbering is the audit's own matrix row number. `Primitives` reference the
 - SECURITY IMPACT: as FE-20.
 - ACTION/AUTONOMY IMPACT: as FE-20.
 - IMPLEMENTATION APPROACH: ADR-013.
-- STATUS: IN PROGRESS
+- STATUS: VERIFIED
+- FINAL CLASSIFICATION: ACCEPTED
+- EVIDENCE: A3 FE-21 · SQL 58 §13 · SPEC (the server-originated local id convention) · RECON: external_references
 
 ### FE-22 — Integration feedback-loop prevention
 - AUDIT ROW: #24
@@ -384,7 +434,9 @@ Audit numbering is the audit's own matrix row number. `Primitives` reference the
 - SECURITY IMPACT: as FE-20.
 - ACTION/AUTONOMY IMPACT: links the external object to the execution that wrote it.
 - IMPLEMENTATION APPROACH: ADR-013.
-- STATUS: IN PROGRESS
+- STATUS: VERIFIED
+- FINAL CLASSIFICATION: ACCEPTED
+- EVIDENCE: A3 FE-22 (resolveObservation recognises the echo of Her Keys' own write) · SQL 58 §13 (identity is unique, so the echo cannot be stored twice) · RECON: external_references
 
 ### FE-23 — Co-parent logistics
 - AUDIT ROW: #26
@@ -399,7 +451,9 @@ Audit numbering is the audit's own matrix row number. `Primitives` reference the
 - SECURITY IMPACT: no widening; logistics are not a legal-record architecture.
 - ACTION/AUTONOMY IMPACT: requests are actions with consequence.
 - IMPLEMENTATION APPROACH: ADR-006, -019.
-- STATUS: IN PROGRESS
+- STATUS: VERIFIED
+- FINAL CLASSIFICATION: EXTENSION
+- EVIDENCE: A3 FE-23 · composed from shared primitives; coparent-shared stays owner-only (SQL 57) · RECON: household_people, responsibilities, recurrence_rules
 
 ### FE-24 — Money OS
 - AUDIT ROW: #27
@@ -407,14 +461,16 @@ Audit numbering is the audit's own matrix row number. `Primitives` reference the
 - USER JOB: "Bills, fees and reimbursements as obligations I can reason about."
 - CURRENT GAP: no amount, currency or monetary type anywhere.
 - MISSING PRIMITIVE(S): B4-FE01-020, -008, -007, -004
-- DOMAIN IMPACT: exact integer-minor-unit value facet on tasks/events/candidates; financial consequence; payment authority limit.
+- DOMAIN IMPACT: exact integer-minor-unit value facet on tasks/events/interpretations; financial consequence; payment authority limit.
 - LOCAL-PERSISTENCE IMPACT: `value` facet.
 - CLOUD/SCHEMA IMPACT: `value_amount_minor bigint`, `value_currency`, `value_direction`; never floating point.
 - SYNC IMPACT: per-kind column lists.
 - SECURITY IMPACT: new sensitivity class; owner-only where authority is involved.
 - ACTION/AUTONOMY IMPACT: financial action is the highest consequence class.
 - IMPLEMENTATION APPROACH: ADR-014. No Money OS, bank connectivity or payments.
-- STATUS: IN PROGRESS
+- STATUS: VERIFIED
+- FINAL CLASSIFICATION: EXTENSION
+- EVIDENCE: A3 FE-24 · SQL 58 §2 (exact minor units, never floating point) · F4 · RT · RECON: value columns on tasks, events and interpretations
 
 ### FE-25 — Household Systems as an engine
 - AUDIT ROW: #32
@@ -429,7 +485,9 @@ Audit numbering is the audit's own matrix row number. `Primitives` reference the
 - SECURITY IMPACT: owner-only.
 - ACTION/AUTONOMY IMPACT: automation level uses the shared mode vocabulary.
 - IMPLEMENTATION APPROACH: ADR-017, -022.
-- STATUS: IN PROGRESS
+- STATUS: VERIFIED
+- FINAL CLASSIFICATION: EXTENSION
+- EVIDENCE: A3 FE-25 · SQL 58 §11 and §14 (one active rule per subject; ordered steps) · F8 · RECON: system_steps, recurrence_rules, household_systems
 
 ### FE-26 — Pattern Intelligence
 - AUDIT ROW: #33
@@ -444,7 +502,9 @@ Audit numbering is the audit's own matrix row number. `Primitives` reference the
 - SECURITY IMPACT: owner-only.
 - ACTION/AUTONOMY IMPACT: a pattern needs approval before acting (`requiresApproval('pattern')`).
 - IMPLEMENTATION APPROACH: ADR-022.
-- STATUS: IN PROGRESS
+- STATUS: VERIFIED
+- FINAL CLASSIFICATION: EXTENSION
+- EVIDENCE: A3 FE-26 · SQL 58 §10 and §12 (only she can establish a pattern; independent evidence) · F8 · RECON: patterns, behavior_observations, evidence_links
 
 ### FE-27 — Shared household participation
 - AUDIT ROW: #35
@@ -459,7 +519,9 @@ Audit numbering is the audit's own matrix row number. `Primitives` reference the
 - SECURITY IMPACT: no broadening; wrong/foreign/missing context is refused.
 - ACTION/AUTONOMY IMPACT: none.
 - IMPLEMENTATION APPROACH: ADR-019, -020. No collaboration is built.
-- STATUS: NOT STARTED
+- STATUS: VERIFIED
+- FINAL CLASSIFICATION: EXTENSION
+- EVIDENCE: A3 FE-27 · SQL 61 (a named household must be hers; one membership resolves; several without a name raise; none is refused) · SQL 50 (the LIMIT-1 function no longer exists) · F14-F15 (isolation) · RECON: resolve_household_context, sync_pull
 
 ## 4. Governance IDs
 
@@ -467,7 +529,7 @@ Audit numbering is the audit's own matrix row number. `Primitives` reference the
 |---|---|---|
 | B4-FE01-001 | Stored provenance (`producer`, `sourceArtifactId`) | 01, 10 |
 | B4-FE01-002 | Source artifact + lineage anchor | 01, 04, 05 |
-| B4-FE01-003 | Structured candidate | 04, 05, 10 |
+| B4-FE01-003 | Structured candidate (stored as `interpretations`, ADR-012) | 04, 05, 10 |
 | B4-FE01-004 | External reference identity | 05, 20, 21, 22, 24 |
 | B4-FE01-005 | Durable confidence (single writer `promoteConfidence`) | 01, 04, 26 |
 | B4-FE01-006 | Behavior observation (append-only) | 07, 10, 12, 25, 26, 27 |
@@ -587,7 +649,7 @@ Classes: PUSH · PULL · PUSH+PULL · SERVER-ONLY · IMMUTABLE/EVIDENCE · CAS �
 | Primitive | Cloud table | Class |
 |---|---|---|
 | source artifact | `source_artifacts` | PUSH+PULL · CAS (`retracted_at` is the only update) |
-| candidate | `candidates` | PUSH+PULL · CAS |
+| interpretation (a structured candidate) | `interpretations` | PUSH+PULL · CAS |
 | external reference | `external_references` | PUSH+PULL · CAS |
 | behavior observation | `behavior_observations` | PUSH+PULL · IMMUTABLE/EVIDENCE · CAS-FREE |
 | automation authority | `automation_authorities` | PUSH+PULL · CAS (`revoked_at` is the only update) |
@@ -628,6 +690,35 @@ Classes: PUSH · PULL · PUSH+PULL · SERVER-ONLY · IMMUTABLE/EVIDENCE · CAS �
 Each row is a runway, not a prison (Addendum 02 B16). Any revision is recorded below with the original prediction, the discovered requirement, why, the revised
 prediction, the actual, and the authority ID.
 
+## 8A. Actual delta and the B16 revisions
+
+Measured on the official local stack (`supabase db reset --local`, then the locked fingerprint tool), against the predictions in §8, which are left untouched above.
+
+| Dimension | Baseline | Predicted | Actual | Verdict |
+|---|---|---|---|---|
+| Application tables | 16 | 34 | **34** (`relations` 17 → 35) | as predicted |
+| Columns | 219 | ~600 | **713** | REVISED |
+| Constraints | 191 | ~800 | **678** | REVISED |
+| Indexes | 82 | ~200 | **284** | REVISED |
+| Triggers | 41 | ~120 | **104** | REVISED |
+| Functions | 20 | +5..7 | **27** (+7 net: 8 added, `current_household_id` removed) | within the range |
+| Policies | 39 | ~90 | **85** | REVISED |
+| Privileges: relations / columns / functions / effective | 281 / 192 / 40 / 159 | all rise | **587 / 719 / 53 / 309** | as predicted |
+| Claim payload version | 1 | 2 | **2** | as predicted |
+| Zero-data interlock | 16 tables + `auth.users` | 34 tables + `auth.users` | **34** in the protected list (asserted by the harness, `00-interlock` and ENV B3) | as predicted, with one refinement: `LOCK TABLE` keeps the 14 baseline tables only, because a relation the migration creates cannot be locked on a first run (the file's own comment, unchanged since SD4) |
+| Shipping migration SHA-256 | `275e9d1c…8436` | changes | `1e9169de…a7cb` | as predicted |
+| Local fingerprint | `d2b319d0…` / 1300 | changes | `199ed4d4…` / **3613** (net +2313) | as predicted |
+
+The revisions below are recorded at closure, from the measured schema, not as each requirement surfaced; the original predictions were never re-issued mid-build. §8 marks every one of them an estimate, and Addendum 02 B16 treats a prediction as a runway.
+
+| Dimension | Original prediction | Discovered requirement | Revised prediction | Actual | Authority |
+|---|---|---|---|---|---|
+| Columns | ~600 (~19 per new table) | The 18 new tables average **24.4** columns (439 in all): the typed-reference convention spends one nullable typed column per referenced kind, and every foundation row states its provenance explicitly (`producer`, `source_artifact_id`, `confidence`) instead of inheriting it. The nine existing tables net **+55**. | ~710 | 713 | ADR-005, ADR-001, ADR-002 |
+| Constraints | ~800 (+600) | An upper-bound sketch. The generator emits a composite key per typed reference and one exactly-one CHECK per reference, and only the vocabularies a table's semantics require. | ~680 | 678 | ADR-005 |
+| Indexes | ~200 (+120) | The typed-reference rule puts a partial covering index on EVERY typed column, so indexes scale with the column count above. | ~285 | 284 | ADR-005 |
+| Triggers | ~120 (+80) | An upper-bound sketch. Each table takes the standard set; only six trigger functions are bespoke. | ~105 | 104 | ADR-007, ADR-009 |
+| Policies | ~90 (+51) | Evidence tables have no UPDATE policy and the two pull-only tables have SELECT alone, so fewer than three per table. | ~85 | 85 | ADR-006, ADR-007 |
+
 ## 9. J-series and checkpoints
 
 | Commit | Contents | SHA | State |
@@ -635,11 +726,15 @@ prediction, the actual, and the authority ID.
 | J0 | audit banked | `db0989bea6e4672d537a83f3e16e7fa56ed3b378` | done |
 | J1 | this ledger, register, ADRs, predicted delta | `02131234f19066e3fcb3ca95caf26e5ec63f8949` | done |
 | J2 | stored provenance on 9 kinds; local v4 + provable backfill + frozen v3; source artifacts and external references (local); confidence writer | `fdb3d7fd87893bd2bee04de3f45092a913c33834` | done |
-| J3 | the complete v4 local shape and its operations: interpretations, behavioral history, authorization/intents/decisions/executions/outcomes, people and responsibility, dependencies, recurrence, goals, system steps, capacity, patterns and evidence, commitment facets, exact money, One Move target registry, attention, briefing inputs, cross-domain related set | _(this commit)_ | in this commit |
+| J3 | the complete v4 local shape and its operations: interpretations, behavioral history, authorization / intents / decisions / executions / outcomes, people and responsibility, dependencies, recurrence, goals, system steps, capacity, patterns and evidence, commitment facets, exact money, One Move target registry, attention, briefing inputs, cross-domain related set | `275ad1ad45a0a9025518306a0be3fee34487a979` | done |
+| J4 | the cloud schema for the foundation (18 tables generated from one manifest, stored provenance on 9 existing tables), explicit household context, claim v2, and the sync wiring for 28 kinds | `ec4346d32f6a6a68586377e52c6e49e8a7cd09b9` | done |
+| J5 | the backend proof: suites 56 / 57 / 58 / 61 / 73, TypeScript ≡ SQL authorization parity, ENV B3, the F journeys, and the repairs they forced (PD-001..PD-005) | `c53cc252a08bc2a26c57447d1e760ca15d0b5063` | done |
+| J6 | acceptance: one future-shaped test per FE row and the four cross-domain scenarios | `b615c4894ea444aee806c0b36e8136ade54567d4` | done |
+| J7 | fingerprint reconciliation tool and baseline, the token-boundary test, journeys G12-G18 | `1be71a345da3e4301cbd6c707cb3fc8dd3490db8` | done |
+| J8 | regression tests for the repaired defects (H1-H4, claim #29, One Move cross-household), each shown to fail without its repair | `598bca042cf21adddffddea45db05f248104c580` | done |
+| J9 | this closure: the ledger, the attestation updates, the POST-B4-FOUNDATION-BUILDOUT DELTA in the audit | the commit that carries this table (see `git log`; a document cannot cite its own hash) | done |
 
-J3 consolidates the base prompt's suggested J1–J6: the v4 shape is ONE schema, so its collections land together with the
-operations and tests that give them meaning rather than in six partial states of a single AppState. The remaining checkpoints are the
-cloud schema, sync/claim/household context, acceptance closure and documentation.
+J3 consolidated the base prompt's suggested J1-J6: the v4 shape is ONE schema, so its collections land together with the operations and tests that give them meaning rather than in six half-built states of a single AppState. The rest followed as listed. The prompt's numbering is "a shape, not a contract": the backend proof (J5) and the acceptance suites (J6) were kept apart, and the reconciliation and regression work each needed a commit of their own (J7, J8).
 
 The numbering below J1 follows the buildout order (A truth → B action → C shared intelligence → D domain readiness → E durability → F closure); the base
 prompt's suggested numbering is a shape, not a contract.
@@ -650,7 +745,25 @@ Every defect found is recorded with: ID · severity · in/out of FE scope · dis
 
 ### Product defects
 
-_None found so far._
+Every defect below was found by this wave's own tests, before anything shipped, in code this wave introduced, except PW-001. Nothing reached a remote, and no cloud data exists anywhere (the zero-data interlock is intact). `Sev` is the severity had it shipped. All are CLOSED; none is open.
+
+| ID | Sev | Row | Found / repaired | Root cause | Regression test |
+|---|---|---|---|---|---|
+| PD-001 | **P1** | FE-14, introduced J4 | repaired J5 (`c53cc25`); regression coverage added J8 (`598bca0`) | `automation_authorities_revoke_only` allowed only `revoked_at` to differ, but every update a device sends also carries `origin_updated_at`, so the database refused her revocation. Her Keys held the revocation locally and never sent it: on a second device the permission she had withdrawn stayed in force, and a new proposal there was still permitted `execute_authorized`. | `sync: H1-H4`. **Fails without the repair** (H2, H3, H4 fail; H4 observed `execute_authorized`) and passes with it. Evidence in §13. |
+| PD-002 | P2 | FE-04, FE-05, introduced J4 | repaired J5 | `interpretations_artifact_provenance_check` was `source_artifact_id = artifact_id`. A CHECK that evaluates to NULL passes, so a reading could be stored with no provenance link. Now `source_artifact_id IS NOT NULL AND …`. | SQL 58 §9 "it names the artifact it was read from as its provenance too". Fails without the repair (mutation-verified). |
+| PD-003 | P2 | FE-23, FE-25, introduced J4 | repaired J5 | The recurrence weekday and month-day CHECKs read `frequency = 'weekly' AND …`. With a NULL frequency (a manual rule) the whole test is NULL and passes, so a manual rule could carry weekdays. Now `COALESCE(frequency = 'weekly', false)`. | SQL 58 §11 "a MANUAL rule cannot carry weekdays". Fails without the repair (mutation-verified). |
+| PD-004 | P3 | FE-10, introduced J4 | repaired J5 | A dependency on itself was reported by the cycle trigger as a cycle rather than by the table's `not_self_check`, so the refusal named the wrong rule. | SQL 58 §5 "a thing cannot require itself" expects `not_self_check`. |
+| PD-005 | P3 | claim v2, introduced J4 | repaired J5; regression test J8 | The claim closure counted a source artifact once per row that named it, so the claim record over-reported what it carried. | SQL 73 #29 (a task and a Needs Me item read from one artifact). **Fails without the repair** (mutation-verified). |
+| PW-001 | P3 | FE-09, **prior wave** (G2 `6db2d5a`) | repaired J4 (`ec4346d`); regression test J8 | `one_move_records.target_task_id` and `target_needs_me_id` were single-column foreign keys, so a One Move in one household could name a task or Needs Me item from another household (the row's own RLS checked the One Move, not its target). Exposure was limited by unguessable server-generated ids. Now composite `(target, household_id[, profile_id])` keys like every other typed reference. | SQL 58 §1 "a task from ANOTHER household cannot be its target". **Fails without the repair** (mutation-verified). |
+
+**Design findings** (resolved in design, before any DDL was applied; not defects):
+
+- **DF-001. The reference graph had a cycle.** `task → source artifact → external reference → task`, and `external reference ↔ action execution`. A cycle of required foreign keys cannot be inserted in any order. Resolved by removing the two back-pointers (`source_artifacts.external_reference_id`, `external_references.write_execution_id`): an external reference names its artifact through provenance, and the execution that wrote it is found by the reference rather than stored on it. `tests/foundationSpecs.test.mjs` asserts the reference graph is acyclic.
+- **DF-002. Concurrent identical facts are one entity, not a conflict.** Two devices that record the same document (same digest), the same external identity, or the same dependency edge before seeing each other describe ONE thing, so the sync engine ADOPTS the cloud's row: the local id maps to it and whatever names it keeps naming it. Genuinely competing answers (a decision, a live owner, a capacity profile, a cycle) DISPLACE the loser, whose intent is kept as conflict evidence. Both branches are proved against the real database (G1-G18).
+
+**Observation.** OBS-001: `cursor: the barrier does NOT advance past the in-flight transaction` (an existing BE03 check, two concurrent sessions) failed once during this wave and passed in every later full run. Its cause was not established; it is timing-sensitive by construction. It is not counted as a defect. The hostile audit should stress it.
+
+**Observation.** OBS-002: `supabase/tools/schema-fingerprint.mjs --source local` shells out to `supabase db query --local`, which on CLI 2.109.1 refuses the tool's multi-statement SQL (`cannot insert multiple commands into a prepared statement`). The tool is locked and was not changed. Every fingerprint in this wave ran the tool's own SQL through `psql` in the local container, the method `BUILD4_BE02_CLAIM_CORRECTION.md` already documents, and the per-dimension comparison against the baseline was scripted. The `--source local` path is a tooling gap for the hostile audit, not a schema finding.
 
 ### Test-construction defects (Addendum 02 B12 — recorded separately, not counted as product regressions)
 
@@ -659,6 +772,8 @@ _None found so far._
 | TCD-001 | `tests/legacyCatalogRemediation.test.mjs`, `tests/persistence.test.mjs` | Historical (v1/v2) fixtures were derived from the LIVE state factory. That was harmless while the live shape was v3; once v4 added fields, the fixtures stopped being historical and failed the frozen validators for the wrong reason. | `tests/support/legacyShapes.mjs` derives a historical shape by REMOVING what a later version added. Byte-exact v3 envelopes now come from the v3 code itself (`tests/fixtures/v3`, SHA-256 pinned). | CLOSED |
 | TCD-002 | `tests/foundationTruth.test.mjs` (mine) | A convoluted assertion compared two distinct object instances. | Replaced with an identity assertion. | CLOSED |
 | TCD-003 | `supabase/tests/sync-integration.mjs` | Row literals lacked the now-required field, so the integrity gate correctly refused them. | Added provenance to the literals. The gate was right. | CLOSED |
+| TCD-004 | `tests/foundationAcceptance*.test.mjs` (new, mine) | The first drafts asserted things the domain correctly refuses: a non-hex digest, `returnToSelf` on a declined responsibility, an `evidenceLinks.support` of `pattern`, a "risk" attention item with no overdue high-consequence task, a token scan run against a household that carried a One Move. | Corrected the tests. The domain was right every time. | CLOSED |
+| TCD-005 | `supabase/tests/56..73` (new, mine) | Suite-construction errors while writing the new SQL suites: unbalanced parentheses, a `:'var'` psql variable that is not interpolated inside a `$f$` body (now passed as a parameter), psql `\'` escapes, and a claim-row filter on `kind = 'claim'` when the bootstrap row is `kind = 'bootstrap'`. | Corrected. None touched a shipped object. | CLOSED |
 
 ## 12. Existing tests modified by v4 (base prompt section 67)
 
@@ -675,9 +790,101 @@ None was weakened. Each moved because a stored shape gained a required field, or
 | build3Audit.migration ×5 | sections v2 did not change are deep-equal to the v1 bytes; re-encodes as v3; hostile mislabel ladder 2/3/4 | equal after removing ONLY `provenance`; re-encodes as the current version; ladder 2/3 -> `migration_failed`, 4 -> `invalid_state`, 5 -> `future_version` | the ladder moved up one rung; losslessness is now proven against the authentic v1 bytes with only the one intended addition removed | ADR-023 |
 | legacyCatalogRemediation ×9 | `CURRENT_SCHEMA_VERSION === 3`; fixtures from the live factory | `=== 4`; fixtures from `toV3Shape` | TCD-001 | ADR-023 |
 | claimPayload, syncEngine, accountRuntime, categories, discoveryPersistence, oneMove, appStore | row literals without provenance | literals carry provenance | fixture shape only | ADR-001 |
+| claimPayload, accountRuntime | `claimPayloadVersion === 1` | `=== 2` | the payload gained provenance, facets and the source-artifact closure, and version 1 is refused rather than completed by guessing | B4-FE01-030, ADR-024 |
+| needsMe, build3Audit.oneMove | `resolveNeedsMeItem(state, id)` | `resolveNeedsMeItem(state, id, ctx())` | resolving now records the completion it just observed, and a record needs a clock and an id source | B4-FE01-006 |
+| categories | `starterCategories('hh-1')` equals the state's categories | `starterCategories('hh-1', demoProvenance())` | the same eight rows; a demo household says the starters are `demo-seed`, every other household `system-derived` | ADR-001 |
+| syncEngine | `schemaVersion: 3` | `CURRENT_SCHEMA_VERSION` | the literal envelope followed the version it was written against | ADR-023 |
+| backend `00-interlock` | 16 application tables | 34 | the zero-data census enumerates every new table | B4-FE01-029 |
+| backend `10`, `30`, `95` | inserts set `events.source` | no `source` | the column was retired; provenance is stored on the row | ADR-001 |
+| backend `50-privileges` | authenticated holds EXECUTE on `current_household_id()` and `sync_pull(xid8)` | on `resolve_household_context(uuid)` and `sync_pull(xid8, uuid)`, **plus a new assertion that the LIMIT-1 function no longer exists** | a household is named, never guessed | B4-FE01-026, ADR-020 |
+| backend `70`, `72` | `claimPayloadVersion: 1` and rows without `producer` | `2`, and every claimed row states its producer | claim v2 | B4-FE01-030, ADR-024 |
+| backend `run.mjs`, helpers `01`, `05`, `sync-integration` | 16 tables; no default `producer`; row literals without provenance | 34 tables, ENV B3, the parity call, `producer` default assertions, a TEST-ONLY default (`05-test-defaults.sql`), provenance in the literals | the shipped schema has no `producer` default; the fixtures that predate it get one only inside the disposable test databases | B4-FE01-001, TCD-003 |
 
 ## 11. Out-of-scope findings (Addendum 01 A3)
 
 | ID | Kind | Finding | Handling |
 |---|---|---|---|
 | OOS-001 | worktree provenance (not a product defect) | `app.json` gained `ios.bundleIdentifier: "com.herkeys.app"` at 15:45 on 2026-09-20, between the J2 and J3 commits. The change was made by something outside this wave (the file's mtime falls inside the session, and no step here writes it). `git add -A` swept it into J3 (`275ad1ad`). | **Left in place.** It may be the owner's own work (an iOS bundle identifier is what an EAS build needs), so reverting it would destroy someone's change; keeping it costs nothing. Staging is explicit from J4 onward so it cannot recur. The owner should confirm it is intended. It is not part of the 27-row scope and does not affect the schema fingerprint. |
+| OOS-002 | worktree provenance (not a product defect) | `app.json` was modified again at 17:33 on 2026-09-20, after J3: an Android `package` (`com.herkeys.app`), `extra.eas.projectId` and `owner`. That is what an EAS project setup writes; nothing in this wave writes it. | **Left untouched and never staged.** Every commit from J4 onward stages `docs src tests supabase` only. It is the owner's working change, and the reason the worktree is not clean at the end. It affects no schema, fingerprint or test. |
+
+## 13. Closure
+
+### Outcome
+
+Derived from the register by `tests/foundationLedger.test.mjs`, which asserts this table equals the counts it derives.
+
+| Final classification | Rows |
+|---|---|
+| ACCEPTED | 11 |
+| EXTENSION | 16 |
+| STOPPED | 0 |
+
+ACCEPTED: FE-01, 02, 03, 09, 14, 15, 16, 18, 19, 21, 22. EXTENSION: FE-04, 05, 06, 07, 08, 10, 11, 12, 13, 17, 20, 23, 24, 25, 26, 27. ACCEPTED + EXTENSION = 27 and STOPPED = 0, so **B4-FOUNDATION-BUILDOUT-01 = PASS** (Addendum 01 A7). Twenty-seven foundation gaps are now none. No screen, executor, provider connector or collaboration was built, and none was meant to be.
+
+### Gates at close
+
+| Gate | Result |
+|---|---|
+| `npx tsc --noEmit` | clean |
+| App tests (`npm test`) | **705 / 705** (entry 454 / 454) |
+| Backend harness (`node supabase/tests/run.mjs`) | **684 / 684** (entry 365 / 365) |
+| Foundation SQL generator `--check` | up to date: no drift between the manifest and the shipping migration |
+| Baseline migration SHA-256 | `8bc38d66fcffbb9fa83502329bd4738a53a8446dd5ce89327013751872f8f16f`, **unchanged** |
+| Shipping migration SHA-256 (working-tree form) | `1e9169de4cf21c46e2167089328de94ce07cb1fcf005c0461dece1b28ec8a7cb` |
+| Official local fingerprint | `199ed4d4c1b37cd654b5853e91cbde27` / 3613 facts, recomputed after the last mutation test restored the stack; all 16 dimension digests equal the baseline (see OBS-002 for how it is measured) |
+| Reconciliation | 2350 facts added, 37 removed: **2387 explained, 0 unexplained**, across 44 objects |
+| Expo Doctor | 20 / 21, the same three pre-existing patch-level mismatches (`expo`, `expo-constants`, `expo-router`); not upgraded |
+| Android export | succeeded |
+| Remote commands | **NONE** |
+
+### The shipping migration's hash chain (Addendum 01 A5, Addendum 02 B24)
+
+Working-tree (CRLF) form, computed at every commit that touched the file. Nothing was deleted or rewritten; each value was true when it was written.
+
+| Commit | SHA-256 (first 16 hex unless the value is quoted in full elsewhere) | Label |
+|---|---|---|
+| G2 `6db2d5a` | `44603a279325514c` | PRE-B4-BE02-OR-001 |
+| `24e9fae` | `9feac67283896d31` | B4-BE02 CURRENT, B4-BE03 entry |
+| `8c56d6e` | `529e3891101231fa` | B4-BE03 CURRENT |
+| `f8fa0e6` | `275e9d1cd81a3d4361715a6d91a084ad95de2ccbd83c67f56e6ca0d3143e8436` | **PRE-B4-FOUNDATION-BUILDOUT-01** |
+| J4 `ec4346d` | `45fb73c5cb0bb378` | intermediate, superseded within this wave |
+| J5 `c53cc25` | `1e9169de4cf21c46e2167089328de94ce07cb1fcf005c0461dece1b28ec8a7cb` | **CURRENT (as of B4-FOUNDATION-BUILDOUT-01)** |
+
+### B13 — evidence for the one P1 repaired (PD-001)
+
+| Field | Record |
+|---|---|
+| Defect | A revocation could not reach the database, so a permission she withdrew stayed in force on every other device |
+| How it surfaced | The migration was corrected in J5. This ledger's own review then found that NO test exercised the client's real revoke path, so the repair had no regression test until J8 |
+| Reproduction | `enforce_single_column_transition('revoked_at')` reinstated on `automation_authorities_revoke_only` in the LOCAL stack only, then `sync: H1-H4` |
+| Output with the defect present | `H1` ok · `H2 … [{"revoked_at":null}]` FAIL · `H3 … null` FAIL · `H4 … execute_authorized` FAIL |
+| Repair | `enforce_single_column_transition('revoked_at', 'origin_updated_at')`: the one metadata column every client update carries may change alongside `revoked_at`, and nothing else may |
+| Output with the repair | `H1 … [null]` · `H2 … [{"revoked_at":"2026-09-20T22:08:39.182+00:00"}]` · `H3 … 2026-09-20T22:08:39.182Z` · `H4 … suggest` |
+| Adjacent surface | SQL 58 §7 still holds: a revocation is set once and cannot be moved or undone, and nothing else on an authority is editable, even by the table owner |
+| Restoration | `supabase db reset --local`; the fingerprint returned to `199ed4d4…` / 3613 |
+| Remote | none |
+
+### B14 — safety defects outside the FE register
+
+**None.** PW-001 is the only prior-wave defect; it is inside FE-09's remit and is P3.
+
+### B26 — final defect table
+
+| | P0 | P1 | P2 | P3 | Open |
+|---|---|---|---|---|---|
+| Product defects | 0 | 1 (PD-001) | 2 (PD-002, PD-003) | 3 (PD-004, PD-005, PW-001) | **0** |
+
+Also recorded, not counted as product defects: 5 test-construction defects (TCD-001..005), 2 design findings (DF-001, DF-002), 2 out-of-scope worktree findings (OOS-001, OOS-002), 2 observations (OBS-001, OBS-002).
+
+### Test counts
+
+| | Entry | Close |
+|---|---|---|
+| App tests | 454 | **705** |
+| Backend harness checks | 365 | **684** |
+
+New: `foundationSpecs`, `foundationRoundtrip`, `foundationAcceptance`, `foundationAcceptance2`, `foundationAcceptance3`, `foundationOps`, `foundationTruth`, `foundationLedger`, `migrationV3ToV4`, `tokenBoundary` (app); suites 56, 57, 58, 61, 73, the authorization parity check, ENV B3, and journeys F1-F16, G1-G18, H1-H4 (backend). Every existing test that moved is in §12, none weakened.
+
+### What this wave did not do
+
+It built no screen, no executor, no provider connector, no notification delivery, no calendar or email integration, no collaboration and no Money OS. It touched no Staging or Production project and ran no remote command. It did not amend history and did not start the hostile audit. Its next step, by instruction, is the Build 4 local hostile integration audit, which needs the owner's go-ahead. Nothing here authorizes Staging.

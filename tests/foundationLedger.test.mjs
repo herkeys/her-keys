@@ -138,4 +138,51 @@ describe('B4-FOUNDATION-BUILDOUT-01 register reconciliation', () => {
     }
     for (const id of used) assert.ok(defined.has(id), `${id} is used by the register but not defined`);
   });
+
+  // ---- the closure (Addendum 01 A1 / A7): the outcome is DERIVED from the register, never typed in beside it ----------------
+  const FINAL = ['ACCEPTED', 'EXTENSION', 'STOPPED'];
+  const classified = () => register.map((block) => ({ id: block.id, status: block.fields.get('STATUS'), klass: block.fields.get('FINAL CLASSIFICATION') }));
+
+  test('every row that is not still open carries exactly one of the three final classifications', () => {
+    for (const row of classified()) {
+      if (row.status === 'VERIFIED') assert.ok(['ACCEPTED', 'EXTENSION'].includes(row.klass), `${row.id} is VERIFIED but classified "${row.klass}"`);
+      else if (row.status === 'STOPPED') assert.equal(row.klass, 'STOPPED', `${row.id} is STOPPED and must say so`);
+      else assert.equal(row.klass, undefined, `${row.id} is "${row.status}", so it cannot be classified yet`);
+      if (row.klass !== undefined) assert.ok(FINAL.includes(row.klass), `${row.id}: "${row.klass}" is not a final classification`);
+    }
+  });
+
+  test('every classified row cites the evidence that closed it', () => {
+    for (const block of register) {
+      if (block.fields.get('FINAL CLASSIFICATION') === undefined) continue;
+      assert.ok((block.fields.get('EVIDENCE') ?? '').trim().length >= 40, `${block.id} must cite its evidence`);
+    }
+  });
+
+  test('the ledger\'s own outcome table equals the counts derived from the register, and success means ACCEPTED + EXTENSION = 27 with STOPPED = 0', () => {
+    const rows = classified();
+    const derived = Object.fromEntries(FINAL.map((k) => [k, rows.filter((r) => r.klass === k).length]));
+    const stated = Object.fromEntries(FINAL.map((k) => {
+      const m = new RegExp(`^\\| ${k} \\| (\\d+) \\|`, 'm').exec(LEDGER.join('\n'));
+      assert.ok(m, `the outcome table must state a count for ${k}`);
+      return [k, Number(m[1])];
+    }));
+    assert.deepEqual(stated, derived, 'the outcome table must be the derived counts, not a separate claim');
+    assert.equal(derived.ACCEPTED + derived.EXTENSION, 27);
+    assert.equal(derived.STOPPED, 0);
+  });
+
+  test('the audit\'s POST-B4-FOUNDATION-BUILDOUT DELTA states before and after counts equal to the ones derived from the matrix and the register', () => {
+    const after = new Map(register.map((block) => [Number(/#(\d+)/.exec(block.fields.get('AUDIT ROW'))[1]), block.fields.get('FINAL CLASSIFICATION')]));
+    const before = (klass) => matrix.filter((row) => row.klass === klass).length;
+    const now = (klass) => matrix.filter((row) => (after.get(row.num) ?? row.klass) === klass).length;
+    const delta = AUDIT.join('\n');
+    assert.ok(delta.includes('## 15. POST-B4-FOUNDATION-BUILDOUT DELTA'), 'the audit must carry the delta');
+    for (const klass of ['ACCEPTED', 'EXTENSION', 'FOUNDATION EXPANSION REQUIRED']) {
+      const m = new RegExp(`^\\| ${klass} \\| (\\d+) \\| (\\d+) \\|$`, 'm').exec(delta);
+      assert.ok(m, `the delta must state PRE and CURRENT counts for ${klass}`);
+      assert.deepEqual([Number(m[1]), Number(m[2])], [before(klass), now(klass)], klass);
+    }
+    assert.equal(now('FOUNDATION EXPANSION REQUIRED'), 0, 'no foundation gap remains');
+  });
 });

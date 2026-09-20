@@ -12,6 +12,7 @@
 | Remote commands | **NONE** |
 | Implementation changes | **NONE** — this document is the only artifact written |
 | Question answered | Can the current Build 4 foundation support an AI household chief of staff, or does it force expensive rewiring later? |
+| Later change | **Read §15 first.** Everything above is the audit as written at `32b1601`. The classification, the shipping migration hash and the fingerprint quoted here are the PRE-B4-FOUNDATION-BUILDOUT-01 values; the CURRENT ones are in §15 |
 | Result | **FOUNDATION EXPANSION REQUIRED BEFORE STAGING** |
 
 This audit does **not** authorize implementation, Staging, or Production.
@@ -674,3 +675,87 @@ It is because two load-bearing primitives are absent, 20 of the 22 F2 capabiliti
 | **READY FOR STAGING** | **NO** |
 
 Staging is **not** authorized by this audit.
+
+
+---
+
+## 15. POST-B4-FOUNDATION-BUILDOUT DELTA
+
+Appended by B4-FOUNDATION-BUILDOUT-01. Sections 1 to 14 above are the audit exactly as it stood at HEAD `32b1601` and are kept as history; the only edit to them is one pointer row under the header table. The classification, the shipping migration hash and the local fingerprint have since changed, and both the old and the new values are recorded here (Addendum 01 A5). The counts below are derived from the matrix in §6 and from the closed register in `BUILD4_FOUNDATION_BUILDOUT.md`, and `tests/foundationLedger.test.mjs` re-derives and compares them on every run.
+
+### 15.1 What changed underneath the audit
+
+| | PRE-B4-FOUNDATION-BUILDOUT-01 (the values in this audit) | CURRENT (as of B4-FOUNDATION-BUILDOUT-01) |
+|---|---|---|
+| Shipping migration SHA-256 (working-tree form) | `275e9d1cd81a3d4361715a6d91a084ad95de2ccbd83c67f56e6ca0d3143e8436` | `1e9169de4cf21c46e2167089328de94ce07cb1fcf005c0461dece1b28ec8a7cb` |
+| Baseline migration SHA-256 | `8bc38d66fcffbb9fa83502329bd4738a53a8446dd5ce89327013751872f8f16f` | unchanged |
+| Local gating digest / facts | `d2b319d0253613d6a5c1dd36ef906da6` / 1300 | `199ed4d4c1b37cd654b5853e91cbde27` / 3613 |
+| Application tables | 16 | 34 |
+| Local schema version | 3 (this audit's "v4 migration" was a recommendation) | 4 |
+| `claimPayloadVersion` | 1 | 2 |
+| App tests | 454 / 454 | 705 / 705 |
+| Backend harness | 365 / 365 | 684 / 684 |
+| Remote commands | none | none |
+
+The fingerprint change is attributed fact by fact (2387 explained, 0 unexplained) in `supabase/tools/baselines/build4-foundation-reconciliation.json`. The old baseline file keeps every digest and now carries a `superseded_by` pointer instead of being rewritten.
+
+### 15.2 Classification, before and after
+
+| Classification | PRE (§7) | CURRENT |
+|---|---|---|
+| ACCEPTED | 3 | 14 |
+| EXTENSION | 9 | 25 |
+| FOUNDATION EXPANSION REQUIRED | 27 | 0 |
+| STOPPED | n/a | 0 |
+| BLOCKED / CONTRADICTED | 0 | 0 |
+| Total rows | 39 | 39 |
+
+| Foundation urgency still outstanding | PRE | CURRENT |
+|---|---|---|
+| F1 — must before Staging | 2 | 0 |
+| F2 — should before the associated feature | 22 | 0 |
+| F3 — safe to add with the feature | 3 | 0 |
+
+The twelve rows that were not FOUNDATION EXPANSION REQUIRED are unchanged: they are consumers of the primitives and none was reclassified. ACCEPTED here means the foundation for the row is complete and nothing further is needed; EXTENSION means the foundation is complete and building the feature is additive future work. Neither means a feature was built.
+
+### 15.3 The 27 rows
+
+| # | Capability | Urgency | PRE | CURRENT | Ledger row |
+|---|---|---|---|---|---|
+| 1 | Stored provenance / source identity | F1 | FOUNDATION EXPANSION REQUIRED | **ACCEPTED** | FE-01 |
+| 2 | Action authorization, consequence & outcome | F1 | FOUNDATION EXPANSION REQUIRED | **ACCEPTED** | FE-02 |
+| 3 | Universal commitment contract | F2 | FOUNDATION EXPANSION REQUIRED | **ACCEPTED** | FE-03 |
+| 4 | Voice-first Talk It Out | F2 | FOUNDATION EXPANSION REQUIRED | **EXTENSION** | FE-04 |
+| 5 | Life Inbox / multi-source ingestion | F2 | FOUNDATION EXPANSION REQUIRED | **EXTENSION** | FE-05 |
+| 8 | Daily briefing — full ritual | F3 | FOUNDATION EXPANSION REQUIRED | **EXTENSION** | FE-06 |
+| 10 | Capacity Intelligence | F2 | FOUNDATION EXPANSION REQUIRED | **EXTENSION** | FE-07 |
+| 11 | Adaptive scheduling | F2 | FOUNDATION EXPANSION REQUIRED | **EXTENSION** | FE-08 |
+| 12 | One Move extensibility | F2 | FOUNDATION EXPANSION REQUIRED | **ACCEPTED** | FE-09 |
+| 13 | AI decomposition | F2 | FOUNDATION EXPANSION REQUIRED | **EXTENSION** | FE-10 |
+| 14 | Delegation | F2 | FOUNDATION EXPANSION REQUIRED | **EXTENSION** | FE-11 |
+| 15 | Closed-loop responsibility | F2 | FOUNDATION EXPANSION REQUIRED | **EXTENSION** | FE-12 |
+| 16 | Proactive automation | F2 | FOUNDATION EXPANSION REQUIRED | **EXTENSION** | FE-13 |
+| 17 | Autonomy / approval model | F2 | FOUNDATION EXPANSION REQUIRED | **ACCEPTED** | FE-14 |
+| 18 | Action consequence model | F2 | FOUNDATION EXPANSION REQUIRED | **ACCEPTED** | FE-15 |
+| 19 | Observe outcome / closed loop | F2 | FOUNDATION EXPANSION REQUIRED | **ACCEPTED** | FE-16 |
+| 20 | Smart notifications | F3 | FOUNDATION EXPANSION REQUIRED | **EXTENSION** | FE-17 |
+| 38 | Cross-domain reasoning | F2 | FOUNDATION EXPANSION REQUIRED | **ACCEPTED** | FE-18 |
+| 39 | Reasoning explainability | F3 | FOUNDATION EXPANSION REQUIRED | **ACCEPTED** | FE-19 |
+| 22 | Calendar OS — external sources | F2 | FOUNDATION EXPANSION REQUIRED | **EXTENSION** | FE-20 |
+| 23 | External integration identity | F2 | FOUNDATION EXPANSION REQUIRED | **ACCEPTED** | FE-21 |
+| 24 | Integration feedback-loop prevention | F2 | FOUNDATION EXPANSION REQUIRED | **ACCEPTED** | FE-22 |
+| 26 | Co-parent logistics | F2 | FOUNDATION EXPANSION REQUIRED | **EXTENSION** | FE-23 |
+| 27 | Money OS | F2 | FOUNDATION EXPANSION REQUIRED | **EXTENSION** | FE-24 |
+| 32 | Household Systems as an engine | F2 | FOUNDATION EXPANSION REQUIRED | **EXTENSION** | FE-25 |
+| 33 | Pattern Intelligence | F2 | FOUNDATION EXPANSION REQUIRED | **EXTENSION** | FE-26 |
+| 35 | Shared household participation | F2 | FOUNDATION EXPANSION REQUIRED | **EXTENSION** | FE-27 |
+
+### 15.4 The audit's final questions, as of now
+
+| Question | PRE (§14) | CURRENT |
+|---|---|---|
+| F1 FOUNDATION WORK BEFORE STAGING | YES | **NO.** Both F1 rows (#1, #2) are ACCEPTED and verified |
+| READY FOR LOCAL HOSTILE INTEGRATION AUDIT | AFTER FOUNDATION EXPANSION | **YES** |
+| READY FOR STAGING | NO | **NO.** Unchanged. Nothing here authorizes Staging, and the hostile audit has not been run |
+
+The strategic argument in §12 was that the free destructive-restructure window closes the first time Staging holds a row. It was used: the shipping migration was restructured while both environments still hold zero rows, the zero-data interlock now enumerates all 34 tables, and no remote was touched.

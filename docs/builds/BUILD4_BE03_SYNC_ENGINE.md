@@ -12,6 +12,20 @@ Local only. No Staging, no Production, no remote command, no credential.
 | Entry app tests | 419 / 419 |
 | Entry backend harness | 281 / 281 |
 
+> **ATTESTATION UPDATE — B4-FOUNDATION-BUILDOUT-01.** The values below labelled **CURRENT** or **POST** were current as of this wave (B4-BACKEND-03). The migration, the fingerprint and several interfaces have moved on. The chain continues here; the body is **kept unchanged** as history.
+
+| Statement | PRE-B4-FOUNDATION-BUILDOUT-01 | CURRENT (as of B4-FOUNDATION-BUILDOUT-01) |
+|---|---|---|
+| Shipping migration SHA-256 (working-tree form) | entry `9feac672…`; this wave's **CURRENT** `529e3891101231fa…`; and `275e9d1cd81a3d4361715a6d91a084ad95de2ccbd83c67f56e6ca0d3143e8436` after the sync journeys | **`1e9169de4cf21c46e2167089328de94ce07cb1fcf005c0461dece1b28ec8a7cb`** |
+| Local gating digest | entry `0fc7b9bf…` / 1294; this wave's **POST** `db61912018a5c32f97c0b9ea40b752bf` / 1300; and `d2b319d0253613d6a5c1dd36ef906da6` / 1300 immediately before the buildout | **`199ed4d4c1b37cd654b5853e91cbde27` / 3613** |
+| Claim contract | `claimPayloadVersion: 1` | 2 |
+| Pull | `sync_pull(p_cursor xid8)`, household from `private.current_household_id()` | `sync_pull(p_cursor xid8, p_household_id uuid)`. `current_household_id()` is removed; `private.resolve_household_context(uuid)` refuses an unnamed household when the caller belongs to several. The transport is `pull(cursor, limit, householdId)` |
+| Push | "CREATE, for the eight entity kinds that carry `(household_id, local_id, origin_device_id)`" | the allow-list is **25 tables**, the 16 client-written foundation tables among them. Executions and outcomes are deliberately absent: the server writes them, a device only pulls them |
+| Synced kinds | the core kinds | **28**: 10 core and 18 foundation. Pull applies oldest-first in dependency rank; a pending create from another device is a collision; a concurrent identical fact is ADOPTED and a competing answer DISPLACES the loser, whose intent is kept as conflict evidence |
+| Envelope (section 6) | the local-v3 envelope | local schema v4; the sync namespace's shape is unchanged |
+| Conflict principle | server revision is authority; no automatic field merge | **unchanged** |
+| Backend harness | 281 / 281 at entry, 365 / 365 at the end of this wave | 684 / 684 |
+
 ---
 
 ## §A — the completed-claim divergent replay contract

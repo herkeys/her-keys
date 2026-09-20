@@ -13,6 +13,21 @@
 
 > **SD4 is CLOSED.** On 2026-09-19 the owner approved 27 decisions (7 T1 + 20 T2) against the content frozen at Commit D `95dff1f4`, deferred 3 (T3), and no decision remains `PROPOSED`. `INHERITED-APPROVED` restates Phase 0 authority; `OWNER-APPROVED` marks decisions settled during SD4. Reopening requires a P0/P1, a concrete implementation contradiction, a new owner product requirement, or explicit owner direction.
 
+> **ATTESTATION UPDATE — B4-FOUNDATION-BUILDOUT-01.** SD4 remains **CLOSED**. The foundation buildout did not reopen it and created no SD4 decision row: what it added is governed by `B4-FE01-xxx` and ADR-001..026 in `BUILD4_FOUNDATION_BUILDOUT.md`. The statements below were true of the SD4 design and the baseline it started from. Where the implementation has since moved, the old text is **kept unchanged** in the body as history and the current value is recorded here.
+
+| Statement in this document | PRE-B4-FOUNDATION-BUILDOUT-01 | CURRENT (as of B4-FOUNDATION-BUILDOUT-01) |
+|---|---|---|
+| SD4-019: `events.source` is narrowed to `'user'` | the column exists, constrained to `'user'` | the column is **retired**. Every content row states its `producer` (stored, NOT NULL, no default), and the cloud producer vocabulary excludes `demo-seed`. The intent of SD4-019, that the cloud cannot hold a demo row, now holds on every content table rather than on events alone |
+| SD4-027: four private helpers, including `current_household_id()` | `LIMIT 1` with no order | **removed.** `private.resolve_household_context(uuid)` replaces it: a named household must be the caller's (else `42501`); an unnamed one resolves only when exactly one membership exists, and several raise `22023`. Three of the four helpers are unchanged |
+| Section 6, `sync_pull(xid8)` | one argument | `sync_pull(p_cursor xid8, p_household_id uuid)` |
+| Application tables designed and asserted | 16 (14 baseline, `change_log`, `account_claims`) | **34** (18 foundation tables added); RLS enabled on all 34; the zero-data interlock enumerates all 34 |
+| Functions (`public` + `private`), the SD4 prediction | 13 | the fingerprint's `functions` dimension read 20 before the buildout and reads **27** now (8 added, `current_household_id` removed) |
+| Claim payload | version 1 | version 2 |
+| Local schema | v3 was not built when SD4 was written | v4 |
+| Shipping migration SHA-256 | `275e9d1cd81a3d4361715a6d91a084ad95de2ccbd83c67f56e6ca0d3143e8436` | `1e9169de4cf21c46e2167089328de94ce07cb1fcf005c0461dece1b28ec8a7cb` |
+| Local gating digest | `d2b319d0253613d6a5c1dd36ef906da6` / 1300 | `199ed4d4c1b37cd654b5853e91cbde27` / 3613 |
+| Baseline digest `c55d9b80…` / 961 | the hosted and local baseline | unchanged: it is the pre-Build-4 baseline and was never meant to be restored. Staging and Production were not contacted |
+
 `AGENTS.md` requires reading the versioned Expo SDK 57 documentation before writing code. SD4 produces no application code: three documents and one non-executable PostgreSQL draft. No Expo, React Native or TypeScript API is touched, so the directive is not engaged and no runtime code was written.
 
 ---

@@ -8,6 +8,18 @@
 | Versioned by | Git commit SHA. This document is authoritative at the commit that contains it |
 | Not | A new SD4 decision. No SD4 register row is created, reopened or renumbered by this work |
 
+> **ATTESTATION UPDATE — B4-FOUNDATION-BUILDOUT-01.** This lock froze the ingestion and reasoning contract at the commit that contains it. The foundation buildout changed one rule in it deliberately, on the owner's audit finding (`B4-FEATURE-ACCEPTANCE-01`, row #1), and the changes are recorded here. The body below is **kept unchanged** as history.
+
+| Statement | PRE-B4-FOUNDATION-BUILDOUT-01 (as written below) | CURRENT (as of B4-FOUNDATION-BUILDOUT-01) |
+|---|---|---|
+| "No stored shape changed. Local persistence stays at `CURRENT_SCHEMA_VERSION = 2`. Local v3 is deferred" | v2 | `CURRENT_SCHEMA_VERSION = 4` |
+| "**Provenance is DERIVED, never stored.**" | recovered from `origin`, `event.source`, `systemRole` and the entity's kind | **STORED** on every content row: `provenance = { producer, artifactId, confidence }` (ADR-001..004). The audit showed why: `provenanceOfTask()` answered `user-action` for every task, and `isUserStated()` feeds `promoteConfidence()`, so a wrong answer lowered the corroboration bar from 3 to 1. Migration lineage is kept separately (`migrationEvidence`), and where a row's source cannot be proven the answer is `legacy-unknown`, never a guess |
+| The origins `onboarding · user-action · talk-it-out · system-derived · import-sync · ai-inference · demo-seed` | seven | the same seven, plus `automation` and `legacy-unknown`. The cloud producer vocabulary excludes `demo-seed` |
+| `event.source` separates seeded from captured | a stored `source` field on events | retired; `events.source` no longer exists locally or in the cloud |
+| One Move "target id" | a target of kind `catalog`, `task` or `needsMe` | five typed targets in the cloud (task, Needs Me, event, system, responsibility) through one registry, each a composite key that proves one household; `catalog` stays a demo-only local target and is never synced |
+| The funnel's provenance / confidence / scope stage | derived | stored, and every artifact a row was read from is a first-class `source_artifacts` row named by the row's provenance |
+| "It is recomputed, never persisted" (Daily Load and reasoning output) | recomputed | **unchanged.** Attention, the briefing and Daily Load stay derived and are not stored; only the facts they read are |
+
 Naming: this workstream is **B4-INGESTION-LOCK**, never "Phase 4" — that label collides with existing Build 4 phase numbering.
 
 ---

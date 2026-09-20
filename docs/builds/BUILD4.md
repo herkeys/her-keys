@@ -9,6 +9,23 @@ The master contract for Build 4. Detailed discovery, the state census, the appro
 | Branch | `build/04-cloud-identity-sync`, local only. No push, PR or merge without explicit owner authorization |
 | Product document | `HER_KEYS_PRODUCT.md` stays canonical and is not rewritten during implementation (B4-P0-070). This file records newer architecture. A revision is recommended at the Build 4 hostile audit |
 
+> **ATTESTATION UPDATE — B4-FOUNDATION-BUILDOUT-01.** This contract's status text was last edited at `29cbc26`, before B4-BACKEND-01 to 03 and before the foundation buildout. The statements below are the ones a later wave has changed, each paired with the value it holds now. The original text is **kept unchanged** further down as history. Only what this wave touched or verified is updated here: phase-map rows not listed were **not re-audited** by this wave and should be read as they were written until the hostile audit.
+
+| Statement | PRE-B4-FOUNDATION-BUILDOUT-01 (as written below) | CURRENT (as of B4-FOUNDATION-BUILDOUT-01) |
+|---|---|---|
+| Shipping migration | not cited | `supabase/migrations/20260919231500_build4_cloud_schema.sql`. SHA-256 (working-tree form) `275e9d1cd81a3d4361715a6d91a084ad95de2ccbd83c67f56e6ca0d3143e8436` before the buildout; **`1e9169de4cf21c46e2167089328de94ce07cb1fcf005c0461dece1b28ec8a7cb`** now. The whole chain is in `BUILD4_FOUNDATION_BUILDOUT.md` §13 |
+| Baseline migration | `20260919230054` | unchanged; SHA-256 `8bc38d66fcffbb9fa83502329bd4738a53a8446dd5ce89327013751872f8f16f` re-verified |
+| SD4 (section L, section M.4) | "Implementation authorization PENDING-OWNER: 30 PROPOSED + 2 DEFERRED decisions unapproved" | `BUILD4_SD4_CLOUD_SCHEMA.md` records **SD4 = CLOSED**: 6 INHERITED-APPROVED, 31 OWNER-APPROVED, 5 DEFERRED, 0 PROPOSED, local implementation authorized. The buildout did not reopen it and created no SD4 decision row; its decisions are `B4-FE01-xxx` and ADR-001..026 in the ledger |
+| Local schema (section E) | "Local persistence schema v3 is approved as a direction and is not implemented. Today `CURRENT_SCHEMA_VERSION = 2`" | `CURRENT_SCHEMA_VERSION = 4`. v3 exists, is frozen in `legacySchemasV3.ts` with 13 byte-exact fixtures, and migrates to v4 (stored provenance and 18 foundation collections) |
+| Cloud tables | SD4 designed 16 | **34** application tables, RLS enabled on all 34; the zero-data interlock enumerates all 34 plus `auth.users` |
+| Claim (section F) | "Mechanics (claim table, state names, eligibility result) are PENDING" | implemented and tested locally: `account_claims`, `claim_local_household`, payload **version 2** (version 1 is refused) |
+| Sync (section G) | "Concrete mechanism, pull cursor … are PENDING and are designed by SD4" | implemented and tested locally against the real local Supabase: the `change_log` `xid8` cursor, rank-ordered push and pull, **28** synced kinds, `sync_pull(cursor, household)` |
+| Household resolution | not mentioned | `private.current_household_id()` (`LIMIT 1`, no order) is removed. `private.resolve_household_context(uuid)` names the household or refuses |
+| Local fingerprint | only the hosted pair is quoted: `c55d9b80…` / 961 (Staging equals Production) | unchanged for Staging and Production, which this wave never contacted. **Local:** `d2b319d0253613d6a5c1dd36ef906da6` / 1300 before the buildout, **`199ed4d4c1b37cd654b5853e91cbde27` / 3613** now, every change attributed (`supabase/tools/baselines/build4-foundation-reconciliation.json`) |
+| Phase map rows 2, 9, 10 | Not started | implemented **locally** (see `BUILD4_BE02_CLAIM_CORRECTION.md`, `BUILD4_BE03_SYNC_ENGINE.md` and the ledger). Not applied to Staging or Production, and not certified on a device |
+| Section N, "Not implemented at this point" | lists the claim runtime, sync runtime and local schema v3 | the claim runtime, the sync runtime and the local schema now exist locally. The rest of that list was **not verified by this wave** |
+| Remote state | no Production mutation authorized | unchanged. No remote command was run, nothing was pushed, and Staging and Production were not contacted |
+
 Status vocabulary: `APPROVED`, `PENDING`, `DEFERRED`. Anything marked pending in the checkpoint is not a decision.
 
 ## A. Objective

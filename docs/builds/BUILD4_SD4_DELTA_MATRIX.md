@@ -11,6 +11,17 @@ Object-by-object difference between the **repo-owned Phase 1 baseline** and the 
 
 **The baseline is not altered.** This matrix describes a *future* migration that would sit on top of it. `supabase/migrations/` still contains exactly one `.sql` file.
 
+> **ATTESTATION UPDATE — B4-FOUNDATION-BUILDOUT-01.** The `Status` row above predates SD4's closure: see `BUILD4_SD4_CLOUD_SCHEMA.md` (**SD4 = CLOSED**). The foundation buildout extended this delta; where a statement below has since moved, the old text is **kept unchanged** as history and the current value is here.
+
+| Statement in this document | PRE-B4-FOUNDATION-BUILDOUT-01 | CURRENT (as of B4-FOUNDATION-BUILDOUT-01) |
+|---|---|---|
+| Section 1: "14 → 16 tables" | 16 application tables | **34** (18 foundation tables added) |
+| `events_source_check`: `source IN ('user','demo')` → `source = 'user'` (SD4-019) | the column is narrowed | the column is **retired**; `producer` is stored on every content row and excludes `demo-seed` in the cloud |
+| `private.current_household_id()`: ADD, "Used by the pull path" | added | added by the SD4 implementation and **removed** by the buildout; `private.resolve_household_context(uuid)` replaces it and `sync_pull` names its household |
+| Zero-data interlock: "All 16 application tables plus `auth.users`" | 16 | **34** plus `auth.users`, enumerated by name in the census's protected list and asserted by the harness. `LOCK TABLE` still names only the 14 baseline tables: a relation this migration creates cannot be locked on a first run |
+| Sections 10 and 13, the predicted fingerprint delta | `relations` 14 → 16 and so on, against the baseline `c55d9b80…` / 961 | that baseline is unchanged. The **local** dimension `relations` read 17 before the buildout and reads 35 now; the full attributed delta is in `supabase/tools/baselines/build4-foundation-reconciliation.json` |
+| Shipping migration SHA-256 | `275e9d1c…8436` | `1e9169de4cf21c46e2167089328de94ce07cb1fcf005c0461dece1b28ec8a7cb` |
+
 Change classes: **TYPE** (physical type change) · **ADD** · **DROP** · **NARROW** (constraint tightened) · **WIDEN** · **REPLACE** · **UNCHANGED**.
 
 ---
