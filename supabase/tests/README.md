@@ -129,6 +129,7 @@ because any file can be run alone.
 | `60-trusted-context.sql` | NHR-06 attacks on `is_trusted_server_context()` |
 | `70-claim-bootstrap.sql` | bootstrap, claim, idempotent retry, demo refusal, conflict evidence |
 | `72-claim-closure.sql` | B4-BE02-OR-001 dependency closure: targeted historical One Moves, child/category closure, server-enforced boundedness, retry identity, divergent-retry refusal, rollback census |
+| `74-sync-push.sql` | B4-BE03-OR-001: SD4-006 push identity — create, same-install replay, cross-install local_id collision, server-owned columns, RLS and allow-list |
 | `80-revision-cas.sql` | optimistic concurrency; revision is not the cursor |
 | `90-change-cursor.sql` | change_log, committed_xid, snapshot barrier |
 | `92-one-move.sql` | logical day server-derived and frozen, typed targets, uniqueness |

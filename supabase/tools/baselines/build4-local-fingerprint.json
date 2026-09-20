@@ -80,9 +80,54 @@
     ]
   },
 
-  "current_local_gating_digest": "0fc7b9bf380faaf9fa20b4859e8adf6d",
-  "current_local_fact_count": 1294,
-  "digest_history": "actual_local_gating_digest above is the PRE-CORRECTION digest captured at G4 and is kept as history, not overwritten. current_local_gating_digest is the digest of the repository as it stands now, after B4-BE02-OR-001.",
+  "current_local_gating_digest": "db61912018a5c32f97c0b9ea40b752bf",
+  "current_local_fact_count": 1300,
+  "digest_history": "actual_local_gating_digest above is the digest captured at G4 and is kept as history, not overwritten. Each correction block below records its own before/after. current_local_gating_digest is the digest of the repository as it stands now, after B4-BE02-OR-001 and then B4-BE03-OR-001.",
+
+  "b4_be03_or_001_correction": {
+    "what": "Forward implementation fix: public.sync_push, the SD4-006 push-side collision surface. Everything else the push engine needs is ordinary DML under the existing column grants and RLS; only local-id collision minting had no client-callable expression.",
+    "authorized_by": "B4-BACKEND-03 addendum section C -- a callable surface missing but fully specified by frozen SD4 is an implementation defect, forward-fixed locally. P2: the unfixed failure mode is a 23505 becoming durable failure evidence with needsSyncAttention set.",
+    "shipping_migration_sha256": {
+      "pre_b4_be03_or_001": "9feac67283896d310ed4239776dcd10f3d624cc57be742683e8fa5de35e06b86",
+      "current": "529e3891101231faf1743f0ecbbe2dc3ccbc701037e0f2e7b5cb2fccdc63fb26"
+    },
+    "baseline_migration_sha256_unchanged": "8bc38d66fcffbb9fa83502329bd4738a53a8446dd5ce89327013751872f8f16f",
+    "fingerprint": {
+      "pre_correction_digest": "0fc7b9bf380faaf9fa20b4859e8adf6d",
+      "post_correction_digest": "db61912018a5c32f97c0b9ea40b752bf",
+      "fact_count_before": 1294,
+      "fact_count_after": 1300,
+      "result_rows": 17,
+      "dimensions_changed": 3,
+      "unexplained_differences": 0,
+      "changed": [
+        { "dimension": "functions", "count_before": 19, "count_after": 20,
+          "digest_before": "619edaa84036cd31cfd7914f2f20afb7", "digest_after": "74c2b461d87133664e0c247611818111",
+          "classification": "EXPLAINED-AUTHORIZED", "governing_authority": "SD4-006 / B4-BE03-OR-001",
+          "interpretation": "Exactly one routine added: public.sync_push(text, uuid, jsonb), SECURITY INVOKER. No existing routine body changed." },
+        { "dimension": "privileges.functions", "count_before": 37, "count_after": 40,
+          "digest_before": "52fc30689bdc49d6761e264f825db9c5", "digest_after": "416ed4fab2d451c814394144accc904b",
+          "classification": "EXPLAINED-AUTHORIZED", "governing_authority": "SD4-026 grant posture",
+          "method": "aclexplode over pg_proc.proacl for sync_push",
+          "raw_output": "sync_push|grantee=authenticated|EXECUTE ; sync_push|grantee=postgres|EXECUTE ; sync_push|grantee=service_role|EXECUTE",
+          "interpretation": "+3 = exactly the three ACL entries the new routine carries. No PUBLIC entry and no anon entry, which is the posture Layer 1 exists to produce." },
+        { "dimension": "privileges.effective", "count_before": 157, "count_after": 159,
+          "digest_before": "5572ff4b0464350308b76cdbfd4d0262", "digest_after": "17f2cd006e625c5523e2f51f275eeea6",
+          "classification": "EXPLAINED-AUTHORIZED", "governing_authority": "SD4-026",
+          "method": "has_function_privilege for anon, authenticated, service_role, postgres and PUBLIC",
+          "raw_output": "anon=false authenticated=true service_role=true postgres=true (postgres and PUBLIC are outside roles_of_interest / hold none)",
+          "interpretation": "+2 = the two roles-of-interest that hold EXECUTE on the new routine. anon holds none, which is the load-bearing half." }
+      ],
+      "unchanged": "Fourteen dimensions byte-identical: schemas, relations, columns, constraints, indexes, triggers, policies, types, info.event_triggers, info.extensions, privileges.columns, privileges.relations, privileges.schemas, privileges.default_acl. No relation topology, RLS, policy, trigger or column-grant change at all.",
+      "arithmetic": "1294 + 1 (function) + 3 (function ACL) + 2 (effective) = 1300, which is the observed fact count.",
+      "tool_hashes_unchanged": {
+        "supabase/tools/schema-lines.sql": "1b159be53544cabf94d0893ac728561c9d6df7d8c23a599e29d8099ff7945a6b",
+        "supabase/tools/schema-fingerprint.mjs": "5ba8c323f4f7e678d3a89da6de806f1f1315e95f073ac6e5769239772d2a1379"
+      },
+      "capture_method": "supabase db reset --local, then the UNMODIFIED locked Phase 1 tool via psql against the local `postgres` database."
+    },
+    "backend_harness": { "checks_before": 281, "checks_after": 305, "new": 24, "removed": 0, "failures": 0 }
+  },
 
   "b4_be02_or_001_correction": {
     "what": "Forward correction to the shipping migration: public.claim_local_household now ingests the minimum transitive dependency closure of the historical One Move records being claimed. See docs/builds/BUILD4_BE02_CLAIM_CORRECTION.md.",

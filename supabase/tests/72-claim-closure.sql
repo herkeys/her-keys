@@ -479,6 +479,21 @@ SELECT CASE WHEN count(*) = 1 THEN 'PASS' ELSE 'FAIL' END
        || ' | 16d. the later local One Move stays local for B4-BACKEND-03 (' || count(*)::text || ' cloud row)'
 FROM public.one_move_records o WHERE o.profile_id = :'tf';
 
+-- 16f (B4-BACKEND-03 addendum A.9). The divergent replay created no second
+-- household and no second claim topology: the account still owns exactly one
+-- household, through exactly one owner membership, under one claim row.
+SELECT CASE WHEN (SELECT count(*) FROM public.household_members WHERE profile_id = :'tf' AND role='owner') = 1
+             AND (SELECT count(DISTINCT household_id) FROM public.household_members WHERE profile_id = :'tf') = 1
+             AND (SELECT count(*) FROM public.account_claims WHERE profile_id = :'tf') = 1
+             AND (SELECT count(*) FROM public.account_claims WHERE profile_id = :'tf' AND status='complete') = 1
+            THEN 'PASS' ELSE 'FAIL' END
+       || ' | 16f. the divergent replay created no second household and no second claim topology';
+
+-- 16g. And no claim lockout: the account is not left refused or in_progress.
+SELECT CASE WHEN status = 'complete' AND rejected_reason IS NULL THEN 'PASS' ELSE 'FAIL' END
+       || ' | 16g. the replayed claim is settled complete, with no lockout'
+FROM public.account_claims WHERE profile_id = :'tf';
+
 SELECT CASE WHEN (row_counts ->> 'retry_payload_diverged') = 'true' THEN 'PASS' ELSE 'FAIL' END
        || ' | 16e. the divergence is recorded as evidence in the existing claim row, with no schema expansion'
 FROM public.account_claims WHERE profile_id = :'tf';

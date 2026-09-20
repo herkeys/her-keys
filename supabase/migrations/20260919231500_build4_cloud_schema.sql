@@ -3058,6 +3058,158 @@ BEGIN
 END;
 $fn$;
 
+-- ----------------------------------------------------------------------------
+-- sync_push — create a row under SD4-006 collision semantics.
+--
+-- B4-BE03-OR-001, a forward implementation fix. Everything else the push engine
+-- does is ordinary DML: an UPDATE carries `revision=eq.<base>` and CAS falls out
+-- of the column grants, because `revision` is SELECT-only and
+-- set_row_updated_at() bumps it. Exactly ONE thing has no client-callable
+-- expression, and this is it.
+--
+-- SD4-006 (OWNER-APPROVED, T1): "If a row already exists with that
+-- (household_id, local_id) and a DIFFERENT origin_device_id, the server treats
+-- it as a distinct entity: it inserts a new row with a fresh cloud uuid and
+-- returns local_id_collision alongside the new cloud id. It never merges."
+--
+-- A plain POST cannot do that. The local-id uniqueness constraint rejects it
+-- with 23505, and the pushing device may not rename its own row -- B4-P0-005
+-- keeps existing local ids stable, so a device only ever chooses an id for a row
+-- it has never seen. The minting has to happen here.
+--
+-- SECURITY INVOKER, deliberately and load-bearingly (B4-P0-025). The insert
+-- happens as the CALLER, so the caller's RLS policies and column grants still
+-- decide what may be written. A DEFINER function would hand a client the
+-- postgres role's reach and quietly undo the privilege design; it would also
+-- satisfy private.is_trusted_server_context(), which is the historical-backfill
+-- key and has no business in an ordinary push.
+-- ----------------------------------------------------------------------------
+CREATE FUNCTION public.sync_push(
+  p_entity_table text,
+  p_device_id    uuid,
+  p_row          jsonb
+)
+  RETURNS jsonb
+  LANGUAGE plpgsql
+  SECURITY INVOKER
+  SET search_path TO ''
+AS $fn$
+DECLARE
+  v_uid        uuid := (SELECT auth.uid());
+  v_house      uuid;
+  v_local      text;
+  v_owner_private boolean;
+  v_found_id   uuid;
+  v_found_rev  bigint;
+  v_found_dev  uuid;
+  v_id         uuid;
+  v_rev        bigint;
+  v_local_out  text;
+  v_status     text := 'created';
+  v_clean      jsonb;
+  v_cols       text;
+  v_sel        text;
+BEGIN
+  IF v_uid IS NULL THEN
+    RAISE EXCEPTION 'sync_push: no authenticated caller' USING errcode = '28000';
+  END IF;
+  IF jsonb_typeof(p_row) <> 'object' THEN
+    RAISE EXCEPTION 'sync_push: row must be an object' USING errcode = '22023';
+  END IF;
+
+  -- An allow-list, not a pattern. A table named by the client must be one this
+  -- function was built for, or the dynamic SQL below becomes a way to reach
+  -- tables the push path has no business in.
+  v_owner_private := p_entity_table IN ('one_move_records', 'needs_me_items', 'discovery_records');
+  IF NOT v_owner_private
+     AND p_entity_table NOT IN ('tasks', 'events', 'household_categories',
+                                'household_systems', 'meal_plan_entries') THEN
+    RAISE EXCEPTION 'sync_push: % is not a pushable entity table', p_entity_table
+      USING errcode = '22023';
+  END IF;
+
+  v_house := (p_row ->> 'household_id')::uuid;
+  v_local := p_row ->> 'local_id';
+  IF v_house IS NULL OR v_local IS NULL THEN
+    RAISE EXCEPTION 'sync_push: household_id and local_id are required' USING errcode = '22023';
+  END IF;
+
+  -- Not the permission check -- RLS is, and still runs. This is so the collision
+  -- branch cannot be used to probe another household's local ids, which the
+  -- SELECT policies would otherwise keep hidden.
+  IF NOT private.is_household_member(v_house) THEN
+    RAISE EXCEPTION 'sync_push: caller is not a member of household %', v_house
+      USING errcode = '42501';
+  END IF;
+
+  -- Probe on the table's OWN uniqueness boundary (SD4-004): household-scoped
+  -- tables key on (household_id, local_id), owner-private ones add profile_id.
+  -- Probing the wrong boundary would either miss a real collision or invent one.
+  EXECUTE format(
+    'SELECT id, revision, origin_device_id FROM public.%I WHERE household_id = $1 AND local_id = $2%s',
+    p_entity_table,
+    CASE WHEN v_owner_private THEN ' AND profile_id = $3' ELSE '' END)
+    INTO v_found_id, v_found_rev, v_found_dev
+    USING v_house, v_local, v_uid;
+
+  IF v_found_id IS NOT NULL THEN
+    IF v_found_dev IS NOT DISTINCT FROM p_device_id THEN
+      -- The SAME install already created this row. That is a lost
+      -- acknowledgement, not a collision: the device pushed, the server
+      -- committed, and the answer never came back. Hand over the authoritative
+      -- identity so the retry settles instead of duplicating.
+      RETURN jsonb_build_object(
+        'status', 'already_exists',
+        'cloud_id', v_found_id,
+        'revision', v_found_rev,
+        'local_id', v_local);
+    END IF;
+
+    -- A DIFFERENT install owns that local id, so these are two distinct
+    -- entities that happened to mint the same device-relative id. They are
+    -- never merged. The incoming row takes its own cloud identity under a local
+    -- id that is free here; the pushing device keeps its own local id and
+    -- records the translation in its map (SD4-006).
+    v_status := 'local_id_collision';
+    v_local_out := left(v_local, 96) || '-x' || substr(md5(random()::text || clock_timestamp()::text), 1, 8);
+  ELSE
+    v_local_out := v_local;
+  END IF;
+
+  -- Server-owned columns are stripped rather than trusted. The column grants
+  -- would refuse them anyway; refusing here as well means the client gets a
+  -- clear answer instead of a privilege error, and keeps this function honest
+  -- about what it is allowed to write.
+  v_clean := (p_row - 'id' - 'revision' - 'created_at' - 'updated_at'
+                    - 'subject_member_type' - 'logical_day' - 'timezone_at_decision')
+             || jsonb_build_object('local_id', v_local_out)
+             || jsonb_build_object('origin_device_id', p_device_id);
+
+  SELECT string_agg(quote_ident(k), ', ' ORDER BY k),
+         string_agg('r.' || quote_ident(k), ', ' ORDER BY k)
+    INTO v_cols, v_sel
+  FROM jsonb_object_keys(v_clean) AS k;
+
+  -- jsonb_populate_record does the type coercion, and naming the columns
+  -- explicitly means every column NOT supplied keeps its default -- which is how
+  -- id, revision, created_at and updated_at stay server-generated.
+  EXECUTE format(
+    'INSERT INTO public.%I (%s) SELECT %s FROM jsonb_populate_record(NULL::public.%I, $1) r RETURNING id, revision',
+    p_entity_table, v_cols, v_sel, p_entity_table)
+    USING v_clean
+    INTO v_id, v_rev;
+
+  RETURN jsonb_build_object(
+    'status', v_status,
+    'cloud_id', v_id,
+    'revision', v_rev,
+    'local_id', v_local_out);
+END;
+$fn$;
+
+REVOKE ALL ON FUNCTION public.sync_push(text, uuid, jsonb) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.sync_push(text, uuid, jsonb) TO authenticated;
+
 -- Explicit grants. Layer 1 revoked the authenticated ROUTINES default, so
 -- without these the entry points are simply uncallable (NHR-03, by design).
 REVOKE ALL ON FUNCTION public.bootstrap_account(uuid, text, uuid)                 FROM PUBLIC, anon;
