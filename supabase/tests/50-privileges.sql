@@ -100,13 +100,15 @@ SELECT CASE WHEN has_function_privilege('authenticated', 'private.is_household_m
        || ' | authenticated retains EXECUTE on is_household_member';
 SELECT CASE WHEN has_function_privilege('authenticated', 'private.can_access_scoped_row(uuid,text,uuid)', 'EXECUTE') THEN 'PASS' ELSE 'FAIL' END
        || ' | authenticated retains EXECUTE on can_access_scoped_row';
-SELECT CASE WHEN has_function_privilege('authenticated', 'private.current_household_id()', 'EXECUTE') THEN 'PASS' ELSE 'FAIL' END
-       || ' | authenticated retains EXECUTE on current_household_id';
+SELECT CASE WHEN has_function_privilege('authenticated', 'private.resolve_household_context(uuid)', 'EXECUTE') THEN 'PASS' ELSE 'FAIL' END
+       || ' | authenticated retains EXECUTE on resolve_household_context';
+SELECT CASE WHEN to_regprocedure('private.current_household_id()') IS NULL THEN 'PASS' ELSE 'FAIL' END
+       || ' | the LIMIT-1 current_household_id() no longer exists: a household is named, never guessed';
 
 -- Client entry points are callable; the trusted-only ones are not.
 SELECT CASE WHEN has_function_privilege('authenticated', 'public.bootstrap_account(uuid,text,uuid)', 'EXECUTE') THEN 'PASS' ELSE 'FAIL' END
        || ' | authenticated may call bootstrap_account';
-SELECT CASE WHEN has_function_privilege('authenticated', 'public.sync_pull(xid8)', 'EXECUTE') THEN 'PASS' ELSE 'FAIL' END
+SELECT CASE WHEN has_function_privilege('authenticated', 'public.sync_pull(xid8,uuid)', 'EXECUTE') THEN 'PASS' ELSE 'FAIL' END
        || ' | authenticated may call sync_pull';
 SELECT CASE WHEN NOT has_function_privilege('authenticated', 'private.assert_app_schema_secured()', 'EXECUTE') THEN 'PASS' ELSE 'FAIL' END
        || ' | authenticated may NOT call the schema assertion';

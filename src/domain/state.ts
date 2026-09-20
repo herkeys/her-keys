@@ -792,7 +792,6 @@ export function findIntegrityProblems(state: AppState): string[] {
     if (attempts.has(key)) problems.push(`intent ${execution.intentId} has two attempt ${execution.attempt}`);
     attempts.add(key);
   }
-  for (const ref of state.externalReferences) requireIn('external reference', ref.id, 'execution', executionIds, ref.writeExecutionId);
   for (const outcome of state.outcomes) requireIn('outcome', outcome.id, 'execution', executionIds, outcome.executionId);
 
   const personIds = new Set(state.people.map((row) => row.id));
@@ -858,11 +857,6 @@ export function findIntegrityProblems(state: AppState): string[] {
   }
 
   // ---- external identity.
-  for (const artifact of state.sourceArtifacts) {
-    if (artifact.externalReferenceId !== null && !referenceIds.has(artifact.externalReferenceId)) {
-      problems.push(`source artifact ${artifact.id} names missing external reference ${artifact.externalReferenceId}`);
-    }
-  }
   for (const ref of state.externalReferences) {
     if (ref.linked !== null && !refExists(state, ref.linked)) {
       problems.push(`external reference ${ref.id} is linked to missing ${ref.linked.kind} ${ref.linked.id}`);

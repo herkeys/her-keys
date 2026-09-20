@@ -16,6 +16,19 @@
 -- auth users. Section 0 enforces that and aborts otherwise.
 --
 -- The Phase 1 baseline migration is never edited.
+--
+-- B4-FOUNDATION-BUILDOUT-01 adds the durable foundation the ultimate product is
+-- built on: stored provenance on every synced row, source artifacts and external
+-- references, behavioral history, authorization / intent / decision / execution /
+-- outcome representation, people and responsibility, dependencies, recurrence,
+-- goals, capacity, patterns and evidence, and the commitment facets and exact money
+-- the four commitment kinds gained. It also makes the household a request is about
+-- EXPLICIT (private.resolve_household_context) and versions the claim payload.
+-- The eighteen new tables and the columns added to the nine existing ones are
+-- GENERATED from src/domain/sync/foundationSpecs.ts between the marker pairs in
+-- sections 8B and 9, and a test fails if the file drifts from the manifest.
+-- The migration was still unapplied anywhere, so this is a revision of the same
+-- file, not a second migration.
 
 -- ============================================================================
 -- ATOMICITY: this migration opens its OWN transaction.
@@ -45,7 +58,7 @@ DECLARE
   total     bigint := 0;
   offenders text[] := ARRAY[]::text[];
   protected text[] := ARRAY[
-    -- All 16 Build 4 application tables, schema-qualified, enumerated explicitly.
+    -- All 34 Build 4 application tables, schema-qualified, enumerated explicitly.
     -- 14 inherited from the Phase 1 baseline:
     'public.profiles',
     'public.households',
@@ -64,6 +77,25 @@ DECLARE
     -- 2 introduced by this migration (absent on a first run; guarded by to_regclass):
     'public.change_log',
     'public.account_claims',
+    -- 18 foundation tables (B4-FOUNDATION-BUILDOUT-01), absent on a first run and guarded by to_regclass:
+    'public.source_artifacts',
+    'public.interpretations',
+    'public.external_references',
+    'public.behavior_observations',
+    'public.automation_authorities',
+    'public.action_intents',
+    'public.intent_decisions',
+    'public.action_executions',
+    'public.action_outcomes',
+    'public.household_people',
+    'public.responsibilities',
+    'public.dependencies',
+    'public.recurrence_rules',
+    'public.goals',
+    'public.system_steps',
+    'public.capacity_profiles',
+    'public.patterns',
+    'public.evidence_links',
     -- and the identity table, which is the one that matters most:
     'auth.users'
   ];
@@ -151,7 +183,8 @@ BEGIN
     'public.household_categories','public.events','public.tasks',
     'public.household_systems','public.meal_plan_entries','public.onboarding_state',
     'public.one_move_records','public.needs_me_items','public.discovery_records',
-    'public.discovery_answers','public.action_records','auth.users'
+    'public.discovery_answers','public.action_records','auth.users',
+    'public.source_artifacts','public.interpretations','public.external_references','public.behavior_observations','public.automation_authorities','public.action_intents','public.intent_decisions','public.action_executions','public.action_outcomes','public.household_people','public.responsibilities','public.dependencies','public.recurrence_rules','public.goals','public.system_steps','public.capacity_profiles','public.patterns','public.evidence_links'
   ] LOOP
     IF to_regclass(t) IS NULL THEN CONTINUE; END IF;
     EXECUTE format('SELECT count(*) FROM %s', t) INTO n;
@@ -207,6 +240,24 @@ SET check_function_bodies = false;
 
 ALTER DEFAULT PRIVILEGES FOR ROLE postgres REVOKE EXECUTE ON ROUTINES FROM PUBLIC;
 
+DROP TABLE IF EXISTS public.evidence_links           CASCADE;
+DROP TABLE IF EXISTS public.patterns                 CASCADE;
+DROP TABLE IF EXISTS public.capacity_profiles        CASCADE;
+DROP TABLE IF EXISTS public.system_steps             CASCADE;
+DROP TABLE IF EXISTS public.goals                    CASCADE;
+DROP TABLE IF EXISTS public.recurrence_rules         CASCADE;
+DROP TABLE IF EXISTS public.dependencies             CASCADE;
+DROP TABLE IF EXISTS public.responsibilities         CASCADE;
+DROP TABLE IF EXISTS public.household_people         CASCADE;
+DROP TABLE IF EXISTS public.action_outcomes          CASCADE;
+DROP TABLE IF EXISTS public.action_executions        CASCADE;
+DROP TABLE IF EXISTS public.intent_decisions         CASCADE;
+DROP TABLE IF EXISTS public.action_intents           CASCADE;
+DROP TABLE IF EXISTS public.automation_authorities   CASCADE;
+DROP TABLE IF EXISTS public.behavior_observations    CASCADE;
+DROP TABLE IF EXISTS public.external_references      CASCADE;
+DROP TABLE IF EXISTS public.interpretations          CASCADE;
+DROP TABLE IF EXISTS public.source_artifacts         CASCADE;
 DROP TABLE IF EXISTS public.change_log            CASCADE;
 DROP TABLE IF EXISTS public.account_claims        CASCADE;
 DROP TABLE IF EXISTS public.action_records        CASCADE;
@@ -282,29 +333,62 @@ AS $fn$
      );
 $fn$;
 
--- The single household this account owns, or NULL. Used by the pull path so a device
--- never has to be told which household it belongs to.
-CREATE FUNCTION private.current_household_id()
+-- The household a request is ABOUT, resolved from what the caller said and never guessed.
+--
+--   * A named household must be one the caller belongs to. A stranger's household id, or
+--     a well-formed uuid that names nothing, is refused rather than answered with silence.
+--   * Nothing named, and the caller belongs to exactly one household: that one. Every
+--     device of a single-household account therefore resolves identically.
+--   * Nothing named, and the caller belongs to several: REFUSED as ambiguous. The function
+--     this replaces took LIMIT 1 of an unordered set — a coin flip presented as an answer,
+--     which would have returned another household's changes the day a second membership
+--     existed.
+--   * The caller belongs to none: NULL, and a pull for it is empty.
+CREATE FUNCTION private.resolve_household_context(p_household_id uuid DEFAULT NULL)
   RETURNS uuid
-  LANGUAGE sql
+  LANGUAGE plpgsql
   STABLE SECURITY DEFINER
   SET search_path TO ''
 AS $fn$
-  SELECT hm.household_id
+DECLARE
+  v_uid        uuid := (SELECT auth.uid());
+  v_households uuid[];
+BEGIN
+  IF v_uid IS NULL THEN
+    RAISE EXCEPTION 'household context: no authenticated caller' USING errcode = '28000';
+  END IF;
+
+  SELECT COALESCE(array_agg(hm.household_id ORDER BY hm.household_id), '{}'::uuid[])
+    INTO v_households
   FROM public.household_members hm
-  WHERE hm.profile_id = (SELECT auth.uid())
-  LIMIT 1;
+  WHERE hm.profile_id = v_uid;
+
+  IF p_household_id IS NOT NULL THEN
+    IF NOT (p_household_id = ANY (v_households)) THEN
+      RAISE EXCEPTION 'household context: the caller is not a member of household %', p_household_id
+        USING errcode = '42501';
+    END IF;
+    RETURN p_household_id;
+  END IF;
+
+  IF cardinality(v_households) > 1 THEN
+    RAISE EXCEPTION 'household context is ambiguous: the caller belongs to % households and none was named',
+      cardinality(v_households) USING errcode = '22023';
+  END IF;
+
+  RETURN v_households[1];
+END;
 $fn$;
 
 REVOKE ALL ON FUNCTION private.is_household_member(uuid)                  FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION private.is_household_owner(uuid)                   FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION private.can_access_scoped_row(uuid, text, uuid)    FROM PUBLIC, anon;
-REVOKE ALL ON FUNCTION private.current_household_id()                     FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION private.resolve_household_context(uuid)             FROM PUBLIC, anon;
 
 GRANT EXECUTE ON FUNCTION private.is_household_member(uuid)               TO authenticated;
 GRANT EXECUTE ON FUNCTION private.is_household_owner(uuid)                TO authenticated;
 GRANT EXECUTE ON FUNCTION private.can_access_scoped_row(uuid, text, uuid) TO authenticated;
-GRANT EXECUTE ON FUNCTION private.current_household_id()                  TO authenticated;
+GRANT EXECUTE ON FUNCTION private.resolve_household_context(uuid)          TO authenticated;
 
 -- ============================================================================
 -- 3. SERVER-AUTHORITY TRIGGER FUNCTIONS  (SD4-010, SD4-011, SD4-020)
@@ -387,7 +471,7 @@ BEGIN
   IF private.is_trusted_server_context() AND tg_op = 'DELETE' THEN
     RETURN old;
   END IF;
-  RAISE EXCEPTION 'action_records is an immutable ledger: % is not permitted', tg_op;
+  RAISE EXCEPTION '% is an immutable ledger: % is not permitted', tg_table_name, tg_op;
 END;
 $fn$;
 
@@ -487,6 +571,267 @@ $fn$;
 
 REVOKE ALL ON FUNCTION public.set_subject_member_type() FROM PUBLIC, anon, authenticated;
 
+-- ----------------------------------------------------------------------------
+-- FOUNDATION SAFETY LOGIC (B4-FOUNDATION-BUILDOUT-01)
+--
+-- Written out by hand and NOT generated: these are the rules a reviewer must be
+-- able to read. Each one is the cloud's statement of a rule the local domain also
+-- states, and tests hold the two to the same answers.
+-- ----------------------------------------------------------------------------
+
+-- A reference to a child is proven structurally (NHR-01): the type column carries
+-- the third column of a composite foreign key onto household_members. It is
+-- derived here and never client-written, so a client cannot assert that an adult
+-- is a child. TG_ARGV[0] is the member-id column, TG_ARGV[1] the type column.
+CREATE FUNCTION public.set_child_member_type()
+  RETURNS trigger
+  LANGUAGE plpgsql
+  SET search_path TO ''
+AS $fn$
+BEGIN
+  new := jsonb_populate_record(
+           new,
+           jsonb_build_object(TG_ARGV[1], CASE WHEN (to_jsonb(new) ->> TG_ARGV[0]) IS NULL THEN NULL ELSE 'child' END));
+  RETURN new;
+END;
+$fn$;
+
+-- "Set once" rows: a source artifact is retracted, an authority is revoked, and
+-- that is the ONLY edit either ever takes. TG_ARGV[0] is the column that moves;
+-- any further arguments are companion columns allowed to move with it (the local
+-- updated-at stamp). Everything else is fixed the moment the row is written, and
+-- the one column is set exactly once and never cleared or changed.
+CREATE FUNCTION public.enforce_single_column_transition()
+  RETURNS trigger
+  LANGUAGE plpgsql
+  SET search_path TO ''
+AS $fn$
+DECLARE
+  v_old jsonb := to_jsonb(old) - 'updated_at' - 'revision';
+  v_new jsonb := to_jsonb(new) - 'updated_at' - 'revision';
+  i     integer;
+BEGIN
+  FOR i IN 0 .. TG_NARGS - 1 LOOP
+    v_old := v_old - TG_ARGV[i];
+    v_new := v_new - TG_ARGV[i];
+  END LOOP;
+
+  IF v_old IS DISTINCT FROM v_new THEN
+    RAISE EXCEPTION '%: only % may change once a row is written', tg_table_name, TG_ARGV[0]
+      USING errcode = '23514';
+  END IF;
+  IF (to_jsonb(old) ->> TG_ARGV[0]) IS NOT NULL
+     AND (to_jsonb(new) ->> TG_ARGV[0]) IS DISTINCT FROM (to_jsonb(old) ->> TG_ARGV[0]) THEN
+    RAISE EXCEPTION '%: % is set once and is never changed or cleared', tg_table_name, TG_ARGV[0]
+      USING errcode = '23514';
+  END IF;
+  RETURN new;
+END;
+$fn$;
+
+-- A decided interpretation is history. Accepted, rejected and superseded are
+-- terminal: a better reading is a NEW interpretation that names the one it replaces.
+CREATE FUNCTION public.freeze_decided_interpretation()
+  RETURNS trigger
+  LANGUAGE plpgsql
+  SET search_path TO ''
+AS $fn$
+BEGIN
+  IF old.state = ANY (ARRAY['accepted', 'rejected', 'superseded']) THEN
+    RAISE EXCEPTION 'interpretations: a % interpretation is history and is never edited', old.state
+      USING errcode = '23514';
+  END IF;
+  RETURN new;
+END;
+$fn$;
+
+-- A withdrawal withdraws an APPROVAL. It cannot precede one, and it cannot stand
+-- alone: "she changed her mind" only means something after she said yes.
+CREATE FUNCTION public.guard_withdrawal()
+  RETURNS trigger
+  LANGUAGE plpgsql
+  SET search_path TO ''
+AS $fn$
+BEGIN
+  IF new.decision = 'withdrawn'
+     AND NOT EXISTS (SELECT 1 FROM public.intent_decisions d
+                     WHERE d.intent_id = new.intent_id AND d.decision = 'approved') THEN
+    RAISE EXCEPTION 'intent_decisions: a withdrawal withdraws an approval, and intent % has none', new.intent_id
+      USING errcode = '23514';
+  END IF;
+  RETURN new;
+END;
+$fn$;
+
+-- Requirements cannot chain into a loop: A requires B requires A can never be
+-- satisfied, and a decomposition that contains itself has no leaves. The graph is
+-- `requires` and `part_of` together (`alternative_to` is not an ordering), over
+-- ACTIVE edges only, per household and owner. Two devices each adding half of a
+-- cycle would both pass a check of their own snapshot, so writers are serialised
+-- per household for the length of the check.
+CREATE FUNCTION public.forbid_dependency_cycle()
+  RETURNS trigger
+  LANGUAGE plpgsql
+  SET search_path TO ''
+AS $fn$
+DECLARE
+  v_from  text;
+  v_to    text;
+  v_found boolean;
+BEGIN
+  IF new.status <> 'active' OR new.relation = 'alternative_to' THEN
+    RETURN new;
+  END IF;
+
+  PERFORM pg_advisory_xact_lock(hashtextextended('dependencies:' || new.household_id::text, 0));
+
+  v_from := new.from_type || ':' || COALESCE(new.from_task_id, new.from_event_id, new.from_needs_me_id,
+                                              new.from_system_id, new.from_meal_id, new.from_goal_id)::text;
+  v_to   := new.to_type   || ':' || COALESCE(new.to_task_id, new.to_event_id, new.to_needs_me_id,
+                                              new.to_system_id, new.to_meal_id, new.to_goal_id)::text;
+
+  WITH RECURSIVE walk(node) AS (
+    SELECT v_to
+    UNION
+    SELECT d.to_type || ':' || COALESCE(d.to_task_id, d.to_event_id, d.to_needs_me_id,
+                                         d.to_system_id, d.to_meal_id, d.to_goal_id)::text
+    FROM walk w
+    JOIN public.dependencies d
+      ON d.household_id = new.household_id
+     AND d.profile_id   = new.profile_id
+     AND d.status       = 'active'
+     AND d.relation    <> 'alternative_to'
+     AND d.id IS DISTINCT FROM new.id
+     AND (d.from_type || ':' || COALESCE(d.from_task_id, d.from_event_id, d.from_needs_me_id,
+                                          d.from_system_id, d.from_meal_id, d.from_goal_id)::text) = w.node
+  )
+  SELECT EXISTS (SELECT 1 FROM walk WHERE node = v_from) INTO v_found;
+
+  IF v_found THEN
+    RAISE EXCEPTION 'dependencies: % requiring % would close a cycle', v_from, v_to
+      USING errcode = '23514';
+  END IF;
+  RETURN new;
+END;
+$fn$;
+
+-- THE AUTHORIZATION BOUNDARY (representation only — there is no executor).
+--
+-- An execution is Her Keys having acted, and it is refused unless valid
+-- authorization covers it. This is the cloud's statement of
+-- executionAuthorization() and authorityCoverage() in src/domain/foundation/
+-- authorization.ts; tests/supabase hold the two to the same verdict for the same
+-- inputs, and the refusal names its reason the same way.
+--
+--   * relying on an APPROVAL: it must be for this intent, be an approval, be the one
+--     standing answer, and not have been withdrawn;
+--   * relying on a STANDING AUTHORITY: it must be in execute mode, not revoked, not
+--     expired, granted before the attempt, of this category, at least as consequential
+--     as the intent, inside its category / child / provider / amount boundary, and —
+--     when it is a one-time grant — not already spent by another execution;
+--   * relying on neither: refused.
+--
+-- Runs BEFORE INSERT for every writer, the table owner included. Only the trusted
+-- server boundary can write an execution at all (no client grant, no client policy),
+-- so this is defence in depth against a mistaken server script rather than the only
+-- control.
+CREATE FUNCTION public.guard_execution_authorization()
+  RETURNS trigger
+  LANGUAGE plpgsql
+  SET search_path TO ''
+AS $fn$
+DECLARE
+  i          public.action_intents%ROWTYPE;
+  d          public.intent_decisions%ROWTYPE;
+  a          public.automation_authorities%ROWTYPE;
+  v_standing uuid;
+  v_withdrawn boolean;
+  v_category uuid;
+  v_subject  uuid;
+  v_reason   text;
+  v_rank     text[] := ARRAY['low', 'moderate', 'high', 'critical'];
+BEGIN
+  SELECT * INTO i FROM public.action_intents WHERE id = new.intent_id;
+
+  IF NOT FOUND THEN
+    v_reason := 'no_such_intent';
+
+  ELSIF new.decision_id IS NOT NULL THEN
+    SELECT * INTO d FROM public.intent_decisions WHERE id = new.decision_id;
+    IF NOT FOUND OR d.intent_id <> i.id THEN
+      v_reason := 'wrong_intent';
+    ELSE
+      SELECT x.id INTO v_standing
+      FROM public.intent_decisions x
+      WHERE x.intent_id = i.id AND x.decision <> 'withdrawn'
+      ORDER BY x.created_at, x.id LIMIT 1;
+      SELECT EXISTS (SELECT 1 FROM public.intent_decisions x
+                     WHERE x.intent_id = i.id AND x.decision = 'withdrawn') INTO v_withdrawn;
+      IF NOT (d.decision = 'approved' AND v_standing = d.id AND NOT v_withdrawn) THEN
+        v_reason := 'not_approved';
+      END IF;
+    END IF;
+
+  ELSIF new.authority_id IS NOT NULL THEN
+    SELECT * INTO a FROM public.automation_authorities WHERE id = new.authority_id;
+    IF NOT FOUND THEN
+      v_reason := 'no_authorization';
+    ELSIF a.mode <> 'execute_authorized' THEN
+      v_reason := 'not_execute_mode';
+    ELSE
+      -- What an authority's boundary is measured against: the category, and for a
+      -- task or an event the child, of the row the intent is about (intentContext()).
+      IF i.about_type = 'task' THEN
+        SELECT t.category_id, t.subject_member_id INTO v_category, v_subject FROM public.tasks t WHERE t.id = i.about_task_id;
+      ELSIF i.about_type = 'event' THEN
+        SELECT e.category_id, e.subject_member_id INTO v_category, v_subject FROM public.events e WHERE e.id = i.about_event_id;
+      ELSIF i.about_type = 'needsMe' THEN
+        SELECT n.category_id INTO v_category FROM public.needs_me_items n WHERE n.id = i.about_needs_me_id;
+      ELSIF i.about_type = 'system' THEN
+        SELECT s.category_id INTO v_category FROM public.household_systems s WHERE s.id = i.about_system_id;
+      ELSIF i.about_type = 'meal' THEN
+        SELECT m.category_id INTO v_category FROM public.meal_plan_entries m WHERE m.id = i.about_meal_id;
+      ELSIF i.about_type = 'goal' THEN
+        SELECT g.category_id INTO v_category FROM public.goals g WHERE g.id = i.about_goal_id;
+      END IF;
+
+      v_reason := CASE
+        WHEN a.revoked_at IS NOT NULL AND a.revoked_at <= new.attempted_at THEN 'revoked'
+        WHEN a.granted_at > new.attempted_at THEN 'not_yet_granted'
+        WHEN a.expires_at IS NOT NULL AND a.expires_at <= new.attempted_at THEN 'expired'
+        WHEN a.category <> i.category THEN 'wrong_category'
+        WHEN array_position(v_rank, i.consequence) > array_position(v_rank, a.max_consequence) THEN 'consequence_exceeds_authority'
+        WHEN a.category_id IS NOT NULL AND a.category_id IS DISTINCT FROM v_category THEN 'outside_category_boundary'
+        WHEN a.subject_member_id IS NOT NULL AND a.subject_member_id IS DISTINCT FROM v_subject THEN 'outside_child_boundary'
+        WHEN a.provider IS NOT NULL AND a.provider IS DISTINCT FROM i.provider THEN 'outside_provider_boundary'
+        WHEN a.max_amount_minor IS NOT NULL AND i.amount_amount_minor IS NOT NULL
+             AND (i.amount_currency IS DISTINCT FROM a.max_amount_currency
+                  OR i.amount_amount_minor > a.max_amount_minor) THEN 'exceeds_amount_limit'
+        WHEN NOT a.persistent
+             AND EXISTS (SELECT 1 FROM public.action_executions e WHERE e.authority_id = a.id) THEN 'already_used'
+        ELSE NULL
+      END;
+    END IF;
+
+  ELSE
+    v_reason := 'no_authorization';
+  END IF;
+
+  IF v_reason IS NOT NULL THEN
+    RAISE EXCEPTION 'action_executions: not authorized (%)', v_reason
+      USING errcode = '42501', detail = v_reason;
+  END IF;
+  RETURN new;
+END;
+$fn$;
+
+REVOKE ALL ON FUNCTION public.set_child_member_type()             FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.enforce_single_column_transition()  FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.freeze_decided_interpretation()     FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.guard_withdrawal()                  FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.forbid_dependency_cycle()           FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.guard_execution_authorization()     FROM PUBLIC, anon, authenticated;
+
 REVOKE ALL ON FUNCTION public.set_row_updated_at()      FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.force_server_owned_id()   FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.forbid_ledger_mutation()  FROM PUBLIC, anon, authenticated;
@@ -530,7 +875,14 @@ ALTER TABLE public.change_log
     'households'::text, 'household_members'::text, 'household_categories'::text,
     'events'::text, 'tasks'::text, 'household_systems'::text, 'meal_plan_entries'::text,
     'onboarding_state'::text, 'one_move_records'::text, 'needs_me_items'::text,
-    'discovery_records'::text, 'action_records'::text
+    'discovery_records'::text, 'action_records'::text,
+    -- foundation tables (B4-FOUNDATION-BUILDOUT-01)
+    'source_artifacts'::text, 'interpretations'::text, 'external_references'::text,
+    'behavior_observations'::text, 'automation_authorities'::text, 'action_intents'::text,
+    'intent_decisions'::text, 'action_executions'::text, 'action_outcomes'::text,
+    'household_people'::text, 'responsibilities'::text, 'dependencies'::text,
+    'recurrence_rules'::text, 'goals'::text, 'system_steps'::text,
+    'capacity_profiles'::text, 'patterns'::text, 'evidence_links'::text
   ]));
 
 -- change_log_household_id_fkey is added in section 5, after households exists.
@@ -950,7 +1302,6 @@ CREATE TABLE public.events (
   travel_minutes_before integer,
   travel_minutes_after  integer,
   preparation_minutes   integer,
-  source                text        NOT NULL DEFAULT 'user',
   scope                 text        NOT NULL,
   origin_created_at     timestamptz,
   origin_updated_at     timestamptz,
@@ -1004,12 +1355,11 @@ ALTER TABLE public.events ADD CONSTRAINT events_owner_scope_check
   CHECK ((scope = ANY (ARRAY['personal'::text, 'professional'::text, 'coparent-shared'::text]))
          = (owner_profile_id IS NOT NULL));
 
--- SD4-019: the baseline still allows source = 'demo'. Demo households never sync
--- (B4-P0-010), so the cloud must not be able to hold a demo row at all. Narrowing the
--- CHECK makes that fail closed at the database rather than depending on a client
--- filter. The column is kept for shape parity with local state and future sources.
-ALTER TABLE public.events ADD CONSTRAINT events_source_check
-  CHECK (source = 'user'::text);
+-- SD4-019 / B4-FOUNDATION-BUILDOUT-01: events.source is RETIRED. It could say only
+-- 'user' or 'demo', which is a two-value answer to a question the product now asks of
+-- every row. Where a row came from is the `producer` column added to all nine synced
+-- content tables in section 8B, and 'demo-seed' is not an accepted producer, so the
+-- cloud still cannot hold a demo row at all (B4-P0-010) -- for events as for the rest.
 
 -- NHR-01 (owner decision A2, 2026-09-19). Three invariants, all structural:
 --   rule 1  a child-scoped row must say WHICH child
@@ -1436,6 +1786,9 @@ CREATE TABLE public.one_move_records (
   target_type         text        NOT NULL,
   target_task_id      uuid,
   target_needs_me_id  uuid,
+  target_event_id     uuid,
+  target_system_id    uuid,
+  target_responsibility_id uuid,
   status              text        NOT NULL,
   decided_at          timestamptz NOT NULL,
   completed_at        timestamptz,
@@ -1453,14 +1806,11 @@ ALTER TABLE public.one_move_records ADD CONSTRAINT one_move_records_household_id
 ALTER TABLE public.one_move_records ADD CONSTRAINT one_move_records_profile_id_fkey
   FOREIGN KEY (profile_id) REFERENCES public.profiles(id) ON DELETE CASCADE;
 
--- CASCADE, deliberately, not RESTRICT. Both of these tables already cascade from
--- households, and a RESTRICT between two siblings of the same cascade can make a
--- household delete fail depending on the order PostgreSQL picks. A One Move record
+-- The five target foreign keys are added in section 8C, after the composite keys they
+-- reference exist. They are CASCADE, deliberately, not RESTRICT: both tables already
+-- cascade from households, and a RESTRICT between two siblings of the same cascade can
+-- make a household delete fail depending on the order PostgreSQL picks. A One Move record
 -- is meaningless without its target, so cascading is also the correct semantics.
-ALTER TABLE public.one_move_records ADD CONSTRAINT one_move_records_target_task_id_fkey
-  FOREIGN KEY (target_task_id) REFERENCES public.tasks(id) ON DELETE CASCADE;
--- one_move_records_target_needs_me_id_fkey is added after needs_me_items is created,
--- further down in this section.
 
 -- THE One Move uniqueness constraint (HR-03).
 -- timezone_at_decision is deliberately NOT part of this key. It is historical
@@ -1481,16 +1831,22 @@ ALTER TABLE public.one_move_records ADD CONSTRAINT one_move_records_timezone_at_
 ALTER TABLE public.one_move_records ADD CONSTRAINT one_move_records_status_check
   CHECK (status = ANY (ARRAY['selected'::text, 'completed'::text,
                              'withheld'::text, 'cleared'::text]));
+-- B4-FOUNDATION-BUILDOUT-01: a One Move can name a task, a Needs Me item, an event, a
+-- system or a responsibility, each through its OWN typed foreign key (ADR-005/021). 'catalog'
+-- stays refused: the catalog exists only in a demo household, and demo never syncs.
 ALTER TABLE public.one_move_records ADD CONSTRAINT one_move_records_target_type_check
-  CHECK (target_type = ANY (ARRAY['task'::text, 'needsMe'::text]));
+  CHECK (target_type = ANY (ARRAY['task'::text, 'needsMe'::text, 'event'::text, 'system'::text, 'responsibility'::text]));
 ALTER TABLE public.one_move_records ADD CONSTRAINT one_move_records_target_shape_check
   CHECK (
     CASE
       WHEN status IN ('withheld', 'cleared')
-        THEN target_task_id IS NULL AND target_needs_me_id IS NULL
-      WHEN target_type = 'task'
-        THEN target_task_id IS NOT NULL AND target_needs_me_id IS NULL
-      ELSE target_needs_me_id IS NOT NULL AND target_task_id IS NULL
+        THEN target_task_id IS NULL AND target_needs_me_id IS NULL AND target_event_id IS NULL
+         AND target_system_id IS NULL AND target_responsibility_id IS NULL
+      ELSE (target_type = 'task')           = (target_task_id IS NOT NULL)
+       AND (target_type = 'needsMe')        = (target_needs_me_id IS NOT NULL)
+       AND (target_type = 'event')          = (target_event_id IS NOT NULL)
+       AND (target_type = 'system')         = (target_system_id IS NOT NULL)
+       AND (target_type = 'responsibility') = (target_responsibility_id IS NOT NULL)
     END
   );
 ALTER TABLE public.one_move_records ADD CONSTRAINT one_move_records_completed_at_check
@@ -1505,6 +1861,12 @@ CREATE INDEX one_move_records_target_task_idx
   ON public.one_move_records (target_task_id) WHERE target_task_id IS NOT NULL;
 CREATE INDEX one_move_records_target_needs_me_idx
   ON public.one_move_records (target_needs_me_id) WHERE target_needs_me_id IS NOT NULL;
+CREATE INDEX one_move_records_target_event_idx
+  ON public.one_move_records (target_event_id) WHERE target_event_id IS NOT NULL;
+CREATE INDEX one_move_records_target_system_idx
+  ON public.one_move_records (target_system_id) WHERE target_system_id IS NOT NULL;
+CREATE INDEX one_move_records_target_responsibility_idx
+  ON public.one_move_records (target_responsibility_id) WHERE target_responsibility_id IS NOT NULL;
 
 CREATE TRIGGER one_move_records_set_logical_day BEFORE INSERT OR UPDATE ON public.one_move_records
   FOR EACH ROW EXECUTE FUNCTION public.set_one_move_logical_day();
@@ -1565,9 +1927,7 @@ ALTER TABLE public.needs_me_items ADD CONSTRAINT needs_me_items_scope_check
 ALTER TABLE public.needs_me_items ADD CONSTRAINT needs_me_items_revision_check
   CHECK (revision > 0);
 
--- Deferred from the One Move block above: needs_me_items now exists.
-ALTER TABLE public.one_move_records ADD CONSTRAINT one_move_records_target_needs_me_id_fkey
-  FOREIGN KEY (target_needs_me_id) REFERENCES public.needs_me_items(id) ON DELETE CASCADE;
+-- (The One Move -> needs_me_items foreign key is added in section 8C.)
 
 CREATE INDEX needs_me_items_household_status_idx
   ON public.needs_me_items (household_id, profile_id, status, origin_created_at DESC);
@@ -1907,6 +2267,1809 @@ CREATE POLICY account_claims_select_own ON public.account_claims
   FOR SELECT TO authenticated USING ((SELECT auth.uid()) = profile_id);
 
 -- ============================================================================
+-- 8B. FOUNDATION TABLES  (B4-FOUNDATION-BUILDOUT-01) — GENERATED
+--
+-- Eighteen owner-private tables, and the provenance and commitment-facet columns the
+-- nine existing content tables gained. Every one follows the pattern already used by
+-- one_move_records and needs_me_items: server-generated id, local_id unique per
+-- (household, owner), owner-only RLS, revision + CAS where the row is edited, the pointer
+-- change log, and named-column grants.
+--
+-- Three things distinguish them, all stated in the manifest rather than assumed:
+--   * EVIDENCE tables (observations, intents, decisions, executions, outcomes, evidence
+--     links) are append-only: no UPDATE policy, no UPDATE grant, and the ledger trigger
+--     refuses UPDATE and DELETE for every writer.
+--   * SERVER-WRITTEN tables (executions, outcomes) carry no client INSERT grant and no
+--     client INSERT policy. A device pulls them; it cannot forge one. Automation authority
+--     is not client authority.
+--   * Every reference between rows is a real foreign key that also proves same household
+--     and same owner. There is no polymorphic id column anywhere: a reference to "one of
+--     several kinds" is a type column plus one typed foreign key per kind (ADR-005).
+-- ============================================================================
+
+-- >>> GENERATED foundation-tables — supabase/tools/gen-foundation-sql.mjs from src/domain/sync/foundationSpecs.ts.
+-- >>> Do not edit by hand: edit the manifest and regenerate. A test fails on any difference.
+-- Phase 1 — the tables. Columns only, in one pass, because the references between them are cyclic:
+-- an external reference is written by an execution, and an execution may name an external reference.
+CREATE TABLE public.source_artifacts (
+  id                uuid NOT NULL DEFAULT gen_random_uuid(),
+  household_id      uuid NOT NULL,
+  local_id          text NOT NULL,
+  origin_device_id  uuid,
+  profile_id        uuid NOT NULL,
+  kind              text NOT NULL,
+  origin            text NOT NULL,
+  provider          text,
+  received_at       timestamptz NOT NULL,
+  content_digest    text,
+  content_ref       text,
+  retracted_at      timestamptz,
+  scope             text NOT NULL DEFAULT 'personal',
+  origin_created_at timestamptz NOT NULL,
+  created_at        timestamptz NOT NULL DEFAULT now(),
+  updated_at        timestamptz NOT NULL DEFAULT now(),
+  revision          bigint NOT NULL DEFAULT 1
+);
+
+ALTER TABLE public.source_artifacts ENABLE ROW LEVEL SECURITY;
+
+CREATE TABLE public.interpretations (
+  id                     uuid NOT NULL DEFAULT gen_random_uuid(),
+  household_id           uuid NOT NULL,
+  local_id               text NOT NULL,
+  origin_device_id       uuid,
+  profile_id             uuid NOT NULL,
+  artifact_id            uuid NOT NULL,
+  proposed_kind          text NOT NULL,
+  title                  text NOT NULL,
+  due_date               date,
+  starts_at              timestamptz,
+  ends_at                timestamptz,
+  duration_minutes       integer,
+  value_amount_minor     bigint,
+  value_currency         text,
+  value_direction        text,
+  subject_member_id      uuid,
+  subject_member_type    text,
+  category_hint          text,
+  state                  text NOT NULL,
+  clarification          text,
+  accepted_type          text,
+  accepted_task_id       uuid,
+  accepted_event_id      uuid,
+  accepted_needs_me_id   uuid,
+  supersedes_id          uuid,
+  interpretation_version integer NOT NULL,
+  decided_at             timestamptz,
+  producer               text NOT NULL,
+  source_artifact_id     uuid,
+  confidence             text,
+  scope                  text NOT NULL DEFAULT 'personal',
+  origin_created_at      timestamptz NOT NULL,
+  created_at             timestamptz NOT NULL DEFAULT now(),
+  updated_at             timestamptz NOT NULL DEFAULT now(),
+  revision               bigint NOT NULL DEFAULT 1
+);
+
+ALTER TABLE public.interpretations ENABLE ROW LEVEL SECURITY;
+
+CREATE TABLE public.external_references (
+  id                   uuid NOT NULL DEFAULT gen_random_uuid(),
+  household_id         uuid NOT NULL,
+  local_id             text NOT NULL,
+  origin_device_id     uuid,
+  profile_id           uuid NOT NULL,
+  provider             text NOT NULL,
+  external_account     text NOT NULL,
+  external_object_id   text NOT NULL,
+  external_version     text,
+  origin               text NOT NULL,
+  direction            text NOT NULL,
+  authority            text NOT NULL,
+  last_observed_at     timestamptz,
+  last_observed_digest text,
+  linked_type          text,
+  linked_task_id       uuid,
+  linked_event_id      uuid,
+  linked_needs_me_id   uuid,
+  linked_system_id     uuid,
+  linked_meal_id       uuid,
+  linked_goal_id       uuid,
+  written_at           timestamptz,
+  status               text NOT NULL,
+  producer             text NOT NULL,
+  source_artifact_id   uuid,
+  confidence           text,
+  scope                text NOT NULL DEFAULT 'personal',
+  origin_created_at    timestamptz NOT NULL,
+  origin_updated_at    timestamptz NOT NULL,
+  created_at           timestamptz NOT NULL DEFAULT now(),
+  updated_at           timestamptz NOT NULL DEFAULT now(),
+  revision             bigint NOT NULL DEFAULT 1
+);
+
+ALTER TABLE public.external_references ENABLE ROW LEVEL SECURITY;
+
+CREATE TABLE public.behavior_observations (
+  id                      uuid NOT NULL DEFAULT gen_random_uuid(),
+  household_id            uuid NOT NULL,
+  local_id                text NOT NULL,
+  origin_device_id        uuid,
+  profile_id              uuid NOT NULL,
+  about_type              text NOT NULL,
+  about_task_id           uuid,
+  about_event_id          uuid,
+  about_needs_me_id       uuid,
+  about_system_id         uuid,
+  about_meal_id           uuid,
+  about_goal_id           uuid,
+  about_responsibility_id uuid,
+  about_one_move_id       uuid,
+  about_interpretation_id uuid,
+  outcome                 text NOT NULL,
+  occurred_at             timestamptz NOT NULL,
+  logical_date            date NOT NULL,
+  planned_date            date,
+  to_date                 date,
+  producer                text NOT NULL,
+  source_artifact_id      uuid,
+  confidence              text,
+  scope                   text NOT NULL DEFAULT 'personal',
+  origin_created_at       timestamptz NOT NULL,
+  created_at              timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.behavior_observations ENABLE ROW LEVEL SECURITY;
+
+CREATE TABLE public.automation_authorities (
+  id                  uuid NOT NULL DEFAULT gen_random_uuid(),
+  household_id        uuid NOT NULL,
+  local_id            text NOT NULL,
+  origin_device_id    uuid,
+  profile_id          uuid NOT NULL,
+  category            text NOT NULL,
+  mode                text NOT NULL,
+  max_consequence     text NOT NULL,
+  persistent          boolean NOT NULL,
+  category_id         uuid,
+  subject_member_id   uuid,
+  subject_member_type text,
+  provider            text,
+  max_amount_minor    bigint,
+  max_amount_currency text,
+  granted_at          timestamptz NOT NULL,
+  expires_at          timestamptz,
+  revoked_at          timestamptz,
+  producer            text NOT NULL,
+  source_artifact_id  uuid,
+  confidence          text,
+  scope               text NOT NULL DEFAULT 'personal',
+  origin_created_at   timestamptz NOT NULL,
+  origin_updated_at   timestamptz NOT NULL,
+  created_at          timestamptz NOT NULL DEFAULT now(),
+  updated_at          timestamptz NOT NULL DEFAULT now(),
+  revision            bigint NOT NULL DEFAULT 1
+);
+
+ALTER TABLE public.automation_authorities ENABLE ROW LEVEL SECURITY;
+
+CREATE TABLE public.action_intents (
+  id                      uuid NOT NULL DEFAULT gen_random_uuid(),
+  household_id            uuid NOT NULL,
+  local_id                text NOT NULL,
+  origin_device_id        uuid,
+  profile_id              uuid NOT NULL,
+  category                text NOT NULL,
+  about_type              text,
+  about_task_id           uuid,
+  about_event_id          uuid,
+  about_needs_me_id       uuid,
+  about_system_id         uuid,
+  about_meal_id           uuid,
+  about_goal_id           uuid,
+  about_responsibility_id uuid,
+  consequence             text NOT NULL,
+  reversibility           text NOT NULL,
+  summary_code            text NOT NULL,
+  amount_amount_minor     bigint,
+  amount_currency         text,
+  amount_direction        text,
+  provider                text,
+  permitted_mode          text NOT NULL,
+  expires_at              timestamptz,
+  producer                text NOT NULL,
+  source_artifact_id      uuid,
+  confidence              text,
+  scope                   text NOT NULL DEFAULT 'personal',
+  origin_created_at       timestamptz NOT NULL,
+  created_at              timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.action_intents ENABLE ROW LEVEL SECURITY;
+
+CREATE TABLE public.intent_decisions (
+  id                 uuid NOT NULL DEFAULT gen_random_uuid(),
+  household_id       uuid NOT NULL,
+  local_id           text NOT NULL,
+  origin_device_id   uuid,
+  profile_id         uuid NOT NULL,
+  intent_id          uuid NOT NULL,
+  decision           text NOT NULL,
+  basis              text NOT NULL,
+  authority_id       uuid,
+  decided_at         timestamptz NOT NULL,
+  producer           text NOT NULL,
+  source_artifact_id uuid,
+  confidence         text,
+  scope              text NOT NULL DEFAULT 'personal',
+  origin_created_at  timestamptz NOT NULL,
+  created_at         timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.intent_decisions ENABLE ROW LEVEL SECURITY;
+
+CREATE TABLE public.action_executions (
+  id                       uuid NOT NULL DEFAULT gen_random_uuid(),
+  household_id             uuid NOT NULL,
+  local_id                 text NOT NULL,
+  origin_device_id         uuid,
+  profile_id               uuid NOT NULL,
+  intent_id                uuid NOT NULL,
+  decision_id              uuid,
+  authority_id             uuid,
+  attempt                  integer NOT NULL,
+  attempted_at             timestamptz NOT NULL,
+  provider                 text,
+  external_action_id       text,
+  external_reference_id    uuid,
+  result                   text NOT NULL,
+  error_class              text NOT NULL,
+  reversibility            text NOT NULL,
+  compensation_code        text,
+  compensates_execution_id uuid,
+  producer                 text NOT NULL,
+  source_artifact_id       uuid,
+  confidence               text,
+  scope                    text NOT NULL DEFAULT 'personal',
+  origin_created_at        timestamptz NOT NULL,
+  created_at               timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.action_executions ENABLE ROW LEVEL SECURITY;
+
+CREATE TABLE public.action_outcomes (
+  id                 uuid NOT NULL DEFAULT gen_random_uuid(),
+  household_id       uuid NOT NULL,
+  local_id           text NOT NULL,
+  origin_device_id   uuid,
+  profile_id         uuid NOT NULL,
+  execution_id       uuid NOT NULL,
+  kind               text NOT NULL,
+  observed_at        timestamptz NOT NULL,
+  producer           text NOT NULL,
+  source_artifact_id uuid,
+  confidence         text,
+  scope              text NOT NULL DEFAULT 'personal',
+  origin_created_at  timestamptz NOT NULL,
+  created_at         timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.action_outcomes ENABLE ROW LEVEL SECURITY;
+
+CREATE TABLE public.household_people (
+  id                 uuid NOT NULL DEFAULT gen_random_uuid(),
+  household_id       uuid NOT NULL,
+  local_id           text NOT NULL,
+  origin_device_id   uuid,
+  profile_id         uuid NOT NULL,
+  display_name       text NOT NULL,
+  relationship       text NOT NULL,
+  channel            text NOT NULL,
+  status             text NOT NULL,
+  producer           text NOT NULL,
+  source_artifact_id uuid,
+  confidence         text,
+  scope              text NOT NULL DEFAULT 'personal',
+  origin_created_at  timestamptz NOT NULL,
+  origin_updated_at  timestamptz NOT NULL,
+  created_at         timestamptz NOT NULL DEFAULT now(),
+  updated_at         timestamptz NOT NULL DEFAULT now(),
+  revision           bigint NOT NULL DEFAULT 1
+);
+
+ALTER TABLE public.household_people ENABLE ROW LEVEL SECURITY;
+
+CREATE TABLE public.responsibilities (
+  id                         uuid NOT NULL DEFAULT gen_random_uuid(),
+  household_id               uuid NOT NULL,
+  local_id                   text NOT NULL,
+  origin_device_id           uuid,
+  profile_id                 uuid NOT NULL,
+  about_type                 text NOT NULL,
+  about_task_id              uuid,
+  about_event_id             uuid,
+  about_needs_me_id          uuid,
+  about_system_id            uuid,
+  about_meal_id              uuid,
+  about_goal_id              uuid,
+  responsible_kind           text NOT NULL,
+  responsible_person_id      uuid,
+  responsible_child_id       uuid,
+  responsible_child_type     text,
+  state                      text NOT NULL,
+  requested_at               timestamptz,
+  acknowledged_at            timestamptz,
+  responded_at               timestamptz,
+  completed_at               timestamptz,
+  returned_at                timestamptz,
+  ack_due_at                 timestamptz,
+  still_needs_me             boolean NOT NULL,
+  previous_responsibility_id uuid,
+  producer                   text NOT NULL,
+  source_artifact_id         uuid,
+  confidence                 text,
+  scope                      text NOT NULL DEFAULT 'personal',
+  origin_created_at          timestamptz NOT NULL,
+  origin_updated_at          timestamptz NOT NULL,
+  created_at                 timestamptz NOT NULL DEFAULT now(),
+  updated_at                 timestamptz NOT NULL DEFAULT now(),
+  revision                   bigint NOT NULL DEFAULT 1
+);
+
+ALTER TABLE public.responsibilities ENABLE ROW LEVEL SECURITY;
+
+CREATE TABLE public.dependencies (
+  id                 uuid NOT NULL DEFAULT gen_random_uuid(),
+  household_id       uuid NOT NULL,
+  local_id           text NOT NULL,
+  origin_device_id   uuid,
+  profile_id         uuid NOT NULL,
+  relation           text NOT NULL,
+  from_type          text NOT NULL,
+  from_task_id       uuid,
+  from_event_id      uuid,
+  from_needs_me_id   uuid,
+  from_system_id     uuid,
+  from_meal_id       uuid,
+  from_goal_id       uuid,
+  to_type            text NOT NULL,
+  to_task_id         uuid,
+  to_event_id        uuid,
+  to_needs_me_id     uuid,
+  to_system_id       uuid,
+  to_meal_id         uuid,
+  to_goal_id         uuid,
+  status             text NOT NULL,
+  producer           text NOT NULL,
+  source_artifact_id uuid,
+  confidence         text,
+  scope              text NOT NULL DEFAULT 'personal',
+  origin_created_at  timestamptz NOT NULL,
+  origin_updated_at  timestamptz NOT NULL,
+  created_at         timestamptz NOT NULL DEFAULT now(),
+  updated_at         timestamptz NOT NULL DEFAULT now(),
+  revision           bigint NOT NULL DEFAULT 1
+);
+
+ALTER TABLE public.dependencies ENABLE ROW LEVEL SECURITY;
+
+CREATE TABLE public.recurrence_rules (
+  id                  uuid NOT NULL DEFAULT gen_random_uuid(),
+  household_id        uuid NOT NULL,
+  local_id            text NOT NULL,
+  origin_device_id    uuid,
+  profile_id          uuid NOT NULL,
+  about_type          text NOT NULL,
+  about_task_id       uuid,
+  about_event_id      uuid,
+  about_system_id     uuid,
+  about_meal_id       uuid,
+  trigger_kind        text NOT NULL,
+  frequency           text,
+  interval_count      integer NOT NULL,
+  by_weekday          smallint[],
+  by_month_day        integer,
+  anchor_date         date NOT NULL,
+  time_of_day_minutes integer,
+  timezone            text NOT NULL,
+  ends_on             date,
+  occurrence_count    integer,
+  status              text NOT NULL,
+  producer            text NOT NULL,
+  source_artifact_id  uuid,
+  confidence          text,
+  scope               text NOT NULL DEFAULT 'personal',
+  origin_created_at   timestamptz NOT NULL,
+  origin_updated_at   timestamptz NOT NULL,
+  created_at          timestamptz NOT NULL DEFAULT now(),
+  updated_at          timestamptz NOT NULL DEFAULT now(),
+  revision            bigint NOT NULL DEFAULT 1
+);
+
+ALTER TABLE public.recurrence_rules ENABLE ROW LEVEL SECURITY;
+
+CREATE TABLE public.goals (
+  id                 uuid NOT NULL DEFAULT gen_random_uuid(),
+  household_id       uuid NOT NULL,
+  local_id           text NOT NULL,
+  origin_device_id   uuid,
+  profile_id         uuid NOT NULL,
+  title              text NOT NULL,
+  status             text NOT NULL,
+  target_date        date,
+  category_id        uuid,
+  catalog_goal_id    text,
+  producer           text NOT NULL,
+  source_artifact_id uuid,
+  confidence         text,
+  scope              text NOT NULL DEFAULT 'personal',
+  origin_created_at  timestamptz NOT NULL,
+  origin_updated_at  timestamptz NOT NULL,
+  created_at         timestamptz NOT NULL DEFAULT now(),
+  updated_at         timestamptz NOT NULL DEFAULT now(),
+  revision           bigint NOT NULL DEFAULT 1
+);
+
+ALTER TABLE public.goals ENABLE ROW LEVEL SECURITY;
+
+CREATE TABLE public.system_steps (
+  id                 uuid NOT NULL DEFAULT gen_random_uuid(),
+  household_id       uuid NOT NULL,
+  local_id           text NOT NULL,
+  origin_device_id   uuid,
+  profile_id         uuid NOT NULL,
+  system_id          uuid NOT NULL,
+  position           integer NOT NULL,
+  title              text NOT NULL,
+  effort_minutes     integer,
+  producer           text NOT NULL,
+  source_artifact_id uuid,
+  confidence         text,
+  scope              text NOT NULL DEFAULT 'personal',
+  origin_created_at  timestamptz NOT NULL,
+  origin_updated_at  timestamptz NOT NULL,
+  created_at         timestamptz NOT NULL DEFAULT now(),
+  updated_at         timestamptz NOT NULL DEFAULT now(),
+  revision           bigint NOT NULL DEFAULT 1
+);
+
+ALTER TABLE public.system_steps ENABLE ROW LEVEL SECURITY;
+
+CREATE TABLE public.capacity_profiles (
+  id                        uuid NOT NULL DEFAULT gen_random_uuid(),
+  household_id              uuid NOT NULL,
+  local_id                  text NOT NULL,
+  origin_device_id          uuid,
+  profile_id                uuid NOT NULL,
+  day_start_minutes         integer,
+  day_end_minutes           integer,
+  transition_buffer_minutes integer,
+  producer                  text NOT NULL,
+  source_artifact_id        uuid,
+  confidence                text,
+  scope                     text NOT NULL DEFAULT 'personal',
+  origin_created_at         timestamptz NOT NULL,
+  origin_updated_at         timestamptz NOT NULL,
+  created_at                timestamptz NOT NULL DEFAULT now(),
+  updated_at                timestamptz NOT NULL DEFAULT now(),
+  revision                  bigint NOT NULL DEFAULT 1
+);
+
+ALTER TABLE public.capacity_profiles ENABLE ROW LEVEL SECURITY;
+
+CREATE TABLE public.patterns (
+  id                 uuid NOT NULL DEFAULT gen_random_uuid(),
+  household_id       uuid NOT NULL,
+  local_id           text NOT NULL,
+  origin_device_id   uuid,
+  profile_id         uuid NOT NULL,
+  kind               text NOT NULL,
+  about_type         text,
+  about_task_id      uuid,
+  about_event_id     uuid,
+  about_needs_me_id  uuid,
+  about_system_id    uuid,
+  about_meal_id      uuid,
+  about_goal_id      uuid,
+  category_id        uuid,
+  weekday            integer,
+  time_bucket        text,
+  status             text NOT NULL,
+  first_observed_on  date NOT NULL,
+  last_observed_on   date NOT NULL,
+  producer           text NOT NULL,
+  source_artifact_id uuid,
+  confidence         text,
+  scope              text NOT NULL DEFAULT 'personal',
+  origin_created_at  timestamptz NOT NULL,
+  origin_updated_at  timestamptz NOT NULL,
+  created_at         timestamptz NOT NULL DEFAULT now(),
+  updated_at         timestamptz NOT NULL DEFAULT now(),
+  revision           bigint NOT NULL DEFAULT 1
+);
+
+ALTER TABLE public.patterns ENABLE ROW LEVEL SECURITY;
+
+CREATE TABLE public.evidence_links (
+  id                        uuid NOT NULL DEFAULT gen_random_uuid(),
+  household_id              uuid NOT NULL,
+  local_id                  text NOT NULL,
+  origin_device_id          uuid,
+  profile_id                uuid NOT NULL,
+  for_type                  text NOT NULL,
+  for_pattern_id            uuid,
+  for_one_move_id           uuid,
+  for_intent_id             uuid,
+  support_type              text NOT NULL,
+  support_task_id           uuid,
+  support_event_id          uuid,
+  support_needs_me_id       uuid,
+  support_system_id         uuid,
+  support_meal_id           uuid,
+  support_goal_id           uuid,
+  support_responsibility_id uuid,
+  support_observation_id    uuid,
+  code                      text NOT NULL,
+  producer                  text NOT NULL,
+  source_artifact_id        uuid,
+  confidence                text,
+  scope                     text NOT NULL DEFAULT 'personal',
+  origin_created_at         timestamptz NOT NULL,
+  created_at                timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.evidence_links ENABLE ROW LEVEL SECURITY;
+
+-- Phase 2 — the keys every reference depends on: on the new tables, and the composite keys on the tables that already existed.
+ALTER TABLE public.source_artifacts ADD CONSTRAINT source_artifacts_pkey PRIMARY KEY (id);
+ALTER TABLE public.source_artifacts ADD CONSTRAINT source_artifacts_id_household_id_profile_id_key UNIQUE (id, household_id, profile_id);
+ALTER TABLE public.source_artifacts ADD CONSTRAINT source_artifacts_household_id_profile_id_local_id_key UNIQUE (household_id, profile_id, local_id);
+ALTER TABLE public.interpretations ADD CONSTRAINT interpretations_pkey PRIMARY KEY (id);
+ALTER TABLE public.interpretations ADD CONSTRAINT interpretations_id_household_id_profile_id_key UNIQUE (id, household_id, profile_id);
+ALTER TABLE public.interpretations ADD CONSTRAINT interpretations_household_id_profile_id_local_id_key UNIQUE (household_id, profile_id, local_id);
+ALTER TABLE public.external_references ADD CONSTRAINT external_references_pkey PRIMARY KEY (id);
+ALTER TABLE public.external_references ADD CONSTRAINT external_references_id_household_id_profile_id_key UNIQUE (id, household_id, profile_id);
+ALTER TABLE public.external_references ADD CONSTRAINT external_references_household_id_profile_id_local_id_key UNIQUE (household_id, profile_id, local_id);
+ALTER TABLE public.behavior_observations ADD CONSTRAINT behavior_observations_pkey PRIMARY KEY (id);
+ALTER TABLE public.behavior_observations ADD CONSTRAINT behavior_observations_id_household_id_profile_id_key UNIQUE (id, household_id, profile_id);
+ALTER TABLE public.behavior_observations ADD CONSTRAINT behavior_observations_household_id_profile_id_local_id_key UNIQUE (household_id, profile_id, local_id);
+ALTER TABLE public.automation_authorities ADD CONSTRAINT automation_authorities_pkey PRIMARY KEY (id);
+ALTER TABLE public.automation_authorities ADD CONSTRAINT automation_authorities_id_household_id_profile_id_key UNIQUE (id, household_id, profile_id);
+ALTER TABLE public.automation_authorities ADD CONSTRAINT automation_authorities_household_id_profile_id_local_id_key UNIQUE (household_id, profile_id, local_id);
+ALTER TABLE public.action_intents ADD CONSTRAINT action_intents_pkey PRIMARY KEY (id);
+ALTER TABLE public.action_intents ADD CONSTRAINT action_intents_id_household_id_profile_id_key UNIQUE (id, household_id, profile_id);
+ALTER TABLE public.action_intents ADD CONSTRAINT action_intents_household_id_profile_id_local_id_key UNIQUE (household_id, profile_id, local_id);
+ALTER TABLE public.intent_decisions ADD CONSTRAINT intent_decisions_pkey PRIMARY KEY (id);
+ALTER TABLE public.intent_decisions ADD CONSTRAINT intent_decisions_id_household_id_profile_id_key UNIQUE (id, household_id, profile_id);
+ALTER TABLE public.intent_decisions ADD CONSTRAINT intent_decisions_household_id_profile_id_local_id_key UNIQUE (household_id, profile_id, local_id);
+ALTER TABLE public.action_executions ADD CONSTRAINT action_executions_pkey PRIMARY KEY (id);
+ALTER TABLE public.action_executions ADD CONSTRAINT action_executions_id_household_id_profile_id_key UNIQUE (id, household_id, profile_id);
+ALTER TABLE public.action_executions ADD CONSTRAINT action_executions_household_id_profile_id_local_id_key UNIQUE (household_id, profile_id, local_id);
+ALTER TABLE public.action_outcomes ADD CONSTRAINT action_outcomes_pkey PRIMARY KEY (id);
+ALTER TABLE public.action_outcomes ADD CONSTRAINT action_outcomes_id_household_id_profile_id_key UNIQUE (id, household_id, profile_id);
+ALTER TABLE public.action_outcomes ADD CONSTRAINT action_outcomes_household_id_profile_id_local_id_key UNIQUE (household_id, profile_id, local_id);
+ALTER TABLE public.household_people ADD CONSTRAINT household_people_pkey PRIMARY KEY (id);
+ALTER TABLE public.household_people ADD CONSTRAINT household_people_id_household_id_profile_id_key UNIQUE (id, household_id, profile_id);
+ALTER TABLE public.household_people ADD CONSTRAINT household_people_household_id_profile_id_local_id_key UNIQUE (household_id, profile_id, local_id);
+ALTER TABLE public.responsibilities ADD CONSTRAINT responsibilities_pkey PRIMARY KEY (id);
+ALTER TABLE public.responsibilities ADD CONSTRAINT responsibilities_id_household_id_profile_id_key UNIQUE (id, household_id, profile_id);
+ALTER TABLE public.responsibilities ADD CONSTRAINT responsibilities_household_id_profile_id_local_id_key UNIQUE (household_id, profile_id, local_id);
+ALTER TABLE public.dependencies ADD CONSTRAINT dependencies_pkey PRIMARY KEY (id);
+ALTER TABLE public.dependencies ADD CONSTRAINT dependencies_id_household_id_profile_id_key UNIQUE (id, household_id, profile_id);
+ALTER TABLE public.dependencies ADD CONSTRAINT dependencies_household_id_profile_id_local_id_key UNIQUE (household_id, profile_id, local_id);
+ALTER TABLE public.recurrence_rules ADD CONSTRAINT recurrence_rules_pkey PRIMARY KEY (id);
+ALTER TABLE public.recurrence_rules ADD CONSTRAINT recurrence_rules_id_household_id_profile_id_key UNIQUE (id, household_id, profile_id);
+ALTER TABLE public.recurrence_rules ADD CONSTRAINT recurrence_rules_household_id_profile_id_local_id_key UNIQUE (household_id, profile_id, local_id);
+ALTER TABLE public.goals ADD CONSTRAINT goals_pkey PRIMARY KEY (id);
+ALTER TABLE public.goals ADD CONSTRAINT goals_id_household_id_profile_id_key UNIQUE (id, household_id, profile_id);
+ALTER TABLE public.goals ADD CONSTRAINT goals_household_id_profile_id_local_id_key UNIQUE (household_id, profile_id, local_id);
+ALTER TABLE public.system_steps ADD CONSTRAINT system_steps_pkey PRIMARY KEY (id);
+ALTER TABLE public.system_steps ADD CONSTRAINT system_steps_id_household_id_profile_id_key UNIQUE (id, household_id, profile_id);
+ALTER TABLE public.system_steps ADD CONSTRAINT system_steps_household_id_profile_id_local_id_key UNIQUE (household_id, profile_id, local_id);
+ALTER TABLE public.capacity_profiles ADD CONSTRAINT capacity_profiles_pkey PRIMARY KEY (id);
+ALTER TABLE public.capacity_profiles ADD CONSTRAINT capacity_profiles_id_household_id_profile_id_key UNIQUE (id, household_id, profile_id);
+ALTER TABLE public.capacity_profiles ADD CONSTRAINT capacity_profiles_household_id_profile_id_local_id_key UNIQUE (household_id, profile_id, local_id);
+ALTER TABLE public.patterns ADD CONSTRAINT patterns_pkey PRIMARY KEY (id);
+ALTER TABLE public.patterns ADD CONSTRAINT patterns_id_household_id_profile_id_key UNIQUE (id, household_id, profile_id);
+ALTER TABLE public.patterns ADD CONSTRAINT patterns_household_id_profile_id_local_id_key UNIQUE (household_id, profile_id, local_id);
+ALTER TABLE public.evidence_links ADD CONSTRAINT evidence_links_pkey PRIMARY KEY (id);
+ALTER TABLE public.evidence_links ADD CONSTRAINT evidence_links_id_household_id_profile_id_key UNIQUE (id, household_id, profile_id);
+ALTER TABLE public.evidence_links ADD CONSTRAINT evidence_links_household_id_profile_id_local_id_key UNIQUE (household_id, profile_id, local_id);
+ALTER TABLE public.tasks ADD CONSTRAINT tasks_id_household_id_key UNIQUE (id, household_id);
+ALTER TABLE public.events ADD CONSTRAINT events_id_household_id_key UNIQUE (id, household_id);
+ALTER TABLE public.household_systems ADD CONSTRAINT household_systems_id_household_id_key UNIQUE (id, household_id);
+ALTER TABLE public.meal_plan_entries ADD CONSTRAINT meal_plan_entries_id_household_id_key UNIQUE (id, household_id);
+ALTER TABLE public.needs_me_items ADD CONSTRAINT needs_me_items_id_household_id_profile_id_key UNIQUE (id, household_id, profile_id);
+ALTER TABLE public.one_move_records ADD CONSTRAINT one_move_records_id_household_id_profile_id_key UNIQUE (id, household_id, profile_id);
+ALTER TABLE public.source_artifacts ADD CONSTRAINT source_artifacts_id_household_id_key UNIQUE (id, household_id);
+
+-- Phase 3 — provenance and the commitment facets on the nine tables that already existed. NULL means "not known".
+ALTER TABLE public.household_categories
+  ADD COLUMN producer           text NOT NULL,
+  ADD COLUMN source_artifact_id uuid,
+  ADD COLUMN confidence         text;
+ALTER TABLE public.events
+  ADD COLUMN producer           text NOT NULL,
+  ADD COLUMN source_artifact_id uuid,
+  ADD COLUMN confidence         text,
+  ADD COLUMN energy_demand text,
+  ADD COLUMN consequence text,
+  ADD COLUMN needs_me_personally boolean,
+  ADD COLUMN value_amount_minor bigint,
+  ADD COLUMN value_currency text,
+  ADD COLUMN value_direction text;
+ALTER TABLE public.tasks
+  ADD COLUMN producer           text NOT NULL,
+  ADD COLUMN source_artifact_id uuid,
+  ADD COLUMN confidence         text,
+  ADD COLUMN due_at timestamptz,
+  ADD COLUMN earliest_start_at timestamptz,
+  ADD COLUMN latest_finish_at timestamptz,
+  ADD COLUMN splittable boolean,
+  ADD COLUMN min_chunk_minutes integer,
+  ADD COLUMN preferred_time_of_day text,
+  ADD COLUMN energy_demand text,
+  ADD COLUMN consequence text,
+  ADD COLUMN needs_me_personally boolean,
+  ADD COLUMN travel_minutes_before integer,
+  ADD COLUMN travel_minutes_after integer,
+  ADD COLUMN preparation_minutes integer,
+  ADD COLUMN value_amount_minor bigint,
+  ADD COLUMN value_currency text,
+  ADD COLUMN value_direction text;
+ALTER TABLE public.household_systems
+  ADD COLUMN producer           text NOT NULL,
+  ADD COLUMN source_artifact_id uuid,
+  ADD COLUMN confidence         text,
+  ADD COLUMN automation_mode text NOT NULL DEFAULT 'manual',
+  ADD COLUMN effort_minutes integer,
+  ADD COLUMN energy_demand text;
+ALTER TABLE public.meal_plan_entries
+  ADD COLUMN producer           text NOT NULL,
+  ADD COLUMN source_artifact_id uuid,
+  ADD COLUMN confidence         text,
+  ADD COLUMN prep_minutes integer,
+  ADD COLUMN energy_demand text;
+ALTER TABLE public.needs_me_items
+  ADD COLUMN producer           text NOT NULL,
+  ADD COLUMN source_artifact_id uuid,
+  ADD COLUMN confidence         text;
+ALTER TABLE public.one_move_records
+  ADD COLUMN producer           text NOT NULL,
+  ADD COLUMN source_artifact_id uuid,
+  ADD COLUMN confidence         text;
+ALTER TABLE public.discovery_records
+  ADD COLUMN producer           text NOT NULL,
+  ADD COLUMN source_artifact_id uuid,
+  ADD COLUMN confidence         text;
+ALTER TABLE public.onboarding_state
+  ADD COLUMN producer           text NOT NULL,
+  ADD COLUMN source_artifact_id uuid,
+  ADD COLUMN confidence         text;
+
+-- Phase 4 — every foundation table's constraints, indexes, triggers and policies.
+-- source_artifacts
+ALTER TABLE public.source_artifacts ADD CONSTRAINT source_artifacts_household_id_fkey FOREIGN KEY (household_id) REFERENCES public.households(id) ON DELETE CASCADE;
+ALTER TABLE public.source_artifacts ADD CONSTRAINT source_artifacts_profile_id_fkey FOREIGN KEY (profile_id) REFERENCES public.profiles(id) ON DELETE CASCADE;
+ALTER TABLE public.source_artifacts ADD CONSTRAINT source_artifacts_local_id_check CHECK (local_id ~ '^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$'::text);
+ALTER TABLE public.source_artifacts ADD CONSTRAINT source_artifacts_scope_check CHECK (scope = 'personal'::text);
+ALTER TABLE public.source_artifacts ADD CONSTRAINT source_artifacts_revision_check CHECK (revision > 0);
+ALTER TABLE public.source_artifacts ADD CONSTRAINT source_artifacts_kind_check CHECK (kind = ANY (ARRAY['voice-utterance','email','calendar-item','document','screenshot','school-notice','receipt','bill','message','connected-object']));
+ALTER TABLE public.source_artifacts ADD CONSTRAINT source_artifacts_origin_check CHECK (origin = ANY (ARRAY['user-submitted','voice','connector']));
+ALTER TABLE public.source_artifacts ADD CONSTRAINT source_artifacts_voice_pairing_check CHECK ((origin = 'voice') = (kind = 'voice-utterance'));
+ALTER TABLE public.source_artifacts ADD CONSTRAINT source_artifacts_connector_provider_check CHECK (origin <> 'connector' OR provider IS NOT NULL);
+ALTER TABLE public.source_artifacts ADD CONSTRAINT source_artifacts_provider_check CHECK (provider IS NULL OR provider ~ '^[a-z][a-z0-9_.-]{0,63}$');
+ALTER TABLE public.source_artifacts ADD CONSTRAINT source_artifacts_digest_check CHECK (content_digest IS NULL OR content_digest ~ '^[0-9a-f]{64}$');
+ALTER TABLE public.source_artifacts ADD CONSTRAINT source_artifacts_content_ref_check CHECK (content_ref IS NULL OR content_ref ~ '^[A-Za-z0-9][A-Za-z0-9._:/-]{0,199}$');
+CREATE INDEX source_artifacts_owner_idx ON public.source_artifacts (household_id, profile_id);
+CREATE UNIQUE INDEX source_artifacts_digest_uq
+  ON public.source_artifacts (household_id, profile_id, content_digest) WHERE content_digest IS NOT NULL;
+CREATE TRIGGER source_artifacts_force_id BEFORE INSERT OR UPDATE ON public.source_artifacts
+  FOR EACH ROW EXECUTE FUNCTION public.force_server_owned_id();
+CREATE TRIGGER source_artifacts_set_updated_at BEFORE UPDATE ON public.source_artifacts
+  FOR EACH ROW EXECUTE FUNCTION public.set_row_updated_at();
+CREATE TRIGGER source_artifacts_retract_once BEFORE UPDATE ON public.source_artifacts
+  FOR EACH ROW EXECUTE FUNCTION public.enforce_single_column_transition('retracted_at');
+CREATE TRIGGER source_artifacts_log_change AFTER INSERT OR UPDATE OR DELETE ON public.source_artifacts
+  FOR EACH ROW EXECUTE FUNCTION public.log_row_change('household_id', 'profile_id');
+CREATE POLICY source_artifacts_select_own ON public.source_artifacts
+  FOR SELECT TO authenticated
+  USING ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id));
+CREATE POLICY source_artifacts_insert_own ON public.source_artifacts
+  FOR INSERT TO authenticated
+  WITH CHECK ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id));
+CREATE POLICY source_artifacts_update_own ON public.source_artifacts
+  FOR UPDATE TO authenticated
+  USING ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id))
+  WITH CHECK ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id));
+-- interpretations
+ALTER TABLE public.interpretations ADD CONSTRAINT interpretations_household_id_fkey FOREIGN KEY (household_id) REFERENCES public.households(id) ON DELETE CASCADE;
+ALTER TABLE public.interpretations ADD CONSTRAINT interpretations_profile_id_fkey FOREIGN KEY (profile_id) REFERENCES public.profiles(id) ON DELETE CASCADE;
+ALTER TABLE public.interpretations ADD CONSTRAINT interpretations_local_id_check CHECK (local_id ~ '^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$'::text);
+ALTER TABLE public.interpretations ADD CONSTRAINT interpretations_scope_check CHECK (scope = 'personal'::text);
+ALTER TABLE public.interpretations ADD CONSTRAINT interpretations_revision_check CHECK (revision > 0);
+ALTER TABLE public.interpretations ADD CONSTRAINT interpretations_producer_values_check CHECK (producer = ANY (ARRAY['onboarding', 'user-action', 'talk-it-out', 'system-derived', 'import-sync', 'ai-inference', 'automation', 'legacy-unknown']));
+ALTER TABLE public.interpretations ADD CONSTRAINT interpretations_confidence_check CHECK (((confidence IS NOT NULL) = (producer = ANY (ARRAY['ai-inference','import-sync'])))
+    AND (confidence IS NULL OR confidence = ANY (ARRAY['possible','likely','established'])));
+ALTER TABLE public.interpretations ADD CONSTRAINT interpretations_source_artifact_check CHECK (source_artifact_id IS NULL OR producer <> ALL (ARRAY['legacy-unknown','onboarding']));
+ALTER TABLE public.interpretations ADD CONSTRAINT interpretations_source_artifact_fkey FOREIGN KEY (source_artifact_id, household_id, profile_id)
+    REFERENCES public.source_artifacts(id, household_id, profile_id) ON DELETE NO ACTION;
+ALTER TABLE public.interpretations ADD CONSTRAINT interpretations_artifact_id_fkey FOREIGN KEY (artifact_id, household_id, profile_id)
+    REFERENCES public.source_artifacts(id, household_id, profile_id) ON DELETE NO ACTION;
+ALTER TABLE public.interpretations ADD CONSTRAINT interpretations_value_money_check CHECK (((value_amount_minor IS NULL) = (value_currency IS NULL))
+    AND ((value_amount_minor IS NULL) = (value_direction IS NULL))
+    AND (value_amount_minor IS NULL OR (value_amount_minor >= 0 AND value_amount_minor <= 9007199254740991))
+    AND (value_currency IS NULL OR value_currency ~ '^[A-Z]{3}$')
+    AND (value_direction IS NULL OR value_direction = ANY (ARRAY['outflow','inflow'])));
+ALTER TABLE public.interpretations ADD CONSTRAINT interpretations_subject_member_type_pairing_check CHECK ((subject_member_id IS NULL) = (subject_member_type IS NULL));
+ALTER TABLE public.interpretations ADD CONSTRAINT interpretations_subject_member_type_child_check CHECK (subject_member_type IS NULL OR subject_member_type = 'child'::text);
+ALTER TABLE public.interpretations ADD CONSTRAINT interpretations_subject_member_id_fkey FOREIGN KEY (subject_member_id, household_id, subject_member_type)
+    REFERENCES public.household_members(id, household_id, member_type) ON DELETE NO ACTION;
+ALTER TABLE public.interpretations ADD CONSTRAINT interpretations_accepted_ref_check CHECK ((accepted_type IS NULL OR accepted_type = ANY (ARRAY['task', 'event', 'needsMe']))
+    AND (COALESCE(accepted_type = 'task', false) = (accepted_task_id IS NOT NULL))
+    AND (COALESCE(accepted_type = 'event', false) = (accepted_event_id IS NOT NULL))
+    AND (COALESCE(accepted_type = 'needsMe', false) = (accepted_needs_me_id IS NOT NULL)));
+ALTER TABLE public.interpretations ADD CONSTRAINT interpretations_accepted_task_id_fkey FOREIGN KEY (accepted_task_id, household_id)
+    REFERENCES public.tasks(id, household_id) ON DELETE NO ACTION;
+ALTER TABLE public.interpretations ADD CONSTRAINT interpretations_accepted_event_id_fkey FOREIGN KEY (accepted_event_id, household_id)
+    REFERENCES public.events(id, household_id) ON DELETE NO ACTION;
+ALTER TABLE public.interpretations ADD CONSTRAINT interpretations_accepted_needs_me_id_fkey FOREIGN KEY (accepted_needs_me_id, household_id, profile_id)
+    REFERENCES public.needs_me_items(id, household_id, profile_id) ON DELETE NO ACTION;
+ALTER TABLE public.interpretations ADD CONSTRAINT interpretations_supersedes_id_fkey FOREIGN KEY (supersedes_id, household_id, profile_id)
+    REFERENCES public.interpretations(id, household_id, profile_id) ON DELETE NO ACTION;
+ALTER TABLE public.interpretations ADD CONSTRAINT interpretations_kind_check CHECK (proposed_kind = ANY (ARRAY['task','event','needsMe']));
+ALTER TABLE public.interpretations ADD CONSTRAINT interpretations_state_check CHECK (state = ANY (ARRAY['pending','clarifying','accepted','rejected','superseded']));
+ALTER TABLE public.interpretations ADD CONSTRAINT interpretations_title_check CHECK (char_length(btrim(title)) >= 1 AND char_length(btrim(title)) <= 200);
+ALTER TABLE public.interpretations ADD CONSTRAINT interpretations_duration_check CHECK (duration_minutes IS NULL OR (duration_minutes >= 0 AND duration_minutes <= 1440));
+ALTER TABLE public.interpretations ADD CONSTRAINT interpretations_hint_check CHECK (category_hint IS NULL OR category_hint = ANY (ARRAY['kids','home','money','meals','work','wellbeing','relationships','coparenting']));
+ALTER TABLE public.interpretations ADD CONSTRAINT interpretations_clarification_check CHECK ((state = 'clarifying') = (clarification IS NOT NULL) AND (clarification IS NULL OR clarification ~ '^[a-z][a-z0-9_.-]{0,63}$'));
+ALTER TABLE public.interpretations ADD CONSTRAINT interpretations_accepted_check CHECK ((state = 'accepted') = (accepted_type IS NOT NULL));
+ALTER TABLE public.interpretations ADD CONSTRAINT interpretations_accepted_kind_check CHECK (accepted_type IS NULL OR accepted_type = proposed_kind);
+ALTER TABLE public.interpretations ADD CONSTRAINT interpretations_decided_check CHECK ((state IN ('accepted','rejected','superseded')) = (decided_at IS NOT NULL));
+ALTER TABLE public.interpretations ADD CONSTRAINT interpretations_event_times_check CHECK (CASE WHEN proposed_kind = 'event' THEN starts_at IS NOT NULL AND ends_at IS NOT NULL AND ends_at > starts_at ELSE starts_at IS NULL AND ends_at IS NULL END);
+ALTER TABLE public.interpretations ADD CONSTRAINT interpretations_producer_check CHECK (producer = ANY (ARRAY['ai-inference','import-sync']));
+ALTER TABLE public.interpretations ADD CONSTRAINT interpretations_artifact_provenance_check CHECK (source_artifact_id = artifact_id);
+ALTER TABLE public.interpretations ADD CONSTRAINT interpretations_version_check CHECK (interpretation_version >= 1 AND interpretation_version <= 1000);
+CREATE INDEX interpretations_owner_idx ON public.interpretations (household_id, profile_id);
+CREATE INDEX interpretations_artifact_id_fk_idx ON public.interpretations (artifact_id, household_id) WHERE artifact_id IS NOT NULL;
+CREATE INDEX interpretations_subject_member_id_fk_idx ON public.interpretations (subject_member_id, household_id) WHERE subject_member_id IS NOT NULL;
+CREATE INDEX interpretations_accepted_task_id_fk_idx ON public.interpretations (accepted_task_id, household_id) WHERE accepted_task_id IS NOT NULL;
+CREATE INDEX interpretations_accepted_event_id_fk_idx ON public.interpretations (accepted_event_id, household_id) WHERE accepted_event_id IS NOT NULL;
+CREATE INDEX interpretations_accepted_needs_me_id_fk_idx ON public.interpretations (accepted_needs_me_id, household_id) WHERE accepted_needs_me_id IS NOT NULL;
+CREATE INDEX interpretations_supersedes_id_fk_idx ON public.interpretations (supersedes_id, household_id) WHERE supersedes_id IS NOT NULL;
+CREATE INDEX interpretations_source_artifact_id_fk_idx ON public.interpretations (source_artifact_id, household_id) WHERE source_artifact_id IS NOT NULL;
+CREATE TRIGGER interpretations_force_id BEFORE INSERT OR UPDATE ON public.interpretations
+  FOR EACH ROW EXECUTE FUNCTION public.force_server_owned_id();
+CREATE TRIGGER interpretations_set_updated_at BEFORE UPDATE ON public.interpretations
+  FOR EACH ROW EXECUTE FUNCTION public.set_row_updated_at();
+CREATE TRIGGER interpretations_set_subject_member_type BEFORE INSERT OR UPDATE ON public.interpretations
+  FOR EACH ROW EXECUTE FUNCTION public.set_child_member_type('subject_member_id', 'subject_member_type');
+CREATE TRIGGER interpretations_freeze_decided BEFORE UPDATE ON public.interpretations
+  FOR EACH ROW EXECUTE FUNCTION public.freeze_decided_interpretation();
+CREATE TRIGGER interpretations_log_change AFTER INSERT OR UPDATE OR DELETE ON public.interpretations
+  FOR EACH ROW EXECUTE FUNCTION public.log_row_change('household_id', 'profile_id');
+CREATE POLICY interpretations_select_own ON public.interpretations
+  FOR SELECT TO authenticated
+  USING ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id));
+CREATE POLICY interpretations_insert_own ON public.interpretations
+  FOR INSERT TO authenticated
+  WITH CHECK ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id));
+CREATE POLICY interpretations_update_own ON public.interpretations
+  FOR UPDATE TO authenticated
+  USING ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id))
+  WITH CHECK ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id));
+-- external_references
+ALTER TABLE public.external_references ADD CONSTRAINT external_references_household_id_fkey FOREIGN KEY (household_id) REFERENCES public.households(id) ON DELETE CASCADE;
+ALTER TABLE public.external_references ADD CONSTRAINT external_references_profile_id_fkey FOREIGN KEY (profile_id) REFERENCES public.profiles(id) ON DELETE CASCADE;
+ALTER TABLE public.external_references ADD CONSTRAINT external_references_local_id_check CHECK (local_id ~ '^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$'::text);
+ALTER TABLE public.external_references ADD CONSTRAINT external_references_scope_check CHECK (scope = 'personal'::text);
+ALTER TABLE public.external_references ADD CONSTRAINT external_references_revision_check CHECK (revision > 0);
+ALTER TABLE public.external_references ADD CONSTRAINT external_references_producer_values_check CHECK (producer = ANY (ARRAY['onboarding', 'user-action', 'talk-it-out', 'system-derived', 'import-sync', 'ai-inference', 'automation', 'legacy-unknown']));
+ALTER TABLE public.external_references ADD CONSTRAINT external_references_confidence_check CHECK (((confidence IS NOT NULL) = (producer = ANY (ARRAY['ai-inference','import-sync'])))
+    AND (confidence IS NULL OR confidence = ANY (ARRAY['possible','likely','established'])));
+ALTER TABLE public.external_references ADD CONSTRAINT external_references_source_artifact_check CHECK (source_artifact_id IS NULL OR producer <> ALL (ARRAY['legacy-unknown','onboarding']));
+ALTER TABLE public.external_references ADD CONSTRAINT external_references_source_artifact_fkey FOREIGN KEY (source_artifact_id, household_id, profile_id)
+    REFERENCES public.source_artifacts(id, household_id, profile_id) ON DELETE NO ACTION;
+ALTER TABLE public.external_references ADD CONSTRAINT external_references_linked_ref_check CHECK ((linked_type IS NULL OR linked_type = ANY (ARRAY['task', 'event', 'needsMe', 'system', 'meal', 'goal']))
+    AND (COALESCE(linked_type = 'task', false) = (linked_task_id IS NOT NULL))
+    AND (COALESCE(linked_type = 'event', false) = (linked_event_id IS NOT NULL))
+    AND (COALESCE(linked_type = 'needsMe', false) = (linked_needs_me_id IS NOT NULL))
+    AND (COALESCE(linked_type = 'system', false) = (linked_system_id IS NOT NULL))
+    AND (COALESCE(linked_type = 'meal', false) = (linked_meal_id IS NOT NULL))
+    AND (COALESCE(linked_type = 'goal', false) = (linked_goal_id IS NOT NULL)));
+ALTER TABLE public.external_references ADD CONSTRAINT external_references_linked_task_id_fkey FOREIGN KEY (linked_task_id, household_id)
+    REFERENCES public.tasks(id, household_id) ON DELETE NO ACTION;
+ALTER TABLE public.external_references ADD CONSTRAINT external_references_linked_event_id_fkey FOREIGN KEY (linked_event_id, household_id)
+    REFERENCES public.events(id, household_id) ON DELETE NO ACTION;
+ALTER TABLE public.external_references ADD CONSTRAINT external_references_linked_needs_me_id_fkey FOREIGN KEY (linked_needs_me_id, household_id, profile_id)
+    REFERENCES public.needs_me_items(id, household_id, profile_id) ON DELETE NO ACTION;
+ALTER TABLE public.external_references ADD CONSTRAINT external_references_linked_system_id_fkey FOREIGN KEY (linked_system_id, household_id)
+    REFERENCES public.household_systems(id, household_id) ON DELETE NO ACTION;
+ALTER TABLE public.external_references ADD CONSTRAINT external_references_linked_meal_id_fkey FOREIGN KEY (linked_meal_id, household_id)
+    REFERENCES public.meal_plan_entries(id, household_id) ON DELETE NO ACTION;
+ALTER TABLE public.external_references ADD CONSTRAINT external_references_linked_goal_id_fkey FOREIGN KEY (linked_goal_id, household_id, profile_id)
+    REFERENCES public.goals(id, household_id, profile_id) ON DELETE NO ACTION;
+ALTER TABLE public.external_references ADD CONSTRAINT external_references_provider_check CHECK (provider ~ '^[a-z][a-z0-9_.-]{0,63}$');
+ALTER TABLE public.external_references ADD CONSTRAINT external_references_account_check CHECK (char_length(external_account) >= 1 AND char_length(external_account) <= 128);
+ALTER TABLE public.external_references ADD CONSTRAINT external_references_object_check CHECK (char_length(external_object_id) >= 1 AND char_length(external_object_id) <= 256);
+ALTER TABLE public.external_references ADD CONSTRAINT external_references_version_check CHECK (external_version IS NULL OR char_length(external_version) <= 128);
+ALTER TABLE public.external_references ADD CONSTRAINT external_references_origin_check CHECK (origin = ANY (ARRAY['external','her-keys']));
+ALTER TABLE public.external_references ADD CONSTRAINT external_references_direction_check CHECK (direction = ANY (ARRAY['inbound','outbound','bidirectional']));
+ALTER TABLE public.external_references ADD CONSTRAINT external_references_authority_check CHECK (authority = ANY (ARRAY['external','her-keys']));
+ALTER TABLE public.external_references ADD CONSTRAINT external_references_status_check CHECK (status = ANY (ARRAY['active','unlinked','gone']));
+ALTER TABLE public.external_references ADD CONSTRAINT external_references_digest_check CHECK (last_observed_digest IS NULL OR last_observed_digest ~ '^[0-9a-f]{64}$');
+ALTER TABLE public.external_references ADD CONSTRAINT external_references_her_keys_written_check CHECK (origin <> 'her-keys' OR written_at IS NOT NULL);
+ALTER TABLE public.external_references ADD CONSTRAINT external_references_external_not_written_check CHECK (origin <> 'external' OR written_at IS NULL);
+ALTER TABLE public.external_references ADD CONSTRAINT external_references_her_keys_linked_check CHECK (NOT (origin = 'her-keys' AND status = 'active') OR linked_type IS NOT NULL);
+ALTER TABLE public.external_references ADD CONSTRAINT external_references_identity_key UNIQUE (household_id, profile_id, provider, external_account, external_object_id);
+CREATE INDEX external_references_owner_idx ON public.external_references (household_id, profile_id);
+CREATE INDEX external_references_linked_task_id_fk_idx ON public.external_references (linked_task_id, household_id) WHERE linked_task_id IS NOT NULL;
+CREATE INDEX external_references_linked_event_id_fk_idx ON public.external_references (linked_event_id, household_id) WHERE linked_event_id IS NOT NULL;
+CREATE INDEX external_references_linked_needs_me_id_fk_idx ON public.external_references (linked_needs_me_id, household_id) WHERE linked_needs_me_id IS NOT NULL;
+CREATE INDEX external_references_linked_system_id_fk_idx ON public.external_references (linked_system_id, household_id) WHERE linked_system_id IS NOT NULL;
+CREATE INDEX external_references_linked_meal_id_fk_idx ON public.external_references (linked_meal_id, household_id) WHERE linked_meal_id IS NOT NULL;
+CREATE INDEX external_references_linked_goal_id_fk_idx ON public.external_references (linked_goal_id, household_id) WHERE linked_goal_id IS NOT NULL;
+CREATE INDEX external_references_source_artifact_id_fk_idx ON public.external_references (source_artifact_id, household_id) WHERE source_artifact_id IS NOT NULL;
+CREATE TRIGGER external_references_force_id BEFORE INSERT OR UPDATE ON public.external_references
+  FOR EACH ROW EXECUTE FUNCTION public.force_server_owned_id();
+CREATE TRIGGER external_references_set_updated_at BEFORE UPDATE ON public.external_references
+  FOR EACH ROW EXECUTE FUNCTION public.set_row_updated_at();
+CREATE TRIGGER external_references_log_change AFTER INSERT OR UPDATE OR DELETE ON public.external_references
+  FOR EACH ROW EXECUTE FUNCTION public.log_row_change('household_id', 'profile_id');
+CREATE POLICY external_references_select_own ON public.external_references
+  FOR SELECT TO authenticated
+  USING ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id));
+CREATE POLICY external_references_insert_own ON public.external_references
+  FOR INSERT TO authenticated
+  WITH CHECK ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id));
+CREATE POLICY external_references_update_own ON public.external_references
+  FOR UPDATE TO authenticated
+  USING ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id))
+  WITH CHECK ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id));
+-- behavior_observations
+ALTER TABLE public.behavior_observations ADD CONSTRAINT behavior_observations_household_id_fkey FOREIGN KEY (household_id) REFERENCES public.households(id) ON DELETE CASCADE;
+ALTER TABLE public.behavior_observations ADD CONSTRAINT behavior_observations_profile_id_fkey FOREIGN KEY (profile_id) REFERENCES public.profiles(id) ON DELETE RESTRICT;
+ALTER TABLE public.behavior_observations ADD CONSTRAINT behavior_observations_local_id_check CHECK (local_id ~ '^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$'::text);
+ALTER TABLE public.behavior_observations ADD CONSTRAINT behavior_observations_scope_check CHECK (scope = 'personal'::text);
+ALTER TABLE public.behavior_observations ADD CONSTRAINT behavior_observations_producer_values_check CHECK (producer = ANY (ARRAY['onboarding', 'user-action', 'talk-it-out', 'system-derived', 'import-sync', 'ai-inference', 'automation', 'legacy-unknown']));
+ALTER TABLE public.behavior_observations ADD CONSTRAINT behavior_observations_confidence_check CHECK (((confidence IS NOT NULL) = (producer = ANY (ARRAY['ai-inference','import-sync'])))
+    AND (confidence IS NULL OR confidence = ANY (ARRAY['possible','likely','established'])));
+ALTER TABLE public.behavior_observations ADD CONSTRAINT behavior_observations_source_artifact_check CHECK (source_artifact_id IS NULL OR producer <> ALL (ARRAY['legacy-unknown','onboarding']));
+ALTER TABLE public.behavior_observations ADD CONSTRAINT behavior_observations_source_artifact_fkey FOREIGN KEY (source_artifact_id, household_id, profile_id)
+    REFERENCES public.source_artifacts(id, household_id, profile_id) ON DELETE NO ACTION;
+ALTER TABLE public.behavior_observations ADD CONSTRAINT behavior_observations_about_ref_check CHECK ((about_type IS NULL OR about_type = ANY (ARRAY['task', 'event', 'needsMe', 'system', 'meal', 'goal', 'responsibility', 'oneMove', 'interpretation']))
+    AND (COALESCE(about_type = 'task', false) = (about_task_id IS NOT NULL))
+    AND (COALESCE(about_type = 'event', false) = (about_event_id IS NOT NULL))
+    AND (COALESCE(about_type = 'needsMe', false) = (about_needs_me_id IS NOT NULL))
+    AND (COALESCE(about_type = 'system', false) = (about_system_id IS NOT NULL))
+    AND (COALESCE(about_type = 'meal', false) = (about_meal_id IS NOT NULL))
+    AND (COALESCE(about_type = 'goal', false) = (about_goal_id IS NOT NULL))
+    AND (COALESCE(about_type = 'responsibility', false) = (about_responsibility_id IS NOT NULL))
+    AND (COALESCE(about_type = 'oneMove', false) = (about_one_move_id IS NOT NULL))
+    AND (COALESCE(about_type = 'interpretation', false) = (about_interpretation_id IS NOT NULL)));
+ALTER TABLE public.behavior_observations ADD CONSTRAINT behavior_observations_about_task_id_fkey FOREIGN KEY (about_task_id, household_id)
+    REFERENCES public.tasks(id, household_id) ON DELETE NO ACTION;
+ALTER TABLE public.behavior_observations ADD CONSTRAINT behavior_observations_about_event_id_fkey FOREIGN KEY (about_event_id, household_id)
+    REFERENCES public.events(id, household_id) ON DELETE NO ACTION;
+ALTER TABLE public.behavior_observations ADD CONSTRAINT behavior_observations_about_needs_me_id_fkey FOREIGN KEY (about_needs_me_id, household_id, profile_id)
+    REFERENCES public.needs_me_items(id, household_id, profile_id) ON DELETE NO ACTION;
+ALTER TABLE public.behavior_observations ADD CONSTRAINT behavior_observations_about_system_id_fkey FOREIGN KEY (about_system_id, household_id)
+    REFERENCES public.household_systems(id, household_id) ON DELETE NO ACTION;
+ALTER TABLE public.behavior_observations ADD CONSTRAINT behavior_observations_about_meal_id_fkey FOREIGN KEY (about_meal_id, household_id)
+    REFERENCES public.meal_plan_entries(id, household_id) ON DELETE NO ACTION;
+ALTER TABLE public.behavior_observations ADD CONSTRAINT behavior_observations_about_goal_id_fkey FOREIGN KEY (about_goal_id, household_id, profile_id)
+    REFERENCES public.goals(id, household_id, profile_id) ON DELETE NO ACTION;
+ALTER TABLE public.behavior_observations ADD CONSTRAINT behavior_observations_about_responsibility_id_fkey FOREIGN KEY (about_responsibility_id, household_id, profile_id)
+    REFERENCES public.responsibilities(id, household_id, profile_id) ON DELETE NO ACTION;
+ALTER TABLE public.behavior_observations ADD CONSTRAINT behavior_observations_about_one_move_id_fkey FOREIGN KEY (about_one_move_id, household_id, profile_id)
+    REFERENCES public.one_move_records(id, household_id, profile_id) ON DELETE NO ACTION;
+ALTER TABLE public.behavior_observations ADD CONSTRAINT behavior_observations_about_interpretation_id_fkey FOREIGN KEY (about_interpretation_id, household_id, profile_id)
+    REFERENCES public.interpretations(id, household_id, profile_id) ON DELETE NO ACTION;
+ALTER TABLE public.behavior_observations ADD CONSTRAINT behavior_observations_outcome_check CHECK (outcome = ANY (ARRAY['completed','reopened','deferred','skipped','missed','cancelled','rescheduled','selected','withheld','cleared','delegated','acknowledged','accepted','declined','returned','reassigned','unacknowledged']));
+ALTER TABLE public.behavior_observations ADD CONSTRAINT behavior_observations_outcome_validity_check CHECK (CASE about_type
+        WHEN 'task'           THEN outcome IN ('completed','reopened','deferred','skipped','cancelled','missed')
+        WHEN 'event'          THEN outcome IN ('cancelled','rescheduled')
+        WHEN 'needsMe'        THEN outcome IN ('completed','reopened')
+        WHEN 'system'         THEN outcome IN ('completed','skipped','missed')
+        WHEN 'meal'           THEN outcome IN ('completed','skipped')
+        WHEN 'goal'           THEN outcome IN ('completed','cancelled')
+        WHEN 'responsibility' THEN outcome IN ('delegated','acknowledged','accepted','declined','completed','returned','reassigned','unacknowledged')
+        WHEN 'oneMove'        THEN outcome IN ('selected','completed','withheld','cleared')
+        WHEN 'interpretation' THEN outcome IN ('accepted','declined')
+        ELSE false END);
+ALTER TABLE public.behavior_observations ADD CONSTRAINT behavior_observations_to_date_check CHECK (to_date IS NULL OR outcome IN ('deferred','rescheduled'));
+CREATE INDEX behavior_observations_owner_idx ON public.behavior_observations (household_id, profile_id);
+CREATE INDEX behavior_observations_about_task_id_fk_idx ON public.behavior_observations (about_task_id, household_id) WHERE about_task_id IS NOT NULL;
+CREATE INDEX behavior_observations_about_event_id_fk_idx ON public.behavior_observations (about_event_id, household_id) WHERE about_event_id IS NOT NULL;
+CREATE INDEX behavior_observations_about_needs_me_id_fk_idx ON public.behavior_observations (about_needs_me_id, household_id) WHERE about_needs_me_id IS NOT NULL;
+CREATE INDEX behavior_observations_about_system_id_fk_idx ON public.behavior_observations (about_system_id, household_id) WHERE about_system_id IS NOT NULL;
+CREATE INDEX behavior_observations_about_meal_id_fk_idx ON public.behavior_observations (about_meal_id, household_id) WHERE about_meal_id IS NOT NULL;
+CREATE INDEX behavior_observations_about_goal_id_fk_idx ON public.behavior_observations (about_goal_id, household_id) WHERE about_goal_id IS NOT NULL;
+CREATE INDEX behavior_observations_about_responsibility_id_fk_idx ON public.behavior_observations (about_responsibility_id, household_id) WHERE about_responsibility_id IS NOT NULL;
+CREATE INDEX behavior_observations_about_one_move_id_fk_idx ON public.behavior_observations (about_one_move_id, household_id) WHERE about_one_move_id IS NOT NULL;
+CREATE INDEX behavior_observations_about_interpretation_id_fk_idx ON public.behavior_observations (about_interpretation_id, household_id) WHERE about_interpretation_id IS NOT NULL;
+CREATE INDEX behavior_observations_source_artifact_id_fk_idx ON public.behavior_observations (source_artifact_id, household_id) WHERE source_artifact_id IS NOT NULL;
+CREATE INDEX behavior_observations_about_time_idx
+  ON public.behavior_observations (household_id, profile_id, logical_date DESC);
+CREATE TRIGGER behavior_observations_force_id BEFORE INSERT ON public.behavior_observations
+  FOR EACH ROW EXECUTE FUNCTION public.force_server_owned_id();
+CREATE TRIGGER behavior_observations_immutable BEFORE UPDATE OR DELETE ON public.behavior_observations
+  FOR EACH ROW EXECUTE FUNCTION public.forbid_ledger_mutation();
+CREATE TRIGGER behavior_observations_log_change AFTER INSERT ON public.behavior_observations
+  FOR EACH ROW EXECUTE FUNCTION public.log_row_change('household_id', 'profile_id');
+CREATE POLICY behavior_observations_select_own ON public.behavior_observations
+  FOR SELECT TO authenticated
+  USING ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id));
+CREATE POLICY behavior_observations_insert_own ON public.behavior_observations
+  FOR INSERT TO authenticated
+  WITH CHECK ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id));
+-- automation_authorities
+ALTER TABLE public.automation_authorities ADD CONSTRAINT automation_authorities_household_id_fkey FOREIGN KEY (household_id) REFERENCES public.households(id) ON DELETE CASCADE;
+ALTER TABLE public.automation_authorities ADD CONSTRAINT automation_authorities_profile_id_fkey FOREIGN KEY (profile_id) REFERENCES public.profiles(id) ON DELETE CASCADE;
+ALTER TABLE public.automation_authorities ADD CONSTRAINT automation_authorities_local_id_check CHECK (local_id ~ '^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$'::text);
+ALTER TABLE public.automation_authorities ADD CONSTRAINT automation_authorities_scope_check CHECK (scope = 'personal'::text);
+ALTER TABLE public.automation_authorities ADD CONSTRAINT automation_authorities_revision_check CHECK (revision > 0);
+ALTER TABLE public.automation_authorities ADD CONSTRAINT automation_authorities_producer_values_check CHECK (producer = ANY (ARRAY['onboarding', 'user-action', 'talk-it-out', 'system-derived', 'import-sync', 'ai-inference', 'automation', 'legacy-unknown']));
+ALTER TABLE public.automation_authorities ADD CONSTRAINT automation_authorities_confidence_check CHECK (((confidence IS NOT NULL) = (producer = ANY (ARRAY['ai-inference','import-sync'])))
+    AND (confidence IS NULL OR confidence = ANY (ARRAY['possible','likely','established'])));
+ALTER TABLE public.automation_authorities ADD CONSTRAINT automation_authorities_source_artifact_check CHECK (source_artifact_id IS NULL OR producer <> ALL (ARRAY['legacy-unknown','onboarding']));
+ALTER TABLE public.automation_authorities ADD CONSTRAINT automation_authorities_source_artifact_fkey FOREIGN KEY (source_artifact_id, household_id, profile_id)
+    REFERENCES public.source_artifacts(id, household_id, profile_id) ON DELETE NO ACTION;
+ALTER TABLE public.automation_authorities ADD CONSTRAINT automation_authorities_category_id_fkey FOREIGN KEY (category_id, household_id)
+    REFERENCES public.household_categories(id, household_id) ON DELETE NO ACTION;
+ALTER TABLE public.automation_authorities ADD CONSTRAINT automation_authorities_subject_member_type_pairing_check CHECK ((subject_member_id IS NULL) = (subject_member_type IS NULL));
+ALTER TABLE public.automation_authorities ADD CONSTRAINT automation_authorities_subject_member_type_child_check CHECK (subject_member_type IS NULL OR subject_member_type = 'child'::text);
+ALTER TABLE public.automation_authorities ADD CONSTRAINT automation_authorities_subject_member_id_fkey FOREIGN KEY (subject_member_id, household_id, subject_member_type)
+    REFERENCES public.household_members(id, household_id, member_type) ON DELETE NO ACTION;
+ALTER TABLE public.automation_authorities ADD CONSTRAINT automation_authorities_category_check CHECK (category = ANY (ARRAY['internal_reminder','task_change','schedule_change','delegation_request','outbound_message','external_calendar_write','external_appointment','financial_action']));
+ALTER TABLE public.automation_authorities ADD CONSTRAINT automation_authorities_mode_check CHECK (mode = ANY (ARRAY['suggest','prepare','ask_approval','execute_authorized']));
+ALTER TABLE public.automation_authorities ADD CONSTRAINT automation_authorities_consequence_check CHECK (max_consequence = ANY (ARRAY['low','moderate','high','critical']));
+ALTER TABLE public.automation_authorities ADD CONSTRAINT automation_authorities_provider_check CHECK (provider IS NULL OR provider ~ '^[a-z][a-z0-9_.-]{0,63}$');
+ALTER TABLE public.automation_authorities ADD CONSTRAINT automation_authorities_amount_pair_check CHECK ((max_amount_minor IS NULL) = (max_amount_currency IS NULL));
+ALTER TABLE public.automation_authorities ADD CONSTRAINT automation_authorities_amount_range_check CHECK (max_amount_minor IS NULL OR (max_amount_minor >= 0 AND max_amount_minor <= 9007199254740991));
+ALTER TABLE public.automation_authorities ADD CONSTRAINT automation_authorities_currency_check CHECK (max_amount_currency IS NULL OR max_amount_currency ~ '^[A-Z]{3}$');
+ALTER TABLE public.automation_authorities ADD CONSTRAINT automation_authorities_financial_limit_check CHECK (NOT (category = 'financial_action' AND mode = 'execute_authorized') OR max_amount_minor IS NOT NULL);
+ALTER TABLE public.automation_authorities ADD CONSTRAINT automation_authorities_expiry_check CHECK (expires_at IS NULL OR expires_at > granted_at);
+ALTER TABLE public.automation_authorities ADD CONSTRAINT automation_authorities_revoked_check CHECK (revoked_at IS NULL OR revoked_at >= granted_at);
+ALTER TABLE public.automation_authorities ADD CONSTRAINT automation_authorities_granted_by_user_check CHECK (producer = 'user-action');
+CREATE INDEX automation_authorities_owner_idx ON public.automation_authorities (household_id, profile_id);
+CREATE INDEX automation_authorities_category_id_fk_idx ON public.automation_authorities (category_id, household_id) WHERE category_id IS NOT NULL;
+CREATE INDEX automation_authorities_subject_member_id_fk_idx ON public.automation_authorities (subject_member_id, household_id) WHERE subject_member_id IS NOT NULL;
+CREATE INDEX automation_authorities_source_artifact_id_fk_idx ON public.automation_authorities (source_artifact_id, household_id) WHERE source_artifact_id IS NOT NULL;
+CREATE TRIGGER automation_authorities_force_id BEFORE INSERT OR UPDATE ON public.automation_authorities
+  FOR EACH ROW EXECUTE FUNCTION public.force_server_owned_id();
+CREATE TRIGGER automation_authorities_set_updated_at BEFORE UPDATE ON public.automation_authorities
+  FOR EACH ROW EXECUTE FUNCTION public.set_row_updated_at();
+CREATE TRIGGER automation_authorities_set_subject_member_type BEFORE INSERT OR UPDATE ON public.automation_authorities
+  FOR EACH ROW EXECUTE FUNCTION public.set_child_member_type('subject_member_id', 'subject_member_type');
+CREATE TRIGGER automation_authorities_revoke_only BEFORE UPDATE ON public.automation_authorities
+  FOR EACH ROW EXECUTE FUNCTION public.enforce_single_column_transition('revoked_at');
+CREATE TRIGGER automation_authorities_log_change AFTER INSERT OR UPDATE OR DELETE ON public.automation_authorities
+  FOR EACH ROW EXECUTE FUNCTION public.log_row_change('household_id', 'profile_id');
+CREATE POLICY automation_authorities_select_own ON public.automation_authorities
+  FOR SELECT TO authenticated
+  USING ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id));
+CREATE POLICY automation_authorities_insert_own ON public.automation_authorities
+  FOR INSERT TO authenticated
+  WITH CHECK ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id));
+CREATE POLICY automation_authorities_update_own ON public.automation_authorities
+  FOR UPDATE TO authenticated
+  USING ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id))
+  WITH CHECK ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id));
+-- action_intents
+ALTER TABLE public.action_intents ADD CONSTRAINT action_intents_household_id_fkey FOREIGN KEY (household_id) REFERENCES public.households(id) ON DELETE CASCADE;
+ALTER TABLE public.action_intents ADD CONSTRAINT action_intents_profile_id_fkey FOREIGN KEY (profile_id) REFERENCES public.profiles(id) ON DELETE RESTRICT;
+ALTER TABLE public.action_intents ADD CONSTRAINT action_intents_local_id_check CHECK (local_id ~ '^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$'::text);
+ALTER TABLE public.action_intents ADD CONSTRAINT action_intents_scope_check CHECK (scope = 'personal'::text);
+ALTER TABLE public.action_intents ADD CONSTRAINT action_intents_producer_values_check CHECK (producer = ANY (ARRAY['onboarding', 'user-action', 'talk-it-out', 'system-derived', 'import-sync', 'ai-inference', 'automation', 'legacy-unknown']));
+ALTER TABLE public.action_intents ADD CONSTRAINT action_intents_confidence_check CHECK (((confidence IS NOT NULL) = (producer = ANY (ARRAY['ai-inference','import-sync'])))
+    AND (confidence IS NULL OR confidence = ANY (ARRAY['possible','likely','established'])));
+ALTER TABLE public.action_intents ADD CONSTRAINT action_intents_source_artifact_check CHECK (source_artifact_id IS NULL OR producer <> ALL (ARRAY['legacy-unknown','onboarding']));
+ALTER TABLE public.action_intents ADD CONSTRAINT action_intents_source_artifact_fkey FOREIGN KEY (source_artifact_id, household_id, profile_id)
+    REFERENCES public.source_artifacts(id, household_id, profile_id) ON DELETE NO ACTION;
+ALTER TABLE public.action_intents ADD CONSTRAINT action_intents_about_ref_check CHECK ((about_type IS NULL OR about_type = ANY (ARRAY['task', 'event', 'needsMe', 'system', 'meal', 'goal', 'responsibility']))
+    AND (COALESCE(about_type = 'task', false) = (about_task_id IS NOT NULL))
+    AND (COALESCE(about_type = 'event', false) = (about_event_id IS NOT NULL))
+    AND (COALESCE(about_type = 'needsMe', false) = (about_needs_me_id IS NOT NULL))
+    AND (COALESCE(about_type = 'system', false) = (about_system_id IS NOT NULL))
+    AND (COALESCE(about_type = 'meal', false) = (about_meal_id IS NOT NULL))
+    AND (COALESCE(about_type = 'goal', false) = (about_goal_id IS NOT NULL))
+    AND (COALESCE(about_type = 'responsibility', false) = (about_responsibility_id IS NOT NULL)));
+ALTER TABLE public.action_intents ADD CONSTRAINT action_intents_about_task_id_fkey FOREIGN KEY (about_task_id, household_id)
+    REFERENCES public.tasks(id, household_id) ON DELETE NO ACTION;
+ALTER TABLE public.action_intents ADD CONSTRAINT action_intents_about_event_id_fkey FOREIGN KEY (about_event_id, household_id)
+    REFERENCES public.events(id, household_id) ON DELETE NO ACTION;
+ALTER TABLE public.action_intents ADD CONSTRAINT action_intents_about_needs_me_id_fkey FOREIGN KEY (about_needs_me_id, household_id, profile_id)
+    REFERENCES public.needs_me_items(id, household_id, profile_id) ON DELETE NO ACTION;
+ALTER TABLE public.action_intents ADD CONSTRAINT action_intents_about_system_id_fkey FOREIGN KEY (about_system_id, household_id)
+    REFERENCES public.household_systems(id, household_id) ON DELETE NO ACTION;
+ALTER TABLE public.action_intents ADD CONSTRAINT action_intents_about_meal_id_fkey FOREIGN KEY (about_meal_id, household_id)
+    REFERENCES public.meal_plan_entries(id, household_id) ON DELETE NO ACTION;
+ALTER TABLE public.action_intents ADD CONSTRAINT action_intents_about_goal_id_fkey FOREIGN KEY (about_goal_id, household_id, profile_id)
+    REFERENCES public.goals(id, household_id, profile_id) ON DELETE NO ACTION;
+ALTER TABLE public.action_intents ADD CONSTRAINT action_intents_about_responsibility_id_fkey FOREIGN KEY (about_responsibility_id, household_id, profile_id)
+    REFERENCES public.responsibilities(id, household_id, profile_id) ON DELETE NO ACTION;
+ALTER TABLE public.action_intents ADD CONSTRAINT action_intents_amount_money_check CHECK (((amount_amount_minor IS NULL) = (amount_currency IS NULL))
+    AND ((amount_amount_minor IS NULL) = (amount_direction IS NULL))
+    AND (amount_amount_minor IS NULL OR (amount_amount_minor >= 0 AND amount_amount_minor <= 9007199254740991))
+    AND (amount_currency IS NULL OR amount_currency ~ '^[A-Z]{3}$')
+    AND (amount_direction IS NULL OR amount_direction = ANY (ARRAY['outflow','inflow'])));
+ALTER TABLE public.action_intents ADD CONSTRAINT action_intents_category_check CHECK (category = ANY (ARRAY['internal_reminder','task_change','schedule_change','delegation_request','outbound_message','external_calendar_write','external_appointment','financial_action']));
+ALTER TABLE public.action_intents ADD CONSTRAINT action_intents_consequence_check CHECK (consequence = ANY (ARRAY['low','moderate','high','critical']));
+ALTER TABLE public.action_intents ADD CONSTRAINT action_intents_reversibility_check CHECK (reversibility = ANY (ARRAY['reversible','compensable','irreversible']));
+ALTER TABLE public.action_intents ADD CONSTRAINT action_intents_mode_check CHECK (permitted_mode = ANY (ARRAY['suggest','prepare','ask_approval','execute_authorized']));
+ALTER TABLE public.action_intents ADD CONSTRAINT action_intents_summary_check CHECK (summary_code ~ '^[a-z][a-z0-9_.-]{0,63}$');
+ALTER TABLE public.action_intents ADD CONSTRAINT action_intents_provider_check CHECK (provider IS NULL OR provider ~ '^[a-z][a-z0-9_.-]{0,63}$');
+ALTER TABLE public.action_intents ADD CONSTRAINT action_intents_financial_amount_check CHECK (category <> 'financial_action' OR amount_amount_minor IS NOT NULL);
+ALTER TABLE public.action_intents ADD CONSTRAINT action_intents_proposed_by_her_keys_check CHECK (producer = ANY (ARRAY['ai-inference','automation','system-derived']));
+CREATE INDEX action_intents_owner_idx ON public.action_intents (household_id, profile_id);
+CREATE INDEX action_intents_about_task_id_fk_idx ON public.action_intents (about_task_id, household_id) WHERE about_task_id IS NOT NULL;
+CREATE INDEX action_intents_about_event_id_fk_idx ON public.action_intents (about_event_id, household_id) WHERE about_event_id IS NOT NULL;
+CREATE INDEX action_intents_about_needs_me_id_fk_idx ON public.action_intents (about_needs_me_id, household_id) WHERE about_needs_me_id IS NOT NULL;
+CREATE INDEX action_intents_about_system_id_fk_idx ON public.action_intents (about_system_id, household_id) WHERE about_system_id IS NOT NULL;
+CREATE INDEX action_intents_about_meal_id_fk_idx ON public.action_intents (about_meal_id, household_id) WHERE about_meal_id IS NOT NULL;
+CREATE INDEX action_intents_about_goal_id_fk_idx ON public.action_intents (about_goal_id, household_id) WHERE about_goal_id IS NOT NULL;
+CREATE INDEX action_intents_about_responsibility_id_fk_idx ON public.action_intents (about_responsibility_id, household_id) WHERE about_responsibility_id IS NOT NULL;
+CREATE INDEX action_intents_source_artifact_id_fk_idx ON public.action_intents (source_artifact_id, household_id) WHERE source_artifact_id IS NOT NULL;
+CREATE TRIGGER action_intents_force_id BEFORE INSERT ON public.action_intents
+  FOR EACH ROW EXECUTE FUNCTION public.force_server_owned_id();
+CREATE TRIGGER action_intents_immutable BEFORE UPDATE OR DELETE ON public.action_intents
+  FOR EACH ROW EXECUTE FUNCTION public.forbid_ledger_mutation();
+CREATE TRIGGER action_intents_log_change AFTER INSERT ON public.action_intents
+  FOR EACH ROW EXECUTE FUNCTION public.log_row_change('household_id', 'profile_id');
+CREATE POLICY action_intents_select_own ON public.action_intents
+  FOR SELECT TO authenticated
+  USING ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id));
+CREATE POLICY action_intents_insert_own ON public.action_intents
+  FOR INSERT TO authenticated
+  WITH CHECK ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id));
+-- intent_decisions
+ALTER TABLE public.intent_decisions ADD CONSTRAINT intent_decisions_household_id_fkey FOREIGN KEY (household_id) REFERENCES public.households(id) ON DELETE CASCADE;
+ALTER TABLE public.intent_decisions ADD CONSTRAINT intent_decisions_profile_id_fkey FOREIGN KEY (profile_id) REFERENCES public.profiles(id) ON DELETE RESTRICT;
+ALTER TABLE public.intent_decisions ADD CONSTRAINT intent_decisions_local_id_check CHECK (local_id ~ '^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$'::text);
+ALTER TABLE public.intent_decisions ADD CONSTRAINT intent_decisions_scope_check CHECK (scope = 'personal'::text);
+ALTER TABLE public.intent_decisions ADD CONSTRAINT intent_decisions_producer_values_check CHECK (producer = ANY (ARRAY['onboarding', 'user-action', 'talk-it-out', 'system-derived', 'import-sync', 'ai-inference', 'automation', 'legacy-unknown']));
+ALTER TABLE public.intent_decisions ADD CONSTRAINT intent_decisions_confidence_check CHECK (((confidence IS NOT NULL) = (producer = ANY (ARRAY['ai-inference','import-sync'])))
+    AND (confidence IS NULL OR confidence = ANY (ARRAY['possible','likely','established'])));
+ALTER TABLE public.intent_decisions ADD CONSTRAINT intent_decisions_source_artifact_check CHECK (source_artifact_id IS NULL OR producer <> ALL (ARRAY['legacy-unknown','onboarding']));
+ALTER TABLE public.intent_decisions ADD CONSTRAINT intent_decisions_source_artifact_fkey FOREIGN KEY (source_artifact_id, household_id, profile_id)
+    REFERENCES public.source_artifacts(id, household_id, profile_id) ON DELETE NO ACTION;
+ALTER TABLE public.intent_decisions ADD CONSTRAINT intent_decisions_intent_id_fkey FOREIGN KEY (intent_id, household_id, profile_id)
+    REFERENCES public.action_intents(id, household_id, profile_id) ON DELETE NO ACTION;
+ALTER TABLE public.intent_decisions ADD CONSTRAINT intent_decisions_authority_id_fkey FOREIGN KEY (authority_id, household_id, profile_id)
+    REFERENCES public.automation_authorities(id, household_id, profile_id) ON DELETE NO ACTION;
+ALTER TABLE public.intent_decisions ADD CONSTRAINT intent_decisions_decision_check CHECK (decision = ANY (ARRAY['approved','declined','withdrawn']));
+ALTER TABLE public.intent_decisions ADD CONSTRAINT intent_decisions_basis_check CHECK (basis = ANY (ARRAY['explicit','standing_authority']));
+ALTER TABLE public.intent_decisions ADD CONSTRAINT intent_decisions_standing_check CHECK (CASE WHEN basis = 'standing_authority' THEN authority_id IS NOT NULL AND decision = 'approved' AND producer = 'automation' ELSE authority_id IS NULL AND producer = 'user-action' END);
+CREATE INDEX intent_decisions_owner_idx ON public.intent_decisions (household_id, profile_id);
+CREATE INDEX intent_decisions_intent_id_fk_idx ON public.intent_decisions (intent_id, household_id) WHERE intent_id IS NOT NULL;
+CREATE INDEX intent_decisions_authority_id_fk_idx ON public.intent_decisions (authority_id, household_id) WHERE authority_id IS NOT NULL;
+CREATE INDEX intent_decisions_source_artifact_id_fk_idx ON public.intent_decisions (source_artifact_id, household_id) WHERE source_artifact_id IS NOT NULL;
+CREATE UNIQUE INDEX intent_decisions_one_answer_uq
+  ON public.intent_decisions (intent_id) WHERE decision IN ('approved','declined');
+CREATE UNIQUE INDEX intent_decisions_one_withdrawal_uq
+  ON public.intent_decisions (intent_id) WHERE decision = 'withdrawn';
+CREATE TRIGGER intent_decisions_force_id BEFORE INSERT ON public.intent_decisions
+  FOR EACH ROW EXECUTE FUNCTION public.force_server_owned_id();
+CREATE TRIGGER intent_decisions_immutable BEFORE UPDATE OR DELETE ON public.intent_decisions
+  FOR EACH ROW EXECUTE FUNCTION public.forbid_ledger_mutation();
+CREATE TRIGGER intent_decisions_withdrawal_needs_approval BEFORE INSERT ON public.intent_decisions
+  FOR EACH ROW EXECUTE FUNCTION public.guard_withdrawal();
+CREATE TRIGGER intent_decisions_log_change AFTER INSERT ON public.intent_decisions
+  FOR EACH ROW EXECUTE FUNCTION public.log_row_change('household_id', 'profile_id');
+CREATE POLICY intent_decisions_select_own ON public.intent_decisions
+  FOR SELECT TO authenticated
+  USING ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id));
+CREATE POLICY intent_decisions_insert_own ON public.intent_decisions
+  FOR INSERT TO authenticated
+  WITH CHECK ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id));
+-- action_executions
+ALTER TABLE public.action_executions ADD CONSTRAINT action_executions_household_id_fkey FOREIGN KEY (household_id) REFERENCES public.households(id) ON DELETE CASCADE;
+ALTER TABLE public.action_executions ADD CONSTRAINT action_executions_profile_id_fkey FOREIGN KEY (profile_id) REFERENCES public.profiles(id) ON DELETE RESTRICT;
+ALTER TABLE public.action_executions ADD CONSTRAINT action_executions_local_id_check CHECK (local_id ~ '^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$'::text);
+ALTER TABLE public.action_executions ADD CONSTRAINT action_executions_scope_check CHECK (scope = 'personal'::text);
+ALTER TABLE public.action_executions ADD CONSTRAINT action_executions_producer_values_check CHECK (producer = ANY (ARRAY['onboarding', 'user-action', 'talk-it-out', 'system-derived', 'import-sync', 'ai-inference', 'automation', 'legacy-unknown']));
+ALTER TABLE public.action_executions ADD CONSTRAINT action_executions_confidence_check CHECK (((confidence IS NOT NULL) = (producer = ANY (ARRAY['ai-inference','import-sync'])))
+    AND (confidence IS NULL OR confidence = ANY (ARRAY['possible','likely','established'])));
+ALTER TABLE public.action_executions ADD CONSTRAINT action_executions_source_artifact_check CHECK (source_artifact_id IS NULL OR producer <> ALL (ARRAY['legacy-unknown','onboarding']));
+ALTER TABLE public.action_executions ADD CONSTRAINT action_executions_source_artifact_fkey FOREIGN KEY (source_artifact_id, household_id, profile_id)
+    REFERENCES public.source_artifacts(id, household_id, profile_id) ON DELETE NO ACTION;
+ALTER TABLE public.action_executions ADD CONSTRAINT action_executions_intent_id_fkey FOREIGN KEY (intent_id, household_id, profile_id)
+    REFERENCES public.action_intents(id, household_id, profile_id) ON DELETE NO ACTION;
+ALTER TABLE public.action_executions ADD CONSTRAINT action_executions_decision_id_fkey FOREIGN KEY (decision_id, household_id, profile_id)
+    REFERENCES public.intent_decisions(id, household_id, profile_id) ON DELETE NO ACTION;
+ALTER TABLE public.action_executions ADD CONSTRAINT action_executions_authority_id_fkey FOREIGN KEY (authority_id, household_id, profile_id)
+    REFERENCES public.automation_authorities(id, household_id, profile_id) ON DELETE NO ACTION;
+ALTER TABLE public.action_executions ADD CONSTRAINT action_executions_external_reference_id_fkey FOREIGN KEY (external_reference_id, household_id, profile_id)
+    REFERENCES public.external_references(id, household_id, profile_id) ON DELETE NO ACTION;
+ALTER TABLE public.action_executions ADD CONSTRAINT action_executions_compensates_execution_id_fkey FOREIGN KEY (compensates_execution_id, household_id, profile_id)
+    REFERENCES public.action_executions(id, household_id, profile_id) ON DELETE NO ACTION;
+ALTER TABLE public.action_executions ADD CONSTRAINT action_executions_attempt_check CHECK (attempt >= 1 AND attempt <= 1000);
+ALTER TABLE public.action_executions ADD CONSTRAINT action_executions_result_check CHECK (result = ANY (ARRAY['succeeded','failed','partial','unknown']));
+ALTER TABLE public.action_executions ADD CONSTRAINT action_executions_error_class_check CHECK (error_class = ANY (ARRAY['none','transient','permanent','unauthorized','rate_limited','validation']));
+ALTER TABLE public.action_executions ADD CONSTRAINT action_executions_reversibility_check CHECK (reversibility = ANY (ARRAY['reversible','compensable','irreversible']));
+ALTER TABLE public.action_executions ADD CONSTRAINT action_executions_provider_check CHECK (provider IS NULL OR provider ~ '^[a-z][a-z0-9_.-]{0,63}$');
+ALTER TABLE public.action_executions ADD CONSTRAINT action_executions_compensation_check CHECK (compensation_code IS NULL OR compensation_code ~ '^[a-z][a-z0-9_.-]{0,63}$');
+ALTER TABLE public.action_executions ADD CONSTRAINT action_executions_undo_says_how_check CHECK (compensates_execution_id IS NULL OR compensation_code IS NOT NULL);
+ALTER TABLE public.action_executions ADD CONSTRAINT action_executions_authorization_named_check CHECK (decision_id IS NOT NULL OR authority_id IS NOT NULL);
+ALTER TABLE public.action_executions ADD CONSTRAINT action_executions_result_error_check CHECK ((result = 'succeeded') = (error_class = 'none'));
+ALTER TABLE public.action_executions ADD CONSTRAINT action_executions_automation_only_check CHECK (producer = 'automation');
+ALTER TABLE public.action_executions ADD CONSTRAINT action_executions_intent_attempt_key UNIQUE (intent_id, attempt);
+CREATE INDEX action_executions_owner_idx ON public.action_executions (household_id, profile_id);
+CREATE INDEX action_executions_intent_id_fk_idx ON public.action_executions (intent_id, household_id) WHERE intent_id IS NOT NULL;
+CREATE INDEX action_executions_decision_id_fk_idx ON public.action_executions (decision_id, household_id) WHERE decision_id IS NOT NULL;
+CREATE INDEX action_executions_authority_id_fk_idx ON public.action_executions (authority_id, household_id) WHERE authority_id IS NOT NULL;
+CREATE INDEX action_executions_external_reference_id_fk_idx ON public.action_executions (external_reference_id, household_id) WHERE external_reference_id IS NOT NULL;
+CREATE INDEX action_executions_compensates_execution_id_fk_idx ON public.action_executions (compensates_execution_id, household_id) WHERE compensates_execution_id IS NOT NULL;
+CREATE INDEX action_executions_source_artifact_id_fk_idx ON public.action_executions (source_artifact_id, household_id) WHERE source_artifact_id IS NOT NULL;
+CREATE TRIGGER action_executions_force_id BEFORE INSERT ON public.action_executions
+  FOR EACH ROW EXECUTE FUNCTION public.force_server_owned_id();
+CREATE TRIGGER action_executions_immutable BEFORE UPDATE OR DELETE ON public.action_executions
+  FOR EACH ROW EXECUTE FUNCTION public.forbid_ledger_mutation();
+CREATE TRIGGER action_executions_guard_authorization BEFORE INSERT ON public.action_executions
+  FOR EACH ROW EXECUTE FUNCTION public.guard_execution_authorization();
+CREATE TRIGGER action_executions_log_change AFTER INSERT ON public.action_executions
+  FOR EACH ROW EXECUTE FUNCTION public.log_row_change('household_id', 'profile_id');
+CREATE POLICY action_executions_select_own ON public.action_executions
+  FOR SELECT TO authenticated
+  USING ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id));
+-- action_outcomes
+ALTER TABLE public.action_outcomes ADD CONSTRAINT action_outcomes_household_id_fkey FOREIGN KEY (household_id) REFERENCES public.households(id) ON DELETE CASCADE;
+ALTER TABLE public.action_outcomes ADD CONSTRAINT action_outcomes_profile_id_fkey FOREIGN KEY (profile_id) REFERENCES public.profiles(id) ON DELETE RESTRICT;
+ALTER TABLE public.action_outcomes ADD CONSTRAINT action_outcomes_local_id_check CHECK (local_id ~ '^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$'::text);
+ALTER TABLE public.action_outcomes ADD CONSTRAINT action_outcomes_scope_check CHECK (scope = 'personal'::text);
+ALTER TABLE public.action_outcomes ADD CONSTRAINT action_outcomes_producer_values_check CHECK (producer = ANY (ARRAY['onboarding', 'user-action', 'talk-it-out', 'system-derived', 'import-sync', 'ai-inference', 'automation', 'legacy-unknown']));
+ALTER TABLE public.action_outcomes ADD CONSTRAINT action_outcomes_confidence_check CHECK (((confidence IS NOT NULL) = (producer = ANY (ARRAY['ai-inference','import-sync'])))
+    AND (confidence IS NULL OR confidence = ANY (ARRAY['possible','likely','established'])));
+ALTER TABLE public.action_outcomes ADD CONSTRAINT action_outcomes_source_artifact_check CHECK (source_artifact_id IS NULL OR producer <> ALL (ARRAY['legacy-unknown','onboarding']));
+ALTER TABLE public.action_outcomes ADD CONSTRAINT action_outcomes_source_artifact_fkey FOREIGN KEY (source_artifact_id, household_id, profile_id)
+    REFERENCES public.source_artifacts(id, household_id, profile_id) ON DELETE NO ACTION;
+ALTER TABLE public.action_outcomes ADD CONSTRAINT action_outcomes_execution_id_fkey FOREIGN KEY (execution_id, household_id, profile_id)
+    REFERENCES public.action_executions(id, household_id, profile_id) ON DELETE NO ACTION;
+ALTER TABLE public.action_outcomes ADD CONSTRAINT action_outcomes_kind_check CHECK (kind = ANY (ARRAY['verified','verification_failed','delivered','acknowledged','accepted','declined','completed','paid','cancelled','followed','expired','no_effect']));
+CREATE INDEX action_outcomes_owner_idx ON public.action_outcomes (household_id, profile_id);
+CREATE INDEX action_outcomes_execution_id_fk_idx ON public.action_outcomes (execution_id, household_id) WHERE execution_id IS NOT NULL;
+CREATE INDEX action_outcomes_source_artifact_id_fk_idx ON public.action_outcomes (source_artifact_id, household_id) WHERE source_artifact_id IS NOT NULL;
+CREATE TRIGGER action_outcomes_force_id BEFORE INSERT ON public.action_outcomes
+  FOR EACH ROW EXECUTE FUNCTION public.force_server_owned_id();
+CREATE TRIGGER action_outcomes_immutable BEFORE UPDATE OR DELETE ON public.action_outcomes
+  FOR EACH ROW EXECUTE FUNCTION public.forbid_ledger_mutation();
+CREATE TRIGGER action_outcomes_log_change AFTER INSERT ON public.action_outcomes
+  FOR EACH ROW EXECUTE FUNCTION public.log_row_change('household_id', 'profile_id');
+CREATE POLICY action_outcomes_select_own ON public.action_outcomes
+  FOR SELECT TO authenticated
+  USING ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id));
+-- household_people
+ALTER TABLE public.household_people ADD CONSTRAINT household_people_household_id_fkey FOREIGN KEY (household_id) REFERENCES public.households(id) ON DELETE CASCADE;
+ALTER TABLE public.household_people ADD CONSTRAINT household_people_profile_id_fkey FOREIGN KEY (profile_id) REFERENCES public.profiles(id) ON DELETE CASCADE;
+ALTER TABLE public.household_people ADD CONSTRAINT household_people_local_id_check CHECK (local_id ~ '^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$'::text);
+ALTER TABLE public.household_people ADD CONSTRAINT household_people_scope_check CHECK (scope = 'personal'::text);
+ALTER TABLE public.household_people ADD CONSTRAINT household_people_revision_check CHECK (revision > 0);
+ALTER TABLE public.household_people ADD CONSTRAINT household_people_producer_values_check CHECK (producer = ANY (ARRAY['onboarding', 'user-action', 'talk-it-out', 'system-derived', 'import-sync', 'ai-inference', 'automation', 'legacy-unknown']));
+ALTER TABLE public.household_people ADD CONSTRAINT household_people_confidence_check CHECK (((confidence IS NOT NULL) = (producer = ANY (ARRAY['ai-inference','import-sync'])))
+    AND (confidence IS NULL OR confidence = ANY (ARRAY['possible','likely','established'])));
+ALTER TABLE public.household_people ADD CONSTRAINT household_people_source_artifact_check CHECK (source_artifact_id IS NULL OR producer <> ALL (ARRAY['legacy-unknown','onboarding']));
+ALTER TABLE public.household_people ADD CONSTRAINT household_people_source_artifact_fkey FOREIGN KEY (source_artifact_id, household_id, profile_id)
+    REFERENCES public.source_artifacts(id, household_id, profile_id) ON DELETE NO ACTION;
+ALTER TABLE public.household_people ADD CONSTRAINT household_people_name_check CHECK (char_length(btrim(display_name)) >= 1 AND char_length(display_name) <= 80);
+ALTER TABLE public.household_people ADD CONSTRAINT household_people_relationship_check CHECK (relationship = ANY (ARRAY['co-parent','partner','grandparent','caregiver','neighbor','contractor','friend','other']));
+ALTER TABLE public.household_people ADD CONSTRAINT household_people_channel_check CHECK (channel = ANY (ARRAY['unspecified','sms','email','whatsapp','in-app']));
+ALTER TABLE public.household_people ADD CONSTRAINT household_people_status_check CHECK (status = ANY (ARRAY['active','archived']));
+CREATE INDEX household_people_owner_idx ON public.household_people (household_id, profile_id);
+CREATE INDEX household_people_source_artifact_id_fk_idx ON public.household_people (source_artifact_id, household_id) WHERE source_artifact_id IS NOT NULL;
+CREATE TRIGGER household_people_force_id BEFORE INSERT OR UPDATE ON public.household_people
+  FOR EACH ROW EXECUTE FUNCTION public.force_server_owned_id();
+CREATE TRIGGER household_people_set_updated_at BEFORE UPDATE ON public.household_people
+  FOR EACH ROW EXECUTE FUNCTION public.set_row_updated_at();
+CREATE TRIGGER household_people_log_change AFTER INSERT OR UPDATE OR DELETE ON public.household_people
+  FOR EACH ROW EXECUTE FUNCTION public.log_row_change('household_id', 'profile_id');
+CREATE POLICY household_people_select_own ON public.household_people
+  FOR SELECT TO authenticated
+  USING ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id));
+CREATE POLICY household_people_insert_own ON public.household_people
+  FOR INSERT TO authenticated
+  WITH CHECK ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id));
+CREATE POLICY household_people_update_own ON public.household_people
+  FOR UPDATE TO authenticated
+  USING ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id))
+  WITH CHECK ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id));
+-- responsibilities
+ALTER TABLE public.responsibilities ADD CONSTRAINT responsibilities_household_id_fkey FOREIGN KEY (household_id) REFERENCES public.households(id) ON DELETE CASCADE;
+ALTER TABLE public.responsibilities ADD CONSTRAINT responsibilities_profile_id_fkey FOREIGN KEY (profile_id) REFERENCES public.profiles(id) ON DELETE CASCADE;
+ALTER TABLE public.responsibilities ADD CONSTRAINT responsibilities_local_id_check CHECK (local_id ~ '^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$'::text);
+ALTER TABLE public.responsibilities ADD CONSTRAINT responsibilities_scope_check CHECK (scope = 'personal'::text);
+ALTER TABLE public.responsibilities ADD CONSTRAINT responsibilities_revision_check CHECK (revision > 0);
+ALTER TABLE public.responsibilities ADD CONSTRAINT responsibilities_producer_values_check CHECK (producer = ANY (ARRAY['onboarding', 'user-action', 'talk-it-out', 'system-derived', 'import-sync', 'ai-inference', 'automation', 'legacy-unknown']));
+ALTER TABLE public.responsibilities ADD CONSTRAINT responsibilities_confidence_check CHECK (((confidence IS NOT NULL) = (producer = ANY (ARRAY['ai-inference','import-sync'])))
+    AND (confidence IS NULL OR confidence = ANY (ARRAY['possible','likely','established'])));
+ALTER TABLE public.responsibilities ADD CONSTRAINT responsibilities_source_artifact_check CHECK (source_artifact_id IS NULL OR producer <> ALL (ARRAY['legacy-unknown','onboarding']));
+ALTER TABLE public.responsibilities ADD CONSTRAINT responsibilities_source_artifact_fkey FOREIGN KEY (source_artifact_id, household_id, profile_id)
+    REFERENCES public.source_artifacts(id, household_id, profile_id) ON DELETE NO ACTION;
+ALTER TABLE public.responsibilities ADD CONSTRAINT responsibilities_about_ref_check CHECK ((about_type IS NULL OR about_type = ANY (ARRAY['task', 'event', 'needsMe', 'system', 'meal', 'goal']))
+    AND (COALESCE(about_type = 'task', false) = (about_task_id IS NOT NULL))
+    AND (COALESCE(about_type = 'event', false) = (about_event_id IS NOT NULL))
+    AND (COALESCE(about_type = 'needsMe', false) = (about_needs_me_id IS NOT NULL))
+    AND (COALESCE(about_type = 'system', false) = (about_system_id IS NOT NULL))
+    AND (COALESCE(about_type = 'meal', false) = (about_meal_id IS NOT NULL))
+    AND (COALESCE(about_type = 'goal', false) = (about_goal_id IS NOT NULL)));
+ALTER TABLE public.responsibilities ADD CONSTRAINT responsibilities_about_task_id_fkey FOREIGN KEY (about_task_id, household_id)
+    REFERENCES public.tasks(id, household_id) ON DELETE NO ACTION;
+ALTER TABLE public.responsibilities ADD CONSTRAINT responsibilities_about_event_id_fkey FOREIGN KEY (about_event_id, household_id)
+    REFERENCES public.events(id, household_id) ON DELETE NO ACTION;
+ALTER TABLE public.responsibilities ADD CONSTRAINT responsibilities_about_needs_me_id_fkey FOREIGN KEY (about_needs_me_id, household_id, profile_id)
+    REFERENCES public.needs_me_items(id, household_id, profile_id) ON DELETE NO ACTION;
+ALTER TABLE public.responsibilities ADD CONSTRAINT responsibilities_about_system_id_fkey FOREIGN KEY (about_system_id, household_id)
+    REFERENCES public.household_systems(id, household_id) ON DELETE NO ACTION;
+ALTER TABLE public.responsibilities ADD CONSTRAINT responsibilities_about_meal_id_fkey FOREIGN KEY (about_meal_id, household_id)
+    REFERENCES public.meal_plan_entries(id, household_id) ON DELETE NO ACTION;
+ALTER TABLE public.responsibilities ADD CONSTRAINT responsibilities_about_goal_id_fkey FOREIGN KEY (about_goal_id, household_id, profile_id)
+    REFERENCES public.goals(id, household_id, profile_id) ON DELETE NO ACTION;
+ALTER TABLE public.responsibilities ADD CONSTRAINT responsibilities_responsible_person_id_fkey FOREIGN KEY (responsible_person_id, household_id, profile_id)
+    REFERENCES public.household_people(id, household_id, profile_id) ON DELETE NO ACTION;
+ALTER TABLE public.responsibilities ADD CONSTRAINT responsibilities_responsible_child_type_pairing_check CHECK ((responsible_child_id IS NULL) = (responsible_child_type IS NULL));
+ALTER TABLE public.responsibilities ADD CONSTRAINT responsibilities_responsible_child_type_child_check CHECK (responsible_child_type IS NULL OR responsible_child_type = 'child'::text);
+ALTER TABLE public.responsibilities ADD CONSTRAINT responsibilities_responsible_child_id_fkey FOREIGN KEY (responsible_child_id, household_id, responsible_child_type)
+    REFERENCES public.household_members(id, household_id, member_type) ON DELETE NO ACTION;
+ALTER TABLE public.responsibilities ADD CONSTRAINT responsibilities_previous_responsibility_id_fkey FOREIGN KEY (previous_responsibility_id, household_id, profile_id)
+    REFERENCES public.responsibilities(id, household_id, profile_id) ON DELETE NO ACTION;
+ALTER TABLE public.responsibilities ADD CONSTRAINT responsibilities_kind_check CHECK (responsible_kind = ANY (ARRAY['self','person','child']));
+ALTER TABLE public.responsibilities ADD CONSTRAINT responsibilities_state_check CHECK (state = ANY (ARRAY['owned','requested','acknowledged','accepted','declined','completed','returned']));
+ALTER TABLE public.responsibilities ADD CONSTRAINT responsibilities_holder_check CHECK (CASE responsible_kind
+        WHEN 'self'   THEN responsible_person_id IS NULL AND responsible_child_id IS NULL
+        WHEN 'person' THEN responsible_person_id IS NOT NULL AND responsible_child_id IS NULL
+        ELSE               responsible_person_id IS NULL AND responsible_child_id IS NOT NULL END);
+ALTER TABLE public.responsibilities ADD CONSTRAINT responsibilities_lifecycle_check CHECK (CASE state
+        WHEN 'owned'        THEN true
+        WHEN 'requested'    THEN requested_at IS NOT NULL AND responsible_kind <> 'self'
+        WHEN 'acknowledged' THEN requested_at IS NOT NULL AND acknowledged_at IS NOT NULL AND responsible_kind <> 'self'
+        WHEN 'accepted'     THEN requested_at IS NOT NULL AND responded_at IS NOT NULL AND responsible_kind <> 'self'
+        WHEN 'declined'     THEN requested_at IS NOT NULL AND responded_at IS NOT NULL
+        WHEN 'completed'    THEN completed_at IS NOT NULL
+        ELSE                     returned_at IS NOT NULL AND responsible_kind = 'self' END);
+ALTER TABLE public.responsibilities ADD CONSTRAINT responsibilities_completed_only_check CHECK ((state = 'completed') = (completed_at IS NOT NULL));
+ALTER TABLE public.responsibilities ADD CONSTRAINT responsibilities_returned_only_check CHECK ((state = 'returned') = (returned_at IS NOT NULL));
+CREATE INDEX responsibilities_owner_idx ON public.responsibilities (household_id, profile_id);
+CREATE INDEX responsibilities_about_task_id_fk_idx ON public.responsibilities (about_task_id, household_id) WHERE about_task_id IS NOT NULL;
+CREATE INDEX responsibilities_about_event_id_fk_idx ON public.responsibilities (about_event_id, household_id) WHERE about_event_id IS NOT NULL;
+CREATE INDEX responsibilities_about_needs_me_id_fk_idx ON public.responsibilities (about_needs_me_id, household_id) WHERE about_needs_me_id IS NOT NULL;
+CREATE INDEX responsibilities_about_system_id_fk_idx ON public.responsibilities (about_system_id, household_id) WHERE about_system_id IS NOT NULL;
+CREATE INDEX responsibilities_about_meal_id_fk_idx ON public.responsibilities (about_meal_id, household_id) WHERE about_meal_id IS NOT NULL;
+CREATE INDEX responsibilities_about_goal_id_fk_idx ON public.responsibilities (about_goal_id, household_id) WHERE about_goal_id IS NOT NULL;
+CREATE INDEX responsibilities_responsible_person_id_fk_idx ON public.responsibilities (responsible_person_id, household_id) WHERE responsible_person_id IS NOT NULL;
+CREATE INDEX responsibilities_responsible_child_id_fk_idx ON public.responsibilities (responsible_child_id, household_id) WHERE responsible_child_id IS NOT NULL;
+CREATE INDEX responsibilities_previous_responsibility_id_fk_idx ON public.responsibilities (previous_responsibility_id, household_id) WHERE previous_responsibility_id IS NOT NULL;
+CREATE INDEX responsibilities_source_artifact_id_fk_idx ON public.responsibilities (source_artifact_id, household_id) WHERE source_artifact_id IS NOT NULL;
+CREATE UNIQUE INDEX responsibilities_one_live_owner_uq
+  ON public.responsibilities (household_id, COALESCE(about_task_id, about_event_id, about_needs_me_id, about_system_id, about_meal_id, about_goal_id)) WHERE state IN ('owned','requested','acknowledged','accepted');
+CREATE TRIGGER responsibilities_force_id BEFORE INSERT OR UPDATE ON public.responsibilities
+  FOR EACH ROW EXECUTE FUNCTION public.force_server_owned_id();
+CREATE TRIGGER responsibilities_set_updated_at BEFORE UPDATE ON public.responsibilities
+  FOR EACH ROW EXECUTE FUNCTION public.set_row_updated_at();
+CREATE TRIGGER responsibilities_set_responsible_child_type BEFORE INSERT OR UPDATE ON public.responsibilities
+  FOR EACH ROW EXECUTE FUNCTION public.set_child_member_type('responsible_child_id', 'responsible_child_type');
+CREATE TRIGGER responsibilities_log_change AFTER INSERT OR UPDATE OR DELETE ON public.responsibilities
+  FOR EACH ROW EXECUTE FUNCTION public.log_row_change('household_id', 'profile_id');
+CREATE POLICY responsibilities_select_own ON public.responsibilities
+  FOR SELECT TO authenticated
+  USING ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id));
+CREATE POLICY responsibilities_insert_own ON public.responsibilities
+  FOR INSERT TO authenticated
+  WITH CHECK ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id));
+CREATE POLICY responsibilities_update_own ON public.responsibilities
+  FOR UPDATE TO authenticated
+  USING ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id))
+  WITH CHECK ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id));
+-- dependencies
+ALTER TABLE public.dependencies ADD CONSTRAINT dependencies_household_id_fkey FOREIGN KEY (household_id) REFERENCES public.households(id) ON DELETE CASCADE;
+ALTER TABLE public.dependencies ADD CONSTRAINT dependencies_profile_id_fkey FOREIGN KEY (profile_id) REFERENCES public.profiles(id) ON DELETE CASCADE;
+ALTER TABLE public.dependencies ADD CONSTRAINT dependencies_local_id_check CHECK (local_id ~ '^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$'::text);
+ALTER TABLE public.dependencies ADD CONSTRAINT dependencies_scope_check CHECK (scope = 'personal'::text);
+ALTER TABLE public.dependencies ADD CONSTRAINT dependencies_revision_check CHECK (revision > 0);
+ALTER TABLE public.dependencies ADD CONSTRAINT dependencies_producer_values_check CHECK (producer = ANY (ARRAY['onboarding', 'user-action', 'talk-it-out', 'system-derived', 'import-sync', 'ai-inference', 'automation', 'legacy-unknown']));
+ALTER TABLE public.dependencies ADD CONSTRAINT dependencies_confidence_check CHECK (((confidence IS NOT NULL) = (producer = ANY (ARRAY['ai-inference','import-sync'])))
+    AND (confidence IS NULL OR confidence = ANY (ARRAY['possible','likely','established'])));
+ALTER TABLE public.dependencies ADD CONSTRAINT dependencies_source_artifact_check CHECK (source_artifact_id IS NULL OR producer <> ALL (ARRAY['legacy-unknown','onboarding']));
+ALTER TABLE public.dependencies ADD CONSTRAINT dependencies_source_artifact_fkey FOREIGN KEY (source_artifact_id, household_id, profile_id)
+    REFERENCES public.source_artifacts(id, household_id, profile_id) ON DELETE NO ACTION;
+ALTER TABLE public.dependencies ADD CONSTRAINT dependencies_from_ref_check CHECK ((from_type IS NULL OR from_type = ANY (ARRAY['task', 'event', 'needsMe', 'system', 'meal', 'goal']))
+    AND (COALESCE(from_type = 'task', false) = (from_task_id IS NOT NULL))
+    AND (COALESCE(from_type = 'event', false) = (from_event_id IS NOT NULL))
+    AND (COALESCE(from_type = 'needsMe', false) = (from_needs_me_id IS NOT NULL))
+    AND (COALESCE(from_type = 'system', false) = (from_system_id IS NOT NULL))
+    AND (COALESCE(from_type = 'meal', false) = (from_meal_id IS NOT NULL))
+    AND (COALESCE(from_type = 'goal', false) = (from_goal_id IS NOT NULL)));
+ALTER TABLE public.dependencies ADD CONSTRAINT dependencies_from_task_id_fkey FOREIGN KEY (from_task_id, household_id)
+    REFERENCES public.tasks(id, household_id) ON DELETE CASCADE;
+ALTER TABLE public.dependencies ADD CONSTRAINT dependencies_from_event_id_fkey FOREIGN KEY (from_event_id, household_id)
+    REFERENCES public.events(id, household_id) ON DELETE CASCADE;
+ALTER TABLE public.dependencies ADD CONSTRAINT dependencies_from_needs_me_id_fkey FOREIGN KEY (from_needs_me_id, household_id, profile_id)
+    REFERENCES public.needs_me_items(id, household_id, profile_id) ON DELETE CASCADE;
+ALTER TABLE public.dependencies ADD CONSTRAINT dependencies_from_system_id_fkey FOREIGN KEY (from_system_id, household_id)
+    REFERENCES public.household_systems(id, household_id) ON DELETE CASCADE;
+ALTER TABLE public.dependencies ADD CONSTRAINT dependencies_from_meal_id_fkey FOREIGN KEY (from_meal_id, household_id)
+    REFERENCES public.meal_plan_entries(id, household_id) ON DELETE CASCADE;
+ALTER TABLE public.dependencies ADD CONSTRAINT dependencies_from_goal_id_fkey FOREIGN KEY (from_goal_id, household_id, profile_id)
+    REFERENCES public.goals(id, household_id, profile_id) ON DELETE CASCADE;
+ALTER TABLE public.dependencies ADD CONSTRAINT dependencies_to_ref_check CHECK ((to_type IS NULL OR to_type = ANY (ARRAY['task', 'event', 'needsMe', 'system', 'meal', 'goal']))
+    AND (COALESCE(to_type = 'task', false) = (to_task_id IS NOT NULL))
+    AND (COALESCE(to_type = 'event', false) = (to_event_id IS NOT NULL))
+    AND (COALESCE(to_type = 'needsMe', false) = (to_needs_me_id IS NOT NULL))
+    AND (COALESCE(to_type = 'system', false) = (to_system_id IS NOT NULL))
+    AND (COALESCE(to_type = 'meal', false) = (to_meal_id IS NOT NULL))
+    AND (COALESCE(to_type = 'goal', false) = (to_goal_id IS NOT NULL)));
+ALTER TABLE public.dependencies ADD CONSTRAINT dependencies_to_task_id_fkey FOREIGN KEY (to_task_id, household_id)
+    REFERENCES public.tasks(id, household_id) ON DELETE CASCADE;
+ALTER TABLE public.dependencies ADD CONSTRAINT dependencies_to_event_id_fkey FOREIGN KEY (to_event_id, household_id)
+    REFERENCES public.events(id, household_id) ON DELETE CASCADE;
+ALTER TABLE public.dependencies ADD CONSTRAINT dependencies_to_needs_me_id_fkey FOREIGN KEY (to_needs_me_id, household_id, profile_id)
+    REFERENCES public.needs_me_items(id, household_id, profile_id) ON DELETE CASCADE;
+ALTER TABLE public.dependencies ADD CONSTRAINT dependencies_to_system_id_fkey FOREIGN KEY (to_system_id, household_id)
+    REFERENCES public.household_systems(id, household_id) ON DELETE CASCADE;
+ALTER TABLE public.dependencies ADD CONSTRAINT dependencies_to_meal_id_fkey FOREIGN KEY (to_meal_id, household_id)
+    REFERENCES public.meal_plan_entries(id, household_id) ON DELETE CASCADE;
+ALTER TABLE public.dependencies ADD CONSTRAINT dependencies_to_goal_id_fkey FOREIGN KEY (to_goal_id, household_id, profile_id)
+    REFERENCES public.goals(id, household_id, profile_id) ON DELETE CASCADE;
+ALTER TABLE public.dependencies ADD CONSTRAINT dependencies_relation_check CHECK (relation = ANY (ARRAY['requires','part_of','alternative_to']));
+ALTER TABLE public.dependencies ADD CONSTRAINT dependencies_status_check CHECK (status = ANY (ARRAY['active','removed']));
+ALTER TABLE public.dependencies ADD CONSTRAINT dependencies_not_self_check CHECK (NOT (from_type = to_type AND COALESCE(from_task_id, from_event_id, from_needs_me_id, from_system_id, from_meal_id, from_goal_id) = COALESCE(to_task_id, to_event_id, to_needs_me_id, to_system_id, to_meal_id, to_goal_id)));
+CREATE INDEX dependencies_owner_idx ON public.dependencies (household_id, profile_id);
+CREATE INDEX dependencies_from_task_id_fk_idx ON public.dependencies (from_task_id, household_id) WHERE from_task_id IS NOT NULL;
+CREATE INDEX dependencies_from_event_id_fk_idx ON public.dependencies (from_event_id, household_id) WHERE from_event_id IS NOT NULL;
+CREATE INDEX dependencies_from_needs_me_id_fk_idx ON public.dependencies (from_needs_me_id, household_id) WHERE from_needs_me_id IS NOT NULL;
+CREATE INDEX dependencies_from_system_id_fk_idx ON public.dependencies (from_system_id, household_id) WHERE from_system_id IS NOT NULL;
+CREATE INDEX dependencies_from_meal_id_fk_idx ON public.dependencies (from_meal_id, household_id) WHERE from_meal_id IS NOT NULL;
+CREATE INDEX dependencies_from_goal_id_fk_idx ON public.dependencies (from_goal_id, household_id) WHERE from_goal_id IS NOT NULL;
+CREATE INDEX dependencies_to_task_id_fk_idx ON public.dependencies (to_task_id, household_id) WHERE to_task_id IS NOT NULL;
+CREATE INDEX dependencies_to_event_id_fk_idx ON public.dependencies (to_event_id, household_id) WHERE to_event_id IS NOT NULL;
+CREATE INDEX dependencies_to_needs_me_id_fk_idx ON public.dependencies (to_needs_me_id, household_id) WHERE to_needs_me_id IS NOT NULL;
+CREATE INDEX dependencies_to_system_id_fk_idx ON public.dependencies (to_system_id, household_id) WHERE to_system_id IS NOT NULL;
+CREATE INDEX dependencies_to_meal_id_fk_idx ON public.dependencies (to_meal_id, household_id) WHERE to_meal_id IS NOT NULL;
+CREATE INDEX dependencies_to_goal_id_fk_idx ON public.dependencies (to_goal_id, household_id) WHERE to_goal_id IS NOT NULL;
+CREATE INDEX dependencies_source_artifact_id_fk_idx ON public.dependencies (source_artifact_id, household_id) WHERE source_artifact_id IS NOT NULL;
+CREATE UNIQUE INDEX dependencies_live_edge_uq
+  ON public.dependencies (household_id, relation, from_type, COALESCE(from_task_id, from_event_id, from_needs_me_id, from_system_id, from_meal_id, from_goal_id), to_type, COALESCE(to_task_id, to_event_id, to_needs_me_id, to_system_id, to_meal_id, to_goal_id)) WHERE status = 'active';
+CREATE TRIGGER dependencies_force_id BEFORE INSERT OR UPDATE ON public.dependencies
+  FOR EACH ROW EXECUTE FUNCTION public.force_server_owned_id();
+CREATE TRIGGER dependencies_set_updated_at BEFORE UPDATE ON public.dependencies
+  FOR EACH ROW EXECUTE FUNCTION public.set_row_updated_at();
+CREATE TRIGGER dependencies_forbid_cycle BEFORE INSERT OR UPDATE ON public.dependencies
+  FOR EACH ROW EXECUTE FUNCTION public.forbid_dependency_cycle();
+CREATE TRIGGER dependencies_log_change AFTER INSERT OR UPDATE OR DELETE ON public.dependencies
+  FOR EACH ROW EXECUTE FUNCTION public.log_row_change('household_id', 'profile_id');
+CREATE POLICY dependencies_select_own ON public.dependencies
+  FOR SELECT TO authenticated
+  USING ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id));
+CREATE POLICY dependencies_insert_own ON public.dependencies
+  FOR INSERT TO authenticated
+  WITH CHECK ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id));
+CREATE POLICY dependencies_update_own ON public.dependencies
+  FOR UPDATE TO authenticated
+  USING ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id))
+  WITH CHECK ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id));
+-- recurrence_rules
+ALTER TABLE public.recurrence_rules ADD CONSTRAINT recurrence_rules_household_id_fkey FOREIGN KEY (household_id) REFERENCES public.households(id) ON DELETE CASCADE;
+ALTER TABLE public.recurrence_rules ADD CONSTRAINT recurrence_rules_profile_id_fkey FOREIGN KEY (profile_id) REFERENCES public.profiles(id) ON DELETE CASCADE;
+ALTER TABLE public.recurrence_rules ADD CONSTRAINT recurrence_rules_local_id_check CHECK (local_id ~ '^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$'::text);
+ALTER TABLE public.recurrence_rules ADD CONSTRAINT recurrence_rules_scope_check CHECK (scope = 'personal'::text);
+ALTER TABLE public.recurrence_rules ADD CONSTRAINT recurrence_rules_revision_check CHECK (revision > 0);
+ALTER TABLE public.recurrence_rules ADD CONSTRAINT recurrence_rules_producer_values_check CHECK (producer = ANY (ARRAY['onboarding', 'user-action', 'talk-it-out', 'system-derived', 'import-sync', 'ai-inference', 'automation', 'legacy-unknown']));
+ALTER TABLE public.recurrence_rules ADD CONSTRAINT recurrence_rules_confidence_check CHECK (((confidence IS NOT NULL) = (producer = ANY (ARRAY['ai-inference','import-sync'])))
+    AND (confidence IS NULL OR confidence = ANY (ARRAY['possible','likely','established'])));
+ALTER TABLE public.recurrence_rules ADD CONSTRAINT recurrence_rules_source_artifact_check CHECK (source_artifact_id IS NULL OR producer <> ALL (ARRAY['legacy-unknown','onboarding']));
+ALTER TABLE public.recurrence_rules ADD CONSTRAINT recurrence_rules_source_artifact_fkey FOREIGN KEY (source_artifact_id, household_id, profile_id)
+    REFERENCES public.source_artifacts(id, household_id, profile_id) ON DELETE NO ACTION;
+ALTER TABLE public.recurrence_rules ADD CONSTRAINT recurrence_rules_about_ref_check CHECK ((about_type IS NULL OR about_type = ANY (ARRAY['task', 'event', 'system', 'meal']))
+    AND (COALESCE(about_type = 'task', false) = (about_task_id IS NOT NULL))
+    AND (COALESCE(about_type = 'event', false) = (about_event_id IS NOT NULL))
+    AND (COALESCE(about_type = 'system', false) = (about_system_id IS NOT NULL))
+    AND (COALESCE(about_type = 'meal', false) = (about_meal_id IS NOT NULL)));
+ALTER TABLE public.recurrence_rules ADD CONSTRAINT recurrence_rules_about_task_id_fkey FOREIGN KEY (about_task_id, household_id)
+    REFERENCES public.tasks(id, household_id) ON DELETE CASCADE;
+ALTER TABLE public.recurrence_rules ADD CONSTRAINT recurrence_rules_about_event_id_fkey FOREIGN KEY (about_event_id, household_id)
+    REFERENCES public.events(id, household_id) ON DELETE CASCADE;
+ALTER TABLE public.recurrence_rules ADD CONSTRAINT recurrence_rules_about_system_id_fkey FOREIGN KEY (about_system_id, household_id)
+    REFERENCES public.household_systems(id, household_id) ON DELETE CASCADE;
+ALTER TABLE public.recurrence_rules ADD CONSTRAINT recurrence_rules_about_meal_id_fkey FOREIGN KEY (about_meal_id, household_id)
+    REFERENCES public.meal_plan_entries(id, household_id) ON DELETE CASCADE;
+ALTER TABLE public.recurrence_rules ADD CONSTRAINT recurrence_rules_trigger_check CHECK (trigger_kind = ANY (ARRAY['schedule','after_completion','manual']));
+ALTER TABLE public.recurrence_rules ADD CONSTRAINT recurrence_rules_frequency_check CHECK (frequency IS NULL OR frequency = ANY (ARRAY['daily','weekly','monthly','yearly']));
+ALTER TABLE public.recurrence_rules ADD CONSTRAINT recurrence_rules_manual_check CHECK ((trigger_kind = 'manual') = (frequency IS NULL));
+ALTER TABLE public.recurrence_rules ADD CONSTRAINT recurrence_rules_interval_check CHECK (interval_count >= 1 AND interval_count <= 366);
+ALTER TABLE public.recurrence_rules ADD CONSTRAINT recurrence_rules_weekday_check CHECK (by_weekday IS NULL OR (frequency = 'weekly' AND cardinality(by_weekday) <= 7 AND by_weekday <@ ARRAY[0,1,2,3,4,5,6]::smallint[]));
+ALTER TABLE public.recurrence_rules ADD CONSTRAINT recurrence_rules_month_day_check CHECK (by_month_day IS NULL OR (frequency = 'monthly' AND by_month_day >= 1 AND by_month_day <= 31));
+ALTER TABLE public.recurrence_rules ADD CONSTRAINT recurrence_rules_time_check CHECK (time_of_day_minutes IS NULL OR (time_of_day_minutes >= 0 AND time_of_day_minutes <= 1439));
+ALTER TABLE public.recurrence_rules ADD CONSTRAINT recurrence_rules_timezone_check CHECK (char_length(timezone) >= 1 AND char_length(timezone) <= 64);
+ALTER TABLE public.recurrence_rules ADD CONSTRAINT recurrence_rules_end_check CHECK (NOT (ends_on IS NOT NULL AND occurrence_count IS NOT NULL) AND (ends_on IS NULL OR ends_on >= anchor_date));
+ALTER TABLE public.recurrence_rules ADD CONSTRAINT recurrence_rules_count_check CHECK (occurrence_count IS NULL OR (occurrence_count >= 1 AND occurrence_count <= 10000));
+ALTER TABLE public.recurrence_rules ADD CONSTRAINT recurrence_rules_status_check CHECK (status = ANY (ARRAY['active','paused','ended']));
+CREATE INDEX recurrence_rules_owner_idx ON public.recurrence_rules (household_id, profile_id);
+CREATE INDEX recurrence_rules_about_task_id_fk_idx ON public.recurrence_rules (about_task_id, household_id) WHERE about_task_id IS NOT NULL;
+CREATE INDEX recurrence_rules_about_event_id_fk_idx ON public.recurrence_rules (about_event_id, household_id) WHERE about_event_id IS NOT NULL;
+CREATE INDEX recurrence_rules_about_system_id_fk_idx ON public.recurrence_rules (about_system_id, household_id) WHERE about_system_id IS NOT NULL;
+CREATE INDEX recurrence_rules_about_meal_id_fk_idx ON public.recurrence_rules (about_meal_id, household_id) WHERE about_meal_id IS NOT NULL;
+CREATE INDEX recurrence_rules_source_artifact_id_fk_idx ON public.recurrence_rules (source_artifact_id, household_id) WHERE source_artifact_id IS NOT NULL;
+CREATE UNIQUE INDEX recurrence_rules_one_active_rule_uq
+  ON public.recurrence_rules (household_id, COALESCE(about_task_id, about_event_id, about_system_id, about_meal_id)) WHERE status = 'active';
+CREATE TRIGGER recurrence_rules_force_id BEFORE INSERT OR UPDATE ON public.recurrence_rules
+  FOR EACH ROW EXECUTE FUNCTION public.force_server_owned_id();
+CREATE TRIGGER recurrence_rules_set_updated_at BEFORE UPDATE ON public.recurrence_rules
+  FOR EACH ROW EXECUTE FUNCTION public.set_row_updated_at();
+CREATE TRIGGER recurrence_rules_log_change AFTER INSERT OR UPDATE OR DELETE ON public.recurrence_rules
+  FOR EACH ROW EXECUTE FUNCTION public.log_row_change('household_id', 'profile_id');
+CREATE POLICY recurrence_rules_select_own ON public.recurrence_rules
+  FOR SELECT TO authenticated
+  USING ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id));
+CREATE POLICY recurrence_rules_insert_own ON public.recurrence_rules
+  FOR INSERT TO authenticated
+  WITH CHECK ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id));
+CREATE POLICY recurrence_rules_update_own ON public.recurrence_rules
+  FOR UPDATE TO authenticated
+  USING ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id))
+  WITH CHECK ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id));
+-- goals
+ALTER TABLE public.goals ADD CONSTRAINT goals_household_id_fkey FOREIGN KEY (household_id) REFERENCES public.households(id) ON DELETE CASCADE;
+ALTER TABLE public.goals ADD CONSTRAINT goals_profile_id_fkey FOREIGN KEY (profile_id) REFERENCES public.profiles(id) ON DELETE CASCADE;
+ALTER TABLE public.goals ADD CONSTRAINT goals_local_id_check CHECK (local_id ~ '^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$'::text);
+ALTER TABLE public.goals ADD CONSTRAINT goals_scope_check CHECK (scope = 'personal'::text);
+ALTER TABLE public.goals ADD CONSTRAINT goals_revision_check CHECK (revision > 0);
+ALTER TABLE public.goals ADD CONSTRAINT goals_producer_values_check CHECK (producer = ANY (ARRAY['onboarding', 'user-action', 'talk-it-out', 'system-derived', 'import-sync', 'ai-inference', 'automation', 'legacy-unknown']));
+ALTER TABLE public.goals ADD CONSTRAINT goals_confidence_check CHECK (((confidence IS NOT NULL) = (producer = ANY (ARRAY['ai-inference','import-sync'])))
+    AND (confidence IS NULL OR confidence = ANY (ARRAY['possible','likely','established'])));
+ALTER TABLE public.goals ADD CONSTRAINT goals_source_artifact_check CHECK (source_artifact_id IS NULL OR producer <> ALL (ARRAY['legacy-unknown','onboarding']));
+ALTER TABLE public.goals ADD CONSTRAINT goals_source_artifact_fkey FOREIGN KEY (source_artifact_id, household_id, profile_id)
+    REFERENCES public.source_artifacts(id, household_id, profile_id) ON DELETE NO ACTION;
+ALTER TABLE public.goals ADD CONSTRAINT goals_category_id_fkey FOREIGN KEY (category_id, household_id)
+    REFERENCES public.household_categories(id, household_id) ON DELETE NO ACTION;
+ALTER TABLE public.goals ADD CONSTRAINT goals_title_check CHECK (char_length(btrim(title)) >= 1 AND char_length(btrim(title)) <= 200);
+ALTER TABLE public.goals ADD CONSTRAINT goals_status_check CHECK (status = ANY (ARRAY['active','achieved','paused','abandoned']));
+ALTER TABLE public.goals ADD CONSTRAINT goals_catalog_goal_check CHECK (catalog_goal_id IS NULL OR catalog_goal_id ~ '^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$');
+CREATE INDEX goals_owner_idx ON public.goals (household_id, profile_id);
+CREATE INDEX goals_category_id_fk_idx ON public.goals (category_id, household_id) WHERE category_id IS NOT NULL;
+CREATE INDEX goals_source_artifact_id_fk_idx ON public.goals (source_artifact_id, household_id) WHERE source_artifact_id IS NOT NULL;
+CREATE TRIGGER goals_force_id BEFORE INSERT OR UPDATE ON public.goals
+  FOR EACH ROW EXECUTE FUNCTION public.force_server_owned_id();
+CREATE TRIGGER goals_set_updated_at BEFORE UPDATE ON public.goals
+  FOR EACH ROW EXECUTE FUNCTION public.set_row_updated_at();
+CREATE TRIGGER goals_log_change AFTER INSERT OR UPDATE OR DELETE ON public.goals
+  FOR EACH ROW EXECUTE FUNCTION public.log_row_change('household_id', 'profile_id');
+CREATE POLICY goals_select_own ON public.goals
+  FOR SELECT TO authenticated
+  USING ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id));
+CREATE POLICY goals_insert_own ON public.goals
+  FOR INSERT TO authenticated
+  WITH CHECK ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id));
+CREATE POLICY goals_update_own ON public.goals
+  FOR UPDATE TO authenticated
+  USING ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id))
+  WITH CHECK ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id));
+-- system_steps
+ALTER TABLE public.system_steps ADD CONSTRAINT system_steps_household_id_fkey FOREIGN KEY (household_id) REFERENCES public.households(id) ON DELETE CASCADE;
+ALTER TABLE public.system_steps ADD CONSTRAINT system_steps_profile_id_fkey FOREIGN KEY (profile_id) REFERENCES public.profiles(id) ON DELETE CASCADE;
+ALTER TABLE public.system_steps ADD CONSTRAINT system_steps_local_id_check CHECK (local_id ~ '^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$'::text);
+ALTER TABLE public.system_steps ADD CONSTRAINT system_steps_scope_check CHECK (scope = 'personal'::text);
+ALTER TABLE public.system_steps ADD CONSTRAINT system_steps_revision_check CHECK (revision > 0);
+ALTER TABLE public.system_steps ADD CONSTRAINT system_steps_producer_values_check CHECK (producer = ANY (ARRAY['onboarding', 'user-action', 'talk-it-out', 'system-derived', 'import-sync', 'ai-inference', 'automation', 'legacy-unknown']));
+ALTER TABLE public.system_steps ADD CONSTRAINT system_steps_confidence_check CHECK (((confidence IS NOT NULL) = (producer = ANY (ARRAY['ai-inference','import-sync'])))
+    AND (confidence IS NULL OR confidence = ANY (ARRAY['possible','likely','established'])));
+ALTER TABLE public.system_steps ADD CONSTRAINT system_steps_source_artifact_check CHECK (source_artifact_id IS NULL OR producer <> ALL (ARRAY['legacy-unknown','onboarding']));
+ALTER TABLE public.system_steps ADD CONSTRAINT system_steps_source_artifact_fkey FOREIGN KEY (source_artifact_id, household_id, profile_id)
+    REFERENCES public.source_artifacts(id, household_id, profile_id) ON DELETE NO ACTION;
+ALTER TABLE public.system_steps ADD CONSTRAINT system_steps_system_id_fkey FOREIGN KEY (system_id, household_id)
+    REFERENCES public.household_systems(id, household_id) ON DELETE NO ACTION;
+ALTER TABLE public.system_steps ADD CONSTRAINT system_steps_position_check CHECK (position >= 0 AND position <= 999);
+ALTER TABLE public.system_steps ADD CONSTRAINT system_steps_title_check CHECK (char_length(btrim(title)) >= 1 AND char_length(btrim(title)) <= 200);
+ALTER TABLE public.system_steps ADD CONSTRAINT system_steps_effort_check CHECK (effort_minutes IS NULL OR (effort_minutes >= 0 AND effort_minutes <= 1440));
+ALTER TABLE public.system_steps ADD CONSTRAINT system_steps_system_position_key UNIQUE (system_id, position);
+CREATE INDEX system_steps_owner_idx ON public.system_steps (household_id, profile_id);
+CREATE INDEX system_steps_system_id_fk_idx ON public.system_steps (system_id, household_id) WHERE system_id IS NOT NULL;
+CREATE INDEX system_steps_source_artifact_id_fk_idx ON public.system_steps (source_artifact_id, household_id) WHERE source_artifact_id IS NOT NULL;
+CREATE TRIGGER system_steps_force_id BEFORE INSERT OR UPDATE ON public.system_steps
+  FOR EACH ROW EXECUTE FUNCTION public.force_server_owned_id();
+CREATE TRIGGER system_steps_set_updated_at BEFORE UPDATE ON public.system_steps
+  FOR EACH ROW EXECUTE FUNCTION public.set_row_updated_at();
+CREATE TRIGGER system_steps_log_change AFTER INSERT OR UPDATE OR DELETE ON public.system_steps
+  FOR EACH ROW EXECUTE FUNCTION public.log_row_change('household_id', 'profile_id');
+CREATE POLICY system_steps_select_own ON public.system_steps
+  FOR SELECT TO authenticated
+  USING ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id));
+CREATE POLICY system_steps_insert_own ON public.system_steps
+  FOR INSERT TO authenticated
+  WITH CHECK ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id));
+CREATE POLICY system_steps_update_own ON public.system_steps
+  FOR UPDATE TO authenticated
+  USING ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id))
+  WITH CHECK ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id));
+-- capacity_profiles
+ALTER TABLE public.capacity_profiles ADD CONSTRAINT capacity_profiles_household_id_fkey FOREIGN KEY (household_id) REFERENCES public.households(id) ON DELETE CASCADE;
+ALTER TABLE public.capacity_profiles ADD CONSTRAINT capacity_profiles_profile_id_fkey FOREIGN KEY (profile_id) REFERENCES public.profiles(id) ON DELETE CASCADE;
+ALTER TABLE public.capacity_profiles ADD CONSTRAINT capacity_profiles_local_id_check CHECK (local_id ~ '^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$'::text);
+ALTER TABLE public.capacity_profiles ADD CONSTRAINT capacity_profiles_scope_check CHECK (scope = 'personal'::text);
+ALTER TABLE public.capacity_profiles ADD CONSTRAINT capacity_profiles_revision_check CHECK (revision > 0);
+ALTER TABLE public.capacity_profiles ADD CONSTRAINT capacity_profiles_producer_values_check CHECK (producer = ANY (ARRAY['onboarding', 'user-action', 'talk-it-out', 'system-derived', 'import-sync', 'ai-inference', 'automation', 'legacy-unknown']));
+ALTER TABLE public.capacity_profiles ADD CONSTRAINT capacity_profiles_confidence_check CHECK (((confidence IS NOT NULL) = (producer = ANY (ARRAY['ai-inference','import-sync'])))
+    AND (confidence IS NULL OR confidence = ANY (ARRAY['possible','likely','established'])));
+ALTER TABLE public.capacity_profiles ADD CONSTRAINT capacity_profiles_source_artifact_check CHECK (source_artifact_id IS NULL OR producer <> ALL (ARRAY['legacy-unknown','onboarding']));
+ALTER TABLE public.capacity_profiles ADD CONSTRAINT capacity_profiles_source_artifact_fkey FOREIGN KEY (source_artifact_id, household_id, profile_id)
+    REFERENCES public.source_artifacts(id, household_id, profile_id) ON DELETE NO ACTION;
+ALTER TABLE public.capacity_profiles ADD CONSTRAINT capacity_profiles_start_check CHECK (day_start_minutes IS NULL OR (day_start_minutes >= 0 AND day_start_minutes <= 1439));
+ALTER TABLE public.capacity_profiles ADD CONSTRAINT capacity_profiles_end_check CHECK (day_end_minutes IS NULL OR (day_end_minutes >= 1 AND day_end_minutes <= 1440));
+ALTER TABLE public.capacity_profiles ADD CONSTRAINT capacity_profiles_buffer_check CHECK (transition_buffer_minutes IS NULL OR (transition_buffer_minutes >= 0 AND transition_buffer_minutes <= 240));
+ALTER TABLE public.capacity_profiles ADD CONSTRAINT capacity_profiles_window_check CHECK (day_start_minutes IS NULL OR day_end_minutes IS NULL OR day_start_minutes < day_end_minutes);
+ALTER TABLE public.capacity_profiles ADD CONSTRAINT capacity_profiles_owner_key UNIQUE (household_id, profile_id);
+CREATE INDEX capacity_profiles_owner_idx ON public.capacity_profiles (household_id, profile_id);
+CREATE INDEX capacity_profiles_source_artifact_id_fk_idx ON public.capacity_profiles (source_artifact_id, household_id) WHERE source_artifact_id IS NOT NULL;
+CREATE TRIGGER capacity_profiles_force_id BEFORE INSERT OR UPDATE ON public.capacity_profiles
+  FOR EACH ROW EXECUTE FUNCTION public.force_server_owned_id();
+CREATE TRIGGER capacity_profiles_set_updated_at BEFORE UPDATE ON public.capacity_profiles
+  FOR EACH ROW EXECUTE FUNCTION public.set_row_updated_at();
+CREATE TRIGGER capacity_profiles_log_change AFTER INSERT OR UPDATE OR DELETE ON public.capacity_profiles
+  FOR EACH ROW EXECUTE FUNCTION public.log_row_change('household_id', 'profile_id');
+CREATE POLICY capacity_profiles_select_own ON public.capacity_profiles
+  FOR SELECT TO authenticated
+  USING ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id));
+CREATE POLICY capacity_profiles_insert_own ON public.capacity_profiles
+  FOR INSERT TO authenticated
+  WITH CHECK ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id));
+CREATE POLICY capacity_profiles_update_own ON public.capacity_profiles
+  FOR UPDATE TO authenticated
+  USING ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id))
+  WITH CHECK ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id));
+-- patterns
+ALTER TABLE public.patterns ADD CONSTRAINT patterns_household_id_fkey FOREIGN KEY (household_id) REFERENCES public.households(id) ON DELETE CASCADE;
+ALTER TABLE public.patterns ADD CONSTRAINT patterns_profile_id_fkey FOREIGN KEY (profile_id) REFERENCES public.profiles(id) ON DELETE CASCADE;
+ALTER TABLE public.patterns ADD CONSTRAINT patterns_local_id_check CHECK (local_id ~ '^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$'::text);
+ALTER TABLE public.patterns ADD CONSTRAINT patterns_scope_check CHECK (scope = 'personal'::text);
+ALTER TABLE public.patterns ADD CONSTRAINT patterns_revision_check CHECK (revision > 0);
+ALTER TABLE public.patterns ADD CONSTRAINT patterns_producer_values_check CHECK (producer = ANY (ARRAY['onboarding', 'user-action', 'talk-it-out', 'system-derived', 'import-sync', 'ai-inference', 'automation', 'legacy-unknown']));
+ALTER TABLE public.patterns ADD CONSTRAINT patterns_confidence_check CHECK (((confidence IS NOT NULL) = (producer = ANY (ARRAY['ai-inference','import-sync'])))
+    AND (confidence IS NULL OR confidence = ANY (ARRAY['possible','likely','established'])));
+ALTER TABLE public.patterns ADD CONSTRAINT patterns_source_artifact_check CHECK (source_artifact_id IS NULL OR producer <> ALL (ARRAY['legacy-unknown','onboarding']));
+ALTER TABLE public.patterns ADD CONSTRAINT patterns_source_artifact_fkey FOREIGN KEY (source_artifact_id, household_id, profile_id)
+    REFERENCES public.source_artifacts(id, household_id, profile_id) ON DELETE NO ACTION;
+ALTER TABLE public.patterns ADD CONSTRAINT patterns_about_ref_check CHECK ((about_type IS NULL OR about_type = ANY (ARRAY['task', 'event', 'needsMe', 'system', 'meal', 'goal']))
+    AND (COALESCE(about_type = 'task', false) = (about_task_id IS NOT NULL))
+    AND (COALESCE(about_type = 'event', false) = (about_event_id IS NOT NULL))
+    AND (COALESCE(about_type = 'needsMe', false) = (about_needs_me_id IS NOT NULL))
+    AND (COALESCE(about_type = 'system', false) = (about_system_id IS NOT NULL))
+    AND (COALESCE(about_type = 'meal', false) = (about_meal_id IS NOT NULL))
+    AND (COALESCE(about_type = 'goal', false) = (about_goal_id IS NOT NULL)));
+ALTER TABLE public.patterns ADD CONSTRAINT patterns_about_task_id_fkey FOREIGN KEY (about_task_id, household_id)
+    REFERENCES public.tasks(id, household_id) ON DELETE NO ACTION;
+ALTER TABLE public.patterns ADD CONSTRAINT patterns_about_event_id_fkey FOREIGN KEY (about_event_id, household_id)
+    REFERENCES public.events(id, household_id) ON DELETE NO ACTION;
+ALTER TABLE public.patterns ADD CONSTRAINT patterns_about_needs_me_id_fkey FOREIGN KEY (about_needs_me_id, household_id, profile_id)
+    REFERENCES public.needs_me_items(id, household_id, profile_id) ON DELETE NO ACTION;
+ALTER TABLE public.patterns ADD CONSTRAINT patterns_about_system_id_fkey FOREIGN KEY (about_system_id, household_id)
+    REFERENCES public.household_systems(id, household_id) ON DELETE NO ACTION;
+ALTER TABLE public.patterns ADD CONSTRAINT patterns_about_meal_id_fkey FOREIGN KEY (about_meal_id, household_id)
+    REFERENCES public.meal_plan_entries(id, household_id) ON DELETE NO ACTION;
+ALTER TABLE public.patterns ADD CONSTRAINT patterns_about_goal_id_fkey FOREIGN KEY (about_goal_id, household_id, profile_id)
+    REFERENCES public.goals(id, household_id, profile_id) ON DELETE NO ACTION;
+ALTER TABLE public.patterns ADD CONSTRAINT patterns_category_id_fkey FOREIGN KEY (category_id, household_id)
+    REFERENCES public.household_categories(id, household_id) ON DELETE NO ACTION;
+ALTER TABLE public.patterns ADD CONSTRAINT patterns_kind_check CHECK (kind = ANY (ARRAY['routine','deferral','energy','preference','reliability','timing']));
+ALTER TABLE public.patterns ADD CONSTRAINT patterns_weekday_check CHECK (weekday IS NULL OR (weekday >= 0 AND weekday <= 6));
+ALTER TABLE public.patterns ADD CONSTRAINT patterns_bucket_check CHECK (time_bucket IS NULL OR time_bucket = ANY (ARRAY['morning','afternoon','evening']));
+ALTER TABLE public.patterns ADD CONSTRAINT patterns_status_check CHECK (status = ANY (ARRAY['candidate','confirmed','rejected','retired']));
+ALTER TABLE public.patterns ADD CONSTRAINT patterns_observed_order_check CHECK (last_observed_on >= first_observed_on);
+ALTER TABLE public.patterns ADD CONSTRAINT patterns_inference_check CHECK (producer = 'ai-inference');
+ALTER TABLE public.patterns ADD CONSTRAINT patterns_confirmed_check CHECK (status <> 'confirmed' OR confidence = 'established');
+ALTER TABLE public.patterns ADD CONSTRAINT patterns_established_check CHECK (confidence <> 'established' OR status IN ('confirmed','retired'));
+CREATE INDEX patterns_owner_idx ON public.patterns (household_id, profile_id);
+CREATE INDEX patterns_about_task_id_fk_idx ON public.patterns (about_task_id, household_id) WHERE about_task_id IS NOT NULL;
+CREATE INDEX patterns_about_event_id_fk_idx ON public.patterns (about_event_id, household_id) WHERE about_event_id IS NOT NULL;
+CREATE INDEX patterns_about_needs_me_id_fk_idx ON public.patterns (about_needs_me_id, household_id) WHERE about_needs_me_id IS NOT NULL;
+CREATE INDEX patterns_about_system_id_fk_idx ON public.patterns (about_system_id, household_id) WHERE about_system_id IS NOT NULL;
+CREATE INDEX patterns_about_meal_id_fk_idx ON public.patterns (about_meal_id, household_id) WHERE about_meal_id IS NOT NULL;
+CREATE INDEX patterns_about_goal_id_fk_idx ON public.patterns (about_goal_id, household_id) WHERE about_goal_id IS NOT NULL;
+CREATE INDEX patterns_category_id_fk_idx ON public.patterns (category_id, household_id) WHERE category_id IS NOT NULL;
+CREATE INDEX patterns_source_artifact_id_fk_idx ON public.patterns (source_artifact_id, household_id) WHERE source_artifact_id IS NOT NULL;
+CREATE TRIGGER patterns_force_id BEFORE INSERT OR UPDATE ON public.patterns
+  FOR EACH ROW EXECUTE FUNCTION public.force_server_owned_id();
+CREATE TRIGGER patterns_set_updated_at BEFORE UPDATE ON public.patterns
+  FOR EACH ROW EXECUTE FUNCTION public.set_row_updated_at();
+CREATE TRIGGER patterns_log_change AFTER INSERT OR UPDATE OR DELETE ON public.patterns
+  FOR EACH ROW EXECUTE FUNCTION public.log_row_change('household_id', 'profile_id');
+CREATE POLICY patterns_select_own ON public.patterns
+  FOR SELECT TO authenticated
+  USING ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id));
+CREATE POLICY patterns_insert_own ON public.patterns
+  FOR INSERT TO authenticated
+  WITH CHECK ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id));
+CREATE POLICY patterns_update_own ON public.patterns
+  FOR UPDATE TO authenticated
+  USING ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id))
+  WITH CHECK ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id));
+-- evidence_links
+ALTER TABLE public.evidence_links ADD CONSTRAINT evidence_links_household_id_fkey FOREIGN KEY (household_id) REFERENCES public.households(id) ON DELETE CASCADE;
+ALTER TABLE public.evidence_links ADD CONSTRAINT evidence_links_profile_id_fkey FOREIGN KEY (profile_id) REFERENCES public.profiles(id) ON DELETE RESTRICT;
+ALTER TABLE public.evidence_links ADD CONSTRAINT evidence_links_local_id_check CHECK (local_id ~ '^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$'::text);
+ALTER TABLE public.evidence_links ADD CONSTRAINT evidence_links_scope_check CHECK (scope = 'personal'::text);
+ALTER TABLE public.evidence_links ADD CONSTRAINT evidence_links_producer_values_check CHECK (producer = ANY (ARRAY['onboarding', 'user-action', 'talk-it-out', 'system-derived', 'import-sync', 'ai-inference', 'automation', 'legacy-unknown']));
+ALTER TABLE public.evidence_links ADD CONSTRAINT evidence_links_confidence_check CHECK (((confidence IS NOT NULL) = (producer = ANY (ARRAY['ai-inference','import-sync'])))
+    AND (confidence IS NULL OR confidence = ANY (ARRAY['possible','likely','established'])));
+ALTER TABLE public.evidence_links ADD CONSTRAINT evidence_links_source_artifact_check CHECK (source_artifact_id IS NULL OR producer <> ALL (ARRAY['legacy-unknown','onboarding']));
+ALTER TABLE public.evidence_links ADD CONSTRAINT evidence_links_source_artifact_fkey FOREIGN KEY (source_artifact_id, household_id, profile_id)
+    REFERENCES public.source_artifacts(id, household_id, profile_id) ON DELETE NO ACTION;
+ALTER TABLE public.evidence_links ADD CONSTRAINT evidence_links_for_ref_check CHECK ((for_type IS NULL OR for_type = ANY (ARRAY['pattern', 'oneMove', 'intent']))
+    AND (COALESCE(for_type = 'pattern', false) = (for_pattern_id IS NOT NULL))
+    AND (COALESCE(for_type = 'oneMove', false) = (for_one_move_id IS NOT NULL))
+    AND (COALESCE(for_type = 'intent', false) = (for_intent_id IS NOT NULL)));
+ALTER TABLE public.evidence_links ADD CONSTRAINT evidence_links_for_pattern_id_fkey FOREIGN KEY (for_pattern_id, household_id, profile_id)
+    REFERENCES public.patterns(id, household_id, profile_id) ON DELETE NO ACTION;
+ALTER TABLE public.evidence_links ADD CONSTRAINT evidence_links_for_one_move_id_fkey FOREIGN KEY (for_one_move_id, household_id, profile_id)
+    REFERENCES public.one_move_records(id, household_id, profile_id) ON DELETE NO ACTION;
+ALTER TABLE public.evidence_links ADD CONSTRAINT evidence_links_for_intent_id_fkey FOREIGN KEY (for_intent_id, household_id, profile_id)
+    REFERENCES public.action_intents(id, household_id, profile_id) ON DELETE NO ACTION;
+ALTER TABLE public.evidence_links ADD CONSTRAINT evidence_links_support_ref_check CHECK ((support_type IS NULL OR support_type = ANY (ARRAY['task', 'event', 'needsMe', 'system', 'meal', 'goal', 'responsibility', 'observation']))
+    AND (COALESCE(support_type = 'task', false) = (support_task_id IS NOT NULL))
+    AND (COALESCE(support_type = 'event', false) = (support_event_id IS NOT NULL))
+    AND (COALESCE(support_type = 'needsMe', false) = (support_needs_me_id IS NOT NULL))
+    AND (COALESCE(support_type = 'system', false) = (support_system_id IS NOT NULL))
+    AND (COALESCE(support_type = 'meal', false) = (support_meal_id IS NOT NULL))
+    AND (COALESCE(support_type = 'goal', false) = (support_goal_id IS NOT NULL))
+    AND (COALESCE(support_type = 'responsibility', false) = (support_responsibility_id IS NOT NULL))
+    AND (COALESCE(support_type = 'observation', false) = (support_observation_id IS NOT NULL)));
+ALTER TABLE public.evidence_links ADD CONSTRAINT evidence_links_support_task_id_fkey FOREIGN KEY (support_task_id, household_id)
+    REFERENCES public.tasks(id, household_id) ON DELETE NO ACTION;
+ALTER TABLE public.evidence_links ADD CONSTRAINT evidence_links_support_event_id_fkey FOREIGN KEY (support_event_id, household_id)
+    REFERENCES public.events(id, household_id) ON DELETE NO ACTION;
+ALTER TABLE public.evidence_links ADD CONSTRAINT evidence_links_support_needs_me_id_fkey FOREIGN KEY (support_needs_me_id, household_id, profile_id)
+    REFERENCES public.needs_me_items(id, household_id, profile_id) ON DELETE NO ACTION;
+ALTER TABLE public.evidence_links ADD CONSTRAINT evidence_links_support_system_id_fkey FOREIGN KEY (support_system_id, household_id)
+    REFERENCES public.household_systems(id, household_id) ON DELETE NO ACTION;
+ALTER TABLE public.evidence_links ADD CONSTRAINT evidence_links_support_meal_id_fkey FOREIGN KEY (support_meal_id, household_id)
+    REFERENCES public.meal_plan_entries(id, household_id) ON DELETE NO ACTION;
+ALTER TABLE public.evidence_links ADD CONSTRAINT evidence_links_support_goal_id_fkey FOREIGN KEY (support_goal_id, household_id, profile_id)
+    REFERENCES public.goals(id, household_id, profile_id) ON DELETE NO ACTION;
+ALTER TABLE public.evidence_links ADD CONSTRAINT evidence_links_support_responsibility_id_fkey FOREIGN KEY (support_responsibility_id, household_id, profile_id)
+    REFERENCES public.responsibilities(id, household_id, profile_id) ON DELETE NO ACTION;
+ALTER TABLE public.evidence_links ADD CONSTRAINT evidence_links_support_observation_id_fkey FOREIGN KEY (support_observation_id, household_id, profile_id)
+    REFERENCES public.behavior_observations(id, household_id, profile_id) ON DELETE NO ACTION;
+ALTER TABLE public.evidence_links ADD CONSTRAINT evidence_links_code_check CHECK (code ~ '^[a-z][a-z0-9_.-]{0,63}$');
+CREATE INDEX evidence_links_owner_idx ON public.evidence_links (household_id, profile_id);
+CREATE INDEX evidence_links_for_pattern_id_fk_idx ON public.evidence_links (for_pattern_id, household_id) WHERE for_pattern_id IS NOT NULL;
+CREATE INDEX evidence_links_for_one_move_id_fk_idx ON public.evidence_links (for_one_move_id, household_id) WHERE for_one_move_id IS NOT NULL;
+CREATE INDEX evidence_links_for_intent_id_fk_idx ON public.evidence_links (for_intent_id, household_id) WHERE for_intent_id IS NOT NULL;
+CREATE INDEX evidence_links_support_task_id_fk_idx ON public.evidence_links (support_task_id, household_id) WHERE support_task_id IS NOT NULL;
+CREATE INDEX evidence_links_support_event_id_fk_idx ON public.evidence_links (support_event_id, household_id) WHERE support_event_id IS NOT NULL;
+CREATE INDEX evidence_links_support_needs_me_id_fk_idx ON public.evidence_links (support_needs_me_id, household_id) WHERE support_needs_me_id IS NOT NULL;
+CREATE INDEX evidence_links_support_system_id_fk_idx ON public.evidence_links (support_system_id, household_id) WHERE support_system_id IS NOT NULL;
+CREATE INDEX evidence_links_support_meal_id_fk_idx ON public.evidence_links (support_meal_id, household_id) WHERE support_meal_id IS NOT NULL;
+CREATE INDEX evidence_links_support_goal_id_fk_idx ON public.evidence_links (support_goal_id, household_id) WHERE support_goal_id IS NOT NULL;
+CREATE INDEX evidence_links_support_responsibility_id_fk_idx ON public.evidence_links (support_responsibility_id, household_id) WHERE support_responsibility_id IS NOT NULL;
+CREATE INDEX evidence_links_support_observation_id_fk_idx ON public.evidence_links (support_observation_id, household_id) WHERE support_observation_id IS NOT NULL;
+CREATE INDEX evidence_links_source_artifact_id_fk_idx ON public.evidence_links (source_artifact_id, household_id) WHERE source_artifact_id IS NOT NULL;
+CREATE TRIGGER evidence_links_force_id BEFORE INSERT ON public.evidence_links
+  FOR EACH ROW EXECUTE FUNCTION public.force_server_owned_id();
+CREATE TRIGGER evidence_links_immutable BEFORE UPDATE OR DELETE ON public.evidence_links
+  FOR EACH ROW EXECUTE FUNCTION public.forbid_ledger_mutation();
+CREATE TRIGGER evidence_links_log_change AFTER INSERT ON public.evidence_links
+  FOR EACH ROW EXECUTE FUNCTION public.log_row_change('household_id', 'profile_id');
+CREATE POLICY evidence_links_select_own ON public.evidence_links
+  FOR SELECT TO authenticated
+  USING ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id));
+CREATE POLICY evidence_links_insert_own ON public.evidence_links
+  FOR INSERT TO authenticated
+  WITH CHECK ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id));
+
+-- Phase 5 — constraints on the nine existing tables' new columns.
+ALTER TABLE public.household_categories ADD CONSTRAINT household_categories_producer_values_check CHECK (producer = ANY (ARRAY['onboarding', 'user-action', 'talk-it-out', 'system-derived', 'import-sync', 'ai-inference', 'automation', 'legacy-unknown']));
+ALTER TABLE public.household_categories ADD CONSTRAINT household_categories_confidence_check CHECK (((confidence IS NOT NULL) = (producer = ANY (ARRAY['ai-inference','import-sync'])))
+    AND (confidence IS NULL OR confidence = ANY (ARRAY['possible','likely','established'])));
+ALTER TABLE public.household_categories ADD CONSTRAINT household_categories_source_artifact_check CHECK (source_artifact_id IS NULL OR producer <> ALL (ARRAY['legacy-unknown','onboarding']));
+ALTER TABLE public.household_categories ADD CONSTRAINT household_categories_source_artifact_fkey FOREIGN KEY (source_artifact_id, household_id)
+    REFERENCES public.source_artifacts(id, household_id) ON DELETE NO ACTION;
+CREATE INDEX household_categories_source_artifact_fk_idx ON public.household_categories (source_artifact_id, household_id) WHERE source_artifact_id IS NOT NULL;
+ALTER TABLE public.events ADD CONSTRAINT events_producer_values_check CHECK (producer = ANY (ARRAY['onboarding', 'user-action', 'talk-it-out', 'system-derived', 'import-sync', 'ai-inference', 'automation', 'legacy-unknown']));
+ALTER TABLE public.events ADD CONSTRAINT events_confidence_check CHECK (((confidence IS NOT NULL) = (producer = ANY (ARRAY['ai-inference','import-sync'])))
+    AND (confidence IS NULL OR confidence = ANY (ARRAY['possible','likely','established'])));
+ALTER TABLE public.events ADD CONSTRAINT events_source_artifact_check CHECK (source_artifact_id IS NULL OR producer <> ALL (ARRAY['legacy-unknown','onboarding']));
+ALTER TABLE public.events ADD CONSTRAINT events_source_artifact_fkey FOREIGN KEY (source_artifact_id, household_id)
+    REFERENCES public.source_artifacts(id, household_id) ON DELETE NO ACTION;
+CREATE INDEX events_source_artifact_fk_idx ON public.events (source_artifact_id, household_id) WHERE source_artifact_id IS NOT NULL;
+ALTER TABLE public.events ADD CONSTRAINT events_energy_demand_check CHECK (energy_demand IS NULL OR energy_demand = ANY (ARRAY['low','moderate','high']));
+ALTER TABLE public.events ADD CONSTRAINT events_consequence_check CHECK (consequence IS NULL OR consequence = ANY (ARRAY['low','moderate','high','critical']));
+ALTER TABLE public.events ADD CONSTRAINT events_value_money_check CHECK (((value_amount_minor IS NULL) = (value_currency IS NULL))
+    AND ((value_amount_minor IS NULL) = (value_direction IS NULL))
+    AND (value_amount_minor IS NULL OR (value_amount_minor >= 0 AND value_amount_minor <= 9007199254740991))
+    AND (value_currency IS NULL OR value_currency ~ '^[A-Z]{3}$')
+    AND (value_direction IS NULL OR value_direction = ANY (ARRAY['outflow','inflow'])));
+ALTER TABLE public.tasks ADD CONSTRAINT tasks_producer_values_check CHECK (producer = ANY (ARRAY['onboarding', 'user-action', 'talk-it-out', 'system-derived', 'import-sync', 'ai-inference', 'automation', 'legacy-unknown']));
+ALTER TABLE public.tasks ADD CONSTRAINT tasks_confidence_check CHECK (((confidence IS NOT NULL) = (producer = ANY (ARRAY['ai-inference','import-sync'])))
+    AND (confidence IS NULL OR confidence = ANY (ARRAY['possible','likely','established'])));
+ALTER TABLE public.tasks ADD CONSTRAINT tasks_source_artifact_check CHECK (source_artifact_id IS NULL OR producer <> ALL (ARRAY['legacy-unknown','onboarding']));
+ALTER TABLE public.tasks ADD CONSTRAINT tasks_source_artifact_fkey FOREIGN KEY (source_artifact_id, household_id)
+    REFERENCES public.source_artifacts(id, household_id) ON DELETE NO ACTION;
+CREATE INDEX tasks_source_artifact_fk_idx ON public.tasks (source_artifact_id, household_id) WHERE source_artifact_id IS NOT NULL;
+ALTER TABLE public.tasks ADD CONSTRAINT tasks_min_chunk_minutes_check CHECK (min_chunk_minutes IS NULL OR (min_chunk_minutes >= 5 AND min_chunk_minutes <= 1440));
+ALTER TABLE public.tasks ADD CONSTRAINT tasks_preferred_time_of_day_check CHECK (preferred_time_of_day IS NULL OR preferred_time_of_day = ANY (ARRAY['morning','afternoon','evening']));
+ALTER TABLE public.tasks ADD CONSTRAINT tasks_energy_demand_check CHECK (energy_demand IS NULL OR energy_demand = ANY (ARRAY['low','moderate','high']));
+ALTER TABLE public.tasks ADD CONSTRAINT tasks_consequence_check CHECK (consequence IS NULL OR consequence = ANY (ARRAY['low','moderate','high','critical']));
+ALTER TABLE public.tasks ADD CONSTRAINT tasks_travel_minutes_before_check CHECK (travel_minutes_before IS NULL OR (travel_minutes_before >= 0 AND travel_minutes_before <= 240));
+ALTER TABLE public.tasks ADD CONSTRAINT tasks_travel_minutes_after_check CHECK (travel_minutes_after IS NULL OR (travel_minutes_after >= 0 AND travel_minutes_after <= 240));
+ALTER TABLE public.tasks ADD CONSTRAINT tasks_preparation_minutes_check CHECK (preparation_minutes IS NULL OR (preparation_minutes >= 0 AND preparation_minutes <= 240));
+ALTER TABLE public.tasks ADD CONSTRAINT tasks_value_money_check CHECK (((value_amount_minor IS NULL) = (value_currency IS NULL))
+    AND ((value_amount_minor IS NULL) = (value_direction IS NULL))
+    AND (value_amount_minor IS NULL OR (value_amount_minor >= 0 AND value_amount_minor <= 9007199254740991))
+    AND (value_currency IS NULL OR value_currency ~ '^[A-Z]{3}$')
+    AND (value_direction IS NULL OR value_direction = ANY (ARRAY['outflow','inflow'])));
+ALTER TABLE public.tasks ADD CONSTRAINT tasks_window_check CHECK (earliest_start_at IS NULL OR latest_finish_at IS NULL OR earliest_start_at <= latest_finish_at);
+ALTER TABLE public.tasks ADD CONSTRAINT tasks_chunk_split_check CHECK (min_chunk_minutes IS NULL OR splittable IS TRUE);
+ALTER TABLE public.tasks ADD CONSTRAINT tasks_chunk_length_check CHECK (min_chunk_minutes IS NULL OR min_chunk_minutes <= duration_minutes);
+ALTER TABLE public.household_systems ADD CONSTRAINT household_systems_producer_values_check CHECK (producer = ANY (ARRAY['onboarding', 'user-action', 'talk-it-out', 'system-derived', 'import-sync', 'ai-inference', 'automation', 'legacy-unknown']));
+ALTER TABLE public.household_systems ADD CONSTRAINT household_systems_confidence_check CHECK (((confidence IS NOT NULL) = (producer = ANY (ARRAY['ai-inference','import-sync'])))
+    AND (confidence IS NULL OR confidence = ANY (ARRAY['possible','likely','established'])));
+ALTER TABLE public.household_systems ADD CONSTRAINT household_systems_source_artifact_check CHECK (source_artifact_id IS NULL OR producer <> ALL (ARRAY['legacy-unknown','onboarding']));
+ALTER TABLE public.household_systems ADD CONSTRAINT household_systems_source_artifact_fkey FOREIGN KEY (source_artifact_id, household_id)
+    REFERENCES public.source_artifacts(id, household_id) ON DELETE NO ACTION;
+CREATE INDEX household_systems_source_artifact_fk_idx ON public.household_systems (source_artifact_id, household_id) WHERE source_artifact_id IS NOT NULL;
+ALTER TABLE public.household_systems ADD CONSTRAINT household_systems_automation_mode_check CHECK (automation_mode = ANY (ARRAY['manual','suggest','prepare','ask_approval','execute_authorized']));
+ALTER TABLE public.household_systems ADD CONSTRAINT household_systems_effort_minutes_check CHECK (effort_minutes IS NULL OR (effort_minutes >= 0 AND effort_minutes <= 1440));
+ALTER TABLE public.household_systems ADD CONSTRAINT household_systems_energy_demand_check CHECK (energy_demand IS NULL OR energy_demand = ANY (ARRAY['low','moderate','high']));
+ALTER TABLE public.meal_plan_entries ADD CONSTRAINT meal_plan_entries_producer_values_check CHECK (producer = ANY (ARRAY['onboarding', 'user-action', 'talk-it-out', 'system-derived', 'import-sync', 'ai-inference', 'automation', 'legacy-unknown']));
+ALTER TABLE public.meal_plan_entries ADD CONSTRAINT meal_plan_entries_confidence_check CHECK (((confidence IS NOT NULL) = (producer = ANY (ARRAY['ai-inference','import-sync'])))
+    AND (confidence IS NULL OR confidence = ANY (ARRAY['possible','likely','established'])));
+ALTER TABLE public.meal_plan_entries ADD CONSTRAINT meal_plan_entries_source_artifact_check CHECK (source_artifact_id IS NULL OR producer <> ALL (ARRAY['legacy-unknown','onboarding']));
+ALTER TABLE public.meal_plan_entries ADD CONSTRAINT meal_plan_entries_source_artifact_fkey FOREIGN KEY (source_artifact_id, household_id)
+    REFERENCES public.source_artifacts(id, household_id) ON DELETE NO ACTION;
+CREATE INDEX meal_plan_entries_source_artifact_fk_idx ON public.meal_plan_entries (source_artifact_id, household_id) WHERE source_artifact_id IS NOT NULL;
+ALTER TABLE public.meal_plan_entries ADD CONSTRAINT meal_plan_entries_prep_minutes_check CHECK (prep_minutes IS NULL OR (prep_minutes >= 0 AND prep_minutes <= 240));
+ALTER TABLE public.meal_plan_entries ADD CONSTRAINT meal_plan_entries_energy_demand_check CHECK (energy_demand IS NULL OR energy_demand = ANY (ARRAY['low','moderate','high']));
+ALTER TABLE public.needs_me_items ADD CONSTRAINT needs_me_items_producer_values_check CHECK (producer = ANY (ARRAY['onboarding', 'user-action', 'talk-it-out', 'system-derived', 'import-sync', 'ai-inference', 'automation', 'legacy-unknown']));
+ALTER TABLE public.needs_me_items ADD CONSTRAINT needs_me_items_confidence_check CHECK (((confidence IS NOT NULL) = (producer = ANY (ARRAY['ai-inference','import-sync'])))
+    AND (confidence IS NULL OR confidence = ANY (ARRAY['possible','likely','established'])));
+ALTER TABLE public.needs_me_items ADD CONSTRAINT needs_me_items_source_artifact_check CHECK (source_artifact_id IS NULL OR producer <> ALL (ARRAY['legacy-unknown','onboarding']));
+ALTER TABLE public.needs_me_items ADD CONSTRAINT needs_me_items_source_artifact_fkey FOREIGN KEY (source_artifact_id, household_id, profile_id)
+    REFERENCES public.source_artifacts(id, household_id, profile_id) ON DELETE NO ACTION;
+CREATE INDEX needs_me_items_source_artifact_fk_idx ON public.needs_me_items (source_artifact_id, household_id) WHERE source_artifact_id IS NOT NULL;
+ALTER TABLE public.one_move_records ADD CONSTRAINT one_move_records_producer_values_check CHECK (producer = ANY (ARRAY['onboarding', 'user-action', 'talk-it-out', 'system-derived', 'import-sync', 'ai-inference', 'automation', 'legacy-unknown']));
+ALTER TABLE public.one_move_records ADD CONSTRAINT one_move_records_confidence_check CHECK (((confidence IS NOT NULL) = (producer = ANY (ARRAY['ai-inference','import-sync'])))
+    AND (confidence IS NULL OR confidence = ANY (ARRAY['possible','likely','established'])));
+ALTER TABLE public.one_move_records ADD CONSTRAINT one_move_records_source_artifact_check CHECK (source_artifact_id IS NULL OR producer <> ALL (ARRAY['legacy-unknown','onboarding']));
+ALTER TABLE public.one_move_records ADD CONSTRAINT one_move_records_source_artifact_fkey FOREIGN KEY (source_artifact_id, household_id, profile_id)
+    REFERENCES public.source_artifacts(id, household_id, profile_id) ON DELETE NO ACTION;
+CREATE INDEX one_move_records_source_artifact_fk_idx ON public.one_move_records (source_artifact_id, household_id) WHERE source_artifact_id IS NOT NULL;
+ALTER TABLE public.discovery_records ADD CONSTRAINT discovery_records_producer_values_check CHECK (producer = ANY (ARRAY['onboarding', 'user-action', 'talk-it-out', 'system-derived', 'import-sync', 'ai-inference', 'automation', 'legacy-unknown']));
+ALTER TABLE public.discovery_records ADD CONSTRAINT discovery_records_confidence_check CHECK (((confidence IS NOT NULL) = (producer = ANY (ARRAY['ai-inference','import-sync'])))
+    AND (confidence IS NULL OR confidence = ANY (ARRAY['possible','likely','established'])));
+ALTER TABLE public.discovery_records ADD CONSTRAINT discovery_records_source_artifact_check CHECK (source_artifact_id IS NULL OR producer <> ALL (ARRAY['legacy-unknown','onboarding']));
+ALTER TABLE public.discovery_records ADD CONSTRAINT discovery_records_source_artifact_fkey FOREIGN KEY (source_artifact_id, household_id, profile_id)
+    REFERENCES public.source_artifacts(id, household_id, profile_id) ON DELETE NO ACTION;
+CREATE INDEX discovery_records_source_artifact_fk_idx ON public.discovery_records (source_artifact_id, household_id) WHERE source_artifact_id IS NOT NULL;
+ALTER TABLE public.onboarding_state ADD CONSTRAINT onboarding_state_producer_values_check CHECK (producer = ANY (ARRAY['onboarding', 'user-action', 'talk-it-out', 'system-derived', 'import-sync', 'ai-inference', 'automation', 'legacy-unknown']));
+ALTER TABLE public.onboarding_state ADD CONSTRAINT onboarding_state_confidence_check CHECK (((confidence IS NOT NULL) = (producer = ANY (ARRAY['ai-inference','import-sync'])))
+    AND (confidence IS NULL OR confidence = ANY (ARRAY['possible','likely','established'])));
+ALTER TABLE public.onboarding_state ADD CONSTRAINT onboarding_state_source_artifact_check CHECK (source_artifact_id IS NULL OR producer <> ALL (ARRAY['legacy-unknown','onboarding']));
+ALTER TABLE public.onboarding_state ADD CONSTRAINT onboarding_state_source_artifact_fkey FOREIGN KEY (source_artifact_id, household_id, profile_id)
+    REFERENCES public.source_artifacts(id, household_id, profile_id) ON DELETE NO ACTION;
+CREATE INDEX onboarding_state_source_artifact_fk_idx ON public.onboarding_state (source_artifact_id, household_id) WHERE source_artifact_id IS NOT NULL;
+-- <<< GENERATED foundation-tables
+
+-- ============================================================================
+-- 8C. REFERENCES THAT CANNOT BE GENERATED
+--
+-- One Move's five typed targets. They live here rather than beside the table because the
+-- composite keys they reference are created by the generated block above, and they are
+-- COMPOSITE (target, household[, owner]) so that a One Move can never point at another
+-- household's row. The two that existed before -- task and Needs Me -- were plain
+-- single-column keys, which let a row name a uuid from anywhere; that is closed here.
+-- ============================================================================
+
+ALTER TABLE public.one_move_records ADD CONSTRAINT one_move_records_target_task_id_fkey
+  FOREIGN KEY (target_task_id, household_id) REFERENCES public.tasks(id, household_id) ON DELETE CASCADE;
+ALTER TABLE public.one_move_records ADD CONSTRAINT one_move_records_target_needs_me_id_fkey
+  FOREIGN KEY (target_needs_me_id, household_id, profile_id)
+  REFERENCES public.needs_me_items(id, household_id, profile_id) ON DELETE CASCADE;
+ALTER TABLE public.one_move_records ADD CONSTRAINT one_move_records_target_event_id_fkey
+  FOREIGN KEY (target_event_id, household_id) REFERENCES public.events(id, household_id) ON DELETE CASCADE;
+ALTER TABLE public.one_move_records ADD CONSTRAINT one_move_records_target_system_id_fkey
+  FOREIGN KEY (target_system_id, household_id) REFERENCES public.household_systems(id, household_id) ON DELETE CASCADE;
+ALTER TABLE public.one_move_records ADD CONSTRAINT one_move_records_target_responsibility_id_fkey
+  FOREIGN KEY (target_responsibility_id, household_id, profile_id)
+  REFERENCES public.responsibilities(id, household_id, profile_id) ON DELETE CASCADE;
+
+-- ============================================================================
 -- 9. PRIVILEGES  (SD4-026, SD4-039) — implementing B4-P0-040
 --
 -- Phase 1 proved that the stock ALTER DEFAULT PRIVILEGES statements retained in the
@@ -1969,7 +4132,7 @@ GRANT SELECT ON public.events TO authenticated;
 GRANT INSERT (household_id, local_id, origin_device_id, owner_profile_id, title,
               category_id, subject_member_id, starts_at, ends_at, location, notes,
               commitment, status, travel_minutes_before, travel_minutes_after,
-              preparation_minutes, source, scope, origin_created_at, origin_updated_at)
+              preparation_minutes, scope, origin_created_at, origin_updated_at)
   ON public.events TO authenticated;
 GRANT UPDATE (title, category_id, subject_member_id, starts_at, ends_at, location,
               notes, commitment, status, travel_minutes_before, travel_minutes_after,
@@ -2017,10 +4180,12 @@ GRANT SELECT ON public.one_move_records TO authenticated;
 -- grants altogether. Withholding the privilege is prevention; relying on the trigger
 -- to overwrite a client value would only be correction.
 GRANT INSERT (household_id, local_id, origin_device_id, profile_id,
-              target_type, target_task_id, target_needs_me_id,
+              target_type, target_task_id, target_needs_me_id, target_event_id,
+              target_system_id, target_responsibility_id,
               status, decided_at, completed_at, cleared_at, scope)
   ON public.one_move_records TO authenticated;
-GRANT UPDATE (target_type, target_task_id, target_needs_me_id,
+GRANT UPDATE (target_type, target_task_id, target_needs_me_id, target_event_id,
+              target_system_id, target_responsibility_id,
               status, decided_at, completed_at, cleared_at)
   ON public.one_move_records TO authenticated;
 
@@ -2048,6 +4213,187 @@ GRANT INSERT (household_id, local_id, origin_device_id, actor_profile_id, logica
               action_type, approval, target_type, target_id, payload_version, reason,
               before_state, after_state, source, scope, origin_created_at)
   ON public.action_records TO authenticated;
+
+-- B4-FOUNDATION-BUILDOUT-01 — GENERATED from the same manifest as the tables they grant on.
+-- >>> GENERATED foundation-grants — supabase/tools/gen-foundation-sql.mjs from src/domain/sync/foundationSpecs.ts.
+-- >>> Do not edit by hand: edit the manifest and regenerate. A test fails on any difference.
+-- Foundation tables. Server-written kinds have SELECT only: the client pulls what the server records.
+GRANT SELECT ON public.source_artifacts TO authenticated;
+GRANT INSERT (household_id, local_id, origin_device_id, profile_id, kind, origin, provider, 
+              received_at, content_digest, content_ref, retracted_at, scope, origin_created_at)
+  ON public.source_artifacts TO authenticated;
+GRANT UPDATE (retracted_at)
+  ON public.source_artifacts TO authenticated;
+GRANT SELECT ON public.interpretations TO authenticated;
+GRANT INSERT (household_id, local_id, origin_device_id, profile_id, artifact_id, proposed_kind, 
+              title, due_date, starts_at, ends_at, duration_minutes, value_amount_minor, 
+              value_currency, value_direction, subject_member_id, category_hint, state, 
+              clarification, accepted_type, accepted_task_id, accepted_event_id, 
+              accepted_needs_me_id, supersedes_id, interpretation_version, decided_at, producer, 
+              source_artifact_id, confidence, scope, origin_created_at)
+  ON public.interpretations TO authenticated;
+GRANT UPDATE (title, due_date, starts_at, ends_at, duration_minutes, value_amount_minor, 
+              value_currency, value_direction, subject_member_id, category_hint, state, 
+              clarification, accepted_type, accepted_task_id, accepted_event_id, 
+              accepted_needs_me_id, decided_at, confidence)
+  ON public.interpretations TO authenticated;
+GRANT SELECT ON public.external_references TO authenticated;
+GRANT INSERT (household_id, local_id, origin_device_id, profile_id, provider, external_account, 
+              external_object_id, external_version, origin, direction, authority, last_observed_at, 
+              last_observed_digest, linked_type, linked_task_id, linked_event_id, linked_needs_me_id, 
+              linked_system_id, linked_meal_id, linked_goal_id, written_at, status, producer, 
+              source_artifact_id, confidence, scope, origin_created_at, origin_updated_at)
+  ON public.external_references TO authenticated;
+GRANT UPDATE (external_version, last_observed_at, last_observed_digest, linked_type, linked_task_id, 
+              linked_event_id, linked_needs_me_id, linked_system_id, linked_meal_id, linked_goal_id, 
+              status, confidence, origin_updated_at)
+  ON public.external_references TO authenticated;
+GRANT SELECT ON public.behavior_observations TO authenticated;
+GRANT INSERT (household_id, local_id, origin_device_id, profile_id, about_type, about_task_id, 
+              about_event_id, about_needs_me_id, about_system_id, about_meal_id, about_goal_id, 
+              about_responsibility_id, about_one_move_id, about_interpretation_id, outcome, 
+              occurred_at, logical_date, planned_date, to_date, producer, source_artifact_id, 
+              confidence, scope, origin_created_at)
+  ON public.behavior_observations TO authenticated;
+GRANT SELECT ON public.automation_authorities TO authenticated;
+GRANT INSERT (household_id, local_id, origin_device_id, profile_id, category, mode, max_consequence, 
+              persistent, category_id, subject_member_id, provider, max_amount_minor, 
+              max_amount_currency, granted_at, expires_at, revoked_at, producer, source_artifact_id, 
+              confidence, scope, origin_created_at, origin_updated_at)
+  ON public.automation_authorities TO authenticated;
+GRANT UPDATE (revoked_at, origin_updated_at)
+  ON public.automation_authorities TO authenticated;
+GRANT SELECT ON public.action_intents TO authenticated;
+GRANT INSERT (household_id, local_id, origin_device_id, profile_id, category, about_type, 
+              about_task_id, about_event_id, about_needs_me_id, about_system_id, about_meal_id, 
+              about_goal_id, about_responsibility_id, consequence, reversibility, summary_code, 
+              amount_amount_minor, amount_currency, amount_direction, provider, permitted_mode, 
+              expires_at, producer, source_artifact_id, confidence, scope, origin_created_at)
+  ON public.action_intents TO authenticated;
+GRANT SELECT ON public.intent_decisions TO authenticated;
+GRANT INSERT (household_id, local_id, origin_device_id, profile_id, intent_id, decision, basis, 
+              authority_id, decided_at, producer, source_artifact_id, confidence, scope, 
+              origin_created_at)
+  ON public.intent_decisions TO authenticated;
+GRANT SELECT ON public.action_executions TO authenticated;
+GRANT SELECT ON public.action_outcomes TO authenticated;
+GRANT SELECT ON public.household_people TO authenticated;
+GRANT INSERT (household_id, local_id, origin_device_id, profile_id, display_name, relationship, 
+              channel, status, producer, source_artifact_id, confidence, scope, origin_created_at, 
+              origin_updated_at)
+  ON public.household_people TO authenticated;
+GRANT UPDATE (display_name, relationship, channel, status, confidence, origin_updated_at)
+  ON public.household_people TO authenticated;
+GRANT SELECT ON public.responsibilities TO authenticated;
+GRANT INSERT (household_id, local_id, origin_device_id, profile_id, about_type, about_task_id, 
+              about_event_id, about_needs_me_id, about_system_id, about_meal_id, about_goal_id, 
+              responsible_kind, responsible_person_id, responsible_child_id, state, requested_at, 
+              acknowledged_at, responded_at, completed_at, returned_at, ack_due_at, still_needs_me, 
+              previous_responsibility_id, producer, source_artifact_id, confidence, scope, 
+              origin_created_at, origin_updated_at)
+  ON public.responsibilities TO authenticated;
+GRANT UPDATE (responsible_kind, responsible_person_id, responsible_child_id, state, requested_at, 
+              acknowledged_at, responded_at, completed_at, returned_at, ack_due_at, still_needs_me, 
+              confidence, origin_updated_at)
+  ON public.responsibilities TO authenticated;
+GRANT SELECT ON public.dependencies TO authenticated;
+GRANT INSERT (household_id, local_id, origin_device_id, profile_id, relation, from_type, 
+              from_task_id, from_event_id, from_needs_me_id, from_system_id, from_meal_id, 
+              from_goal_id, to_type, to_task_id, to_event_id, to_needs_me_id, to_system_id, 
+              to_meal_id, to_goal_id, status, producer, source_artifact_id, confidence, scope, 
+              origin_created_at, origin_updated_at)
+  ON public.dependencies TO authenticated;
+GRANT UPDATE (status, confidence, origin_updated_at)
+  ON public.dependencies TO authenticated;
+GRANT SELECT ON public.recurrence_rules TO authenticated;
+GRANT INSERT (household_id, local_id, origin_device_id, profile_id, about_type, about_task_id, 
+              about_event_id, about_system_id, about_meal_id, trigger_kind, frequency, 
+              interval_count, by_weekday, by_month_day, anchor_date, time_of_day_minutes, timezone, 
+              ends_on, occurrence_count, status, producer, source_artifact_id, confidence, scope, 
+              origin_created_at, origin_updated_at)
+  ON public.recurrence_rules TO authenticated;
+GRANT UPDATE (trigger_kind, frequency, interval_count, by_weekday, by_month_day, anchor_date, 
+              time_of_day_minutes, timezone, ends_on, occurrence_count, status, confidence, 
+              origin_updated_at)
+  ON public.recurrence_rules TO authenticated;
+GRANT SELECT ON public.goals TO authenticated;
+GRANT INSERT (household_id, local_id, origin_device_id, profile_id, title, status, target_date, 
+              category_id, catalog_goal_id, producer, source_artifact_id, confidence, scope, 
+              origin_created_at, origin_updated_at)
+  ON public.goals TO authenticated;
+GRANT UPDATE (title, status, target_date, category_id, catalog_goal_id, confidence, 
+              origin_updated_at)
+  ON public.goals TO authenticated;
+GRANT SELECT ON public.system_steps TO authenticated;
+GRANT INSERT (household_id, local_id, origin_device_id, profile_id, system_id, position, title, 
+              effort_minutes, producer, source_artifact_id, confidence, scope, origin_created_at, 
+              origin_updated_at)
+  ON public.system_steps TO authenticated;
+GRANT UPDATE (position, title, effort_minutes, confidence, origin_updated_at)
+  ON public.system_steps TO authenticated;
+GRANT SELECT ON public.capacity_profiles TO authenticated;
+GRANT INSERT (household_id, local_id, origin_device_id, profile_id, day_start_minutes, 
+              day_end_minutes, transition_buffer_minutes, producer, source_artifact_id, confidence, 
+              scope, origin_created_at, origin_updated_at)
+  ON public.capacity_profiles TO authenticated;
+GRANT UPDATE (day_start_minutes, day_end_minutes, transition_buffer_minutes, confidence, 
+              origin_updated_at)
+  ON public.capacity_profiles TO authenticated;
+GRANT SELECT ON public.patterns TO authenticated;
+GRANT INSERT (household_id, local_id, origin_device_id, profile_id, kind, about_type, about_task_id, 
+              about_event_id, about_needs_me_id, about_system_id, about_meal_id, about_goal_id, 
+              category_id, weekday, time_bucket, status, first_observed_on, last_observed_on, 
+              producer, source_artifact_id, confidence, scope, origin_created_at, origin_updated_at)
+  ON public.patterns TO authenticated;
+GRANT UPDATE (weekday, time_bucket, status, last_observed_on, confidence, origin_updated_at)
+  ON public.patterns TO authenticated;
+GRANT SELECT ON public.evidence_links TO authenticated;
+GRANT INSERT (household_id, local_id, origin_device_id, profile_id, for_type, for_pattern_id, 
+              for_one_move_id, for_intent_id, support_type, support_task_id, support_event_id, 
+              support_needs_me_id, support_system_id, support_meal_id, support_goal_id, 
+              support_responsibility_id, support_observation_id, code, producer, source_artifact_id, 
+              confidence, scope, origin_created_at)
+  ON public.evidence_links TO authenticated;
+
+-- Provenance and facets on the tables that already existed. A client states where a row came from when it creates it,
+-- and may afterwards move only its confidence. `producer` and `source_artifact_id` are fixed at insert.
+GRANT INSERT (producer, source_artifact_id, confidence)
+  ON public.household_categories TO authenticated;
+GRANT UPDATE (confidence)
+  ON public.household_categories TO authenticated;
+GRANT INSERT (producer, source_artifact_id, confidence, energy_demand, consequence, needs_me_personally, value_amount_minor, value_currency, value_direction)
+  ON public.events TO authenticated;
+GRANT UPDATE (confidence, energy_demand, consequence, needs_me_personally, value_amount_minor, value_currency, value_direction)
+  ON public.events TO authenticated;
+GRANT INSERT (producer, source_artifact_id, confidence, due_at, earliest_start_at, latest_finish_at, splittable, min_chunk_minutes, preferred_time_of_day, energy_demand, consequence, needs_me_personally, travel_minutes_before, travel_minutes_after, preparation_minutes, value_amount_minor, value_currency, value_direction)
+  ON public.tasks TO authenticated;
+GRANT UPDATE (confidence, due_at, earliest_start_at, latest_finish_at, splittable, min_chunk_minutes, preferred_time_of_day, energy_demand, consequence, needs_me_personally, travel_minutes_before, travel_minutes_after, preparation_minutes, value_amount_minor, value_currency, value_direction)
+  ON public.tasks TO authenticated;
+GRANT INSERT (producer, source_artifact_id, confidence, automation_mode, effort_minutes, energy_demand)
+  ON public.household_systems TO authenticated;
+GRANT UPDATE (confidence, automation_mode, effort_minutes, energy_demand)
+  ON public.household_systems TO authenticated;
+GRANT INSERT (producer, source_artifact_id, confidence, prep_minutes, energy_demand)
+  ON public.meal_plan_entries TO authenticated;
+GRANT UPDATE (confidence, prep_minutes, energy_demand)
+  ON public.meal_plan_entries TO authenticated;
+GRANT INSERT (producer, source_artifact_id, confidence)
+  ON public.needs_me_items TO authenticated;
+GRANT UPDATE (confidence)
+  ON public.needs_me_items TO authenticated;
+GRANT INSERT (producer, source_artifact_id, confidence)
+  ON public.one_move_records TO authenticated;
+GRANT UPDATE (confidence)
+  ON public.one_move_records TO authenticated;
+GRANT INSERT (producer, source_artifact_id, confidence)
+  ON public.discovery_records TO authenticated;
+GRANT UPDATE (confidence)
+  ON public.discovery_records TO authenticated;
+GRANT INSERT (producer, source_artifact_id, confidence)
+  ON public.onboarding_state TO authenticated;
+GRANT UPDATE (confidence)
+  ON public.onboarding_state TO authenticated;
+-- <<< GENERATED foundation-grants
 
 -- --- Step 3: anon and PUBLIC hold nothing, anywhere, and it is stated explicitly. ---
 
@@ -2139,7 +4485,7 @@ ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA private REVOKE ALL     ON R
 --   GRANT EXECUTE ON FUNCTION private.is_household_member(uuid) ...     (Section 2)
 --   GRANT EXECUTE ON FUNCTION private.can_access_scoped_row(...) ...    (Section 2)
 --   GRANT EXECUTE ON FUNCTION private.is_household_owner(uuid) ...      (Section 2)
---   GRANT EXECUTE ON FUNCTION private.current_household_id() ...        (Section 2)
+--   GRANT EXECUTE ON FUNCTION private.resolve_household_context(uuid) ... (Section 2)
 --
 -- These are re-asserted here, after the blanket revokes above, precisely so that the
 -- ordering cannot strand them. A blanket REVOKE that runs later than a GRANT is the
@@ -2148,7 +4494,7 @@ GRANT USAGE   ON SCHEMA   private                                          TO au
 GRANT EXECUTE ON FUNCTION private.is_household_member(uuid)                TO authenticated;
 GRANT EXECUTE ON FUNCTION private.is_household_owner(uuid)                 TO authenticated;
 GRANT EXECUTE ON FUNCTION private.can_access_scoped_row(uuid, text, uuid)  TO authenticated;
-GRANT EXECUTE ON FUNCTION private.current_household_id()                   TO authenticated;
+GRANT EXECUTE ON FUNCTION private.resolve_household_context(uuid)           TO authenticated;
 
 -- Trigger functions are deliberately NOT granted to anyone. PostgreSQL checks EXECUTE
 -- on a trigger function when the trigger is CREATED, not each time it fires, so the
@@ -2286,17 +4632,19 @@ CREATE FUNCTION private.insert_starter_categories(p_household_id uuid, p_profile
   SECURITY DEFINER
   SET search_path TO ''
 AS $fn$
+  -- The starter set is structure Her Keys lays down, not something she told it: producer
+  -- 'system-derived', the same answer the local pristine state gives.
   INSERT INTO public.household_categories
-    (household_id, local_id, owner_profile_id, name, system_role, status, sort_order, scope)
+    (household_id, local_id, owner_profile_id, name, system_role, status, sort_order, scope, producer)
   VALUES
-    (p_household_id, 'cat-kids',          NULL,         'Kids',          'kids',          'active', 0, 'household'),
-    (p_household_id, 'cat-home',          NULL,         'Home',          'home',          'active', 1, 'household'),
-    (p_household_id, 'cat-money',         NULL,         'Money',         'money',         'active', 2, 'household'),
-    (p_household_id, 'cat-meals',         NULL,         'Meals',         'meals',         'active', 3, 'household'),
-    (p_household_id, 'cat-work',          p_profile_id, 'Work',          'work',          'active', 4, 'professional'),
-    (p_household_id, 'cat-wellbeing',     p_profile_id, 'Wellbeing',     'wellbeing',     'active', 5, 'personal'),
-    (p_household_id, 'cat-relationships', p_profile_id, 'Relationships', 'relationships', 'active', 6, 'personal'),
-    (p_household_id, 'cat-coparenting',   p_profile_id, 'Co-parenting',  'coparenting',   'active', 7, 'coparent-shared');
+    (p_household_id, 'cat-kids',          NULL,         'Kids',          'kids',          'active', 0, 'household',       'system-derived'),
+    (p_household_id, 'cat-home',          NULL,         'Home',          'home',          'active', 1, 'household',       'system-derived'),
+    (p_household_id, 'cat-money',         NULL,         'Money',         'money',         'active', 2, 'household',       'system-derived'),
+    (p_household_id, 'cat-meals',         NULL,         'Meals',         'meals',         'active', 3, 'household',       'system-derived'),
+    (p_household_id, 'cat-work',          p_profile_id, 'Work',          'work',          'active', 4, 'professional',    'system-derived'),
+    (p_household_id, 'cat-wellbeing',     p_profile_id, 'Wellbeing',     'wellbeing',     'active', 5, 'personal',        'system-derived'),
+    (p_household_id, 'cat-relationships', p_profile_id, 'Relationships', 'relationships', 'active', 6, 'personal',        'system-derived'),
+    (p_household_id, 'cat-coparenting',   p_profile_id, 'Co-parenting',  'coparenting',   'active', 7, 'coparent-shared', 'system-derived');
 $fn$;
 
 REVOKE ALL ON FUNCTION private.insert_starter_categories(uuid, uuid) FROM PUBLIC, anon, authenticated;
@@ -2413,8 +4761,8 @@ BEGIN
 
   PERFORM private.insert_starter_categories(v_household, v_uid);
 
-  INSERT INTO public.onboarding_state (household_id, profile_id)
-  VALUES (v_household, v_uid);
+  INSERT INTO public.onboarding_state (household_id, profile_id, producer)
+  VALUES (v_household, v_uid, 'onboarding');
 
   UPDATE public.account_claims
      SET status = 'complete', household_id = v_household, row_counts = jsonb_build_object('categories', 8)
@@ -2459,12 +4807,43 @@ AS $fn$
           SELECT local_id, id             FROM public.needs_me_items       WHERE household_id = p_household_id
           UNION ALL
           SELECT local_id, id             FROM public.one_move_records     WHERE household_id = p_household_id
+          UNION ALL
+          SELECT local_id, id             FROM public.source_artifacts     WHERE household_id = p_household_id
         ) m
       ), '{}'::jsonb)
   );
 $fn$;
 
 REVOKE ALL ON FUNCTION private.claim_result(uuid, uuid, text, text) FROM PUBLIC, anon, authenticated;
+
+-- The cloud id of a source artifact a claimed row was derived from, or NULL when it names
+-- none. An artifact the claim did not carry is a broken lineage pointer, and the claim is
+-- refused rather than completed with a row whose provenance dangles.
+CREATE FUNCTION private.claim_artifact_id(p_household_id uuid, p_profile_id uuid, p_local_id text)
+  RETURNS uuid
+  LANGUAGE plpgsql
+  SECURITY DEFINER
+  SET search_path TO ''
+AS $fn$
+DECLARE
+  v_id uuid;
+BEGIN
+  IF p_local_id IS NULL THEN
+    RETURN NULL;
+  END IF;
+  SELECT a.id INTO v_id
+  FROM public.source_artifacts a
+  WHERE a.household_id = p_household_id AND a.profile_id = p_profile_id AND a.local_id = p_local_id;
+  IF v_id IS NULL THEN
+    RAISE EXCEPTION 'claim_local_household: source artifact % did not resolve', p_local_id
+      USING errcode = '22023',
+            detail = jsonb_build_object('reason', 'unresolved_source_artifact', 'artifact_local_id', p_local_id)::text;
+  END IF;
+  RETURN v_id;
+END;
+$fn$;
+
+REVOKE ALL ON FUNCTION private.claim_artifact_id(uuid, uuid, text) FROM PUBLIC, anon, authenticated;
 
 -- ----------------------------------------------------------------------------
 -- claim_local_household — an existing real local household comes to the cloud.
@@ -2540,6 +4919,7 @@ DECLARE
   v_need_items    text[] := '{}'::text[];
   v_need_cats     text[] := '{}'::text[];
   v_need_children text[] := '{}'::text[];
+  v_need_artifacts text[] := '{}'::text[];
   v_extra         text[];
 
   v_lid       text;
@@ -2558,7 +4938,13 @@ BEGIN
 
   -- One explicit payload version, so a later shape change is a refusal rather
   -- than a silent misread of fields that moved.
-  IF (p_payload ->> 'claimPayloadVersion') IS DISTINCT FROM '1' THEN
+  --
+  -- Version 2 (B4-FOUNDATION-BUILDOUT-01): every claimed row states its PROVENANCE
+  -- (producer, source artifact, confidence), a task carries its commitment facets and
+  -- exact value, and the source artifacts the claimed rows were derived from travel with
+  -- them. A version 1 payload names none of that, so it is REFUSED -- it cannot be
+  -- completed without inventing where each row came from.
+  IF (p_payload ->> 'claimPayloadVersion') IS DISTINCT FROM '2' THEN
     RAISE EXCEPTION 'claim_local_household: unsupported claimPayloadVersion %',
       COALESCE(p_payload ->> 'claimPayloadVersion', '(absent)') USING errcode = '22023';
   END IF;
@@ -2678,6 +5064,36 @@ BEGIN
     END IF;
   END LOOP;
 
+  -- The PROVENANCE CLOSURE. Every carried row must say where it came from, and the
+  -- artifacts they name join the closure. A rehearsal's provenance is refused outright,
+  -- as the demo origin is: a claim never quietly launders a demo row into a real one.
+  FOR v_obj IN
+    SELECT e.value FROM jsonb_array_elements(COALESCE(p_payload -> 'tasks', '[]'::jsonb)) e
+     WHERE (e.value ->> 'localId') = ANY (v_need_tasks)
+    UNION ALL
+    SELECT e.value FROM jsonb_array_elements(COALESCE(p_payload -> 'needsMeItems', '[]'::jsonb)) e
+     WHERE (e.value ->> 'localId') = ANY (v_need_items)
+    UNION ALL
+    SELECT e.value FROM jsonb_array_elements(COALESCE(p_payload -> 'categories', '[]'::jsonb)) e
+     WHERE (e.value ->> 'localId') = ANY (v_need_cats)
+    UNION ALL
+    SELECT e.value FROM jsonb_array_elements(COALESCE(p_payload -> 'oneMoves', '[]'::jsonb)) e
+  LOOP
+    IF COALESCE(v_obj ->> 'producer', '') = '' THEN
+      RAISE EXCEPTION 'claim_local_household: row % states no provenance', v_obj ->> 'localId'
+        USING errcode = '22023',
+              detail = jsonb_build_object('reason', 'missing_provenance', 'local_id', v_obj ->> 'localId')::text;
+    END IF;
+    IF (v_obj ->> 'producer') = 'demo-seed' THEN
+      RAISE EXCEPTION 'claim_local_household: row % is demo data', v_obj ->> 'localId'
+        USING errcode = '22023',
+              detail = jsonb_build_object('reason', 'demo_provenance', 'local_id', v_obj ->> 'localId')::text;
+    END IF;
+    IF (v_obj ->> 'sourceArtifactLocalId') IS NOT NULL THEN
+      v_need_artifacts := v_need_artifacts || (v_obj ->> 'sourceArtifactLocalId');
+    END IF;
+  END LOOP;
+
   -- ==========================================================================
   -- 2. BOUNDEDNESS. "Claim is not sync" as an executable invariant.
   --    Extras are REJECTED, not ignored -- ignoring them would let a client
@@ -2722,6 +5138,50 @@ BEGIN
             detail = jsonb_build_object('reason', 'overbroad_payload', 'collection', 'childMembers',
                                         'unrequired_local_ids', to_jsonb(v_extra))::text;
   END IF;
+
+  SELECT COALESCE(array_agg(t ->> 'localId'), '{}'::text[]) INTO v_extra
+  FROM jsonb_array_elements(COALESCE(p_payload -> 'sourceArtifacts', '[]'::jsonb)) t
+  WHERE NOT ((t ->> 'localId') = ANY (v_need_artifacts));
+  IF array_length(v_extra, 1) > 0 THEN
+    RAISE EXCEPTION 'claim_local_household: payload carries % source artifact(s) no claimed row was derived from', array_length(v_extra, 1)
+      USING errcode = '22023',
+            detail = jsonb_build_object('reason', 'overbroad_payload', 'collection', 'sourceArtifacts',
+                                        'unrequired_local_ids', to_jsonb(v_extra))::text;
+  END IF;
+
+  -- ==========================================================================
+  -- 2B. SOURCE ARTIFACTS. Before anything that names one. An artifact linked to an
+  --     external reference, or one a connector delivered, is REFUSED: nothing may
+  --     enter the cloud through claim as though it had been observed elsewhere, and
+  --     no connector exists to have produced one honestly.
+  -- ==========================================================================
+  FOREACH v_lid IN ARRAY v_need_artifacts
+  LOOP
+    PERFORM 1 FROM public.source_artifacts WHERE household_id = v_household AND profile_id = v_uid AND local_id = v_lid;
+    IF FOUND THEN CONTINUE; END IF;
+
+    SELECT t INTO v_obj FROM jsonb_array_elements(COALESCE(p_payload -> 'sourceArtifacts', '[]'::jsonb)) t
+    WHERE t ->> 'localId' = v_lid;
+    IF v_obj IS NULL THEN
+      RAISE EXCEPTION 'claim_local_household: source artifact % is named by a claimed row but was not supplied', v_lid
+        USING errcode = '22023',
+              detail = jsonb_build_object('reason', 'missing_dependency', 'collection', 'sourceArtifacts',
+                                          'local_id', v_lid)::text;
+    END IF;
+    IF (v_obj ->> 'externalReferenceLocalId') IS NOT NULL OR (v_obj ->> 'origin') = 'connector' THEN
+      RAISE EXCEPTION 'claim_local_household: source artifact % came from an external system and cannot be claimed', v_lid
+        USING errcode = '22023',
+              detail = jsonb_build_object('reason', 'external_artifact_not_claimable', 'artifact_local_id', v_lid)::text;
+    END IF;
+
+    INSERT INTO public.source_artifacts
+      (household_id, local_id, origin_device_id, profile_id, kind, origin, provider, received_at,
+       content_digest, content_ref, retracted_at, scope, origin_created_at)
+    VALUES (v_household, v_lid, p_device_id, v_uid, v_obj ->> 'kind', v_obj ->> 'origin', v_obj ->> 'provider',
+            (v_obj ->> 'receivedAt')::timestamptz, v_obj ->> 'contentDigest', v_obj ->> 'contentRef',
+            (v_obj ->> 'retractedAt')::timestamptz, 'personal', (v_obj ->> 'originCreatedAt')::timestamptz)
+    ON CONFLICT (household_id, profile_id, local_id) DO NOTHING;
+  END LOOP;
 
   -- ==========================================================================
   -- 3. CHILD MEMBERS. First, because a category or a task may name one.
@@ -2815,11 +5275,14 @@ BEGIN
 
     BEGIN
       INSERT INTO public.household_categories
-        (household_id, local_id, origin_device_id, owner_profile_id, name, system_role, status, sort_order, scope)
+        (household_id, local_id, origin_device_id, owner_profile_id, name, system_role, status, sort_order, scope,
+         producer, source_artifact_id, confidence)
       VALUES (v_household, v_lid, p_device_id,
               CASE WHEN v_scope IN ('personal', 'professional', 'coparent-shared') THEN v_uid ELSE NULL END,
               v_obj ->> 'name', NULLIF(v_obj ->> 'systemRole', ''), v_obj ->> 'status',
-              (v_obj ->> 'sortOrder')::integer, v_scope)
+              (v_obj ->> 'sortOrder')::integer, v_scope,
+              v_obj ->> 'producer', private.claim_artifact_id(v_household, v_uid, v_obj ->> 'sourceArtifactLocalId'),
+              v_obj ->> 'confidence')
       ON CONFLICT (household_id, local_id) DO NOTHING;
     EXCEPTION WHEN unique_violation THEN
       -- sort_order and system_role carry their own NON-DEFERRABLE uniqueness.
@@ -2882,7 +5345,11 @@ BEGIN
     INSERT INTO public.tasks
       (household_id, local_id, origin_device_id, owner_profile_id, title, category_id,
        subject_member_id, duration_minutes, commitment, due_date, plan_kind, planned_date,
-       planned_starts_at, notes, status, completed_at, scope, origin_created_at, origin_updated_at)
+       planned_starts_at, notes, status, completed_at, scope, origin_created_at, origin_updated_at,
+       producer, source_artifact_id, confidence,
+       due_at, earliest_start_at, latest_finish_at, splittable, min_chunk_minutes, preferred_time_of_day,
+       energy_demand, consequence, needs_me_personally, travel_minutes_before, travel_minutes_after,
+       preparation_minutes, value_amount_minor, value_currency, value_direction)
     VALUES (v_household, v_lid, p_device_id,
             CASE WHEN v_scope IN ('personal', 'professional', 'coparent-shared') THEN v_uid ELSE NULL END,
             v_obj ->> 'title', v_cat_id, v_child_id,
@@ -2890,7 +5357,18 @@ BEGIN
             (v_obj ->> 'dueDate')::date, v_obj ->> 'planKind',
             (v_obj ->> 'plannedDate')::date, (v_obj ->> 'plannedStartsAt')::timestamptz,
             v_obj ->> 'notes', v_obj ->> 'status', (v_obj ->> 'completedAt')::timestamptz,
-            v_scope, (v_obj ->> 'originCreatedAt')::timestamptz, (v_obj ->> 'originUpdatedAt')::timestamptz)
+            v_scope, (v_obj ->> 'originCreatedAt')::timestamptz, (v_obj ->> 'originUpdatedAt')::timestamptz,
+            v_obj ->> 'producer', private.claim_artifact_id(v_household, v_uid, v_obj ->> 'sourceArtifactLocalId'),
+            v_obj ->> 'confidence',
+            -- The commitment facets travel with the task. NULL means "not known", and stays NULL.
+            (v_obj ->> 'dueAt')::timestamptz, (v_obj ->> 'earliestStartAt')::timestamptz,
+            (v_obj ->> 'latestFinishAt')::timestamptz, (v_obj ->> 'splittable')::boolean,
+            (v_obj ->> 'minChunkMinutes')::integer, v_obj ->> 'preferredTimeOfDay',
+            v_obj ->> 'energyDemand', v_obj ->> 'consequence', (v_obj ->> 'needsMePersonally')::boolean,
+            (v_obj ->> 'travelMinutesBefore')::integer, (v_obj ->> 'travelMinutesAfter')::integer,
+            (v_obj ->> 'preparationMinutes')::integer,
+            (v_obj -> 'value' ->> 'amountMinor')::bigint, v_obj -> 'value' ->> 'currency',
+            v_obj -> 'value' ->> 'direction')
     ON CONFLICT (household_id, local_id) DO NOTHING;
   END LOOP;
 
@@ -2927,10 +5405,12 @@ BEGIN
 
     INSERT INTO public.needs_me_items
       (household_id, local_id, origin_device_id, profile_id, title, status, due_date,
-       category_id, scope, origin_created_at)
+       category_id, scope, origin_created_at, producer, source_artifact_id, confidence)
     VALUES (v_household, v_lid, p_device_id, v_uid, v_obj ->> 'title', v_obj ->> 'status',
             (v_obj ->> 'dueDate')::date, v_cat_id, COALESCE(v_obj ->> 'scope', 'personal'),
-            (v_obj ->> 'originCreatedAt')::timestamptz)
+            (v_obj ->> 'originCreatedAt')::timestamptz,
+            v_obj ->> 'producer', private.claim_artifact_id(v_household, v_uid, v_obj ->> 'sourceArtifactLocalId'),
+            v_obj ->> 'confidence')
     ON CONFLICT (household_id, profile_id, local_id) DO NOTHING;
   END LOOP;
 
@@ -2991,7 +5471,8 @@ BEGIN
 
     INSERT INTO public.one_move_records
       (household_id, local_id, origin_device_id, profile_id, logical_day,
-       target_type, target_task_id, target_needs_me_id, status, decided_at, completed_at, cleared_at)
+       target_type, target_task_id, target_needs_me_id, status, decided_at, completed_at, cleared_at,
+       producer, source_artifact_id, confidence)
     VALUES (
       v_household,
       v_move ->> 'localId',
@@ -3004,7 +5485,10 @@ BEGIN
       v_move ->> 'status',
       (v_move ->> 'decidedAt')::timestamptz,
       (v_move ->> 'completedAt')::timestamptz,
-      (v_move ->> 'clearedAt')::timestamptz);
+      (v_move ->> 'clearedAt')::timestamptz,
+      v_move ->> 'producer',
+      private.claim_artifact_id(v_household, v_uid, v_move ->> 'sourceArtifactLocalId'),
+      v_move ->> 'confidence');
   END LOOP;
 
   UPDATE public.account_claims
@@ -3016,6 +5500,7 @@ BEGIN
            'tasks',          COALESCE(array_length(v_need_tasks, 1), 0),
            'needs_me_items', COALESCE(array_length(v_need_items, 1), 0),
            'one_moves',      jsonb_array_length(COALESCE(p_payload -> 'oneMoves', '[]'::jsonb)),
+           'source_artifacts', COALESCE(array_length(v_need_artifacts, 1), 0),
            'payload_digest', v_digest)
    WHERE id = v_claim.id;
 
@@ -3031,8 +5516,14 @@ $fn$;
 -- The cursor axis is committed_xid, never seq: see the proof in
 -- BUILD4_SD4_CLOUD_SCHEMA.md section 6.3. Rows are re-read by the device, so
 -- at-least-once delivery at the boundary is safe and loss is not.
+--
+-- The household is EXPLICIT. A device says which household it is pulling for
+-- (p_household_id) and private.resolve_household_context refuses one the caller does
+-- not belong to. Omitting it is honoured only when the caller belongs to exactly one
+-- household; with several it is refused as ambiguous rather than answered with
+-- whichever the planner returned first.
 -- ----------------------------------------------------------------------------
-CREATE FUNCTION public.sync_pull(p_cursor xid8 DEFAULT '0'::xid8)
+CREATE FUNCTION public.sync_pull(p_cursor xid8 DEFAULT '0'::xid8, p_household_id uuid DEFAULT NULL)
   RETURNS jsonb
   LANGUAGE plpgsql
   SECURITY INVOKER
@@ -3040,6 +5531,7 @@ CREATE FUNCTION public.sync_pull(p_cursor xid8 DEFAULT '0'::xid8)
 AS $fn$
 DECLARE
   v_barrier xid8 := pg_snapshot_xmin(pg_current_snapshot());
+  v_house   uuid := private.resolve_household_context(p_household_id);
   v_rows    jsonb;
 BEGIN
   SELECT COALESCE(jsonb_agg(jsonb_build_object(
@@ -3050,7 +5542,7 @@ BEGIN
          ) ORDER BY c.committed_xid, c.seq), '[]'::jsonb)
     INTO v_rows
     FROM public.change_log c
-   WHERE c.household_id = private.current_household_id()
+   WHERE c.household_id = v_house
      AND c.committed_xid >= p_cursor
      AND c.committed_xid <  v_barrier;
 
@@ -3125,11 +5617,22 @@ BEGIN
   -- Which column carries the owner half of the uniqueness boundary, when the
   -- table has one. The ledger names it actor_profile_id, because the question
   -- it answers is who ACTED, not who owns.
-  v_owner_col := CASE p_entity_table
-                   WHEN 'one_move_records' THEN 'profile_id'
-                   WHEN 'needs_me_items'   THEN 'profile_id'
-                   WHEN 'discovery_records' THEN 'profile_id'
-                   WHEN 'action_records'   THEN 'actor_profile_id'
+  --
+  -- Foundation tables (B4-FOUNDATION-BUILDOUT-01) are owner-private, so they key on
+  -- profile_id. Executions and outcomes are ABSENT: they are written by the trusted
+  -- server boundary, never pushed, and a device asking to push one is refused here
+  -- as well as by the missing grant and policy.
+  v_owner_col := CASE
+                   WHEN p_entity_table = 'action_records' THEN 'actor_profile_id'
+                   WHEN p_entity_table = ANY (ARRAY[
+                        'one_move_records', 'needs_me_items', 'discovery_records',
+                        'source_artifacts', 'interpretations', 'external_references',
+                        'behavior_observations', 'automation_authorities', 'action_intents',
+                        'intent_decisions', 'household_people', 'responsibilities',
+                        'dependencies', 'recurrence_rules', 'goals',
+                        'system_steps', 'capacity_profiles', 'patterns',
+                        'evidence_links'
+                        ]) THEN 'profile_id'
                  END;
   v_owner_private := v_owner_col IS NOT NULL;
   IF NOT v_owner_private
@@ -3139,9 +5642,10 @@ BEGIN
       USING errcode = '22023';
   END IF;
 
-  -- The action ledger is immutable and carries no revision column. Everything
-  -- else does, and the caller needs it as the base for its next CAS.
-  v_has_revision := p_entity_table <> 'action_records';
+  -- The action ledger and the other append-only evidence tables carry no revision
+  -- column. Everything else does, and the caller needs it as the base for its next CAS.
+  v_has_revision := p_entity_table <> ALL (ARRAY['action_records', 'behavior_observations', 'action_intents',
+                                                  'intent_decisions', 'evidence_links']);
 
   v_house := (p_row ->> 'household_id')::uuid;
   v_local := p_row ->> 'local_id';
@@ -3197,7 +5701,7 @@ BEGIN
   -- clear answer instead of a privilege error, and keeps this function honest
   -- about what it is allowed to write.
   v_clean := (p_row - 'id' - 'revision' - 'created_at' - 'updated_at'
-                    - 'subject_member_type' - 'logical_day' - 'timezone_at_decision')
+                    - 'subject_member_type' - 'responsible_child_type' - 'logical_day' - 'timezone_at_decision')
              || jsonb_build_object('local_id', v_local_out)
              || jsonb_build_object('origin_device_id', p_device_id);
 
@@ -3231,11 +5735,11 @@ GRANT EXECUTE ON FUNCTION public.sync_push(text, uuid, jsonb) TO authenticated;
 -- without these the entry points are simply uncallable (NHR-03, by design).
 REVOKE ALL ON FUNCTION public.bootstrap_account(uuid, text, uuid)                 FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public.claim_local_household(uuid, text, jsonb, uuid)      FROM PUBLIC, anon;
-REVOKE ALL ON FUNCTION public.sync_pull(xid8)                                     FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION public.sync_pull(xid8, uuid)                                FROM PUBLIC, anon;
 
 GRANT EXECUTE ON FUNCTION public.bootstrap_account(uuid, text, uuid)              TO authenticated;
 GRANT EXECUTE ON FUNCTION public.claim_local_household(uuid, text, jsonb, uuid)   TO authenticated;
-GRANT EXECUTE ON FUNCTION public.sync_pull(xid8)                                  TO authenticated;
+GRANT EXECUTE ON FUNCTION public.sync_pull(xid8, uuid)                             TO authenticated;
 
 -- ============================================================================
 -- 11. FAIL-CLOSED ASSERTION — run last, so a mistake above cannot complete.

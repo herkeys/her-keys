@@ -1,4 +1,12 @@
 import { z } from 'zod';
+import {
+  EXISTING_FACETS,
+  FOUNDATION_KIND_NAMES,
+  FOUNDATION_SPECS,
+  updatableColumnsOf,
+  type FoundationKind,
+  type FoundationSpec,
+} from './foundationSpecs';
 
 /**
  * The sync vocabulary.
@@ -18,7 +26,7 @@ import { z } from 'zod';
  * (B4-P0-019 — "ordinary client sync can never create, change or remove a
  * membership"); `change_log` is transport; `account_claims` is server-only.
  */
-export const SYNC_ENTITY_KINDS = [
+export const CORE_SYNC_KINDS = [
   'category',
   'event',
   'task',
@@ -30,7 +38,19 @@ export const SYNC_ENTITY_KINDS = [
   'onboarding',
   'action',
 ] as const;
+export type CoreSyncKind = (typeof CORE_SYNC_KINDS)[number];
+
+/**
+ * Core kinds plus the eighteen the foundation buildout adds (B4-FOUNDATION-BUILDOUT-01). The foundation
+ * kinds are described ONCE, in `foundationSpecs.ts`, and everything below that is per-kind is derived from
+ * that description — the table, the identity column, the operations, the columns a client may update and
+ * the dependency rank — so the migration, the projection and this file cannot disagree.
+ */
+export const SYNC_ENTITY_KINDS = [...CORE_SYNC_KINDS, ...FOUNDATION_KIND_NAMES] as const;
 export type SyncEntityKind = (typeof SYNC_ENTITY_KINDS)[number];
+
+const fromFoundation = <T>(pick: (spec: FoundationSpec) => T): Record<FoundationKind, T> =>
+  Object.fromEntries(FOUNDATION_SPECS.map((spec) => [spec.kind, pick(spec)])) as Record<FoundationKind, T>;
 
 /**
  * Kinds that carry a local/cloud mapping but never travel through the sync
@@ -45,6 +65,7 @@ export type MappedKind = SyncEntityKind | MappingOnlyKind;
 
 /** Cloud table per kind. The matrix, executable. */
 export const CLOUD_TABLE: Record<SyncEntityKind, string> = {
+  ...fromFoundation((spec) => spec.table),
   category: 'household_categories',
   event: 'events',
   task: 'tasks',
@@ -66,6 +87,7 @@ export const CLOUD_TABLE: Record<SyncEntityKind, string> = {
  * that does not exist.
  */
 export const IDENTITY_COLUMN: Record<SyncEntityKind, string> = {
+  ...fromFoundation(() => 'id'),
   category: 'id',
   event: 'id',
   task: 'id',
@@ -91,6 +113,9 @@ export const IDENTITY_COLUMN: Record<SyncEntityKind, string> = {
  * privilege, so this wave does not invent removal for them.
  */
 export const ALLOWED_OPS: Record<SyncEntityKind, readonly SyncOp[]> = {
+  // A server-written kind (an execution, an outcome) is never pushed: a device cannot forge one.
+  // An append-only kind is created and never edited.
+  ...fromFoundation((spec): readonly SyncOp[] => (spec.serverWritten ? [] : spec.mutable ? ['create', 'update'] : ['create'])),
   category: ['create', 'update'],
   event: ['create', 'update'],
   task: ['create', 'update'],
@@ -115,21 +140,37 @@ export const ALLOWED_OPS: Record<SyncEntityKind, readonly SyncOp[]> = {
  * `action` has an empty list on purpose: the ledger is immutable and has no
  * UPDATE grant at all.
  */
+/**
+ * The columns the nine content kinds gained. A client states where a row came from when it creates it
+ * (`producer`, `source_artifact_id`, `confidence`) and may afterwards move only its confidence; the facet
+ * columns are editable like any other field. Derived from the manifest so it matches the generated grants.
+ */
+const existingUpdatable = (kind: keyof typeof EXISTING_FACETS | 'category' | 'needsMe' | 'oneMove' | 'discovery' | 'onboarding'): string[] => [
+  'confidence',
+  ...((EXISTING_FACETS as Record<string, ReadonlyArray<{ col: string; type: string; prefix?: string }>>)[kind] ?? []).flatMap((f) =>
+    f.type === 'money' ? [`${f.prefix}_amount_minor`, `${f.prefix}_currency`, `${f.prefix}_direction`] : [f.col]
+  ),
+];
+const merged = (columns: readonly string[], kind: Parameters<typeof existingUpdatable>[0]): string[] =>
+  [...columns, ...existingUpdatable(kind)].sort();
+
 export const UPDATABLE_COLUMNS: Record<SyncEntityKind, readonly string[]> = {
-  category: ['name', 'origin_updated_at', 'sort_order', 'status', 'subject_member_id', 'system_role'],
-  event: ['category_id', 'commitment', 'ends_at', 'location', 'notes', 'origin_updated_at',
-          'preparation_minutes', 'scope', 'starts_at', 'status', 'subject_member_id', 'title',
-          'travel_minutes_after', 'travel_minutes_before'],
-  task: ['category_id', 'commitment', 'completed_at', 'due_date', 'duration_minutes', 'notes',
-         'origin_updated_at', 'plan_kind', 'planned_date', 'planned_starts_at', 'scope', 'status',
-         'subject_member_id', 'title'],
-  system: ['category_id', 'description', 'name', 'origin_updated_at', 'scope', 'subject_member_id'],
-  meal: ['category_id', 'meal_date', 'origin_updated_at', 'scope', 'subject_member_id', 'title'],
-  needsMe: ['category_id', 'due_date', 'status', 'title'],
-  oneMove: ['cleared_at', 'completed_at', 'decided_at', 'status', 'target_needs_me_id',
-            'target_task_id', 'target_type'],
-  discovery: ['deleted_at', 'local_id', 'topic_id'],
-  onboarding: ['completed_at', 'goal_ids', 'last_step', 'strength_ids', 'struggle_ids'],
+  ...fromFoundation((spec) => updatableColumnsOf(spec)),
+  category: merged(['name', 'origin_updated_at', 'sort_order', 'status', 'subject_member_id', 'system_role'], 'category'),
+  event: merged(['category_id', 'commitment', 'ends_at', 'location', 'notes', 'origin_updated_at',
+                 'preparation_minutes', 'scope', 'starts_at', 'status', 'subject_member_id', 'title',
+                 'travel_minutes_after', 'travel_minutes_before'], 'event'),
+  task: merged(['category_id', 'commitment', 'completed_at', 'due_date', 'duration_minutes', 'notes',
+                'origin_updated_at', 'plan_kind', 'planned_date', 'planned_starts_at', 'scope', 'status',
+                'subject_member_id', 'title'], 'task'),
+  system: merged(['category_id', 'description', 'name', 'origin_updated_at', 'scope', 'subject_member_id'], 'system'),
+  meal: merged(['category_id', 'meal_date', 'origin_updated_at', 'scope', 'subject_member_id', 'title'], 'meal'),
+  needsMe: merged(['category_id', 'due_date', 'status', 'title'], 'needsMe'),
+  oneMove: merged(['cleared_at', 'completed_at', 'decided_at', 'status', 'target_needs_me_id',
+                   'target_task_id', 'target_type', 'target_event_id', 'target_system_id',
+                   'target_responsibility_id'], 'oneMove'),
+  discovery: merged(['deleted_at', 'local_id', 'topic_id'], 'discovery'),
+  onboarding: merged(['completed_at', 'goal_ids', 'last_step', 'strength_ids', 'struggle_ids'], 'onboarding'),
   action: [],
 };
 
@@ -152,16 +193,20 @@ export type SyncOp = (typeof SYNC_OPS)[number];
  * accident.
  */
 export const DEPENDENCY_RANK: Record<SyncEntityKind, number> = {
-  category: 0,
-  task: 1,
-  needsMe: 1,
-  event: 1,
-  system: 1,
-  meal: 1,
-  discovery: 1,
-  onboarding: 1,
-  oneMove: 2,
-  action: 3,
+  // Every synced row names its source artifact, so artifacts come first; a One Move can name a
+  // responsibility, so it comes after the foundation kinds at rank 3. The foundation kinds carry
+  // their own rank in the manifest, and a test derives the reference graph and holds them to it.
+  ...fromFoundation((spec) => spec.rank),
+  category: 1,
+  task: 2,
+  needsMe: 2,
+  event: 2,
+  system: 2,
+  meal: 2,
+  discovery: 2,
+  onboarding: 2,
+  oneMove: 4,
+  action: 5,
 };
 
 // ---------------------------------------------------------------- bounds ----

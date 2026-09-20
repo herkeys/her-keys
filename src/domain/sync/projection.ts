@@ -1,4 +1,14 @@
 import type { AppState } from '../state';
+import { foundationToCloudRow, isFoundationKind } from './foundationProjection';
+import {
+  UnresolvedReferenceError,
+  childRef,
+  cloudRef,
+  facetColumns,
+  provenanceColumns,
+  require_,
+  type ProjectionContext,
+} from './projectionSupport';
 import { CLOUD_TABLE, mappingKey, type MappedKind, type Mapping, type SyncEntityKind, type SyncNamespace } from './syncTypes';
 
 /**
@@ -13,41 +23,13 @@ import { CLOUD_TABLE, mappingKey, type MappedKind, type Mapping, type SyncEntity
  * `created_at`, `updated_at`, `subject_member_type`, and One Move's
  * `logical_day` and `timezone_at_decision`. The column grants would refuse them,
  * and sending them anyway would be asking to be refused.
+ *
+ * Every row states where it came from (`producer`, `source_artifact_id`,
+ * `confidence`) and the commitment facets it can answer. The eighteen foundation
+ * kinds are projected by `foundationProjection.ts`, from the manifest.
  */
 
-export interface ProjectionContext {
-  householdId: string;
-  profileId: string;
-  namespace: SyncNamespace;
-}
-
-/** Resolve a local reference to the cloud uuid the server expects (SD4-007). */
-function cloudRef(ctx: ProjectionContext, kind: MappedKind, localId: string | null): string | null {
-  if (localId === null) return null;
-  return ctx.namespace.mappings[mappingKey(kind, localId)]?.cloudId ?? null;
-}
-
-/** The child member's cloud uuid. Children arrive through claim, never through sync. */
-function childRef(ctx: ProjectionContext, localId: string | null): string | null {
-  if (localId === null) return null;
-  return ctx.namespace.mappings[mappingKey('member', localId)]?.cloudId ?? null;
-}
-
-export class UnresolvedReferenceError extends Error {
-  // Written out rather than declared as parameter properties: the test runner
-  // strips types without transforming, and a parameter property is a transform.
-  kind: SyncEntityKind;
-  localId: string;
-  missing: string;
-
-  constructor(kind: SyncEntityKind, localId: string, missing: string) {
-    super(`${kind} ${localId} needs ${missing}, which has no cloud mapping yet`);
-    this.name = 'UnresolvedReferenceError';
-    this.kind = kind;
-    this.localId = localId;
-    this.missing = missing;
-  }
-}
+export { UnresolvedReferenceError, type ProjectionContext };
 
 /**
  * Build the cloud row for one local entity.
@@ -58,6 +40,8 @@ export class UnresolvedReferenceError extends Error {
  * resolve into durable evidence instead.
  */
 export function toCloudRow(state: AppState, ctx: ProjectionContext, kind: SyncEntityKind, localId: string): Record<string, unknown> {
+  if (isFoundationKind(kind)) return foundationToCloudRow(state, ctx, kind, localId);
+
   const base = { household_id: ctx.householdId, local_id: localId };
 
   switch (kind) {
@@ -71,6 +55,7 @@ export function toCloudRow(state: AppState, ctx: ProjectionContext, kind: SyncEn
         status: row.status,
         sort_order: row.sortOrder,
         scope: row.scope,
+        ...provenanceColumns(ctx, kind, localId, row.provenance),
       };
     }
 
@@ -100,6 +85,8 @@ export function toCloudRow(state: AppState, ctx: ProjectionContext, kind: SyncEn
         scope: row.scope,
         origin_created_at: row.createdAt,
         origin_updated_at: row.updatedAt,
+        ...provenanceColumns(ctx, kind, localId, row.provenance),
+        ...facetColumns('task', row),
       };
     }
 
@@ -129,6 +116,8 @@ export function toCloudRow(state: AppState, ctx: ProjectionContext, kind: SyncEn
         scope: row.scope,
         origin_created_at: row.createdAt,
         origin_updated_at: row.updatedAt,
+        ...provenanceColumns(ctx, kind, localId, row.provenance),
+        ...facetColumns('event', row),
       };
     }
 
@@ -143,6 +132,8 @@ export function toCloudRow(state: AppState, ctx: ProjectionContext, kind: SyncEn
         description: row.description,
         category_id: category,
         scope: row.scope,
+        ...provenanceColumns(ctx, kind, localId, row.provenance),
+        ...facetColumns('system', row),
       };
     }
 
@@ -157,6 +148,8 @@ export function toCloudRow(state: AppState, ctx: ProjectionContext, kind: SyncEn
         meal_date: row.date,
         category_id: category,
         scope: row.scope,
+        ...provenanceColumns(ctx, kind, localId, row.provenance),
+        ...facetColumns('meal', row),
       };
     }
 
@@ -175,16 +168,24 @@ export function toCloudRow(state: AppState, ctx: ProjectionContext, kind: SyncEn
         category_id: category,
         scope: row.scope,
         origin_created_at: row.createdAt,
+        ...provenanceColumns(ctx, kind, localId, row.provenance),
       };
     }
 
     case 'oneMove': {
       const row = require_(state.oneMoves.find((o) => o.id === localId), kind, localId);
       const targeted = row.status === 'selected' || row.status === 'completed';
-      let target: string | null = null;
-      if (targeted && row.targetId !== null) {
-        target = cloudRef(ctx, row.targetType === 'task' ? 'task' : 'needsMe', row.targetId);
+      // One Move names one of five kinds of thing, each through its OWN typed column. `catalog` has
+      // no column: the catalog exists only in a demo household, which never syncs.
+      const targets: Record<string, string | null> = {
+        task: null, needsMe: null, event: null, system: null, responsibility: null,
+      };
+      if (targeted && row.targetId !== null && row.targetType in targets) {
+        const target = cloudRef(ctx, row.targetType as MappedKind, row.targetId);
         if (target === null) throw new UnresolvedReferenceError(kind, localId, `${row.targetType} ${row.targetId}`);
+        targets[row.targetType] = target;
+      } else if (targeted && row.targetId !== null) {
+        throw new UnresolvedReferenceError(kind, localId, `${row.targetType} ${row.targetId}`);
       }
       // logical_day and timezone_at_decision are absent on purpose. They are
       // granted on neither INSERT nor UPDATE; the server derives today's value
@@ -192,12 +193,16 @@ export function toCloudRow(state: AppState, ctx: ProjectionContext, kind: SyncEn
       return {
         ...base,
         profile_id: ctx.profileId,
-        target_type: row.targetType === 'needsMe' ? 'needsMe' : 'task',
-        target_task_id: row.targetType === 'task' ? target : null,
-        target_needs_me_id: row.targetType === 'needsMe' ? target : null,
+        target_type: row.targetType in targets ? row.targetType : 'task',
+        target_task_id: targets.task,
+        target_needs_me_id: targets.needsMe,
+        target_event_id: targets.event,
+        target_system_id: targets.system,
+        target_responsibility_id: targets.responsibility,
         status: row.status,
         decided_at: row.decidedAt,
         completed_at: row.completedAt,
+        ...provenanceColumns(ctx, kind, localId, row.provenance),
       };
     }
 
@@ -206,9 +211,16 @@ export function toCloudRow(state: AppState, ctx: ProjectionContext, kind: SyncEn
       // A cleared discovery is a tombstone, not an absence: a hard delete would
       // be invisible to a second device that is offline at the time (B4-P0-024).
       if (row === null || row.id !== localId) {
-        return { ...base, profile_id: ctx.profileId, topic_id: 'unknown', scope: 'personal', deleted_at: nowIso() };
+        // The row is gone locally, so what it was is unknown: the producer says so rather than inventing one.
+        return {
+          ...base, profile_id: ctx.profileId, topic_id: 'unknown', scope: 'personal', deleted_at: nowIso(),
+          producer: 'legacy-unknown', source_artifact_id: null, confidence: null,
+        };
       }
-      return { ...base, profile_id: ctx.profileId, topic_id: row.topicId, scope: row.scope, deleted_at: null };
+      return {
+        ...base, profile_id: ctx.profileId, topic_id: row.topicId, scope: row.scope, deleted_at: null,
+        ...provenanceColumns(ctx, kind, localId, row.provenance),
+      };
     }
 
     case 'onboarding': {
@@ -222,6 +234,7 @@ export function toCloudRow(state: AppState, ctx: ProjectionContext, kind: SyncEn
         last_step: row.lastStep,
         completed_at: row.completedAt,
         scope: row.scope,
+        ...provenanceColumns(ctx, kind, localId, row.provenance),
       };
     }
 
@@ -253,6 +266,9 @@ export function toCloudRow(state: AppState, ctx: ProjectionContext, kind: SyncEn
         origin_created_at: row.createdAt,
       };
     }
+
+    default:
+      throw new UnresolvedReferenceError(kind, localId, `a projection for ${kind}, which does not exist`);
   }
 }
 
@@ -261,11 +277,6 @@ function ownerFor(scope: string, profileId: string): string | null {
   return scope === 'personal' || scope === 'professional' || scope === 'coparent-shared' ? profileId : null;
 }
 
-/**
- * The action ledger's reason manifest carries references, and SD4-007 says a
- * durable cloud reference is a cloud uuid — never a local id, which is
- * device-relative and ambiguous the moment a second device exists.
- */
 /**
  * Which kind of row an action points at.
  *
@@ -303,13 +314,6 @@ function reasonWithCloudRefs(
     out[field] = mapped;
   }
   return out;
-}
-
-function require_<T>(value: T | undefined, kind: SyncEntityKind, localId: string): T {
-  if (value === undefined) {
-    throw new UnresolvedReferenceError(kind, localId, `the local ${kind} itself, which is no longer in state`);
-  }
-  return value;
 }
 
 function nowIso(): string {

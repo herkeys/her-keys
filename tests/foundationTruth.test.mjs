@@ -36,7 +36,6 @@ const artifact = (over = {}) => ({
   receivedAt: AT,
   contentDigest: DIGEST_A,
   contentRef: null,
-  externalReferenceId: null,
   retractedAt: null,
   createdAt: AT,
   scope: 'personal',
@@ -55,7 +54,6 @@ const reference = (over = {}) => ({
   lastObservedAt: AT,
   lastObservedDigest: DIGEST_A,
   linked: null,
-  writeExecutionId: null,
   writtenAt: null,
   status: 'active',
   createdAt: AT,
@@ -230,7 +228,7 @@ describe('B4-FE01-004 — external reference identity and feedback-loop preventi
     // Her Keys created this calendar entry itself.
     const written = reference({
       id: 'xref-out', origin: 'her-keys', direction: 'outbound', authority: 'her-keys', externalObjectId: 'evt-made-by-us',
-      writtenAt: AT, writeExecutionId: null, linked: { kind: 'event', id: 'evt-1' }, provenance: automationProvenance(),
+      writtenAt: AT, linked: { kind: 'event', id: 'evt-1' }, provenance: automationProvenance(),
     });
     assert.equal(ExternalReferenceSchema.safeParse(written).success, true);
 

@@ -1,4 +1,6 @@
 import type { AppState } from '../state';
+import { foundationLocalRow } from './foundationProjection';
+import { FOUNDATION_SPECS } from './foundationSpecs';
 import { emptyNamespace, mappingKey, type MappedKind, type Mapping, type SyncNamespace } from './syncTypes';
 
 /**
@@ -29,6 +31,10 @@ export function kindOfLocalId(state: AppState, localId: string): MappedKind | nu
   if (state.oneMoves.some((row) => row.id === localId)) return 'oneMove';
   if (state.discovery?.id === localId) return 'discovery';
   if (state.actions.some((row) => row.id === localId)) return 'action';
+  // The foundation kinds (a claim carries the source artifacts its rows were derived from).
+  for (const spec of FOUNDATION_SPECS) {
+    if (foundationLocalRow(state, spec.kind, localId) !== undefined) return spec.kind;
+  }
   return null;
 }
 

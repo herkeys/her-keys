@@ -74,9 +74,9 @@ export function createSupabaseSyncTransport(client: SupabaseClient): SyncTranspo
       }
     },
 
-    async pull(cursor, limit) {
+    async pull(cursor, limit, householdId) {
       try {
-        const { data, error } = await client.rpc('sync_pull', { p_cursor: cursor });
+        const { data, error } = await client.rpc('sync_pull', { p_cursor: cursor, p_household_id: householdId });
         if (error) return failureFrom(error);
 
         const body = (data ?? {}) as Record<string, unknown>;
@@ -147,6 +147,16 @@ const DOMAIN_INVARIANTS = [
   'one_move_records_household_profile_logical_day_key',
   'household_categories_household_id_sort_order_key',
   'household_categories_system_role_uq',
+  // Foundation (B4-FOUNDATION-BUILDOUT-01): each of these is two devices deciding the same slot.
+  'intent_decisions_one_answer_uq',
+  'intent_decisions_one_withdrawal_uq',
+  'responsibilities_one_live_owner_uq',
+  'recurrence_rules_one_active_rule_uq',
+  'dependencies_live_edge_uq',
+  'capacity_profiles_owner_key',
+  'external_references_identity_key',
+  'source_artifacts_digest_uq',
+  'system_steps_system_position_key',
 ];
 
 function isDomainInvariant(detail: string): boolean {

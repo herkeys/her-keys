@@ -20,6 +20,13 @@ import { Id, InstantSchema, OpenCode, Sha256Hex } from '../schemaPrimitives';
  * An artifact records arrival, not a claim, so it carries an `origin` of its own
  * rather than a provenance with a confidence. The claims made about it live on the
  * candidates and rows derived from it.
+ *
+ * It does NOT point at an external reference. The relation runs the other way — the
+ * external reference NAMES the artifact it was first observed in, as its provenance —
+ * because every synced row names its artifact and an external reference is linked to
+ * the rows built from it, so an artifact -> reference pointer would close a loop
+ * (task -> artifact -> reference -> task) that no push order can satisfy. One direction
+ * answers every question the other would have.
  */
 
 export const SOURCE_ARTIFACT_KINDS = [
@@ -54,8 +61,6 @@ export const SourceArtifactSchema = z
     /** Duplicate detection: the same digest for the same account is the same artifact. */
     contentDigest: Sha256Hex.nullable(),
     contentRef: ContentRef.nullable(),
-    /** The identity of the same object in an external system, once one is known. */
-    externalReferenceId: Id.nullable(),
     /** Set once when the source is withdrawn. The artifact itself is never edited or deleted. */
     retractedAt: InstantSchema.nullable(),
     createdAt: InstantSchema,

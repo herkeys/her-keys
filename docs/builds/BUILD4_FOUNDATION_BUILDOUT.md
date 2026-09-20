@@ -678,4 +678,6 @@ None was weakened. Each moved because a stored shape gained a required field, or
 
 ## 11. Out-of-scope findings (Addendum 01 A3)
 
-_None yet._
+| ID | Kind | Finding | Handling |
+|---|---|---|---|
+| OOS-001 | worktree provenance (not a product defect) | `app.json` gained `ios.bundleIdentifier: "com.herkeys.app"` at 15:45 on 2026-09-20, between the J2 and J3 commits. The change was made by something outside this wave (the file's mtime falls inside the session, and no step here writes it). `git add -A` swept it into J3 (`275ad1ad`). | **Left in place.** It may be the owner's own work (an iOS bundle identifier is what an EAS build needs), so reverting it would destroy someone's change; keeping it costs nothing. Staging is explicit from J4 onward so it cannot recur. The owner should confirm it is intended. It is not part of the 27-row scope and does not affect the schema fingerprint. |

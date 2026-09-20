@@ -111,7 +111,7 @@ describe('B4-BE02-OR-001 — claim payload closure', () => {
   test('the payload carries its explicit version and the true origin', () => {
     const payload = buildClaimPayload(crowdedHousehold());
     assert.equal(payload.claimPayloadVersion, CLAIM_PAYLOAD_VERSION);
-    assert.equal(payload.claimPayloadVersion, 1);
+    assert.equal(payload.claimPayloadVersion, 2, 'version 2 states provenance, facets and the artifact closure; version 1 is refused by the server');
     assert.equal(payload.origin, 'empty');
   });
 

@@ -58,7 +58,13 @@ export interface PullContext {
    * not know those rules; the caller does, and says so here so the displaced
    * intent becomes evidence rather than vanishing.
    */
-  displacedBy?: (state: AppState, kind: SyncEntityKind, localId: string, row: Record<string, unknown>) => string | null;
+  displacedBy?: (
+    state: AppState,
+    kind: SyncEntityKind,
+    localId: string,
+    row: Record<string, unknown>,
+    resolve: (cloudId: string | null | undefined) => string | null
+  ) => string | null;
   /** Mint a local id that is free in this namespace (SD4-006 pull side). */
   mintLocalId: (kind: SyncEntityKind, wanted: string) => string;
   batchSize?: number;
@@ -82,7 +88,7 @@ export type PullOutcome =
 
 export async function pullOnce(state: AppState, namespace: SyncNamespace, ctx: PullContext): Promise<PullOutcome> {
   const limit = ctx.batchSize ?? PULL_BATCH_SIZE;
-  const result = await ctx.transport.pull(namespace.cursor, limit);
+  const result = await ctx.transport.pull(namespace.cursor, limit, namespace.householdId);
 
   if (isFailure(result)) {
     if (result.failure === 'unauthorized') return { kind: 'paused', detail: result.detail };
@@ -117,7 +123,13 @@ export async function pullOnce(state: AppState, namespace: SyncNamespace, ctx: P
       return { kind: 'failed', detail: fetched.detail, retriable: fetched.failure !== 'forbidden' };
     }
 
-    for (const row of fetched.rows) {
+    // Oldest first. A row can point at an EARLIER row of its own kind (a correction names what it
+    // supersedes, a handoff names the one before it, an undo names what it undoes), and a reference
+    // only resolves once its target has been applied.
+    const ordered = [...fetched.rows].sort(
+      (a, b) => String(a.created_at ?? '').localeCompare(String(b.created_at ?? '')) || String(a.id ?? '').localeCompare(String(b.id ?? ''))
+    );
+    for (const row of ordered) {
       const applied = applyOne(nextState, nextNamespace, kind, row, ctx);
       nextState = applied.state;
       nextNamespace = applied.namespace;
@@ -286,7 +298,7 @@ function applyOne(
   // Something of hers may be displaced by this row under a domain uniqueness
   // rule. Record it BEFORE applying, so a decision that loses a race is kept as
   // evidence rather than simply disappearing from her household.
-  const displaced = ctx.displacedBy?.(state, kind, '', row) ?? null;
+  const displaced = ctx.displacedBy?.(state, kind, '', row, resolverFor(namespace)) ?? null;
   let carried = namespace;
   if (displaced !== null) {
     const at = new Date(ctx.now()).toISOString();
@@ -312,7 +324,14 @@ function applyOne(
   // DIFFERENT cloud row is never overwritten -- that would silently replace one
   // of her rows with somebody else's.
   const wanted = String(row.local_id ?? cloudId);
-  const taken = carried.mappings[mappingKey(kind, wanted)] !== undefined;
+  // Taken when a row of this kind already has that local id — mapped, OR waiting to be created by THIS
+  // device while the incoming row came from ANOTHER: a pending create is a different entity that happened
+  // to mint the same device-relative id (SD4-006). A row this device itself created and whose
+  // acknowledgement was lost is not a collision; it is ours coming home.
+  const fromAnotherDevice = row.origin_device_id !== undefined && row.origin_device_id !== null && String(row.origin_device_id) !== namespace.deviceId;
+  const taken =
+    carried.mappings[mappingKey(kind, wanted)] !== undefined ||
+    (fromAnotherDevice && carried.queue.some((q) => q.kind === kind && q.localId === wanted && q.op === 'create'));
   const localId = taken ? ctx.mintLocalId(kind, wanted) : wanted;
 
   return {

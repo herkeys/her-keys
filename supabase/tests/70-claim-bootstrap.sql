@@ -76,7 +76,7 @@ BEGIN;
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claims = '{"sub":"55555555-5555-4555-8555-555555555555"}';
 SELECT CASE WHEN (public.claim_local_household('eeeeeeee-0000-4000-8000-00000000000e'::uuid,'Europe/London',
-                    '{"claimPayloadVersion":1,"origin":"demo","oneMoves":[]}'::jsonb, NULL) ->> 'rejected_reason') = 'refused_demo'
+                    '{"claimPayloadVersion":2,"origin":"demo","oneMoves":[]}'::jsonb, NULL) ->> 'rejected_reason') = 'refused_demo'
             THEN 'PASS' ELSE 'FAIL' END || ' | a demo payload is refused fail-closed, not filtered (B4-P0-010)';
 COMMIT;
 
@@ -87,7 +87,7 @@ BEGIN;
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claims = '{"sub":"55555555-5555-4555-8555-555555555555"}';
 SELECT CASE WHEN (public.claim_local_household('eeeeeeee-0000-4000-8000-00000000001e'::uuid,'Europe/London',
-                    '{"claimPayloadVersion":1,"origin":"empty","oneMoves":[]}'::jsonb, NULL) ->> 'status') = 'complete'
+                    '{"claimPayloadVersion":2,"origin":"empty","oneMoves":[]}'::jsonb, NULL) ->> 'status') = 'complete'
             THEN 'PASS' ELSE 'FAIL' END || ' | a real (origin=empty) claim completes';
 COMMIT;
 
@@ -96,7 +96,7 @@ BEGIN;
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claims = '{"sub":"55555555-5555-4555-8555-555555555555"}';
 SELECT CASE WHEN herkeys_test.test_denied($q$
-  SELECT public.claim_local_household('eeeeeeee-0000-4000-8000-00000000002e'::uuid,'Not/A_Zone','{"claimPayloadVersion":1,"origin":"empty"}'::jsonb, NULL)
+  SELECT public.claim_local_household('eeeeeeee-0000-4000-8000-00000000002e'::uuid,'Not/A_Zone','{"claimPayloadVersion":2,"origin":"empty"}'::jsonb, NULL)
 $q$) THEN 'PASS' ELSE 'FAIL' END || ' | a malformed IANA timezone is rejected';
 SELECT CASE WHEN herkeys_test.test_denied($q$
   SELECT public.claim_local_household('eeeeeeee-0000-4000-8000-00000000003e'::uuid,'Europe/London','"not an object"'::jsonb, NULL)
@@ -136,7 +136,7 @@ BEGIN;
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claims = '{"sub":"55555555-5555-4555-8555-555555555555"}';
 SELECT CASE WHEN (public.claim_local_household('eeeeeeee-0000-4000-8000-00000000009e'::uuid,'Europe/London',
-        '{"claimPayloadVersion":1,"origin":"empty","oneMoves":[]}'::jsonb, NULL) ->> 'rejected_reason') = 'superseded_by_cloud'
+        '{"claimPayloadVersion":2,"origin":"empty","oneMoves":[]}'::jsonb, NULL) ->> 'rejected_reason') = 'superseded_by_cloud'
        THEN 'PASS' ELSE 'FAIL' END || ' | a new claim_key on an account that already has a household is superseded';
 COMMIT;
 
@@ -154,7 +154,7 @@ BEGIN;
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claims = '{"sub":"66666666-6666-4666-8666-666666666666"}';
 SELECT CASE WHEN (public.claim_local_household('ffffffff-0000-4000-8000-00000000000f'::uuid,'America/Chicago',
-        '{"claimPayloadVersion":1,"origin":"empty","oneMoves":[{"localId":"onemove-2026-09-18","logicalDay":"2026-09-18","status":"withheld","targetType":"task","targetLocalId":null,"decidedAt":"2026-09-18T12:00:00Z"}]}'::jsonb, NULL)
+        '{"claimPayloadVersion":2,"origin":"empty","oneMoves":[{"localId":"onemove-2026-09-18","producer":"user-action","logicalDay":"2026-09-18","status":"withheld","targetType":"task","targetLocalId":null,"decidedAt":"2026-09-18T12:00:00Z"}]}'::jsonb, NULL)
       ->> 'status') = 'complete' THEN 'PASS' ELSE 'FAIL' END || ' | historical One Move backfill accepted through the trusted path';
 COMMIT;
 
@@ -173,7 +173,7 @@ BEGIN;
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claims = '{"sub":"66666666-6666-4666-8666-666666666666"}';
 SELECT CASE WHEN (public.claim_local_household('ffffffff-0000-4000-8000-00000000000f'::uuid,'America/Chicago',
-        '{"claimPayloadVersion":1,"origin":"empty","oneMoves":[{"localId":"onemove-2026-09-18","logicalDay":"2026-09-18","status":"withheld","targetType":"task","targetLocalId":null,"decidedAt":"2026-09-18T12:00:00Z"}]}'::jsonb, NULL)
+        '{"claimPayloadVersion":2,"origin":"empty","oneMoves":[{"localId":"onemove-2026-09-18","producer":"user-action","logicalDay":"2026-09-18","status":"withheld","targetType":"task","targetLocalId":null,"decidedAt":"2026-09-18T12:00:00Z"}]}'::jsonb, NULL)
       ->> 'status') = 'complete' THEN 'PASS' ELSE 'FAIL' END
       || ' | retry with an IDENTICAL historical One Move is an idempotent replay, not a raw unique violation';
 COMMIT;
@@ -191,13 +191,13 @@ SET LOCAL request.jwt.claims = '{"sub":"66666666-6666-4666-8666-666666666666"}';
 -- path and is turned back by the stored row -- not refused earlier for naming no
 -- target at all, which is what the pre-correction version of this test did.
 SELECT CASE WHEN jsonb_array_length(public.claim_local_household('ffffffff-0000-4000-8000-00000000000f'::uuid,'America/Chicago',
-        $p${"claimPayloadVersion":1,"origin":"empty",
-            "categories":[{"localId":"cat-home","name":"Home","systemRole":"home","status":"active","sortOrder":1,"scope":"household"}],
-            "tasks":[{"localId":"task-f1","title":"Rinse the recycling","categoryLocalId":"cat-home","subjectMemberLocalId":null,
+        $p${"claimPayloadVersion":2,"origin":"empty",
+            "categories":[{"localId":"cat-home","producer":"user-action","name":"Home","systemRole":"home","status":"active","sortOrder":1,"scope":"household"}],
+            "tasks":[{"localId":"task-f1","producer":"user-action","title":"Rinse the recycling","categoryLocalId":"cat-home","subjectMemberLocalId":null,
                       "durationMinutes":10,"commitment":"flexible","dueDate":null,"planKind":"unplanned","plannedDate":null,
                       "plannedStartsAt":null,"notes":null,"status":"open","completedAt":null,
                       "originCreatedAt":null,"originUpdatedAt":null,"scope":"household"}],
-            "oneMoves":[{"localId":"onemove-2026-09-18","logicalDay":"2026-09-18","status":"selected","targetType":"task",
+            "oneMoves":[{"localId":"onemove-2026-09-18","producer":"user-action","logicalDay":"2026-09-18","status":"selected","targetType":"task",
                          "targetLocalId":"task-f1","decidedAt":"2026-09-18T12:00:00Z","completedAt":null}]}$p$::jsonb, NULL)
       -> 'conflict_evidence') = 1 THEN 'PASS' ELSE 'FAIL' END
       || ' | a MATERIALLY different historical One Move preserves conflict evidence instead of overwriting';

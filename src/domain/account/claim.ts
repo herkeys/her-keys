@@ -8,6 +8,8 @@ import type {
   VisibilityScope,
 } from '../state';
 import { resolveOnboardingOptionId, type OnboardingGroup } from '../../data/catalog/onboardingOptions';
+import type { Provenance } from '../foundation/provenance';
+import type { SourceArtifact } from '../foundation/sourceArtifact';
 import type { AccountId } from './identity';
 import type { ClaimKind, IdentityRecord, RejectedReason } from './binding';
 
@@ -158,25 +160,65 @@ export function normalizeOnboardingIds(state: AppState): NormalizedOnboarding {
 }
 
 /**
- * THE CLAIM PAYLOAD — `claimPayloadVersion: 1`.
+ * THE CLAIM PAYLOAD — `claimPayloadVersion: 2`.
  *
- * The first shipping claim payload contract (B4-BE02-OR-001). It carries the
- * historical One Move records and the MINIMUM TRANSITIVE DEPENDENCY SET that
- * makes them valid in the cloud, and nothing else:
+ * The first shipping claim payload contract (B4-BE02-OR-001), revised by
+ * B4-FOUNDATION-BUILDOUT-01. It carries the historical One Move records and the
+ * MINIMUM TRANSITIVE DEPENDENCY SET that makes them valid in the cloud, and nothing
+ * else:
  *
  *   One Move (selected|completed)
  *     -> task     -> category (the cloud column is NOT NULL)
  *                 -> child member, when the task names a child subject
+ *                 -> source artifact, when its provenance names one
  *     -> needsMe  -> category, only when the item actually has one
+ *                 -> source artifact, when its provenance names one
  *
- * Unrelated tasks, Needs Me items, categories and children are not sent, and
- * the server rejects a payload that carries them rather than ignoring the
- * extras. Everything else she owns — events, systems, meals, Discovery — is
+ * Unrelated tasks, Needs Me items, categories, children and artifacts are not
+ * sent, and the server rejects a payload that carries them rather than ignoring
+ * the extras. Everything else she owns — events, systems, meals, Discovery — is
  * B4-BACKEND-03's job. Claim is not sync.
+ *
+ * VERSION 2 differs from 1 in exactly three ways, and version 1 is REFUSED by the
+ * server (it names none of them, so it cannot be completed without inventing where
+ * each row came from):
+ *
+ *   1. every carried row states its PROVENANCE — producer, source artifact, confidence;
+ *   2. a task carries its commitment FACETS and exact value, so claiming a task
+ *      never silently drops what she recorded about it;
+ *   3. the SOURCE ARTIFACTS the carried rows were derived from travel with them, as
+ *      part of the closure rather than as a general upload.
  */
-export const CLAIM_PAYLOAD_VERSION = 1;
+export const CLAIM_PAYLOAD_VERSION = 2;
 
-export interface ClaimOneMove {
+/** A row's provenance, as the claim states it. The artifact is named by local id, like every other reference. */
+export interface ClaimProvenance {
+  producer: Provenance['producer'];
+  sourceArtifactLocalId: string | null;
+  confidence: Provenance['confidence'];
+}
+
+const claimProvenance = (provenance: Provenance): ClaimProvenance => ({
+  producer: provenance.producer,
+  sourceArtifactLocalId: provenance.artifactId,
+  confidence: provenance.confidence,
+});
+
+/** A source artifact in the closure. An artifact from an external system is sent truthfully and REFUSED by the server. */
+export interface ClaimSourceArtifact {
+  localId: string;
+  kind: SourceArtifact['kind'];
+  origin: SourceArtifact['origin'];
+  provider: string | null;
+  receivedAt: string;
+  contentDigest: string | null;
+  contentRef: string | null;
+  externalReferenceLocalId: string | null;
+  retractedAt: string | null;
+  originCreatedAt: string;
+}
+
+export interface ClaimOneMove extends ClaimProvenance {
   localId: string;
   logicalDay: string;
   targetType: 'task' | 'needsMe';
@@ -186,7 +228,24 @@ export interface ClaimOneMove {
   completedAt: string | null;
 }
 
-export interface ClaimTask {
+export interface ClaimTaskFacets {
+  dueAt: string | null;
+  earliestStartAt: string | null;
+  latestFinishAt: string | null;
+  splittable: boolean | null;
+  minChunkMinutes: number | null;
+  preferredTimeOfDay: Task['preferredTimeOfDay'];
+  energyDemand: Task['energyDemand'];
+  consequence: Task['consequence'];
+  needsMePersonally: boolean | null;
+  travelMinutesBefore: number | null;
+  travelMinutesAfter: number | null;
+  preparationMinutes: number | null;
+  /** Exact: minor units and currency, never a float. */
+  value: Task['value'];
+}
+
+export interface ClaimTask extends ClaimProvenance, ClaimTaskFacets {
   localId: string;
   title: string;
   categoryLocalId: string;
@@ -206,7 +265,7 @@ export interface ClaimTask {
   scope: VisibilityScope;
 }
 
-export interface ClaimNeedsMeItem {
+export interface ClaimNeedsMeItem extends ClaimProvenance {
   localId: string;
   title: string;
   status: NeedsMeItem['status'];
@@ -216,7 +275,7 @@ export interface ClaimNeedsMeItem {
   scope: 'personal';
 }
 
-export interface ClaimCategory {
+export interface ClaimCategory extends ClaimProvenance {
   localId: string;
   name: string;
   systemRole: string | null;
@@ -239,6 +298,7 @@ export interface ClaimPayload {
   tasks: ClaimTask[];
   needsMeItems: ClaimNeedsMeItem[];
   oneMoves: ClaimOneMove[];
+  sourceArtifacts: ClaimSourceArtifact[];
 }
 
 /** Local state contradicts something the app already guarantees about itself. */
@@ -278,6 +338,12 @@ export function buildClaimPayload(state: AppState): ClaimPayload {
   const needsMeById = new Map(state.needsMe.map((item) => [item.id, item]));
   const categoryById = new Map(state.categories.map((category) => [category.id, category]));
   const childById = new Map(state.children.map((child) => [child.id, child]));
+  const artifactById = new Map(state.sourceArtifacts.map((artifact) => [artifact.id, artifact]));
+
+  const neededArtifacts = new Set<string>();
+  const needArtifact = (provenance: Provenance) => {
+    if (provenance.artifactId !== null) neededArtifacts.add(provenance.artifactId);
+  };
 
   const neededTasks = new Set<string>();
   const neededItems = new Set<string>();
@@ -309,8 +375,10 @@ export function buildClaimPayload(state: AppState): ClaimPayload {
       status: record.status,
       decidedAt: record.decidedAt,
       completedAt: record.completedAt,
+      ...claimProvenance(record.provenance),
     };
   });
+  for (const record of state.oneMoves) needArtifact(record.provenance);
 
   const tasks: ClaimTask[] = [];
   for (const localId of neededTasks) {
@@ -335,7 +403,22 @@ export function buildClaimPayload(state: AppState): ClaimPayload {
       originCreatedAt: task.createdAt,
       originUpdatedAt: task.updatedAt,
       scope: task.scope,
+      ...claimProvenance(task.provenance),
+      dueAt: task.dueAt,
+      earliestStartAt: task.earliestStartAt,
+      latestFinishAt: task.latestFinishAt,
+      splittable: task.splittable,
+      minChunkMinutes: task.minChunkMinutes,
+      preferredTimeOfDay: task.preferredTimeOfDay,
+      energyDemand: task.energyDemand,
+      consequence: task.consequence,
+      needsMePersonally: task.needsMePersonally,
+      travelMinutesBefore: task.travelMinutesBefore,
+      travelMinutesAfter: task.travelMinutesAfter,
+      preparationMinutes: task.preparationMinutes,
+      value: task.value,
     });
+    needArtifact(task.provenance);
   }
 
   const needsMeItems: ClaimNeedsMeItem[] = [];
@@ -352,7 +435,9 @@ export function buildClaimPayload(state: AppState): ClaimPayload {
       categoryLocalId: item.categoryId,
       originCreatedAt: item.createdAt,
       scope: item.scope,
+      ...claimProvenance(item.provenance),
     });
+    needArtifact(item.provenance);
   }
 
   const categories: ClaimCategory[] = [];
@@ -366,7 +451,9 @@ export function buildClaimPayload(state: AppState): ClaimPayload {
       status: category.status,
       sortOrder: category.sortOrder,
       scope: category.scope,
+      ...claimProvenance(category.provenance),
     });
+    needArtifact(category.provenance);
   }
 
   const childMembers: ClaimChildMember[] = [];
@@ -374,6 +461,25 @@ export function buildClaimPayload(state: AppState): ClaimPayload {
     const child = childById.get(localId);
     if (!child) throw new ClaimInvariantError(`Required child member ${localId} is not in local state.`);
     childMembers.push({ localId: child.id, displayName: child.displayName, birthDate: child.birthDate });
+  }
+
+  const sourceArtifacts: ClaimSourceArtifact[] = [];
+  for (const localId of neededArtifacts) {
+    const artifact = artifactById.get(localId);
+    if (!artifact) throw new ClaimInvariantError(`Required source artifact ${localId} is not in local state.`);
+    sourceArtifacts.push({
+      localId: artifact.id,
+      kind: artifact.kind,
+      origin: artifact.origin,
+      provider: artifact.provider,
+      receivedAt: artifact.receivedAt,
+      contentDigest: artifact.contentDigest,
+      contentRef: artifact.contentRef,
+      // Derived, truthfully: an artifact is external-linked when an external reference names it as its source.
+      externalReferenceLocalId: state.externalReferences.find((ref) => ref.provenance.artifactId === artifact.id)?.id ?? null,
+      retractedAt: artifact.retractedAt,
+      originCreatedAt: artifact.createdAt,
+    });
   }
 
   return {
@@ -384,6 +490,7 @@ export function buildClaimPayload(state: AppState): ClaimPayload {
     tasks,
     needsMeItems,
     oneMoves,
+    sourceArtifacts,
   };
 }
 

@@ -61,7 +61,6 @@ export function recordArtifact(
     receivedAt: toInstant(input.receivedAtMs ?? ctx.nowMs),
     contentDigest: input.contentDigest ?? null,
     contentRef: input.contentRef ?? null,
-    externalReferenceId: null,
     retractedAt: null,
     createdAt: now,
     scope: 'personal',

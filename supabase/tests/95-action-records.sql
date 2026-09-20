@@ -14,9 +14,9 @@ SELECT id AS cat_kids FROM public.household_categories WHERE household_id = :'hh
 BEGIN;
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claims = '{"sub":"11111111-1111-4111-8111-111111111111"}';
-INSERT INTO public.events (household_id, local_id, title, category_id, starts_at, ends_at, commitment, status, source, scope) VALUES
-  (:'hh_a','evt-ar-1','Window before',:'cat_kids', now(), now()+interval '30 min','fixed','active','user','household'),
-  (:'hh_a','evt-ar-2','Window after', :'cat_kids', now()+interval '1 hour', now()+interval '90 min','fixed','active','user','household');
+INSERT INTO public.events (household_id, local_id, title, category_id, starts_at, ends_at, commitment, status, scope) VALUES
+  (:'hh_a','evt-ar-1','Window before',:'cat_kids', now(), now()+interval '30 min','fixed','active','household'),
+  (:'hh_a','evt-ar-2','Window after', :'cat_kids', now()+interval '1 hour', now()+interval '90 min','fixed','active','household');
 INSERT INTO public.tasks (household_id, local_id, title, category_id, duration_minutes, commitment, plan_kind, status, scope)
 VALUES (:'hh_a','task-ar-1','Moved task',:'cat_kids',10,'flexible','unplanned','open','household');
 COMMIT;

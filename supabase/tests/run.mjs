@@ -32,6 +32,7 @@ const BASELINE = join(REPO, 'supabase', 'migrations', '20260919230054_build4_bas
 const BUILD4 = join(REPO, 'supabase', 'migrations', '20260919231500_build4_cloud_schema.sql');
 const AUTH_STUB = join(HERE, 'helpers', '00-auth-stub.sql');
 const TEST_HELPERS = join(HERE, 'helpers', '01-test-helpers.sql');
+const TEST_DEFAULTS = join(HERE, 'helpers', '05-test-defaults.sql');
 const FIXTURES = join(HERE, 'helpers', '10-fixtures.sql');
 
 let failures = 0;
@@ -100,7 +101,12 @@ function envA() {
   applyBuild4('b4_env_a', { label: 'ENV A build4' });
 
   check('ENV A: Build 4 migration applies on an empty surface', true);
-  check('ENV A: 16 application tables', scalar('b4_env_a', "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r';") === '16');
+  check('ENV A: 34 application tables', scalar('b4_env_a', "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r';") === '34');
+  // The test-only producer default (helpers/05) must never be in the shipped schema: a writer that does not say where a row came from is refused.
+  check('ENV A: the shipped schema gives `producer` NO default on any of the nine synced content tables',
+        scalar('b4_env_a', "select count(*) from information_schema.columns where table_schema='public' and column_name='producer' and column_default is not null;") === '0');
+  check('ENV A: all nine synced content tables carry `producer`, NOT NULL',
+        scalar('b4_env_a', "select count(*) from information_schema.columns where table_schema='public' and column_name='producer' and is_nullable='NO' and table_name in ('household_categories','events','tasks','household_systems','meal_plan_entries','needs_me_items','one_move_records','discovery_records','onboarding_state');") === '9');
   check('ENV A: RLS enabled on every public table', scalar('b4_env_a', "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r' and not c.relrowsecurity;") === '0');
   check('ENV A: fail-closed assertion passes', psql('b4_env_a', 'SELECT private.assert_app_schema_secured();').ok);
 
@@ -161,6 +167,8 @@ function envC(only) {
   psqlFile('b4_env_c', BASELINE, { label: 'ENV C baseline' });
   applyBuild4('b4_env_c', { label: 'ENV C build4 (while empty)' });
   check('ENV C: migrated while empty, before any fixture exists', true);
+  // Test-environment convenience ONLY: see the header of helpers/05-test-defaults.sql.
+  psqlFile('b4_env_c', TEST_DEFAULTS, { label: 'ENV C test defaults' });
 
   psql('b4_env_c', `BEGIN;\n${readFileSync(FIXTURES, 'utf8')}\nCOMMIT;`, { label: 'ENV C fixtures' });
   check('ENV C: identity fixtures created', scalar('b4_env_c', 'select count(*) from public.households;') === '2');
@@ -259,16 +267,17 @@ function migrationQuality() {
   check('quality: the fail-closed assertion is the LAST statement before COMMIT',
         assertCall > 0 && sql.slice(assertCall + CALL.length).trim() === 'COMMIT;');
 
-  // The protected list must name all 16 tables plus auth.users.
+  // The protected list must name all 34 tables plus auth.users.
   const guardBlock = sql.slice(guard, sql.indexOf('$interlock$;', guard));
   const protectedTables = [
     'profiles','households','household_members','household_categories','events','tasks',
     'household_systems','meal_plan_entries','onboarding_state','one_move_records',
     'needs_me_items','discovery_records','discovery_answers','action_records',
     'change_log','account_claims',
+    'source_artifacts','interpretations','external_references','behavior_observations','automation_authorities','action_intents','intent_decisions','action_executions','action_outcomes','household_people','responsibilities','dependencies','recurrence_rules','goals','system_steps','capacity_profiles','patterns','evidence_links',
   ];
   const missing = protectedTables.filter((t) => !guardBlock.includes(`'public.${t}'`));
-  check('quality: the guard enumerates all 16 application tables', missing.length === 0, missing.join(', ') || 'none missing');
+  check('quality: the guard enumerates all 34 application tables', missing.length === 0, missing.join(', ') || 'none missing');
   check('quality: the guard enumerates auth.users', guardBlock.includes("'auth.users'"));
 
   // Debris.
@@ -313,6 +322,8 @@ async function clientPayloadIntegration() {
   await import(`file://${join(REPO, 'tests', 'support', 'register-ts.mjs')}`);
   const { buildClaimPayload } = await import(`file://${join(REPO, 'src', 'domain', 'account', 'claim.ts')}`);
   const { createEmptyState } = await import(`file://${join(REPO, 'src', 'state', 'initialState.ts')}`);
+  const { emptyTaskFacets } = await import(`file://${join(REPO, 'src', 'domain', 'foundation', 'commitment.ts')}`);
+  const userProvenance = { producer: 'user-action', artifactId: null, confidence: null };
 
   const base = createEmptyState('America/Chicago');
   const state = {
@@ -322,17 +333,17 @@ async function clientPayloadIntegration() {
       id: 'task-1', title: 'Return the library books', categoryId: 'cat-home', subjectMemberId: 'child-1',
       durationMinutes: 15, commitment: 'flexible', dueDate: '2026-09-18', plan: { kind: 'day', date: '2026-09-18' },
       notes: null, status: 'completed', completedAt: '2026-09-18T18:00:00.000Z',
-      createdAt: '2026-09-17T09:00:00.000Z', updatedAt: '2026-09-18T18:00:00.000Z', scope: 'child',
+      createdAt: '2026-09-17T09:00:00.000Z', updatedAt: '2026-09-18T18:00:00.000Z', ...emptyTaskFacets(), provenance: userProvenance, scope: 'child',
     }],
-    needsMe: [{ id: 'needsme-1', title: 'Call the dentist back', status: 'open', dueDate: null, categoryId: null, createdAt: '2026-09-15T08:30:00.000Z', scope: 'personal' }],
+    needsMe: [{ id: 'needsme-1', title: 'Call the dentist back', status: 'open', dueDate: null, categoryId: null, createdAt: '2026-09-15T08:30:00.000Z', provenance: userProvenance, scope: 'personal' }],
     oneMoves: [
-      { id: 'onemove-2026-09-18', forDate: '2026-09-18', targetId: 'task-1', targetType: 'task', status: 'completed', decidedAt: '2026-09-18T12:00:00.000Z', completedAt: '2026-09-18T18:00:00.000Z', scope: 'personal' },
-      { id: 'onemove-2026-09-17', forDate: '2026-09-17', targetId: 'needsme-1', targetType: 'needsMe', status: 'selected', decidedAt: '2026-09-17T12:00:00.000Z', completedAt: null, scope: 'personal' },
+      { id: 'onemove-2026-09-18', forDate: '2026-09-18', targetId: 'task-1', targetType: 'task', status: 'completed', decidedAt: '2026-09-18T12:00:00.000Z', completedAt: '2026-09-18T18:00:00.000Z', provenance: userProvenance, scope: 'personal' },
+      { id: 'onemove-2026-09-17', forDate: '2026-09-17', targetId: 'needsme-1', targetType: 'needsMe', status: 'selected', decidedAt: '2026-09-17T12:00:00.000Z', completedAt: null, provenance: userProvenance, scope: 'personal' },
     ],
   };
 
   const payload = buildClaimPayload(state);
-  check('client: buildClaimPayload emits claimPayloadVersion 1', payload.claimPayloadVersion === 1);
+  check('client: buildClaimPayload emits claimPayloadVersion 2', payload.claimPayloadVersion === 2);
   check('client: the closure carries exactly its two targets and the one required category',
     payload.tasks.length === 1 && payload.needsMeItems.length === 1 && payload.categories.length === 1 && payload.childMembers.length === 1,
     `tasks=${payload.tasks.length} needsMe=${payload.needsMeItems.length} categories=${payload.categories.length} children=${payload.childMembers.length}`);

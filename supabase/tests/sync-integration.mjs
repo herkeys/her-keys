@@ -50,7 +50,7 @@ export async function syncIntegration(check, psql) {
 
 async function load() {
   const at = (p) => `file://${join(REPO, 'src', ...p)}`;
-  const [types, queue, claimSeam, push, pull, coordinator, apply, projection, transport, initial] = await Promise.all([
+  const [types, queue, claimSeam, push, pull, coordinator, apply, projection, transport, initial, rules] = await Promise.all([
     import(at(['domain', 'sync', 'syncTypes.ts'])),
     import(at(['domain', 'sync', 'queue.ts'])),
     import(at(['domain', 'sync', 'claimSeam.ts'])),
@@ -61,8 +61,9 @@ async function load() {
     import(at(['domain', 'sync', 'projection.ts'])),
     import(at(['platform', 'supabaseSyncTransport.ts'])),
     import(at(['state', 'initialState.ts'])),
+    import(at(['domain', 'sync', 'domainRules.ts'])),
   ]);
-  return { types, queue, claimSeam, push, pull, coordinator, apply, projection, transport, initial };
+  return { types, queue, claimSeam, push, pull, coordinator, apply, projection, transport, initial, rules };
 }
 
 const TZ = 'America/Chicago';
@@ -116,33 +117,11 @@ function makeDevice(m, { accountId, deviceId, householdId, state, namespace, tra
       now: () => Date.now(),
       applyRow: (s, kind, localId, row, resolve) => m.apply.applyCloudRow(s, kind, localId, row, resolve),
       applyTombstone: (s, kind, localId) => m.apply.applyCloudTombstone(s, kind, localId),
-      matchesLocal: (kind, localId, row) => {
-        // Compare what the server holds with what this device would send. Equal
-        // means the push landed and only the answer was lost.
-        try {
-          const mine = m.projection.toCloudRow(
-            currentState,
-            { householdId, profileId: accountId, namespace: currentNamespace },
-            kind,
-            localId
-          );
-          return Object.entries(mine).every(([column, value]) => {
-            if (column === 'household_id' || column === 'local_id' || column === 'profile_id') return true;
-            const theirs = row[column];
-            return theirs === value || (theirs ?? null) === (value ?? null);
-          });
-        } catch {
-          return false;
-        }
-      },
-      // The one domain uniqueness rule this wave transports: One Move is unique
-      // per product logical day (HR-03). An incoming authoritative row for a
-      // day this device decided differently displaces the local decision.
-      displacedBy: (s, kind, _localId, row) => {
-        if (kind !== 'oneMove') return null;
-        const clash = s.oneMoves.find((o) => o.forDate === String(row.logical_day));
-        return clash && clash.id !== String(row.local_id) ? clash.id : null;
-      },
+      // The product's own rules, not test scaffolding: whether the server row IS what this device was
+      // sending (a lost acknowledgement), and which local row an authoritative row displaces.
+      matchesLocal: (kind, localId, row) =>
+        m.rules.rowMatchesLocal(currentState, { householdId, profileId: accountId, namespace: currentNamespace }, kind, localId, row),
+      displacedBy: (s, kind, localId, row, resolve) => m.rules.displacedBy(s, kind, localId, row, resolve),
       // A minted local id must itself be a legal local id: the app's Id pattern
       // allows letters, digits and `._:-` only.
       mintLocalId: (kind, wanted) => `${wanted}-x${deviceId.slice(0, 4)}`,

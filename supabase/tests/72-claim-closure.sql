@@ -43,16 +43,16 @@ BEGIN;
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claims = '{"sub":"7a000000-0000-4000-8000-00000000000a"}';
 SELECT CASE WHEN (public.claim_local_household('7a000000-0000-4000-8000-0000000000c1'::uuid,'America/Chicago',
-  $p${"claimPayloadVersion":1,"origin":"empty",
-      "childMembers":[{"localId":"child-1","displayName":"Mia","birthDate":"2016-04-02"}],
-      "categories":[{"localId":"cat-home","name":"Home","systemRole":"home","status":"active","sortOrder":1,"scope":"household"}],
-      "tasks":[{"localId":"task-1","title":"Return the library books","categoryLocalId":"cat-home",
+  $p${"claimPayloadVersion":2,"origin":"empty",
+      "childMembers":[{"localId":"child-1","producer":"user-action","displayName":"Mia","birthDate":"2016-04-02"}],
+      "categories":[{"localId":"cat-home","producer":"user-action","name":"Home","systemRole":"home","status":"active","sortOrder":1,"scope":"household"}],
+      "tasks":[{"localId":"task-1","producer":"user-action","title":"Return the library books","categoryLocalId":"cat-home",
                 "subjectMemberLocalId":"child-1","durationMinutes":15,"commitment":"flexible",
                 "dueDate":"2026-09-18","planKind":"day","plannedDate":"2026-09-18","plannedStartsAt":null,
                 "notes":null,"status":"completed","completedAt":"2026-09-18T18:00:00Z",
                 "originCreatedAt":"2026-09-17T09:00:00Z","originUpdatedAt":"2026-09-18T18:00:00Z","scope":"child"}],
       "needsMeItems":[],
-      "oneMoves":[{"localId":"onemove-2026-09-18","logicalDay":"2026-09-18","targetType":"task",
+      "oneMoves":[{"localId":"onemove-2026-09-18","producer":"user-action","logicalDay":"2026-09-18","targetType":"task",
                    "targetLocalId":"task-1","status":"completed","decidedAt":"2026-09-18T12:00:00Z",
                    "completedAt":"2026-09-18T18:00:00Z"}]}$p$::jsonb, NULL) ->> 'status') = 'complete'
   THEN 'PASS' ELSE 'FAIL' END || ' | 1. a COMPLETED historical One Move with a task target claims successfully';
@@ -132,7 +132,7 @@ SELECT CASE WHEN (r -> 'id_map') ? 'task-1' AND (r -> 'id_map') ? 'child-1'
             THEN 'PASS' ELSE 'FAIL' END
        || ' | J. the returned id_map covers the WHOLE closure, not just the One Move target'
 FROM (SELECT public.claim_local_household('7a000000-0000-4000-8000-0000000000c1'::uuid,'America/Chicago',
-        '{"claimPayloadVersion":1,"origin":"empty","oneMoves":[]}'::jsonb, NULL) AS r) s;
+        '{"claimPayloadVersion":2,"origin":"empty","oneMoves":[]}'::jsonb, NULL) AS r) s;
 COMMIT;
 
 -- ----------------------------------------------------------------------------
@@ -142,11 +142,11 @@ BEGIN;
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claims = '{"sub":"7b000000-0000-4000-8000-00000000000b"}';
 SELECT CASE WHEN (public.claim_local_household('7b000000-0000-4000-8000-0000000000c2'::uuid,'Europe/London',
-  $p${"claimPayloadVersion":1,"origin":"empty",
-      "categories":[{"localId":"cat-custom-1","name":"Garden","systemRole":null,"status":"active","sortOrder":8,"scope":"personal"}],
-      "needsMeItems":[{"localId":"needsme-1","title":"Call the dentist back","status":"open","dueDate":null,
+  $p${"claimPayloadVersion":2,"origin":"empty",
+      "categories":[{"localId":"cat-custom-1","producer":"user-action","name":"Garden","systemRole":null,"status":"active","sortOrder":8,"scope":"personal"}],
+      "needsMeItems":[{"localId":"needsme-1","producer":"user-action","title":"Call the dentist back","status":"open","dueDate":null,
                        "categoryLocalId":"cat-custom-1","originCreatedAt":"2026-09-15T08:30:00Z","scope":"personal"}],
-      "oneMoves":[{"localId":"onemove-2026-09-17","logicalDay":"2026-09-17","targetType":"needsMe",
+      "oneMoves":[{"localId":"onemove-2026-09-17","producer":"user-action","logicalDay":"2026-09-17","targetType":"needsMe",
                    "targetLocalId":"needsme-1","status":"selected","decidedAt":"2026-09-17T12:00:00Z",
                    "completedAt":null}]}$p$::jsonb, NULL) ->> 'status') = 'complete'
   THEN 'PASS' ELSE 'FAIL' END || ' | 4. a SELECTED historical One Move with a Needs Me target claims successfully';
@@ -186,39 +186,39 @@ SET LOCAL request.jwt.claims = '{"sub":"7c000000-0000-4000-8000-00000000000c"}';
 
 SELECT CASE WHEN herkeys_test.test_denied($q$
   SELECT public.claim_local_household('7c000000-0000-4000-8000-0000000000d1'::uuid,'Europe/London',
-    $p${"claimPayloadVersion":1,"origin":"empty",
-        "categories":[{"localId":"cat-home","name":"Home","systemRole":"home","status":"active","sortOrder":1,"scope":"household"}],
-        "tasks":[{"localId":"task-1","title":"Needed","categoryLocalId":"cat-home","subjectMemberLocalId":null,
+    $p${"claimPayloadVersion":2,"origin":"empty",
+        "categories":[{"localId":"cat-home","producer":"user-action","name":"Home","systemRole":"home","status":"active","sortOrder":1,"scope":"household"}],
+        "tasks":[{"localId":"task-1","producer":"user-action","title":"Needed","categoryLocalId":"cat-home","subjectMemberLocalId":null,
                   "durationMinutes":10,"commitment":"flexible","dueDate":null,"planKind":"unplanned","plannedDate":null,
                   "plannedStartsAt":null,"notes":null,"status":"open","completedAt":null,
                   "originCreatedAt":null,"originUpdatedAt":null,"scope":"household"},
-                 {"localId":"task-9","title":"Unrelated","categoryLocalId":"cat-home","subjectMemberLocalId":null,
+                 {"localId":"task-9","producer":"user-action","title":"Unrelated","categoryLocalId":"cat-home","subjectMemberLocalId":null,
                   "durationMinutes":10,"commitment":"flexible","dueDate":null,"planKind":"unplanned","plannedDate":null,
                   "plannedStartsAt":null,"notes":null,"status":"open","completedAt":null,
                   "originCreatedAt":null,"originUpdatedAt":null,"scope":"household"}],
-        "oneMoves":[{"localId":"onemove-2026-09-16","logicalDay":"2026-09-16","targetType":"task",
+        "oneMoves":[{"localId":"onemove-2026-09-16","producer":"user-action","logicalDay":"2026-09-16","targetType":"task",
                      "targetLocalId":"task-1","status":"selected","decidedAt":"2026-09-16T12:00:00Z","completedAt":null}]}$p$::jsonb, NULL)
 $q$) THEN 'PASS' ELSE 'FAIL' END || ' | 13/9. an UNRELATED task in the payload is REJECTED, not quietly ignored';
 
 SELECT CASE WHEN herkeys_test.test_denied($q$
   SELECT public.claim_local_household('7c000000-0000-4000-8000-0000000000d2'::uuid,'Europe/London',
-    $p${"claimPayloadVersion":1,"origin":"empty",
-        "needsMeItems":[{"localId":"needsme-9","title":"Unrelated","status":"open","dueDate":null,
+    $p${"claimPayloadVersion":2,"origin":"empty",
+        "needsMeItems":[{"localId":"needsme-9","producer":"user-action","title":"Unrelated","status":"open","dueDate":null,
                          "categoryLocalId":null,"originCreatedAt":"2026-09-15T08:30:00Z","scope":"personal"}],
         "oneMoves":[]}$p$::jsonb, NULL)
 $q$) THEN 'PASS' ELSE 'FAIL' END || ' | 10. an UNRELATED Needs Me item in the payload is REJECTED';
 
 SELECT CASE WHEN herkeys_test.test_denied($q$
   SELECT public.claim_local_household('7c000000-0000-4000-8000-0000000000d3'::uuid,'Europe/London',
-    $p${"claimPayloadVersion":1,"origin":"empty",
-        "categories":[{"localId":"cat-custom-9","name":"Unrelated","systemRole":null,"status":"active","sortOrder":9,"scope":"household"}],
+    $p${"claimPayloadVersion":2,"origin":"empty",
+        "categories":[{"localId":"cat-custom-9","producer":"user-action","name":"Unrelated","systemRole":null,"status":"active","sortOrder":9,"scope":"household"}],
         "oneMoves":[]}$p$::jsonb, NULL)
 $q$) THEN 'PASS' ELSE 'FAIL' END || ' | 11. an UNRELATED user-created category in the payload is REJECTED';
 
 SELECT CASE WHEN herkeys_test.test_denied($q$
   SELECT public.claim_local_household('7c000000-0000-4000-8000-0000000000d4'::uuid,'Europe/London',
-    $p${"claimPayloadVersion":1,"origin":"empty",
-        "childMembers":[{"localId":"child-9","displayName":"Unrelated","birthDate":"2018-01-01"}],
+    $p${"claimPayloadVersion":2,"origin":"empty",
+        "childMembers":[{"localId":"child-9","producer":"user-action","displayName":"Unrelated","birthDate":"2018-01-01"}],
         "oneMoves":[]}$p$::jsonb, NULL)
 $q$) THEN 'PASS' ELSE 'FAIL' END || ' | 12. an UNRELATED child member in the payload is REJECTED';
 
@@ -226,22 +226,22 @@ $q$) THEN 'PASS' ELSE 'FAIL' END || ' | 12. an UNRELATED child member in the pay
 -- if one still arrives, the claim fails closed instead of guessing.
 SELECT CASE WHEN herkeys_test.test_denied($q$
   SELECT public.claim_local_household('7c000000-0000-4000-8000-0000000000d5'::uuid,'Europe/London',
-    $p${"claimPayloadVersion":1,"origin":"empty",
-        "oneMoves":[{"localId":"onemove-2026-09-10","logicalDay":"2026-09-10","targetType":"catalog",
+    $p${"claimPayloadVersion":2,"origin":"empty",
+        "oneMoves":[{"localId":"onemove-2026-09-10","producer":"user-action","logicalDay":"2026-09-10","targetType":"catalog",
                      "targetLocalId":"move-breathe","status":"completed","decidedAt":"2026-09-10T12:00:00Z",
                      "completedAt":"2026-09-10T13:00:00Z"}]}$p$::jsonb, NULL)
 $q$) THEN 'PASS' ELSE 'FAIL' END || ' | 1(OR-002). a catalog targetType reaching the RPC is REFUSED, never converted';
 
 -- 1(census). The frozen cloud target set really is exactly {task, needsMe}.
-SELECT CASE WHEN pg_get_constraintdef(oid) = 'CHECK ((target_type = ANY (ARRAY[''task''::text, ''needsMe''::text])))'
+SELECT CASE WHEN pg_get_constraintdef(oid) = 'CHECK ((target_type = ANY (ARRAY[''task''::text, ''needsMe''::text, ''event''::text, ''system''::text, ''responsibility''::text])))'
             THEN 'PASS' ELSE 'FAIL' END
-       || ' | 1(census). the cloud One Move target set is exactly {task, needsMe}'
+       || ' | 1(census). the cloud One Move target set is exactly {task, needsMe, event, system, responsibility} (widened deliberately by B4-FOUNDATION-BUILDOUT-01; catalog stays refused)'
 FROM pg_constraint WHERE conname = 'one_move_records_target_type_check';
 
 -- An unsupported payload version is refused rather than misread.
 SELECT CASE WHEN herkeys_test.test_denied($q$
   SELECT public.claim_local_household('7c000000-0000-4000-8000-0000000000d6'::uuid,'Europe/London',
-    '{"claimPayloadVersion":2,"origin":"empty","oneMoves":[]}'::jsonb, NULL)
+    '{"claimPayloadVersion":3,"origin":"empty","oneMoves":[]}'::jsonb, NULL)
 $q$) THEN 'PASS' ELSE 'FAIL' END || ' | C. an unknown claimPayloadVersion is refused, not guessed at';
 
 SELECT CASE WHEN herkeys_test.test_denied($q$
@@ -269,47 +269,47 @@ SET LOCAL request.jwt.claims = '{"sub":"7d000000-0000-4000-8000-00000000000d"}';
 
 SELECT CASE WHEN herkeys_test.test_denied($q$
   SELECT public.claim_local_household('7d000000-0000-4000-8000-0000000000e1'::uuid,'Europe/London',
-    $p${"claimPayloadVersion":1,"origin":"empty",
-        "oneMoves":[{"localId":"onemove-2026-09-16","logicalDay":"2026-09-16","targetType":"task",
+    $p${"claimPayloadVersion":2,"origin":"empty",
+        "oneMoves":[{"localId":"onemove-2026-09-16","producer":"user-action","logicalDay":"2026-09-16","targetType":"task",
                      "targetLocalId":"task-missing","status":"completed","decidedAt":"2026-09-16T12:00:00Z",
                      "completedAt":"2026-09-16T13:00:00Z"}]}$p$::jsonb, NULL)
 $q$) THEN 'PASS' ELSE 'FAIL' END || ' | 11(OR-001). a MISSING task target fails the claim atomically';
 
 SELECT CASE WHEN herkeys_test.test_denied($q$
   SELECT public.claim_local_household('7d000000-0000-4000-8000-0000000000e2'::uuid,'Europe/London',
-    $p${"claimPayloadVersion":1,"origin":"empty",
-        "oneMoves":[{"localId":"onemove-2026-09-16","logicalDay":"2026-09-16","targetType":"needsMe",
+    $p${"claimPayloadVersion":2,"origin":"empty",
+        "oneMoves":[{"localId":"onemove-2026-09-16","producer":"user-action","logicalDay":"2026-09-16","targetType":"needsMe",
                      "targetLocalId":"needsme-missing","status":"selected","decidedAt":"2026-09-16T12:00:00Z",
                      "completedAt":null}]}$p$::jsonb, NULL)
 $q$) THEN 'PASS' ELSE 'FAIL' END || ' | 12(OR-001). a MISSING Needs Me target fails the claim atomically';
 
 SELECT CASE WHEN herkeys_test.test_denied($q$
   SELECT public.claim_local_household('7d000000-0000-4000-8000-0000000000e3'::uuid,'Europe/London',
-    $p${"claimPayloadVersion":1,"origin":"empty",
-        "tasks":[{"localId":"task-1","title":"Orphan","categoryLocalId":"cat-nonexistent","subjectMemberLocalId":null,
+    $p${"claimPayloadVersion":2,"origin":"empty",
+        "tasks":[{"localId":"task-1","producer":"user-action","title":"Orphan","categoryLocalId":"cat-nonexistent","subjectMemberLocalId":null,
                   "durationMinutes":10,"commitment":"flexible","dueDate":null,"planKind":"unplanned","plannedDate":null,
                   "plannedStartsAt":null,"notes":null,"status":"open","completedAt":null,
                   "originCreatedAt":null,"originUpdatedAt":null,"scope":"household"}],
-        "oneMoves":[{"localId":"onemove-2026-09-16","logicalDay":"2026-09-16","targetType":"task",
+        "oneMoves":[{"localId":"onemove-2026-09-16","producer":"user-action","logicalDay":"2026-09-16","targetType":"task",
                      "targetLocalId":"task-1","status":"selected","decidedAt":"2026-09-16T12:00:00Z","completedAt":null}]}$p$::jsonb, NULL)
 $q$) THEN 'PASS' ELSE 'FAIL' END || ' | 20. a required category that was not supplied fails the claim atomically';
 
 SELECT CASE WHEN herkeys_test.test_denied($q$
   SELECT public.claim_local_household('7d000000-0000-4000-8000-0000000000e4'::uuid,'Europe/London',
-    $p${"claimPayloadVersion":1,"origin":"empty",
-        "categories":[{"localId":"cat-home","name":"Home","systemRole":"home","status":"active","sortOrder":1,"scope":"household"}],
-        "tasks":[{"localId":"task-1","title":"Child work","categoryLocalId":"cat-home","subjectMemberLocalId":"child-missing",
+    $p${"claimPayloadVersion":2,"origin":"empty",
+        "categories":[{"localId":"cat-home","producer":"user-action","name":"Home","systemRole":"home","status":"active","sortOrder":1,"scope":"household"}],
+        "tasks":[{"localId":"task-1","producer":"user-action","title":"Child work","categoryLocalId":"cat-home","subjectMemberLocalId":"child-missing",
                   "durationMinutes":10,"commitment":"flexible","dueDate":null,"planKind":"unplanned","plannedDate":null,
                   "plannedStartsAt":null,"notes":null,"status":"open","completedAt":null,
                   "originCreatedAt":null,"originUpdatedAt":null,"scope":"child"}],
-        "oneMoves":[{"localId":"onemove-2026-09-16","logicalDay":"2026-09-16","targetType":"task",
+        "oneMoves":[{"localId":"onemove-2026-09-16","producer":"user-action","logicalDay":"2026-09-16","targetType":"task",
                      "targetLocalId":"task-1","status":"selected","decidedAt":"2026-09-16T12:00:00Z","completedAt":null}]}$p$::jsonb, NULL)
 $q$) THEN 'PASS' ELSE 'FAIL' END || ' | 19. a required child member that was not supplied fails the claim atomically';
 
 SELECT CASE WHEN herkeys_test.test_denied($q$
   SELECT public.claim_local_household('7d000000-0000-4000-8000-0000000000e5'::uuid,'Europe/London',
-    $p${"claimPayloadVersion":1,"origin":"empty",
-        "oneMoves":[{"localId":"onemove-2026-09-16","logicalDay":"2026-09-16","targetType":"task",
+    $p${"claimPayloadVersion":2,"origin":"empty",
+        "oneMoves":[{"localId":"onemove-2026-09-16","producer":"user-action","logicalDay":"2026-09-16","targetType":"task",
                      "targetLocalId":null,"status":"completed","decidedAt":"2026-09-16T12:00:00Z",
                      "completedAt":"2026-09-16T13:00:00Z"}]}$p$::jsonb, NULL)
 $q$) THEN 'PASS' ELSE 'FAIL' END || ' | 13(OR-001). a completed One Move naming NO target is malformed and fails atomically';
@@ -329,23 +329,23 @@ SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claims = '{"sub":"7e000000-0000-4000-8000-00000000000e"}';
 CREATE TEMP TABLE claim_first AS
 SELECT public.claim_local_household('7e000000-0000-4000-8000-0000000000f1'::uuid,'America/Chicago',
-  $p${"claimPayloadVersion":1,"origin":"empty",
-      "childMembers":[{"localId":"child-1","displayName":"Ben","birthDate":"2014-11-20"}],
-      "categories":[{"localId":"cat-kids","name":"Kids","systemRole":"kids","status":"active","sortOrder":0,"scope":"household"}],
-      "tasks":[{"localId":"task-1","title":"Sign the permission slip","categoryLocalId":"cat-kids",
+  $p${"claimPayloadVersion":2,"origin":"empty",
+      "childMembers":[{"localId":"child-1","producer":"user-action","displayName":"Ben","birthDate":"2014-11-20"}],
+      "categories":[{"localId":"cat-kids","producer":"user-action","name":"Kids","systemRole":"kids","status":"active","sortOrder":0,"scope":"household"}],
+      "tasks":[{"localId":"task-1","producer":"user-action","title":"Sign the permission slip","categoryLocalId":"cat-kids",
                 "subjectMemberLocalId":"child-1","durationMinutes":5,"commitment":"fixed",
                 "dueDate":"2026-09-15","planKind":"unplanned","plannedDate":null,"plannedStartsAt":null,
                 "notes":null,"status":"completed","completedAt":"2026-09-15T17:00:00Z",
                 "originCreatedAt":"2026-09-14T09:00:00Z","originUpdatedAt":"2026-09-15T17:00:00Z","scope":"child"}],
-      "needsMeItems":[{"localId":"needsme-1","title":"Book the eye test","status":"open","dueDate":null,
+      "needsMeItems":[{"localId":"needsme-1","producer":"user-action","title":"Book the eye test","status":"open","dueDate":null,
                        "categoryLocalId":null,"originCreatedAt":"2026-09-14T10:00:00Z","scope":"personal"}],
-      "oneMoves":[{"localId":"onemove-2026-09-15","logicalDay":"2026-09-15","targetType":"task",
+      "oneMoves":[{"localId":"onemove-2026-09-15","producer":"user-action","logicalDay":"2026-09-15","targetType":"task",
                    "targetLocalId":"task-1","status":"completed","decidedAt":"2026-09-15T12:00:00Z",
                    "completedAt":"2026-09-15T17:00:00Z"},
-                  {"localId":"onemove-2026-09-14","logicalDay":"2026-09-14","targetType":"needsMe",
+                  {"localId":"onemove-2026-09-14","producer":"user-action","logicalDay":"2026-09-14","targetType":"needsMe",
                    "targetLocalId":"needsme-1","status":"selected","decidedAt":"2026-09-14T12:00:00Z",
                    "completedAt":null},
-                  {"localId":"onemove-2026-09-13","logicalDay":"2026-09-13","targetType":"task",
+                  {"localId":"onemove-2026-09-13","producer":"user-action","logicalDay":"2026-09-13","targetType":"task",
                    "targetLocalId":null,"status":"withheld","decidedAt":"2026-09-13T12:00:00Z",
                    "completedAt":null}]}$p$::jsonb, NULL) AS r;
 SELECT CASE WHEN (r ->> 'status') = 'complete' THEN 'PASS' ELSE 'FAIL' END
@@ -384,23 +384,23 @@ BEGIN;
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claims = '{"sub":"7e000000-0000-4000-8000-00000000000e"}';
 SELECT CASE WHEN (public.claim_local_household('7e000000-0000-4000-8000-0000000000f1'::uuid,'America/Chicago',
-  $p${"claimPayloadVersion":1,"origin":"empty",
-      "childMembers":[{"localId":"child-1","displayName":"Ben","birthDate":"2014-11-20"}],
-      "categories":[{"localId":"cat-kids","name":"Kids","systemRole":"kids","status":"active","sortOrder":0,"scope":"household"}],
-      "tasks":[{"localId":"task-1","title":"Sign the permission slip","categoryLocalId":"cat-kids",
+  $p${"claimPayloadVersion":2,"origin":"empty",
+      "childMembers":[{"localId":"child-1","producer":"user-action","displayName":"Ben","birthDate":"2014-11-20"}],
+      "categories":[{"localId":"cat-kids","producer":"user-action","name":"Kids","systemRole":"kids","status":"active","sortOrder":0,"scope":"household"}],
+      "tasks":[{"localId":"task-1","producer":"user-action","title":"Sign the permission slip","categoryLocalId":"cat-kids",
                 "subjectMemberLocalId":"child-1","durationMinutes":5,"commitment":"fixed",
                 "dueDate":"2026-09-15","planKind":"unplanned","plannedDate":null,"plannedStartsAt":null,
                 "notes":null,"status":"completed","completedAt":"2026-09-15T17:00:00Z",
                 "originCreatedAt":"2026-09-14T09:00:00Z","originUpdatedAt":"2026-09-15T17:00:00Z","scope":"child"}],
-      "needsMeItems":[{"localId":"needsme-1","title":"Book the eye test","status":"open","dueDate":null,
+      "needsMeItems":[{"localId":"needsme-1","producer":"user-action","title":"Book the eye test","status":"open","dueDate":null,
                        "categoryLocalId":null,"originCreatedAt":"2026-09-14T10:00:00Z","scope":"personal"}],
-      "oneMoves":[{"localId":"onemove-2026-09-15","logicalDay":"2026-09-15","targetType":"task",
+      "oneMoves":[{"localId":"onemove-2026-09-15","producer":"user-action","logicalDay":"2026-09-15","targetType":"task",
                    "targetLocalId":"task-1","status":"completed","decidedAt":"2026-09-15T12:00:00Z",
                    "completedAt":"2026-09-15T17:00:00Z"},
-                  {"localId":"onemove-2026-09-14","logicalDay":"2026-09-14","targetType":"needsMe",
+                  {"localId":"onemove-2026-09-14","producer":"user-action","logicalDay":"2026-09-14","targetType":"needsMe",
                    "targetLocalId":"needsme-1","status":"selected","decidedAt":"2026-09-14T12:00:00Z",
                    "completedAt":null},
-                  {"localId":"onemove-2026-09-13","logicalDay":"2026-09-13","targetType":"task",
+                  {"localId":"onemove-2026-09-13","producer":"user-action","logicalDay":"2026-09-13","targetType":"task",
                    "targetLocalId":null,"status":"withheld","decidedAt":"2026-09-13T12:00:00Z",
                    "completedAt":null}]}$p$::jsonb, NULL) ->> 'status') = 'complete'
   THEN 'PASS' ELSE 'FAIL' END || ' | 17(OR-001). the crash/retry path resolves the existing mapping and completes';
@@ -434,13 +434,13 @@ BEGIN;
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claims = '{"sub":"7f000000-0000-4000-8000-00000000000f"}';
 SELECT CASE WHEN (public.claim_local_household('7f000000-0000-4000-8000-0000000000a1'::uuid,'Europe/London',
-  $p${"claimPayloadVersion":1,"origin":"empty",
-      "categories":[{"localId":"cat-home","name":"Home","systemRole":"home","status":"active","sortOrder":1,"scope":"household"}],
-      "tasks":[{"localId":"task-1","title":"Water the plants","categoryLocalId":"cat-home","subjectMemberLocalId":null,
+  $p${"claimPayloadVersion":2,"origin":"empty",
+      "categories":[{"localId":"cat-home","producer":"user-action","name":"Home","systemRole":"home","status":"active","sortOrder":1,"scope":"household"}],
+      "tasks":[{"localId":"task-1","producer":"user-action","title":"Water the plants","categoryLocalId":"cat-home","subjectMemberLocalId":null,
                 "durationMinutes":5,"commitment":"flexible","dueDate":null,"planKind":"unplanned","plannedDate":null,
                 "plannedStartsAt":null,"notes":null,"status":"open","completedAt":null,
                 "originCreatedAt":null,"originUpdatedAt":null,"scope":"household"}],
-      "oneMoves":[{"localId":"onemove-2026-09-12","logicalDay":"2026-09-12","targetType":"task",
+      "oneMoves":[{"localId":"onemove-2026-09-12","producer":"user-action","logicalDay":"2026-09-12","targetType":"task",
                    "targetLocalId":"task-1","status":"selected","decidedAt":"2026-09-12T12:00:00Z","completedAt":null}]}$p$::jsonb, NULL)
       ->> 'status') = 'complete' THEN 'PASS' ELSE 'FAIL' END || ' | 16a. the first claim completes';
 COMMIT;
@@ -451,19 +451,19 @@ BEGIN;
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claims = '{"sub":"7f000000-0000-4000-8000-00000000000f"}';
 SELECT CASE WHEN (public.claim_local_household('7f000000-0000-4000-8000-0000000000a1'::uuid,'Europe/London',
-  $p${"claimPayloadVersion":1,"origin":"empty",
-      "categories":[{"localId":"cat-home","name":"Home","systemRole":"home","status":"active","sortOrder":1,"scope":"household"}],
-      "tasks":[{"localId":"task-1","title":"Water the plants","categoryLocalId":"cat-home","subjectMemberLocalId":null,
+  $p${"claimPayloadVersion":2,"origin":"empty",
+      "categories":[{"localId":"cat-home","producer":"user-action","name":"Home","systemRole":"home","status":"active","sortOrder":1,"scope":"household"}],
+      "tasks":[{"localId":"task-1","producer":"user-action","title":"Water the plants","categoryLocalId":"cat-home","subjectMemberLocalId":null,
                 "durationMinutes":5,"commitment":"flexible","dueDate":null,"planKind":"unplanned","plannedDate":null,
                 "plannedStartsAt":null,"notes":null,"status":"open","completedAt":null,
                 "originCreatedAt":null,"originUpdatedAt":null,"scope":"household"},
-               {"localId":"task-2","title":"Added after the claim","categoryLocalId":"cat-home","subjectMemberLocalId":null,
+               {"localId":"task-2","producer":"user-action","title":"Added after the claim","categoryLocalId":"cat-home","subjectMemberLocalId":null,
                 "durationMinutes":5,"commitment":"flexible","dueDate":null,"planKind":"unplanned","plannedDate":null,
                 "plannedStartsAt":null,"notes":null,"status":"open","completedAt":null,
                 "originCreatedAt":null,"originUpdatedAt":null,"scope":"household"}],
-      "oneMoves":[{"localId":"onemove-2026-09-12","logicalDay":"2026-09-12","targetType":"task",
+      "oneMoves":[{"localId":"onemove-2026-09-12","producer":"user-action","logicalDay":"2026-09-12","targetType":"task",
                    "targetLocalId":"task-1","status":"selected","decidedAt":"2026-09-12T12:00:00Z","completedAt":null},
-                  {"localId":"onemove-2026-09-11","logicalDay":"2026-09-11","targetType":"task",
+                  {"localId":"onemove-2026-09-11","producer":"user-action","logicalDay":"2026-09-11","targetType":"task",
                    "targetLocalId":"task-2","status":"completed","decidedAt":"2026-09-11T12:00:00Z",
                    "completedAt":"2026-09-11T13:00:00Z"}]}$p$::jsonb, NULL)
       ->> 'status') = 'complete' THEN 'PASS' ELSE 'FAIL' END
@@ -507,13 +507,13 @@ SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claims = '{"sub":"79000000-0000-4000-8000-000000000009"}';
 SELECT CASE WHEN herkeys_test.test_denied($q$
   SELECT public.claim_local_household('79000000-0000-4000-8000-0000000000b1'::uuid,'Europe/London',
-    $p${"claimPayloadVersion":1,"origin":"empty",
-        "categories":[{"localId":"cat-home","name":"Home","systemRole":"money","status":"active","sortOrder":1,"scope":"household"}],
-        "tasks":[{"localId":"task-1","title":"Work","categoryLocalId":"cat-home","subjectMemberLocalId":null,
+    $p${"claimPayloadVersion":2,"origin":"empty",
+        "categories":[{"localId":"cat-home","producer":"user-action","name":"Home","systemRole":"money","status":"active","sortOrder":1,"scope":"household"}],
+        "tasks":[{"localId":"task-1","producer":"user-action","title":"Work","categoryLocalId":"cat-home","subjectMemberLocalId":null,
                   "durationMinutes":10,"commitment":"flexible","dueDate":null,"planKind":"unplanned","plannedDate":null,
                   "plannedStartsAt":null,"notes":null,"status":"open","completedAt":null,
                   "originCreatedAt":null,"originUpdatedAt":null,"scope":"household"}],
-        "oneMoves":[{"localId":"onemove-2026-09-16","logicalDay":"2026-09-16","targetType":"task",
+        "oneMoves":[{"localId":"onemove-2026-09-16","producer":"user-action","logicalDay":"2026-09-16","targetType":"task",
                      "targetLocalId":"task-1","status":"selected","decidedAt":"2026-09-16T12:00:00Z","completedAt":null}]}$p$::jsonb, NULL)
 $q$) THEN 'PASS' ELSE 'FAIL' END
   || ' | I. adopting a category whose system role disagrees is REFUSED, not overwritten';
@@ -532,8 +532,8 @@ SET LOCAL request.jwt.claims = '{"sub":"78000000-0000-4000-8000-000000000008"}';
 -- stranger's task.
 SELECT CASE WHEN herkeys_test.test_denied($q$
   SELECT public.claim_local_household('78000000-0000-4000-8000-0000000000b8'::uuid,'Europe/London',
-    $p${"claimPayloadVersion":1,"origin":"empty",
-        "oneMoves":[{"localId":"onemove-2026-09-16","logicalDay":"2026-09-16","targetType":"task",
+    $p${"claimPayloadVersion":2,"origin":"empty",
+        "oneMoves":[{"localId":"onemove-2026-09-16","producer":"user-action","logicalDay":"2026-09-16","targetType":"task",
                      "targetLocalId":"task-1","status":"completed","decidedAt":"2026-09-16T12:00:00Z",
                      "completedAt":"2026-09-16T13:00:00Z"}]}$p$::jsonb, NULL)
 $q$) THEN 'PASS' ELSE 'FAIL' END
@@ -552,16 +552,16 @@ BEGIN;
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claims = '{"sub":"78000000-0000-4000-8000-000000000008"}';
 SELECT CASE WHEN (public.claim_local_household('78000000-0000-4000-8000-0000000000c8'::uuid,'Europe/London',
-  $p${"claimPayloadVersion":1,"origin":"empty",
-      "categories":[{"localId":"cat-home","name":"Home","systemRole":"home","status":"active","sortOrder":1,"scope":"household"}],
-      "tasks":[{"localId":"task-shared","title":"Put the bins out","categoryLocalId":"cat-home","subjectMemberLocalId":null,
+  $p${"claimPayloadVersion":2,"origin":"empty",
+      "categories":[{"localId":"cat-home","producer":"user-action","name":"Home","systemRole":"home","status":"active","sortOrder":1,"scope":"household"}],
+      "tasks":[{"localId":"task-shared","producer":"user-action","title":"Put the bins out","categoryLocalId":"cat-home","subjectMemberLocalId":null,
                 "durationMinutes":5,"commitment":"flexible","dueDate":null,"planKind":"unplanned","plannedDate":null,
                 "plannedStartsAt":null,"notes":null,"status":"open","completedAt":null,
                 "originCreatedAt":null,"originUpdatedAt":null,"scope":"household"}],
-      "oneMoves":[{"localId":"onemove-2026-09-09","logicalDay":"2026-09-09","targetType":"task",
+      "oneMoves":[{"localId":"onemove-2026-09-09","producer":"user-action","logicalDay":"2026-09-09","targetType":"task",
                    "targetLocalId":"task-shared","status":"completed","decidedAt":"2026-09-09T12:00:00Z",
                    "completedAt":"2026-09-09T13:00:00Z"},
-                  {"localId":"onemove-2026-09-08","logicalDay":"2026-09-08","targetType":"task",
+                  {"localId":"onemove-2026-09-08","producer":"user-action","logicalDay":"2026-09-08","targetType":"task",
                    "targetLocalId":"task-shared","status":"selected","decidedAt":"2026-09-08T12:00:00Z",
                    "completedAt":null}]}$p$::jsonb, NULL) ->> 'status') = 'complete'
   THEN 'PASS' ELSE 'FAIL' END || ' | 16(OR-001). two One Moves naming the same target claim together';

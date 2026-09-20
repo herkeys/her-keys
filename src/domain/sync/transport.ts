@@ -75,7 +75,11 @@ export interface SyncTransport {
     row: Record<string, unknown>,
     idColumn: string
   ): Promise<UpdateResult>;
-  pull(cursor: string, limit: number): Promise<PullResult>;
+  /**
+   * The household is NAMED, never guessed: the server refuses one the caller does not belong to and
+   * refuses an unnamed request when the caller belongs to several (private.resolve_household_context).
+   */
+  pull(cursor: string, limit: number, householdId: string): Promise<PullResult>;
   fetchRows(table: string, cloudIds: readonly string[], idColumn: string): Promise<FetchResult>;
 }
 

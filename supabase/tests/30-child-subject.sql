@@ -18,8 +18,8 @@ SELECT id AS adult_a  FROM public.household_members     WHERE household_id = :'h
 
 -- rule 1 — a child-scoped row must say WHICH child, on all five tables.
 SELECT CASE WHEN herkeys_test.test_denied(format($q$
-  INSERT INTO public.events (household_id, local_id, title, category_id, starts_at, ends_at, commitment, status, source, scope)
-  VALUES (%L,'evt-nochild','Nobody',%L, now(), now()+interval '1 hour','fixed','active','user','child')
+  INSERT INTO public.events (household_id, local_id, title, category_id, starts_at, ends_at, commitment, status, scope)
+  VALUES (%L,'evt-nochild','Nobody',%L, now(), now()+interval '1 hour','fixed','active','child')
 $q$, :'hh_a', :'cat_kids')) THEN 'PASS' ELSE 'FAIL' END || ' | rule 1: events child-scope with NULL subject rejected';
 
 SELECT CASE WHEN herkeys_test.test_denied(format($q$

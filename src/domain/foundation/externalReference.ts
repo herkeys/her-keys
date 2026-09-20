@@ -55,8 +55,11 @@ export const ExternalReferenceSchema = z
     lastObservedDigest: Sha256Hex.nullable(),
     /** The Her Keys object this is. Null until it is linked. */
     linked: ContentRefSchema.nullable(),
-    /** For a Her Keys-originated write: the execution that made the external object. */
-    writeExecutionId: Id.nullable(),
+    /**
+     * When Her Keys wrote this object. Which execution wrote it is answered by the execution
+     * that names this reference, not by a pointer back from here: two rows pointing at each
+     * other cannot be inserted in any order.
+     */
     writtenAt: InstantSchema.nullable(),
     status: z.enum(EXTERNAL_STATUSES),
     createdAt: InstantSchema,
@@ -68,7 +71,7 @@ export const ExternalReferenceSchema = z
     if (ref.origin === 'her-keys' && ref.writtenAt === null) {
       ctx.addIssue({ code: 'custom', path: ['writtenAt'], message: 'a Her Keys-originated external object records when it was written' });
     }
-    if (ref.origin === 'external' && (ref.writeExecutionId !== null || ref.writtenAt !== null)) {
+    if (ref.origin === 'external' && ref.writtenAt !== null) {
       ctx.addIssue({ code: 'custom', path: ['origin'], message: 'an externally created object was not written by Her Keys' });
     }
     if (ref.status === 'active' && ref.linked === null && ref.origin === 'her-keys') {

@@ -1,6 +1,16 @@
-import { emptyEventFacets, emptyMealFacets, emptySystemFacets, emptyTaskFacets } from '../foundation/commitment';
-import { PROVENANCE_SOURCES, legacyProvenance, carriesConfidence, type Provenance, type ProvenanceSource } from '../foundation/provenance';
 import type { AppState } from '../state';
+import {
+  facetsFromRow,
+  instant,
+  instantOr,
+  num,
+  provenanceFromRow,
+  str,
+  strOrNull,
+  upsert,
+  type LocalIdResolver,
+} from './applySupport';
+import { applyFoundationRow, isFoundationKind } from './foundationProjection';
 import type { SyncEntityKind } from './syncTypes';
 
 /**
@@ -15,61 +25,13 @@ import type { SyncEntityKind } from './syncTypes';
  * Scope and subject travel intact. A child-scoped row keeps its scope and its
  * subject; nothing is stripped to get it past a local check, because a
  * scope-integrity failure is a real problem and hiding it would make it worse.
- */
-
-/** Cloud uuid -> the local id this device uses for it. */
-export type LocalIdResolver = (cloudId: string | null | undefined) => string | null;
-
-function upsert<T extends { id: string }>(rows: readonly T[], row: T): T[] {
-  const index = rows.findIndex((existing) => existing.id === row.id);
-  if (index === -1) return [...rows, row];
-  const next = [...rows];
-  next[index] = row;
-  return next;
-}
-
-const str = (value: unknown): string => String(value ?? '');
-const strOrNull = (value: unknown): string | null => (value === null || value === undefined ? null : String(value));
-const num = (value: unknown, fallback = 0): number => (typeof value === 'number' ? value : fallback);
-
-/**
- * A timestamptz, in the one form local state stores.
  *
- * PostgREST hands back whatever Postgres rendered -- `2026-09-20 12:00:00+00`
- * on this stack -- and the local model wants a canonical UTC instant. The same
- * moment, written the way the household already writes it; the value is never
- * shifted, only re-rendered.
+ * The nine content kinds read their provenance and commitment facets back from
+ * the columns that store them; the eighteen foundation kinds are applied by
+ * `foundationProjection.ts`, from the manifest.
  */
-const instant = (value: unknown): string | null => {
-  if (value === null || value === undefined) return null;
-  const ms = Date.parse(String(value));
-  return Number.isFinite(ms) ? new Date(ms).toISOString() : null;
-};
 
-/** The same, where the local model requires a value rather than allowing null. */
-const instantOr = (value: unknown, fallback: string): string => instant(value) ?? fallback;
-
-/**
- * A pulled row's provenance, read from the columns the cloud stores it in.
- *
- * It is transported, never reinterpreted: a row arrives meaning exactly what it
- * meant when it was pushed, so no producer is promoted, demoted or guessed here.
- * A cloud row that carries no producer (an older cloud schema) is
- * `legacy-unknown` — explicit and conservative — rather than being assumed to be
- * hers. `resolve` turns the artifact's cloud uuid into this device's local id.
- */
-function provenanceFromRow(row: Record<string, unknown>, resolve: LocalIdResolver): Provenance {
-  const producer = row.producer;
-  if (typeof producer !== 'string' || !(PROVENANCE_SOURCES as readonly string[]).includes(producer)) return legacyProvenance();
-  const source = producer as ProvenanceSource;
-  const confidence = row.confidence;
-  return {
-    producer: source,
-    artifactId: resolve(row.source_artifact_id as string),
-    // The schema requires a level exactly for claim-bearing producers; anything else is null, never invented.
-    confidence: carriesConfidence(source) ? ((strOrNull(confidence) as Provenance['confidence']) ?? 'possible') : null,
-  };
-}
+export type { LocalIdResolver };
 
 /**
  * Apply one cloud row. `resolve` turns a cloud reference into this device's
@@ -83,6 +45,8 @@ export function applyCloudRow(
   row: Record<string, unknown>,
   resolve: LocalIdResolver
 ): AppState {
+  if (isFoundationKind(kind)) return applyFoundationRow(state, kind, localId, row, resolve);
+
   switch (kind) {
     case 'category':
       return {
@@ -123,7 +87,7 @@ export function applyCloudRow(
           completedAt: instant(row.completed_at),
           createdAt: instant(row.origin_created_at),
           updatedAt: instant(row.origin_updated_at),
-          ...emptyTaskFacets(),
+          ...facetsFromRow('task', row),
           provenance: provenanceFromRow(row, resolve),
           scope: str(row.scope) as never,
         }),
@@ -147,7 +111,7 @@ export function applyCloudRow(
           travelMinutesBefore: row.travel_minutes_before === null ? null : num(row.travel_minutes_before),
           travelMinutesAfter: row.travel_minutes_after === null ? null : num(row.travel_minutes_after),
           preparationMinutes: row.preparation_minutes === null ? null : num(row.preparation_minutes),
-          ...emptyEventFacets(),
+          ...facetsFromRow('event', row),
           provenance: provenanceFromRow(row, resolve),
           createdAt: instant(row.origin_created_at),
           updatedAt: instant(row.origin_updated_at),
@@ -163,7 +127,7 @@ export function applyCloudRow(
           name: str(row.name),
           description: str(row.description),
           categoryId: resolve(row.category_id as string) ?? str(row.category_id),
-          ...emptySystemFacets(),
+          ...facetsFromRow('system', row),
           provenance: provenanceFromRow(row, resolve),
           scope: str(row.scope) as never,
         }),
@@ -177,7 +141,7 @@ export function applyCloudRow(
           date: str(row.meal_date),
           title: str(row.title),
           categoryId: resolve(row.category_id as string) ?? str(row.category_id),
-          ...emptyMealFacets(),
+          ...facetsFromRow('meal', row),
           provenance: provenanceFromRow(row, resolve),
           scope: str(row.scope) as never,
         }),
@@ -208,8 +172,13 @@ export function applyCloudRow(
       const withoutDay = state.oneMoves.filter(
         (existing) => existing.id === localId || existing.forDate !== str(row.logical_day)
       );
-      const targetType = str(row.target_type) === 'needsMe' ? ('needsMe' as const) : ('task' as const);
-      const targetCloud = targetType === 'task' ? row.target_task_id : row.target_needs_me_id;
+      const targetType = (['task', 'needsMe', 'event', 'system', 'responsibility'] as const).find((t) => t === str(row.target_type)) ?? 'task';
+      const targetCloud =
+        targetType === 'task' ? row.target_task_id
+        : targetType === 'needsMe' ? row.target_needs_me_id
+        : targetType === 'event' ? row.target_event_id
+        : targetType === 'system' ? row.target_system_id
+        : row.target_responsibility_id;
       return {
         ...state,
         oneMoves: upsert(withoutDay, {
@@ -269,6 +238,7 @@ export function applyCloudRow(
         ? state
         : { ...state, actions: [...state.actions, rebuildAction(localId, row, resolve)] };
   }
+  return state;
 }
 
 /** Remove what a tombstone removes. Only `discovery` ever produces one. */

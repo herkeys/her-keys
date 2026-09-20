@@ -214,13 +214,13 @@ describe('bootstrap and claim', () => {
 
   test('11. a real household with content claims, and carries its closure', async () => {
     const state = { ...createEmptyState(TZ), tasks: [task('task-1')], oneMoves: [
-      { id: 'onemove-1', forDate: '2026-09-18', targetId: 'task-1', targetType: 'task', status: 'completed', decidedAt: '2026-09-18T12:00:00.000Z', completedAt: '2026-09-18T18:00:00.000Z', scope: 'personal' },
+      { id: 'onemove-1', forDate: '2026-09-18', targetId: 'task-1', targetType: 'task', status: 'completed', decidedAt: '2026-09-18T12:00:00.000Z', completedAt: '2026-09-18T18:00:00.000Z', provenance: { producer: 'user-action', artifactId: null, confidence: null }, scope: 'personal' },
     ] };
     const h = runtimeFor({ state });
     const next = await h.runtime.signIn('apple');
     assert.equal(next.kind, 'accountBound');
     assert.equal(h.calls[0].fn, 'claim');
-    assert.equal(h.calls[0].payload.claimPayloadVersion, 1);
+    assert.equal(h.calls[0].payload.claimPayloadVersion, 2);
     assert.deepEqual(h.calls[0].payload.tasks.map((t) => t.localId), ['task-1']);
   });
 
@@ -255,7 +255,7 @@ describe('bootstrap and claim', () => {
   test('14. the complete id map is durable before the account is called bound', async () => {
     const h = runtimeFor({
       state: { ...createEmptyState(TZ), tasks: [task('task-1')], oneMoves: [
-        { id: 'onemove-1', forDate: '2026-09-18', targetId: 'task-1', targetType: 'task', status: 'completed', decidedAt: '2026-09-18T12:00:00.000Z', completedAt: '2026-09-18T18:00:00.000Z', scope: 'personal' },
+        { id: 'onemove-1', forDate: '2026-09-18', targetId: 'task-1', targetType: 'task', status: 'completed', decidedAt: '2026-09-18T12:00:00.000Z', completedAt: '2026-09-18T18:00:00.000Z', provenance: { producer: 'user-action', artifactId: null, confidence: null }, scope: 'personal' },
       ] },
     });
     const state = await h.runtime.signIn('apple');

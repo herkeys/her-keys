@@ -14,9 +14,9 @@
 BEGIN;
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claims = '{"sub":"11111111-1111-4111-8111-111111111111"}';
-INSERT INTO public.events (household_id, local_id, title, category_id, starts_at, ends_at, commitment, status, source, scope)
+INSERT INTO public.events (household_id, local_id, title, category_id, starts_at, ends_at, commitment, status, scope)
 SELECT hm.household_id, 'evt-hh-1', 'School run', c.id,
-       now() + interval '1 day', now() + interval '1 day 30 minutes', 'fixed', 'active', 'user', 'household'
+       now() + interval '1 day', now() + interval '1 day 30 minutes', 'fixed', 'active', 'household'
 FROM public.household_members hm
 JOIN public.household_categories c ON c.household_id = hm.household_id AND c.local_id = 'cat-kids'
 WHERE hm.profile_id = :'ua' AND hm.role = 'owner';

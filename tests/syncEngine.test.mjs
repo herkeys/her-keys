@@ -465,7 +465,7 @@ describe('push and pull against a scripted transport', () => {
       tasks: [task('task-1')],
       oneMoves: [{
         id: 'om-1', forDate: '2026-09-20', targetId: 'task-1', targetType: 'task',
-        status: 'selected', decidedAt: AT, completedAt: null, scope: 'personal',
+        status: 'selected', decidedAt: AT, completedAt: null, provenance: { producer: 'user-action', artifactId: null, confidence: null }, scope: 'personal',
       }],
     };
     const namespace = {
@@ -506,7 +506,7 @@ describe('push and pull against a scripted transport', () => {
   test('38. transport does not reinterpret onboarding — it carries the stable ids as they are', () => {
     const state = {
       ...createEmptyState(TZ),
-      onboarding: { goalIds: ['calmer-household'], strengthIds: ['cooking'], struggleIds: [], lastStep: 'struggles', completedAt: null, scope: 'personal' },
+      onboarding: { goalIds: ['calmer-household'], strengthIds: ['cooking'], struggleIds: [], lastStep: 'struggles', completedAt: null, provenance: { producer: 'onboarding', artifactId: null, confidence: null }, scope: 'personal' },
     };
     const outbound = toCloudRow(state, { householdId: HOUSEHOLD, profileId: ACCOUNT_A, namespace: ns() }, 'onboarding', 'user-1');
     assert.deepEqual(outbound.goal_ids, ['calmer-household']);
