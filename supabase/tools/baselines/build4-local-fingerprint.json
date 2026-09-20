@@ -1,0 +1,61 @@
+{
+  "artifact": "build4-local-fingerprint",
+  "scope": "LOCAL DISPOSABLE DATABASE ONLY",
+  "not_staging": true,
+  "not_production": true,
+  "note": "This is the actual fingerprint of the Build 4 schema applied to the LOCAL Supabase stack. It is NOT a Staging or Production digest, and it does not authorize any remote apply.",
+
+  "captured": "2026-09-19",
+  "target": "local Supabase stack, database `postgres`, applied by `supabase db reset --local`",
+  "cli_version": "2.109.1",
+  "local_postgres_version": "PostgreSQL 17.6 on x86_64-pc-linux-gnu",
+
+  "migrations_applied": [
+    "20260919230054_build4_baseline.sql",
+    "20260919231500_build4_cloud_schema.sql"
+  ],
+  "baseline_sha256": "8bc38d66fcffbb9fa83502329bd4738a53a8446dd5ce89327013751872f8f16f",
+
+  "method": "print-sql emitted by the UNMODIFIED locked Phase 1 tool, executed read-only via psql against the local database. Identical to the Phase 1 local-reproduction method, which used the same workaround because `supabase db query --local` rejects the multi-statement SQL on CLI 2.109.1.",
+  "tool_hashes_unchanged": {
+    "supabase/tools/schema-lines.sql": "1b159be53544cabf94d0893ac728561c9d6df7d8c23a599e29d8099ff7945a6b",
+    "supabase/tools/schema-fingerprint.mjs": "5ba8c323f4f7e678d3a89da6de806f1f1315e95f073ac6e5769239772d2a1379"
+  },
+  "tool_changes": "NONE. No dimension was added, removed or redefined; no ordering, normalization or hashing rule was changed; no connection-layer extension was required.",
+
+  "phase1_baseline_gating_digest": "c55d9b80d604211a5841260709b27f47",
+  "phase1_baseline_fact_count": 961,
+
+  "actual_local_gating_digest": "c70ee89ba3e8bf67155cf7cadfa42b81",
+  "actual_local_fact_count": 1294,
+  "result_rows": 17,
+  "result_rows_before": 16,
+  "new_result_row": "privileges.columns — predicted at Commit D and observed",
+
+  "dimensions": [
+    { "dimension": "schemas",                 "phase1": 2,   "predicted": "UNCHANGED",            "actual": 2,   "digest": "0e57bd8fd092941a34193a365f9fd211", "classification": "MATCH", "note": "digest byte-identical to Phase 1" },
+    { "dimension": "relations",               "phase1": 14,  "predicted": "+2 -> 16",             "actual": 17,  "digest": "ef3f23fb5170c54292bc2ddee944eba8", "classification": "EXPLAINED-AUTHORIZED", "note": "16 tables plus change_log_seq_seq, the identity sequence backing change_log.seq. Governed by SD4-012; the prediction counted tables only and omitted the sequence." },
+    { "dimension": "columns",                 "phase1": 148, "predicted": "up, roughly +60 (estimate)", "actual": 219, "digest": "e7790af1c2a57e1d848a24b598b76061", "classification": "EXPLAINED-AUTHORIZED", "note": "+71. SD4-001/004/009/011/017/025/037 plus the NHR-01 subject_member_id and subject_member_type columns on five tables. The prediction was labelled an estimate." },
+    { "dimension": "constraints",             "phase1": 130, "predicted": "up, roughly +50 (estimate)", "actual": 191, "digest": "0d7de64bdd612ae4e0bf554ef1707102", "classification": "EXPLAINED-AUTHORIZED", "note": "+61. local_id uniques, owner-scope CHECKs, NHR-01 child-subject CHECKs and composite FKs, narrowed enums, display-name normalization. Estimate." },
+    { "dimension": "indexes",                 "phase1": 51,  "predicted": "84",                   "actual": 82,  "digest": "3145a1377562b2fdf891e2529f0936cf", "classification": "EXPLAINED-AUTHORIZED", "note": "-2 against prediction: the design draft declared events_subject_member_idx and tasks_subject_member_idx twice, since both tables already carried a subject partial index. The duplicates were removed during implementation; no approved index is missing." },
+    { "dimension": "triggers",                "phase1": 12,  "predicted": "41",                   "actual": 41,  "digest": "edd16afa9b0804b934f40c178e19b598", "classification": "MATCH" },
+    { "dimension": "functions",               "phase1": 3,   "predicted": "13",                   "actual": 19,  "digest": "4659d82b89ba1525239ef5e35fc0c75d", "classification": "EXPLAINED-AUTHORIZED", "note": "+6. The Commit D prediction counted the RPCs as signatures only; this pass implements them as required by section 14 of the backend prompt: bootstrap_account, claim_local_household, sync_pull (SD4-022, SD4-012) plus their helpers insert_starter_categories, is_valid_timezone and claim_result." },
+    { "dimension": "policies",                "phase1": 37,  "predicted": "39",                   "actual": 39,  "digest": "7d56acccd84739e6b6b057dbeac5a575", "classification": "MATCH" },
+    { "dimension": "privileges.relations",    "phase1": 336, "predicted": "DECREASE",             "actual": 281, "digest": "c8141c2058039eefca014b81e67ffd4e", "classification": "MATCH", "note": "Moved DOWN as required. An increase would have been a failure signal even though the dimension was expected to change." },
+    { "dimension": "privileges.columns",      "phase1": 0,   "predicted": "becomes populated, adds a 17th result row", "actual": 192, "digest": "dbd07379b0c154bf356eefad3b51e42e", "classification": "MATCH", "note": "The predicted new result row appeared. Output went from 16 rows to 17." },
+    { "dimension": "privileges.functions",    "phase1": 8,   "predicted": "up",                   "actual": 37,  "digest": "52fc30689bdc49d6761e264f825db9c5", "classification": "MATCH" },
+    { "dimension": "privileges.effective",    "phase1": 205, "predicted": "REWRITTEN",            "actual": 157, "digest": "5572ff4b0464350308b76cdbfd4d0262", "classification": "MATCH" },
+    { "dimension": "privileges.schemas",      "phase1": 9,   "predicted": "REWRITTEN (private USAGE narrowed)", "actual": 10, "digest": "eda0330fda8cc1898fa30c327ab67768", "classification": "EXPLAINED-AUTHORIZED", "note": "+1: the explicit GRANT USAGE ON SCHEMA private TO authenticated required by SD4-027, which the narrowing replaced rather than removed." },
+    { "dimension": "privileges.default_acl",  "phase1": 6,   "predicted": "changes",              "actual": 7,   "digest": "84cba4e765aaa559cf174135e54549ff", "classification": "EXPLAINED-AUTHORIZED", "note": "+1: the GLOBAL routine default-ACL entry created by ALTER DEFAULT PRIVILEGES FOR ROLE postgres REVOKE EXECUTE ON ROUTINES FROM PUBLIC (SD4-026, Layer 1). Schema-scoped revokes replace existing entries rather than adding one; the global form adds a row with a null namespace." },
+    { "dimension": "types",                   "phase1": 0,   "predicted": "UNCHANGED, emits no row", "actual": 0, "digest": null, "classification": "MATCH", "note": "still emits no row; TEXT+CHECK retained per SD4-024" },
+    { "dimension": "info.event_triggers",     "phase1": 7,   "predicted": "UNCHANGED",            "actual": 7,   "digest": "460fef42355350673d98786b2395e9f7", "classification": "MATCH", "note": "digest byte-identical to Phase 1 — the platform ensure_rls machinery was not touched" },
+    { "dimension": "info.extensions",         "phase1": "5 hosted / 6 local", "predicted": "UNCHANGED", "actual": 6, "digest": "7d12895eecbafc55a6fb3f91e7ce78b7", "classification": "MATCH", "note": "local count, carrying the same explained hosted/local pg_net difference Phase 1 recorded" }
+  ],
+
+  "unexplained_differences": 0,
+  "not_comparable_dimensions": 0,
+
+  "interlock_precondition_at_apply": { "application_rows": 0, "auth_users": 0 },
+
+  "atomicity_finding": "The Supabase CLI does NOT wrap a migration file in a transaction. `supabase db reset --local` failed at the LOCK TABLE guard with SQLSTATE 25P01 before any destructive DDL ran. The migration now opens its own transaction (BEGIN first, COMMIT last), and a poisoned-migration test proves a late failure rolls the whole restructuring back."
+}

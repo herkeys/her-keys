@@ -221,3 +221,45 @@ Recorded, not acted on. None blocks implementation.
 | `buildOperatingProfile` matches `struggles` on **display labels**, not option ids | `describeUnknown()` switches on strings like `'Financial avoidance'`. Renaming a user-visible label would silently change reasoning. Keying on option id would be a behavioral-visible change and is therefore left for owner direction |
 | Systems and meals have no production create path | Carried from SD4 HR-07; they are designed and synced but never exercised |
 | Children have no production create path | B4-P0-066, deferred |
+
+---
+
+## 14. Amendments
+
+The contract is frozen. An amendment records a structural correction to
+behaviour it already governs; it does not reopen or re-freeze the contract, and
+it creates no SD4 decision row.
+
+### AMD-01 — stable option IDs are canonical identity (2026-09-19)
+
+**Reason.** `buildOperatingProfile` keyed its conclusions on **display labels**.
+Answers are stored by id, so no persisted data was ever in label form, but the
+call site resolved ids to labels through `OnboardingContext` before handing them
+on, and `describeUnknown` then switched on that text. Rewording a user-visible
+label would silently have changed reasoning. That is not an acceptable identity
+boundary ahead of cloud persistence, where the value becomes durable.
+
+**Amendment:**
+
+- **Stable option IDs are the canonical persisted representation.** Display
+  labels are presentation, not durable semantic identity.
+- **New and updated structured state uses stable IDs.** `struggleIds` is the
+  authoritative input to the Operating Profile.
+- **Legacy display-label values are compatibility-read input only.**
+  `resolveOnboardingOptionId` accepts an id first and falls back to a catalog
+  label lookup, so an older label-shaped caller lands on the same id.
+- **A recognized, unique historical label normalizes to its canonical ID before
+  the value becomes cloud-bound.** The normalization happens on the way in, not
+  by treating the label as an identifier.
+- **An unknown or ambiguous value does not silently map.** It resolves to
+  `null`, falls back to the neutral question, and remains available to the later
+  claim conflict/quarantine handling rather than being invented into an ID.
+- **No user-visible label was renamed, no option removed, no step reordered**,
+  and every current input produces the same conclusion as before.
+
+**The cloud must not inherit fragile UI label identity for backward
+compatibility.** The compatibility path exists to read old inputs, not to make
+labels durable.
+
+**Effective implementation commit:** `2881f78` (G1).
+**Covered by:** §3 information semantics, §4 confidence, §8 Operating Profile.
