@@ -64,6 +64,9 @@ SELECT pg_temp.exp('typed ref: a kind outside the allowed set is refused', pg_te
 SELECT pg_temp.exp('typed ref: a required reference cannot be omitted', pg_temp.resp('r-none', '{}'::jsonb), '23502%');
 SELECT pg_temp.exp('typed ref: a row from ANOTHER household cannot be referenced', pg_temp.resp('r-x', jsonb_build_object('about_type', 'task', 'about_task_id', :'tc'::uuid)), '23503%');
 SELECT pg_temp.exp('typed ref: a reference to nothing at all is refused', pg_temp.resp('r-ghost', jsonb_build_object('about_type', 'task', 'about_task_id', gen_random_uuid())), '23503%');
+-- One Move: its targets used to be plain single-column keys, so a row could name a uuid from ANYWHERE (PW-001). They are composite now.
+SELECT pg_temp.exp('one move: a task of the same household is accepted as its target', herkeys_test.ins('one_move_records', jsonb_build_object('household_id', :'hh_a', 'profile_id', :'ua', 'local_id', 'i-om-1', 'logical_day', DATE '2026-09-01', 'timezone_at_decision', 'America/Chicago', 'target_type', 'task', 'target_task_id', :'t1'::uuid, 'status', 'selected', 'decided_at', now(), 'producer', 'system-derived')), NULL);
+SELECT pg_temp.exp('one move: a task from ANOTHER household cannot be its target', herkeys_test.ins('one_move_records', jsonb_build_object('household_id', :'hh_a', 'profile_id', :'ua', 'local_id', 'i-om-2', 'logical_day', DATE '2026-09-02', 'timezone_at_decision', 'America/Chicago', 'target_type', 'task', 'target_task_id', :'tc'::uuid, 'status', 'selected', 'decided_at', now(), 'producer', 'system-derived')), '23503%');
 
 -- ============ 2. EXACT MONEY ====================================================================================================
 SELECT pg_temp.exp('money: 3500 minor units, USD, outflow is accepted', herkeys_test.error_of('UPDATE public.tasks SET value_amount_minor = 3500, value_currency = ''USD'', value_direction = ''outflow'' WHERE local_id = ''i-t1'''), NULL);

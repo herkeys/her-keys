@@ -19,11 +19,12 @@
 \set t6 '73f00000-0000-4000-8000-00000000000f'
 \set t7 '73900000-0000-4000-8000-000000000009'
 \set t8 '73800000-0000-4000-8000-000000000008'
+\set t9 '73700000-0000-4000-8000-000000000007'
 
 RESET ROLE;
 INSERT INTO auth.users (id, email) VALUES
   (:'t1','73a@local.test'), (:'t2','73b@local.test'), (:'t3','73c@local.test'), (:'t4','73d@local.test'),
-  (:'t5','73e@local.test'), (:'t6','73f@local.test'), (:'t7','73g@local.test'), (:'t8','73h@local.test')
+  (:'t5','73e@local.test'), (:'t6','73f@local.test'), (:'t7','73g@local.test'), (:'t8','73h@local.test'), (:'t9','73i@local.test')
 ON CONFLICT (id) DO NOTHING;
 
 -- ---- the payload every case starts from: an accepted inference, derived from a forwarded email --------------------
@@ -167,3 +168,16 @@ SELECT pg_temp.say('27. an unknown FUTURE version is still refused, not guessed 
   pg_temp.refusal(:'t7', '73900000-0000-4000-8000-0000000000c1', pg_temp.payload(jsonb_build_object('claimPayloadVersion', 3))) LIKE '22023%unsupported claimPayloadVersion 3%');
 SELECT pg_temp.say('28. a demo origin is still refused as a whole, whatever else it states',
   (pg_temp.claim_as(:'t8', '73800000-0000-4000-8000-0000000000c1', pg_temp.payload(jsonb_build_object('origin', 'demo'))) ->> 'rejected_reason') = 'refused_demo');
+
+-- ================= 9. SEVERAL ROWS DERIVED FROM ONE ARTIFACT =========================================================
+-- Regression for PD-005: the closure counted an artifact once per row that named it, so the claim record over-reported
+-- what it carried. A document is carried once, however many rows were read out of it.
+SELECT pg_temp.claim_as(:'t9', '73700000-0000-4000-8000-0000000000c1', pg_temp.payload(jsonb_build_object(
+  'needsMeItems', jsonb_build_array(jsonb_build_object('localId','needsme-1','producer','ai-inference','sourceArtifactLocalId','artifact-1','confidence','established','title','Call the school back','status','open','dueDate',NULL,'categoryLocalId',NULL,'originCreatedAt','2026-09-15T08:30:00Z','scope','personal')),
+  'oneMoves', jsonb_build_array(pg_temp.payload() -> 'oneMoves' -> 0,
+    jsonb_build_object('localId','onemove-2026-09-17','producer','system-derived','sourceArtifactLocalId',NULL,'confidence',NULL,'logicalDay','2026-09-17','targetType','needsMe','targetLocalId','needsme-1','status','selected','decidedAt','2026-09-17T12:00:00Z','completedAt',NULL)))))  AS r9 \gset
+SELECT pg_temp.say('29. a task and a Needs Me item read from ONE artifact carry it, and count it, once',
+  (SELECT count(*) FROM public.source_artifacts WHERE profile_id = :'t9'::uuid) = 1
+  AND (SELECT count(*) FROM public.tasks WHERE source_artifact_id IS NOT NULL AND household_id IN (SELECT household_id FROM public.household_members WHERE profile_id = :'t9'::uuid)) = 1
+  AND (SELECT count(*) FROM public.needs_me_items WHERE source_artifact_id IS NOT NULL AND household_id IN (SELECT household_id FROM public.household_members WHERE profile_id = :'t9'::uuid)) = 1
+  AND (SELECT (row_counts ->> 'source_artifacts')::int FROM public.account_claims WHERE profile_id = :'t9'::uuid) = 1);

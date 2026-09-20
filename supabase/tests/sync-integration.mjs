@@ -1011,6 +1011,31 @@ async function journeyFoundationConflicts(check, m, accountId, psql) {
     `dayEnd=${b.state().capacity?.dayEndMinutes} evidence=${b.namespace().evidence.filter((e) => e.kind === 'capacity').length}`);
   check('sync: G18. and both devices are quiet afterwards: nothing left waiting, state valid',
     a.namespace().queue.length === 0 && b.namespace().queue.length === 0 && m.state.validateAppState(b.state()).ok);
+
+  // --- A PERMISSION SHE WITHDRAWS REACHES EVERY DEVICE ----------------------------------------------------------
+  // Regression for PD-001: the revoke-only trigger refused an update that carried the client's origin_updated_at, so a
+  // revocation could be made locally and never arrive — the other device would keep honouring a permission she took back.
+  a.setState(m.auth.grantAuthority(a.state(), at(), { category: 'internal_reminder', mode: 'execute_authorized', persistent: true }));
+  const permission = a.state().authorities[0];
+  a.enqueue('authority', permission.id, 'create');
+  await a.coordinator.request('manual');
+  await b.coordinator.request('manual');
+  check('sync: H1. a standing permission she grants reaches the other device, still in force',
+    b.state().authorities.length === 1 && b.state().authorities[0].revokedAt === null, JSON.stringify(b.state().authorities.map((x) => x.revokedAt)));
+  a.setState(m.auth.revokeAuthority(a.state(), at(), permission.id));
+  a.enqueue('authority', permission.id, 'update');
+  await a.coordinator.request('manual');
+  const { data: stored } = await client.from('automation_authorities').select('revoked_at').eq('household_id', householdId);
+  check('sync: H2. her revocation is ACCEPTED by the database (not refused as an edit to a locked row)',
+    (stored ?? []).length === 1 && stored[0].revoked_at !== null && a.namespace().queue.length === 0 && !a.namespace().evidence.some((e) => e.kind === 'authority' && !e.resolved),
+    JSON.stringify(stored));
+  await b.coordinator.request('manual');
+  check('sync: H3. the other device now holds the permission as WITHDRAWN', b.state().authorities[0]?.revokedAt !== null && b.state().authorities[0]?.revokedAt !== undefined,
+    String(b.state().authorities[0]?.revokedAt));
+  const proposed = m.auth.proposeIntent(b.state(), atB(), { category: 'internal_reminder', summaryCode: 'nudge-after-revoke', about: { kind: 'task', id: b.state().tasks[0].id } });
+  const fresh = proposed.intents[proposed.intents.length - 1];
+  check('sync: H4. and a new proposal on that device is only a suggestion: the withdrawn permission grants nothing',
+    fresh.permittedMode === 'suggest' && m.auth.approveUnderAuthority(proposed, atB(), fresh.id) === proposed, fresh.permittedMode);
 }
 
 async function cloudIdOf(client, table, householdId, localId) {
