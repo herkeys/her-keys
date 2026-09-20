@@ -49,6 +49,16 @@ export interface PullContext {
    * server moved past my base".
    */
   matchesLocal?: (kind: SyncEntityKind, localId: string, row: Record<string, unknown>) => boolean;
+  /**
+   * The local row this incoming row displaces, if any.
+   *
+   * A domain uniqueness rule can mean two devices legitimately decided
+   * different things for the same slot -- One Move's
+   * (household, profile, logical day) is the one that matters. The engine does
+   * not know those rules; the caller does, and says so here so the displaced
+   * intent becomes evidence rather than vanishing.
+   */
+  displacedBy?: (state: AppState, kind: SyncEntityKind, localId: string, row: Record<string, unknown>) => string | null;
   /** Mint a local id that is free in this namespace (SD4-006 pull side). */
   mintLocalId: (kind: SyncEntityKind, wanted: string) => string;
   batchSize?: number;
@@ -273,17 +283,41 @@ function applyOne(
     };
   }
 
+  // Something of hers may be displaced by this row under a domain uniqueness
+  // rule. Record it BEFORE applying, so a decision that loses a race is kept as
+  // evidence rather than simply disappearing from her household.
+  const displaced = ctx.displacedBy?.(state, kind, '', row) ?? null;
+  let carried = namespace;
+  if (displaced !== null) {
+    const at = new Date(ctx.now()).toISOString();
+    const pending = namespace.queue.find((q) => q.kind === kind && q.localId === displaced);
+    carried = recordEvidence(namespace, {
+      id: `displaced:${kind}:${displaced}#${at}`,
+      evidence: 'domain-conflict',
+      kind,
+      localId: displaced,
+      cloudId,
+      attemptedOp: pending?.op ?? 'create',
+      baseRevision: pending?.baseRevision ?? null,
+      serverRevision,
+      detail: 'another device already decided this, and the cloud keeps one decision',
+      recordedAt: at,
+      resolved: false,
+    });
+    if (pending) carried = { ...carried, queue: carried.queue.filter((q) => q.id !== pending.id) };
+  }
+
   // Brand new here. SD4-006 pull side: adopt the origin local id when it is
   // free, mint a fresh one when it is not. A local id already in use for a
-  // DIFFERENT cloud row is never overwritten — that would silently replace one
+  // DIFFERENT cloud row is never overwritten -- that would silently replace one
   // of her rows with somebody else's.
   const wanted = String(row.local_id ?? cloudId);
-  const taken = namespace.mappings[mappingKey(kind, wanted)] !== undefined;
+  const taken = carried.mappings[mappingKey(kind, wanted)] !== undefined;
   const localId = taken ? ctx.mintLocalId(kind, wanted) : wanted;
 
   return {
-    state: ctx.applyRow(state, kind, localId, row, resolverFor(namespace)),
-    namespace: rememberMapping(namespace, { kind, localId, cloudId, revision: serverRevision }),
+    state: ctx.applyRow(state, kind, localId, row, resolverFor(carried)),
+    namespace: rememberMapping(carried, { kind, localId, cloudId, revision: serverRevision }),
     changed: true,
   };
 }

@@ -80,7 +80,7 @@
     ]
   },
 
-  "current_local_gating_digest": "db61912018a5c32f97c0b9ea40b752bf",
+  "current_local_gating_digest": "d2b319d0253613d6a5c1dd36ef906da6",
   "current_local_fact_count": 1300,
   "digest_history": "actual_local_gating_digest above is the digest captured at G4 and is kept as history, not overwritten. Each correction block below records its own before/after. current_local_gating_digest is the digest of the repository as it stands now, after B4-BE02-OR-001 and then B4-BE03-OR-001.",
 
@@ -89,12 +89,12 @@
     "authorized_by": "B4-BACKEND-03 addendum section C -- a callable surface missing but fully specified by frozen SD4 is an implementation defect, forward-fixed locally. P2: the unfixed failure mode is a 23505 becoming durable failure evidence with needsSyncAttention set.",
     "shipping_migration_sha256": {
       "pre_b4_be03_or_001": "9feac67283896d310ed4239776dcd10f3d624cc57be742683e8fa5de35e06b86",
-      "current": "529e3891101231faf1743f0ecbbe2dc3ccbc701037e0f2e7b5cb2fccdc63fb26"
+      "current": "275e9d1cd81a3d4361715a6d91a084ad95de2ccbd83c67f56e6ca0d3143e8436"
     },
     "baseline_migration_sha256_unchanged": "8bc38d66fcffbb9fa83502329bd4738a53a8446dd5ce89327013751872f8f16f",
     "fingerprint": {
       "pre_correction_digest": "0fc7b9bf380faaf9fa20b4859e8adf6d",
-      "post_correction_digest": "db61912018a5c32f97c0b9ea40b752bf",
+      "post_correction_digest": "d2b319d0253613d6a5c1dd36ef906da6",
       "fact_count_before": 1294,
       "fact_count_after": 1300,
       "result_rows": 17,
@@ -102,9 +102,9 @@
       "unexplained_differences": 0,
       "changed": [
         { "dimension": "functions", "count_before": 19, "count_after": 20,
-          "digest_before": "619edaa84036cd31cfd7914f2f20afb7", "digest_after": "74c2b461d87133664e0c247611818111",
+          "digest_before": "619edaa84036cd31cfd7914f2f20afb7", "digest_after": "65eee717f7f614273da98505da66b44f",
           "classification": "EXPLAINED-AUTHORIZED", "governing_authority": "SD4-006 / B4-BE03-OR-001",
-          "interpretation": "Exactly one routine added: public.sync_push(text, uuid, jsonb), SECURITY INVOKER. No existing routine body changed." },
+          "interpretation": "Exactly one routine added: public.sync_push(text, uuid, jsonb), SECURITY INVOKER. No existing routine body changed. The digest reflects the routine as finally shipped, after the action-ledger entity was added to its allow-list during the same wave." },
         { "dimension": "privileges.functions", "count_before": 37, "count_after": 40,
           "digest_before": "52fc30689bdc49d6761e264f825db9c5", "digest_after": "416ed4fab2d451c814394144accc904b",
           "classification": "EXPLAINED-AUTHORIZED", "governing_authority": "SD4-026 grant posture",
@@ -126,7 +126,7 @@
       },
       "capture_method": "supabase db reset --local, then the UNMODIFIED locked Phase 1 tool via psql against the local `postgres` database."
     },
-    "backend_harness": { "checks_before": 281, "checks_after": 305, "new": 24, "removed": 0, "failures": 0 }
+    "backend_harness": { "checks_before": 281, "checks_after": 365, "new": 84, "removed": 0, "failures": 0, "note": "29 in 74-sync-push.sql, 2 added to 72-claim-closure.sql for the addendum-A replay topology, and 53 sync journeys against the real local Supabase." }
   },
 
   "b4_be02_or_001_correction": {

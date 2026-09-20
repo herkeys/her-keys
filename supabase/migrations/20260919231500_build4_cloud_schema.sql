@@ -3099,6 +3099,8 @@ DECLARE
   v_house      uuid;
   v_local      text;
   v_owner_private boolean;
+  v_owner_col  text;
+  v_has_revision boolean;
   v_found_id   uuid;
   v_found_rev  bigint;
   v_found_dev  uuid;
@@ -3120,13 +3122,26 @@ BEGIN
   -- An allow-list, not a pattern. A table named by the client must be one this
   -- function was built for, or the dynamic SQL below becomes a way to reach
   -- tables the push path has no business in.
-  v_owner_private := p_entity_table IN ('one_move_records', 'needs_me_items', 'discovery_records');
+  -- Which column carries the owner half of the uniqueness boundary, when the
+  -- table has one. The ledger names it actor_profile_id, because the question
+  -- it answers is who ACTED, not who owns.
+  v_owner_col := CASE p_entity_table
+                   WHEN 'one_move_records' THEN 'profile_id'
+                   WHEN 'needs_me_items'   THEN 'profile_id'
+                   WHEN 'discovery_records' THEN 'profile_id'
+                   WHEN 'action_records'   THEN 'actor_profile_id'
+                 END;
+  v_owner_private := v_owner_col IS NOT NULL;
   IF NOT v_owner_private
      AND p_entity_table NOT IN ('tasks', 'events', 'household_categories',
                                 'household_systems', 'meal_plan_entries') THEN
     RAISE EXCEPTION 'sync_push: % is not a pushable entity table', p_entity_table
       USING errcode = '22023';
   END IF;
+
+  -- The action ledger is immutable and carries no revision column. Everything
+  -- else does, and the caller needs it as the base for its next CAS.
+  v_has_revision := p_entity_table <> 'action_records';
 
   v_house := (p_row ->> 'household_id')::uuid;
   v_local := p_row ->> 'local_id';
@@ -3146,9 +3161,10 @@ BEGIN
   -- tables key on (household_id, local_id), owner-private ones add profile_id.
   -- Probing the wrong boundary would either miss a real collision or invent one.
   EXECUTE format(
-    'SELECT id, revision, origin_device_id FROM public.%I WHERE household_id = $1 AND local_id = $2%s',
+    'SELECT id, %s, origin_device_id FROM public.%I WHERE household_id = $1 AND local_id = $2%s',
+    CASE WHEN v_has_revision THEN 'revision' ELSE 'NULL::bigint' END,
     p_entity_table,
-    CASE WHEN v_owner_private THEN ' AND profile_id = $3' ELSE '' END)
+    CASE WHEN v_owner_private THEN format(' AND %I = $3', v_owner_col) ELSE '' END)
     INTO v_found_id, v_found_rev, v_found_dev
     USING v_house, v_local, v_uid;
 
@@ -3194,8 +3210,9 @@ BEGIN
   -- explicitly means every column NOT supplied keeps its default -- which is how
   -- id, revision, created_at and updated_at stay server-generated.
   EXECUTE format(
-    'INSERT INTO public.%I (%s) SELECT %s FROM jsonb_populate_record(NULL::public.%I, $1) r RETURNING id, revision',
-    p_entity_table, v_cols, v_sel, p_entity_table)
+    'INSERT INTO public.%I (%s) SELECT %s FROM jsonb_populate_record(NULL::public.%I, $1) r RETURNING id, %s',
+    p_entity_table, v_cols, v_sel, p_entity_table,
+    CASE WHEN v_has_revision THEN 'revision' ELSE 'NULL::bigint' END)
     USING v_clean
     INTO v_id, v_rev;
 

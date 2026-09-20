@@ -30,12 +30,14 @@ export async function syncIntegration(check, psql) {
   const A = crypto.randomUUID();
   const B = crypto.randomUUID();
   const C = crypto.randomUUID();
+  const D = crypto.randomUUID();
   psql(
     'postgres',
     `INSERT INTO auth.users (id, email, aud, role) VALUES
        ('${A}','sync-${A}@local.test','authenticated','authenticated'),
        ('${B}','sync-${B}@local.test','authenticated','authenticated'),
-       ('${C}','sync-${C}@local.test','authenticated','authenticated')
+       ('${C}','sync-${C}@local.test','authenticated','authenticated'),
+       ('${D}','sync-${D}@local.test','authenticated','authenticated')
      ON CONFLICT (id) DO NOTHING;`,
     { label: 'sync fixture users' }
   );
@@ -43,6 +45,7 @@ export async function syncIntegration(check, psql) {
   await journeyPostClaim(check, m, A);
   await journeySecondDevice(check, m, B);
   await journeyOfflineConflict(check, m, C);
+  await journeyOneMoveAndLedger(check, m, D, psql);
 }
 
 async function load() {
@@ -105,6 +108,9 @@ function makeDevice(m, { accountId, deviceId, householdId, state, namespace, tra
     profileId: accountId,
     now: () => Date.now(),
     push: { householdId, profileId: accountId, deviceId, transport, now: () => Date.now() },
+    report: (event) => {
+      if (event.type === 'sync.integrity_refused') console.log('      INTEGRITY:', event.detail);
+    },
     pull: {
       transport,
       now: () => Date.now(),
@@ -129,7 +135,17 @@ function makeDevice(m, { accountId, deviceId, householdId, state, namespace, tra
           return false;
         }
       },
-      mintLocalId: (kind, wanted) => `${wanted}~${deviceId.slice(0, 4)}`,
+      // The one domain uniqueness rule this wave transports: One Move is unique
+      // per product logical day (HR-03). An incoming authoritative row for a
+      // day this device decided differently displaces the local decision.
+      displacedBy: (s, kind, _localId, row) => {
+        if (kind !== 'oneMove') return null;
+        const clash = s.oneMoves.find((o) => o.forDate === String(row.logical_day));
+        return clash && clash.id !== String(row.local_id) ? clash.id : null;
+      },
+      // A minted local id must itself be a legal local id: the app's Id pattern
+      // allows letters, digits and `._:-` only.
+      mintLocalId: (kind, wanted) => `${wanted}-x${deviceId.slice(0, 4)}`,
       batchSize: 200,
     },
   });
@@ -573,4 +589,165 @@ async function countRows(client, householdId) {
 async function scalarTitle(client, householdId) {
   const { data } = await client.from('tasks').select('title').eq('household_id', householdId).eq('local_id', 'task-shared');
   return data?.[0]?.title ?? null;
+}
+
+// ---------------------------------------------------------------------------
+// Journey 4 — One Move across two devices and two timezones (HR-03), the
+// action ledger, and a cursor spanning two server transactions.
+// ---------------------------------------------------------------------------
+async function journeyOneMoveAndLedger(check, m, accountId, psql) {
+  const deviceA = crypto.randomUUID();
+  const deviceB = crypto.randomUUID();
+  const { client, householdId, idMap } = await bootstrapCloud(m, accountId, deviceA);
+
+  const state = m.initial.createEmptyState(TZ);
+  const nsA = m.claimSeam.namespaceFromClaim({ state, accountId, householdId, deviceId: deviceA, idMap });
+  const transportA = m.transport.createSupabaseSyncTransport(client);
+  const a = makeDevice(m, { accountId, deviceId: deviceA, householdId, state, namespace: nsA, transport: transportA });
+
+  a.setState({ ...a.state(), tasks: [task('task-move', { title: 'Rinse the recycling' })] });
+  a.enqueue('task', 'task-move', 'create');
+  await a.coordinator.request('localMutation');
+
+  const today = new Date().toISOString().slice(0, 10);
+  a.setState({
+    ...a.state(),
+    oneMoves: [{
+      id: `onemove-${today}`, forDate: today, targetId: 'task-move', targetType: 'task',
+      status: 'selected', decidedAt: new Date().toISOString(), completedAt: null, scope: 'personal',
+    }],
+  });
+  a.enqueue('oneMove', `onemove-${today}`, 'create');
+
+  // Q/HR-03. Device B, in ANOTHER timezone, decided its OWN One Move for the
+  // same product day while it had not yet seen A's. Exactly one row may live.
+  const b = makeDevice(m, {
+    accountId,
+    deviceId: deviceB,
+    householdId,
+    state: m.initial.createEmptyState('Europe/London'),
+    namespace: m.claimSeam.namespaceForNewDevice({ accountId, householdId, deviceId: deviceB }),
+    transport: m.transport.createSupabaseSyncTransport(clientFor(accountId)),
+  });
+  await b.coordinator.request('foreground');
+
+  check('sync: Q pre. device B hydrated the task it needs', b.state().tasks.length === 1, `tasks=${b.state().tasks.length} phase=${b.coordinator.snapshot().phase} detail=${b.coordinator.snapshot().detail}`);
+  const bTask = b.state().tasks[0];
+  b.setState({
+    ...b.state(),
+    // Local state permits one One Move per day, so this IS B's decision for
+    // the day -- not a second row stacked on top of one it has not seen.
+    oneMoves: [{
+      id: 'onemove-b-own', forDate: today, targetId: bTask.id, targetType: 'task',
+      status: 'selected', decidedAt: new Date().toISOString(), completedAt: null, scope: 'personal',
+    }],
+  });
+  b.enqueue('oneMove', 'onemove-b-own', 'create');
+
+  // A reaches the server first and its decision becomes the authoritative one.
+  await a.coordinator.request('localMutation');
+  const moveRow = await oneMoveRow(client, householdId);
+  check('sync: 23. today One Move pushed, and the SERVER owns its logical day', moveRow?.logical_day === today, moveRow?.logical_day);
+  check(
+    'sync: 23b. with the timezone at decision recorded as evidence, never sent by the client',
+    moveRow?.timezone_at_decision === TZ,
+    moveRow?.timezone_at_decision
+  );
+  check('sync: 23c. and a TYPED target, never polymorphic', Boolean(moveRow?.target_task_id) && moveRow?.target_needs_me_id === null);
+
+  await b.coordinator.request('localMutation');
+
+  const moveCount = await countOneMoves(client, householdId);
+  check(
+    'sync: Q/HR-03. exactly ONE One Move survives that product day, across two devices in two timezones',
+    moveCount === 1,
+    `${moveCount} rows`
+  );
+  const domain = m.types.unresolvedEvidence(b.namespace()).find((e) => e.evidence === 'domain-conflict');
+  check(
+    'sync: R. the second device competing decision is a DOMAIN conflict, not a generic validation failure',
+    Boolean(domain),
+    domain?.detail?.slice(0, 80)
+  );
+  check('sync: Q b. and her intent was not silently dropped', m.types.needsSyncAttention(b.namespace()));
+
+  // 35. Completion transitions and reaches the other device.
+  a.setState({
+    ...a.state(),
+    oneMoves: a.state().oneMoves.map((o) => ({ ...o, status: 'completed', completedAt: new Date().toISOString() })),
+  });
+  a.enqueue('oneMove', `onemove-${today}`, 'update');
+  await a.coordinator.request('localMutation');
+  await b.coordinator.request('manual');
+  const onB = b.state().oneMoves.find((o) => o.status === 'completed');
+  check('sync: 35. a completion transition reaches the second device', Boolean(onB), onB?.status);
+  check('sync: 35b. without losing its target', Boolean(onB?.targetId), onB?.targetId);
+
+  // 24. The action ledger: push, pull, immutable.
+  a.setState({
+    ...a.state(),
+    actions: [{
+      id: 'act-1', type: 'daily_load.drop_task', approval: 'approved', targetId: 'task-move',
+      reason: { code: 'capacity_pressure', totalAvailableMinutes: 120, totalFlexibleNeededMinutes: 150, shortfallMinutes: 30 },
+      before: { status: 'open' }, after: { status: 'archived' },
+      logicalDate: today, createdAt: new Date().toISOString(),
+      actor: 'user', source: 'her_keys_recommendation', scope: 'personal',
+    }],
+  });
+  a.enqueue('action', 'act-1', 'create');
+  await a.coordinator.request('localMutation');
+
+  const ledger = await ledgerRow(client, householdId);
+  check('sync: 24 pre. the ledger push reported', Boolean(ledger), `phase=${a.coordinator.snapshot().phase} detail=${a.coordinator.snapshot().detail} evidence=${JSON.stringify(m.types.unresolvedEvidence(a.namespace()).map((e) => [e.evidence, e.detail.slice(0, 120)]))}`);
+  check('sync: 24. the action record pushed', Boolean(ledger), ledger?.action_type);
+  check(
+    'sync: 24b. its target is a CLOUD uuid, never a local id (SD4-007)',
+    Boolean(ledger?.target_id) && ledger.target_id !== 'task-move',
+    ledger?.target_id
+  );
+
+  const mutate = await client.from('action_records').update({ approval: 'declined' }).eq('id', ledger.id).select('*');
+  check(
+    'sync: 24c. and it is immutable: a valid session cannot update it',
+    (mutate.data ?? []).length === 0 || Boolean(mutate.error),
+    mutate.error?.code ?? 'no rows updated'
+  );
+
+  await b.coordinator.request('manual');
+  check('sync: 24d. the second device pulled the ledger row', b.state().actions.length === 1, `${b.state().actions.length} actions`);
+  const beforeReplay = JSON.stringify(b.state().actions);
+  await b.coordinator.request('manual');
+  check(
+    'sync: 24e. and a second delivery changed nothing: history is not regenerated',
+    JSON.stringify(b.state().actions) === beforeReplay
+  );
+
+  // 9. Two separate server transactions, then a cursor that spans both.
+  const cursorBefore = a.namespace().cursor;
+  b.setState({ ...b.state(), tasks: [...b.state().tasks, task('task-tx1', { title: 'Tx one' })] });
+  b.enqueue('task', 'task-tx1', 'create');
+  await b.coordinator.request('localMutation');
+  b.setState({ ...b.state(), tasks: [...b.state().tasks, task('task-tx2', { title: 'Tx two' })] });
+  b.enqueue('task', 'task-tx2', 'create');
+  await b.coordinator.request('localMutation');
+
+  await a.coordinator.request('manual');
+  const sawBoth = ['Tx one', 'Tx two'].every((title) => a.state().tasks.some((t) => t.title === title));
+  check('sync: 9. a cursor spanning TWO server transactions skipped neither', sawBoth);
+  check('sync: 9b. and advanced past both', a.namespace().cursor !== cursorBefore, `${cursorBefore} -> ${a.namespace().cursor}`);
+}
+
+async function oneMoveRow(client, householdId) {
+  const { data } = await client.from('one_move_records').select('*').eq('household_id', householdId);
+  return data?.[0] ?? null;
+}
+
+async function countOneMoves(client, householdId) {
+  const { data } = await client.from('one_move_records').select('id').eq('household_id', householdId);
+  return (data ?? []).length;
+}
+
+async function ledgerRow(client, householdId) {
+  const { data } = await client.from('action_records').select('*').eq('household_id', householdId);
+  return data?.[0] ?? null;
 }

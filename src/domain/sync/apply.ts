@@ -31,6 +31,23 @@ const strOrNull = (value: unknown): string | null => (value === null || value ==
 const num = (value: unknown, fallback = 0): number => (typeof value === 'number' ? value : fallback);
 
 /**
+ * A timestamptz, in the one form local state stores.
+ *
+ * PostgREST hands back whatever Postgres rendered -- `2026-09-20 12:00:00+00`
+ * on this stack -- and the local model wants a canonical UTC instant. The same
+ * moment, written the way the household already writes it; the value is never
+ * shifted, only re-rendered.
+ */
+const instant = (value: unknown): string | null => {
+  if (value === null || value === undefined) return null;
+  const ms = Date.parse(String(value));
+  return Number.isFinite(ms) ? new Date(ms).toISOString() : null;
+};
+
+/** The same, where the local model requires a value rather than allowing null. */
+const instantOr = (value: unknown, fallback: string): string => instant(value) ?? fallback;
+
+/**
  * Apply one cloud row. `resolve` turns a cloud reference into this device's
  * local id — never the raw uuid, because local integrity checking works in
  * local ids and SD4-006 makes them device-relative.
@@ -78,9 +95,9 @@ export function applyCloudRow(
           plan,
           notes: strOrNull(row.notes),
           status: str(row.status) as never,
-          completedAt: strOrNull(row.completed_at),
-          createdAt: strOrNull(row.origin_created_at),
-          updatedAt: strOrNull(row.origin_updated_at),
+          completedAt: instant(row.completed_at),
+          createdAt: instant(row.origin_created_at),
+          updatedAt: instant(row.origin_updated_at),
           scope: str(row.scope) as never,
         }),
       };
@@ -94,8 +111,8 @@ export function applyCloudRow(
           title: str(row.title),
           categoryId: resolve(row.category_id as string) ?? str(row.category_id),
           subjectMemberId: resolve(row.subject_member_id as string),
-          startsAt: str(row.starts_at),
-          endsAt: str(row.ends_at),
+          startsAt: instantOr(row.starts_at, str(row.starts_at)),
+          endsAt: instantOr(row.ends_at, str(row.ends_at)),
           location: strOrNull(row.location),
           notes: strOrNull(row.notes),
           commitment: str(row.commitment) as never,
@@ -104,8 +121,8 @@ export function applyCloudRow(
           travelMinutesAfter: row.travel_minutes_after === null ? null : num(row.travel_minutes_after),
           preparationMinutes: row.preparation_minutes === null ? null : num(row.preparation_minutes),
           source: str(row.source) as never,
-          createdAt: strOrNull(row.origin_created_at),
-          updatedAt: strOrNull(row.origin_updated_at),
+          createdAt: instant(row.origin_created_at),
+          updatedAt: instant(row.origin_updated_at),
           scope: str(row.scope) as never,
         }),
       };
@@ -143,17 +160,26 @@ export function applyCloudRow(
           status: str(row.status) as never,
           dueDate: strOrNull(row.due_date),
           categoryId: resolve(row.category_id as string),
-          createdAt: str(row.origin_created_at),
+          createdAt: instantOr(row.origin_created_at, str(row.origin_created_at)),
           scope: 'personal',
         }),
       };
 
     case 'oneMove': {
+      // One Move is unique per (household, profile, logical day) -- HR-03, and
+      // the cloud enforces it. An incoming authoritative row for a day this
+      // device decided differently DISPLACES the local one; both cannot exist,
+      // and stacking them would make local state invalid. Her displaced intent
+      // is not lost: the push that lost the race recorded it as conflict
+      // evidence before this ever runs.
+      const withoutDay = state.oneMoves.filter(
+        (existing) => existing.id === localId || existing.forDate !== str(row.logical_day)
+      );
       const targetType = str(row.target_type) === 'needsMe' ? ('needsMe' as const) : ('task' as const);
       const targetCloud = targetType === 'task' ? row.target_task_id : row.target_needs_me_id;
       return {
         ...state,
-        oneMoves: upsert(state.oneMoves, {
+        oneMoves: upsert(withoutDay, {
           id: localId,
           // The SERVER owns the logical day. It is read back, never recomputed
           // from a device clock — two devices in two timezones must agree, and
@@ -162,8 +188,8 @@ export function applyCloudRow(
           targetId: resolve(targetCloud as string),
           targetType,
           status: str(row.status) as never,
-          decidedAt: str(row.decided_at),
-          completedAt: strOrNull(row.completed_at),
+          decidedAt: instantOr(row.decided_at, str(row.decided_at)),
+          completedAt: instant(row.completed_at),
           scope: 'personal',
         }),
       };
@@ -193,7 +219,7 @@ export function applyCloudRow(
           strengthIds: Array.isArray(row.strength_ids) ? (row.strength_ids as string[]) : [],
           struggleIds: Array.isArray(row.struggle_ids) ? (row.struggle_ids as string[]) : [],
           lastStep: (strOrNull(row.last_step) as never) ?? null,
-          completedAt: strOrNull(row.completed_at),
+          completedAt: instant(row.completed_at),
           scope: 'personal',
         },
       };
@@ -235,19 +261,26 @@ function rebuildAction(localId: string, row: Record<string, unknown>, resolve: L
     if (typeof value === 'string') localReason[field] = resolve(value) ?? value;
   }
 
-  return {
+  const type = str(row.action_type);
+  const rebuilt: Record<string, unknown> = {
     id: localId,
-    type: str(row.action_type),
+    type,
     approval: str(row.approval),
     targetId: resolve(row.target_id as string),
-    targetType: strOrNull(row.target_type),
     reason: localReason,
-    before: row.before_state ?? null,
-    after: row.after_state ?? null,
     logicalDate: str(row.logical_date),
-    createdAt: str(row.origin_created_at),
+    createdAt: instantOr(row.origin_created_at, str(row.origin_created_at)),
     actor: 'user',
     source: 'her_keys_recommendation',
     scope: 'personal',
-  } as unknown as AppState['actions'][number];
+  };
+
+  // Only `protect_item` carries an explicit targetType, and the local schemas
+  // are strict: adding the key to any other action type makes the record
+  // invalid. The shape is reproduced as it was, not as a union of every shape.
+  if (type === 'daily_load.protect_item') rebuilt.targetType = strOrNull(row.target_type);
+  if (row.before_state !== null && row.before_state !== undefined) rebuilt.before = row.before_state;
+  if (row.after_state !== null && row.after_state !== undefined) rebuilt.after = row.after_state;
+
+  return rebuilt as unknown as AppState['actions'][number];
 }
