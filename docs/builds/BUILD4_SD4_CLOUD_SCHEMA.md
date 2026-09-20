@@ -1003,46 +1003,132 @@ Recorded per owner direction. Nothing is erased.
 
 **No substantive design changed during the bookkeeping correction itself.** The SD4-017 status fix moved a label to match a disposition that already existed in the same document. All design changes in this pass flow from the four owner decisions.
 
+### 13.1 Correction 3 — the dependency-count defect and the tier-classification conflict (2026-09-19)
+
+**The defect.** A prior prose report claimed *"9 implementation-blocking decisions."* Extraction found no support for it anywhere in the artifacts; the string "nine" appears in no SD4 file. The `Dep?` column actually held three distinct values:
+
+| Raw `Dep?` value | Count |
+|---|---|
+| `**YES — blocking**` | 4 |
+| `**YES**` | 23 |
+| `No — …` (three different phrasings) | 3 |
+| **Total PROPOSED** | **30** |
+
+Two separate faults: the "nine" was written from recollection rather than extracted, **and** the column itself was ambiguous — two different markers in a column whose own definition made both blocking. Neither reading yields nine.
+
+**The corrected authorization fact:** **27 implementation-required PROPOSED decisions**, composed of **T1 = 7** and **T2 = 20**, with **T3 = 3** non-blocking. 7 + 20 + 3 = 30.
+
+**The conflict.** A boundary sweep of all non-T1 proposals surfaced three additional candidates beyond the original four (`SD4-001`, `SD4-004`, `SD4-007`, `SD4-012`): **SD4-006** (strong), **SD4-002** and **SD4-008** (moderate). Rather than re-tier them, the conflict was returned to the owner.
+
+**Agent recommendation:** Option C — adopt SD4-006 only, leaving SD4-002 in T2 because it preserves the baseline and SD4-008 in T2 because its manifest is verifiably complete against frozen Build 3 schemas. Proposed T1 = 5.
+
+**Owner selection: Option B** — adopt all three. T1 = 7. The owner rationale, which supersedes the recommendation:
+
+- **SD4-002 is T1** because `profiles.id = auth.users.id` establishes the account identity topology. Preserving the current baseline does not make it safely retrofittable; *"status quo today"* and *"cheap to reverse after data"* are different questions.
+- **SD4-006 is T1** because it and SD4-004 are the behavioral and structural halves of one durable identity-mapping contract, now recorded as **IDENTITY-MAPPING-CONTRACT-01** (§14.3).
+- **SD4-008 is T1** because verified-complete lowers the *probability* of error, not the *cost* of correction. Repair would require rewriting records the design declares immutable.
+
+The governing principle the owner set: **probability of later change is irrelevant, and whether implementation can technically begin is irrelevant.** The question is what correction costs if the decision is wrong after durable data exists.
+
+**Final tier counts, mechanically extracted from the artifact after relabelling:** T1 = 7, T2 = 20, T3 = 3, total 30.
+
+**This was a tier-classification decision only. It approved no substantive proposal.** All 30 decisions in the package remain `PROPOSED`; the register status counts are unchanged at 42 / 6 / 4 / 30 / 2. Tier metadata is orthogonal to decision status, and no new SD4 decision ID was created for the tier model or for the Option B resolution.
+
 ---
 
 ## 14. SD4 implementation authorization package
+
+### 14.1 Authorization tier model
+
+Tier is **governance metadata about a decision, not a decision status.** It is orthogonal to `PROPOSED` / `OWNER-APPROVED` / `INHERITED-APPROVED` / `DEFERRED`, and it creates no new SD4 decision IDs.
+
+| Tier | Meaning |
+|---|---|
+| **T1 — PRE-DATA STRUCTURAL** | If this design choice is wrong after durable account-backed data exists, correcting it requires foundational identity, namespace, reference, key, or sync-protocol migration |
+| **T2 — IMPLEMENTATION-REQUIRED** | Schema implementation requires the decision to be settled, but a later correction is retrofittable without foundational migration |
+| **T3 — NON-BLOCKING** | Not required for schema implementation |
+
+**T1 is *not* determined by** whether the proposal preserves the current baseline, whether implementation could technically begin without settling it, or how likely a later change appears. The only question is: *what happens if this decision is wrong after real data exists?*
+
+**Tier changes sequencing and the level of individual owner attention. It does not change gate membership.** All **27** T1 + T2 decisions require explicit owner disposition before schema implementation is authorized. **T2 does not mean optional. T1 classification does not mean approved. Presence in the SQL draft does not mean approved.**
+
+### 14.2 T1 justification — auditable without the conversation
+
+Owner-classified 2026-09-19 (Option B). Each entry records the proposal source, the criterion triggered, and why correction after durable data would be foundational.
+
+| ID | Verbatim proposal (source: `BUILD4_SD4_CLOUD_SCHEMA.md` §2 register) | Criterion triggered | Irreversibility rationale |
+|---|---|---|---|
+| SD4-001 | *"Cloud primary keys become native PostgreSQL `uuid`, server-generated by `DEFAULT gen_random_uuid()`. Not server-generated TEXT."* (L75) | **primary-key re-keying** | The physical key type of all 16 tables. Correcting it after rows exist means re-keying every primary key and all 26 foreign keys, including the five composite `(id, household_id)` edges |
+| SD4-002 | *"`profiles.id` stays the Supabase Auth user id — a shared primary key with `auth.users(id) ON DELETE CASCADE`. No surrogate account id and no separate account table."* (L76) | **identity rewriting / primary-key re-keying** | Establishes the account identity topology. Introducing a surrogate account key later means account identity migration plus migration of six dependent foreign keys and reconciliation of existing ownership references. **Preserving the current baseline does not make it cheap to reverse** — "status quo today" and "cheap to reverse after data" are different questions |
+| SD4-004 | *"`local_id text NOT NULL`, same id pattern as the baseline. Uniqueness boundary follows the ownership boundary: `(household_id, local_id)` on household-scoped tables, `(household_id, profile_id, local_id)` on owner-private tables…"* (L78) | **local/cloud ID namespace migration** | The structural half of the durable identity-mapping contract, across 11 tables. Changing the boundary after devices have persisted mappings invalidates every idempotency key derived from it. **Atomic with SD4-006** |
+| SD4-006 | *"A local id is device-relative, not a global handle. On pull, a device adopts the origin local id when it is free and mints a fresh local id when it is not, recording the mapping either way."* (L80) | **local/cloud ID namespace migration** | The behavioral half of the same contract: what happens when a second device meets an occupied `local_id`, and how a fresh mapping is minted. Changing it after devices have persisted mappings requires map reconstruction, collision reconciliation, cross-device sync migration, and potentially local identifier rewriting — which **B4-P0-005 forbids**. **Atomic with SD4-004** |
+| SD4-007 | *"Soft references are stored in the cloud as cloud uuids, not as local ids."* (L81) | **durable reference migration** | Decides the namespace of every durable soft reference. Reversal makes stored reference values meaningless rather than merely reshaped, and Build 3 local integrity rejects the alternative outright |
+| SD4-008 | *"A closed reference manifest for JSONB payloads: exactly four paths carry references (`reason.windowBeforeEventId`, `reason.windowAfterEventId`, `reason.recommendedTaskId`, `reason.consideredTaskId`), plus the `target_id` column."* (L82) | **reinterpretation/rewrite of immutable durable references** | Determines which values inside the **immutable** action ledger are durable references requiring translation. The manifest is verified complete against the frozen Build 3 action schemas, which lowers the probability of error but **not the cost of correction**: repair would require reinterpreting historical JSONB, reference-namespace migration, and rewriting records SD4-020 declares immutable. Future schema versions may add reference paths *prospectively* under SD4-025 versioning; that does not change the classification of the current frozen manifest |
+| SD4-012 | *"The global change cursor is `public.change_log` keyed on `committed_xid xid8`, read behind a `pg_snapshot_xmin` barrier."* (L87) | **cursor-protocol migration** | The sync change-discovery protocol. Every device persists a cursor in this coordinate system; changing the coordinate invalidates all of them and requires a full-resync migration across the fleet |
+
+### 14.3 Atomic contract groups
+
+A dependency edge does **not** by itself require identical owner disposition. An atomic group is used only where splitting the decisions would produce an internally incoherent schema or protocol.
+
+| Group | Members | Why atomic |
+|---|---|---|
+| **IDENTITY-MAPPING-CONTRACT-01** | **SD4-004**, **SD4-006** | The structural and behavioral halves of the durable `local_id`/`cloud_id` mapping contract. Approving one while deferring or incompatibly revising the other is incoherent: a uniqueness boundary with no collision semantics, or collision semantics with no boundary, is not an implementable contract. **If an owner disposition would split this pair, STOP and return it to the owner** |
+
+All other dependency relationships are assessed individually. Atomicity is not inferred from dependency.
+
+### 14.4 Boundary sweep — non-T1 proposals reviewed under the refined criterion
+
+Every non-T1 PROPOSED decision was reviewed against the refined rule (probability irrelevant; "can implementation begin" irrelevant). The five closest calls are recorded so the classification is auditable rather than asserted.
+
+| ID | Adjacent to | T1 qualifies | Why retrofittable |
+|---|---|---|---|
+| SD4-005 | `local_id`, idempotency | **NO** | Adds no durable structure of its own. The constraint it uses as the `ON CONFLICT` target belongs to SD4-004, which is already T1; changing SD4-005 alone changes the form of an SQL statement, not a stored namespace |
+| SD4-018 | reference representation | **NO** | A *shape* change within one namespace, not a namespace change: both the typed FK columns and any alternative hold cloud uuids. Migration between the two is a mechanical, lossless, single-table transform with referential integrity intact throughout |
+| SD4-023 | account identity | **NO** | Correction cost is **conditional**, unlike every T1 entry whose cost is unconditional. Relaxing the constraint is trivial; the expensive direction (adding it once duplicates exist) requires a household merge, but duplicates are structurally prevented by a separate approved mechanism — households are creatable only through the bootstrap/claim RPC (B4-P0-029, B4-P0-039) |
+| SD4-025 | immutable ledger | **NO** | It is the **mitigation**, not the risk. `payload_version` is precisely the mechanism that makes future payload changes prospective, so correction applies to new rows and never requires rewriting existing immutable rows |
+| SD4-037 | cloud mapping | **NO** | `origin_device_id` is provenance evidence consumed by SD4-006, not a stored namespace. If a device registry were later required, it is an additive table backfillable from the existing column values |
+
+The remaining 18 non-T1 proposals are policies, grants, helper functions, CHECK constraints, nullable columns, status values and FK actions — all alterable in place without identity, namespace, reference, key or sync-protocol migration.
+
+
+### 14.5 The package
 
 **Resolving HR-01 through HR-04 did not approve the rest of the schema.** These 30 decisions remain `PROPOSED` and 2 remain `DEFERRED`. None has been self-promoted. Each is listed with what the owner would be approving.
 
 Columns: **Dep?** = does schema implementation depend on this decision being settled first. **Defer?** = can it remain unresolved past schema implementation.
 
-| ID | Title | Exact design choice | Rationale | Affected objects | B4-P0 | Dep? | Defer? |
+| ID | Title | Exact design choice | Rationale | Affected objects | B4-P0 | Authorization Tier | Defer? |
 |---|---|---|---|---|---|---|---|
-| SD4-001 | Cloud PK type | Native `uuid`, `DEFAULT gen_random_uuid()`, trigger-pinned | Makes server authority structural; ends the global-text-id collision class (`cat-kids`); matches `profiles.id`; smaller composite FKs | All 16 tables | **B4-P0-007** | **YES — blocking** | No |
-| SD4-002 | profiles/Auth relationship | Shared PK with `auth.users(id) ON DELETE CASCADE`; no surrogate account key | Auth is identity authority; removes account/profile ambiguity | `profiles` | B4-P0-012 | **YES** | No |
-| SD4-003 | No client profile INSERT | Drop `profiles_insert_own` | Closes the profile-with-no-household orphan | `profiles` | B4-P0-029 | **YES** | No |
-| SD4-004 | `local_id` type + uniqueness | `text NOT NULL`, baseline id pattern; `(household_id, local_id)` household-scoped, `(household_id, profile_id, local_id)` owner-private | Uniqueness boundary follows the ownership boundary | 11 tables | **B4-P0-008** | **YES — blocking** | No |
-| SD4-005 | Row-upload idempotency | The `local_id` unique constraint is the idempotency key; `ON CONFLICT` upsert | A retry after a lost response cannot duplicate | 11 tables | B4-P0-006 | **YES** | No |
-| SD4-006 | Cross-device collision semantics | Local ids are device-relative; server never merges on a same-`local_id`/different-`origin_device_id` push; puller mints a fresh local id when its own is taken | `createId` resets its counter per process, so collision is reachable | 11 tables, sync RPCs | B4-P0-005, 006 | **YES** | No |
-| SD4-007 | Soft references are cloud uuids | Cloud stores cloud uuids, not local ids | A local id is ambiguous once a second device exists; Build 3 local integrity would reject the pulled row and stall sync | `action_records`, `one_move_records` | **B4-P0-009** | **YES — blocking** | No |
-| SD4-008 | JSONB reference manifest | Exactly four paths carry references, plus `target_id`; translated both ways; uuid-shape CHECK | Bounded, enumerable translation surface | `action_records` | B4-P0-009 | **YES** | No |
-| SD4-009 | `owner_profile_id` placement | NOT NULL exactly when scope is private; NULL for `household`/`child`; CHECK-bound | Scope-aware ownership without a second source of truth | 5 content tables | B4-P0-038 | **YES** | No |
-| SD4-010 | Server-owned `revision` | Existing trigger unchanged, plus no column grant | Two independent layers | 13 tables | B4-P0-020 | **YES** | No |
-| SD4-011 | Origin vs server timestamps | `origin_created_at`/`origin_updated_at` nullable, never defaulted | Stops the server fabricating history the device never had | 7 tables | B4-P0-020 | **YES** | No |
-| SD4-012 | Global change cursor | `change_log` keyed on `committed_xid xid8` behind a `pg_snapshot_xmin` barrier; pointer log, not content | `updated_at` and `BIGSERIAL` both lose writes; proof in 6.3 | `change_log`, 12 triggers | **B4-P0-026** | **YES — blocking** | No |
-| SD4-013 | Cursor retention | 90 days; `cursor_expired` forces a full resync | Expensive, never silent | `change_log`, `prune_change_log` | B4-P0-026 | No — tunable later | **Yes**, the horizon value only |
-| SD4-014 | Tombstone realization | Status values; `deleted_at` on `discovery_records`; `cleared` status on One Move | Build 3 physically deletes One Move records; invisible to offline devices | `discovery_records`, `one_move_records` | **B4-P0-027** | **YES** | No |
-| SD4-015 | Conflict evidence is local-only | No cloud conflict table; `sync_push` returns the authoritative row | Evidence is unaccepted client intent; uploading creates a retention and child-data surface | `sync_push` | **B4-P0-028** | **YES** | No |
-| SD4-016 | One Move state machine | Four states with an explicit legal-transition set | `cleared` replaces a physical delete | `one_move_records` | **B4-P0-059** | **YES** | No |
-| SD4-018 | Typed One Move targets | `target_task_id` / `target_needs_me_id` FKs, exactly one set; `catalog` rejected | Real referential integrity; demo cannot be represented | `one_move_records` | B4-P0-010, 059 | **YES** | No |
-| SD4-019 | `events.source` narrowed to `'user'` | CHECK narrowed from `('user','demo')` | Fail closed at the database rather than by client filtering | `events` | B4-P0-010 | **YES** | No |
-| SD4-020 | Ledger immutability | No UPDATE/DELETE policy + revoked verbs + raising trigger; purge escape via session setting | Third layer binds `service_role` too | `action_records` | B4-P0-039 | **YES** | No |
-| SD4-021 | Action retention asymmetry | Cloud unbounded; local windowed; trimming never emits a cloud delete | Local cache eviction must not destroy cloud truth | `action_records`, sync engine | B4-P0-023 | No — a sync-engine rule | **Yes** |
-| SD4-022 | `account_claims` required | `UNIQUE (profile_id, claim_key)` + partial unique on `status='complete'` | Crash recovery of the id map, not bookkeeping | `account_claims` | **B4-P0-034** | **YES** | No |
-| SD4-023 | One household per account | Two partial unique indexes on `household_members` | Makes a duplicate cloud household structurally impossible | `household_members` | B4-P0-031 | **YES** | No |
-| SD4-024 | TEXT + CHECK over native enum | Keep TEXT + CHECK everywhere | Baseline is built that way; CHECKs narrow inside a transaction; SD4 narrows two enumerations immediately | All enumerated columns | — | **YES** | No |
-| SD4-025 | JSONB payload versioning | `payload_version`, required `reason.code`, 4 KiB bound, agreement CHECK, uuid-shape CHECK | Baseline accepted any JSON object | `action_records` | B4-P0-064 | **YES** | No |
-| SD4-027 | Private helper signatures | Four helpers, STABLE, DEFINER, `search_path=''`, EXECUTE to `authenticated` only | RLS needs them; over-revoking breaks every scoped read (10.4) | `private.*` | B4-P0-039, 040 | **YES** | No |
-| SD4-029 | Member FK CASCADE + adult CHECK | `profile_id` FK `SET NULL` → `CASCADE`; adult requires a profile | Baseline leaves a profile-less adult member orphan | `household_members` | B4-P0-019 | **YES** | No |
-| SD4-030 | Account-deletion purge order | Explicit 10-step order driven by the RESTRICT edges | Deleting `auth.users` alone fails while ledger rows exist | `private.purge_account` | **B4-P0-049** | No — needed at the deletion phase | **Yes** |
-| SD4-037 | `origin_device_id`, no registry | `uuid NULL` column; no device table | Provenance for collision diagnosis, not an access-control input | 11 tables | — | **YES** | No |
-| SD4-039 | Revoke TRUNCATE/REFERENCES/TRIGGER | And DELETE except `discovery_answers` | RLS does not govern TRUNCATE | All tables | B4-P0-040 | **YES** | No |
-| SD4-040 | Column-level client writes | ~20 column grants so `id`, `household_id`, `local_id`, `revision`, `created_at`, `updated_at` are unwritable | Survives a policy being widened by mistake | 11 tables | B4-P0-040 | **YES** | No |
+| SD4-001 | Cloud PK type | Native `uuid`, `DEFAULT gen_random_uuid()`, trigger-pinned | Makes server authority structural; ends the global-text-id collision class (`cat-kids`); matches `profiles.id`; smaller composite FKs | All 16 tables | **B4-P0-007** | **T1 — PRE-DATA STRUCTURAL** | No |
+| SD4-002 | profiles/Auth relationship | Shared PK with `auth.users(id) ON DELETE CASCADE`; no surrogate account key | Auth is identity authority; removes account/profile ambiguity | `profiles` | B4-P0-012 | **T1 — PRE-DATA STRUCTURAL** | No |
+| SD4-003 | No client profile INSERT | Drop `profiles_insert_own` | Closes the profile-with-no-household orphan | `profiles` | B4-P0-029 | T2 — IMPLEMENTATION-REQUIRED | No |
+| SD4-004 | `local_id` type + uniqueness | `text NOT NULL`, baseline id pattern; `(household_id, local_id)` household-scoped, `(household_id, profile_id, local_id)` owner-private | Uniqueness boundary follows the ownership boundary | 11 tables | **B4-P0-008** | **T1 — PRE-DATA STRUCTURAL** | No |
+| SD4-005 | Row-upload idempotency | The `local_id` unique constraint is the idempotency key; `ON CONFLICT` upsert | A retry after a lost response cannot duplicate | 11 tables | B4-P0-006 | T2 — IMPLEMENTATION-REQUIRED | No |
+| SD4-006 | Cross-device collision semantics | Local ids are device-relative; server never merges on a same-`local_id`/different-`origin_device_id` push; puller mints a fresh local id when its own is taken | `createId` resets its counter per process, so collision is reachable | 11 tables, sync RPCs | B4-P0-005, 006 | **T1 — PRE-DATA STRUCTURAL** | No |
+| SD4-007 | Soft references are cloud uuids | Cloud stores cloud uuids, not local ids | A local id is ambiguous once a second device exists; Build 3 local integrity would reject the pulled row and stall sync | `action_records`, `one_move_records` | **B4-P0-009** | **T1 — PRE-DATA STRUCTURAL** | No |
+| SD4-008 | JSONB reference manifest | Exactly four paths carry references, plus `target_id`; translated both ways; uuid-shape CHECK | Bounded, enumerable translation surface | `action_records` | B4-P0-009 | **T1 — PRE-DATA STRUCTURAL** | No |
+| SD4-009 | `owner_profile_id` placement | NOT NULL exactly when scope is private; NULL for `household`/`child`; CHECK-bound | Scope-aware ownership without a second source of truth | 5 content tables | B4-P0-038 | T2 — IMPLEMENTATION-REQUIRED | No |
+| SD4-010 | Server-owned `revision` | Existing trigger unchanged, plus no column grant | Two independent layers | 13 tables | B4-P0-020 | T2 — IMPLEMENTATION-REQUIRED | No |
+| SD4-011 | Origin vs server timestamps | `origin_created_at`/`origin_updated_at` nullable, never defaulted | Stops the server fabricating history the device never had | 7 tables | B4-P0-020 | T2 — IMPLEMENTATION-REQUIRED | No |
+| SD4-012 | Global change cursor | `change_log` keyed on `committed_xid xid8` behind a `pg_snapshot_xmin` barrier; pointer log, not content | `updated_at` and `BIGSERIAL` both lose writes; proof in 6.3 | `change_log`, 12 triggers | **B4-P0-026** | **T1 — PRE-DATA STRUCTURAL** | No |
+| SD4-013 | Cursor retention | 90 days; `cursor_expired` forces a full resync | Expensive, never silent | `change_log`, `prune_change_log` | B4-P0-026 | T3 — NON-BLOCKING | **Yes**, the horizon value only |
+| SD4-014 | Tombstone realization | Status values; `deleted_at` on `discovery_records`; `cleared` status on One Move | Build 3 physically deletes One Move records; invisible to offline devices | `discovery_records`, `one_move_records` | **B4-P0-027** | T2 — IMPLEMENTATION-REQUIRED | No |
+| SD4-015 | Conflict evidence is local-only | No cloud conflict table; `sync_push` returns the authoritative row | Evidence is unaccepted client intent; uploading creates a retention and child-data surface | `sync_push` | **B4-P0-028** | T2 — IMPLEMENTATION-REQUIRED | No |
+| SD4-016 | One Move state machine | Four states with an explicit legal-transition set | `cleared` replaces a physical delete | `one_move_records` | **B4-P0-059** | T2 — IMPLEMENTATION-REQUIRED | No |
+| SD4-018 | Typed One Move targets | `target_task_id` / `target_needs_me_id` FKs, exactly one set; `catalog` rejected | Real referential integrity; demo cannot be represented | `one_move_records` | B4-P0-010, 059 | T2 — IMPLEMENTATION-REQUIRED | No |
+| SD4-019 | `events.source` narrowed to `'user'` | CHECK narrowed from `('user','demo')` | Fail closed at the database rather than by client filtering | `events` | B4-P0-010 | T2 — IMPLEMENTATION-REQUIRED | No |
+| SD4-020 | Ledger immutability | No UPDATE/DELETE policy + revoked verbs + raising trigger; purge escape via session setting | Third layer binds `service_role` too | `action_records` | B4-P0-039 | T2 — IMPLEMENTATION-REQUIRED | No |
+| SD4-021 | Action retention asymmetry | Cloud unbounded; local windowed; trimming never emits a cloud delete | Local cache eviction must not destroy cloud truth | `action_records`, sync engine | B4-P0-023 | T3 — NON-BLOCKING | **Yes** |
+| SD4-022 | `account_claims` required | `UNIQUE (profile_id, claim_key)` + partial unique on `status='complete'` | Crash recovery of the id map, not bookkeeping | `account_claims` | **B4-P0-034** | T2 — IMPLEMENTATION-REQUIRED | No |
+| SD4-023 | One household per account | Two partial unique indexes on `household_members` | Makes a duplicate cloud household structurally impossible | `household_members` | B4-P0-031 | T2 — IMPLEMENTATION-REQUIRED | No |
+| SD4-024 | TEXT + CHECK over native enum | Keep TEXT + CHECK everywhere | Baseline is built that way; CHECKs narrow inside a transaction; SD4 narrows two enumerations immediately | All enumerated columns | — | T2 — IMPLEMENTATION-REQUIRED | No |
+| SD4-025 | JSONB payload versioning | `payload_version`, required `reason.code`, 4 KiB bound, agreement CHECK, uuid-shape CHECK | Baseline accepted any JSON object | `action_records` | B4-P0-064 | T2 — IMPLEMENTATION-REQUIRED | No |
+| SD4-027 | Private helper signatures | Four helpers, STABLE, DEFINER, `search_path=''`, EXECUTE to `authenticated` only | RLS needs them; over-revoking breaks every scoped read (10.4) | `private.*` | B4-P0-039, 040 | T2 — IMPLEMENTATION-REQUIRED | No |
+| SD4-029 | Member FK CASCADE + adult CHECK | `profile_id` FK `SET NULL` → `CASCADE`; adult requires a profile | Baseline leaves a profile-less adult member orphan | `household_members` | B4-P0-019 | T2 — IMPLEMENTATION-REQUIRED | No |
+| SD4-030 | Account-deletion purge order | Explicit 10-step order driven by the RESTRICT edges | Deleting `auth.users` alone fails while ledger rows exist | `private.purge_account` | **B4-P0-049** | T3 — NON-BLOCKING | **Yes** |
+| SD4-037 | `origin_device_id`, no registry | `uuid NULL` column; no device table | Provenance for collision diagnosis, not an access-control input | 11 tables | — | T2 — IMPLEMENTATION-REQUIRED | No |
+| SD4-039 | Revoke TRUNCATE/REFERENCES/TRIGGER | And DELETE except `discovery_answers` | RLS does not govern TRUNCATE | All tables | B4-P0-040 | T2 — IMPLEMENTATION-REQUIRED | No |
+| SD4-040 | Column-level client writes | ~20 column grants so `id`, `household_id`, `local_id`, `revision`, `created_at`, `updated_at` are unwritable | Survives a policy being widened by mistake | 11 tables | B4-P0-040 | T2 — IMPLEMENTATION-REQUIRED | No |
 
 **Deferred decisions:**
 
