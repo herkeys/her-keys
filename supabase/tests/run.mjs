@@ -158,6 +158,35 @@ function envB() {
   check('ENV B2: no partial destructive state — 14 baseline tables intact', scalar('b4_env_b2', "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r';") === '14');
 }
 
+// B3: the interlock over a FOUNDATION table. The eighteen new tables cannot hold a row on a first run, but a
+// re-run of the migration over a household that already uses them must still refuse: a row in one of them is
+// real data, exactly like a row in `tasks`.
+function envB3() {
+  console.log('\nENV B3 — interlock re-run over a populated foundation table');
+  recreate('b4_env_b3');
+  psqlFile('b4_env_b3', AUTH_STUB, { label: 'ENV B3 auth stub' });
+  psqlFile('b4_env_b3', TEST_HELPERS, { label: 'helpers' });
+  psqlFile('b4_env_b3', BASELINE, { label: 'ENV B3 baseline' });
+  applyBuild4('b4_env_b3', { label: 'ENV B3 build4 (while empty)' });
+  const uid = 'b3b3b3b3-b3b3-4b3b-8b3b-b3b3b3b3b3b3';
+  psql('b4_env_b3', `
+    BEGIN;
+    INSERT INTO auth.users (id, email) VALUES ('${uid}', 'b3@local.test');
+    SET LOCAL ROLE authenticated;
+    SET LOCAL request.jwt.claims = '{"sub":"${uid}"}';
+    SELECT public.bootstrap_account('b3b3b3b3-0000-4000-8000-00000000b3b3'::uuid, 'America/Chicago', NULL);
+    RESET ROLE;
+    SELECT herkeys_test.ins('goals', jsonb_build_object('household_id', (SELECT household_id FROM public.household_members WHERE profile_id = '${uid}'),
+      'profile_id', '${uid}', 'local_id', 'g-b3', 'title', 'A real goal', 'status', 'active'));
+    COMMIT;`, { label: 'ENV B3 seed' });
+  const again = applyBuild4('b4_env_b3', { expectFailure: true, label: 'ENV B3 re-apply' });
+  check('ENV B3: re-running the migration ABORTS when a foundation table holds a row', !again.ok);
+  check('ENV B3: the abort names the foundation table', /public\.goals=1/.test(again.out), (again.out.match(/public\.goals=\d+/) ?? [''])[0]);
+  check('ENV B3: no partial destructive state — the row survives', scalar('b4_env_b3', 'select count(*) from public.goals;') === '1');
+  check('ENV B3: ...and every one of the 34 tables is still there',
+        scalar('b4_env_b3', "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r';") === '34');
+}
+
 // ---------------------------------------------------------------- ENV C -----
 function envC(only) {
   console.log('\nENV C — post-apply security environment');
@@ -382,7 +411,7 @@ console.log(`Her Keys local backend harness — container ${CONTAINER} (LOCAL ON
 // Ad-hoc databases from a manual investigation are dropped here, so a probe
 // can never be mistaken later for unexplained local state. Durable evidence
 // belongs in this directory, not in a leftover database.
-for (const stray of ['b4_probe', 'b4_fp_pre', 'b4_fp_post']) {
+for (const stray of ['b4_probe', 'b4_fp_pre', 'b4_fp_post', 'b4_env_b3']) {
   admin(`DROP DATABASE IF EXISTS ${stray} WITH (FORCE);`);
 }
 
@@ -391,8 +420,13 @@ try {
     migrationQuality();
     envA();
     envB();
+    envB3();
   }
   envC(only);
+  if (!only || only === 'parity') {
+    const { authorizationParity } = await import(`file://${join(HERE, 'authorization-parity.mjs')}`);
+    await authorizationParity(check, psql);
+  }
   if (!only) await clientPayloadIntegration();
   if (!only) {
     const { syncIntegration } = await import(`file://${join(HERE, 'sync-integration.mjs')}`);

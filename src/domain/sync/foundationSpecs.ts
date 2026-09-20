@@ -231,7 +231,8 @@ export const FOUNDATION_SPECS: readonly FoundationSpec[] = [
       ['decided_check', `(state IN ('accepted','rejected','superseded')) = (decided_at IS NOT NULL)`],
       ['event_times_check', `CASE WHEN proposed_kind = 'event' THEN starts_at IS NOT NULL AND ends_at IS NOT NULL AND ends_at > starts_at ELSE starts_at IS NULL AND ends_at IS NULL END`],
       ['producer_check', `producer = ANY (ARRAY['ai-inference','import-sync'])`],
-      ['artifact_provenance_check', `source_artifact_id = artifact_id`],
+      // A CHECK that evaluates to NULL PASSES, so this must say NOT NULL: a reading with no provenance artifact would otherwise slip through.
+      ['artifact_provenance_check', `source_artifact_id IS NOT NULL AND source_artifact_id = artifact_id`],
       ['version_check', `interpretation_version >= 1 AND interpretation_version <= 1000`],
     ],
     triggers: [['freeze_decided', 'BEFORE', 'UPDATE', `public.freeze_decided_interpretation()`]],
@@ -340,7 +341,7 @@ export const FOUNDATION_SPECS: readonly FoundationSpec[] = [
       // Only she can grant Her Keys permission. A permission an inference wrote for itself is not a permission.
       ['granted_by_user_check', `producer = 'user-action'`],
     ],
-    triggers: [['revoke_only', 'BEFORE', 'UPDATE', `public.enforce_single_column_transition('revoked_at')`]],
+    triggers: [['revoke_only', 'BEFORE', 'UPDATE', `public.enforce_single_column_transition('revoked_at', 'origin_updated_at')`]],
   },
 
   // ------------------------------------------------------------------- intent
@@ -549,8 +550,8 @@ export const FOUNDATION_SPECS: readonly FoundationSpec[] = [
       ['frequency_check', `frequency IS NULL OR frequency = ANY (ARRAY['daily','weekly','monthly','yearly'])`],
       ['manual_check', `(trigger_kind = 'manual') = (frequency IS NULL)`],
       ['interval_check', `interval_count >= 1 AND interval_count <= 366`],
-      ['weekday_check', `by_weekday IS NULL OR (frequency = 'weekly' AND cardinality(by_weekday) <= 7 AND by_weekday <@ ARRAY[0,1,2,3,4,5,6]::smallint[])`],
-      ['month_day_check', `by_month_day IS NULL OR (frequency = 'monthly' AND by_month_day >= 1 AND by_month_day <= 31)`],
+      ['weekday_check', `by_weekday IS NULL OR (COALESCE(frequency = 'weekly', false) AND cardinality(by_weekday) <= 7 AND by_weekday <@ ARRAY[0,1,2,3,4,5,6]::smallint[])`],
+      ['month_day_check', `by_month_day IS NULL OR (COALESCE(frequency = 'monthly', false) AND by_month_day >= 1 AND by_month_day <= 31)`],
       ['time_check', `time_of_day_minutes IS NULL OR (time_of_day_minutes >= 0 AND time_of_day_minutes <= 1439)`],
       ['timezone_check', `char_length(timezone) >= 1 AND char_length(timezone) <= 64`],
       ['end_check', `NOT (ends_on IS NOT NULL AND occurrence_count IS NOT NULL) AND (ends_on IS NULL OR ends_on >= anchor_date)`],

@@ -690,6 +690,11 @@ BEGIN
   v_to   := new.to_type   || ':' || COALESCE(new.to_task_id, new.to_event_id, new.to_needs_me_id,
                                               new.to_system_id, new.to_meal_id, new.to_goal_id)::text;
 
+  -- A thing that requires itself is refused by the table's own not_self_check, which names it precisely.
+  IF v_from = v_to THEN
+    RETURN new;
+  END IF;
+
   WITH RECURSIVE walk(node) AS (
     SELECT v_to
     UNION
@@ -3028,7 +3033,7 @@ ALTER TABLE public.interpretations ADD CONSTRAINT interpretations_accepted_kind_
 ALTER TABLE public.interpretations ADD CONSTRAINT interpretations_decided_check CHECK ((state IN ('accepted','rejected','superseded')) = (decided_at IS NOT NULL));
 ALTER TABLE public.interpretations ADD CONSTRAINT interpretations_event_times_check CHECK (CASE WHEN proposed_kind = 'event' THEN starts_at IS NOT NULL AND ends_at IS NOT NULL AND ends_at > starts_at ELSE starts_at IS NULL AND ends_at IS NULL END);
 ALTER TABLE public.interpretations ADD CONSTRAINT interpretations_producer_check CHECK (producer = ANY (ARRAY['ai-inference','import-sync']));
-ALTER TABLE public.interpretations ADD CONSTRAINT interpretations_artifact_provenance_check CHECK (source_artifact_id = artifact_id);
+ALTER TABLE public.interpretations ADD CONSTRAINT interpretations_artifact_provenance_check CHECK (source_artifact_id IS NOT NULL AND source_artifact_id = artifact_id);
 ALTER TABLE public.interpretations ADD CONSTRAINT interpretations_version_check CHECK (interpretation_version >= 1 AND interpretation_version <= 1000);
 CREATE INDEX interpretations_owner_idx ON public.interpretations (household_id, profile_id);
 CREATE INDEX interpretations_artifact_id_fk_idx ON public.interpretations (artifact_id, household_id) WHERE artifact_id IS NOT NULL;
@@ -3243,7 +3248,7 @@ CREATE TRIGGER automation_authorities_set_updated_at BEFORE UPDATE ON public.aut
 CREATE TRIGGER automation_authorities_set_subject_member_type BEFORE INSERT OR UPDATE ON public.automation_authorities
   FOR EACH ROW EXECUTE FUNCTION public.set_child_member_type('subject_member_id', 'subject_member_type');
 CREATE TRIGGER automation_authorities_revoke_only BEFORE UPDATE ON public.automation_authorities
-  FOR EACH ROW EXECUTE FUNCTION public.enforce_single_column_transition('revoked_at');
+  FOR EACH ROW EXECUTE FUNCTION public.enforce_single_column_transition('revoked_at', 'origin_updated_at');
 CREATE TRIGGER automation_authorities_log_change AFTER INSERT OR UPDATE OR DELETE ON public.automation_authorities
   FOR EACH ROW EXECUTE FUNCTION public.log_row_change('household_id', 'profile_id');
 CREATE POLICY automation_authorities_select_own ON public.automation_authorities
@@ -3675,8 +3680,8 @@ ALTER TABLE public.recurrence_rules ADD CONSTRAINT recurrence_rules_trigger_chec
 ALTER TABLE public.recurrence_rules ADD CONSTRAINT recurrence_rules_frequency_check CHECK (frequency IS NULL OR frequency = ANY (ARRAY['daily','weekly','monthly','yearly']));
 ALTER TABLE public.recurrence_rules ADD CONSTRAINT recurrence_rules_manual_check CHECK ((trigger_kind = 'manual') = (frequency IS NULL));
 ALTER TABLE public.recurrence_rules ADD CONSTRAINT recurrence_rules_interval_check CHECK (interval_count >= 1 AND interval_count <= 366);
-ALTER TABLE public.recurrence_rules ADD CONSTRAINT recurrence_rules_weekday_check CHECK (by_weekday IS NULL OR (frequency = 'weekly' AND cardinality(by_weekday) <= 7 AND by_weekday <@ ARRAY[0,1,2,3,4,5,6]::smallint[]));
-ALTER TABLE public.recurrence_rules ADD CONSTRAINT recurrence_rules_month_day_check CHECK (by_month_day IS NULL OR (frequency = 'monthly' AND by_month_day >= 1 AND by_month_day <= 31));
+ALTER TABLE public.recurrence_rules ADD CONSTRAINT recurrence_rules_weekday_check CHECK (by_weekday IS NULL OR (COALESCE(frequency = 'weekly', false) AND cardinality(by_weekday) <= 7 AND by_weekday <@ ARRAY[0,1,2,3,4,5,6]::smallint[]));
+ALTER TABLE public.recurrence_rules ADD CONSTRAINT recurrence_rules_month_day_check CHECK (by_month_day IS NULL OR (COALESCE(frequency = 'monthly', false) AND by_month_day >= 1 AND by_month_day <= 31));
 ALTER TABLE public.recurrence_rules ADD CONSTRAINT recurrence_rules_time_check CHECK (time_of_day_minutes IS NULL OR (time_of_day_minutes >= 0 AND time_of_day_minutes <= 1439));
 ALTER TABLE public.recurrence_rules ADD CONSTRAINT recurrence_rules_timezone_check CHECK (char_length(timezone) >= 1 AND char_length(timezone) <= 64);
 ALTER TABLE public.recurrence_rules ADD CONSTRAINT recurrence_rules_end_check CHECK (NOT (ends_on IS NOT NULL AND occurrence_count IS NOT NULL) AND (ends_on IS NULL OR ends_on >= anchor_date));
@@ -5093,6 +5098,8 @@ BEGIN
       v_need_artifacts := v_need_artifacts || (v_obj ->> 'sourceArtifactLocalId');
     END IF;
   END LOOP;
+  -- Several rows may be derived from one artifact; it is carried, and counted, once.
+  v_need_artifacts := COALESCE(ARRAY(SELECT DISTINCT a FROM unnest(v_need_artifacts) AS a ORDER BY a), '{}'::text[]);
 
   -- ==========================================================================
   -- 2. BOUNDEDNESS. "Claim is not sync" as an executable invariant.

@@ -63,8 +63,11 @@ export interface PullContext {
     kind: SyncEntityKind,
     localId: string,
     row: Record<string, unknown>,
-    resolve: (cloudId: string | null | undefined) => string | null
-  ) => string | null;
+    resolve: (cloudId: string | null | undefined) => string | null,
+    isPending: (kind: SyncEntityKind, localId: string) => boolean
+  ) => { displace: string } | { adopt: string } | null;
+  /** Remove the local row `displacedBy` named. The engine has already kept her intent as conflict evidence. */
+  dropLocal?: (state: AppState, kind: SyncEntityKind, localId: string) => AppState;
   /** Mint a local id that is free in this namespace (SD4-006 pull side). */
   mintLocalId: (kind: SyncEntityKind, wanted: string) => string;
   batchSize?: number;
@@ -298,9 +301,28 @@ function applyOne(
   // Something of hers may be displaced by this row under a domain uniqueness
   // rule. Record it BEFORE applying, so a decision that loses a race is kept as
   // evidence rather than simply disappearing from her household.
-  const displaced = ctx.displacedBy?.(state, kind, '', row, resolverFor(namespace)) ?? null;
+  const isPending = (k: SyncEntityKind, id: string) => namespace.queue.some((q) => q.kind === k && q.localId === id);
+  // A row THIS device created, coming home after a lost acknowledgement, competes with nothing.
+  const ownRow = row.origin_device_id !== undefined && row.origin_device_id !== null && String(row.origin_device_id) === namespace.deviceId;
+  const encounter = ownRow ? null : (ctx.displacedBy?.(state, kind, '', row, resolverFor(namespace), isPending) ?? null);
+
+  // The local row IS the same thing the cloud holds (the same document, the same external object, the same
+  // relationship). Nothing competes: it becomes the cloud's, keeps its local id, and whatever names it keeps
+  // naming it. What it was waiting to create has just been created.
+  if (encounter !== null && 'adopt' in encounter) {
+    const local = encounter.adopt;
+    const settled = { ...namespace, queue: namespace.queue.filter((q) => !(q.kind === kind && q.localId === local && q.op === 'create')) };
+    return {
+      state: ctx.applyRow(state, kind, local, row, resolverFor(settled)),
+      namespace: rememberMapping(settled, { kind, localId: local, cloudId, revision: serverRevision }),
+      changed: true,
+    };
+  }
+
+  const displaced = encounter === null ? null : encounter.displace;
   let carried = namespace;
   if (displaced !== null) {
+    state = ctx.dropLocal?.(state, kind, displaced) ?? state;
     const at = new Date(ctx.now()).toISOString();
     const pending = namespace.queue.find((q) => q.kind === kind && q.localId === displaced);
     carried = recordEvidence(namespace, {

@@ -1,6 +1,6 @@
 import type { AppState } from '../state';
 import { sameCloudValue, type LocalIdResolver } from './applySupport';
-import { findClash } from './clash';
+import { classify, withoutClash, type Encounter, type IsPending } from './clash';
 import { toCloudRow, type ProjectionContext } from './projection';
 import type { SyncEntityKind } from './syncTypes';
 
@@ -38,7 +38,11 @@ export function displacedBy(
   kind: SyncEntityKind,
   _localId: string,
   row: Record<string, unknown>,
-  resolve: LocalIdResolver
-): string | null {
-  return findClash(state, kind, row, resolve);
+  resolve: LocalIdResolver,
+  isPending: IsPending
+): Encounter | null {
+  return classify(state, kind, row, resolve, isPending);
 }
+
+/** Remove the displaced local row, so state never holds two answers to one question. */
+export const dropLocal = (state: AppState, kind: SyncEntityKind, localId: string): AppState => withoutClash(state, kind, localId);

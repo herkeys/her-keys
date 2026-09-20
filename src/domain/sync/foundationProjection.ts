@@ -1,6 +1,5 @@
 import type { AppState } from '../state';
 import { KIND_CLOUD } from '../foundation/typedRef';
-import { findClash, withoutClash } from './clash';
 import { FOUNDATION_SPECS, columnsOfSpec, type FoundationKind, type FoundationSpec } from './foundationSpecs';
 import {
   applyBoolean,
@@ -116,12 +115,6 @@ export function applyFoundationRow(
   const spec = SPEC_BY_KIND.get(kind)!;
   const local: LocalRow = {};
   if (!spec.singleton) local.id = localId;
-
-  // A domain uniqueness rule can mean a DIFFERENT local row already holds this slot (one answer per
-  // intent, one live owner per thing…). The pull engine has recorded it as conflict evidence; the row
-  // itself must go, because state that holds both is state the app rejects.
-  const clash = findClash(state, kind, row, resolve);
-  if (clash !== null && clash !== localId) state = withoutClash(state, kind, clash);
 
   for (const field of spec.fields) {
     if (field.type === 'ref') {

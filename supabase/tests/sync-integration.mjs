@@ -1,3 +1,4 @@
+import { createClient } from '@supabase/supabase-js';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { apiReachable, clientFor, createDeviceStore, offlineTransport, withLostAck } from './support/syncDevice.mjs';
@@ -31,13 +32,19 @@ export async function syncIntegration(check, psql) {
   const B = crypto.randomUUID();
   const C = crypto.randomUUID();
   const D = crypto.randomUUID();
+  const E = crypto.randomUUID();
+  const F = crypto.randomUUID();
+  const G = crypto.randomUUID();
   psql(
     'postgres',
     `INSERT INTO auth.users (id, email, aud, role) VALUES
        ('${A}','sync-${A}@local.test','authenticated','authenticated'),
        ('${B}','sync-${B}@local.test','authenticated','authenticated'),
        ('${C}','sync-${C}@local.test','authenticated','authenticated'),
-       ('${D}','sync-${D}@local.test','authenticated','authenticated')
+       ('${D}','sync-${D}@local.test','authenticated','authenticated'),
+       ('${E}','sync-${E}@local.test','authenticated','authenticated'),
+       ('${F}','sync-${F}@local.test','authenticated','authenticated'),
+       ('${G}','sync-${G}@local.test','authenticated','authenticated')
      ON CONFLICT (id) DO NOTHING;`,
     { label: 'sync fixture users' }
   );
@@ -46,11 +53,13 @@ export async function syncIntegration(check, psql) {
   await journeySecondDevice(check, m, B);
   await journeyOfflineConflict(check, m, C);
   await journeyOneMoveAndLedger(check, m, D, psql);
+  await journeyFoundation(check, m, E, F, psql);
+  await journeyFoundationConflicts(check, m, G, psql);
 }
 
 async function load() {
   const at = (p) => `file://${join(REPO, 'src', ...p)}`;
-  const [types, queue, claimSeam, push, pull, coordinator, apply, projection, transport, initial, rules] = await Promise.all([
+  const [types, queue, claimSeam, push, pull, coordinator, apply, projection, transport, initial, rules, specs, rich, auth, resp, struct, tasksOps, state] = await Promise.all([
     import(at(['domain', 'sync', 'syncTypes.ts'])),
     import(at(['domain', 'sync', 'queue.ts'])),
     import(at(['domain', 'sync', 'claimSeam.ts'])),
@@ -62,8 +71,15 @@ async function load() {
     import(at(['platform', 'supabaseSyncTransport.ts'])),
     import(at(['state', 'initialState.ts'])),
     import(at(['domain', 'sync', 'domainRules.ts'])),
+    import(at(['domain', 'sync', 'foundationSpecs.ts'])),
+    import(`file://${join(REPO, 'tests', 'support', 'richHousehold.mjs')}`),
+    import(at(['domain', 'authorization.ts'])),
+    import(at(['domain', 'responsibility.ts'])),
+    import(at(['domain', 'structure.ts'])),
+    import(at(['domain', 'tasks.ts'])),
+    import(at(['domain', 'state.ts'])),
   ]);
-  return { types, queue, claimSeam, push, pull, coordinator, apply, projection, transport, initial, rules };
+  return { types, queue, claimSeam, push, pull, coordinator, apply, projection, transport, initial, rules, specs, rich, auth, resp, struct, tasksOps, state };
 }
 
 const TZ = 'America/Chicago';
@@ -121,7 +137,8 @@ function makeDevice(m, { accountId, deviceId, householdId, state, namespace, tra
       // sending (a lost acknowledgement), and which local row an authoritative row displaces.
       matchesLocal: (kind, localId, row) =>
         m.rules.rowMatchesLocal(currentState, { householdId, profileId: accountId, namespace: currentNamespace }, kind, localId, row),
-      displacedBy: (s, kind, localId, row, resolve) => m.rules.displacedBy(s, kind, localId, row, resolve),
+      displacedBy: (s, kind, localId, row, resolve, isPending) => m.rules.displacedBy(s, kind, localId, row, resolve, isPending),
+      dropLocal: (s, kind, localId) => m.rules.dropLocal(s, kind, localId),
       // A minted local id must itself be a legal local id: the app's Id pattern
       // allows letters, digits and `._:-` only.
       mintLocalId: (kind, wanted) => `${wanted}-x${deviceId.slice(0, 4)}`,
@@ -717,6 +734,250 @@ async function journeyOneMoveAndLedger(check, m, accountId, psql) {
   const sawBoth = ['Tx one', 'Tx two'].every((title) => a.state().tasks.some((t) => t.title === title));
   check('sync: 9. a cursor spanning TWO server transactions skipped neither', sawBoth);
   check('sync: 9b. and advanced past both', a.namespace().cursor !== cursorBefore, `${cursorBefore} -> ${a.namespace().cursor}`);
+}
+
+
+// ---------------------------------------------------------------------------
+// Journey 5 — the FOUNDATION kinds, against the real database (B4-FOUNDATION-BUILDOUT-01).
+//
+// One device writes a row of every client-written kind; the database accepts them all; a brand-new
+// second device hydrates and holds EXACTLY the same household; the server writes an execution and an
+// outcome that both devices then pull; a stranger's account sees none of it.
+// ---------------------------------------------------------------------------
+async function journeyFoundation(check, m, accountId, strangerId, psql) {
+  const deviceA = crypto.randomUUID();
+  const deviceB = crypto.randomUUID();
+  const { client, householdId, idMap } = await bootstrapCloud(m, accountId, deviceA);
+
+  const { state: rich } = m.rich.richHousehold({ withOneMove: false });
+  const nsA = m.claimSeam.namespaceFromClaim({ state: rich, accountId, householdId, deviceId: deviceA, idMap });
+  const a = makeDevice(m, { accountId, deviceId: deviceA, householdId, state: rich, namespace: nsA, transport: m.transport.createSupabaseSyncTransport(client) });
+
+  const specs = m.specs.FOUNDATION_SPECS;
+  const plan = [
+    ['task', rich.tasks.map((t) => t.id)], ['event', rich.events.map((e) => e.id)], ['system', rich.systems.map((s) => s.id)],
+    ['meal', rich.meals.map((x) => x.id)], ['needsMe', rich.needsMe.map((x) => x.id)],
+    ...specs.filter((s) => !s.serverWritten).map((s) => [s.kind, s.singleton ? (rich[s.collection] === null ? [] : ['capacity']) : rich[s.collection].map((r) => r.id)]),
+  ];
+  let expected = 0;
+  for (const [kind, ids] of plan) for (const id of ids) { a.enqueue(kind, id, 'create'); expected += 1; }
+
+  for (let pass = 0; pass < 4 && a.namespace().queue.length > 0; pass += 1) await a.coordinator.request('manual');
+
+  const evidence = a.namespace().evidence.filter((e) => !e.resolved);
+  check(`sync: F1. one device pushed ${expected} rows across 21 kinds and the database accepted every one`,
+    a.namespace().queue.length === 0 && evidence.length === 0,
+    `queued=${a.namespace().queue.length} evidence=${JSON.stringify(evidence.slice(0, 3).map((e) => `${e.kind}:${e.evidence}:${e.detail}`))}`);
+
+  const counts = {};
+  for (const spec of specs.filter((s) => !s.serverWritten)) {
+    const { data } = await client.from(spec.table).select('id').eq('household_id', householdId);
+    counts[spec.table] = (data ?? []).length;
+  }
+  const missing = specs.filter((s) => !s.serverWritten).filter((s) => counts[s.table] === 0).map((s) => s.table);
+  check('sync: F2. every client-written foundation table holds its row in the cloud', missing.length === 0, missing.join(', ') || 'none missing');
+
+  // Stored provenance and exact money survive the trip through the real database.
+  const { data: taskRows } = await client.from('tasks').select('title,producer,confidence,source_artifact_id,value_amount_minor,value_currency,value_direction,splittable,min_chunk_minutes,energy_demand,consequence,needs_me_personally').eq('household_id', householdId);
+  const fee = (taskRows ?? []).find((t) => t.title === 'Pay the $35 trip fee');
+  const form = (taskRows ?? []).find((t) => t.title === 'Sign the permission form');
+  check('sync: F3. an accepted inference keeps its producer, its established level and its source artifact in the cloud',
+    fee?.producer === 'ai-inference' && fee?.confidence === 'established' && fee?.source_artifact_id !== null, JSON.stringify(fee));
+  check('sync: F4. money is exact minor units and a direction, never a float', Number(form?.value_amount_minor) === 3500 && form?.value_currency === 'USD' && form?.value_direction === 'outflow', JSON.stringify(form));
+  check('sync: F5. an unanswered facet is NULL in the cloud, not a plausible default', fee?.splittable === null && fee?.min_chunk_minutes === null && fee?.energy_demand === null);
+
+  // ---- a brand-new second device hydrates the whole foundation ------------------------------------------
+  const b = makeDevice(m, {
+    accountId, deviceId: deviceB, householdId, state: m.initial.createEmptyState(TZ),
+    namespace: m.claimSeam.namespaceForNewDevice({ accountId, householdId, deviceId: deviceB }),
+    transport: m.transport.createSupabaseSyncTransport(clientFor(accountId)),
+  });
+  for (let pass = 0; pass < 3; pass += 1) await b.coordinator.request('foreground');
+  check('sync: F6. the second device hydrated and is ready, with nothing waiting to send',
+    b.namespace().hydration === 'ready' || b.namespace().cursor !== '0', `hydration=${b.namespace().hydration} queue=${b.namespace().queue.length}`);
+  check('sync: F7. hydrating produced no outbound work and no conflict', b.namespace().queue.length === 0 && m.types.needsSyncAttentionCount(b.namespace()) === 0,
+    `queue=${b.namespace().queue.length} unresolved=${m.types.needsSyncAttentionCount(b.namespace())}`);
+
+  const byId = (rows) => [...rows].sort((x, y) => x.id.localeCompare(y.id));
+  const differing = [];
+  for (const spec of specs.filter((s) => !s.serverWritten)) {
+    const mine = a.state()[spec.collection];
+    const theirs = b.state()[spec.collection];
+    const same = spec.singleton
+      ? JSON.stringify(mine) === JSON.stringify(theirs)
+      : JSON.stringify(byId(mine)) === JSON.stringify(byId(theirs));
+    if (!same) differing.push(spec.kind);
+  }
+  for (const [kind, collection] of [['task', 'tasks'], ['event', 'events'], ['system', 'systems'], ['meal', 'meals'], ['needsMe', 'needsMe']]) {
+    if (JSON.stringify(byId(a.state()[collection])) !== JSON.stringify(byId(b.state()[collection]))) differing.push(kind);
+  }
+  check('sync: F8. SECOND-DEVICE HYDRATION: the new device holds exactly what the first wrote — every kind, provenance and reference intact',
+    differing.length === 0, differing.join(', ') || 'identical');
+  const valid = m.state.validateAppState(b.state());
+  check('sync: F9. and what it hydrated is a valid household the app would accept from disk', valid.ok, valid.ok ? '' : valid.issues.slice(0, 3).join('; '));
+
+  // ---- the server writes what only the server can: an execution and an outcome -----------------------------
+  const intentLocal = rich.intents[0].id;
+  psql('postgres', `
+    INSERT INTO public.action_executions
+      (household_id, local_id, profile_id, intent_id, decision_id, attempt, attempted_at, result, error_class, reversibility, producer, scope, origin_created_at)
+    SELECT i.household_id, 'srv-exec-1', i.profile_id, i.id, d.id, 1, now(), 'succeeded', 'none', 'reversible', 'automation', 'personal', now()
+    FROM public.action_intents i JOIN public.intent_decisions d ON d.intent_id = i.id AND d.decision = 'approved'
+    WHERE i.household_id = '${householdId}' AND i.local_id = '${intentLocal}';
+    INSERT INTO public.action_outcomes
+      (household_id, local_id, profile_id, execution_id, kind, observed_at, producer, scope, origin_created_at)
+    SELECT e.household_id, 'srv-out-1', e.profile_id, e.id, 'delivered', now(), 'automation', 'personal', now()
+    FROM public.action_executions e WHERE e.household_id = '${householdId}' AND e.local_id = 'srv-exec-1';`,
+    { label: 'server writes an execution and an outcome' });
+
+  await a.coordinator.request('manual');
+  await b.coordinator.request('manual');
+  const lifeA = m.auth.intentLifecycle(a.state(), intentLocal);
+  const lifeB = m.auth.intentLifecycle(b.state(), intentLocal);
+  check('sync: F10. the execution and outcome the SERVER wrote reach BOTH devices by pull, and the lifecycle derives from them',
+    lifeA?.stage === 'succeeded' && lifeB?.stage === 'succeeded' && lifeB.outcomes.length === 1, `A=${lifeA?.stage} B=${lifeB?.stage}`);
+  check('sync: F11. pulled server rows produced no outbound work', a.namespace().queue.length === 0 && b.namespace().queue.length === 0);
+
+  const forged = await client.from('action_executions').insert({ household_id: householdId, local_id: 'forged', profile_id: accountId, intent_id: '00000000-0000-4000-8000-000000000001', attempt: 1, attempted_at: new Date().toISOString(), result: 'succeeded', error_class: 'none', reversibility: 'reversible', producer: 'automation', origin_created_at: new Date().toISOString() });
+  check('sync: F12. a device cannot forge an execution: automation authority is not client authority', Boolean(forged.error), forged.error?.code ?? 'accepted');
+  const queued = a.enqueue('execution', 'anything', 'create');
+  check('sync: F13. the sync queue refuses to carry an execution at all', queued.ok === false, queued.reason);
+
+  // ---- isolation --------------------------------------------------------------------------------------------
+  const stranger = clientFor(strangerId);
+  let leaked = 0;
+  for (const spec of specs) {
+    const { data } = await stranger.from(spec.table).select('id').eq('household_id', householdId);
+    leaked += (data ?? []).length;
+  }
+  check('sync: F14. another account reads NONE of these rows, from any of the 18 tables', leaked === 0, `${leaked} rows leaked`);
+  const anon = createAnon();
+  let anonLeak = 0;
+  for (const spec of specs) {
+    const { data } = await anon.from(spec.table).select('id').eq('household_id', householdId);
+    anonLeak += (data ?? []).length;
+  }
+  check('sync: F15. and an unauthenticated caller reads none', anonLeak === 0, `${anonLeak} rows`);
+
+  // ---- a demo row can never reach the cloud ------------------------------------------------------------------
+  const demoState = { ...a.state(), tasks: [...a.state().tasks, task('task-demo', { title: 'A rehearsal', categoryId: 'cat-home', provenance: { producer: 'demo-seed', artifactId: null, confidence: null } })] };
+  a.setState(demoState);
+  a.enqueue('task', 'task-demo', 'create');
+  await a.coordinator.request('manual');
+  const demoEvidence = a.namespace().evidence.filter((e) => e.localId === 'task-demo');
+  const inCloud = await client.from('tasks').select('id').eq('household_id', householdId).eq('local_id', 'task-demo');
+  check('sync: F16. a demo-seed row is refused by the database, kept as evidence, and never stored', demoEvidence.length === 1 && (inCloud.data ?? []).length === 0,
+    `${demoEvidence.map((e) => e.evidence)} cloud=${(inCloud.data ?? []).length}`);
+
+  return { client, householdId, a, b, deviceA, deviceB, rich };
+}
+
+// ---------------------------------------------------------------------------
+// Journey 6 — two devices decide the same thing offline. Nothing is lost; the cloud keeps one answer.
+// ---------------------------------------------------------------------------
+async function journeyFoundationConflicts(check, m, accountId, psql) {
+  const deviceA = crypto.randomUUID();
+  const deviceB = crypto.randomUUID();
+  const { client, householdId, idMap } = await bootstrapCloud(m, accountId, deviceA);
+
+  const nsA = m.claimSeam.namespaceFromClaim({ state: m.initial.createEmptyState(TZ), accountId, householdId, deviceId: deviceA, idMap });
+  const a = makeDevice(m, { accountId, deviceId: deviceA, householdId, state: m.initial.createEmptyState(TZ), namespace: nsA, transport: m.transport.createSupabaseSyncTransport(client) });
+  const b = makeDevice(m, {
+    accountId, deviceId: deviceB, householdId, state: m.initial.createEmptyState(TZ),
+    namespace: m.claimSeam.namespaceForNewDevice({ accountId, householdId, deviceId: deviceB }),
+    transport: m.transport.createSupabaseSyncTransport(clientFor(accountId)),
+  });
+
+  let n = 0;
+  const at = (over = {}) => ({ nowMs: Date.now(), today: '2026-09-16', createId: (p) => `${p}-${deviceA.slice(0, 4)}-${++n}`, ...over });
+  const atB = () => ({ nowMs: Date.now(), today: '2026-09-16', createId: (p) => `${p}-${deviceB.slice(0, 4)}-${++n}` });
+
+  // A creates two tasks, a person, and an intent, and pushes; B hydrates.
+  let sa = m.tasksOps.addTask(a.state(), at(), { title: 'Sign the form', categoryId: 'cat-kids', scope: 'household' });
+  sa = m.tasksOps.addTask(sa, at(), { title: 'Pay the fee', categoryId: 'cat-money', scope: 'household' });
+  sa = m.resp.addPerson(sa, at(), { displayName: 'Grandma June', relationship: 'grandparent' });
+  sa = m.resp.addPerson(sa, at(), { displayName: 'Neighbour Sam', relationship: 'neighbor' });
+  sa = m.auth.proposeIntent(sa, at(), { category: 'internal_reminder', summaryCode: 'nudge', about: { kind: 'task', id: sa.tasks[0].id } });
+  a.setState(sa);
+  for (const t of sa.tasks) a.enqueue('task', t.id, 'create');
+  for (const p of sa.people) a.enqueue('person', p.id, 'create');
+  a.enqueue('intent', sa.intents[0].id, 'create');
+  for (let i = 0; i < 3 && a.namespace().queue.length > 0; i += 1) await a.coordinator.request('manual');
+  await b.coordinator.request('foreground');
+  check('sync: G1. both devices hold the same tasks, people and intent before they diverge',
+    b.state().tasks.length === 2 && b.state().people.length === 2 && b.state().intents.length === 1, `${b.state().tasks.length}/${b.state().people.length}/${b.state().intents.length}`);
+
+  // --- ONE ANSWER PER INTENT: A approves, B (offline) declines ----------------------------------------------
+  const intentId = sa.intents[0].id;
+  a.setState(m.auth.decideIntent(a.state(), at(), intentId, 'approved'));
+  a.enqueue('decision', a.state().decisions[0].id, 'create');
+  b.setState(m.auth.decideIntent(b.state(), atB(), b.state().intents[0].id, 'declined'));
+  const bDecisionId = b.state().decisions[0].id;
+  b.enqueue('decision', bDecisionId, 'create');
+
+  await a.coordinator.request('manual'); // A's approval lands first
+  await b.coordinator.request('manual'); // B pulls it, and its own decline is displaced — not overwritten, not lost
+  const { data: answers } = await client.from('intent_decisions').select('decision').eq('household_id', householdId);
+  check('sync: G2. the cloud kept exactly ONE answer for the intent', (answers ?? []).length === 1 && answers[0].decision === 'approved', JSON.stringify(answers));
+  check('sync: G3. the losing device adopted the authoritative answer and holds one decision', b.state().decisions.length === 1 && b.state().decisions[0].decision === 'approved',
+    b.state().decisions.map((d) => d.decision).join(','));
+  const lost = b.namespace().evidence.filter((e) => !e.resolved && e.kind === 'decision');
+  check('sync: G4. her displaced decision is kept as durable conflict evidence, not silently overwritten', lost.length === 1 && lost[0].evidence === 'domain-conflict',
+    lost.map((e) => `${e.evidence}:${e.detail}`).join(' | '));
+  check('sync: G5. the unsent decline no longer waits in the queue', !b.namespace().queue.some((q) => q.kind === 'decision'));
+  check('sync: G6. and the surviving household is one the app accepts from disk', m.state.validateAppState(b.state()).ok);
+
+  // --- ONE LIVE OWNER PER THING: both delegate the same task to different people -----------------------------
+  const task0 = { kind: 'task', id: sa.tasks[1].id };
+  a.setState(m.resp.delegate(a.state(), at(), { about: task0, to: { kind: 'person', id: a.state().people[0].id } }));
+  const bTask = { kind: 'task', id: b.state().tasks[1].id };
+  b.setState(m.resp.delegate(b.state(), atB(), { about: bTask, to: { kind: 'person', id: b.state().people[1].id } }));
+  a.enqueue('responsibility', a.state().responsibilities[0].id, 'create');
+  b.enqueue('responsibility', b.state().responsibilities[0].id, 'create');
+  await a.coordinator.request('manual');
+  await b.coordinator.request('manual');
+  const { data: owners } = await client.from('responsibilities').select('state').eq('household_id', householdId);
+  check('sync: G7. one thing has ONE live owner in the cloud, however many devices delegated it', (owners ?? []).length === 1, `${(owners ?? []).length} responsibilities`);
+  check('sync: G8. the device that lost holds the winner\'s delegation and kept its own as evidence',
+    b.state().responsibilities.length === 1 && b.namespace().evidence.some((e) => e.kind === 'responsibility' && !e.resolved),
+    `${b.state().responsibilities.length} live, evidence=${b.namespace().evidence.filter((e) => e.kind === 'responsibility').length}`);
+
+  // --- A CYCLE NEITHER DEVICE COULD SEE: A adds x requires y, B adds y requires x ----------------------------
+  const x = { kind: 'task', id: sa.tasks[0].id };
+  const y = { kind: 'task', id: sa.tasks[1].id };
+  let dA = m.struct.addDependency(a.state(), at(), { relation: 'requires', from: x, to: y });
+  a.setState(dA.state);
+  a.enqueue('dependency', dA.state.dependencies[0].id, 'create');
+  const bx = { kind: 'task', id: b.state().tasks[0].id };
+  const by = { kind: 'task', id: b.state().tasks[1].id };
+  const dB = m.struct.addDependency(b.state(), atB(), { relation: 'requires', from: by, to: bx });
+  b.setState(dB.state);
+  b.enqueue('dependency', dB.state.dependencies[0].id, 'create');
+  await a.coordinator.request('manual');
+  await b.coordinator.request('manual');
+  const { data: edges } = await client.from('dependencies').select('relation').eq('household_id', householdId);
+  check('sync: G9. the cloud holds ONE of the two edges — a requirement cycle is never stored', (edges ?? []).length === 1, `${(edges ?? []).length} edges`);
+  check('sync: G10. the device whose edge would have closed the loop yielded it, kept as evidence, and holds valid state',
+    b.state().dependencies.length === 1 && m.state.validateAppState(b.state()).ok && b.namespace().evidence.some((e) => e.kind === 'dependency' && !e.resolved),
+    `${b.state().dependencies.length} edges`);
+
+  // --- the database refuses a cycle even when a device does NOT notice (defence in depth) -------------------
+  const direct = await client.rpc('sync_push', { p_entity_table: 'dependencies', p_device_id: deviceB, p_row: {
+    household_id: householdId, local_id: 'dep-cycle-direct', relation: 'requires', from_type: 'task', from_task_id: (await cloudIdOf(client, 'tasks', householdId, sa.tasks[1].id)),
+    to_type: 'task', to_task_id: (await cloudIdOf(client, 'tasks', householdId, sa.tasks[0].id)), status: 'active', profile_id: accountId,
+    producer: 'user-action', scope: 'personal', origin_created_at: new Date().toISOString(), origin_updated_at: new Date().toISOString() } });
+  check('sync: G11. a cycle sent straight at the database is refused by the database', Boolean(direct.error), direct.error?.message?.slice(0, 80) ?? 'accepted');
+}
+
+async function cloudIdOf(client, table, householdId, localId) {
+  const { data } = await client.from(table).select('id').eq('household_id', householdId).eq('local_id', localId);
+  return data?.[0]?.id ?? null;
+}
+
+function createAnon() {
+  return createClient(process.env.HERKEYS_LOCAL_API_URL ?? 'http://127.0.0.1:54321', process.env.HERKEYS_LOCAL_ANON_KEY ??
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0',
+    { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } });
 }
 
 async function oneMoveRow(client, householdId) {
