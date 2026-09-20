@@ -23,6 +23,7 @@ export function createEmptyState(timeZone: string): AppState {
     needsMe: [],
     discovery: null,
     actions: [],
+    migrationEvidence: [],
   };
 }
 

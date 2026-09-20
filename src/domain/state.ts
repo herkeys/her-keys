@@ -329,6 +329,42 @@ export const ActionRecordSchema = z.discriminatedUnion('type', [
   ProtectItemActionSchema,
 ]);
 
+/**
+ * Durable evidence that a local migration had to let go of a record it could no
+ * longer represent truthfully (B4-BE02-OR-002).
+ *
+ * The surviving facts are kept verbatim; the missing target is never
+ * fabricated, the outcome is never rewritten, and the record is never silently
+ * deleted. This is the local evidence channel — the same one later conflict
+ * handling uses — not a second subsystem invented for one case.
+ *
+ * `targetType`, `status` and `scope` are plain strings here on purpose. This is
+ * a record of what WAS stored, and narrowing it to today's enums is exactly the
+ * mistake that created the need for it: a value that is no longer legal must
+ * still be recordable, or the evidence cannot describe the thing it exists to
+ * describe.
+ */
+export const MIGRATION_EVIDENCE_REASONS = ['LEGACY_REAL_CATALOG_ONE_MOVE'] as const;
+export type MigrationEvidenceReason = (typeof MIGRATION_EVIDENCE_REASONS)[number];
+
+export const MigrationEvidenceSchema = z.strictObject({
+  /** Stable and derived from the original record, so re-running a migration cannot duplicate it. */
+  id: Id,
+  kind: z.literal('one-move'),
+  reason: z.enum(MIGRATION_EVIDENCE_REASONS),
+  /** Which stored shape the record came out of. */
+  sourceSchemaVersion: z.number().int().min(1).max(1000),
+  original: z.strictObject({
+    oneMoveId: Id,
+    forDate: LocalDateSchema,
+    targetId: Id.nullable(),
+    targetType: z.string().max(64),
+    status: z.string().max(32),
+    decidedAt: InstantSchema,
+    completedAt: InstantSchema.nullable(),
+    scope: z.string().max(32),
+  }),
+});
 export const AppStateSchema = z.strictObject({
   /** Whether this state began as the fictional demo household or as a real, empty one. */
   origin: z.enum(['demo', 'empty']),
@@ -345,6 +381,8 @@ export const AppStateSchema = z.strictObject({
   needsMe: z.array(NeedsMeItemSchema).max(1000),
   discovery: DiscoveryRecordSchema.nullable(),
   actions: z.array(ActionRecordSchema).max(10_000),
+  /** Records a local migration could not carry forward truthfully. Usually empty. */
+  migrationEvidence: z.array(MigrationEvidenceSchema).max(4000),
 });
 
 export type Household = z.infer<typeof HouseholdSchema>;
@@ -368,6 +406,7 @@ export type ShortenTaskAction = z.infer<typeof ShortenTaskActionSchema>;
 export type KeepCapacityPlanAction = z.infer<typeof KeepCapacityPlanActionSchema>;
 export type ProtectItemAction = z.infer<typeof ProtectItemActionSchema>;
 export type ActionRecord = z.infer<typeof ActionRecordSchema>;
+export type MigrationEvidence = z.infer<typeof MigrationEvidenceSchema>;
 export type AppState = z.infer<typeof AppStateSchema>;
 export type DataOrigin = AppState['origin'];
 

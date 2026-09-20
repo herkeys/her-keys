@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { AppStateSchema, validateAppState, type AppState } from '../domain/state';
 import { isValidV1AppState } from './legacySchemas';
+import { isValidV2AppState } from './legacySchemasV2';
 import { MAX_WRITE_SEQUENCE } from './writeQueue';
 
 /**
@@ -13,7 +14,7 @@ import { MAX_WRITE_SEQUENCE } from './writeQueue';
  * an app update never has to throw a household away.
  */
 
-export const CURRENT_SCHEMA_VERSION = 2;
+export const CURRENT_SCHEMA_VERSION = 3;
 
 export type InvalidReason =
   | 'malformed_json'
@@ -92,12 +93,81 @@ function migrateV1ToV2(data: unknown): unknown {
   };
 }
 
+/**
+ * Build 4 — the local evidence channel arrives, and one thing has to move into
+ * it (B4-BE02-OR-002).
+ *
+ * The v1 -> v2 migration stamped `targetType: 'catalog'` onto EVERY v1 One Move
+ * regardless of origin, on the assumption that only the demo seed had ever
+ * produced content. That assumption did not hold for a real household, so a
+ * real household can be carrying One Moves whose target is a fictional demo
+ * catalog item — a target that `oneMoveCatalogFor('empty')` cannot resolve and
+ * the app already cannot render.
+ *
+ * Those records are not truthful current relationships, but they are truthful
+ * HISTORY: on that day she made a One Move decision, and she selected or
+ * completed it. So the record leaves the claimable collection and its surviving
+ * facts move into `migrationEvidence`, verbatim. The target is not fabricated,
+ * the outcome is not rewritten, and nothing is silently dropped.
+ *
+ * Demo households are untouched: there `catalog` is exactly what it says, and a
+ * demo household never claims or syncs anyway.
+ *
+ * Pure and idempotent. The evidence id is derived from the original record, so
+ * re-running this can only produce the same entry, never a second one.
+ */
+function migrateV2ToV3(data: unknown): unknown {
+  const v2 = data as {
+    origin: 'demo' | 'empty';
+    oneMoves: Array<Record<string, unknown>>;
+    [key: string]: unknown;
+  };
+
+  if (v2.origin === 'demo') return { ...v2, migrationEvidence: [] };
+
+  const kept: Array<Record<string, unknown>> = [];
+  const evidence: Array<Record<string, unknown>> = [];
+  const seen = new Set<string>();
+
+  for (const record of v2.oneMoves) {
+    if (record.targetType !== 'catalog') {
+      kept.push(record);
+      continue;
+    }
+    const id = `evidence:${String(record.id)}`;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    evidence.push({
+      id,
+      kind: 'one-move',
+      reason: 'LEGACY_REAL_CATALOG_ONE_MOVE',
+      sourceSchemaVersion: 2,
+      original: {
+        oneMoveId: record.id,
+        forDate: record.forDate,
+        targetId: record.targetId,
+        targetType: record.targetType,
+        status: record.status,
+        decidedAt: record.decidedAt,
+        completedAt: record.completedAt,
+        scope: record.scope,
+      },
+    });
+  }
+
+  return { ...v2, oneMoves: kept, migrationEvidence: evidence };
+}
+
 export const migrationPlan: MigrationPlan = {
   currentVersion: CURRENT_SCHEMA_VERSION,
-  migrations: new Map([[1, migrateV1ToV2]]),
+  migrations: new Map([
+    [1, migrateV1ToV2],
+    [2, migrateV2ToV3],
+  ]),
   validators: new Map([
     [1, isValidV1AppState],
-    [2, (data: unknown) => AppStateSchema.safeParse(data).success],
+    [2, isValidV2AppState],
+    [3, (data: unknown) => AppStateSchema.safeParse(data).success],
   ]),
 };
 

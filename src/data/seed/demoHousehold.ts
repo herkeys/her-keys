@@ -134,5 +134,6 @@ export function materializeDemoState({ anchorDate, timeZone }: { anchorDate: Loc
     needsMe: [],
     discovery: null,
     actions: [],
+    migrationEvidence: [],
   };
 }

@@ -85,14 +85,19 @@ describe('Build 3 audit — authentic v1 data migrates without loss', () => {
       });
       state.oneMoves.forEach((record, index) => assert.deepEqual(record, { ...before.oneMoves[index], targetType: 'catalog' }));
       assert.deepEqual(state.needsMe, []);
+      // Every One Move in this authentic corpus belongs to a DEMO household, so
+      // the v2 -> v3 catalog remediation has nothing to do here. Real Build 2.5
+      // households produced no One Moves at all, which is why the v1 -> v2
+      // catalog assumption went unnoticed for so long.
+      assert.deepEqual(state.migrationEvidence, [], `${name}: authentic demo data needs no remediation`);
     }
   });
 
-  test('migrating is not repeated: the migrated state re-encodes as v2 and reads back identical, unmigrated', () => {
+  test('migrating is not repeated: the migrated state re-encodes as v3 and reads back identical, unmigrated', () => {
     for (const name of Object.keys(V1)) {
       const first = decodeValid(V1[name]);
       const rewritten = encodeStoredState(first.state, { appVersion: 'audit', savedAt: '2026-09-16T12:00:00.000Z', writeSeq: first.writeSeq + 1 });
-      assert.equal(JSON.parse(rewritten).schemaVersion, 2);
+      assert.equal(JSON.parse(rewritten).schemaVersion, 3);
       const second = decodeValid(rewritten);
       assert.equal(second.migratedFrom, null, name);
       assert.deepEqual(second.state, first.state, name);
@@ -121,7 +126,7 @@ describe('Build 3 audit — authentic v1 data migrates without loss', () => {
 });
 
 describe('Build 3 audit — migrated data through a real launch', () => {
-  test('loading migrated state writes nothing; the first Build 3 change writes v2 and continues the sequence', async () => {
+  test('loading migrated state writes nothing; the first Build 3 change writes v3 and continues the sequence', async () => {
     const h = harness({ mode: 'empty', initial: { [STORAGE_KEYS.primary]: V1.emptyOnboarded } });
     const store = await launch(h);
     assert.equal(store.getSnapshot().status, 'ready');
@@ -131,7 +136,7 @@ describe('Build 3 audit — migrated data through a real launch', () => {
     const saved = await store.commit((state, ctx) => addTask(state, ctx, { title: 'First real task', categoryId: 'cat-home', dueDate: DAY, scope: 'household' }));
     assert.equal(saved, true);
     const disk = h.readPrimary();
-    assert.equal(disk.schemaVersion, 2);
+    assert.equal(disk.schemaVersion, 3);
     assert.equal(disk.writeSeq, JSON.parse(V1.emptyOnboarded).writeSeq + 1);
     assert.equal(disk.data.origin, 'empty');
     assert.deepEqual(disk.data.onboarding, v1Data('emptyOnboarded').onboarding);
@@ -189,9 +194,13 @@ describe('Build 3 audit — hostile v1 input fails closed, never into a false fa
     assert.equal(state.household.id, v1Data('demoFresh').household.id);
   });
 
-  test('a mislabeled version is not reinterpreted: v1 data claiming v2 is invalid, and a newer version is left alone', () => {
-    assert.equal(failureOf(tampered('demoFresh', (d, envelope) => (envelope.schemaVersion = 2))), 'invalid_state');
-    assert.equal(failureOf(tampered('demoFresh', (d, envelope) => (envelope.schemaVersion = 3))), 'future_version');
+  test('a mislabeled version is not reinterpreted: v1 data claiming a later version is invalid, and a newer version is left alone', () => {
+    // Claiming to be v2 is caught by the frozen v2 validator on the way IN to
+    // the v2 -> v3 step, rather than by the shape check at the end. Either way
+    // the data is never reinterpreted under rules it was not written for.
+    assert.equal(failureOf(tampered('demoFresh', (d, envelope) => (envelope.schemaVersion = 2))), 'migration_failed');
+    assert.equal(failureOf(tampered('demoFresh', (d, envelope) => (envelope.schemaVersion = 3))), 'invalid_state');
+    assert.equal(failureOf(tampered('demoFresh', (d, envelope) => (envelope.schemaVersion = 4))), 'future_version');
   });
 
   test('the largest stored write sequence still migrates', () => {

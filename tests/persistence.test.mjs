@@ -70,17 +70,21 @@ describe('Migration seam', () => {
     ]),
   });
 
-  test('schema v2 is current, so v2 data passes through untouched', () => {
+  test('the current schema passes through untouched', () => {
     const state = demoState();
-    assert.deepEqual(migrateStoredState(2, state), { ok: true, data: state });
+    assert.deepEqual(migrateStoredState(CURRENT_SCHEMA_VERSION, state), { ok: true, data: state });
   });
 
-  test('v1 data is migrated to v2 with conservative, honest backfills', () => {
+  test('v1 data is carried all the way forward with conservative, honest backfills', () => {
     const v1Event = { id: 'evt-1', title: 'Team status call', categoryId: 'cat-work', subjectMemberId: 'user-1', startsAt: '2026-09-16T13:00:00.000Z', endsAt: '2026-09-16T13:30:00.000Z', location: null, scope: 'professional' };
     const v1Task = { id: 'task-1', title: 'Pay orthodontist invoice', categoryId: 'cat-money', subjectMemberId: null, durationMinutes: 10, commitment: 'flexible', dueDate: null, plan: { kind: 'unplanned' }, scope: 'household' };
     const v1OneMove = { id: 'onemove-2026-09-16', forDate: '2026-09-16', targetId: 'one-move-1', status: 'selected', decidedAt: '2026-09-16T13:00:00.000Z', completedAt: null, scope: 'personal' };
     const v1State = { ...demoState(), events: [v1Event], tasks: [v1Task], oneMoves: [v1OneMove] };
+    // v1 had neither of these. Building the fixture from a current demo state
+    // means stripping the fields later versions added, or the frozen v1
+    // validator correctly refuses it.
     delete v1State.needsMe;
+    delete v1State.migrationEvidence;
 
     const migrated = migrateStoredState(1, v1State);
     assert.equal(migrated.ok, true);
@@ -91,7 +95,10 @@ describe('Migration seam', () => {
     assert.equal(migrated.data.events[0].createdAt, null);
     assert.equal(migrated.data.tasks[0].status, 'open');
     assert.equal(migrated.data.tasks[0].createdAt, null);
+    // demoState() is a DEMO household, where a catalog target is exactly what it
+    // says it is, so v2 -> v3 leaves it alone.
     assert.equal(migrated.data.oneMoves[0].targetType, 'catalog');
+    assert.deepEqual(migrated.data.migrationEvidence, []);
     assert.deepEqual(migrated.data.needsMe, []);
     assert.equal(AppStateSchema.safeParse(migrated.data).success, true);
   });
@@ -108,6 +115,7 @@ describe('Migration seam', () => {
     assert.deepEqual(migrateStoredState(1, demoState(), planTo2(() => ({ upgraded: true }))), { ok: false, reason: 'migration_failed' });
     assert.deepEqual(migrateStoredState(1, { notV1: true }, planTo2((data) => ({ ...data, upgraded: true }))), { ok: false, reason: 'migration_failed' });
     assert.deepEqual(migrateStoredState(3, demoState(), planTo2(null)), { ok: false, reason: 'unsupported_schema_version' });
+    assert.deepEqual(migrateStoredState(CURRENT_SCHEMA_VERSION + 1, demoState()), { ok: false, reason: 'unsupported_schema_version' });
   });
 });
 
