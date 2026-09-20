@@ -136,6 +136,21 @@ because any file can be run alone.
 | `95-action-records.sql` | immutability, cloud-uuid references, payload bounds |
 | `99-fail-closed.sql` | the assertion detects breakage and does not false-positive on platform objects |
 
+Two further sections live in `run.mjs` rather than in a `.sql` file, because
+they exercise the CLIENT against the server:
+
+- **client payload -> real RPC** — the real `buildClaimPayload` output fed to the
+  real claim RPC, so a drift between the two sides fails here rather than on a
+  device.
+- **sync engine** (`sync-integration.mjs`) — four multi-device journeys over real
+  HTTP, real PostgREST, real RLS, real CAS, real change_log and the real snapshot
+  barrier. Each simulated device has its own persisted blob, queue, cursor,
+  mappings, `origin_device_id` and coordinator, and shares nothing in memory.
+  Fault injection happens only at the client-side transport boundary: the
+  request really is sent and the server really does commit; only the answer is
+  discarded. A fully mocked transport cannot prove a case whose whole point is
+  that client and server disagree.
+
 Interlock **behaviour** (ENV A/B) and the **snapshot barrier** live in
 `run.mjs`, not in a `.sql` file: the first cannot re-apply a migration from
 inside an already-migrated database, and the second needs two genuinely

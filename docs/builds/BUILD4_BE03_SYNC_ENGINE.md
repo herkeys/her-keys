@@ -208,5 +208,189 @@ Fourteen dimensions byte-identical, including `relations`, `columns`,
 `privileges.relations` and `privileges.default_acl`. No relation topology, RLS,
 policy, trigger or column-grant change at all. Both locked tool hashes unchanged.
 
-**Backend harness: 281 → 305** (+24 in `74-sync-push.sql`, 0 removed, 0
-failures).
+**Backend harness: 281 → 365** (+29 in `74-sync-push.sql`, +2 in
+`72-claim-closure.sql` for the addendum-A replay topology, and +53 sync journeys
+against the real local Supabase; 0 removed, 0 failures).
+
+The hash and digest above are the values as finally shipped: `sync_push` gained
+the action ledger later in the same wave, which moved the one routine body it
+owns and nothing else.
+
+---
+
+# Implementation
+
+## §6 — the local-v3 sync envelope
+
+The sync namespace lives beside the identity block B4-BACKEND-02 added to the v3
+envelope (`IdentityRecord.sync`). No parallel SyncState, CloudState or
+RemoteHousehold framework: one canonical local household, and metadata about it.
+
+| Field | Holds |
+|---|---|
+| `accountId`, `householdId` | which account and cloud household this namespace is |
+| `deviceId` | `origin_device_id`, per INSTALL — two devices of one account must differ, or SD4-006 cannot tell a lost acknowledgement from a genuine collision |
+| `hydration` | `unhydrated` / `hydrating` / `ready` |
+| `cursor` | the last cursor whose batch is **durable**, never the highest seen |
+| `mappings` | `kind:localId` → cloud uuid + last-seen server revision |
+| `queue` | durable outbound work |
+| `evidence` | conflicts and permanent failures |
+| `backlog` | the queue or evidence store is full; work stops before intent is lost |
+| `lastSyncedAt` | for the product signal only |
+
+It holds **no credential**. Tokens stay behind the secure-session boundary.
+
+## §11 / §H / §M — bounds
+
+No numeric bound exists in the frozen authority, only "bounded", so these are
+named technical parameters, documented rather than scattered as literals:
+
+| Constant | Value | What it bounds |
+|---|---|---|
+| `MAX_QUEUE_ITEMS` | **500** | pending work items per namespace |
+| `MAX_UNRESOLVED_EVIDENCE` | **200** | unresolved conflicts before backlog |
+| `PULL_BATCH_SIZE` | **200** | change-log rows per round trip; a multi-year household is many batches, and the engine supports many |
+
+Nothing is ever evicted. At the queue bound the oldest item survives and the new
+intent is **refused** — the caller must not report that change as cloud-safe. At
+the evidence bound work stops entirely, because a conflict that cannot be
+recorded durably is indistinguishable from a lost one.
+
+## §E / §F — the coalescing table
+
+At most one pending work item per `(account, kind, localId)`. No payload is
+stored on the item; the row is read from canonical local state at push time, so
+the latest intent goes out while `baseRevision` and `order` stay where the first
+edit found them.
+
+| pending | incoming | result | why |
+|---|---|---|---|
+| create | update | **create** | the cloud has never seen it: one create carrying the latest state |
+| create | tombstone | **tombstone** | a row created and removed offline still needs its removal recorded once it exists |
+| update | update | **update** | latest intent, original base revision |
+| update | tombstone | **tombstone** | the removal supersedes, keeping the original base |
+| tombstone | anything | **tombstone** | nothing is resurrected by a later edit racing a removal |
+| `action` | update | **refused** | the ledger is immutable; the attempt becomes evidence, never a silent no-op |
+
+Three offline edits therefore produce one CAS attempt against the revision the
+first edit saw, not three sequential stale ones fighting each other.
+
+## §G — the queue is work, evidence is history
+
+A terminal outcome leaves the queue and becomes durable evidence, so one
+permanently bad row can never fill the queue and block every future change. The
+evidence records what was attempted, against which cloud row, at which base
+revision, what the server said, and what happened to the queue item — and
+nothing more. No transcripts, no debug blobs.
+
+| Failure | Classification | Disposition |
+|---|---|---|
+| network / 08xxx / 53xxx / 57xxx | retriable | stays queued, attempt counted, bounded backoff |
+| session gone (28000) | pause | cycle stops; queue untouched, attempts not burned |
+| RLS / grant (42501) | permanent | `forbidden` evidence |
+| CHECK / malformed | permanent | `validation-failure` evidence |
+| a uniqueness invariant that encodes a competing decision | **domain conflict** | `domain-conflict` evidence, never a generic validation failure |
+| stale CAS | conflict | `cas-conflict` evidence; intent preserved, unapplied |
+| tombstone vs pending edit | conflict | `tombstone-conflict`; removal authoritative, intent kept |
+| reference that can never resolve | permanent | `unresolvable-dependency`; the reference is named, never stripped |
+
+## §R — the domain-conflict taxonomy
+
+SQLSTATE alone does not classify. `23505` is a uniqueness violation, but whether
+it is malformed input or a competing valid decision depends on **which**
+invariant fired. `one_move_records_household_profile_logical_day_key` is two
+devices legitimately deciding different things for the same product day; calling
+that a validation error would hide a real disagreement behind a generic failure.
+
+## §33 — deletion participation
+
+Two, both extracted: `discovery_records.deleted_at` (soft tombstone, an UPDATE)
+and `discovery_answers` (hard DELETE of child rows). Every other table has no
+DELETE policy and no DELETE privilege. `one_move_records.status = 'cleared'` is
+**not** a tombstone — the row is revived in place under the day key. Local action
+trimming at the 10,000 cap emits no cloud delete **by construction**:
+`ALLOWED_OPS.action` is `['create']`, and no path produces anything else
+(SD4-021).
+
+## §36 — OR-002 migration evidence
+
+**LOCAL EVIDENCE PRESERVED. CLOUD DESTINATION = NONE.**
+
+There is no sync entity kind for migration evidence and no cloud table it maps
+to, which is the structural reason a pull cannot touch it. A pull that rewrites
+everything else leaves it verbatim — status not rewritten, catalog target not
+turned into a cloud one. No cloud evidence table was invented.
+
+## §I — the user-visible signal
+
+`needsSyncAttention` and `needsSyncAttentionCount`, derived from unresolved
+evidence and the backlog flag, surfaced as one quiet line on Today. Nothing
+else: no revisions, no queue ids, no cursors, no database errors, no dashboard.
+Marking a conflict resolved clears the signal and keeps the record.
+
+## §O / §43 — single-flight
+
+One active coordinator cycle per account namespace. Concurrent triggers join the
+cycle in flight; work that arrived during it gets exactly one follow-up pass,
+never a recursive spawn. Phases run serially: **account guard → pull/reconcile →
+push eligible work → settle**.
+
+## §19 / §V — the account guard
+
+Checked before the cycle and again before **each** network phase, because a
+session can change between them. On a mismatch the cycle aborts immediately:
+nothing uploaded, no pull applied to the wrong namespace, the namespace
+untouched.
+
+## §N — the pull integrity gate
+
+`validateAppState` runs on the candidate state before the cursor is allowed past
+it. On failure the cursor does **not** advance, the previous durable state
+stands, and actionable evidence is recorded. A server that returns valid SQL has
+not thereby earned the right to corrupt her household.
+
+---
+
+# Defects found and fixed while proving this
+
+All five surfaced against the real local Supabase, not against a mock.
+
+1. **The pull settled pending, unpushed intent.** A server revision at or below
+   the base means the server has not seen the change yet; the old code applied
+   the row anyway, overwriting her local edit with the version it was an edit
+   *of*. Now: at-or-below leaves the row alone; above the base is compared
+   against what this device would send — equal means the push landed and only
+   the answer was lost, different means a real conflict. Revision alone cannot
+   tell those apart, which is exactly why they looked the same.
+
+2. **Updates sent columns with no UPDATE grant.** Postgres answered `42501`, the
+   transport correctly called it forbidden, and an ordinary edit became
+   permanent failure evidence while the queue reported success.
+   `UPDATABLE_COLUMNS` now carries the real grant per kind, extracted from
+   `information_schema`.
+
+3. **The action ledger could not be pushed at all.** `sync_push`'s allow-list
+   omitted it; its uniqueness boundary names `actor_profile_id`, not
+   `profile_id`; and it carries no `revision` column, being immutable. All three
+   are now handled by name.
+
+4. **Pulled timestamps failed the integrity gate.** PostgREST returned
+   `2026-09-20 12:00:00+00`, which the local ISO instant rejects, so a perfectly
+   good batch was refused. They are re-rendered to the canonical form on the way
+   in — the same moment, written the way the household already writes it.
+
+5. **A pulled action record was rebuilt with a `targetType` key on every action
+   type.** Only `protect_item` permits one and the local schemas are strict, so
+   the record was invalid on arrival. The shape is now reproduced as it was, not
+   as a union of every shape.
+
+And one design gap, which is the most interesting of them:
+
+**Two devices can each decide a One Move for the same product day.** The cloud
+rejects the second with the HR-03 day key, and local state cannot hold both
+either. The pull now understands *displacement* — an incoming authoritative row
+can displace a local decision under a domain uniqueness rule — and records the
+displaced intent as a **domain conflict** before applying. Not a generic
+validation failure, not a second row, not a silent local disappearance. The
+engine does not know which rules those are; the caller says so, because that is
+where domain rules live.
