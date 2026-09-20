@@ -7,7 +7,7 @@ Object-by-object difference between the **repo-owned Phase 1 baseline** and the 
 | Baseline | `supabase/migrations/20260919230054_build4_baseline.sql`, gating digest `c55d9b80d604211a5841260709b27f47` over 961 catalog facts |
 | Proposal | `docs/builds/drafts/BUILD4_SD4_PROPOSED_SCHEMA.sql` — **DESIGN ONLY, NOT AUTHORIZED FOR EXECUTION** |
 | Rationale | [BUILD4_SD4_CLOUD_SCHEMA.md](BUILD4_SD4_CLOUD_SCHEMA.md) |
-| Status | **PENDING-OWNER.** HR-01..HR-04 are owner-resolved (2026-09-19); the remaining 30 PROPOSED and 2 DEFERRED decisions are **not approved**. Nothing here is applied |
+| Status | **PENDING-OWNER.** HR-01..HR-04 and NHR-01/NHR-02/NHR-05/HR-05 are owner-resolved (2026-09-19). The 30 PROPOSED and 2 DEFERRED decisions are **not approved**. Nothing here is applied |
 
 **The baseline is not altered.** This matrix describes a *future* migration that would sit on top of it. `supabase/migrations/` still contains exactly one `.sql` file.
 
@@ -51,6 +51,8 @@ Change classes: **TYPE** (physical type change) · **ADD** · **DROP** · **NARR
 | `cleared_at` | `one_move_records` | `timestamptz NULL` | Paired with the new `cleared` status (SD4-014, SD4-016) |
 | `timezone_at_decision` | `one_move_records` | `text NOT NULL` | Frozen historical evidence of which timezone produced `logical_day`. **Deliberately outside every unique key** (SD4-017, HR-03) |
 | `payload_version` | `action_records` | `smallint NOT NULL DEFAULT 1` | JSONB versioning (SD4-025) |
+| `subject_member_id` | **NEW on** `household_categories`, `household_systems`, `meal_plan_entries` (3) | `uuid NULL` | NHR-01 owner decision A2 — a child-scoped row must identify which child |
+| `subject_member_type` | `events`, `tasks`, `household_categories`, `household_systems`, `meal_plan_entries` (5) | `text NULL`, derived, **granted to nobody** | Carries the third column of the composite FK so the subject is provably a child of the same household (NHR-01) |
 
 ## 3. Columns replaced or removed
 
@@ -99,6 +101,8 @@ Change classes: **TYPE** (physical type change) · **ADD** · **DROP** · **NARR
 | Constraint | Baseline | Proposed | Decision |
 |---|---|---|---|
 | `household_members_profile_id_fkey` | `ON DELETE SET NULL` | `ON DELETE CASCADE` | SD4-029 — removes the profile-less adult member orphan |
+| `household_members.display_name` | `text NOT NULL` | **nullable**, with `CHECK (member_type <> 'child' OR display_name IS NOT NULL)` | HR-05 — no fabricated placeholder is persisted; the NOT NULL obligation stays only where the data supports it |
+| `events_subject_member_id_household_id_fkey`, `tasks_…` | 2-column FK to `(id, household_id)` | **3-column composite FK** to `(id, household_id, member_type)` | NHR-01 — proves subject-is-a-child and blocks invalidating membership mutations, structurally |
 
 ### Deliberately unchanged
 
@@ -250,3 +254,39 @@ This delta is delivered as **drop-and-recreate of the 14 baseline tables**, not 
 The next implementation phase must begin with **ephemeral local parse/apply validation** before any remote migration is considered. First-apply SQL churn is expected there. Remote-first debugging is not acceptable.
 
 Mandatory acceptance tests, recorded in section 11 of the SQL draft: **Test A** (populated reproduction aborts), **Test B** (empty reproduction completes), **Test C** (transaction boundary), **Test D** (privilege reachability — no stranded `private` USAGE or helper EXECUTE), **Test E** (One Move logical day server-derived and frozen).
+
+---
+
+## 13. Predicted fingerprint delta — structured verification contract
+
+**`c55d9b80d604211a5841260709b27f47` over 961 facts is the PRE-Build-4 baseline.** It is not a restoration target. Applying this delta **will** produce a different gating digest; that is designed.
+
+**Do not compute or pin a final digest now.** The implementation phase computes the actual local digest during Tests A–E and verifies it against this table. **Any dimension that changes outside this table is drift, not design.**
+
+| Dimension | Phase 1 baseline | Expected Build 4 change | Predicted object delta | Governing SD4 IDs | Why | Verification during Tests A–E | Class |
+|---|---|---|---|---|---|---|---|
+| `schemas` | 2 (`public`, `private`) | **UNCHANGED** | 0 | — | No schema added or removed | Digest must equal `0e57bd8f…` | **GATING** |
+| `relations` | 14 | **INCREASE** | **+2 → 16** (`change_log`, `account_claims`) | SD4-012, SD4-022 | New sync-cursor and claim-idempotency tables | Count 16; every name in the §1 list | **GATING** |
+| `columns` | 148 | **INCREASE** | roughly **+75** (estimate) | SD4-001, 004, 009, 011, 017, 025, 037; NHR-01 | `local_id`, `origin_device_id`, `owner_profile_id`, `origin_*`, `subject_member_id`, `subject_member_type`, One Move day columns, new tables | Enumerate; no unexpected column | **GATING** |
+| `constraints` | 130 | **INCREASE** | roughly **+60** (estimate) | SD4-004, 009, 016, 018, 019, 023, 025, 029; NHR-01, HR-05 | local_id uniques, owner-scope CHECKs, child-subject CHECKs + composite FKs, narrowed enums, display_name normalization | Enumerate | **GATING** |
+| `indexes` | 51 (31 explicit + 6 UNIQUE + 14 PK) | **INCREASE** | **84** (51 explicit + 17 UNIQUE + 16 PK) | SD4-012, 023, 040; NHR-01 | Cursor indexes, owner indexes, 5 subject-member partial indexes, new-table indexes | Exact count 84; the baseline decomposes the same way, which is how this figure was derived | **GATING** |
+| `triggers` | 12 | **INCREASE** | **41** = 13 `set_row_updated_at` + 12 `log_row_change` + 9 `force_server_owned_id` + 5 `set_subject_member_type` + 1 `set_one_move_logical_day` + 1 ledger guard | SD4-010, 012, 001, 017; NHR-01 | Server-owned fields, change log, derived carrier column | Exact count 41 | **GATING** |
+| `functions` | 3 | **INCREASE** | **13** (12 created/recreated + retained `rls_auto_enable`) | SD4-027, 010, 012, 020, 017, 026; NHR-01, NHR-02, NHR-05 | 4 RLS helpers, 5 trigger functions, trusted-context predicate, schema assertion, retained platform handler | Exact count 13; `rls_auto_enable` body byte-identical | **GATING** |
+| `policies` | 37 | **INCREASE** | **39** (`profiles_insert_own` dropped; `discovery_answers_delete_own`, `change_log_select_scoped`, `account_claims_select_own` added; 15 scope-aware rewrites) | SD4-003, 009, 012, 022, 033 | Scope-aware RLS per B4-P0-038 | Exact count 39 | **GATING** |
+| **RLS enablement** | enabled on 14/14 | **INCREASE** | **16/16** | SD4-026 (NHR-02) | Explicit `ENABLE ROW LEVEL SECURITY` on every table, asserted by `private.assert_app_schema_secured()` | 16 statements; assertion passes | **GATING** |
+| `privileges.relations` | 336 | **DECREASE** | fewer verbs held by `authenticated` (no TRUNCATE/REFERENCES/TRIGGER; DELETE only on `discovery_answers`) | SD4-039, 040 | RLS does not govern TRUNCATE | **A decrease is expected; an INCREASE is a failure signal** even though this dimension is on the intended-change list | **GATING** |
+| **`privileges.columns`** | **0 — empty, emits no output row** | **REWRITTEN (appears)** | **populated, 20 column grants** | SD4-040, 010, 011, 017; NHR-01, NHR-05 | Server-owned columns withheld by privilege, not by trigger correction | **The fingerprint output gains a 17th result row.** A reviewer expecting 16 rows must not read the 17th as corruption | **GATING** |
+| `privileges.functions` | 8 | **INCREASE** | up — 13 functions, each with an explicit posture | SD4-026, 027 | No inherited EXECUTE | Enumerate; `anon` and `PUBLIC` hold nothing | **GATING** |
+| `privileges.effective` | 205 | **REWRITTEN** | changes in both directions | SD4-026, 039, 040 | Net of all of the above | Enumerate | **GATING** |
+| `privileges.schemas` | 9 | **REWRITTEN** | `private` USAGE narrowed to `authenticated` | SD4-027 | Helpers must stay reachable | `authenticated` retains USAGE on `private` | **GATING** |
+| `privileges.default_acl` | 6 | **REWRITTEN** | **+9 `ALTER DEFAULT PRIVILEGES`** statements | SD4-026 | Layer 1 secure defaults | `anon` and `PUBLIC` defaults removed in both schemas | **GATING** |
+| `types` | empty, emits no row | **UNCHANGED** | 0 | — | No composite or enum types; TEXT+CHECK retained | Still emits no row | **GATING** |
+| `info.event_triggers` | 7 | **UNCHANGED** | 0 | — | `ensure_rls` is PLATFORM-MANAGED and is not touched | Digest must equal `460fef42…` | informational |
+| `info.extensions` | 5 hosted / 6 local | **UNCHANGED** | 0 | — | The hosted/local `pg_net` difference remains explained and non-gating | Same explained difference | informational |
+
+**Three standing rules.**
+
+1. **Any change outside this table is drift.** Investigate, do not absorb.
+2. **Do not "repair" the intended Build 4 delta back to the Phase 1 digest.** The Phase 1 artifacts record the pre-Build-4 state accurately and are not a restoration target.
+3. **Unexpected privilege widening must not hide inside the intended delta.** `privileges.relations` is expected to move *down*; an increase is a failure even though the dimension is expected to change. That is the specific way a privilege regression would otherwise be camouflaged by a large legitimate diff.
+

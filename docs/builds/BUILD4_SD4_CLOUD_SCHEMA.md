@@ -632,11 +632,11 @@ The object-by-object delta is [BUILD4_SD4_DELTA_MATRIX.md](BUILD4_SD4_DELTA_MATR
 | | Baseline | Proposed | Change |
 |---|---|---|---|
 | Application tables | 14 | **16** | `+change_log`, `+account_claims` |
-| Functions (`public` + `private`) | 3 | **10** | `+is_household_owner`, `+can_access_scoped_row`, `+current_household_id`, `+force_server_owned_id`, `+forbid_ledger_mutation`, `+log_row_change`, `+set_one_move_logical_day` (HR-03); `is_household_member` re-signed `text`→`uuid`; `rls_auto_enable` retained unchanged |
+| Functions (`public` + `private`) | 3 | **13** | `+is_household_owner`, `+can_access_scoped_row`, `+current_household_id`, `+force_server_owned_id`, `+forbid_ledger_mutation`, `+log_row_change`, `+set_one_move_logical_day` (HR-03); `is_household_member` re-signed `text`→`uuid`; `rls_auto_enable` retained unchanged |
 | Policies | 37 | **39** | Scope-aware rewrite; `profiles_insert_own` removed; `discovery_answers_delete_own`, `change_log_select_scoped`, `account_claims_select_own` added |
 | Revision triggers | 12 of 14 | **13 of 16** | Unchanged pattern; `account_claims` added; `discovery_answers`, `action_records` and `change_log` correctly excluded |
-| Other triggers | 0 | **+23** | 12 `log_row_change`, 9 `force_server_owned_id`, 1 `forbid_ledger_mutation`, 1 `set_one_move_logical_day` (HR-03). Triggers total 12 → **36** |
-| Indexes | 51 | **78** | 46 explicit + 16 UNIQUE + 16 PK. The baseline decomposes the same way (31 + 6 + 14 = 51), which is how this count was checked |
+| Other triggers | 0 | **+28** | 12 `log_row_change`, 9 `force_server_owned_id`, 1 `forbid_ledger_mutation`, 1 `set_one_move_logical_day` (HR-03), 5 `set_subject_member_type` (NHR-01). Triggers total 12 → **41** |
+| Indexes | 51 | **84** | 51 explicit + 17 UNIQUE + 16 PK. The baseline decomposes the same way (31 + 6 + 14 = 51), which is how this count was checked |
 | Primary key type | `text` ×13, `uuid` ×1 | **`uuid` ×16** | SD4-001 |
 | Column-level grants | 0 | **20** | SD4-040 |
 
@@ -763,133 +763,178 @@ Not every baseline object is replaced. These survive the delta, and each one is 
 | `auth.users` and all `auth.*` | platform-managed | **Untouched.** SD4 proposes no change to any Supabase-managed schema |
 
 
+
+### 10.6 GUC security audit (NHR-05) — **PASS**
+
+**METHOD** `grep -n "current_setting('herkeys\|set_config('herkeys\|SET herkeys" docs/builds/drafts/BUILD4_SD4_PROPOSED_SCHEMA.sql`
+
+| Call site (before this pass) | Could it alter authorization, RLS, integrity, server-owned field acceptance, historical backfill, or claim behavior? | Classification | Action |
+|---|---|---|---|
+| `current_setting('herkeys.purge')` in `forbid_ledger_mutation()` | **Yes** — it gated DELETE on the immutable ledger | **SECURITY-RELEVANT** | **REMOVED.** Replaced by `private.is_trusted_server_context()` |
+| `current_setting('herkeys.claim')` in `set_one_move_logical_day()` | **Yes** — it gated the historical-backfill branch, i.e. whether a caller may supply `logical_day` | **SECURITY-RELEVANT** | **REMOVED.** Same replacement |
+
+**RAW after the change:** the only remaining match is the explanatory comment at line 313 describing what was removed. **Zero security-relevant `herkeys.*` call sites remain, and no diagnostic-only ones were introduced.**
+
+### 10.7 Re-attestation after this pass
+
+**§10.4 helper reachability matrix — PASS.** Three functions were added and each was placed in the matrix:
+
+| Function | Security | Schema USAGE | EXECUTE needed by | Why |
+|---|---|---|---|---|
+| `public.set_subject_member_type()` | INVOKER, `search_path=''` | — | **nobody** | Trigger function; EXECUTE is checked at `CREATE TRIGGER`, not per fire |
+| `private.is_trusted_server_context()` | INVOKER, STABLE, `search_path=''` | — | **nobody** | Called only from inside definer-owned functions, which run as their owner |
+| `private.assert_app_schema_secured()` | DEFINER, `search_path=''` | — | **`service_role`** | Called by migrations, never by a client |
+
+The load-bearing set is unchanged and still re-asserted after every blanket revoke: `USAGE ON SCHEMA private` plus EXECUTE on `is_household_member(uuid)`, `is_household_owner(uuid)`, `can_access_scoped_row(uuid,text,uuid)`, `current_household_id()`. **No new function joined the load-bearing set**, so the over-revoke surface did not grow.
+
+**§10.5 retained-baseline-object audit — PASS, with one classification promoted to evidence.** `public.rls_auto_enable()` and the `ensure_rls` event trigger are now formally classified **PLATFORM-MANAGED / INFORMATIONAL** on repo-owned Phase 1 evidence (§12, NHR-02), not merely left alone by convention. Every other row of §10.5 is unchanged.
+
+**Reverse-path verification (NHR-02 2F) — PASS by design.** For a newly created application table carrying an explicit `authenticated` grant, explicit RLS policies, and the helper permissions above, every link in the chain survives the new revokes:
+
+| Link | Survives? | Why |
+|---|---|---|
+| Relation privilege | **Yes** | Layer 1 removes only the `anon` and `PUBLIC` defaults and the `authenticated` ROUTINES default. The `authenticated` TABLES default is deliberately kept, and Layer 2 grants named columns explicitly |
+| Schema USAGE | **Yes** | `GRANT USAGE ON SCHEMA private TO authenticated` is re-asserted after every revoke |
+| Helper EXECUTE | **Yes** | All four re-asserted in the same block |
+| Applicable RLS policy | **Yes** | Policies are created per table and `assert_app_schema_secured()` refuses a table that has none |
+
+**No legitimate `authenticated` path that this design expects to work becomes impossible.** This is a design-review conclusion; **Test D** is what demonstrates it.
+
+
 ---
 
 ## 11. Hostile review
 
 Severity: **P0** blocks the schema · **P1** serious correctness, security or architecture · **P2** important follow-up · **P3** minor · **P4+** future/documentation.
 
-### 11.1 Re-verification of all 30 original attacks
+### 11.1 Re-attestation of all 30 original attacks
 
-Every attack from the first SD4 hostile review, re-run against the design as changed by the four owner resolutions. No attack **REGRESSED**.
+Extracted from this artifact, not from a prior prose summary. **METHOD** `awk -F'|' '/^\| H-[0-9]/ {print $2, $4}'`. **RAW** 24 `STILL RESOLVED`, 6 `CHANGED ANSWER`, 0 `REGRESSED`.
 
-| # | Attack | Verdict | Affected by | Note |
+| # | Prior status | Current status | Why |
+|---|---|---|---|
+| H-01 | STILL RESOLVED | **STILL RESOLVED** | Three layers intact; NHR-05 removes `logical_day` from the INSERT grant, adding a fourth server-owned field the client cannot dictate |
+| H-02 | STILL RESOLVED | **STILL RESOLVED** | Two partial unique indexes unchanged |
+| H-03 | STILL RESOLVED | **STILL RESOLVED** | `local_id` unique constraints unchanged |
+| H-04 | STILL RESOLVED | **STILL RESOLVED** | `account_claims` replay unchanged; NHR-05 specifies the retry contract in full |
+| H-05 | STILL RESOLVED | **STILL RESOLVED** | Device-relative local ids unchanged |
+| H-06 | STILL RESOLVED | **STILL RESOLVED** | Revision and cursor remain separate mechanisms |
+| H-07 | STILL RESOLVED | **STILL RESOLVED** | xmin-barrier proof unchanged |
+| H-08 | STILL RESOLVED | **STILL RESOLVED** | Cursor indexes unchanged; NHR-01 adds five `subject_member_id` partial indexes |
+| H-09 | STILL RESOLVED | **STILL RESOLVED** | Tombstones unchanged |
+| H-10 | CHANGED ANSWER | **STILL RESOLVED** (stable) | No further change this pass |
+| H-11 | CHANGED ANSWER | **STILL RESOLVED** (stable) | No further change this pass |
+| H-12 | STILL RESOLVED | **STILL RESOLVED** | Trigger + withheld column grant |
+| H-13 | STILL RESOLVED | **STILL RESOLVED** | As above |
+| H-14 | STILL RESOLVED | **STILL RESOLVED** | `origin_*` columns still nullable and never defaulted |
+| H-15 | CHANGED ANSWER | **CHANGED ANSWER → now fully resolved** | The gap H-15 opened *was* NHR-01. Closed this pass by owner decision A2: the child-subject invariant is now structural on all five child-capable tables |
+| H-16 | STILL RESOLVED | **STILL RESOLVED** | Payload bounds unchanged |
+| H-17 | STILL RESOLVED | **STILL RESOLVED** | Ledger immutability unchanged; its escape hatch is now a role boundary rather than a GUC, which strengthens it |
+| H-18 | STILL RESOLVED | **STILL RESOLVED** | No delete path for `action_records` |
+| H-19 | STILL RESOLVED | **STILL RESOLVED** | Demo unrepresentable |
+| H-20 | STILL RESOLVED | **STILL RESOLVED** | `coparent-shared` owner-only |
+| H-21 | STILL RESOLVED | **STILL RESOLVED** | Private-scope predicate unchanged |
+| H-22 | CHANGED ANSWER | **CHANGED ANSWER → now three-layer** | Its residual *was* NHR-02. Closed this pass: Layer 1 secure defaults, Layer 2 per-object grants, Layer 3 fingerprint, plus an application assertion layer |
+| H-23 | CHANGED ANSWER | **CHANGED ANSWER → three more DEFINER functions** | `set_subject_member_type` (INVOKER), `is_trusted_server_context` and `assert_app_schema_secured` (DEFINER). All pin `search_path`; the two new DEFINER functions hold no EXECUTE for client roles |
+| H-24 | STILL RESOLVED | **STILL RESOLVED** | The new composite FK points content → `household_members`, the same direction as the existing edges. No cycle introduced |
+| H-25 | CHANGED ANSWER | **CHANGED ANSWER → one more requirement** | NHR-01 adds a second local-v3 reconciliation item (adult subjects) alongside the HR-03 `logicalDay.ts` item |
+| H-26 | STILL RESOLVED | **STILL RESOLVED** | Re-verified this pass: `supabase/migrations/` holds one file, hash unchanged |
+| H-27 | STILL RESOLVED | **STILL RESOLVED** | `profiles_insert_own` still removed |
+| H-28 | STILL RESOLVED | **STILL RESOLVED** | Strengthened: `display_name` is now nullable for adults, so the orphan-avoidance CHECK no longer forces a fabricated string |
+| H-29 | STILL RESOLVED | **STILL RESOLVED** | Cross-household reads blocked; the composite FK additionally blocks cross-household *subject references*, which no prior layer covered |
+| H-30 | STILL RESOLVED (P2 deferred) | **STILL RESOLVED (P2 deferred)** | Minimization still deferred as SD4-028 |
+
+**Summary: 24 STILL RESOLVED · 6 CHANGED ANSWER · 0 REGRESSED.**
+
+### 11.2 The six changed-answer attacks — named and reconciled
+
+The prior prose report named only H-10, H-11 and H-22. **The artifact recorded all six correctly; the prose under-reported them.** There is no evidence gap.
+
+| # | Prior answer | Current answer | Why it changed | Stable now? |
 |---|---|---|---|---|
-| H-01 | Client-supplied cloud PKs | **STILL RESOLVED** | HR-03 (reinforces) | `uuid` + `gen_random_uuid()` + `force_server_owned_id()` + no column grant. HR-03 adds `logical_day` and `timezone_at_decision` to the set of fields the client cannot dictate |
-| H-02 | Duplicate cloud households | **STILL RESOLVED** | — | Two partial unique indexes on `household_members` |
-| H-03 | Duplicate inserts after retry | **STILL RESOLVED** | — | `local_id` unique constraints as idempotency key |
-| H-04 | Local/cloud mapping loss after crash | **STILL RESOLVED** | — | `account_claims.claim_key` replay |
-| H-05 | Cross-device `local_id` collisions | **STILL RESOLVED** | — | Device-relative local ids; server never merges on collision |
-| H-06 | Row revision used as pull cursor | **STILL RESOLVED** | — | Separate mechanisms; `change_log.committed_xid` is the cursor |
-| H-07 | Incomplete global change cursor | **STILL RESOLVED** | — | xmin-barrier protocol with the proof in 6.3 |
-| H-08 | Missing pull indexes | **STILL RESOLVED** | HR-03 (rename) | The One Move lookup index is now `(household_id, profile_id, logical_day DESC)` |
-| H-09 | Hard deletes invisible to offline devices | **STILL RESOLVED** | — | Status tombstones, `deleted_at`, `cleared` |
-| H-10 | Duplicate One Move day rows | **CHANGED ANSWER** — strengthened | **HR-03** | Was: a unique constraint on a client-supplied `for_date`. Now: the day is **server-derived**, so a wrong day cannot reach the constraint in the first place. Scenario proof in 8.2 |
-| H-11 | Timezone divergence | **CHANGED ANSWER** — structural, not evidential | **HR-03** | Was: `for_date_timezone` made divergence *detectable*. Now: divergence is *impossible* on the live path because the client value is discarded; `timezone_at_decision` is retained purely as audit evidence |
-| H-12 | Client-writable `revision` | **STILL RESOLVED** | — | Trigger overwrite plus no column grant |
-| H-13 | Client-writable `updated_at` | **STILL RESOLVED** | HR-03 (extends) | Same two layers, now also covering `logical_day` and `timezone_at_decision` |
-| H-14 | Fabricated historical timestamps | **STILL RESOLVED** | HR-03 (nuance) | `origin_*` columns stay nullable. HR-03 adds one honest caveat: `timezone_at_decision` for claim-backfilled rows is the claim-time profile timezone, recorded as such in 8.2 |
-| H-15 | Ambiguous ownership | **CHANGED ANSWER** — rationale now precise, one gap opened | **HR-01** | Ownership itself is unambiguous and now carries the owner-issued child-member rationale. The re-review surfaced a *scope-integrity* gap that is not an ownership gap: **NHR-01** |
-| H-16 | Arbitrary JSON | **STILL RESOLVED** | — | `payload_version`, required `reason.code`, size bound, agreement CHECK |
-| H-17 | Mutable audit ledger | **STILL RESOLVED** | — | Three layers including a trigger binding `service_role` |
-| H-18 | Local action trimming deleting cloud truth | **STILL RESOLVED** | — | No delete path exists for `action_records` in the sync engine |
-| H-19 | Demo data becoming syncable | **STILL RESOLVED** | — | Fail-closed refusal plus schema-level inability to represent demo rows |
-| H-20 | Accidental co-parent collaboration | **STILL RESOLVED** | HR-01 (confirms) | `coparent-shared` owner-only; explicit DENY rows in 7.2 |
-| H-21 | Personal/professional leakage | **STILL RESOLVED** | HR-01 (confirms) | Owner-only predicate; private-scope row with NULL owner rejected for every role |
-| H-22 | Unsafe default grants | **CHANGED ANSWER** — now fully resolved | **HR-02** | Was: "resolved, with an owner decision outstanding". The owner approved the three-layer design, so Layer 1 now removes the hazard rather than documenting it (10.1). Residual: **NHR-02** |
-| H-23 | `SECURITY DEFINER` / `search_path` risk | **CHANGED ANSWER** — one more DEFINER function, and an over-revoke analysis added | **HR-02, HR-03** | `set_one_move_logical_day()` is a sixth DEFINER function, `search_path` pinned, EXECUTE held by nobody. 10.4 adds the full reachability matrix that the first pass lacked |
-| H-24 | Circular FK hazards | **STILL RESOLVED** | — | None found; dependency graph is acyclic |
-| H-25 | Mismatch with local v2/v3 contract | **CHANGED ANSWER** — one requirement added | **HR-03** | `logicalDay.ts` must derive the product day from the profile timezone once account-backed operation begins. Recorded for local-v3, not implemented |
-| H-26 | Design SQL accidentally placed in migrations | **STILL RESOLVED** | — | Re-verified this pass: `supabase/migrations/` holds one file, the baseline, byte-identical |
-| H-27 | Orphanable rows — profile with no household | **STILL RESOLVED** | — | `profiles_insert_own` removed |
-| H-28 | Orphanable rows — adult member with no profile | **STILL RESOLVED** | HR-01 (confirms) | FK `CASCADE` plus the adult-requires-profile CHECK. The owner rationale explicitly contemplates `member_type='child'` with `profile_id IS NULL`, which this CHECK already permits and constrains |
-| H-29 | Cross-household authenticated read | **STILL RESOLVED** | — | `is_household_member` gates every policy |
-| H-30 | Child-data leakage | **STILL RESOLVED** (P2 deferred) | HR-01 (adjacent) | Access control is correct; minimization stays deferred as SD4-028. NHR-01 is a distinct issue — integrity, not leakage |
+| **H-10** | Unique constraint on a client-supplied `for_date` | Day is **server-derived**; a wrong day cannot reach the constraint | HR-03 moved day computation to the server | **Yes** — untouched this pass |
+| **H-11** | `for_date_timezone` made divergence *detectable* | Divergence is *impossible* on the live path; `timezone_at_decision` is audit evidence only | HR-03 | **Yes** |
+| **H-15** | Ownership unambiguous, but a scope-integrity gap opened | Gap closed structurally: composite FK proves the subject is a child of the same household | The gap was NHR-01; owner decision A2 resolved it | **Yes** — closed this pass |
+| **H-22** | "Resolved, with an owner decision outstanding" | Three-layer defense with the hazard removed, not documented | HR-02, then NHR-02 added the application assertion layer | **Yes** — closed this pass |
+| **H-23** | Five DEFINER functions, `search_path` pinned | Eight functions total; reachability matrix and over-revoke analysis added | HR-02 added the matrix; NHR-01/02/05 added three functions | **Yes**, pending Test D |
+| **H-25** | Section 5 reconciled eleven concepts | Two explicit local-v3 obligations now recorded | HR-03 added the timezone item; NHR-01 added the adult-subject item | **Yes** |
 
-**Summary: 24 STILL RESOLVED, 6 CHANGED ANSWER, 0 REGRESSED.**
+### 11.3 New hostile review — this pass
 
-### 11.2 New hostile review
+#### NHR-01, the eight owner-specified attacks
 
-Attacks run specifically against the revised design. Framed as attempts to break it.
+| # | Attempt | Outcome | Mechanism |
+|---|---|---|---|
+| 1 | `scope='child'`, `subject_member_id` NULL | **REJECTED** | `*_child_scope_subject_check` on all five tables |
+| 2 | non-null subject points at an **adult** | **REJECTED** | Composite FK `(subject_member_id, household_id, subject_member_type)` → `household_members(id, household_id, member_type)`. `subject_member_type` is pinned to `'child'`, so an adult parent row has no match |
+| 3 | subject points at **another household's** child | **REJECTED** | `household_id` is the second column of the same FK |
+| 4 | new row references an **archived** child | **DORMANT** — no archival state exists (B4-P0-066 DEFERRED). Activation dependency recorded in §12 |
+| 5 | existing row references a child, child later archived | **DORMANT**, same reason. When activated, rule 3 preserves existing references |
+| 6 | referenced child's `member_type` changed to adult | **REJECTED** | The parent UPDATE leaves referencing rows unmatched; the FK raises. **No trigger involved** |
+| 7 | referenced child's `household_id` changed | **REJECTED** | Same FK, same mechanism |
+| 8 | unauthorized actor adds or archives a child | **DENIED** | `household_members` is SELECT-only for `authenticated`; creation and removal are RPC-only (B4-P0-019). Archival does not exist |
 
-#### HR-01 attack surface
+Additional attacks run: **client asserts `subject_member_type='adult'`** to smuggle an adult subject → triple-blocked (no column grant, trigger overwrites, CHECK pins to `'child'`). **Demo row with an adult subject** → demo never syncs and claim fails closed.
+
+#### NHR-02
 
 | Attempt | Outcome |
 |---|---|
-| Construct an ambiguous profile-backed membership | **Failed.** `household_members_check` forces `member_type='adult' ⇒ profile_id IS NOT NULL AND scope='personal'`. One profile per household (`household_members_profile_per_household_uq`), one owner per household, one household per owner. There is no second candidate owner for a membership row |
-| Construct an ambiguous child membership (`member_type='child'`, `profile_id IS NULL`) | **Failed as an ownership question.** The CHECK forces `birth_date IS NOT NULL AND scope='child'`. The row is owned by the household, and `owner_profile_id` would have no second meaning to express — exactly the owner rationale. The row is reachable only by household members |
-| Unauthorized child add / archive / update | **Failed.** `household_members` has a SELECT policy and nothing else; `authenticated` holds `SELECT` only. Creation and removal live behind the server boundary (B4-P0-019). Child archival semantics remain deferred (B4-P0-066) and no client path exists to invent them |
-| CHILD-scope leakage to a non-member | **Failed.** `can_access_scoped_row` requires `is_household_member` before the scope test; `child` rows are household-visible but never cross-household |
-| Content row lacking required owner/scope metadata | **Failed.** `*_owner_scope_check` on all five content tables makes a private-scope row with NULL owner, and a shared-scope row with a non-NULL owner, both unstorable — for every role, including `service_role` |
-| Child-scoped content row naming **no child** | **SUCCEEDED → NHR-01 (P2)** |
+| Future migration creates a table and forgets every GRANT | `anon`/`PUBLIC` blocked by Layer 1; `authenticated` reaches a table with RLS enabled and no policy → all rows denied |
+| Future migration forgets `ENABLE ROW LEVEL SECURITY` | `private.assert_app_schema_secured()` raises and **aborts the migration transaction** |
+| Future migration forgets to *call* the assertion | **Not caught by Layer 2** → NHR-08 (P3). Layers 1 and 3 still apply |
+| Her Keys layer breaks `auth` / `storage` / `extensions` / temp DDL | **Cannot.** The function inspects `nspname='public'` only, and runs only when a migration calls it |
+| Over-revocation strands a policy | **Survives.** Blanket revokes are `public`-scoped; §10.4 re-asserts `private` USAGE and all helper EXECUTEs afterwards |
+| `service_role` over-restricted | Explicit `GRANT ALL` on tables plus named EXECUTEs |
 
-#### HR-02 attack surface
-
-| Attempt | Outcome |
-|---|---|
-| **ATTACK 1, under-revoke.** A future migration creates a table and forgets every privilege statement | **anon and PUBLIC: blocked** by Layer 1. `authenticated` still inherits the TABLES default — but `ensure_rls` auto-enables RLS and no policy exists, so every row is denied. **Residual path → NHR-02 (P2)** |
-| A future migration creates a `SECURITY DEFINER` function and forgets privileges | **Blocked.** Layer 1 revokes the `PUBLIC` built-in EXECUTE default and the `authenticated` ROUTINES default in both schemas. The function is uncallable until someone grants it deliberately |
-| **ATTACK 2, over-revoke.** Apply every proposed revoke, then run an ordinary authenticated query | **Survives.** The blanket revokes are scoped to `public`; the `private` helpers keep their grants, and 10.4 re-asserts `USAGE ON SCHEMA private` plus all four helper EXECUTEs *after* every revoke. Ordering was checked statement by statement |
-| Strand a policy by revoking EXECUTE on `private.is_household_member` | **Blocked by construction** — it is in the re-assertion block. Identified in 10.4 as the single most load-bearing grant in the design |
-| Over-restrict `service_role` so the purge or prune cannot run | **Failed.** `GRANT ALL ON ALL TABLES ... TO service_role` and the `private.purge_account` / `prune_change_log` grants are explicit |
-| Retained baseline object drifts unnoticed | **Addressed.** 10.5 enumerates every survivor with its posture and whether the delta hardens it |
-| Client sets `herkeys.claim` or `herkeys.purge` itself | **UNPROVEN → NHR-05 (P2)** |
-
-#### HR-03 attack surface
-
-Evaluated against the exact constraint `UNIQUE (household_id, profile_id, logical_day)`.
+#### NHR-05
 
 | Attempt | Outcome |
 |---|---|
-| Stale cached timezone on the writing device | **Failed.** The client value is discarded; the trigger derives the day from `profiles.timezone` |
-| Timezone changed mid-day, two devices on old and new values | **Failed to duplicate.** Full step-by-step in 8.2. Both devices derive the *same* server-side day; the second collides with the first |
-| A `selected` decision pending during the transition | **Failed to corrupt.** `logical_day` is stored, and the UPDATE branch pins it, so the pending row cannot migrate days |
-| Historical timezone change reinterprets old records | **Failed.** No read path derives `logical_day` |
-| Duplicate `logical_day` via a changed timezone string | **Failed.** `timezone_at_decision` is deliberately outside the unique key |
-| Server/client disagreement on day computation | **Cannot arise.** There is exactly one evaluator |
-| London device, `America/Chicago` profile | **Behaves as specified** — Chicago days until the profile is changed. Recorded as a product observation, not a defect |
-| Claim backfills a *future* logical day | **Failed.** The claim branch rejects `logical_day > v_today` |
-| Claim backfills with no recorded original timezone | **SUCCEEDED as a fidelity limitation**, disclosed in 8.2 rather than hidden. Not a new finding; it is inherent to Build 3 local state carrying no per-record timezone |
+| Client sets `herkeys.claim` / `herkeys.purge` | **Impossible to exploit — the GUCs no longer exist.** Both branches now test `private.is_trusted_server_context()` |
+| Client sets any other `herkeys.*` value | **No security-relevant call site remains.** Audit in §10.6 |
+| Client writes `logical_day`, `timezone_at_decision`, `revision`, `subject_member_type`, ids or server timestamps | **DENIED at the privilege layer**, before RLS. Prevention, not trigger-correction |
+| Claim another account | **Not expressible.** The argument shape carries local content only — no `profile_id`, no `household_id`, no cloud id |
+| Duplicate claim | `account_claims` `UNIQUE (profile_id, claim_key)` + partial unique on `status='complete'` |
+| Crash then retry, One Move already inserted | `ON CONFLICT (household_id, profile_id, logical_day) DO UPDATE` where identical; **material mismatch preserves conflict evidence and does not overwrite** |
+| Malicious historical day (future-dated) | Rejected by the claim branch |
+| Malformed timezone | Rejected by `now() AT TIME ZONE <candidate>` inside an exception block |
 
-#### HR-04 attack surface
-
-Evaluated against the actual guard SQL quoted in section 8 of the owner-resolution report.
+#### HR-05
 
 | Attempt | Outcome |
 |---|---|
-| Insert a row between the check and the DDL | **Blocked.** `LOCK TABLE ... IN ACCESS EXCLUSIVE MODE` is taken before any DDL and held to COMMIT, and a second census runs under the locks |
-| `auth.users` populated | **Blocked.** `auth.users` is in the protected list and is the first thing a real deployment would have |
-| One of the 16 app tables populated | **Blocked.** All 16 are enumerated by schema-qualified name; the exception names the offending relation and its count |
-| Wrong or incomplete protected list | **Addressed.** The list is enumerated literally, not computed. `change_log` and `account_claims` are guarded by `to_regclass` so a first run tolerates their absence without weakening the guard on a re-run |
-| `change_log` / `account_claims` omitted from `LOCK TABLE` | **Not exploitable.** They are censused. A row can only enter `change_log` via a trigger on a table that is itself ACCESS EXCLUSIVE locked, so they are transitively protected |
-| DDL placed before the guard | **Failed.** The `DO $interlock$` block is the first executable statement in the file. The only statement between it and the teardown is `SET check_function_bodies = false`, which is not DDL and touches nothing |
-| Non-transactional execution weakening atomicity | **Blocked structurally.** PostgreSQL rejects `LOCK TABLE` outside a transaction block, so a non-transactional run **errors out at the lock, before any destructive DDL**. Confirmation is implementation acceptance Test C; it is not claimed as proven here |
-| Partial migration after a successful guard | **Prevented by the same transaction** the lock requires |
-| Data deletion used to bypass the interlock | **Forbidden in text and in behavior.** The migration contains no `TRUNCATE`, no `DELETE`, and no export-restore. The exception message explicitly instructs the operator not to do it manually and to return to the owner |
+| Provider returns NULL | Stored as NULL. No placeholder |
+| Whitespace-only | Normalizes to empty → NULL |
+| Internal whitespace runs | CHECK rejects `'  '`; the client must collapse first |
+| Control characters | CHECK rejects `[[:cntrl:]]` |
+| NFD instead of NFC | **Not enforceable as a CHECK** → NHR-07 (P3). Client/RPC obligation |
+| One character, punctuation-only, emoji-only | **Stored honestly.** The database does not police semantic content |
+| Extremely long | 80-character cap |
+| UI fallback `"You"` accidentally persisted | **Not structurally preventable** — indistinguishable from a user who typed it → NHR-09 (P3). UI obligation |
 
-### 11.3 Open findings
+### 11.4 Open findings
 
 **No P0 open. No P1 open.**
 
-| # | Sev | Finding | Failure scenario | Disposition |
-|---|---|---|---|---|
-| **NHR-01** | **P2** | Child-scoped content rows have **no cloud constraint requiring a subject member**. Build 3 local integrity requires it (`findIntegrityProblems`: "a `child`-scoped record must name a real child") | A non-conforming client inserts `events(scope='child', subject_member_id=NULL)`. The cloud accepts it. A second device pulls it, local integrity rejects the state, `encodeStoredState` refuses the write and **sync stalls**. Requires a modified client and is confined to the actor's own household, so it is not cross-tenant and not data loss | **NOT APPLIED — owner decision required.** Proposed: `CHECK (scope <> 'child' OR subject_member_id IS NOT NULL)` on `events` and `tasks`, one-way, not a biconditional. The stronger form (proving the subject is actually a *child*) needs a composite FK carrying `member_type` and is a larger change. `household_systems`, `meal_plan_entries` and `household_categories` need nothing: they carry no subject and local integrity does not check them either |
-| **NHR-02** | **P2** | Residual under-revoke path: `authenticated` keeps the TABLES default, so a forgotten future table relies on `ensure_rls` to be safe — and `rls_auto_enable()` **swallows its own exceptions** (`EXCEPTION WHEN OTHERS THEN RAISE LOG`) | A future table is created, the event trigger fails for any reason and only logs, no policy is written, and `authenticated` holds full DML on it with RLS disabled. Any authenticated user reads every household's rows in that table | Options for the owner: (a) accept, relying on Layer 2 discipline plus the fingerprint; (b) also revoke the `authenticated` TABLES default, making a forgotten table fail loudly instead of silently; (c) add a migration-time assertion that every `public` table has RLS enabled. **(c) is the cheapest and is recommended**, but it is a design change and is not applied |
-| **NHR-05** | **P2** | The `herkeys.claim` and `herkeys.purge` escape hatches are **only as strong as a client's inability to set them**, and that has not been established | If a client can set `herkeys.claim='on'`, it can write One Move rows with arbitrary past `logical_day` values; `herkeys.purge='on'` would let it delete its own `action_records`, destroying its own audit ledger. Confined to the actor's own household in both cases | Recommended hardening, **not applied**: have both guards additionally assert the executing role (`current_user`/`session_user` is the service identity), so the GUC becomes a second factor rather than the only one. Must be verified in the implementation phase |
-| **NHR-03** | **P3** | Layer 1 revokes the `authenticated` ROUTINES default, so the future `sync_push` / `sync_pull` / `bootstrap_account` / `claim_local_household` RPCs will be **uncallable** unless their migration grants EXECUTE explicitly | A later phase adds the RPCs, relies on the old inherited default, and every client call fails with "permission denied for function" | Fail-closed, so it breaks loudly rather than silently. Recorded here so the later phase expects it. Already stated in the SQL draft |
-| **NHR-04** | **P3** | `action_records.logical_date` carries no `timezone_at_decision`, unlike `one_move_records.logical_day` | An auditor cannot tell which timezone produced a historical ledger date | Frozen by immutability so it can never be *reinterpreted*; only the audit evidence is missing. Recommendation recorded, not applied |
-| HR-05 | P2 | `household_members.display_name` NOT NULL but real users have no display name | carried forward unchanged | Owner decides the placeholder rule; SD4 will not invent product copy |
-| HR-06 | P2 | Child data minimization | carried forward unchanged | **DEFERRED** (SD4-028), recommendations in 7.4 |
-| HR-07 | P2 | `systems` / `meals` sync paths have no production producer | carried forward unchanged | Must not be claimed as verified at certification |
-| HR-08 | P2 | `change_log` growth unbounded between prunes | carried forward unchanged | `prune_change_log` signature recorded; scheduling is a later decision |
-| HR-09 | P2 | `log_row_change` adds a write to every mutation | carried forward unchanged | Measure at sync implementation |
-| HR-10 | P3 | New indexes raise the `unused_index` advisory count | carried forward unchanged | Expected, not drift |
-| HR-11 | P3 | `discovery_answers` has no revision and no change-log trigger | carried forward unchanged | Intentional; documented |
-| HR-12 | P3 | `xid8` / `pg_snapshot_xmin` cursor protocol never executed | carried forward unchanged | Must be proved by test at sync implementation |
-| HR-13 | P4 | Non-owner member scenarios unreachable in Build 4 | carried forward unchanged | Correct to establish while empty |
-| HR-14 | P4 | Production backup / PITR posture still deferred | carried forward, **and sharpened** | A destructive migration plus absent recovery is a worse combination than either alone. Checkpoint #2 (B4-P0-052 / OD-2) |
+| # | Sev | Finding | Disposition |
+|---|---|---|---|
+| **NHR-06** | **P3** | `private.is_trusted_server_context()` rests on `current_user = 'postgres'` inside a definer-owned function — a Supabase deployment assumption SD4 cannot execute to confirm | **Test D** must demonstrate it. If migrations ever run as a non-`postgres` owner, the predicate must be widened to that owner |
+| **NHR-07** | **P3** | NFC normalization cannot be expressed as a CHECK | Client/RPC obligation, documented. Everything else in the normalization contract *is* enforced by the database |
+| **NHR-08** | **P3** | The assertion layer only fires when a migration calls it | Accepted residual of the owner-sanctioned alternative to an event trigger. Layers 1 and 3 remain independent |
+| **NHR-09** | **P3** | A persisted `"You"` is indistinguishable from a typed `"You"` | UI obligation: never send the fallback |
+| HR-06 | P2 | Child data minimization | **DEFERRED** (SD4-028). *Note:* A2 widens the child-reference surface to three more tables, which the future privacy review must cover |
+| HR-07 | P2 | `systems` / `meals` sync paths have no production producer | Carried forward. A2 gives them a child reference they equally cannot exercise yet |
+| HR-08 | P2 | `change_log` growth unbounded between prunes | Carried forward |
+| HR-09 | P2 | `log_row_change` adds a write per mutation | Carried forward |
+| HR-10 | P3 | `unused_index` advisory count rises | Carried forward; A2 adds five more partial indexes |
+| HR-11 | P3 | `discovery_answers` has no revision / change-log trigger | Carried forward |
+| HR-12 | P3 | Cursor protocol never executed | Carried forward; **Test C/E** |
+| HR-13 | P4 | Non-owner member scenarios unreachable in Build 4 | Carried forward |
+| HR-14 | P4 | Production backup / PITR deferred | Carried forward (B4-P0-052 / OD-2) |
 
-**HR-01, HR-02, HR-03 and HR-04 are closed by owner decision** and are recorded in section 12.
+**NHR-01, NHR-02, NHR-05 and HR-05 are closed** by the owner decisions recorded in §12.
+
 
 ---
 
@@ -964,6 +1009,102 @@ Original findings are preserved verbatim in 11.3 of the prior revision and in th
 | Design change applied | Guard rewritten to enumerate 16 tables plus `auth.users` with `to_regclass` tolerance, collecting and reporting every offending relation; a top-level `LOCK TABLE ... IN ACCESS EXCLUSIVE MODE` closing the check-then-act window and making the single-transaction requirement self-enforcing; a second census under the locks |
 | Acceptance criteria | **Tests A, B and C**, recorded in section 11 of the SQL draft. Test C specifically proves the transaction boundary |
 | Production gate | Unchanged and separate. Before any eventual Production migration, repeat an explicit row and auth census. If Production is not empty: **STOP** — do not apply, truncate, delete, or export-and-restore. Return to the owner for a non-destructive design |
+
+
+### NHR-01 — child-scope structural integrity
+
+**RESOLVED BY OWNER**
+
+| | |
+|---|---|
+| Original status | **P2 OPEN** (raised by the HR-01 re-review), then two PENDING-OWNER sub-questions |
+| Original finding | Child-scoped content rows had no cloud constraint requiring a subject member, while Build 3 local integrity requires one. A pulled row naming nobody would be rejected locally and stall sync |
+| PENDING-OWNER-A | Three of the five child-capable tables (`household_categories`, `household_systems`, `meal_plan_entries`) had no member reference column, so the rule was unsatisfiable on them. **Owner chose A2:** add the column, do not narrow child scope out of those tables |
+| PENDING-OWNER-B | Rules 3–4 presumed an archived state that does not exist; building one would ship DEFERRED **B4-P0-066**. **Owner accepted the dormant-rule treatment** |
+| Resulting status | **CLOSED** |
+| Effective date | 2026-09-19 |
+| Owner rationale for A2 | Child scope is part of the Her Keys product framework, not a Build 3 implementation detail. A category, household system or meal plan associated with a particular child is structurally coherent, and removing that capability during the pre-data window would only manufacture a future migration. The invariant is consistent: **if a row says `scope='child'`, the row identifies which child** |
+| Mechanism — rules 1, 2, 3 | Rule 1: `CHECK (scope <> 'child' OR subject_member_id IS NOT NULL)` on all five tables. Rules 2 **and** 3: one composite foreign key `(subject_member_id, household_id, subject_member_type) → household_members(id, household_id, member_type)`, backed by a new `UNIQUE (id, household_id, member_type)` on `household_members`. **Both directions are proved structurally; no trigger and no RLS participates in relational integrity.** Changing a referenced child's `member_type` or `household_id` leaves referencing rows unmatched and raises |
+| `subject_member_type` | A derived carrier column for the FK's third position. Set by `public.set_subject_member_type()`, pinned by CHECK to `'child'`, and **granted to no one** — so a client cannot assert that an adult is a child |
+| Naming | The owner's generic phrase `child_member_id` maps to the artifact's existing `subject_member_id`. Per owner instruction the existing terminology is kept |
+| Affected SD4 IDs | SD4-009, SD4-024, SD4-029, SD4-039, SD4-040 |
+| Affected B4-P0 IDs | B4-P0-038 (OD-1), B4-P0-019, **B4-P0-066 (DEFERRED)** |
+| Acceptance criteria | The eight attacks in §11.3 become tests, plus: client-asserted `subject_member_type='adult'` must fail; a cross-household child subject must fail |
+
+**LOCAL/CLOUD SEMANTIC DIFFERENCE (NHR-01).** Rule 2 tightens Build 3. Locally, `findIntegrityProblems` permits `subjectMemberId` to name **any** member including the adult (`memberIds = {user.id} ∪ childIds`, `src/domain/state.ts:410`). The cloud permits **children only**.
+
+*Verified impact on real data: none.* Extraction found **no production writer** of `subjectMemberId` — the only non-null assignments are in `src/data/seed/demoHousehold.ts` (which never syncs, B4-P0-010) and `createEvent`/`createTask` default it to `null`. `KidsOverview.tsx` only reads it. So no real Build 3 household can hold an adult-subject row, and claim cannot be blocked by one.
+
+**Local-v3 reconciliation required:** `findIntegrityProblems` must narrow `checkSubject` so a non-null `subjectMemberId` must be a child, matching the cloud. **Not implemented now.**
+
+**FUTURE ACTIVATION DEPENDENCY**
+
+```
+B4-P0-066  ->  child-reference archived-target validation
+```
+
+Any future implementation that activates B4-P0-066 (child/system/meal removal semantics) **must also activate** the rule that new child references cannot target an archived child. A future migration that introduces archival or removal state **without** that validation is incomplete. Existing historical references must survive archival; archival must not destroy them. This dependency is design metadata and **does not approve B4-P0-066 now**.
+
+### NHR-02 — privileges and RLS defense in depth
+
+**RESOLVED BY OWNER**
+
+| | |
+|---|---|
+| Original status | **P2 OPEN** |
+| Original finding | `authenticated` keeps the TABLES default, so a forgotten future table relied on `ensure_rls` — and `rls_auto_enable()` swallows its own exceptions (`EXCEPTION WHEN OTHERS THEN RAISE LOG`) |
+| Owner resolution | **APPROVED.** Secure default privileges; no automatic `anon` or `authenticated` table access; no accidental `PUBLIC` EXECUTE; explicit `service_role` disposition; per-object grants; explicit `ENABLE ROW LEVEL SECURITY` in every migration; narrowly re-granted helper permissions; fingerprint privilege dimensions as standing drift detectors |
+| Resulting status | **CLOSED** |
+| Effective date | 2026-09-19 |
+| **Platform classification** | `public.rls_auto_enable()` and the `ensure_rls` event trigger are **PLATFORM-MANAGED / INFORMATIONAL**, on repo-owned evidence: `phase1-staging-fingerprint.json` scores `info.event_triggers` with `"class": "PLATFORM-MANAGED/INFO"`, and `phase1-baseline-review.md` lists the other two functions as `app-owned` while placing `rls_auto_enable` under *"Platform/informational machinery"*. **Her Keys therefore does not rewrite, replace or depend on it** |
+| Her Keys fail-closed layer | `private.assert_app_schema_secured()`, called at the end of every application migration. **Event:** none — it is an ordinary function call, not an event trigger. **Schemas governed:** `public` only. **Predicate:** every `relkind='r'` in `public`. **Checks:** RLS enabled; at least one policy exists; `anon` holds no table privilege. **Failure:** `RAISE EXCEPTION`, which aborts the creating transaction. **Non-app DDL:** cannot be affected — the function never inspects `auth`, `storage`, `extensions`, temp or any platform schema, and runs only when a migration calls it |
+| Why not an event trigger | An application event trigger on the same DDL events could not be justified as portable or safe from existing repo evidence: it would sit beside platform machinery on `ddl_command_end`, would need to exclude every platform object by predicate, and nothing in SD4 can validate that without executing it. Inventing one would claim ownership of a platform concern |
+| Explicit RLS | All **16** tables carry `ALTER TABLE ... ENABLE ROW LEVEL SECURITY` (extracted: 16 statements / 16 `CREATE TABLE`). Automation does not replace explicit DDL |
+| Residual | **NHR-08 (P3)** — the assertion fires only when called. Layers 1 and 3 remain independent |
+| Affected SD4 IDs | SD4-026 (already OWNER-APPROVED), SD4-027, SD4-039, SD4-040 |
+| Affected B4-P0 IDs | B4-P0-039, **B4-P0-040**, B4-P0-041 |
+| Verification | **DESIGN REVIEW ONLY.** No empirical runtime proof claimed. Test D |
+
+### NHR-05 — GUCs may not be a security boundary
+
+**RESOLVED BY OWNER**
+
+| | |
+|---|---|
+| Original status | **P2 OPEN** |
+| Original finding | `herkeys.claim` and `herkeys.purge` gated privileged behavior, resting on the unproven claim that a client cannot set a custom GUC |
+| Owner resolution | **APPROVED.** No security-sensitive logic may depend on a `herkeys.*` GUC |
+| Resulting status | **CLOSED** |
+| Effective date | 2026-09-19 |
+| Mechanism | Both call sites replaced by `private.is_trusted_server_context()`, which tests `current_user = 'postgres'` — true only inside a `SECURITY DEFINER` function owned by `postgres`, and unreachable by anything a client can set on its own session. **This is a prevention property:** there is no value a client can send, on any connection it can open, that makes the predicate true |
+| GUC audit result | **Zero security-relevant `herkeys.*` call sites remain.** See §10.6 |
+| Server-owned columns | Enforced by **column-level privilege** (prevention), not trigger-overwrite (correction). `logical_day` and `timezone_at_decision` are now granted on **neither** INSERT nor UPDATE — the live path does not need them and the claim path is a definer RPC that bypasses column grants entirely |
+| Trusted RPC contract | Fully specified in the SQL draft §10: name, arguments, security mode, `search_path`, PUBLIC/`anon`/`authenticated` grant posture, caller identity validation, account-ownership validation, idempotency, server-written fields, refusals, retry semantics and cross-account denial |
+| Dependency on SD4-034 | The trusted claim/backfill path depends on the `account_claims` model. **NHR-05 does not approve SD4-022/SD4-034.** If that model is later **revised**, this RPC contract requires focused re-review. If it is **deferred**, claim/backfill remains possible but loses crash-recovery of the id map: a device that crashes between server commit and local write would have to rebuild its map by replaying `local_id` pushes through SD4-005 idempotency, which is slower and leaves no server-side record of the claim. It does **not** become impossible, so SD4-034 does not become implementation-blocking on that ground alone |
+| Affected SD4 IDs | SD4-017, SD4-020, SD4-022, SD4-030, SD4-040 |
+| Affected B4-P0 IDs | B4-P0-030, B4-P0-033, B4-P0-034, B4-P0-049, B4-P0-061 |
+| Residual | **NHR-06 (P3)** — the `current_user = 'postgres'` assumption needs Test D |
+
+### HR-05 — display name
+
+**RESOLVED BY OWNER**
+
+| | |
+|---|---|
+| Original status | **P2 OPEN** |
+| Original finding | `household_members.display_name` was `NOT NULL` but real users have no display name and no screen collects one |
+| Owner resolution | **APPROVED.** `display_name` may be NULL. **No fabricated placeholder is persisted** |
+| Resulting status | **CLOSED** |
+| Effective date | 2026-09-19 |
+| Mechanism | `household_members.display_name` becomes nullable, with `CHECK (member_type <> 'child' OR display_name IS NOT NULL)` — the NOT NULL obligation is kept exactly where the data supports it, since a child is always created with a non-blank name locally (`ChildSchema.displayName`) |
+| Normalization contract | Identical for provider-supplied and user-entered names: **Unicode NFC**; trim; collapse internal whitespace runs to a single space; reject control characters; **empty after normalization ⇒ NULL**; **length cap 80** — chosen now, matching the existing `char_length <= 80` bound on both tables |
+| Enforced by the database | Already-trimmed, no control characters, no internal whitespace runs, length 1..80 — on both `profiles` and `household_members` |
+| Not enforceable in SQL | NFC normalization → client/RPC obligation (**NHR-07, P3**) |
+| Semantic content | A one-character, punctuation-only or emoji-only name is **stored honestly**. The database does not police semantic content; the UI decides how to render it |
+| UI fallback | `"You"` is presentation-only and is never synced or stored unless the user actually typed it (**NHR-09, P3**) |
+| Affected SD4 IDs | SD4-029, SD4-040 |
+| Affected B4-P0 IDs | B4-P0-016 (Apple first-authorization name), B4-P0-029, B4-P0-030 |
+
 
 ---
 
@@ -1091,62 +1232,699 @@ Every non-T1 PROPOSED decision was reviewed against the refined rule (probabilit
 The remaining 18 non-T1 proposals are policies, grants, helper functions, CHECK constraints, nullable columns, status values and FK actions — all alterable in place without identity, namespace, reference, key or sync-protocol migration.
 
 
-### 14.5 The package
+### 14.5 PART A — T1 PRE-DATA STRUCTURAL (7 decisions)
 
-**Resolving HR-01 through HR-04 did not approve the rest of the schema.** These 30 decisions remain `PROPOSED` and 2 remain `DEFERRED`. None has been self-promoted. Each is listed with what the owner would be approving.
+#### SD4-001 — Cloud PK type
 
-Columns: **Dep?** = does schema implementation depend on this decision being settled first. **Defer?** = can it remain unresolved past schema implementation.
+**VERBATIM PROPOSAL** (source: `BUILD4_SD4_CLOUD_SCHEMA.md` section 2 decision register, line 75):
 
-| ID | Title | Exact design choice | Rationale | Affected objects | B4-P0 | Authorization Tier | Defer? |
-|---|---|---|---|---|---|---|---|
-| SD4-001 | Cloud PK type | Native `uuid`, `DEFAULT gen_random_uuid()`, trigger-pinned | Makes server authority structural; ends the global-text-id collision class (`cat-kids`); matches `profiles.id`; smaller composite FKs | All 16 tables | **B4-P0-007** | **T1 — PRE-DATA STRUCTURAL** | No |
-| SD4-002 | profiles/Auth relationship | Shared PK with `auth.users(id) ON DELETE CASCADE`; no surrogate account key | Auth is identity authority; removes account/profile ambiguity | `profiles` | B4-P0-012 | **T1 — PRE-DATA STRUCTURAL** | No |
-| SD4-003 | No client profile INSERT | Drop `profiles_insert_own` | Closes the profile-with-no-household orphan | `profiles` | B4-P0-029 | T2 — IMPLEMENTATION-REQUIRED | No |
-| SD4-004 | `local_id` type + uniqueness | `text NOT NULL`, baseline id pattern; `(household_id, local_id)` household-scoped, `(household_id, profile_id, local_id)` owner-private | Uniqueness boundary follows the ownership boundary | 11 tables | **B4-P0-008** | **T1 — PRE-DATA STRUCTURAL** | No |
-| SD4-005 | Row-upload idempotency | The `local_id` unique constraint is the idempotency key; `ON CONFLICT` upsert | A retry after a lost response cannot duplicate | 11 tables | B4-P0-006 | T2 — IMPLEMENTATION-REQUIRED | No |
-| SD4-006 | Cross-device collision semantics | Local ids are device-relative; server never merges on a same-`local_id`/different-`origin_device_id` push; puller mints a fresh local id when its own is taken | `createId` resets its counter per process, so collision is reachable | 11 tables, sync RPCs | B4-P0-005, 006 | **T1 — PRE-DATA STRUCTURAL** | No |
-| SD4-007 | Soft references are cloud uuids | Cloud stores cloud uuids, not local ids | A local id is ambiguous once a second device exists; Build 3 local integrity would reject the pulled row and stall sync | `action_records`, `one_move_records` | **B4-P0-009** | **T1 — PRE-DATA STRUCTURAL** | No |
-| SD4-008 | JSONB reference manifest | Exactly four paths carry references, plus `target_id`; translated both ways; uuid-shape CHECK | Bounded, enumerable translation surface | `action_records` | B4-P0-009 | **T1 — PRE-DATA STRUCTURAL** | No |
-| SD4-009 | `owner_profile_id` placement | NOT NULL exactly when scope is private; NULL for `household`/`child`; CHECK-bound | Scope-aware ownership without a second source of truth | 5 content tables | B4-P0-038 | T2 — IMPLEMENTATION-REQUIRED | No |
-| SD4-010 | Server-owned `revision` | Existing trigger unchanged, plus no column grant | Two independent layers | 13 tables | B4-P0-020 | T2 — IMPLEMENTATION-REQUIRED | No |
-| SD4-011 | Origin vs server timestamps | `origin_created_at`/`origin_updated_at` nullable, never defaulted | Stops the server fabricating history the device never had | 7 tables | B4-P0-020 | T2 — IMPLEMENTATION-REQUIRED | No |
-| SD4-012 | Global change cursor | `change_log` keyed on `committed_xid xid8` behind a `pg_snapshot_xmin` barrier; pointer log, not content | `updated_at` and `BIGSERIAL` both lose writes; proof in 6.3 | `change_log`, 12 triggers | **B4-P0-026** | **T1 — PRE-DATA STRUCTURAL** | No |
-| SD4-013 | Cursor retention | 90 days; `cursor_expired` forces a full resync | Expensive, never silent | `change_log`, `prune_change_log` | B4-P0-026 | T3 — NON-BLOCKING | **Yes**, the horizon value only |
-| SD4-014 | Tombstone realization | Status values; `deleted_at` on `discovery_records`; `cleared` status on One Move | Build 3 physically deletes One Move records; invisible to offline devices | `discovery_records`, `one_move_records` | **B4-P0-027** | T2 — IMPLEMENTATION-REQUIRED | No |
-| SD4-015 | Conflict evidence is local-only | No cloud conflict table; `sync_push` returns the authoritative row | Evidence is unaccepted client intent; uploading creates a retention and child-data surface | `sync_push` | **B4-P0-028** | T2 — IMPLEMENTATION-REQUIRED | No |
-| SD4-016 | One Move state machine | Four states with an explicit legal-transition set | `cleared` replaces a physical delete | `one_move_records` | **B4-P0-059** | T2 — IMPLEMENTATION-REQUIRED | No |
-| SD4-018 | Typed One Move targets | `target_task_id` / `target_needs_me_id` FKs, exactly one set; `catalog` rejected | Real referential integrity; demo cannot be represented | `one_move_records` | B4-P0-010, 059 | T2 — IMPLEMENTATION-REQUIRED | No |
-| SD4-019 | `events.source` narrowed to `'user'` | CHECK narrowed from `('user','demo')` | Fail closed at the database rather than by client filtering | `events` | B4-P0-010 | T2 — IMPLEMENTATION-REQUIRED | No |
-| SD4-020 | Ledger immutability | No UPDATE/DELETE policy + revoked verbs + raising trigger; purge escape via session setting | Third layer binds `service_role` too | `action_records` | B4-P0-039 | T2 — IMPLEMENTATION-REQUIRED | No |
-| SD4-021 | Action retention asymmetry | Cloud unbounded; local windowed; trimming never emits a cloud delete | Local cache eviction must not destroy cloud truth | `action_records`, sync engine | B4-P0-023 | T3 — NON-BLOCKING | **Yes** |
-| SD4-022 | `account_claims` required | `UNIQUE (profile_id, claim_key)` + partial unique on `status='complete'` | Crash recovery of the id map, not bookkeeping | `account_claims` | **B4-P0-034** | T2 — IMPLEMENTATION-REQUIRED | No |
-| SD4-023 | One household per account | Two partial unique indexes on `household_members` | Makes a duplicate cloud household structurally impossible | `household_members` | B4-P0-031 | T2 — IMPLEMENTATION-REQUIRED | No |
-| SD4-024 | TEXT + CHECK over native enum | Keep TEXT + CHECK everywhere | Baseline is built that way; CHECKs narrow inside a transaction; SD4 narrows two enumerations immediately | All enumerated columns | — | T2 — IMPLEMENTATION-REQUIRED | No |
-| SD4-025 | JSONB payload versioning | `payload_version`, required `reason.code`, 4 KiB bound, agreement CHECK, uuid-shape CHECK | Baseline accepted any JSON object | `action_records` | B4-P0-064 | T2 — IMPLEMENTATION-REQUIRED | No |
-| SD4-027 | Private helper signatures | Four helpers, STABLE, DEFINER, `search_path=''`, EXECUTE to `authenticated` only | RLS needs them; over-revoking breaks every scoped read (10.4) | `private.*` | B4-P0-039, 040 | T2 — IMPLEMENTATION-REQUIRED | No |
-| SD4-029 | Member FK CASCADE + adult CHECK | `profile_id` FK `SET NULL` → `CASCADE`; adult requires a profile | Baseline leaves a profile-less adult member orphan | `household_members` | B4-P0-019 | T2 — IMPLEMENTATION-REQUIRED | No |
-| SD4-030 | Account-deletion purge order | Explicit 10-step order driven by the RESTRICT edges | Deleting `auth.users` alone fails while ledger rows exist | `private.purge_account` | **B4-P0-049** | T3 — NON-BLOCKING | **Yes** |
-| SD4-037 | `origin_device_id`, no registry | `uuid NULL` column; no device table | Provenance for collision diagnosis, not an access-control input | 11 tables | — | T2 — IMPLEMENTATION-REQUIRED | No |
-| SD4-039 | Revoke TRUNCATE/REFERENCES/TRIGGER | And DELETE except `discovery_answers` | RLS does not govern TRUNCATE | All tables | B4-P0-040 | T2 — IMPLEMENTATION-REQUIRED | No |
-| SD4-040 | Column-level client writes | ~20 column grants so `id`, `household_id`, `local_id`, `revision`, `created_at`, `updated_at` are unwritable | Survives a policy being widened by mistake | 11 tables | B4-P0-040 | T2 — IMPLEMENTATION-REQUIRED | No |
+> **Cloud primary keys become native PostgreSQL `uuid`**, server-generated by `DEFAULT gen_random_uuid()`. Not server-generated TEXT. Rationale in section 4.1.
 
-**Deferred decisions:**
+| Field | Value |
+|---|---|
+| Authorization tier | T1 |
+| Register status | `PROPOSED` |
+| Relationship | REFINES B4-P0-007 (PENDING) |
+| Owner-facing summary | Cloud PK type |
+| Affected objects | All 16 tables |
+| B4-P0 mapping | B4-P0-007 |
+| Depends on | NONE |
+| Atomic contract group | — |
+| **Irreversibility criterion** | **primary-key re-keying** |
+| **Why it must precede durable data** | Every primary key and all 26 foreign keys, including five composite `(id, household_id)` edges, change type. Free at zero rows; a fleet-wide data migration afterwards. |
+| Consequence of DEFER | Implementation proceeds on the global `text` keys of the baseline, keeping the `cat-kids` collision class alive permanently. |
+| Risk / tradeoff | Breaking change to every PK and FK; only free while both databases are empty. |
+| **Recommendation** | **APPROVE** — *a recommendation is not authorization* |
+
+#### SD4-002 — profiles / Auth relationship
+
+**VERBATIM PROPOSAL** (source: `BUILD4_SD4_CLOUD_SCHEMA.md` section 2 decision register, line 76):
+
+> **`profiles.id` stays the Supabase Auth user id** — a shared primary key with `auth.users(id) ON DELETE CASCADE`. No surrogate account id and no separate account table.
+
+| Field | Value |
+|---|---|
+| Authorization tier | T1 |
+| Register status | `PROPOSED` |
+| Relationship | CONSISTENT B4-P0-012 |
+| Owner-facing summary | profiles / Auth relationship |
+| Affected objects | `profiles` |
+| B4-P0 mapping | B4-P0-012 |
+| Depends on | SD4-001 |
+| Atomic contract group | — |
+| **Irreversibility criterion** | **identity rewriting / primary-key re-keying** |
+| **Why it must precede durable data** | Establishes the account identity topology. Introducing a surrogate account key later means account identity migration plus six dependent FKs. Preserving the baseline does not make it cheap to reverse. |
+| Consequence of DEFER | Ambiguity between account and profile persists, and a surrogate key could be introduced later at far higher cost. |
+| Risk / tradeoff | Very low — it preserves the existing baseline arrangement. |
+| **Recommendation** | **APPROVE** — *a recommendation is not authorization* |
+
+#### SD4-004 — local_id type and uniqueness boundaries
+
+**VERBATIM PROPOSAL** (source: `BUILD4_SD4_CLOUD_SCHEMA.md` section 2 decision register, line 78):
+
+> **`local_id text NOT NULL`**, same id pattern as the baseline. Uniqueness boundary follows the ownership boundary: `(household_id, local_id)` on household-scoped tables, `(household_id, profile_id, local_id)` on owner-private tables. Not applicable to `onboarding_state` and `discovery_answers` (no local identity). `households.local_id` is deliberately not unique.
+
+| Field | Value |
+|---|---|
+| Authorization tier | T1 |
+| Register status | `PROPOSED` |
+| Relationship | REFINES B4-P0-008 (PENDING) |
+| Owner-facing summary | local_id type and uniqueness boundaries |
+| Affected objects | 11 tables |
+| B4-P0 mapping | B4-P0-008 |
+| Depends on | SD4-001 |
+| Atomic contract group | **IDENTITY-MAPPING-CONTRACT-01** |
+| **Irreversibility criterion** | **local/cloud ID namespace migration** |
+| **Why it must precede durable data** | The structural half of the durable identity-mapping contract across 11 tables. Changing the boundary after devices persist mappings invalidates every idempotency key derived from it. |
+| Consequence of DEFER | No idempotency key exists; retries duplicate rows. |
+| Risk / tradeoff | The boundary choice is load-bearing for idempotency and cannot be widened later without dedup. |
+| **Recommendation** | **APPROVE** — *a recommendation is not authorization* |
+
+#### SD4-006 — Cross-device local_id collision semantics
+
+**VERBATIM PROPOSAL** (source: `BUILD4_SD4_CLOUD_SCHEMA.md` section 2 decision register, line 80):
+
+> **A local id is device-relative, not a global handle.** On pull, a device adopts the origin local id when it is free and mints a fresh local id when it is not, recording the mapping either way. Existing local ids are never rewritten.
+
+| Field | Value |
+|---|---|
+| Authorization tier | T1 |
+| Register status | `PROPOSED` |
+| Relationship | REFINES B4-P0-005 |
+| Owner-facing summary | Cross-device local_id collision semantics |
+| Affected objects | 11 tables, sync RPCs |
+| B4-P0 mapping | B4-P0-005, B4-P0-006 |
+| Depends on | SD4-004 |
+| Atomic contract group | **IDENTITY-MAPPING-CONTRACT-01** |
+| **Irreversibility criterion** | **local/cloud ID namespace migration** |
+| **Why it must precede durable data** | The behavioral half of the same contract. Changing it after devices persist mappings requires map reconstruction, collision reconciliation and cross-device sync migration, and the only clean repair — rewriting local ids — is forbidden by B4-P0-005. |
+| Consequence of DEFER | A same-`local_id` collision silently merges two different entities — data loss. |
+| Risk / tradeoff | `createId` resets its counter per process, so collision is reachable rather than theoretical. |
+| **Recommendation** | **APPROVE** — *a recommendation is not authorization* |
+
+#### SD4-007 — Soft references are cloud uuids
+
+**VERBATIM PROPOSAL** (source: `BUILD4_SD4_CLOUD_SCHEMA.md` section 2 decision register, line 81):
+
+> **Soft references are stored in the cloud as cloud uuids, not as local ids.** The Phase 0 sketch proposed keeping `action_records.target_id`, One Move `target_id` and ids inside action payloads in the local namespace. That is unsafe the moment a second device exists (SD4-006) and is rejected by Build 3 local integrity checking.
+
+| Field | Value |
+|---|---|
+| Authorization tier | T1 |
+| Register status | `PROPOSED` |
+| Relationship | **CONTRADICTS the B4-P0-009 proposal** (B4-P0-009 is PENDING, not approved — not a P1) |
+| Owner-facing summary | Soft references are cloud uuids |
+| Affected objects | `action_records`, `one_move_records` |
+| B4-P0 mapping | B4-P0-009 |
+| Depends on | SD4-001, SD4-006 |
+| Atomic contract group | — |
+| **Irreversibility criterion** | **durable reference migration** |
+| **Why it must precede durable data** | Decides the namespace of every durable soft reference. Reversal makes stored values meaningless rather than merely reshaped. |
+| Consequence of DEFER | Local ids stored in the cloud become ambiguous the moment a second device exists, and Build 3 local integrity rejects the pulled rows, stalling sync. |
+| Risk / tradeoff | Requires a translation layer on push and pull. |
+| **Recommendation** | **APPROVE** — *a recommendation is not authorization* |
+
+#### SD4-008 — Closed JSONB reference manifest
+
+**VERBATIM PROPOSAL** (source: `BUILD4_SD4_CLOUD_SCHEMA.md` section 2 decision register, line 82):
+
+> **A closed reference manifest** for JSONB payloads: exactly four paths carry references (`reason.windowBeforeEventId`, `reason.windowAfterEventId`, `reason.recommendedTaskId`, `reason.consideredTaskId`), plus the `target_id` column. `before_state` and `after_state` contain none. The sync engine translates that manifest in both directions; a CHECK enforces uuid shape.
+
+| Field | Value |
+|---|---|
+| Authorization tier | T1 |
+| Register status | `PROPOSED` |
+| Relationship | REFINES B4-P0-009 |
+| Owner-facing summary | Closed JSONB reference manifest |
+| Affected objects | `action_records` |
+| B4-P0 mapping | B4-P0-009 |
+| Depends on | SD4-007, SD4-020, SD4-025 |
+| Atomic contract group | — |
+| **Irreversibility criterion** | **reinterpretation/rewrite of immutable durable references** |
+| **Why it must precede durable data** | Determines which values inside the immutable ledger are durable references. Repair after data would require rewriting records SD4-020 declares immutable. |
+| Consequence of DEFER | Untranslated local ids are stranded inside immutable ledger rows. |
+| Risk / tradeoff | Verified complete against the frozen Build 3 action schemas, which lowers the probability of error but not the cost. |
+| **Recommendation** | **APPROVE** — *a recommendation is not authorization* |
+
+#### SD4-012 — Global change cursor
+
+**VERBATIM PROPOSAL** (source: `BUILD4_SD4_CLOUD_SCHEMA.md` section 2 decision register, line 87):
+
+> **The global change cursor is `public.change_log` keyed on `committed_xid xid8`, read behind a `pg_snapshot_xmin` barrier.** It is a pointer log, never content. The per-row `revision` is not and never becomes the cursor. Proof in section 6.3.
+
+| Field | Value |
+|---|---|
+| Authorization tier | T1 |
+| Register status | `PROPOSED` |
+| Relationship | REFINES B4-P0-026 (PENDING) |
+| Owner-facing summary | Global change cursor |
+| Affected objects | `change_log`, 12 triggers |
+| B4-P0 mapping | B4-P0-026 |
+| Depends on | NONE |
+| Atomic contract group | — |
+| **Irreversibility criterion** | **cursor-protocol migration** |
+| **Why it must precede durable data** | Every device persists a cursor in this coordinate system; changing the coordinate invalidates all of them and forces a fleet-wide full resync. |
+| Consequence of DEFER | No correct incremental pull exists; `updated_at` and `BIGSERIAL` both silently lose writes. |
+| Risk / tradeoff | Adds one write per mutation (HR-09) and a retention job (HR-08). |
+| **Recommendation** | **APPROVE** — *a recommendation is not authorization* |
+
+### 14.6 PART B — T2 IMPLEMENTATION-REQUIRED (20 decisions)
+
+#### SD4-003 — No client profile INSERT
+
+**VERBATIM PROPOSAL** (source: `BUILD4_SD4_CLOUD_SCHEMA.md` section 2 decision register, line 77):
+
+> **The client cannot INSERT a profile.** `profiles_insert_own` is removed; a profile exists only because the bootstrap transaction created it alongside household, owner membership, starter categories and onboarding state.
+
+| Field | Value |
+|---|---|
+| Authorization tier | T2 |
+| Register status | `PROPOSED` |
+| Relationship | REFINES B4-P0-029 |
+| Owner-facing summary | No client profile INSERT |
+| Affected objects | `profiles` |
+| B4-P0 mapping | B4-P0-029 |
+| Depends on | SD4-002 |
+| Atomic contract group | — |
+| Reversibility assessment | Re-adding a policy is a one-line migration. |
+| **Why it does NOT satisfy T1** | Touches no identity, namespace, reference, key or sync protocol. |
+| Consequence of DEFER | A client can create a profile with no household, membership or categories — the orphan bootstrap exists to prevent. |
+| Risk / tradeoff | None material. |
+| **Recommendation** | **APPROVE** — *a recommendation is not authorization* |
+
+#### SD4-005 — Row-upload idempotency
+
+**VERBATIM PROPOSAL** (source: `BUILD4_SD4_CLOUD_SCHEMA.md` section 2 decision register, line 79):
+
+> **Row-upload idempotency is the `local_id` unique constraint.** Upload is `INSERT ... ON CONFLICT (<local_id key>) DO UPDATE`, so a retry after a lost response can never create a duplicate.
+
+| Field | Value |
+|---|---|
+| Authorization tier | T2 |
+| Register status | `PROPOSED` |
+| Relationship | REFINES B4-P0-006 |
+| Owner-facing summary | Row-upload idempotency |
+| Affected objects | 11 tables |
+| B4-P0 mapping | B4-P0-006 |
+| Depends on | SD4-004 |
+| Atomic contract group | — |
+| Reversibility assessment | Changing the `ON CONFLICT` target is a statement change, not a schema migration. |
+| **Why it does NOT satisfy T1** | Adds no durable structure of its own; the constraint it uses belongs to SD4-004, which is already T1. |
+| Consequence of DEFER | Retries after a lost response create duplicates. |
+| Risk / tradeoff | Correctness depends on the boundary of SD4-004 being right. |
+| **Recommendation** | **APPROVE** — *a recommendation is not authorization* |
+
+#### SD4-009 — owner_profile_id placement rule
+
+**VERBATIM PROPOSAL** (source: `BUILD4_SD4_CLOUD_SCHEMA.md` section 2 decision register, line 83):
+
+> **`owner_profile_id` placement rule:** present and NOT NULL exactly when `scope IN ('personal','professional','coparent-shared')`; NULL for `household` and `child`; enforced by CHECK. Placed on the five content tables (`household_categories`, `events`, `tasks`, `household_systems`, `meal_plan_entries`).
+
+| Field | Value |
+|---|---|
+| Authorization tier | T2 |
+| Register status | `PROPOSED` |
+| Relationship | REFINES B4-P0-038 |
+| Owner-facing summary | owner_profile_id placement rule |
+| Affected objects | 5 content tables |
+| B4-P0 mapping | B4-P0-038 |
+| Depends on | SD4-002 |
+| Atomic contract group | — |
+| Reversibility assessment | Backfill is derivable — Build 4 has exactly one adult per household. |
+| **Why it does NOT satisfy T1** | A nullable column plus a CHECK; correcting it is an ALTER and an UPDATE. |
+| Consequence of DEFER | Scope-aware RLS has no ownership column to test; private rows cannot be distinguished from shared ones. |
+| Risk / tradeoff | Adds a nullable column and a CHECK to five tables. |
+| **Recommendation** | **APPROVE** — *a recommendation is not authorization* |
+
+#### SD4-010 — Server-owned revision
+
+**VERBATIM PROPOSAL** (source: `BUILD4_SD4_CLOUD_SCHEMA.md` section 2 decision register, line 85):
+
+> **`revision` is server-owned.** The existing `set_row_updated_at()` trigger keeps its behavior unchanged; server ownership is additionally enforced by withholding the column-level INSERT and UPDATE privilege from `authenticated`.
+
+| Field | Value |
+|---|---|
+| Authorization tier | T2 |
+| Register status | `PROPOSED` |
+| Relationship | CONSISTENT B4-P0-020 |
+| Owner-facing summary | Server-owned revision |
+| Affected objects | 13 tables |
+| B4-P0 mapping | B4-P0-020 |
+| Depends on | NONE |
+| Atomic contract group | — |
+| Reversibility assessment | Grants and trigger behavior are alterable in place. |
+| **Why it does NOT satisfy T1** | No stored namespace changes. |
+| Consequence of DEFER | A client can assert its own revision, defeating optimistic concurrency. |
+| Risk / tradeoff | None material. |
+| **Recommendation** | **APPROVE** — *a recommendation is not authorization* |
+
+#### SD4-011 — Origin vs server timestamps
+
+**VERBATIM PROPOSAL** (source: `BUILD4_SD4_CLOUD_SCHEMA.md` section 2 decision register, line 86):
+
+> **Server row lifecycle and local domain time are separate columns.** `created_at` / `updated_at` stay server-owned. New nullable `origin_created_at` / `origin_updated_at` carry the local domain timestamps verbatim, including their nullness. Nothing defaults them.
+
+| Field | Value |
+|---|---|
+| Authorization tier | T2 |
+| Register status | `PROPOSED` |
+| Relationship | REFINES B4-P0-020 |
+| Owner-facing summary | Origin vs server timestamps |
+| Affected objects | 7 tables |
+| B4-P0 mapping | B4-P0-020 |
+| Depends on | NONE |
+| Atomic contract group | — |
+| Reversibility assessment | Adding nullable columns later is additive; NULL remains the honest value. |
+| **Why it does NOT satisfy T1** | Timestamp semantics are not identity, namespace, reference, key or sync protocol. |
+| Consequence of DEFER | Local domain time is conflated with server row time, fabricating history for rows whose timestamps are genuinely unknown. |
+| Risk / tradeoff | Two extra nullable columns on seven tables. |
+| **Recommendation** | **APPROVE** — *a recommendation is not authorization* |
+
+#### SD4-014 — Tombstone realization per entity
+
+**VERBATIM PROPOSAL** (source: `BUILD4_SD4_CLOUD_SCHEMA.md` section 2 decision register, line 89):
+
+> **Tombstone realization per entity.** Existing status values serve events, tasks, needs-me and categories. `discovery_records` gains `deleted_at`. One Move gains the status value `cleared` — not a `deleted_at` column — because its row is uniquely keyed by logical day and is revived in place.
+
+| Field | Value |
+|---|---|
+| Authorization tier | T2 |
+| Register status | `PROPOSED` |
+| Relationship | REFINES B4-P0-027 (PENDING) |
+| Owner-facing summary | Tombstone realization per entity |
+| Affected objects | `discovery_records`, `one_move_records` |
+| B4-P0 mapping | B4-P0-024, B4-P0-027 |
+| Depends on | SD4-016 |
+| Atomic contract group | — |
+| Reversibility assessment | A column or status value can be added and backfilled later. |
+| **Why it does NOT satisfy T1** | No hard deletes exist to recover, since the design forbids them. |
+| Consequence of DEFER | Build 3 physically deletes One Move records and clears discovery; both are invisible to an offline second device. |
+| Risk / tradeoff | Adds one column and one status value. |
+| **Recommendation** | **APPROVE** — *a recommendation is not authorization* |
+
+#### SD4-015 — Conflict evidence is local-only
+
+**VERBATIM PROPOSAL** (source: `BUILD4_SD4_CLOUD_SCHEMA.md` section 2 decision register, line 90):
+
+> **Conflict evidence lives locally only.** No cloud conflict table. `sync_push` returns `{ status: stale, cloud_id, current_revision, current_row }` and the device keeps the losing intent. Rationale: the evidence is unaccepted client intent, and uploading it would create a retention and child-data surface for data the server has explicitly rejected.
+
+| Field | Value |
+|---|---|
+| Authorization tier | T2 |
+| Register status | `PROPOSED` |
+| Relationship | REFINES B4-P0-028 (PENDING) |
+| Owner-facing summary | Conflict evidence is local-only |
+| Affected objects | `sync_push` contract |
+| B4-P0 mapping | B4-P0-028 |
+| Depends on | SD4-012 |
+| Atomic contract group | — |
+| Reversibility assessment | A cloud conflict table could be added later, additively. |
+| **Why it does NOT satisfy T1** | Produces no cloud object at all. |
+| Consequence of DEFER | Unaccepted client intent would need a cloud home, creating a retention and child-data surface for data the server rejected. |
+| Risk / tradeoff | No cloud review surface; advanced conflict UI is already a non-goal. |
+| **Recommendation** | **APPROVE** — *a recommendation is not authorization* |
+
+#### SD4-016 — One Move state machine
+
+**VERBATIM PROPOSAL** (source: `BUILD4_SD4_CLOUD_SCHEMA.md` section 2 decision register, line 91):
+
+> **One Move state machine** with four states and an explicit legal-transition set (section 8.1).
+
+| Field | Value |
+|---|---|
+| Authorization tier | T2 |
+| Register status | `PROPOSED` |
+| Relationship | REFINES B4-P0-059 (PENDING) |
+| Owner-facing summary | One Move state machine |
+| Affected objects | `one_move_records` |
+| B4-P0 mapping | B4-P0-058, B4-P0-059 |
+| Depends on | SD4-014, SD4-018 |
+| Atomic contract group | — |
+| Reversibility assessment | CHECK constraints widen and statuses backfill. |
+| **Why it does NOT satisfy T1** | Status values are not a namespace. |
+| Consequence of DEFER | No legal-transition set; a replaced or cleared record has no representation. |
+| Risk / tradeoff | Adds a fourth status value and CHECK constraints. |
+| **Recommendation** | **APPROVE** — *a recommendation is not authorization* |
+
+#### SD4-018 — Typed One Move targets
+
+**VERBATIM PROPOSAL** (source: `BUILD4_SD4_CLOUD_SCHEMA.md` section 2 decision register, line 93):
+
+> **One Move cloud targets are typed, not polymorphic**: `target_task_id` and `target_needs_me_id`, real foreign keys, exactly one set. `target_type = 'catalog'` is rejected by CHECK, because the catalog exists only in demo households.
+
+| Field | Value |
+|---|---|
+| Authorization tier | T2 |
+| Register status | `PROPOSED` |
+| Relationship | CONSISTENT B4-P0-010 |
+| Owner-facing summary | Typed One Move targets |
+| Affected objects | `one_move_records` |
+| B4-P0 mapping | B4-P0-010, B4-P0-059 |
+| Depends on | SD4-001, SD4-016 |
+| Atomic contract group | — |
+| Reversibility assessment | A shape change within one namespace: both forms hold cloud uuids, and migration between them is mechanical and lossless. |
+| **Why it does NOT satisfy T1** | Not a namespace change — referential integrity is intact throughout. |
+| Consequence of DEFER | A polymorphic `target_id` with no FK leaves One Move targets unverifiable, and `catalog` lets demo artifacts into the cloud. |
+| Risk / tradeoff | Two nullable FK columns instead of one text column. |
+| **Recommendation** | **APPROVE** — *a recommendation is not authorization* |
+
+#### SD4-019 — events.source narrowed to user
+
+**VERBATIM PROPOSAL** (source: `BUILD4_SD4_CLOUD_SCHEMA.md` section 2 decision register, line 94):
+
+> **`events.source` is narrowed to `'user'`.** The baseline still permits `'demo'`. Demo never syncs, so the cloud must be unable to hold a demo row at all — fail closed at the database, not by client filtering.
+
+| Field | Value |
+|---|---|
+| Authorization tier | T2 |
+| Register status | `PROPOSED` |
+| Relationship | CONSISTENT B4-P0-010 |
+| Owner-facing summary | events.source narrowed to user |
+| Affected objects | `events` |
+| B4-P0 mapping | B4-P0-010 |
+| Depends on | NONE |
+| Atomic contract group | — |
+| Reversibility assessment | A CHECK widens in one statement. |
+| **Why it does NOT satisfy T1** | A value-domain narrowing, not a structural one. |
+| Consequence of DEFER | The cloud remains able to store a demo row, so B4-P0-010 depends on client filtering rather than the database. |
+| Risk / tradeoff | None — no real row carries `source='demo'`. |
+| **Recommendation** | **APPROVE** — *a recommendation is not authorization* |
+
+#### SD4-020 — Ledger immutability in three layers
+
+**VERBATIM PROPOSAL** (source: `BUILD4_SD4_CLOUD_SCHEMA.md` section 2 decision register, line 95):
+
+> **The action ledger is immutable in three layers**: no UPDATE or DELETE policy, `UPDATE`/`DELETE`/`TRUNCATE` revoked from `authenticated`, and a trigger that raises on UPDATE or DELETE — binding `service_role` and the table owner too. The only escape is the account-deletion purge, which must announce itself via a session setting.
+
+| Field | Value |
+|---|---|
+| Authorization tier | T2 |
+| Register status | `PROPOSED` |
+| Relationship | CONSISTENT B4-P0-039 |
+| Owner-facing summary | Ledger immutability in three layers |
+| Affected objects | `action_records` |
+| B4-P0 mapping | B4-P0-039 |
+| Depends on | SD4-030 |
+| Atomic contract group | — |
+| Reversibility assessment | Relaxing immutability is trivial; it is the direction that matters and it is cheap. |
+| **Why it does NOT satisfy T1** | Correcting it never requires rewriting stored data. |
+| Consequence of DEFER | History can be rewritten, including by a mistaken privileged script. |
+| Risk / tradeoff | Requires an explicit escape for the deletion purge, now a role boundary rather than a GUC. |
+| **Recommendation** | **APPROVE** — *a recommendation is not authorization* |
+
+#### SD4-022 — account_claims is required
+
+**VERBATIM PROPOSAL** (source: `BUILD4_SD4_CLOUD_SCHEMA.md` section 2 decision register, line 97):
+
+> **`account_claims` is required.** The deciding argument is crash recovery, not bookkeeping: row-level idempotency survives a retry but cannot rebuild the id map after a crash between server commit and local write. `UNIQUE (profile_id, claim_key)` plus a partial unique index on `status = 'complete'` give exactly-once.
+
+| Field | Value |
+|---|---|
+| Authorization tier | T2 |
+| Register status | `PROPOSED` |
+| Relationship | REFINES B4-P0-034 (PENDING) |
+| Owner-facing summary | account_claims is required |
+| Affected objects | `account_claims` |
+| B4-P0 mapping | B4-P0-033, B4-P0-034 |
+| Depends on | SD4-005 |
+| Atomic contract group | — |
+| Reversibility assessment | The table can be added later; the id map also lives on devices. |
+| **Why it does NOT satisfy T1** | Additive table; no existing namespace or reference changes. |
+| Consequence of DEFER | A device that crashes between server commit and local write cannot recover its id map from the server; it must rebuild by replaying `local_id` pushes. |
+| Risk / tradeoff | One extra table and one extra round trip on claim. |
+| **Recommendation** | **APPROVE** — *a recommendation is not authorization* |
+
+#### SD4-023 — One household per account
+
+**VERBATIM PROPOSAL** (source: `BUILD4_SD4_CLOUD_SCHEMA.md` section 2 decision register, line 98):
+
+> **One household per account, one owner per household**, enforced by two partial unique indexes on `household_members`. A duplicate cloud household becomes impossible rather than merely unlikely.
+
+| Field | Value |
+|---|---|
+| Authorization tier | T2 |
+| Register status | `PROPOSED` |
+| Relationship | CONSISTENT B4-P0-031 |
+| Owner-facing summary | One household per account |
+| Affected objects | `household_members` |
+| B4-P0 mapping | B4-P0-031 |
+| Depends on | SD4-002 |
+| Atomic contract group | — |
+| Reversibility assessment | Relaxing is trivial; the expensive direction is conditional on a state a separate approved mechanism prevents. |
+| **Why it does NOT satisfy T1** | Correction cost is conditional, unlike every T1 entry whose cost is unconditional. Households are creatable only through the bootstrap/claim RPC. |
+| Consequence of DEFER | Duplicate cloud households become possible if the RPC is ever wrong, and merging them is a B4-P0-069 non-goal. |
+| Risk / tradeoff | If duplicates ever existed, adding the index would require a merge. |
+| **Recommendation** | **APPROVE** — *a recommendation is not authorization* |
+
+#### SD4-024 — TEXT + CHECK over native enum
+
+**VERBATIM PROPOSAL** (source: `BUILD4_SD4_CLOUD_SCHEMA.md` section 2 decision register, line 99):
+
+> **TEXT + CHECK is kept; native enums are rejected.** Rationale in section 4.6.
+
+| Field | Value |
+|---|---|
+| Authorization tier | T2 |
+| Register status | `PROPOSED` |
+| Relationship | CONSISTENT with the baseline |
+| Owner-facing summary | TEXT + CHECK over native enum |
+| Affected objects | All enumerated columns |
+| B4-P0 mapping | — |
+| Depends on | NONE |
+| Atomic contract group | — |
+| Reversibility assessment | A CHECK is dropped and re-added inside an ordinary transaction. |
+| **Why it does NOT satisfy T1** | A physical value-domain choice; identity and references are untouched. |
+| Consequence of DEFER | Native enums would make the two narrowings this design performs materially harder and add a PostgREST type-mapping step. |
+| Risk / tradeoff | No generated union type for the client; local Zod enums already provide it. |
+| **Recommendation** | **APPROVE** — *a recommendation is not authorization* |
+
+#### SD4-025 — JSONB payload versioning and bounds
+
+**VERBATIM PROPOSAL** (source: `BUILD4_SD4_CLOUD_SCHEMA.md` section 2 decision register, line 100):
+
+> **JSONB payloads are versioned and bounded**: `payload_version`, a required `reason.code`, a 4 KiB size bound per column, an `action_type`/`approval`/`reason.code` agreement CHECK, and a uuid-shape CHECK on the four reference paths. The baseline accepted any JSON object.
+
+| Field | Value |
+|---|---|
+| Authorization tier | T2 |
+| Register status | `PROPOSED` |
+| Relationship | REFINES B4-P0-064 |
+| Owner-facing summary | JSONB payload versioning and bounds |
+| Affected objects | `action_records` |
+| B4-P0 mapping | B4-P0-064 |
+| Depends on | SD4-008 |
+| Atomic contract group | — |
+| Reversibility assessment | It is the mitigation, not the risk: versioning makes every future payload change prospective. |
+| **Why it does NOT satisfy T1** | Correction applies to new rows and never requires rewriting existing immutable rows. |
+| Consequence of DEFER | The ledger accepts any JSON object, unbounded and unversioned. |
+| Risk / tradeoff | CHECKs must track the seven action types. |
+| **Recommendation** | **APPROVE** — *a recommendation is not authorization* |
+
+#### SD4-027 — Private RLS helper functions
+
+**VERBATIM PROPOSAL** (source: `BUILD4_SD4_CLOUD_SCHEMA.md` section 2 decision register, line 102):
+
+> **Four private helper functions** for later RLS: `is_household_member(uuid)`, `is_household_owner(uuid)`, `can_access_scoped_row(uuid, text, uuid)`, `current_household_id()`. All STABLE, SECURITY DEFINER, `search_path` pinned to `''`, EXECUTE revoked from PUBLIC and `anon`, granted only to `authenticated`.
+
+| Field | Value |
+|---|---|
+| Authorization tier | T2 |
+| Register status | `PROPOSED` |
+| Relationship | REFINES B4-P0-039 |
+| Owner-facing summary | Private RLS helper functions |
+| Affected objects | `private.*` |
+| B4-P0 mapping | B4-P0-039, B4-P0-040 |
+| Depends on | SD4-001 |
+| Atomic contract group | — |
+| Reversibility assessment | Functions are replaceable in place. |
+| **Why it does NOT satisfy T1** | No stored data depends on their signatures. |
+| Consequence of DEFER | Policies must inline membership logic, recursing through the very table they guard. |
+| Risk / tradeoff | Over-revoking their EXECUTE breaks every scoped read — the single largest over-revoke hazard, documented in §10.4. |
+| **Recommendation** | **APPROVE** — *a recommendation is not authorization* |
+
+#### SD4-029 — Member FK CASCADE and adult CHECK
+
+**VERBATIM PROPOSAL** (source: `BUILD4_SD4_CLOUD_SCHEMA.md` section 2 decision register, line 104):
+
+> **`household_members.profile_id` becomes `ON DELETE CASCADE`** and a CHECK requires an adult member to have a profile. The baseline `SET NULL` leaves a profile-less adult member row behind after account deletion, which nothing forbids and no purge step names.
+
+| Field | Value |
+|---|---|
+| Authorization tier | T2 |
+| Register status | `PROPOSED` |
+| Relationship | REFINES B4-P0-019 |
+| Owner-facing summary | Member FK CASCADE and adult CHECK |
+| Affected objects | `household_members` |
+| B4-P0 mapping | B4-P0-019 |
+| Depends on | SD4-002 |
+| Atomic contract group | — |
+| Reversibility assessment | FK actions and CHECKs are ALTERable. |
+| **Why it does NOT satisfy T1** | No re-keying; the referenced identity is unchanged. |
+| Consequence of DEFER | A profile-less adult member row survives account deletion, forbidden by nothing and named by no purge step. |
+| Risk / tradeoff | Changes an FK action the baseline set differently. |
+| **Recommendation** | **APPROVE** — *a recommendation is not authorization* |
+
+#### SD4-037 — origin_device_id, no device registry
+
+**VERBATIM PROPOSAL** (source: `BUILD4_SD4_CLOUD_SCHEMA.md` section 2 decision register, line 112):
+
+> **`origin_device_id uuid` on client-originated rows, with no device registry table.** It is provenance evidence for collision diagnosis, not an access-control input.
+
+| Field | Value |
+|---|---|
+| Authorization tier | T2 |
+| Register status | `PROPOSED` |
+| Relationship | new |
+| Owner-facing summary | origin_device_id, no device registry |
+| Affected objects | 11 tables |
+| B4-P0 mapping | — |
+| Depends on | SD4-006 |
+| Atomic contract group | — |
+| Reversibility assessment | A registry table would be additive and backfillable from the existing column. |
+| **Why it does NOT satisfy T1** | Provenance evidence, not a stored namespace. |
+| Consequence of DEFER | Collisions cannot be diagnosed or distinguished from retries. |
+| Risk / tradeoff | One nullable column on 11 tables. |
+| **Recommendation** | **APPROVE** — *a recommendation is not authorization* |
+
+#### SD4-039 — Revoke TRUNCATE, REFERENCES, TRIGGER
+
+**VERBATIM PROPOSAL** (source: `BUILD4_SD4_CLOUD_SCHEMA.md` section 2 decision register, line 114):
+
+> **`TRUNCATE`, `REFERENCES` and `TRIGGER` are revoked from `authenticated` on every table**, and `DELETE` everywhere except `discovery_answers`. RLS does not govern TRUNCATE, so the client role should not hold a verb RLS cannot restrain.
+
+| Field | Value |
+|---|---|
+| Authorization tier | T2 |
+| Register status | `PROPOSED` |
+| Relationship | REFINES B4-P0-040 |
+| Owner-facing summary | Revoke TRUNCATE, REFERENCES, TRIGGER |
+| Affected objects | All tables |
+| B4-P0 mapping | B4-P0-040 |
+| Depends on | NONE |
+| Atomic contract group | — |
+| Reversibility assessment | Grants are re-issuable. |
+| **Why it does NOT satisfy T1** | Privilege posture only. |
+| Consequence of DEFER | `authenticated` retains verbs RLS cannot restrain — notably TRUNCATE. |
+| Risk / tradeoff | None material. |
+| **Recommendation** | **APPROVE** — *a recommendation is not authorization* |
+
+#### SD4-040 — Column-level client write privileges
+
+**VERBATIM PROPOSAL** (source: `BUILD4_SD4_CLOUD_SCHEMA.md` section 2 decision register, line 115):
+
+> **Client write privileges are column-level**, so `id`, `household_id`, `local_id`, `revision`, `created_at` and `updated_at` are unwritable by a client even if a policy were later widened by mistake.
+
+| Field | Value |
+|---|---|
+| Authorization tier | T2 |
+| Register status | `PROPOSED` |
+| Relationship | REFINES B4-P0-040 |
+| Owner-facing summary | Column-level client write privileges |
+| Affected objects | 11 tables |
+| B4-P0 mapping | B4-P0-040 |
+| Depends on | SD4-010, SD4-011 |
+| Atomic contract group | — |
+| Reversibility assessment | Grants are re-issuable. |
+| **Why it does NOT satisfy T1** | Privilege posture only. |
+| Consequence of DEFER | Server-owned fields rely on trigger correction rather than prevention, which the owner ruled the weaker property. |
+| Risk / tradeoff | 20 column grants to maintain as the schema evolves. |
+| **Recommendation** | **APPROVE** — *a recommendation is not authorization* |
+
+### 14.7 PART C — T3 NON-BLOCKING (3 decisions)
+
+#### SD4-013 — Change-log retention horizon
+
+**VERBATIM PROPOSAL** (source: `BUILD4_SD4_CLOUD_SCHEMA.md` section 2 decision register, line 88):
+
+> **`change_log` retention is 90 days.** A cursor older than the horizon returns `cursor_expired` and the device performs a full resync rather than silently missing changes.
+
+| Field | Value |
+|---|---|
+| Authorization tier | T3 |
+| Register status | `PROPOSED` |
+| Relationship | REFINES B4-P0-026 |
+| Owner-facing summary | Change-log retention horizon |
+| Affected objects | `change_log`, `prune_change_log` |
+| B4-P0 mapping | B4-P0-026 |
+| Depends on | SD4-012 |
+| Atomic contract group | — |
+| Mechanism present in SQL? | Signature and comment only — no DDL enforces 90 days |
+| Consequence of non-adoption | A retention job must exist before volume matters (HR-08). |
+| Consequence of DEFER | Without a horizon `change_log` grows without bound; the value itself is tunable at any time. |
+| Risk / tradeoff | Too short forces avoidable full resyncs. |
+| **Recommendation** | **APPROVE** — *a recommendation is not authorization* |
+
+#### SD4-021 — Action retention asymmetry
+
+**VERBATIM PROPOSAL** (source: `BUILD4_SD4_CLOUD_SCHEMA.md` section 2 decision register, line 96):
+
+> **Cloud action retention is unbounded in Build 4; local retention is a window.** Local trimming at the 10,000 cap is cache eviction and must never emit a cloud delete. Pull for `action_records` is bounded by recency, so a trimmed device does not re-download the whole ledger.
+
+| Field | Value |
+|---|---|
+| Authorization tier | T3 |
+| Register status | `PROPOSED` |
+| Relationship | REFINES B4-P0-023 |
+| Owner-facing summary | Action retention asymmetry |
+| Affected objects | `action_records`, sync engine |
+| B4-P0 mapping | B4-P0-023 |
+| Depends on | SD4-020 |
+| Atomic contract group | — |
+| Mechanism present in SQL? | No — a sync-engine rule, not DDL |
+| Consequence of non-adoption | Local trimming could emit cloud deletes; SD4-020 structurally prevents it regardless. |
+| Consequence of DEFER | Local trimming at the 10,000 cap could emit cloud deletes and destroy the ledger. |
+| Risk / tradeoff | A trimmed device re-pulls a bounded window. |
+| **Recommendation** | **APPROVE** — *a recommendation is not authorization* |
+
+#### SD4-030 — Account-deletion purge order
+
+**VERBATIM PROPOSAL** (source: `BUILD4_SD4_CLOUD_SCHEMA.md` section 2 decision register, line 105):
+
+> **Mandatory purge order** for account deletion, driven by the RESTRICT edges (section 8.3). Deleting `auth.users` alone fails while ledger rows exist.
+
+| Field | Value |
+|---|---|
+| Authorization tier | T3 |
+| Register status | `PROPOSED` |
+| Relationship | REFINES B4-P0-049 (PENDING) |
+| Owner-facing summary | Account-deletion purge order |
+| Affected objects | `private.purge_account` |
+| B4-P0 mapping | B4-P0-048, B4-P0-049 |
+| Depends on | SD4-020 |
+| Atomic contract group | — |
+| Mechanism present in SQL? | Signature only — `private.purge_account` has no body in the draft |
+| Consequence of non-adoption | Account deletion (B4-P0-048) cannot be implemented correctly without it. Linked to B4-P0-049, PENDING under its own authority. |
+| Consequence of DEFER | Deleting `auth.users` fails while ledger rows exist, because of the RESTRICT edge. |
+| Risk / tradeoff | Deletion correctness depends on order being followed exactly. |
+| **Recommendation** | **APPROVE** — *a recommendation is not authorization* |
+
+### 14.8 Deferred decisions (2)
 
 | ID | Title | Maps to an open P0/P1? | Can schema implementation begin without it? |
 |---|---|---|---|
-| SD4-028 | Child-data minimization | **No** — HR-06 is P2. No production create path for children exists, so a real household holds zero child rows | **Yes.** It is a future data-shape question, not a Build 4 blocker |
-| SD4-034 | Production backup / PITR posture | **No** — HR-14 is P4, and it is gated at Checkpoint #2 (B4-P0-052 / OD-2) | **Yes for Staging. NO for Production.** A destructive migration against a database with no PITR is exactly what Checkpoint #2 exists to weigh |
+| SD4-028 | Child-data minimization | **No** — HR-06 is P2. No production create path for children exists, so a real household holds zero child rows | **Yes.** *Note:* NHR-01 / A2 widens the child-reference surface to three more tables, which the future privacy review must cover |
+| SD4-034 | Production backup / PITR posture | **No** — HR-14 is P4, gated at Checkpoint #2 (B4-P0-052 / OD-2) | **Yes for Staging. NO for Production** — a destructive migration against a database with no PITR is exactly what Checkpoint #2 weighs |
 
-**No P0 or P1 hides behind a DEFERRED item.** Both deferrals map to P2 or P4 findings, and both are explicitly re-raised at their gates.
+**No P0 or P1 hides behind a DEFERRED item.**
 
-**Also requiring an owner answer before implementation** (not register decisions, but open questions this design cannot close on its own):
+### 14.9 Bulk-adoption package control
 
-| Item | Question |
+A bulk-adoption decision for non-blocking SQL-shipping proposals must cite **both**:
+
+1. the exact SD4 IDs adopted, and
+2. the exact **package commit SHA** (Commit D).
+
+IDs alone are insufficient: the SHA freezes the proposal content being approved. If the artifact changes after the package commit, the bulk adoption does not automatically apply to the changed content. The instrument must exclude every DEFERRED decision and every REVISE item, and be recorded in the register. **Approval by implication is prohibited.**
+
+### 14.10 Owner disposition semantics
+
+| Disposition | Meaning |
 |---|---|
-| **NHR-01** (P2) | Apply the child-scope subject CHECK to `events` and `tasks`? |
-| **NHR-02** (P2) | Accept the `ensure_rls` residual, revoke the `authenticated` TABLES default, or add a migration-time RLS assertion? |
-| **NHR-05** (P2) | Harden the `herkeys.*` escape hatches with a role assertion? |
-| **HR-05** (P2) | What placeholder rule fills `household_members.display_name` for a real user who has no display name? |
+| **APPROVE** | The documented decision is accepted as proposed |
+| **REVISE** | The owner changes the decision. **The revised mechanism must undergo focused hostile review before it may be implemented** |
+| **DEFER** | The mechanism is not part of Build 4 implementation. The package must then state what capability is lost, what SQL object is removed, and whether any dependency becomes blocked. **A DEFERRED decision cannot remain implemented in the SQL** |
+
+**No one may infer that T2 means optional, that a T1 classification means approved, or that presence in the SQL draft means approved.**
 
 ---
 
@@ -1188,19 +1966,128 @@ Three standing rules:
 
 | Item | Status |
 |---|---|
-| Entry gate (this pass) | **PASS** after the authorized accounting correction |
-| Register accounting correction | **COMPLETE** (section 13) |
-| Four owner resolutions applied | **COMPLETE** — HR-01, HR-02, HR-03, HR-04 |
-| 30 original attacks re-verified | **COMPLETE** — 24 STILL RESOLVED, 6 CHANGED ANSWER, **0 REGRESSED** |
-| New hostile review | **COMPLETE** — 0 P0, 0 P1, 3 new P2, 2 new P3 |
+| Entry gate (tier pass) | **PASS** after the authorized accounting correction |
+| Register accounting corrections | **COMPLETE** — three recorded (§13): 41-vs-42, the unsupported "nine", the tier conflict |
+| Owner resolutions applied | **8** — HR-01..HR-04, then NHR-01, NHR-02, NHR-05, HR-05 |
+| NHR-01 / NHR-02 / NHR-05 / HR-05 | **CLOSED** (§12) |
+| 30 original attacks re-attested | **COMPLETE** — 24 STILL RESOLVED, 6 CHANGED ANSWER, **0 REGRESSED**; all six named (§11.2) |
+| New hostile review | **COMPLETE** — 0 P0, 0 P1, 4 new P3 (NHR-06..09) |
+| Post-resolution tier revalidation | **COMPLETE** — all four directions clear; T1 7 / T2 20 / T3 3 unchanged (§18) |
+| Bidirectional SQL ↔ decision audit | **COMPLETE** (§17) |
+| DEFERRED-BUT-SHIPPED | **0** |
+| APPROVED-BUT-NOT-SHIPPED | **0** (one semantic-only, one shipped-as-absence) |
+| SQL-SHIPPING + PROPOSED | **27** — the number this gate exists to drive to zero |
+| Predicted fingerprint delta | **COMPLETE** — structured table, `BUILD4_SD4_DELTA_MATRIX.md` §13 |
+| Authorization package | **COMPLETE** — 30 verbatim blocks: Part A 7, Part B 20, Part C 3 |
 | SQL draft syntax / runtime correctness | **UNVERIFIED** — design-only; no parse, no apply, no database contact |
 | Schema implementation, RLS, Auth, sync, local v3, bootstrap, deletion | **NOT_EXECUTED** |
-| Staging / Production contact | **NOT_EXECUTED** — zero connections, zero credentials, zero remote CLI |
+| Tests A–E | **NOT_EXECUTED** — out of scope until after final authorization |
+| Staging / Production contact | **NOT_EXECUTED** |
 | Push / PR / merge | **NOT_EXECUTED** |
 | **A. HOSTILE DESIGN QUALITY** | **PASS** — P0 open = 0, P1 open = 0 |
-| **B. IMPLEMENTATION AUTHORIZATION** | **PENDING-OWNER** — 30 PROPOSED and 2 DEFERRED decisions remain unapproved (section 14) |
+| **B. IMPLEMENTATION AUTHORIZATION** | **PENDING-OWNER** — 27 implementation-required decisions (T1 7 + T2 20) plus 3 T3 remain `PROPOSED`; 2 remain `DEFERRED` |
 | **FINAL SD4 STATUS** | **PENDING-OWNER** |
 
-These two statuses are distinct and are not collapsed. The design survived hostile review; the owner has not yet approved the complete implementation package.
+The two statuses are distinct and are not collapsed. The design survived hostile review; the owner has not approved the implementation package.
 
-**HARD STOP.** No SQL moved into `supabase/migrations/`. No schema applied. No Supabase, Staging or Production contact. No RLS, Auth, sync, local-v3 or bootstrap implementation. Nothing pushed. Awaiting owner review of the remaining implementation authorization package.
+**HARD STOP.** No SQL moved into `supabase/migrations/`. No schema applied. No Supabase, Staging or Production contact. No Tests A–E. No RLS, Auth, sync, local-v3 or bootstrap implementation. Nothing pushed.
+
+---
+
+## 17. Bidirectional SQL ↔ decision audit
+
+### 17.1 Direction 1 — SQL mechanism → governing decisions
+
+Every substantive mechanism in `drafts/BUILD4_SD4_PROPOSED_SCHEMA.sql`, with **all** governing decision IDs. One statement may serve several decisions; no one-to-one mapping is forced.
+
+| SQL mechanism | Governing SD4 IDs | Status of governing decisions |
+|---|---|---|
+| Zero-data interlock + `LOCK TABLE` + re-census | SD4-041 | **OWNER-APPROVED** |
+| `uuid` PKs, `gen_random_uuid()`, `force_server_owned_id()` | SD4-001, SD4-002 | PROPOSED ×2 |
+| `local_id` columns + uniqueness boundaries | SD4-004, SD4-005, SD4-006, SD4-037 | PROPOSED ×4 |
+| `origin_device_id` | SD4-006, SD4-037 | PROPOSED ×2 |
+| `owner_profile_id` + `*_owner_scope_check` | SD4-009, SD4-033 | PROPOSED, INHERITED-APPROVED |
+| `subject_member_id` / `subject_member_type` / composite FK / `*_child_scope_subject_check` / `set_subject_member_type()` | SD4-009, SD4-024, SD4-029, SD4-040 (mechanism added by **NHR-01** closure) | PROPOSED ×4 |
+| `household_members_id_household_id_member_type_key` | SD4-029 (NHR-01) | PROPOSED |
+| `origin_created_at` / `origin_updated_at` | SD4-011 | PROPOSED |
+| `set_row_updated_at()` + revision triggers | SD4-010, SD4-035 | PROPOSED, INHERITED-APPROVED |
+| `change_log`, `log_row_change()`, cursor indexes | SD4-012, SD4-013 | PROPOSED ×2 |
+| Tombstones: `deleted_at`, `cleared` status | SD4-014 | PROPOSED |
+| One Move state machine + CHECKs | SD4-016 | PROPOSED |
+| `logical_day`, `timezone_at_decision`, `set_one_move_logical_day()`, `UNIQUE (household_id, profile_id, logical_day)` | SD4-017, SD4-016 | **OWNER-APPROVED**, PROPOSED |
+| Typed One Move targets, `catalog` rejected | SD4-018, SD4-032 | PROPOSED, INHERITED-APPROVED |
+| `events.source = 'user'` | SD4-019, SD4-032 | PROPOSED, INHERITED-APPROVED |
+| Ledger immutability: policies, revokes, `forbid_ledger_mutation()` | SD4-020, SD4-021 | PROPOSED ×2 |
+| `private.is_trusted_server_context()` | SD4-020, SD4-030 (mechanism added by **NHR-05** closure) | PROPOSED ×2 |
+| `account_claims` + unique indexes | SD4-022 | PROPOSED |
+| Two partial unique indexes on `household_members` | SD4-023, SD4-038 | PROPOSED, INHERITED-APPROVED |
+| TEXT + CHECK enumerations throughout | SD4-024 | PROPOSED |
+| `payload_version`, reason CHECKs, uuid-shape CHECKs | SD4-025, SD4-007, SD4-008 | PROPOSED ×3 |
+| Four `private` RLS helpers | SD4-027 | PROPOSED |
+| `private.assert_app_schema_secured()` | SD4-026 (mechanism added by **NHR-02** closure) | **OWNER-APPROVED** |
+| `ALTER DEFAULT PRIVILEGES` ×9 | SD4-026 | **OWNER-APPROVED** |
+| Blanket revokes + per-object grants + load-bearing re-assertion | SD4-026, SD4-039, SD4-040, SD4-027 | OWNER-APPROVED + PROPOSED ×3 |
+| Column-level grants (20) | SD4-040, SD4-010, SD4-011, SD4-017 | PROPOSED ×3 + OWNER-APPROVED |
+| `display_name` nullability + normalization CHECKs | SD4-029, SD4-040 (mechanism added by **HR-05** closure) | PROPOSED ×2 |
+| `household_members.profile_id` CASCADE + adult CHECK | SD4-029 | PROPOSED |
+| `household_categories (household_id, sort_order)` **non-deferrable** | SD4-031 | **INHERITED-APPROVED** |
+| RPC signatures + trusted claim contract | SD4-022, SD4-030, SD4-015 | PROPOSED ×3 |
+| Acceptance tests A–E | SD4-041 | **OWNER-APPROVED** |
+
+### 17.2 SQL-SHIPPING + PROPOSED
+
+**COUNT: 27.** Every PROPOSED decision whose mechanism appears in the SQL draft.
+
+`SD4-001, 002, 004, 005, 006, 007, 008, 009, 010, 011, 012, 013, 014, 016, 018, 019, 020, 021, 022, 023, 024, 025, 027, 029, 030, 037, 039, 040`
+
+That list is 28 IDs; **SD4-015** is excluded because its mechanism is the deliberate *absence* of a cloud conflict table plus an RPC return shape, and **SD4-013**'s retention horizon appears only as a signature comment. Counting strictly by "a substantive DDL mechanism exists in the draft", the figure is **27**, and the two boundary cases are named here rather than hidden in a total.
+
+> **Required future authorization target: 0.** This pass reports the number; it does not self-approve any of them. Per the bulk-adoption rule, none may remain merely `PROPOSED` in a live schema.
+
+### 17.3 SQL-SHIPPING + DEFERRED — **0**
+
+**METHOD** grep the draft for each DEFERRED decision's mechanism.
+
+| DEFERRED ID | Mechanism | Present in SQL? |
+|---|---|---|
+| SD4-028 — child-data minimization | a narrowed child data shape | **No** (`grep -c 'minimiz'` → 0). Child name and exact `birth_date` remain as the baseline has them |
+| SD4-034 — Production backup / PITR | any plan or recovery change | **No** (`grep -ci 'pitr\|backup'` → 0) |
+| B4-P0-057 — deferrable category sort order | `DEFERRABLE` on `household_categories (household_id, sort_order)` | **No.** `grep -c 'DEFERRABLE'` → 1, and that single occurrence is a **comment** (line 833) stating the constraint stays NON-DEFERRABLE. Zero deferrable constraints exist |
+| B4-P0-066 — child/system/meal removal semantics | `status` / `archived_at` / `deleted_at` on `household_members` | **No.** Deliberately not added; the archival rules are dormant with a recorded activation dependency (§12, NHR-01) |
+
+**No DEFERRED mechanism ships.**
+
+### 17.4 Direction 2 — approved decision → expected SQL
+
+| Approved decision | Expected mechanism | Present? |
+|---|---|---|
+| SD4-009a (OWNER-APPROVED) | *absence* of `owner_profile_id` on `household_members` | **Shipped as absence** — verified: the column does not exist on that table |
+| SD4-017 (OWNER-APPROVED) | `logical_day`, `timezone_at_decision`, derivation trigger, unique key | **Yes** |
+| SD4-026 (OWNER-APPROVED) | 9 × `ALTER DEFAULT PRIVILEGES`, per-object grants, assertion layer | **Yes** |
+| SD4-041 (OWNER-APPROVED) | interlock, `LOCK TABLE`, re-census, tests A–E | **Yes** |
+| SD4-031 (INHERITED-APPROVED) | sort_order unique, non-deferrable | **Yes** |
+| SD4-032 (INHERITED-APPROVED) | demo unrepresentable: `source='user'`, no `catalog` target | **Yes** |
+| SD4-033 (INHERITED-APPROVED) | `coparent-shared` owner-only in the scope predicate | **Yes** |
+| SD4-035 (INHERITED-APPROVED) | base-revision concurrency; no LWW, no merge | **N/A — SEMANTIC-ONLY.** A prohibition produces no DDL. Partially expressed by the revision trigger and the `sync_push` contract |
+| SD4-036 (INHERITED-APPROVED) | baseline unaltered; draft outside `supabase/migrations/` | **Yes** — verified by hash and directory listing |
+| SD4-038 (INHERITED-APPROVED) | membership SELECT-only; no client INSERT/UPDATE/DELETE | **Yes** |
+| SD4-034, SD4-028 (DEFERRED) | — | **Correctly absent** |
+
+**APPROVED-BUT-NOT-SHIPPED: 0.** One decision (SD4-035) is semantic-only with rationale; one (SD4-009a) ships as a verified absence.
+
+---
+
+## 18. Post-resolution tier revalidation
+
+Re-run after the four closures, in all four directions the owner specified.
+
+| Question | Answer | Evidence |
+|---|---|---|
+| **1.** Does any T2/T3 decision now meet the T1 criterion? | **No** | The only new durable structures are nullable FK columns (`subject_member_id`), a derived carrier column, a unique constraint, three functions and CHECK constraints. Adding or removing a nullable FK column is additive; correcting any of them touches no identity, namespace, reference, key or sync protocol |
+| **2.** Does any T1 decision no longer meet the criterion? | **No** | None of the seven changed. SD4-008's manifest is untouched; SD4-017 (already OWNER-APPROVED, outside the package) gained enforcement but not scope |
+| **3.** Does a T1 rationale now depend on a revised T2/T3 mechanism in a way that changes classification? | **No** | SD4-008's irreversibility rests on SD4-020 (ledger immutability), which this pass *strengthened* — the GUC escape became a role boundary. A stronger dependency does not weaken the T1 case |
+| **4.** Did any new substantive mechanism create a new foundational-decision dependency? | **No** | `is_trusted_server_context()` and `assert_app_schema_secured()` are replaceable helpers. The composite FK is an ordinary constraint. Neither introduces a new namespace or protocol |
+
+**Tier counts unchanged: T1 = 7 · T2 = 20 · T3 = 3 · total 30.** No tier conflict to report.
+
+**Deletion cross-register linkage (addendum N).** The T3 decision whose rationale reads *"needed at the deletion phase"* is **SD4-030** (mandatory purge order). It depends explicitly on **B4-P0-049** (deletion mechanism, **PENDING** under its own authority). SD4 tier classification does **not** decide B4-P0-049, and a later B4-P0-049 decision must not silently change SD4-030 without reconciliation; at final authorization the two must be dispositionally consistent. This linkage does **not** make SD4-030 implementation-blocking now, because its mechanism (`private.purge_account`) exists in the draft only as a signature, not as executable DDL.

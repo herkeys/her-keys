@@ -308,6 +308,32 @@ BEGIN
 END;
 $fn$;
 
+-- NHR-05 (owner decision, 2026-09-19). A GUC may NOT be a security boundary.
+--
+-- Two earlier branches keyed privileged behavior off current_setting('herkeys.*').
+-- That rested on an unproven claim -- that a client cannot set a custom GUC -- and the
+-- owner has ruled such a dependency out entirely. Both are replaced by this predicate,
+-- which tests the EFFECTIVE ROLE rather than a settable value.
+--
+-- Why current_user: inside a SECURITY DEFINER function owned by postgres, current_user
+-- is postgres. Ordinary API traffic arrives as anon or authenticated, and service_role
+-- is likewise not postgres. So the privileged branch is reachable only from code that
+-- is already running with definer rights -- something a client cannot cause by setting
+-- anything on its session.
+--
+-- This is a PREVENTION property, not a correction property: there is no value a client
+-- can send, on any connection it can open, that makes this predicate true.
+CREATE FUNCTION private.is_trusted_server_context()
+  RETURNS boolean
+  LANGUAGE sql
+  STABLE
+  SET search_path TO ''
+AS $fn$
+  SELECT current_user = 'postgres';
+$fn$;
+
+REVOKE ALL ON FUNCTION private.is_trusted_server_context() FROM PUBLIC, anon, authenticated;
+
 -- The action ledger is append-only (B4-P0-039). RLS already withholds UPDATE and
 -- DELETE from clients; this binds service_role and the table owner too, so a
 -- mistaken privileged script cannot rewrite history. The only escape is the
@@ -318,7 +344,7 @@ CREATE FUNCTION public.forbid_ledger_mutation()
   SET search_path TO ''
 AS $fn$
 BEGIN
-  IF coalesce(current_setting('herkeys.purge', true), '') = 'on' AND tg_op = 'DELETE' THEN
+  IF private.is_trusted_server_context() AND tg_op = 'DELETE' THEN
     RETURN old;
   END IF;
   RAISE EXCEPTION 'action_records is an immutable ledger: % is not permitted', tg_op;
@@ -339,7 +365,8 @@ $fn$;
 --   it either lands on the correct row or collides with it. There is no stale-timezone
 --   race to reconcile because the client value is never trusted in the first place.
 --
---   CLAIM PATH (bootstrap/claim RPC, which sets herkeys.claim = on): historical One
+--   CLAIM PATH (the bootstrap/claim RPC, recognised by private.is_trusted_server_context):
+--   historical One
 --   Move records uploaded from an existing local household keep their own past days.
 --   A future day is still refused. Local Build 3 state records no timezone per One
 --   Move, so timezone_at_decision for backfilled history is the profile timezone at
@@ -375,7 +402,7 @@ BEGIN
   v_today := (now() AT TIME ZONE v_timezone)::date;
   new.timezone_at_decision := v_timezone;
 
-  IF coalesce(current_setting('herkeys.claim', true), '') = 'on' THEN
+  IF private.is_trusted_server_context() THEN
     -- Historical backfill: keep the supplied day, refuse anything in the future.
     IF new.logical_day > v_today THEN
       RAISE EXCEPTION
@@ -392,6 +419,24 @@ END;
 $fn$;
 
 REVOKE ALL ON FUNCTION public.set_one_move_logical_day() FROM PUBLIC, anon, authenticated;
+
+-- NHR-01. subject_member_type exists only to carry the third column of the composite
+-- foreign key. It is never client-written (no column grant) and is derived here, so it
+-- cannot disagree with subject_member_id. A plain column plus this trigger is used
+-- rather than a GENERATED column because generated-column support as a foreign-key
+-- referencing column is not something SD4 can verify without executing anything.
+CREATE FUNCTION public.set_subject_member_type()
+  RETURNS trigger
+  LANGUAGE plpgsql
+  SET search_path TO ''
+AS $fn$
+BEGIN
+  new.subject_member_type := CASE WHEN new.subject_member_id IS NULL THEN NULL ELSE 'child' END;
+  RETURN new;
+END;
+$fn$;
+
+REVOKE ALL ON FUNCTION public.set_subject_member_type() FROM PUBLIC, anon, authenticated;
 
 REVOKE ALL ON FUNCTION public.set_row_updated_at()      FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.force_server_owned_id()   FROM PUBLIC, anon, authenticated;
@@ -552,8 +597,17 @@ ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.profiles ADD CONSTRAINT profiles_pkey PRIMARY KEY (id);
 ALTER TABLE public.profiles ADD CONSTRAINT profiles_id_fkey
   FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE;
+-- HR-05. display_name stays nullable; the same normalization boundary applies to
+-- provider-supplied (Apple/Google) and user-entered names alike. A name that is one
+-- character, punctuation-only or emoji-only is stored honestly: the database does not
+-- police semantic content, and the UI decides how to render it.
 ALTER TABLE public.profiles ADD CONSTRAINT profiles_display_name_check
-  CHECK (display_name IS NULL OR char_length(display_name) <= 80);
+  CHECK (display_name IS NULL OR (
+           display_name = btrim(display_name)
+       AND display_name !~ '[[:cntrl:]]'
+       AND display_name !~ '  '
+       AND char_length(display_name) >= 1
+       AND char_length(display_name) <= 80));
 ALTER TABLE public.profiles ADD CONSTRAINT profiles_timezone_check
   CHECK (char_length(timezone) >= 1 AND char_length(timezone) <= 64);
 ALTER TABLE public.profiles ADD CONSTRAINT profiles_revision_check CHECK (revision > 0);
@@ -616,7 +670,7 @@ CREATE TABLE public.household_members (
   profile_id        uuid,
   member_type       text        NOT NULL,
   role              text        NOT NULL DEFAULT 'member',
-  display_name      text        NOT NULL,
+  display_name      text,
   birth_date        date,
   scope             text        NOT NULL,
   created_at        timestamptz NOT NULL DEFAULT now(),
@@ -628,6 +682,15 @@ ALTER TABLE public.household_members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.household_members ADD CONSTRAINT household_members_pkey PRIMARY KEY (id);
 ALTER TABLE public.household_members ADD CONSTRAINT household_members_id_household_id_key
   UNIQUE (id, household_id);
+
+-- NHR-01 rules 2 and 3. Carrying member_type in a unique key lets every referencing
+-- table prove STRUCTURALLY, with an ordinary composite foreign key and no trigger,
+-- that a subject is a child of the same household -- and it simultaneously blocks the
+-- two identity mutations that would invalidate an existing reference: changing
+-- member_type away from 'child', or moving the member to another household. Either
+-- attempt leaves a referencing row with no matching parent and raises.
+ALTER TABLE public.household_members ADD CONSTRAINT household_members_id_household_id_member_type_key
+  UNIQUE (id, household_id, member_type);
 ALTER TABLE public.household_members ADD CONSTRAINT household_members_household_id_fkey
   FOREIGN KEY (household_id) REFERENCES public.households(id) ON DELETE CASCADE;
 
@@ -643,8 +706,25 @@ ALTER TABLE public.household_members ADD CONSTRAINT household_members_member_typ
   CHECK (member_type = ANY (ARRAY['adult'::text, 'child'::text]));
 ALTER TABLE public.household_members ADD CONSTRAINT household_members_role_check
   CHECK (role = ANY (ARRAY['owner'::text, 'member'::text]));
+-- HR-05 (owner decision, 2026-09-19). No fabricated placeholder is ever persisted.
+-- A real Build 3 user has no display name -- no screen collects one -- so the adult
+-- member row must be able to say "unknown" rather than invent a string. A child is
+-- always created with a name locally (ChildSchema.displayName is non-blank), so the
+-- NOT NULL obligation is kept exactly where the data actually supports it.
+ALTER TABLE public.household_members ADD CONSTRAINT household_members_child_display_name_check
+  CHECK (member_type <> 'child'::text OR display_name IS NOT NULL);
+
+-- Normalization is enforced at the boundary, not merely requested of callers:
+-- already-trimmed, no control characters, no internal whitespace runs, 1..80.
+-- NFC normalization cannot be expressed as a CHECK and is the RPC/client obligation
+-- recorded in BUILD4_SD4_CLOUD_SCHEMA.md; everything else is refused by the database.
 ALTER TABLE public.household_members ADD CONSTRAINT household_members_display_name_check
-  CHECK (char_length(btrim(display_name)) >= 1 AND char_length(btrim(display_name)) <= 80);
+  CHECK (display_name IS NULL OR (
+           display_name = btrim(display_name)
+       AND display_name !~ '[[:cntrl:]]'
+       AND display_name !~ '  '
+       AND char_length(display_name) >= 1
+       AND char_length(display_name) <= 80));
 ALTER TABLE public.household_members ADD CONSTRAINT household_members_scope_check
   CHECK (scope = ANY (ARRAY['personal'::text, 'household'::text, 'child'::text,
                             'coparent-shared'::text, 'professional'::text]));
@@ -705,6 +785,8 @@ CREATE TABLE public.household_categories (
   local_id          text        NOT NULL,
   origin_device_id  uuid,
   owner_profile_id  uuid,
+  subject_member_id uuid,
+  subject_member_type text,
   name              text        NOT NULL,
   system_role       text,
   status            text        NOT NULL,
@@ -755,6 +837,26 @@ ALTER TABLE public.household_categories ADD CONSTRAINT household_categories_owne
 ALTER TABLE public.household_categories ADD CONSTRAINT household_categories_household_id_sort_order_key
   UNIQUE (household_id, sort_order);
 
+-- NHR-01 (owner decision A2, 2026-09-19). Three invariants, all structural:
+--   rule 1  a child-scoped row must say WHICH child
+--   rule 2  any non-null subject is an existing child of the SAME household
+--   rule 3  the referenced membership cannot be mutated out from under the reference
+-- Rules 2 and 3 are both discharged by the composite foreign key alone. No trigger
+-- and no RLS is involved in proving relational integrity.
+ALTER TABLE public.household_categories ADD CONSTRAINT household_categories_child_scope_subject_check
+  CHECK (scope <> 'child'::text OR subject_member_id IS NOT NULL);
+ALTER TABLE public.household_categories ADD CONSTRAINT household_categories_subject_pairing_check
+  CHECK ((subject_member_id IS NULL) = (subject_member_type IS NULL));
+ALTER TABLE public.household_categories ADD CONSTRAINT household_categories_subject_member_type_check
+  CHECK (subject_member_type IS NULL OR subject_member_type = 'child'::text);
+ALTER TABLE public.household_categories ADD CONSTRAINT household_categories_subject_member_fkey
+  FOREIGN KEY (subject_member_id, household_id, subject_member_type)
+  REFERENCES public.household_members(id, household_id, member_type) ON DELETE RESTRICT;
+CREATE INDEX household_categories_subject_member_idx
+  ON public.household_categories (subject_member_id) WHERE subject_member_id IS NOT NULL;
+CREATE TRIGGER household_categories_set_subject_member_type BEFORE INSERT OR UPDATE ON public.household_categories
+  FOR EACH ROW EXECUTE FUNCTION public.set_subject_member_type();
+
 CREATE INDEX household_categories_household_idx ON public.household_categories (household_id);
 CREATE UNIQUE INDEX household_categories_system_role_uq
   ON public.household_categories (household_id, system_role) WHERE system_role IS NOT NULL;
@@ -789,6 +891,7 @@ CREATE TABLE public.events (
   title                 text        NOT NULL,
   category_id           uuid        NOT NULL,
   subject_member_id     uuid,
+  subject_member_type      text,
   starts_at             timestamptz NOT NULL,
   ends_at               timestamptz NOT NULL,
   location              text,
@@ -816,9 +919,9 @@ ALTER TABLE public.events ADD CONSTRAINT events_owner_profile_id_fkey
 ALTER TABLE public.events ADD CONSTRAINT events_category_id_household_id_fkey
   FOREIGN KEY (category_id, household_id)
   REFERENCES public.household_categories(id, household_id) ON DELETE RESTRICT;
-ALTER TABLE public.events ADD CONSTRAINT events_subject_member_id_household_id_fkey
-  FOREIGN KEY (subject_member_id, household_id)
-  REFERENCES public.household_members(id, household_id) ON DELETE RESTRICT;
+ALTER TABLE public.events ADD CONSTRAINT events_subject_member_fkey
+  FOREIGN KEY (subject_member_id, household_id, subject_member_type)
+  REFERENCES public.household_members(id, household_id, member_type) ON DELETE RESTRICT;
 ALTER TABLE public.events ADD CONSTRAINT events_household_id_local_id_key
   UNIQUE (household_id, local_id);
 ALTER TABLE public.events ADD CONSTRAINT events_local_id_check
@@ -859,6 +962,24 @@ ALTER TABLE public.events ADD CONSTRAINT events_owner_scope_check
 ALTER TABLE public.events ADD CONSTRAINT events_source_check
   CHECK (source = 'user'::text);
 
+-- NHR-01 (owner decision A2, 2026-09-19). Three invariants, all structural:
+--   rule 1  a child-scoped row must say WHICH child
+--   rule 2  any non-null subject is an existing child of the SAME household
+--   rule 3  the referenced membership cannot be mutated out from under the reference
+-- Rules 2 and 3 are both discharged by the composite foreign key alone. No trigger
+-- and no RLS is involved in proving relational integrity.
+ALTER TABLE public.events ADD CONSTRAINT events_child_scope_subject_check
+  CHECK (scope <> 'child'::text OR subject_member_id IS NOT NULL);
+ALTER TABLE public.events ADD CONSTRAINT events_subject_pairing_check
+  CHECK ((subject_member_id IS NULL) = (subject_member_type IS NULL));
+ALTER TABLE public.events ADD CONSTRAINT events_subject_member_type_check
+  CHECK (subject_member_type IS NULL OR subject_member_type = 'child'::text);
+-- composite FK already declared above for this table.
+CREATE INDEX events_subject_member_idx
+  ON public.events (subject_member_id) WHERE subject_member_id IS NOT NULL;
+CREATE TRIGGER events_set_subject_member_type BEFORE INSERT OR UPDATE ON public.events
+  FOR EACH ROW EXECUTE FUNCTION public.set_subject_member_type();
+
 CREATE INDEX events_household_time_idx        ON public.events (household_id, starts_at, ends_at);
 CREATE INDEX events_category_idx              ON public.events (category_id);
 CREATE INDEX events_category_household_fk_idx ON public.events (category_id, household_id);
@@ -893,6 +1014,7 @@ CREATE TABLE public.tasks (
   title             text        NOT NULL,
   category_id       uuid        NOT NULL,
   subject_member_id uuid,
+  subject_member_type  text,
   duration_minutes  integer     NOT NULL,
   commitment        text        NOT NULL,
   due_date          date,
@@ -919,9 +1041,9 @@ ALTER TABLE public.tasks ADD CONSTRAINT tasks_owner_profile_id_fkey
 ALTER TABLE public.tasks ADD CONSTRAINT tasks_category_id_household_id_fkey
   FOREIGN KEY (category_id, household_id)
   REFERENCES public.household_categories(id, household_id) ON DELETE RESTRICT;
-ALTER TABLE public.tasks ADD CONSTRAINT tasks_subject_member_id_household_id_fkey
-  FOREIGN KEY (subject_member_id, household_id)
-  REFERENCES public.household_members(id, household_id) ON DELETE RESTRICT;
+ALTER TABLE public.tasks ADD CONSTRAINT tasks_subject_member_fkey
+  FOREIGN KEY (subject_member_id, household_id, subject_member_type)
+  REFERENCES public.household_members(id, household_id, member_type) ON DELETE RESTRICT;
 ALTER TABLE public.tasks ADD CONSTRAINT tasks_household_id_local_id_key
   UNIQUE (household_id, local_id);
 ALTER TABLE public.tasks ADD CONSTRAINT tasks_local_id_check
@@ -952,6 +1074,24 @@ ALTER TABLE public.tasks ADD CONSTRAINT tasks_revision_check CHECK (revision > 0
 ALTER TABLE public.tasks ADD CONSTRAINT tasks_owner_scope_check
   CHECK ((scope = ANY (ARRAY['personal'::text, 'professional'::text, 'coparent-shared'::text]))
          = (owner_profile_id IS NOT NULL));
+
+-- NHR-01 (owner decision A2, 2026-09-19). Three invariants, all structural:
+--   rule 1  a child-scoped row must say WHICH child
+--   rule 2  any non-null subject is an existing child of the SAME household
+--   rule 3  the referenced membership cannot be mutated out from under the reference
+-- Rules 2 and 3 are both discharged by the composite foreign key alone. No trigger
+-- and no RLS is involved in proving relational integrity.
+ALTER TABLE public.tasks ADD CONSTRAINT tasks_child_scope_subject_check
+  CHECK (scope <> 'child'::text OR subject_member_id IS NOT NULL);
+ALTER TABLE public.tasks ADD CONSTRAINT tasks_subject_pairing_check
+  CHECK ((subject_member_id IS NULL) = (subject_member_type IS NULL));
+ALTER TABLE public.tasks ADD CONSTRAINT tasks_subject_member_type_check
+  CHECK (subject_member_type IS NULL OR subject_member_type = 'child'::text);
+-- composite FK already declared above for this table.
+CREATE INDEX tasks_subject_member_idx
+  ON public.tasks (subject_member_id) WHERE subject_member_id IS NOT NULL;
+CREATE TRIGGER tasks_set_subject_member_type BEFORE INSERT OR UPDATE ON public.tasks
+  FOR EACH ROW EXECUTE FUNCTION public.set_subject_member_type();
 
 CREATE INDEX tasks_household_status_due_idx     ON public.tasks (household_id, status, due_date);
 CREATE INDEX tasks_household_planned_date_idx   ON public.tasks (household_id, planned_date) WHERE planned_date IS NOT NULL;
@@ -986,6 +1126,8 @@ CREATE TABLE public.household_systems (
   local_id          text        NOT NULL,
   origin_device_id  uuid,
   owner_profile_id  uuid,
+  subject_member_id uuid,
+  subject_member_type text,
   name              text        NOT NULL,
   description       text        NOT NULL,
   category_id       uuid        NOT NULL,
@@ -1023,6 +1165,26 @@ ALTER TABLE public.household_systems ADD CONSTRAINT household_systems_owner_scop
   CHECK ((scope = ANY (ARRAY['personal'::text, 'professional'::text, 'coparent-shared'::text]))
          = (owner_profile_id IS NOT NULL));
 
+-- NHR-01 (owner decision A2, 2026-09-19). Three invariants, all structural:
+--   rule 1  a child-scoped row must say WHICH child
+--   rule 2  any non-null subject is an existing child of the SAME household
+--   rule 3  the referenced membership cannot be mutated out from under the reference
+-- Rules 2 and 3 are both discharged by the composite foreign key alone. No trigger
+-- and no RLS is involved in proving relational integrity.
+ALTER TABLE public.household_systems ADD CONSTRAINT household_systems_child_scope_subject_check
+  CHECK (scope <> 'child'::text OR subject_member_id IS NOT NULL);
+ALTER TABLE public.household_systems ADD CONSTRAINT household_systems_subject_pairing_check
+  CHECK ((subject_member_id IS NULL) = (subject_member_type IS NULL));
+ALTER TABLE public.household_systems ADD CONSTRAINT household_systems_subject_member_type_check
+  CHECK (subject_member_type IS NULL OR subject_member_type = 'child'::text);
+ALTER TABLE public.household_systems ADD CONSTRAINT household_systems_subject_member_fkey
+  FOREIGN KEY (subject_member_id, household_id, subject_member_type)
+  REFERENCES public.household_members(id, household_id, member_type) ON DELETE RESTRICT;
+CREATE INDEX household_systems_subject_member_idx
+  ON public.household_systems (subject_member_id) WHERE subject_member_id IS NOT NULL;
+CREATE TRIGGER household_systems_set_subject_member_type BEFORE INSERT OR UPDATE ON public.household_systems
+  FOR EACH ROW EXECUTE FUNCTION public.set_subject_member_type();
+
 CREATE INDEX household_systems_household_idx           ON public.household_systems (household_id);
 CREATE INDEX household_systems_category_idx            ON public.household_systems (category_id);
 CREATE INDEX household_systems_category_household_fk_idx ON public.household_systems (category_id, household_id);
@@ -1052,6 +1214,8 @@ CREATE TABLE public.meal_plan_entries (
   local_id          text        NOT NULL,
   origin_device_id  uuid,
   owner_profile_id  uuid,
+  subject_member_id uuid,
+  subject_member_type text,
   meal_date         date        NOT NULL,
   title             text        NOT NULL,
   category_id       uuid        NOT NULL,
@@ -1086,6 +1250,26 @@ ALTER TABLE public.meal_plan_entries ADD CONSTRAINT meal_plan_entries_revision_c
 ALTER TABLE public.meal_plan_entries ADD CONSTRAINT meal_plan_entries_owner_scope_check
   CHECK ((scope = ANY (ARRAY['personal'::text, 'professional'::text, 'coparent-shared'::text]))
          = (owner_profile_id IS NOT NULL));
+
+-- NHR-01 (owner decision A2, 2026-09-19). Three invariants, all structural:
+--   rule 1  a child-scoped row must say WHICH child
+--   rule 2  any non-null subject is an existing child of the SAME household
+--   rule 3  the referenced membership cannot be mutated out from under the reference
+-- Rules 2 and 3 are both discharged by the composite foreign key alone. No trigger
+-- and no RLS is involved in proving relational integrity.
+ALTER TABLE public.meal_plan_entries ADD CONSTRAINT meal_plan_entries_child_scope_subject_check
+  CHECK (scope <> 'child'::text OR subject_member_id IS NOT NULL);
+ALTER TABLE public.meal_plan_entries ADD CONSTRAINT meal_plan_entries_subject_pairing_check
+  CHECK ((subject_member_id IS NULL) = (subject_member_type IS NULL));
+ALTER TABLE public.meal_plan_entries ADD CONSTRAINT meal_plan_entries_subject_member_type_check
+  CHECK (subject_member_type IS NULL OR subject_member_type = 'child'::text);
+ALTER TABLE public.meal_plan_entries ADD CONSTRAINT meal_plan_entries_subject_member_fkey
+  FOREIGN KEY (subject_member_id, household_id, subject_member_type)
+  REFERENCES public.household_members(id, household_id, member_type) ON DELETE RESTRICT;
+CREATE INDEX meal_plan_entries_subject_member_idx
+  ON public.meal_plan_entries (subject_member_id) WHERE subject_member_id IS NOT NULL;
+CREATE TRIGGER meal_plan_entries_set_subject_member_type BEFORE INSERT OR UPDATE ON public.meal_plan_entries
+  FOR EACH ROW EXECUTE FUNCTION public.set_subject_member_type();
 
 CREATE INDEX meal_plan_entries_household_date_idx      ON public.meal_plan_entries (household_id, meal_date);
 CREATE INDEX meal_plan_entries_category_idx            ON public.meal_plan_entries (category_id);
@@ -1706,6 +1890,11 @@ REVOKE ALL ON ALL ROUTINES  IN SCHEMA public FROM PUBLIC, anon, authenticated;
 GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role;
 
 -- --- Step 2: grant back exactly what the client role needs. ---
+--
+-- NHR-01 note: subject_member_id IS client-writable (the client chooses which child a
+-- row concerns). subject_member_type is NEVER granted on any table -- it is derived by
+-- public.set_subject_member_type() and exists only to carry the third column of the
+-- composite foreign key. A client therefore cannot assert that an adult is a child.
 
 -- Read-only for the client. Written only by the bootstrap/claim RPC.
 GRANT SELECT ON public.households        TO authenticated;
@@ -1718,10 +1907,11 @@ GRANT SELECT                         ON public.profiles TO authenticated;
 GRANT UPDATE (display_name, timezone) ON public.profiles TO authenticated;
 
 GRANT SELECT ON public.household_categories TO authenticated;
-GRANT INSERT (household_id, local_id, origin_device_id, owner_profile_id, name,
+GRANT INSERT (household_id, local_id, origin_device_id, owner_profile_id,
+              subject_member_id, name,
               system_role, status, sort_order, scope, origin_created_at, origin_updated_at)
   ON public.household_categories TO authenticated;
-GRANT UPDATE (name, system_role, status, sort_order, origin_updated_at)
+GRANT UPDATE (subject_member_id, name, system_role, status, sort_order, origin_updated_at)
   ON public.household_categories TO authenticated;
 
 GRANT SELECT ON public.events TO authenticated;
@@ -1747,17 +1937,19 @@ GRANT UPDATE (title, category_id, subject_member_id, duration_minutes, commitmen
   ON public.tasks TO authenticated;
 
 GRANT SELECT ON public.household_systems TO authenticated;
-GRANT INSERT (household_id, local_id, origin_device_id, owner_profile_id, name,
+GRANT INSERT (household_id, local_id, origin_device_id, owner_profile_id,
+              subject_member_id, name,
               description, category_id, scope, origin_created_at, origin_updated_at)
   ON public.household_systems TO authenticated;
-GRANT UPDATE (name, description, category_id, scope, origin_updated_at)
+GRANT UPDATE (subject_member_id, name, description, category_id, scope, origin_updated_at)
   ON public.household_systems TO authenticated;
 
 GRANT SELECT ON public.meal_plan_entries TO authenticated;
-GRANT INSERT (household_id, local_id, origin_device_id, owner_profile_id, meal_date,
+GRANT INSERT (household_id, local_id, origin_device_id, owner_profile_id,
+              subject_member_id, meal_date,
               title, category_id, scope, origin_created_at, origin_updated_at)
   ON public.meal_plan_entries TO authenticated;
-GRANT UPDATE (meal_date, title, category_id, scope, origin_updated_at)
+GRANT UPDATE (subject_member_id, meal_date, title, category_id, scope, origin_updated_at)
   ON public.meal_plan_entries TO authenticated;
 
 GRANT SELECT ON public.onboarding_state TO authenticated;
@@ -1768,10 +1960,12 @@ GRANT UPDATE (goal_ids, strength_ids, struggle_ids, last_step, completed_at)
   ON public.onboarding_state TO authenticated;
 
 GRANT SELECT ON public.one_move_records TO authenticated;
--- logical_day and timezone_at_decision are NOT granted on UPDATE: they are frozen at
--- insert. logical_day is granted on INSERT only so the claim path can supply history;
--- on the live path the trigger overwrites whatever arrives.
-GRANT INSERT (household_id, local_id, origin_device_id, profile_id, logical_day,
+-- NHR-05: logical_day and timezone_at_decision are granted on NEITHER insert nor
+-- update. The live path does not need logical_day (the trigger derives it) and the
+-- claim path is a SECURITY DEFINER RPC running as postgres, which bypasses column
+-- grants altogether. Withholding the privilege is prevention; relying on the trigger
+-- to overwrite a client value would only be correction.
+GRANT INSERT (household_id, local_id, origin_device_id, profile_id,
               target_type, target_task_id, target_needs_me_id,
               status, decided_at, completed_at, cleared_at, scope)
   ON public.one_move_records TO authenticated;
@@ -1909,6 +2103,93 @@ GRANT EXECUTE ON FUNCTION private.current_household_id()                   TO au
 -- so implementation acceptance Test D exists to demonstrate it on an ephemeral local
 -- database before any remote apply.
 
+
+-- ============================================================================
+-- 9A. HER KEYS FAIL-CLOSED ASSERTION LAYER  (NHR-02, owner-approved)
+--
+-- PLATFORM CLASSIFICATION FIRST, as the owner required.
+--
+-- public.rls_auto_enable() and the ensure_rls event trigger are
+-- PLATFORM-MANAGED / INFORMATIONAL, on repo-owned Phase 1 evidence:
+--   * supabase/tools/baselines/phase1-staging-fingerprint.json scores
+--     info.event_triggers with "class": "PLATFORM-MANAGED/INFO"
+--   * supabase/tools/baselines/phase1-baseline-review.md lists the other two
+--     functions as "app-owned" and rls_auto_enable as "event-trigger handler",
+--     under the heading "Platform/informational machinery"
+--
+-- Therefore Her Keys does NOT rewrite, replace or depend on it. It is left exactly as
+-- the baseline has it. Her Keys security guarantees must not rest on changing
+-- platform-owned DDL behaviour -- and in any case rls_auto_enable swallows its own
+-- exceptions (EXCEPTION WHEN OTHERS THEN RAISE LOG), so it can fail silently.
+--
+-- WHY NOT A SECOND EVENT TRIGGER. An application-owned event trigger on the same DDL
+-- events cannot be justified as portable or safe from the existing repo evidence: it
+-- would sit alongside platform machinery on ddl_command_end, it would have to exclude
+-- auth, storage, extensions, temp and every other platform object by predicate, and
+-- nothing in SD4 can validate that without executing it. Inventing one would be
+-- claiming ownership of a platform concern. The owner-sanctioned alternative is used
+-- instead: a same-migration post-DDL assertion.
+--
+-- SCOPE. This function inspects schema public and nothing else. It cannot fail auth,
+-- storage, extensions, temporary or any other platform DDL, because it never looks at
+-- them and only runs when an application migration explicitly calls it.
+--
+-- FAILURE PATH. It RAISES, which aborts the calling migration transaction.
+--
+-- RESIDUAL, stated plainly: this layer only fires when a migration calls it. A
+-- migration that forgets the call is not caught here -- it is caught by Layer 1
+-- (secure defaults deny anon and PUBLIC regardless) and by Layer 3 (the deterministic
+-- fingerprint privilege dimensions). Three independent layers, none load-bearing alone.
+-- ============================================================================
+
+CREATE FUNCTION private.assert_app_schema_secured()
+  RETURNS void
+  LANGUAGE plpgsql
+  SECURITY DEFINER
+  SET search_path TO ''
+AS $fn$
+DECLARE
+  offenders text[] := ARRAY[]::text[];
+  r record;
+BEGIN
+  FOR r IN
+    SELECT c.oid, c.relname, c.relrowsecurity
+    FROM pg_catalog.pg_class c
+    JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public' AND c.relkind = 'r'
+  LOOP
+    IF NOT r.relrowsecurity THEN
+      offenders := offenders || format('%s: RLS not enabled', r.relname);
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM pg_catalog.pg_policy p WHERE p.polrelid = r.oid) THEN
+      offenders := offenders || format('%s: RLS enabled but no policy exists', r.relname);
+    END IF;
+
+    IF EXISTS (
+      SELECT 1
+      FROM pg_catalog.pg_class c2
+      WHERE c2.oid = r.oid
+        AND has_table_privilege('anon', c2.oid, 'SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER')
+    ) THEN
+      offenders := offenders || format('%s: anon holds a table privilege', r.relname);
+    END IF;
+  END LOOP;
+
+  IF array_length(offenders, 1) > 0 THEN
+    RAISE EXCEPTION
+      'Her Keys schema assertion FAILED, migration aborted: %',
+      array_to_string(offenders, '; ');
+  END IF;
+END;
+$fn$;
+
+REVOKE ALL ON FUNCTION private.assert_app_schema_secured() FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION private.assert_app_schema_secured() TO service_role;
+
+-- Every application migration, including this one, ends by calling it.
+SELECT private.assert_app_schema_secured();
+
 -- ============================================================================
 -- 10. SERVER BOUNDARY — SIGNATURES ONLY
 --
@@ -1929,11 +2210,69 @@ GRANT EXECUTE ON FUNCTION private.current_household_id()                   TO au
 --   public.claim_local_household(
 --     p_claim_key uuid, p_timezone text, p_device_id uuid, p_payload jsonb
 --   ) RETURNS jsonb
---     The same transaction with local content attached (B4-P0-030). REFUSES a payload
---     that declares origin demo or carries any demo-sourced row: fail closed, never
---     filter (B4-P0-010). Returns the complete local_id -> cloud_id map.
---     If the account already owns a household, returns that household and the reason
---     superseded_by_cloud; it never creates a second one (B4-P0-031, SD4-023).
+--
+--     THE TRUSTED CLAIM/BACKFILL CONTRACT (NHR-05). Full specification:
+--
+--     SECURITY            DEFINER, owned by postgres. This is what makes
+--                         private.is_trusted_server_context() true inside it, and it is
+--                         the ONLY sanctioned way to reach the historical-backfill
+--                         branch of set_one_move_logical_day(). No GUC is involved.
+--     search_path         pinned to ''
+--     PUBLIC EXECUTE      revoked
+--     anon EXECUTE        revoked
+--     authenticated       GRANTed -- this is a client entry point
+--     service_role        inherits via ALL
+--
+--     CALLER IDENTITY     auth.uid() must be non-null; the RPC operates on that
+--                         profile and no other. p_payload may not name a profile_id,
+--                         household_id or any cloud id: it carries LOCAL content only,
+--                         so cross-account claiming is not expressible in the argument
+--                         shape, let alone permitted.
+--     ACCOUNT OWNERSHIP   the resulting household is the one this profile owns
+--                         (household_members.role='owner'), enforced structurally by
+--                         household_members_one_household_per_owner_uq (SD4-023).
+--     IDEMPOTENCY         account_claims UNIQUE (profile_id, claim_key). A replay of
+--                         the same claim_key returns the SAME household and the SAME
+--                         complete id map. A different claim_key from a profile that
+--                         already has status='complete' is refused by the partial
+--                         unique index, reason superseded_by_cloud.
+--     DEPENDS ON          SD4-022 (account_claims), which is PROPOSED, not approved.
+--                         See the dependency note in BUILD4_SD4_CLOUD_SCHEMA.md.
+--
+--     FIELDS THE RPC WRITES SERVER-SIDE (never client-writable, by column grant):
+--       every id, revision, created_at, updated_at,
+--       one_move_records.logical_day, one_move_records.timezone_at_decision,
+--       subject_member_type, account_claims.*
+--
+--     REFUSALS            origin demo, or any demo-sourced row: fail closed, never
+--                         filter (B4-P0-010). A future logical_day. A malformed or
+--                         unknown IANA timezone, tested with
+--                         now() AT TIME ZONE <candidate> inside an exception block.
+--                         A display_name that fails the normalization CHECK.
+--
+--     ONE MOVE RETRY SEMANTICS (NHR-05 / HR-03 composition). A claim can crash after
+--     the server commits historical One Move rows but before the client records
+--     success. The retry therefore meets its own rows already sitting under
+--     UNIQUE (household_id, profile_id, logical_day). It must NOT die on that
+--     violation. Required behaviour:
+--
+--       INSERT ... ON CONFLICT (household_id, profile_id, logical_day) DO UPDATE
+--         SET ... WHERE <incoming is byte-identical to stored>
+--
+--       identical row      -> skip, counted as an idempotent replay
+--       material mismatch  -> do NOT overwrite. Keep the stored row, record the
+--                             incoming intent as conflict evidence in the claim
+--                             result, and report it. Silent overwrite of a historical
+--                             decision is exactly what B4-P0-021 forbids.
+--
+--     These three compose because they key on the same tuple: the One Move unique
+--     constraint dedupes the row, account_claims dedupes the request, and the id map
+--     returned by the replay lets the device finish what it could not record.
+--
+--     Returns the complete local_id -> cloud_id map, the claim status, and any
+--     conflict evidence. If the account already owns a household, returns that
+--     household with reason superseded_by_cloud; it never creates a second one
+--     (B4-P0-031, SD4-023).
 --
 --   public.sync_push(p_device_id uuid, p_ops jsonb) RETURNS jsonb
 --     SECURITY INVOKER, so RLS still guards every row (B4-P0-025). Each op carries a
@@ -1949,9 +2288,10 @@ GRANT EXECUTE ON FUNCTION private.current_household_id()                   TO au
 --     horizon, which the device answers with a full resync (SD4-013).
 --
 --   private.purge_account(p_profile_id uuid) RETURNS jsonb
---     service_role only, never reachable by authenticated. Sets herkeys.purge = on and
---     deletes in the mandatory order recorded in SD4-030. EXECUTE granted to
---     service_role only.
+--     SECURITY DEFINER owned by postgres, EXECUTE granted to service_role only, never
+--     reachable by authenticated. Because it is definer-owned, it satisfies
+--     private.is_trusted_server_context() and may therefore delete ledger rows; no GUC
+--     is involved (NHR-05). Deletes in the mandatory order recorded in SD4-030.
 --
 --   private.prune_change_log(p_older_than interval) RETURNS bigint
 --     service_role only. Retention maintenance for SD4-013.
