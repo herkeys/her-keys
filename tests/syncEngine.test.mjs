@@ -33,6 +33,10 @@ import { toCloudRow } from '../src/domain/sync/projection.ts';
 import { createEmptyState } from '../src/state/initialState.ts';
 import { decodeStoredState } from '../src/persistence/envelope.ts';
 import { UNBOUND_IDENTITY } from '../src/domain/account/binding.ts';
+import { SYNC_ENTITY_KINDS } from '../src/domain/sync/syncTypes.ts';
+import { createAccountRuntime } from '../src/domain/account/accountRuntime.ts';
+import { createProviderRegistry, createScriptedProvider } from '../src/domain/account/provider.ts';
+import { createMemorySecureStorage, createSecureSessionStore } from '../src/domain/account/secureSession.ts';
 import { TZ, demoState } from './support/fixtures.mjs';
 
 const ACCOUNT_A = '11111111-1111-4111-8111-111111111111';
@@ -607,5 +611,191 @@ describe('the coordinator', () => {
   test('M. the pull batch size is a named constant, not a literal', () => {
     assert.equal(typeof PULL_BATCH_SIZE, 'number');
     assert.ok(PULL_BATCH_SIZE > 0 && PULL_BATCH_SIZE <= 1000, `PULL_BATCH_SIZE=${PULL_BATCH_SIZE}`);
+  });
+});
+
+describe('isolation across accounts, devices and modes', () => {
+  test('15/26. an unrelated local household is quarantined with its sync state intact', async () => {
+    const localState = { ...createEmptyState(TZ), tasks: [task('task-1')] };
+    const boundToA = {
+      binding: { accountId: ACCOUNT_A, householdId: HOUSEHOLD, boundAt: AT, kind: 'claim', idMap: { 'task-1': cloud(1) } },
+      receipt: null,
+      quarantine: null,
+      sync: {
+        ...ns(),
+        mappings: { 'task:task-1': { kind: 'task', localId: 'task-1', cloudId: cloud(1), revision: 3 } },
+        cursor: '7700',
+        queue: [{ id: 'q1', kind: 'task', localId: 'task-1', op: 'update', baseRevision: 3, order: 0, enqueuedAt: AT, attempts: 0, lastAttemptAt: null, lastError: null }],
+      },
+    };
+
+    let staged = boundToA;
+    let stored = boundToA;
+    const calls = [];
+    const runtime = createAccountRuntime({
+      sessions: createSecureSessionStore(createMemorySecureStorage()),
+      providers: createProviderRegistry([
+        createScriptedProvider('apple', {
+          results: [{ kind: 'success', session: { accountId: ACCOUNT_B, accessToken: 'a', refreshToken: 'r', expiresAt: Date.parse(AT) + 3_600_000, provider: null } }],
+        }),
+      ]),
+      cloud: {
+        async bootstrapAccount(input) {
+          calls.push(input);
+          return { kind: 'ok', body: { status: 'complete', household_id: cloud(9), claim_id: null, id_map: {}, rejected_reason: null } };
+        },
+        async claimLocalHousehold(input) {
+          calls.push(input);
+          return { kind: 'ok', body: { status: 'complete', household_id: cloud(9), claim_id: null, id_map: {}, rejected_reason: null } };
+        },
+      },
+      identity: {
+        current: () => staged,
+        set: (next) => {
+          staged = next;
+        },
+        save: async () => {
+          stored = staged;
+        },
+      },
+      localState: () => localState,
+      timezone: () => TZ,
+      now: () => Date.parse(AT),
+      newClaimKey: () => '99999999-9999-4999-8999-999999999999',
+      onAccountIdentified: async () => {},
+    });
+
+    const after = await runtime.signIn('apple');
+    assert.equal(after.kind, 'boundOther', "account B may not open account A's household");
+    assert.deepEqual(calls, [], 'and nothing of hers was uploaded under B');
+
+    assert.equal(stored.binding.accountId, ACCOUNT_A, "A's binding is preserved exactly");
+    assert.equal(stored.sync.cursor, '7700', "A's cursor is untouched");
+    assert.equal(stored.sync.queue.length, 1, "A's pending work is untouched");
+    assert.equal(stored.sync.mappings['task:task-1'].cloudId, cloud(1), "and A's mappings");
+    assert.equal(stored.quarantine.accountId, ACCOUNT_A, 'the situation is recorded rather than guessed at later');
+    assert.equal(localState.tasks.length, 1, 'her local household still exists, undeleted');
+  });
+
+  test('16/W. signing out keeps A intact and hands RevenueCat back an anonymous identity', async () => {
+    const identified = [];
+    const bound = {
+      binding: { accountId: ACCOUNT_A, householdId: HOUSEHOLD, boundAt: AT, kind: 'bootstrap', idMap: {} },
+      receipt: null,
+      quarantine: null,
+      sync: { ...ns(), cursor: '8800', queue: [{ id: 'q1', kind: 'task', localId: 'task-1', op: 'create', baseRevision: null, order: 0, enqueuedAt: AT, attempts: 0, lastAttemptAt: null, lastError: null }] },
+    };
+    let staged = bound;
+    const secure = createMemorySecureStorage({
+      'herkeys.secure.session': JSON.stringify({ accountId: ACCOUNT_A, accessToken: 'a', refreshToken: 'r', expiresAt: Date.parse(AT) + 3_600_000, provider: null }),
+    });
+
+    const runtime = createAccountRuntime({
+      sessions: createSecureSessionStore(secure),
+      providers: createProviderRegistry([]),
+      cloud: { async bootstrapAccount() { return { kind: 'unreachable', detail: 'n/a' }; }, async claimLocalHousehold() { return { kind: 'unreachable', detail: 'n/a' }; } },
+      identity: { current: () => staged, set: (n) => { staged = n; }, save: async () => {} },
+      localState: () => createEmptyState(TZ),
+      timezone: () => TZ,
+      now: () => Date.parse(AT),
+      newClaimKey: () => '99999999-9999-4999-8999-999999999999',
+      onAccountIdentified: async (id) => identified.push(id),
+    });
+
+    await runtime.signOut();
+    assert.deepEqual(identified, [null], 'RevenueCat is returned to an anonymous id, so B never sees A entitlements');
+    assert.equal(secure.contents()['herkeys.secure.session'], undefined, 'the credential is gone');
+    assert.equal(staged.sync.cursor, '8800', "but A's namespace survives for when she comes back");
+    assert.equal(staged.sync.queue.length, 1, "and so does A's pending work");
+    assert.equal(staged.binding.accountId, ACCOUNT_A);
+  });
+
+  test('25/36. OR-002 migration evidence survives sync activity and has no cloud destination', () => {
+    const withEvidence = {
+      ...createEmptyState(TZ),
+      migrationEvidence: [{
+        id: 'evidence:onemove-2026-09-18',
+        kind: 'one-move',
+        reason: 'LEGACY_REAL_CATALOG_ONE_MOVE',
+        sourceSchemaVersion: 2,
+        original: {
+          oneMoveId: 'onemove-2026-09-18', forDate: '2026-09-18', targetId: 'one-move-1',
+          targetType: 'catalog', status: 'completed', decidedAt: '2026-09-18T12:00:00.000Z',
+          completedAt: '2026-09-18T18:00:00.000Z', scope: 'personal',
+        },
+      }],
+    };
+
+    // Nothing in the sync vocabulary can carry it: there is no entity kind for
+    // migration evidence, and no cloud table it maps to.
+    assert.ok(!SYNC_ENTITY_KINDS.includes('migrationEvidence'));
+    assert.equal(kindOfLocalId(withEvidence, 'evidence:onemove-2026-09-18'), null, 'it is not a syncable entity');
+
+    // A pull that rewrites everything else leaves it exactly alone.
+    const afterPull = applyCloudRow(withEvidence, 'task', 'task-1', {
+      id: cloud(1), local_id: 'task-1', revision: 1, title: 'Anything', category_id: cloud(3),
+      subject_member_id: null, duration_minutes: 5, commitment: 'flexible', due_date: null,
+      plan_kind: 'unplanned', planned_date: null, planned_starts_at: null, notes: null,
+      status: 'open', completed_at: null, scope: 'household', origin_created_at: null, origin_updated_at: null,
+    }, () => 'cat-home');
+
+    assert.deepEqual(afterPull.migrationEvidence, withEvidence.migrationEvidence, 'preserved verbatim');
+    assert.equal(afterPull.migrationEvidence[0].original.status, 'completed', 'its status is not rewritten');
+    assert.equal(afterPull.migrationEvidence[0].original.targetType, 'catalog', 'nor turned into a cloud target');
+  });
+
+  test('30. a duplicate push acknowledgement is idempotent', async () => {
+    const state = { ...createEmptyState(TZ), tasks: [task('task-1')] };
+    let n = namespaceFromClaim({ state, accountId: ACCOUNT_A, householdId: HOUSEHOLD, deviceId: DEVICE_A, idMap: { 'cat-home': cloud(3) } });
+    n = enqueue(n, { kind: 'task', localId: 'task-1', op: 'create', at: AT }).namespace;
+
+    let calls = 0;
+    const transport = {
+      async create() {
+        calls += 1;
+        // The SAME identity, twice: the second call is the server telling a
+        // retry that it already has this row.
+        return calls === 1
+          ? { kind: 'created', cloudId: cloud(4), revision: 1, localId: 'task-1' }
+          : { kind: 'alreadyExists', cloudId: cloud(4), revision: 1, localId: 'task-1' };
+      },
+      async update() { throw new Error('not used'); },
+      async pull() { throw new Error('not used'); },
+      async fetchRows() { throw new Error('not used'); },
+    };
+
+    const ctx = { state, householdId: HOUSEHOLD, profileId: ACCOUNT_A, deviceId: DEVICE_A, transport, now: () => Date.parse(AT) };
+    const first = await pushPending(n, ctx);
+    assert.deepEqual(first.namespace.queue, []);
+    assert.equal(first.namespace.mappings['task:task-1'].cloudId, cloud(4));
+
+    // Replay the case the acknowledgement was lost in: the server has the row
+    // but this device never recorded the mapping, so it tries to create again.
+    const asIfLost = { ...first.namespace, mappings: { ...first.namespace.mappings } };
+    delete asIfLost.mappings['task:task-1'];
+    const replayed = enqueue(asIfLost, { kind: 'task', localId: 'task-1', op: 'create', at: AT }).namespace;
+    const second = await pushPending(replayed, ctx);
+    assert.equal(calls, 2, 'the create really was attempted a second time');
+    assert.deepEqual(second.namespace.queue, []);
+    assert.equal(second.namespace.mappings['task:task-1'].cloudId, cloud(4), 'the same cloud identity, not a second row');
+    assert.equal(unresolvedEvidence(second.namespace).length, 0, 'and no conflict was invented');
+  });
+
+  test('I. the attention signal is derived, and says nothing about revisions or queues', () => {
+    let n = ns();
+    assert.equal(needsSyncAttention(n), false);
+    assert.equal(needsSyncAttentionCount(n), 0);
+
+    const item = { id: 'q1', kind: 'task', localId: 'task-1', op: 'update', baseRevision: 4, order: 0, enqueuedAt: AT, attempts: 0, lastAttemptAt: null, lastError: null };
+    n = moveToEvidence({ ...n, queue: [item] }, { item, evidence: 'cas-conflict', cloudId: cloud(1), serverRevision: 9, detail: 'stale', at: AT });
+
+    assert.equal(needsSyncAttention(n), true);
+    assert.equal(needsSyncAttentionCount(n), 1);
+
+    // Resolution is a later wave's job. Marking it resolved clears the signal
+    // without discarding the record.
+    const resolved = { ...n, evidence: n.evidence.map((e) => ({ ...e, resolved: true })) };
+    assert.equal(needsSyncAttention(resolved), false);
+    assert.equal(resolved.evidence.length, 1, 'resolved evidence is kept, not deleted');
   });
 });

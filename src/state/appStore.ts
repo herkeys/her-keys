@@ -5,7 +5,7 @@ import { deviceTimeZone, logicalDateAt, type LocalDate } from '../domain/logical
 import { resolveOneMoveForToday } from '../domain/oneMove';
 import type { HydrationStatus } from '../domain/routeAccess';
 import { validateAppState, type AppState } from '../domain/state';
-import type { IdentityRecord } from '../domain/account/binding';
+import { UNBOUND_IDENTITY, type IdentityRecord } from '../domain/account/binding';
 import type { AppStateRepository, LoadOutcome } from '../persistence/appStateRepository';
 import type { InvalidReason } from '../persistence/envelope';
 import { createWriteQueue } from '../persistence/writeQueue';
@@ -40,6 +40,8 @@ export interface StoreSnapshot {
   /** Recent changes may not be on disk. Session-only; never stored. */
   persistenceDegraded: boolean;
   diagnostics: { hydrationMs: number | null; loadOutcome: LoadOutcome['kind'] | null; repairs: string[] };
+  /** Who this household belongs to, and how far its sync has got. Never a credential. */
+  identity: IdentityRecord;
 }
 
 export type Transition = (state: AppState, ctx: TransitionContext) => AppState;
@@ -109,6 +111,7 @@ export function createAppStore(options: AppStoreOptions): AppStore {
     persistence: 'enabled',
     persistenceDegraded: false,
     diagnostics: { hydrationMs: null, loadOutcome: null, repairs: [] },
+    identity: UNBOUND_IDENTITY,
   };
   const listeners = new Set<() => void>();
   let hydration: Promise<void> | null = null;
@@ -278,6 +281,9 @@ export function createAppStore(options: AppStoreOptions): AppStore {
       persistence,
       persistenceDegraded: persistence === 'disabled',
       diagnostics: { hydrationMs, loadOutcome: outcome.kind, repairs },
+      // Whatever the blob said about who this household belongs to, published
+      // once hydration settles so nothing account-bound reads it earlier.
+      identity: options.repository.currentIdentity(),
     });
     if (changed) persist(state);
 
@@ -328,6 +334,7 @@ export function createAppStore(options: AppStoreOptions): AppStore {
 
     setIdentity(identity) {
       options.repository.setIdentity(identity);
+      publish({ identity });
     },
 
     saveIdentity() {

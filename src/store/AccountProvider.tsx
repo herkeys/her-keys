@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { INITIAL_ACCOUNT_STATE, type AccountState } from '../domain/account/authState';
 import type { AuthProvider } from '../domain/account/identity';
+import type { SyncNamespace } from '../domain/sync/syncTypes';
 import { accountRuntime, accountsAvailable } from './accountRuntimeInstance';
 import { useStoreSnapshot } from './AppStateProvider';
 
@@ -19,6 +20,8 @@ export interface AccountContextValue {
   /** Retry the binding this device needs, after a failure she can see. */
   retryBinding: () => Promise<void>;
   busy: boolean;
+  /** The sync namespace for the bound account, or null. Read-only here. */
+  syncNamespace: SyncNamespace | null;
 }
 
 const AccountContext = createContext<AccountContextValue | null>(null);
@@ -64,12 +67,13 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     () => ({
       state,
       available: accountsAvailable,
+      syncNamespace: snapshot.identity?.sync ?? null,
       busy,
       signIn: (provider) => run(() => accountRuntime.signIn(provider)),
       signOut: () => run(() => accountRuntime.signOut()),
       retryBinding: () => run(() => accountRuntime.resolveBinding()),
     }),
-    [state, busy, run]
+    [state, busy, run, snapshot.identity]
   );
 
   return <AccountContext.Provider value={value}>{children}</AccountContext.Provider>;

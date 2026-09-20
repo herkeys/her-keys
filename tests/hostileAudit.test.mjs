@@ -1,3 +1,4 @@
+import { UNBOUND_IDENTITY } from '../src/domain/account/binding.ts';
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 import { addCategory, archiveCategory, renameCategory, reorderCategories, restoreCategory } from '../src/domain/categories.ts';
@@ -110,6 +111,10 @@ describe('Hostile hydration and mode isolation', () => {
       saveAppState: async () => {
         saves += 1;
       },
+      // The store reads the identity the blob carried; a hand-built repository
+      // has to answer that too, or it is not standing in for the real one.
+      currentIdentity: () => UNBOUND_IDENTITY,
+      setIdentity: () => {},
       resetAppState: async () => {},
     };
     const store = createAppStore({ repository, mode: 'demo', now: () => MORNING, timeZone: () => TZ });

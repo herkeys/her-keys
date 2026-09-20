@@ -11,6 +11,7 @@ import { weekdayName } from '../../src/features/today/formatDay';
 import { HandledLedger } from '../../src/features/today/HandledLedger';
 import { NeedsMeChip } from '../../src/features/today/NeedsMeChip';
 import { PersistenceNotice } from '../../src/features/today/PersistenceNotice';
+import { SyncNotice } from '../../src/features/today/SyncNotice';
 import { TimelineList } from '../../src/features/today/TimelineList';
 import { TomorrowPreview } from '../../src/features/today/TomorrowPreview';
 import { useSchedule } from '../../src/store/ScheduleContext';
@@ -31,6 +32,7 @@ export default function TodayScreen() {
           {describeDayState(assessment, decision, issues)}
         </AppText>
         <PersistenceNotice />
+        <SyncNotice />
       </View>
 
       <LoadMeter />
