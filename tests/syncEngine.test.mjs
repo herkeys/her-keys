@@ -31,13 +31,14 @@ import { applyCloudRow, applyCloudTombstone } from '../src/domain/sync/apply.ts'
 import { kindOfLocalId, namespaceFromClaim, namespaceForNewDevice } from '../src/domain/sync/claimSeam.ts';
 import { toCloudRow } from '../src/domain/sync/projection.ts';
 import { createEmptyState } from '../src/state/initialState.ts';
-import { decodeStoredState } from '../src/persistence/envelope.ts';
+import { CURRENT_SCHEMA_VERSION, decodeStoredState } from '../src/persistence/envelope.ts';
 import { UNBOUND_IDENTITY } from '../src/domain/account/binding.ts';
 import { SYNC_ENTITY_KINDS } from '../src/domain/sync/syncTypes.ts';
 import { createAccountRuntime } from '../src/domain/account/accountRuntime.ts';
 import { createProviderRegistry, createScriptedProvider } from '../src/domain/account/provider.ts';
 import { createMemorySecureStorage, createSecureSessionStore } from '../src/domain/account/secureSession.ts';
 import { TZ, demoState } from './support/fixtures.mjs';
+import { USER } from './support/provenance.mjs';
 
 const ACCOUNT_A = '11111111-1111-4111-8111-111111111111';
 const ACCOUNT_B = '22222222-2222-4222-8222-222222222222';
@@ -63,6 +64,7 @@ const task = (id, over = {}) => ({
   completedAt: null,
   createdAt: null,
   updatedAt: null,
+  provenance: USER,
   scope: 'household',
   ...over,
 });
@@ -200,7 +202,7 @@ describe('the claim seam and namespace isolation', () => {
 
   test('18. a demo household has no sync state at all', () => {
     const encoded = JSON.stringify({
-      schemaVersion: 3,
+      schemaVersion: CURRENT_SCHEMA_VERSION,
       appVersion: '1.0.0-test',
       savedAt: AT,
       writeSeq: 1,

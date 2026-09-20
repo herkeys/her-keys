@@ -1,4 +1,5 @@
 import type { TransitionContext } from './context';
+import { provenanceFor, userProvenance, type Provenance } from './foundation/provenance';
 import { toInstant, type LocalDate } from './logicalDay';
 import type { AppState, NeedsMeItem } from './state';
 import { addTask, type AddTaskInput } from './tasks';
@@ -12,7 +13,7 @@ import { addTask, type AddTaskInput } from './tasks';
 export function captureNeedsMeItem(
   state: AppState,
   ctx: TransitionContext,
-  input: { title: string; dueDate?: LocalDate | null }
+  input: { title: string; dueDate?: LocalDate | null; provenance?: Provenance }
 ): AppState {
   const item: NeedsMeItem = {
     id: ctx.createId('needsme'),
@@ -21,6 +22,7 @@ export function captureNeedsMeItem(
     dueDate: input.dueDate ?? null,
     categoryId: null,
     createdAt: toInstant(ctx.nowMs),
+    provenance: provenanceFor(state.origin, input.provenance ?? userProvenance()),
     scope: 'personal',
   };
   return { ...state, needsMe: [...state.needsMe, item] };

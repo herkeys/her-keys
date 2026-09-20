@@ -1,0 +1,71 @@
+{
+  "generatedFrom": "32b1601bc7edfa52992a92f1a744167211ee36c1",
+  "how": "tests/fixtures/v3/README.md",
+  "fixtures": {
+    "auth-degraded.json": {
+      "sha256": "32976855e32573205538c0bdac566b52f20fc1feceaa680a5b446552f36d9722",
+      "schemaVersion": 3,
+      "writeSeq": 33
+    },
+    "claimed.json": {
+      "sha256": "d2370484c2cdca7025f9b4fc89f4374a5a801f35cc8220eb3ea3ad16f9653e17",
+      "schemaVersion": 3,
+      "writeSeq": 63
+    },
+    "demo.json": {
+      "sha256": "801e8b58046f5b55bfbc9529b55a976a16ba1972b334a7970da92d12cc0b6bb1",
+      "schemaVersion": 3,
+      "writeSeq": 9
+    },
+    "fresh-empty.json": {
+      "sha256": "28dd312dedbdafc1c07b0f757ec257be67d7abbf98cbe266913981048a168e38",
+      "schemaVersion": 3,
+      "writeSeq": 1
+    },
+    "legacy-catalog-remediated.json": {
+      "sha256": "04c62c3cbf18b2acf2301898da2e7f51db06907535e13ec1acc71f2f22633f67",
+      "schemaVersion": 3,
+      "writeSeq": 5
+    },
+    "one-move-states.json": {
+      "sha256": "5ec36263f36ce2149913cf111c775d5b9dbff461bc647aabca82bfa1e057b8d3",
+      "schemaVersion": 3,
+      "writeSeq": 50
+    },
+    "pending-queue.json": {
+      "sha256": "fddc33626a6d214cb56077f91b380af3f6f785be31c3b5fc77b8987ffd5538fe",
+      "schemaVersion": 3,
+      "writeSeq": 72
+    },
+    "real-child-scoped.json": {
+      "sha256": "6235a9f5f113fa05e7051cc64e69d18222708a315af3ce9129160ff81849438d",
+      "schemaVersion": 3,
+      "writeSeq": 44
+    },
+    "real-populated.json": {
+      "sha256": "e7f680bcb4ec1ed9d7ced2bbe1603995f4960a3654a0177da5b7511c5fc9a9a2",
+      "schemaVersion": 3,
+      "writeSeq": 41
+    },
+    "real-with-actions.json": {
+      "sha256": "25db74f4156e45fa1b5f67e5d45d7cb34958eab9e518db2c0c046a3b16d1c0a0",
+      "schemaVersion": 3,
+      "writeSeq": 58
+    },
+    "sync-active.json": {
+      "sha256": "cae2c2746acfac22b4e781a69c3b8dad17380973d0595783b4610f8e999fd982",
+      "schemaVersion": 3,
+      "writeSeq": 71
+    },
+    "unresolved-conflict.json": {
+      "sha256": "9ec566882f668bc8e775961b47406ecc2493ad2cb7adcdccb3f473501fdd8190",
+      "schemaVersion": 3,
+      "writeSeq": 75
+    },
+    "unstamped-legacy-rows.json": {
+      "sha256": "630e31b5cf2e9d2914509005a54aafe85f0130deb34c91096209f143a8261bb8",
+      "schemaVersion": 3,
+      "writeSeq": 12
+    }
+  }
+}

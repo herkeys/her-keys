@@ -1,12 +1,14 @@
 import { isOnboardingOptionId, type OnboardingGroup } from '../data/catalog/onboardingOptions';
 import type { TransitionContext } from './context';
+import { onboardingProvenance, type Provenance } from './foundation/provenance';
 import { toInstant } from './logicalDay';
 import { ONBOARDING_STEPS, type AppState, type Onboarding, type OnboardingStep } from './state';
 
 const GROUP_FIELDS = { goals: 'goalIds', strengths: 'strengthIds', struggles: 'struggleIds' } as const;
 
-export function initialOnboarding(): Onboarding {
-  return { goalIds: [], strengthIds: [], struggleIds: [], lastStep: null, completedAt: null, scope: 'personal' };
+/** Blank until she answers, and every answer is hers — so the record is the intake flow's, unless the household is a demo. */
+export function initialOnboarding(provenance: Provenance = onboardingProvenance()): Onboarding {
+  return { goalIds: [], strengthIds: [], struggleIds: [], lastStep: null, completedAt: null, provenance: { ...provenance }, scope: 'personal' };
 }
 
 export function isOnboardingComplete(onboarding: Onboarding): boolean {

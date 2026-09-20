@@ -1,4 +1,5 @@
 import type { TransitionContext } from './context';
+import { provenanceFor, userProvenance, type Provenance } from './foundation/provenance';
 import { toInstant, type LocalDate } from './logicalDay';
 import type { AppState, Task, TaskPlan, VisibilityScope } from './state';
 
@@ -20,6 +21,8 @@ export interface AddTaskInput {
   plan?: TaskPlan;
   notes?: string | null;
   scope: VisibilityScope;
+  /** Where this task really came from. Only a capture the user made is `user-action`, which is the default. */
+  provenance?: Provenance;
 }
 
 export function addTask(state: AppState, ctx: TransitionContext, input: AddTaskInput): AppState {
@@ -38,6 +41,7 @@ export function addTask(state: AppState, ctx: TransitionContext, input: AddTaskI
     completedAt: null,
     createdAt: now,
     updatedAt: now,
+    provenance: provenanceFor(state.origin, input.provenance ?? userProvenance()),
     scope: input.scope,
   };
   return { ...state, tasks: [...state.tasks, task] };

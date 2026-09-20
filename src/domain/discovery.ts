@@ -2,6 +2,7 @@ import { conversationStarters, discoveryTopics } from '../data/seed/talkItOutScr
 import { advance, createInitialState, createOpeningMessage, openingQuickReplies } from '../features/talk-it-out/engine';
 import type { ClarificationOption, ConversationState, TalkItOutMessage } from '../types';
 import type { TransitionContext } from './context';
+import { provenanceFor, talkItOutProvenance } from './foundation/provenance';
 import { classifyConversationOutcome } from './reasoning/conversationBoundary';
 import type { AppState, DiscoveryRecord } from './state';
 
@@ -81,6 +82,8 @@ export function applyDiscoveryConversation(state: AppState, ctx: TransitionConte
         id: sameTopic ? current.id : ctx.createId('discovery'),
         topicId: outcome.topicId,
         answers: outcome.answers,
+        // A Talk It Out turn just wrote these answers, so the record is Talk It Out's.
+        provenance: provenanceFor(state.origin, talkItOutProvenance()),
         scope: 'personal',
       };
       return { ...state, discovery: record };

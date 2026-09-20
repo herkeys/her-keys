@@ -126,7 +126,6 @@ export function toCloudRow(state: AppState, ctx: ProjectionContext, kind: SyncEn
         travel_minutes_before: row.travelMinutesBefore,
         travel_minutes_after: row.travelMinutesAfter,
         preparation_minutes: row.preparationMinutes,
-        source: row.source,
         scope: row.scope,
         origin_created_at: row.createdAt,
         origin_updated_at: row.updatedAt,

@@ -1,13 +1,34 @@
 import { z } from 'zod';
-import { isLocalDate, isValidTimeZone } from './logicalDay';
+import { ExternalReferenceSchema } from './foundation/externalReference';
+import { PROVENANCE_SOURCES, ProvenanceSchema } from './foundation/provenance';
+import { SourceArtifactSchema } from './foundation/sourceArtifact';
+import { refExists } from './foundation/typedRef';
+import { isValidTimeZone } from './logicalDay';
+import {
+  Id,
+  InstantSchema,
+  LocalDateSchema,
+  NonBlank,
+  OpenCode,
+  Scope,
+  VISIBILITY_SCOPES,
+  type VisibilityScope,
+} from './schemaPrimitives';
+
+export { VISIBILITY_SCOPES, type VisibilityScope };
 
 /**
- * The canonical household state Her Keys remembers between sessions — schema v1.
+ * The canonical household state Her Keys remembers between sessions — local
+ * schema v4 (see `persistence/envelope.ts`; v3 is frozen in
+ * `persistence/legacySchemasV3.ts`).
  *
  * Only facts and accepted actions live here. Anything that can be worked out
  * from them (Daily Load, load tier, life status, a child's age, the Talk It Out
  * hypothesis) is recomputed instead, and nothing here describes presentation:
  * no colors, icons, card types or copy.
+ *
+ * Since v4 every content row carries STORED provenance (`provenance`), because
+ * where a fact came from is a fact about the row, not about the kind of entity.
  *
  * Household organization is data, not an enum. The eight starter categories
  * are where a household begins; it can rename, reorder, archive and add its
@@ -19,9 +40,6 @@ import { isLocalDate, isValidTimeZone } from './logicalDay';
 
 export const SYSTEM_ROLES = ['kids', 'home', 'money', 'meals', 'work', 'wellbeing', 'relationships', 'coparenting'] as const;
 export type SystemRole = (typeof SYSTEM_ROLES)[number];
-
-export const VISIBILITY_SCOPES = ['personal', 'household', 'child', 'coparent-shared', 'professional'] as const;
-export type VisibilityScope = (typeof VISIBILITY_SCOPES)[number];
 
 export const ONBOARDING_STEPS = ['goals', 'strengths', 'struggles', 'talk-it-out', 'profile', 'plus'] as const;
 export type OnboardingStep = (typeof ONBOARDING_STEPS)[number];
@@ -38,23 +56,6 @@ export const FIELD_LIMITS = {
   durationMinutes: 1440,
   travelMinutes: 240,
 } as const;
-
-/** Letters, digits and `._:-`, starting with a letter or digit — never `__proto__` or similar. */
-const ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
-
-const Id = z.string().regex(ID_PATTERN, { message: 'Invalid id' });
-
-const LocalDateSchema = z.string().refine(isLocalDate, { message: 'Expected a calendar date (YYYY-MM-DD)' });
-
-/** A UTC moment. The round-trip rejects impossible dates such as 30 February that a pattern alone lets through. */
-const InstantSchema = z.iso.datetime().refine((value) => {
-  const ms = Date.parse(value);
-  return Number.isFinite(ms) && new Date(ms).toISOString().slice(0, 19) === value.slice(0, 19);
-}, { message: 'Expected a real UTC instant' });
-
-const NonBlank = (max: number) => z.string().max(max).refine((value) => value.trim().length > 0, { message: 'Must not be blank' });
-
-const Scope = z.enum(VISIBILITY_SCOPES);
 
 const Minutes = z.number().int().min(-1440).max(1440);
 
@@ -93,6 +94,7 @@ export const HouseholdCategorySchema = z.strictObject({
   systemRole: z.enum(SYSTEM_ROLES).nullable(),
   status: z.enum(['active', 'archived']),
   sortOrder: z.number().int().min(0).max(10_000),
+  provenance: ProvenanceSchema,
   scope: Scope,
 });
 
@@ -113,7 +115,7 @@ export const CalendarEventSchema = z
     travelMinutesBefore: TravelMinutes,
     travelMinutesAfter: TravelMinutes,
     preparationMinutes: TravelMinutes,
-    source: z.enum(['user', 'demo']),
+    provenance: ProvenanceSchema,
     createdAt: InstantSchema.nullable(),
     updatedAt: InstantSchema.nullable(),
     scope: Scope,
@@ -144,6 +146,7 @@ export const TaskSchema = z
     completedAt: InstantSchema.nullable(),
     createdAt: InstantSchema.nullable(),
     updatedAt: InstantSchema.nullable(),
+    provenance: ProvenanceSchema,
     scope: Scope,
   })
   .superRefine((task, ctx) => {
@@ -157,6 +160,7 @@ export const HouseholdSystemSchema = z.strictObject({
   name: NonBlank(120),
   description: z.string().max(500),
   categoryId: Id,
+  provenance: ProvenanceSchema,
   scope: Scope,
 });
 
@@ -165,6 +169,7 @@ export const MealPlanEntrySchema = z.strictObject({
   date: LocalDateSchema,
   title: NonBlank(200),
   categoryId: Id,
+  provenance: ProvenanceSchema,
   scope: Scope,
 });
 
@@ -174,6 +179,7 @@ export const OnboardingSchema = z.strictObject({
   struggleIds: z.array(Id).max(50),
   lastStep: z.enum(ONBOARDING_STEPS).nullable(),
   completedAt: InstantSchema.nullable(),
+  provenance: ProvenanceSchema,
   scope: z.literal('personal'),
 });
 
@@ -188,6 +194,7 @@ export const OneMoveRecordSchema = z
     status: z.enum(['selected', 'completed', 'withheld']),
     decidedAt: InstantSchema,
     completedAt: InstantSchema.nullable(),
+    provenance: ProvenanceSchema,
     scope: z.literal('personal'),
   })
   .superRefine((record, ctx) => {
@@ -211,6 +218,7 @@ export const NeedsMeItemSchema = z.strictObject({
   dueDate: LocalDateSchema.nullable(),
   categoryId: Id.nullable(),
   createdAt: InstantSchema,
+  provenance: ProvenanceSchema,
   scope: z.literal('personal'),
 });
 
@@ -219,6 +227,7 @@ export const DiscoveryRecordSchema = z.strictObject({
   id: Id,
   topicId: Id,
   answers: z.array(z.strictObject({ questionId: Id, optionId: Id })).max(2),
+  provenance: ProvenanceSchema,
   scope: z.literal('personal'),
 });
 
@@ -365,6 +374,38 @@ export const MigrationEvidenceSchema = z.strictObject({
     scope: z.string().max(32),
   }),
 });
+
+/**
+ * Migration LINEAGE (ADR-004): which local migration classified which rows, and
+ * by which rule. It is a different fact from a row's semantic producer — a task
+ * proven to be hers stays `user-action` however many times it is migrated — so it
+ * is recorded here and never on the row. Local-only: never synced, never claimed.
+ *
+ * Deliberately not `migrationEvidence`, which records what a migration could NOT
+ * carry forward truthfully; a provenance backfill carries everything forward.
+ */
+export const BACKFILL_COLLECTIONS = ['categories', 'events', 'tasks', 'systems', 'meals', 'needsMe', 'oneMoves', 'discovery', 'onboarding'] as const;
+export type BackfillCollection = (typeof BACKFILL_COLLECTIONS)[number];
+
+export const MigrationLineageSchema = z.strictObject({
+  /** Stable, so re-running a migration cannot add a second entry. */
+  id: Id,
+  kind: z.literal('provenance-backfill'),
+  fromSchemaVersion: z.number().int().min(1).max(1000),
+  toSchemaVersion: z.number().int().min(1).max(1000),
+  tallies: z
+    .array(
+      z.strictObject({
+        collection: z.enum(BACKFILL_COLLECTIONS),
+        producer: z.enum(PROVENANCE_SOURCES),
+        /** Why this producer, in a token: `created-at-stamped-by-capture`, `starter-set`, `unproven-legacy`, ... */
+        rule: OpenCode,
+        count: z.number().int().min(0).max(100_000),
+      })
+    )
+    .max(100),
+});
+
 export const AppStateSchema = z.strictObject({
   /** Whether this state began as the fictional demo household or as a real, empty one. */
   origin: z.enum(['demo', 'empty']),
@@ -383,6 +424,12 @@ export const AppStateSchema = z.strictObject({
   actions: z.array(ActionRecordSchema).max(10_000),
   /** Records a local migration could not carry forward truthfully. Usually empty. */
   migrationEvidence: z.array(MigrationEvidenceSchema).max(4000),
+  /** Which migrations classified which rows (ADR-004). Local-only. */
+  migrationLineage: z.array(MigrationLineageSchema).max(50),
+  /** Evidence that something arrived (B4-FE01-002). Metadata and a digest — never its content. */
+  sourceArtifacts: z.array(SourceArtifactSchema).max(5000),
+  /** The identity of objects in external systems (B4-FE01-004). Never a credential. */
+  externalReferences: z.array(ExternalReferenceSchema).max(10_000),
 });
 
 export type Household = z.infer<typeof HouseholdSchema>;
@@ -407,6 +454,7 @@ export type KeepCapacityPlanAction = z.infer<typeof KeepCapacityPlanActionSchema
 export type ProtectItemAction = z.infer<typeof ProtectItemActionSchema>;
 export type ActionRecord = z.infer<typeof ActionRecordSchema>;
 export type MigrationEvidence = z.infer<typeof MigrationEvidenceSchema>;
+export type MigrationLineage = z.infer<typeof MigrationLineageSchema>;
 export type AppState = z.infer<typeof AppStateSchema>;
 export type DataOrigin = AppState['origin'];
 
@@ -469,6 +517,16 @@ export function findIntegrityProblems(state: AppState): string[] {
   requireUnique('strength', state.onboarding.strengthIds);
   requireUnique('struggle', state.onboarding.struggleIds);
   requireUnique('discovery answer', state.discovery?.answers.map((answer) => answer.questionId) ?? []);
+  requireUnique('source artifact id', state.sourceArtifacts.map((artifact) => artifact.id));
+  // The same digest for the same account is the same artifact: duplicate detection is a stored invariant.
+  requireUnique('source artifact digest', state.sourceArtifacts.flatMap((artifact) => (artifact.contentDigest === null ? [] : [artifact.contentDigest])));
+  requireUnique('external reference id', state.externalReferences.map((ref) => ref.id));
+  // Identity is (provider, account, object): this is what makes a returning object recognisable, so two rows may never share it.
+  requireUnique(
+    'external identity',
+    state.externalReferences.map((ref) => `${ref.provider}|${ref.externalAccount}|${ref.externalObjectId}`)
+  );
+  requireUnique('migration lineage id', state.migrationLineage.map((entry) => entry.id));
 
   for (const category of state.categories) {
     if (category.householdId !== state.household.id) {
@@ -546,6 +604,37 @@ export function findIntegrityProblems(state: AppState): string[] {
     if (action.type === 'daily_load.protect_item') {
       const exists = action.targetType === 'task' ? taskIds.has(action.targetId) : eventIds.has(action.targetId);
       if (!exists) problems.push(`action ${action.id} references missing ${action.targetType} ${action.targetId}`);
+    }
+  }
+
+  // ---- lineage: every provenance that names a source artifact must name a real one.
+  const artifactIds = new Set(state.sourceArtifacts.map((artifact) => artifact.id));
+  const checkArtifact = (label: string, row: { id: string; provenance: { artifactId: string | null } }) => {
+    if (row.provenance.artifactId !== null && !artifactIds.has(row.provenance.artifactId)) {
+      problems.push(`${label} ${row.id} names missing source artifact ${row.provenance.artifactId}`);
+    }
+  };
+  for (const row of state.categories) checkArtifact('category', row);
+  for (const row of state.events) checkArtifact('event', row);
+  for (const row of state.tasks) checkArtifact('task', row);
+  for (const row of state.systems) checkArtifact('system', row);
+  for (const row of state.meals) checkArtifact('meal', row);
+  for (const row of state.needsMe) checkArtifact('needs-me', row);
+  for (const row of state.oneMoves) checkArtifact('One Move', row);
+  for (const row of state.externalReferences) checkArtifact('external reference', row);
+  if (state.discovery !== null) checkArtifact('discovery', state.discovery);
+  checkArtifact('onboarding', { id: 'onboarding', provenance: state.onboarding.provenance });
+
+  // ---- external identity.
+  const referenceIds = new Set(state.externalReferences.map((ref) => ref.id));
+  for (const artifact of state.sourceArtifacts) {
+    if (artifact.externalReferenceId !== null && !referenceIds.has(artifact.externalReferenceId)) {
+      problems.push(`source artifact ${artifact.id} names missing external reference ${artifact.externalReferenceId}`);
+    }
+  }
+  for (const ref of state.externalReferences) {
+    if (ref.linked !== null && !refExists(state, ref.linked)) {
+      problems.push(`external reference ${ref.id} is linked to missing ${ref.linked.kind} ${ref.linked.id}`);
     }
   }
 

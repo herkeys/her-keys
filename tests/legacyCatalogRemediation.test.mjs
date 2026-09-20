@@ -17,12 +17,19 @@ import { isValidV2AppState } from '../src/persistence/legacySchemasV2.ts';
 import { createEmptyState } from '../src/state/initialState.ts';
 import { buildClaimPayload } from '../src/domain/account/claim.ts';
 import { TZ, demoState } from './support/fixtures.mjs';
+import { toV3Shape } from './support/legacyShapes.mjs';
 
 const REAL = () => createEmptyState(TZ);
+/**
+ * What a real household stored BEFORE v4. Historical blobs (v1, v2) must be built from the
+ * historical shape: reusing the live factory silently smuggles v4 fields into a v1 fixture,
+ * which the frozen validators correctly refuse. (B12: a test-construction defect, not a product one.)
+ */
+const LEGACY = () => toV3Shape(REAL());
 
 /** A v1 envelope for a REAL household carrying One Move history. */
 function v1Real(oneMoves) {
-  const base = REAL();
+  const base = LEGACY();
   return JSON.stringify({
     schemaVersion: 1,
     appVersion: '1.0.0-test',
@@ -67,7 +74,7 @@ const selectedMove = {
 
 /** The v2 shape a real household is actually carrying after the v1 -> v2 stamp. */
 function v2Real(oneMoves) {
-  const base = REAL();
+  const base = LEGACY();
   return {
     ...base,
     origin: 'empty',
@@ -172,7 +179,7 @@ describe('B4-BE02-OR-002 — legacy catalog One Move remediation', () => {
 
   // 14. Demo is untouched. Its catalog targets are exactly what they say.
   test('a DEMO catalog One Move is left alone and is never turned into evidence', () => {
-    const demo = { ...demoState(), oneMoves: [{ ...completedMove, targetType: 'catalog' }] };
+    const demo = { ...toV3Shape(demoState()), oneMoves: [{ ...completedMove, targetType: 'catalog' }] };
     const migrated = migrateStoredState(2, asV2(demo));
     assert.equal(migrated.ok, true);
     assert.equal(migrated.data.oneMoves.length, 1, 'the demo record stays in the demo household');
@@ -181,7 +188,7 @@ describe('B4-BE02-OR-002 — legacy catalog One Move remediation', () => {
 
   // 12/13. Real, supported targets are untouched by the remediation.
   test('task and needsMe One Moves stay claimable', () => {
-    const base = REAL();
+    const base = LEGACY();
     const state = asV2({
       ...base,
       tasks: [{ id: 'task-1', title: 'Rinse the recycling', categoryId: 'cat-home', subjectMemberId: null, durationMinutes: 10, commitment: 'flexible', dueDate: null, plan: { kind: 'unplanned' }, notes: null, status: 'open', completedAt: null, createdAt: null, updatedAt: null, scope: 'household' }],
@@ -214,7 +221,8 @@ describe('B4-BE02-OR-002 — legacy catalog One Move remediation', () => {
     assert.equal(decoded.migratedFrom, 1);
     assert.equal(decoded.state.oneMoves.length, 0);
     assert.equal(decoded.state.migrationEvidence.length, 1);
-    assert.equal(CURRENT_SCHEMA_VERSION, 3);
+    // The remediation still happens at v2 -> v3; the household then continues on to the current schema (v4).
+    assert.equal(CURRENT_SCHEMA_VERSION, 4);
   });
 
   // 11. The claim builder does not trust the migration to have run.

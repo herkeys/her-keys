@@ -1,4 +1,5 @@
 import type { TransitionContext } from './context';
+import { provenanceFor, userProvenance, type Provenance } from './foundation/provenance';
 import { toInstant } from './logicalDay';
 import type { CalendarEvent, AppState, VisibilityScope } from './state';
 import { pickFields } from './tasks';
@@ -23,6 +24,8 @@ export interface AddEventInput {
   travelMinutesAfter?: number | null;
   preparationMinutes?: number | null;
   scope: VisibilityScope;
+  /** Where this event really came from. A user capture is `user-action`, which is the default. */
+  provenance?: Provenance;
 }
 
 export function addEvent(state: AppState, ctx: TransitionContext, input: AddEventInput): AppState {
@@ -41,7 +44,7 @@ export function addEvent(state: AppState, ctx: TransitionContext, input: AddEven
     travelMinutesBefore: input.travelMinutesBefore ?? null,
     travelMinutesAfter: input.travelMinutesAfter ?? null,
     preparationMinutes: input.preparationMinutes ?? null,
-    source: 'user',
+    provenance: provenanceFor(state.origin, input.provenance ?? userProvenance()),
     createdAt: now,
     updatedAt: now,
     scope: input.scope,

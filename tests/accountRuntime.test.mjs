@@ -50,6 +50,7 @@ const task = (id) => ({
   completedAt: null,
   createdAt: null,
   updatedAt: null,
+  provenance: { producer: 'user-action', artifactId: null, confidence: null },
   scope: 'household',
 });
 

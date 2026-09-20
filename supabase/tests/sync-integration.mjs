@@ -186,6 +186,7 @@ const task = (id, over = {}) => ({
   completedAt: null,
   createdAt: null,
   updatedAt: null,
+  provenance: { producer: 'user-action', artifactId: null, confidence: null },
   scope: 'household',
   ...over,
 });
@@ -614,7 +615,8 @@ async function journeyOneMoveAndLedger(check, m, accountId, psql) {
     ...a.state(),
     oneMoves: [{
       id: `onemove-${today}`, forDate: today, targetId: 'task-move', targetType: 'task',
-      status: 'selected', decidedAt: new Date().toISOString(), completedAt: null, scope: 'personal',
+      status: 'selected', decidedAt: new Date().toISOString(), completedAt: null,
+      provenance: { producer: 'system-derived', artifactId: null, confidence: null }, scope: 'personal',
     }],
   });
   a.enqueue('oneMove', `onemove-${today}`, 'create');
@@ -639,7 +641,8 @@ async function journeyOneMoveAndLedger(check, m, accountId, psql) {
     // the day -- not a second row stacked on top of one it has not seen.
     oneMoves: [{
       id: 'onemove-b-own', forDate: today, targetId: bTask.id, targetType: 'task',
-      status: 'selected', decidedAt: new Date().toISOString(), completedAt: null, scope: 'personal',
+      status: 'selected', decidedAt: new Date().toISOString(), completedAt: null,
+      provenance: { producer: 'system-derived', artifactId: null, confidence: null }, scope: 'personal',
     }],
   });
   b.enqueue('oneMove', 'onemove-b-own', 'create');

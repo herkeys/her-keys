@@ -5,7 +5,12 @@ import { decodeStoredState } from '../src/persistence/envelope.ts';
 import { applyDiscoveryConversation } from '../src/domain/discovery.ts';
 import { advance, createInitialState } from '../src/features/talk-it-out/engine.ts';
 import { buildOperatingProfile } from '../src/features/onboarding/buildOperatingProfile.ts';
-import { toggleOnboardingOption } from '../src/domain/onboarding.ts';
+import { addCategory } from '../src/domain/categories.ts';
+import { captureNeedsMeItem } from '../src/domain/needsMe.ts';
+import { completeOnboarding, toggleOnboardingOption } from '../src/domain/onboarding.ts';
+import { resolveOneMoveForToday } from '../src/domain/oneMove.ts';
+import { validateAppState } from '../src/domain/state.ts';
+import { addTask } from '../src/domain/tasks.ts';
 import { classifyConversationOutcome, mutatesDurableState } from '../src/domain/reasoning/conversationBoundary.ts';
 import {
   CONFIDENCE_ORDER,
@@ -20,12 +25,13 @@ import {
   provenanceOfCategory,
   provenanceOfDiscovery,
   provenanceOfEvent,
+  provenanceOfNeedsMeItem,
   provenanceOfOnboarding,
   provenanceOfOneMove,
   provenanceOfTask,
 } from '../src/domain/reasoning/provenance.ts';
 import { mayMutateDurableState, requiresApproval, semanticOf } from '../src/domain/reasoning/semantics.ts';
-import { TZ, ctx, demoState, stored } from './support/fixtures.mjs';
+import { DAY, TZ, ctx, demoState, stored } from './support/fixtures.mjs';
 
 const real = () => createEmptyState(TZ);
 
@@ -45,14 +51,16 @@ describe('B4-INGESTION-LOCK — reasoning primitives', () => {
   // 2 + 3. provenance and confidence survive a persistence round trip
   test('provenance survives a persistence round trip', () => {
     const state = demoState();
-    const before = state.events.map((e) => provenanceOfEvent(state, e));
+    const before = state.events.map((e) => provenanceOfEvent(e));
 
     const decoded = decodeStoredState(stored(state));
     assert.equal(decoded.kind, 'valid');
-    const after = decoded.state.events.map((e) => provenanceOfEvent(decoded.state, e));
+    const after = decoded.state.events.map((e) => provenanceOfEvent(e));
 
     assert.deepEqual(after, before);
     assert.ok(before.every((p) => p === 'demo-seed'), 'a demo household must read back as demo-seed');
+    // v4: it is the WHOLE stored provenance that survives, not only the producer.
+    assert.deepEqual(decoded.state.events.map((e) => e.provenance), state.events.map((e) => e.provenance));
   });
 
   test('confidence survives a persistence round trip unchanged', () => {
@@ -106,25 +114,60 @@ describe('B4-INGESTION-LOCK — reasoning primitives', () => {
     assert.ok(!isUserStated('demo-seed'));
   });
 
-  test('every producer in the product has a derivable provenance', () => {
+  // B4-FE01-001. REPLACES the v3 test "every producer in the product has a derivable provenance".
+  // Old expectation: provenanceOfTask(realState, undefined) === 'user-action' — an answer given for a
+  // task that did not exist, derived from the KIND of entity. That was the fabrication the audit named
+  // (FE-01). New expectation: each creator stores the truth about its own row, and nothing is derived.
+  test('every producer in the product stores its own provenance', () => {
+    let r = toggleOnboardingOption(toggleOnboardingOption(toggleOnboardingOption(real(), 'goals', 'calmer-household'), 'strengths', 'cooking'), 'struggles', 'overcommitting');
+    r = completeOnboarding(r, ctx());
+    r = addTask(r, ctx(), { title: 'Return the books', categoryId: 'cat-home', dueDate: DAY, scope: 'household' });
+    r = captureNeedsMeItem(r, ctx(), { title: 'Call the dentist back' });
+    r = addCategory(r, ctx(), { name: 'Pets', scope: 'household' });
+    r = resolveOneMoveForToday(r, ctx());
+
+    assert.equal(provenanceOfTask(r.tasks[0]), 'user-action');
+    assert.equal(provenanceOfNeedsMeItem(r.needsMe[0]), 'user-action');
+    assert.equal(provenanceOfCategory(r.categories.find((c) => c.name === 'Pets')), 'user-action', 'a category she added is hers');
+    assert.equal(provenanceOfCategory(r.categories[0]), 'system-derived', 'a starter category is not her own');
+    assert.equal(provenanceOfOnboarding(r.onboarding), 'onboarding');
+    assert.equal(provenanceOfOneMove(r.oneMoves[0]), 'system-derived', 'the engine chose it; she did not capture it');
+    assert.equal(provenanceOfAction({ actor: 'user', source: 'her_keys_recommendation' }), 'user-action');
+    assert.equal(validateAppState(r).ok, true);
+
+    const turn = advance(advance(createInitialState(), 'Honestly I feel like I am always behind on everything').state, 'it usually falls apart after I pick the kids up from school');
+    assert.equal(provenanceOfDiscovery(applyDiscoveryConversation(real(), ctx(), turn.state).discovery), 'talk-it-out');
+
     const d = demoState();
+    assert.equal(provenanceOfOneMove({ provenance: d.categories[0].provenance }), 'demo-seed');
+    assert.ok(d.tasks.every((t) => provenanceOfTask(t) === 'demo-seed'), 'demo origin dominates every row in a demo household');
+    assert.equal(provenanceOfTask(addTask(d, ctx(), { title: 'Typed during a demo', categoryId: 'cat-home', scope: 'household' }).tasks.at(-1)), 'demo-seed');
+  });
+
+  test('there is no fallback: a row that stores no provenance is not valid state, so nothing can be silently attributed', () => {
     const r = real();
-    assert.equal(provenanceOfTask(r, r.tasks[0] ?? null), 'user-action');
-    assert.equal(provenanceOfOneMove(r), 'system-derived');
-    assert.equal(provenanceOfDiscovery(r), 'talk-it-out');
-    assert.equal(provenanceOfOnboarding(r), 'onboarding');
-    assert.equal(provenanceOfAction(r), 'user-action');
-    assert.equal(provenanceOfCategory(r, r.categories[0]), 'system-derived', 'a starter category is not her own');
-    assert.equal(provenanceOfOneMove(d), 'demo-seed', 'demo origin dominates every derivation');
+    const { provenance: _dropped, ...unstamped } = addTask(r, ctx(), { title: 'x', categoryId: 'cat-home', scope: 'household' }).tasks[0];
+    const result = validateAppState({ ...r, tasks: [unstamped] });
+    assert.equal(result.ok, false);
+    assert.equal(result.reason, 'invalid_state');
+  });
+
+  test('an explicit legacy-unknown is stored, reported as unknown, and is never treated as something she told us', () => {
+    const r = real();
+    const task = { ...addTask(r, ctx(), { title: 'x', categoryId: 'cat-home', scope: 'household' }).tasks[0], provenance: { producer: 'legacy-unknown', artifactId: null, confidence: null } };
+    assert.equal(validateAppState({ ...r, tasks: [task] }).ok, true);
+    assert.equal(provenanceOfTask(task), 'legacy-unknown');
+    assert.equal(isUserStated(provenanceOfTask(task)), false, 'unknown is conservative: it lowers no promotion threshold');
+    assert.equal(promoteConfidence('possible', { source: provenanceOfTask(task), corroborations: 2, userConfirmed: false }), 'possible');
   });
 
   // 11. demo-origin data remains separated from real/account-bound state
   test('demo-origin data is never syncable and real data is', () => {
     const d = demoState();
     const r = real();
-    assert.ok(!isSyncable(provenanceOfOneMove(d)));
-    assert.ok(!isSyncable(provenanceOfEvent(d, d.events[0])));
-    assert.ok(isSyncable(provenanceOfOnboarding(r)));
+    assert.ok(!isSyncable(provenanceOfCategory(d.categories[0])));
+    assert.ok(!isSyncable(provenanceOfEvent(d.events[0])));
+    assert.ok(isSyncable(provenanceOfOnboarding(r.onboarding)));
   });
 
   // 14. malformed reasoning metadata fails safely

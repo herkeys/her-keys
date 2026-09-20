@@ -22,6 +22,7 @@ import { UNBOUND_IDENTITY } from '../src/domain/account/binding.ts';
 import { validateAppState } from '../src/domain/state.ts';
 import { createEmptyState } from '../src/state/initialState.ts';
 import { TZ } from './support/fixtures.mjs';
+import { SYSTEM, USER } from './support/provenance.mjs';
 
 const ACCOUNT_A = '11111111-1111-4111-8111-111111111111';
 const ACCOUNT_B = '22222222-2222-4222-8222-222222222222';
@@ -40,6 +41,7 @@ const task = (id, over = {}) => ({
   completedAt: null,
   createdAt: null,
   updatedAt: null,
+  provenance: USER,
   scope: 'household',
   ...over,
 });
@@ -51,6 +53,7 @@ const item = (id, over = {}) => ({
   dueDate: null,
   categoryId: null,
   createdAt: '2026-09-15T08:30:00.000Z',
+  provenance: USER,
   scope: 'personal',
   ...over,
 });
@@ -63,6 +66,7 @@ const move = (id, forDate, targetType, targetId, over = {}) => ({
   status: 'completed',
   decidedAt: `${forDate}T12:00:00.000Z`,
   completedAt: `${forDate}T18:00:00.000Z`,
+  provenance: SYSTEM,
   scope: 'personal',
   ...over,
 });
@@ -78,8 +82,8 @@ function crowdedHousehold() {
     ],
     categories: [
       ...base.categories,
-      { id: 'cat-custom-1', householdId: 'household-1', name: 'Garden', systemRole: null, status: 'active', sortOrder: 8, scope: 'personal' },
-      { id: 'cat-custom-2', householdId: 'household-1', name: 'Unrelated', systemRole: null, status: 'active', sortOrder: 9, scope: 'household' },
+      { id: 'cat-custom-1', householdId: 'household-1', name: 'Garden', systemRole: null, status: 'active', sortOrder: 8, provenance: USER, scope: 'personal' },
+      { id: 'cat-custom-2', householdId: 'household-1', name: 'Unrelated', systemRole: null, status: 'active', sortOrder: 9, provenance: USER, scope: 'household' },
     ],
     tasks: [
       task('task-1', { scope: 'child', subjectMemberId: 'child-1', status: 'completed', completedAt: '2026-09-18T18:00:00.000Z', createdAt: '2026-09-17T09:00:00.000Z', updatedAt: '2026-09-18T18:00:00.000Z', plan: { kind: 'day', date: '2026-09-18' }, dueDate: '2026-09-18' }),

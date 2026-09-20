@@ -69,7 +69,7 @@ Audit numbering is the audit's own matrix row number. `Primitives` reference the
 - SECURITY IMPACT: none new; `producer`/`source_artifact_id` are never client-UPDATEable.
 - ACTION/AUTONOMY IMPACT: none.
 - IMPLEMENTATION APPROACH: ADR-001..004.
-- STATUS: NOT STARTED
+- STATUS: IN PROGRESS
 
 ### FE-02 — Action authorization, consequence & outcome
 - AUDIT ROW: #2
@@ -114,7 +114,7 @@ Audit numbering is the audit's own matrix row number. `Primitives` reference the
 - SECURITY IMPACT: owner-only; **no transcript is stored** (ADR-011).
 - ACTION/AUTONOMY IMPACT: accepting a candidate is a user decision.
 - IMPLEMENTATION APPROACH: ADR-011, -012.
-- STATUS: NOT STARTED
+- STATUS: IN PROGRESS
 
 ### FE-05 — Life Inbox / multi-source ingestion
 - AUDIT ROW: #5
@@ -129,7 +129,7 @@ Audit numbering is the audit's own matrix row number. `Primitives` reference the
 - SECURITY IMPACT: new data class (email/document metadata); content is never stored.
 - ACTION/AUTONOMY IMPACT: confirmation gate.
 - IMPLEMENTATION APPROACH: ADR-011, -012, -013.
-- STATUS: NOT STARTED
+- STATUS: IN PROGRESS
 
 ### FE-06 — Daily briefing — full ritual
 - AUDIT ROW: #8
@@ -354,7 +354,7 @@ Audit numbering is the audit's own matrix row number. `Primitives` reference the
 - SECURITY IMPACT: **no credential column anywhere**; enforced by a source-scan test (ADR-013).
 - ACTION/AUTONOMY IMPACT: external writes are actions (-011).
 - IMPLEMENTATION APPROACH: ADR-013.
-- STATUS: NOT STARTED
+- STATUS: IN PROGRESS
 
 ### FE-21 — External integration identity
 - AUDIT ROW: #23
@@ -369,7 +369,7 @@ Audit numbering is the audit's own matrix row number. `Primitives` reference the
 - SECURITY IMPACT: as FE-20.
 - ACTION/AUTONOMY IMPACT: as FE-20.
 - IMPLEMENTATION APPROACH: ADR-013.
-- STATUS: NOT STARTED
+- STATUS: IN PROGRESS
 
 ### FE-22 — Integration feedback-loop prevention
 - AUDIT ROW: #24
@@ -384,7 +384,7 @@ Audit numbering is the audit's own matrix row number. `Primitives` reference the
 - SECURITY IMPACT: as FE-20.
 - ACTION/AUTONOMY IMPACT: links the external object to the execution that wrote it.
 - IMPLEMENTATION APPROACH: ADR-013.
-- STATUS: NOT STARTED
+- STATUS: IN PROGRESS
 
 ### FE-23 — Co-parent logistics
 - AUDIT ROW: #26
@@ -632,14 +632,43 @@ prediction, the actual, and the authority ID.
 | Commit | Contents | SHA | State |
 |---|---|---|---|
 | J0 | audit banked | `db0989bea6e4672d537a83f3e16e7fa56ed3b378` | done |
-| J1 | this ledger, register, ADRs, predicted delta | _(this commit)_ | in this commit |
+| J1 | this ledger, register, ADRs, predicted delta | `02131234f19066e3fcb3ca95caf26e5ec63f8949` | done |
+| J2 | stored provenance on 9 kinds; local v4 + provable backfill + frozen v3; source artifacts and external references (local); confidence writer | _(this commit)_ | in this commit |
 
 The numbering below J1 follows the buildout order (A truth → B action → C shared intelligence → D domain readiness → E durability → F closure); the base
 prompt's suggested numbering is a shape, not a contract.
 
 ## 10. Defect ledger
 
-_Empty. Every defect found is recorded here with: ID · severity · in/out of FE scope · discovered in · root cause · repair commit · regression test · status._
+Every defect found is recorded with: ID · severity · in/out of FE scope · discovered in · root cause · repair commit · regression test · status.
+
+### Product defects
+
+_None found so far._
+
+### Test-construction defects (Addendum 02 B12 — recorded separately, not counted as product regressions)
+
+| ID | Where | What was wrong | Repair | Status |
+|---|---|---|---|---|
+| TCD-001 | `tests/legacyCatalogRemediation.test.mjs`, `tests/persistence.test.mjs` | Historical (v1/v2) fixtures were derived from the LIVE state factory. That was harmless while the live shape was v3; once v4 added fields, the fixtures stopped being historical and failed the frozen validators for the wrong reason. | `tests/support/legacyShapes.mjs` derives a historical shape by REMOVING what a later version added. Byte-exact v3 envelopes now come from the v3 code itself (`tests/fixtures/v3`, SHA-256 pinned). | CLOSED |
+| TCD-002 | `tests/foundationTruth.test.mjs` (mine) | A convoluted assertion compared two distinct object instances. | Replaced with an identity assertion. | CLOSED |
+| TCD-003 | `supabase/tests/sync-integration.mjs` | Row literals lacked the now-required field, so the integrity gate correctly refused them. | Added provenance to the literals. The gate was right. | CLOSED |
+
+## 12. Existing tests modified by v4 (base prompt section 67)
+
+None was weakened. Each moved because a stored shape gained a required field, or because a semantic was replaced with one the audit required.
+
+| Test | Old expectation | New expectation | Why the old one was wrong / what moved | Authority |
+|---|---|---|---|---|
+| ingestionReasoning: "every producer in the product has a derivable provenance" | `provenanceOfTask(realState, undefined) === 'user-action'` | replaced by "…stores its own provenance" plus a no-fallback test and an explicit legacy-unknown test | It answered for a task that did not exist, from the KIND of entity — the exact fabrication FE-01 names | B4-FE01-001 |
+| ingestionReasoning: "provenance survives a persistence round trip" | derived per event | the whole stored provenance object survives | derivation replaced by storage | B4-FE01-001 |
+| ingestionReasoning: "demo-origin data is never syncable" | derived | read from stored provenance | same | B4-FE01-001 |
+| build3Audit.capture B3-AUD-019 | an edit cannot rewrite `source` | an edit cannot rewrite `provenance`, on tasks AND events, and a patched-in `source` is not stored | **strengthened**: same invariant, now on the field that replaced the flag | B4-FE01-001 |
+| events: "create" | `events[0].source === 'user'` | `provenance.producer === 'user-action'` and no `source` key | one source of truth, not two | ADR-001 |
+| persistence: "v1 data carried forward" | migrated event `source === 'demo'` | `provenance = demo-seed`, no `source` | v3 -> v4 retires the flag | ADR-004 |
+| build3Audit.migration ×5 | sections v2 did not change are deep-equal to the v1 bytes; re-encodes as v3; hostile mislabel ladder 2/3/4 | equal after removing ONLY `provenance`; re-encodes as the current version; ladder 2/3 -> `migration_failed`, 4 -> `invalid_state`, 5 -> `future_version` | the ladder moved up one rung; losslessness is now proven against the authentic v1 bytes with only the one intended addition removed | ADR-023 |
+| legacyCatalogRemediation ×9 | `CURRENT_SCHEMA_VERSION === 3`; fixtures from the live factory | `=== 4`; fixtures from `toV3Shape` | TCD-001 | ADR-023 |
+| claimPayload, syncEngine, accountRuntime, categories, discoveryPersistence, oneMove, appStore | row literals without provenance | literals carry provenance | fixture shape only | ADR-001 |
 
 ## 11. Out-of-scope findings (Addendum 01 A3)
 

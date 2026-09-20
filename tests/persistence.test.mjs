@@ -6,6 +6,7 @@ import { CURRENT_SCHEMA_VERSION, decodeStoredState, encodeStoredState, migrateSt
 import { UNBOUND_IDENTITY } from '../src/domain/account/binding.ts';
 import { MAX_WRITE_SEQUENCE } from '../src/persistence/writeQueue.ts';
 import { demoState, harness, onboardedState, rawEnvelope, stored } from './support/fixtures.mjs';
+import { toV3Shape } from './support/legacyShapes.mjs';
 
 const reasonOf = (raw) => {
   const decoded = decodeStoredState(raw);
@@ -86,10 +87,9 @@ describe('Migration seam', () => {
     const v1Event = { id: 'evt-1', title: 'Team status call', categoryId: 'cat-work', subjectMemberId: 'user-1', startsAt: '2026-09-16T13:00:00.000Z', endsAt: '2026-09-16T13:30:00.000Z', location: null, scope: 'professional' };
     const v1Task = { id: 'task-1', title: 'Pay orthodontist invoice', categoryId: 'cat-money', subjectMemberId: null, durationMinutes: 10, commitment: 'flexible', dueDate: null, plan: { kind: 'unplanned' }, scope: 'household' };
     const v1OneMove = { id: 'onemove-2026-09-16', forDate: '2026-09-16', targetId: 'one-move-1', status: 'selected', decidedAt: '2026-09-16T13:00:00.000Z', completedAt: null, scope: 'personal' };
-    const v1State = { ...demoState(), events: [v1Event], tasks: [v1Task], oneMoves: [v1OneMove] };
-    // v1 had neither of these. Building the fixture from a current demo state
-    // means stripping the fields later versions added, or the frozen v1
-    // validator correctly refuses it.
+    // v1 had neither of these. The fixture is the HISTORICAL shape of a demo household (the live shape
+    // minus what later versions added), or the frozen v1 validator correctly refuses it.
+    const v1State = { ...toV3Shape(demoState()), events: [v1Event], tasks: [v1Task], oneMoves: [v1OneMove] };
     delete v1State.needsMe;
     delete v1State.migrationEvidence;
 
@@ -98,7 +98,9 @@ describe('Migration seam', () => {
     // A pre-existing event's commitment is never assumed movable, whatever it actually was.
     assert.equal(migrated.data.events[0].commitment, 'fixed');
     assert.equal(migrated.data.events[0].status, 'active');
-    assert.equal(migrated.data.events[0].source, 'demo');
+    // v1 -> v2 stamped source:'demo'; v3 -> v4 carries that truth into stored provenance and retires the flag.
+    assert.deepEqual(migrated.data.events[0].provenance, { producer: 'demo-seed', artifactId: null, confidence: null });
+    assert.equal('source' in migrated.data.events[0], false);
     assert.equal(migrated.data.events[0].createdAt, null);
     assert.equal(migrated.data.tasks[0].status, 'open');
     assert.equal(migrated.data.tasks[0].createdAt, null);

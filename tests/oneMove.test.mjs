@@ -37,7 +37,7 @@ describe('One Move', () => {
   test("a tight day is offered its One Move, stored as that day's decision", () => {
     const state = onboardedState();
     assert.deepEqual(state.oneMoves, [
-      { id: 'onemove-2026-09-16', forDate: DAY, targetId: 'one-move-1', targetType: 'catalog', status: 'selected', decidedAt: new Date(MORNING).toISOString(), completedAt: null, scope: 'personal' },
+      { id: 'onemove-2026-09-16', forDate: DAY, targetId: 'one-move-1', targetType: 'catalog', status: 'selected', decidedAt: new Date(MORNING).toISOString(), completedAt: null, provenance: { producer: 'demo-seed', artifactId: null, confidence: null }, scope: 'personal' },
     ]);
     assert.equal(oneMoveForDay(state, DAY).move.id, 'one-move-1');
   });

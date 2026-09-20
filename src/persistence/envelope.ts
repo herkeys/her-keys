@@ -3,6 +3,8 @@ import { AppStateSchema, validateAppState, type AppState } from '../domain/state
 import { IdentityRecordSchema, UNBOUND_IDENTITY, type IdentityRecord } from '../domain/account/binding';
 import { isValidV1AppState } from './legacySchemas';
 import { isValidV2AppState } from './legacySchemasV2';
+import { isValidV3AppState } from './legacySchemasV3';
+import { migrateV3ToV4 } from './migrateV3ToV4';
 import { MAX_WRITE_SEQUENCE } from './writeQueue';
 
 /**
@@ -15,7 +17,7 @@ import { MAX_WRITE_SEQUENCE } from './writeQueue';
  * an app update never has to throw a household away.
  */
 
-export const CURRENT_SCHEMA_VERSION = 3;
+export const CURRENT_SCHEMA_VERSION = 4;
 
 export type InvalidReason =
   | 'malformed_json'
@@ -176,11 +178,15 @@ export const migrationPlan: MigrationPlan = {
   migrations: new Map([
     [1, migrateV1ToV2],
     [2, migrateV2ToV3],
+    // B4-FOUNDATION-BUILDOUT-01: provenance becomes stored truth (see migrateV3ToV4.ts).
+    [3, migrateV3ToV4],
   ]),
   validators: new Map([
     [1, isValidV1AppState],
     [2, isValidV2AppState],
-    [3, (data: unknown) => AppStateSchema.safeParse(data).success],
+    // v3 is validated against its FROZEN schema, never the live one.
+    [3, isValidV3AppState],
+    [4, (data: unknown) => AppStateSchema.safeParse(data).success],
   ]),
 };
 

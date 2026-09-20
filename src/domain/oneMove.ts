@@ -1,6 +1,7 @@
 import { demoOneMoves, findOneMove } from '../data/catalog/oneMoves';
 import type { OneMoveItem } from '../types';
 import type { TransitionContext } from './context';
+import { provenanceFor, systemProvenance } from './foundation/provenance';
 import { loadTierForDay } from './loadTier';
 import { toInstant, type LocalDate } from './logicalDay';
 import { resolveNeedsMeItem } from './needsMe';
@@ -160,6 +161,8 @@ export function resolveOneMoveForToday(state: AppState, ctx: TransitionContext):
     status: withheld ? 'withheld' : 'selected',
     decidedAt: toInstant(ctx.nowMs),
     completedAt: null,
+    // Chosen by the recommendation engine, never captured by her.
+    provenance: provenanceFor(state.origin, systemProvenance()),
     scope: 'personal',
   };
 

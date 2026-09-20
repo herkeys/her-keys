@@ -18,7 +18,9 @@ import { computeDailyLoad } from '../src/features/daily-load/computeDailyLoad.ts
 import { deriveLifeStatus } from '../src/features/life/lifeStatus.ts';
 import { dayLabel } from '../src/features/today/formatDay.ts';
 import { decodeStoredState } from '../src/persistence/envelope.ts';
+import { demoProvenance } from '../src/domain/foundation/provenance.ts';
 import { DAY, ctx, demoState, rawEnvelope, stored } from './support/fixtures.mjs';
+import { DEMO } from './support/provenance.mjs';
 
 const assessmentFor = (state) => {
   const day = projectStateDay(state, DAY);
@@ -57,7 +59,8 @@ describe('Household categories', () => {
       ]
     );
     assert.ok(state.categories.every((c) => c.householdId === state.household.id));
-    assert.deepEqual(starterCategories('hh-1'), state.categories);
+    // The same eight rows, and a demo household says so: the starters are demo-seed there, system-derived elsewhere.
+    assert.deepEqual(starterCategories('hh-1', demoProvenance()), state.categories);
   });
 
   // 2
@@ -71,7 +74,7 @@ describe('Household categories', () => {
       ...state,
       tasks: [
         ...state.tasks,
-        { id: 'task-vet', title: 'Call the vet', categoryId: pets.id, subjectMemberId: null, durationMinutes: 5, commitment: 'fixed', dueDate: DAY, plan: { kind: 'unplanned' }, notes: null, status: 'open', completedAt: null, createdAt: null, updatedAt: null, scope: 'household' },
+        { id: 'task-vet', title: 'Call the vet', categoryId: pets.id, subjectMemberId: null, durationMinutes: 5, commitment: 'fixed', dueDate: DAY, plan: { kind: 'unplanned' }, notes: null, status: 'open', completedAt: null, createdAt: null, updatedAt: null, provenance: DEMO, scope: 'household' },
       ],
     };
     assert.equal(validateAppState(state).ok, true);

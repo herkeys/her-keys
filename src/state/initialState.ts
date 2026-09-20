@@ -24,6 +24,9 @@ export function createEmptyState(timeZone: string): AppState {
     discovery: null,
     actions: [],
     migrationEvidence: [],
+    migrationLineage: [],
+    sourceArtifacts: [],
+    externalReferences: [],
   };
 }
 

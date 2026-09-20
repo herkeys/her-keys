@@ -1,4 +1,5 @@
 import type { ConfidenceLevel } from '../../types/onboarding';
+import type { Provenance } from '../foundation/provenance';
 import { isUserStated, type ProvenanceSource } from './provenance';
 
 export type { ConfidenceLevel };
@@ -57,6 +58,49 @@ export function promoteConfidence(current: ConfidenceLevel, evidence: Confidence
   const earned: ConfidenceLevel = evidence.corroborations >= threshold ? 'likely' : 'possible';
 
   return confidenceRank(earned) > confidenceRank(current) ? earned : current;
+}
+
+/**
+ * THE ROW-LEVEL WRITER (B4-FE01-005).
+ *
+ * Since v4 a confidence can be stored on a row (`provenance.confidence`), so the
+ * promotion boundary needs a form that takes a row's provenance. It is a thin
+ * wrapper: the rules live in `promoteConfidence` and are not restated. A row whose
+ * provenance carries no confidence — a user-stated fact, a starter category, an
+ * unknown legacy row — has nothing to promote and comes back unchanged. That is what
+ * stops `legacy-unknown` (or anything else) from acquiring a level it never earned.
+ *
+ * This and `promoteConfidence` are the ONLY places a stored level may rise.
+ */
+export function promoteProvenance(
+  provenance: Provenance,
+  evidence: { corroborations: number; userConfirmed: boolean }
+): Provenance {
+  if (provenance.confidence === null) return provenance;
+  const confidence = promoteConfidence(provenance.confidence, { source: provenance.producer, ...evidence });
+  return confidence === provenance.confidence ? provenance : { ...provenance, confidence };
+}
+
+/** One piece of evidence for a claim, reduced to what independence depends on. */
+export interface EvidenceSighting {
+  producer: ProvenanceSource;
+  /** The source artifact it came from, when it came from one. */
+  artifactId: string | null;
+  /** The logical day it was observed on. */
+  logicalDate: string;
+}
+
+/**
+ * How many INDEPENDENT observations agree. Corroboration counts only when it is
+ * independent of the claim: three rows produced from one email are one sighting, not
+ * three, and a producer repeating itself on the same day is one sighting too. Two
+ * different days from the same producer are two.
+ */
+export function independentCorroborations(sightings: readonly EvidenceSighting[]): number {
+  const groups = new Set(
+    sightings.map((s) => (s.artifactId !== null ? `artifact:${s.artifactId}` : `${s.producer}:${s.logicalDate}`))
+  );
+  return groups.size;
 }
 
 /**

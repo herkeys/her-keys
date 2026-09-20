@@ -213,7 +213,7 @@ describe('Recovery from unusable stored state', () => {
     const outdated = {
       ...base,
       onboarding: { ...base.onboarding, goalIds: ['calmer-household', 'retired-goal'] },
-      discovery: { id: 'discovery-1', topicId: 'overload', answers: [{ questionId: 'overload-when', optionId: 'no-longer-offered' }], scope: 'personal' },
+      discovery: { id: 'discovery-1', topicId: 'overload', answers: [{ questionId: 'overload-when', optionId: 'no-longer-offered' }], provenance: { producer: 'demo-seed', artifactId: null, confidence: null }, scope: 'personal' },
     };
     const h = harness({ initial: { [STORAGE_KEYS.primary]: stored(outdated) } });
     const snapshot = (await launch(h)).getSnapshot();

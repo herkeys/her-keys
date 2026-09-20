@@ -1,3 +1,4 @@
+import { PROVENANCE_SOURCES, legacyProvenance, carriesConfidence, type Provenance, type ProvenanceSource } from '../foundation/provenance';
 import type { AppState } from '../state';
 import type { SyncEntityKind } from './syncTypes';
 
@@ -48,6 +49,28 @@ const instant = (value: unknown): string | null => {
 const instantOr = (value: unknown, fallback: string): string => instant(value) ?? fallback;
 
 /**
+ * A pulled row's provenance, read from the columns the cloud stores it in.
+ *
+ * It is transported, never reinterpreted: a row arrives meaning exactly what it
+ * meant when it was pushed, so no producer is promoted, demoted or guessed here.
+ * A cloud row that carries no producer (an older cloud schema) is
+ * `legacy-unknown` — explicit and conservative — rather than being assumed to be
+ * hers. `resolve` turns the artifact's cloud uuid into this device's local id.
+ */
+function provenanceFromRow(row: Record<string, unknown>, resolve: LocalIdResolver): Provenance {
+  const producer = row.producer;
+  if (typeof producer !== 'string' || !(PROVENANCE_SOURCES as readonly string[]).includes(producer)) return legacyProvenance();
+  const source = producer as ProvenanceSource;
+  const confidence = row.confidence;
+  return {
+    producer: source,
+    artifactId: resolve(row.source_artifact_id as string),
+    // The schema requires a level exactly for claim-bearing producers; anything else is null, never invented.
+    confidence: carriesConfidence(source) ? ((strOrNull(confidence) as Provenance['confidence']) ?? 'possible') : null,
+  };
+}
+
+/**
  * Apply one cloud row. `resolve` turns a cloud reference into this device's
  * local id — never the raw uuid, because local integrity checking works in
  * local ids and SD4-006 makes them device-relative.
@@ -70,6 +93,7 @@ export function applyCloudRow(
           systemRole: (strOrNull(row.system_role) as never) ?? null,
           status: str(row.status) === 'archived' ? 'archived' : 'active',
           sortOrder: num(row.sort_order),
+          provenance: provenanceFromRow(row, resolve),
           scope: str(row.scope) as never,
         }),
       };
@@ -98,6 +122,7 @@ export function applyCloudRow(
           completedAt: instant(row.completed_at),
           createdAt: instant(row.origin_created_at),
           updatedAt: instant(row.origin_updated_at),
+          provenance: provenanceFromRow(row, resolve),
           scope: str(row.scope) as never,
         }),
       };
@@ -120,7 +145,7 @@ export function applyCloudRow(
           travelMinutesBefore: row.travel_minutes_before === null ? null : num(row.travel_minutes_before),
           travelMinutesAfter: row.travel_minutes_after === null ? null : num(row.travel_minutes_after),
           preparationMinutes: row.preparation_minutes === null ? null : num(row.preparation_minutes),
-          source: str(row.source) as never,
+          provenance: provenanceFromRow(row, resolve),
           createdAt: instant(row.origin_created_at),
           updatedAt: instant(row.origin_updated_at),
           scope: str(row.scope) as never,
@@ -135,6 +160,7 @@ export function applyCloudRow(
           name: str(row.name),
           description: str(row.description),
           categoryId: resolve(row.category_id as string) ?? str(row.category_id),
+          provenance: provenanceFromRow(row, resolve),
           scope: str(row.scope) as never,
         }),
       };
@@ -147,6 +173,7 @@ export function applyCloudRow(
           date: str(row.meal_date),
           title: str(row.title),
           categoryId: resolve(row.category_id as string) ?? str(row.category_id),
+          provenance: provenanceFromRow(row, resolve),
           scope: str(row.scope) as never,
         }),
       };
@@ -161,6 +188,7 @@ export function applyCloudRow(
           dueDate: strOrNull(row.due_date),
           categoryId: resolve(row.category_id as string),
           createdAt: instantOr(row.origin_created_at, str(row.origin_created_at)),
+          provenance: provenanceFromRow(row, resolve),
           scope: 'personal',
         }),
       };
@@ -190,6 +218,7 @@ export function applyCloudRow(
           status: str(row.status) as never,
           decidedAt: instantOr(row.decided_at, str(row.decided_at)),
           completedAt: instant(row.completed_at),
+          provenance: provenanceFromRow(row, resolve),
           scope: 'personal',
         }),
       };
@@ -207,6 +236,7 @@ export function applyCloudRow(
                 optionId: str(answer.option_id),
               }))
             : (state.discovery?.answers ?? []),
+          provenance: provenanceFromRow(row, resolve),
           scope: 'personal',
         },
       };
@@ -220,6 +250,7 @@ export function applyCloudRow(
           struggleIds: Array.isArray(row.struggle_ids) ? (row.struggle_ids as string[]) : [],
           lastStep: (strOrNull(row.last_step) as never) ?? null,
           completedAt: instant(row.completed_at),
+          provenance: provenanceFromRow(row, resolve),
           scope: 'personal',
         },
       };

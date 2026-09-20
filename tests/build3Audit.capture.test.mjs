@@ -202,14 +202,17 @@ describe('Build 3 audit — promoting a Needs Me item never loses it (B3-AUD-002
 describe('Build 3 audit — an edit changes only what she edited (B3-AUD-019)', () => {
   test('editing a task or event keeps its visibility scope, status and history', () => {
     const state = onboardedState();
-    const task = updateTask(state, ctx(), 'task-3', { title: 'Email the teacher', scope: 'household', status: 'archived', id: 'task-evil' });
+    const forged = { producer: 'user-action', artifactId: null, confidence: null };
+    const task = updateTask(state, ctx(), 'task-3', { title: 'Email the teacher', scope: 'household', status: 'archived', id: 'task-evil', provenance: forged });
     const edited = task.tasks.find((t) => t.id === 'task-3');
     assert.deepEqual([edited.title, edited.scope, edited.status], ['Email the teacher', 'child', 'open']);
     assert.ok(!task.tasks.some((t) => t.id === 'task-evil'));
+    assert.equal(edited.provenance.producer, 'demo-seed', 'an edit never rewrites where a task came from');
 
-    const event = updateEvent(state, ctx(), 'evt-1', { title: 'Team call', scope: 'household', source: 'user', status: 'removed' });
+    const event = updateEvent(state, ctx(), 'evt-1', { title: 'Team call', scope: 'household', source: 'user', provenance: forged, status: 'removed' });
     const editedEvent = event.events.find((e) => e.id === 'evt-1');
-    assert.deepEqual([editedEvent.title, editedEvent.scope, editedEvent.source, editedEvent.status], ['Team call', 'professional', 'demo', 'active']);
+    assert.deepEqual([editedEvent.title, editedEvent.scope, editedEvent.provenance.producer, editedEvent.status], ['Team call', 'professional', 'demo-seed', 'active']);
+    assert.equal('source' in editedEvent, false, 'a patched-in legacy flag is not stored');
   });
 
   test('an explicit null still clears a field', () => {

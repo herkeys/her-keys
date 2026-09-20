@@ -28,7 +28,9 @@ describe('Real events', () => {
     assert.equal(after.events.length, 1);
     assert.equal(after.events[0].title, 'Pick up prescription');
     assert.equal(after.events[0].status, 'active');
-    assert.equal(after.events[0].source, 'user');
+    // v4: the stored producer replaces the old `source` flag rather than sitting beside it.
+    assert.equal(after.events[0].provenance.producer, 'user-action');
+    assert.equal('source' in after.events[0], false, 'there is one source of truth for where an event came from');
     assert.equal(after.events[0].createdAt, new Date(ctx().nowMs).toISOString());
     assert.equal(validateAppState(after).ok, true);
   });

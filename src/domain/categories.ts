@@ -1,4 +1,5 @@
 import type { TransitionContext } from './context';
+import { provenanceFor, systemProvenance, userProvenance, type Provenance } from './foundation/provenance';
 import type { AppState, HouseholdCategory, SystemRole, VisibilityScope } from './state';
 
 /**
@@ -23,12 +24,18 @@ const STARTER_CATEGORIES: ReadonlyArray<{ id: string; name: string; systemRole: 
 
 export const MAX_CATEGORY_NAME_LENGTH = 60;
 
-export function starterCategories(householdId: string): HouseholdCategory[] {
+/**
+ * The eight starters arrive with the household, so by default they are
+ * `system-derived`. A demo household passes `demo-seed` instead: the same rows,
+ * a different truth about where they came from.
+ */
+export function starterCategories(householdId: string, provenance: Provenance = systemProvenance()): HouseholdCategory[] {
   return STARTER_CATEGORIES.map((category, index) => ({
     ...category,
     householdId,
     status: 'active',
     sortOrder: index,
+    provenance: { ...provenance },
   }));
 }
 
@@ -62,6 +69,7 @@ export function addCategory(state: AppState, ctx: TransitionContext, input: { na
     systemRole: null,
     status: 'active',
     sortOrder,
+    provenance: provenanceFor(state.origin, userProvenance()),
     scope: input.scope,
   };
   return { ...state, categories: [...state.categories, category] };

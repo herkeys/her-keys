@@ -1,4 +1,5 @@
 import { starterCategories } from '../../domain/categories';
+import { demoProvenance } from '../../domain/foundation/provenance';
 import { addDays, addYears, toInstant, zonedTimeToEpochMs, type LocalDate } from '../../domain/logicalDay';
 import { initialOnboarding } from '../../domain/onboarding';
 import type { AppState, CalendarEvent, Child, HouseholdSystem, MealPlanEntry, Task, VisibilityScope } from '../../domain/state';
@@ -47,7 +48,7 @@ const eventTemplates: EventTemplate[] = [
   { id: 'evt-4', title: 'Dinner', categoryId: category.meals, subjectMemberId: DEMO_USER_ID, dayOffset: 0, startMinutes: at(18, 30), endMinutes: at(19, 15), location: null, commitment: 'flexible', scope: 'household' },
 ];
 
-interface TaskTemplate extends Omit<Task, 'dueDate' | 'plan' | 'status' | 'notes' | 'completedAt' | 'createdAt' | 'updatedAt'> {
+interface TaskTemplate extends Omit<Task, 'dueDate' | 'plan' | 'status' | 'notes' | 'completedAt' | 'createdAt' | 'updatedAt' | 'provenance'> {
   dueDayOffset: number | null;
   timed: { dayOffset: number; startMinutes: number } | null;
 }
@@ -63,7 +64,7 @@ const childTemplates = [
   { id: 'child-2', displayName: 'Theo', age: 5, daysSinceBirthday: 40 },
 ];
 
-const systems: HouseholdSystem[] = [
+const systems: Array<Omit<HouseholdSystem, 'provenance'>> = [
   { id: 'sys-1', name: 'Backpack landing zone', description: 'One basket by the door catches backpacks and shoes before they spread through the house.', categoryId: category.home, scope: 'household' },
   { id: 'sys-2', name: 'Sunday reset', description: '20 minutes each Sunday to reset shared spaces before the week starts.', categoryId: category.home, scope: 'household' },
   { id: 'sys-3', name: 'Bill envelope', description: 'Paper bills get sorted into a single envelope every Sunday instead of scattering across the counter.', categoryId: category.money, scope: 'household' },
@@ -89,7 +90,7 @@ export function materializeDemoState({ anchorDate, timeZone }: { anchorDate: Loc
     travelMinutesBefore: null,
     travelMinutesAfter: null,
     preparationMinutes: null,
-    source: 'demo',
+    provenance: demoProvenance(),
     createdAt: null,
     updatedAt: null,
   }));
@@ -103,6 +104,7 @@ export function materializeDemoState({ anchorDate, timeZone }: { anchorDate: Loc
     completedAt: null,
     createdAt: null,
     updatedAt: null,
+    provenance: demoProvenance(),
   }));
 
   // Birth dates that make each child the scripted age on the anchor day.
@@ -116,6 +118,7 @@ export function materializeDemoState({ anchorDate, timeZone }: { anchorDate: Loc
     ...meal,
     date: addDays(anchorDate, dayOffset),
     categoryId: category.meals,
+    provenance: demoProvenance(),
     scope: 'household',
   }));
 
@@ -124,16 +127,19 @@ export function materializeDemoState({ anchorDate, timeZone }: { anchorDate: Loc
     household: { id: DEMO_HOUSEHOLD_ID, displayName: 'The Ellis Household', scope: 'household' },
     user: { id: DEMO_USER_ID, displayName: 'Maren Ellis', timezone: timeZone, scope: 'personal' },
     children,
-    categories: starterCategories(DEMO_HOUSEHOLD_ID),
+    categories: starterCategories(DEMO_HOUSEHOLD_ID, demoProvenance()),
     events,
     tasks,
-    systems: systems.map((system) => ({ ...system })),
+    systems: systems.map((system) => ({ ...system, provenance: demoProvenance() })),
     meals,
-    onboarding: initialOnboarding(),
+    onboarding: initialOnboarding(demoProvenance()),
     oneMoves: [],
     needsMe: [],
     discovery: null,
     actions: [],
     migrationEvidence: [],
+    migrationLineage: [],
+    sourceArtifacts: [],
+    externalReferences: [],
   };
 }

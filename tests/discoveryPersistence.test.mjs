@@ -18,6 +18,8 @@ describe('Talk It Out persistence', () => {
       id: 'discovery-1',
       topicId: 'overload',
       answers: [{ questionId: 'overload-when', optionId: 'pickup' }],
+      // demoState(): everything in a demo household is part of the rehearsal.
+      provenance: { producer: 'demo-seed', artifactId: null, confidence: null },
       scope: 'personal',
     });
 

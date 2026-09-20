@@ -1,15 +1,18 @@
 import { z } from 'zod';
 import { isLocalDate } from '../domain/logicalDay';
+// Member schemas that did not change between v1 and v2 are reused from the
+// FROZEN v3 copy, not the live module: v4 changes every one of them, and a legacy
+// validator must keep validating what that version actually was.
 import {
-  ChildSchema,
-  DiscoveryRecordSchema,
-  HouseholdCategorySchema,
-  HouseholdSchema,
-  HouseholdSystemSchema,
-  MealPlanEntrySchema,
-  OnboardingSchema,
-  UserSchema,
-} from '../domain/state';
+  ChildSchemaV3 as ChildSchema,
+  DiscoveryRecordSchemaV3 as DiscoveryRecordSchema,
+  HouseholdCategorySchemaV3 as HouseholdCategorySchema,
+  HouseholdSchemaV3 as HouseholdSchema,
+  HouseholdSystemSchemaV3 as HouseholdSystemSchema,
+  MealPlanEntrySchemaV3 as MealPlanEntrySchema,
+  OnboardingSchemaV3 as OnboardingSchema,
+  UserSchemaV3 as UserSchema,
+} from './legacySchemasV3';
 
 /**
  * Schema v1, frozen exactly as it shipped through Build 2.5 — used only to
