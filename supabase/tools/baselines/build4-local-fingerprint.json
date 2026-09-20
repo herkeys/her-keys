@@ -57,5 +57,28 @@
 
   "interlock_precondition_at_apply": { "application_rows": 0, "auth_users": 0 },
 
+  "reporting_correction_2026_09_19": {
+    "defect": "The B4-BACKEND-01 completion report stated 'Nine P2/P3 found and fixed'. That count was not mechanically established: the enumeration mixed implementation defects with test-construction defects and did not resolve whether the two duplicate index declarations counted as one finding or two.",
+    "resolution": "The numeric summary is withdrawn and replaced by the unnumbered enumeration below. No code changed and no backend work was re-run as a result.",
+    "status_unchanged": "B4-BACKEND-01 = PASS",
+    "implementation_defects_found_and_fixed": [
+      "duplicate events_subject_member_idx declaration inherited from the design draft",
+      "duplicate tasks_subject_member_idx declaration inherited from the design draft",
+      "bootstrap_account inserted an account_claims row before the profile it references",
+      "the demo-refusal branch of claim_local_household had the same ordering fault",
+      "a rejected bootstrap result fell through to 'complete', violating the account_claims rejected_reason CHECK",
+      "a resumed in-progress claim was treated as a duplicate instead of resuming, which would have turned ordinary crash recovery into a permanent refusal",
+      "set_one_move_logical_day consulted is_trusted_server_context() from inside a SECURITY DEFINER function, where it is always true, so every live client write silently took the historical-backfill branch",
+      "the action-ledger reason CHECK did not require reason.code to exist, because jsonb_typeof of a missing key is NULL and a CHECK whose result is NULL is satisfied",
+      "the schema-scoped ALTER DEFAULT PRIVILEGES revoke did not suppress the hardwired PUBLIC EXECUTE default; the global FOR ROLE form does"
+    ],
+    "test_construction_defects_found_and_fixed": [
+      "cross-household denial checks resolved local_id 'user-1' inside the attacker session and so matched the attacker's own row, passing for the wrong reason",
+      "an assertion of zero privileges on logical_day, where SELECT is legitimately granted",
+      "a DEFERRABLE grep that matched the comment stating the constraint is NON-DEFERRABLE",
+      "a subject_member_type assertion that depended on a row another test file created"
+    ]
+  },
+
   "atomicity_finding": "The Supabase CLI does NOT wrap a migration file in a transaction. `supabase db reset --local` failed at the LOCK TABLE guard with SQLSTATE 25P01 before any destructive DDL ran. The migration now opens its own transaction (BEGIN first, COMMIT last), and a poisoned-migration test proves a late failure rolls the whole restructuring back."
 }
