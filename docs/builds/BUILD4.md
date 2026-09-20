@@ -27,11 +27,11 @@ Build 3 baseline: `bab9773226e3b81928af04d5a303596b16502710`, 336 / 336 tests, A
 
 - **Authority split.** Supabase is the durable account and shared-household authority. Local durable state remains the offline execution and cache layer. UI components never call Supabase. Screens render from local state and never wait on the network (B4-P0-001, 002).
 - **Persist facts and accepted actions; recompute intelligence.** Daily Load, One Move source logic and Talk It Out stay deterministic. Derived output is never cloud authority (B4-P0-003).
-- **Identity.** Cloud primary identity is server-generated. Local ids are stable, never rewritten and never trusted as cloud keys. A durable `local id <-> cloud id` map, foreign-key translation and idempotent retries are required (B4-P0-004 to 006). The physical Postgres type of the cloud key is **PENDING** (B4-P0-007), resolved by SD4.
+- **Identity.** Cloud primary identity is server-generated. Local ids are stable, never rewritten and never trusted as cloud keys. A durable `local id <-> cloud id` map, foreign-key translation and idempotent retries are required (B4-P0-004 to 006). The physical Postgres type of the cloud key is **still PENDING** (B4-P0-007): SD4 carries a **PROPOSED** resolution (native `uuid`, SD4-001) which the owner has **not** approved.
 - **Demo households never sync** (B4-P0-010).
 - **Membership is privileged.** Ordinary client sync never deletes or removes memberships (B4-P0-019).
 - **Scope-aware access.** `household`: authorized household members. `child`: future child-scope semantics. `personal` and `professional`: owner only. `coparent-shared`: owner only until collaboration is intentionally built (B4-P0-038).
-- **RLS is never weakened for convenience.** Privileged functions are explicit, least-privilege and never rely on default grants (B4-P0-039, 040).
+- **RLS is never weakened for convenience.** Privileged functions are explicit, least-privilege and never rely on default grants (B4-P0-039, 040). B4-P0-040 now has an **owner-approved mechanism**: the three-layer privilege defense (secure default privileges, per-object grants, fingerprint drift detection) resolved as SD4-026 / HR-02 on 2026-09-19.
 - **No secrets in the bundle.** Only the publishable key reaches the client (B4-P0-041).
 
 ## D. Authentication and account authority
@@ -64,7 +64,7 @@ Local screens always render from local durable state. Cloud propagation is async
 - **Server revision is authority.** Every mutation carries a base revision and is accepted only when it matches. A stale mutation is rejected, the authoritative row is pulled, and the losing local intent is kept as explicit evidence. There is no automatic field merge, no timestamp last-write-wins, no general merge engine, and the device clock is never authority (B4-P0-020, 021).
 - No synced entity relies on hard deletion. Semantic tombstones are used, with a durable tombstone added only where an entity would otherwise vanish (B4-P0-024).
 - One Move syncs the persisted logical-day decision (`selected`, `withheld`, `completed`) so a second device on the same day does not silently choose differently (B4-P0-058).
-- Concrete mechanism, pull cursor, tombstone realization, conflict-evidence home and the One Move cloud model are **PENDING** and are designed by SD4 (B4-P0-025 to 028, 059).
+- Concrete mechanism, pull cursor, tombstone realization, conflict-evidence home and the One Move cloud model are **PENDING** and are designed by SD4 (B4-P0-025 to 028, 059). SD4 carries **PROPOSED** resolutions for 026 (change-log cursor), 027 (tombstones) and 028 (local-only conflict evidence); none is owner-approved. **B4-P0-059 is partly settled**: its logical-day and timezone half is **OWNER-APPROVED** via SD4-017 (2026-09-19), while the rest of the One Move cloud model remains PROPOSED.
 
 ## H. RevenueCat identity requirements
 
@@ -99,7 +99,7 @@ Phase numbers follow the original Build 4 execution prompt. The master implement
 | Checkpoint #1 | Architecture checkpoint | **Approved**, subject to the owner addendum |
 | Repo authority repair | Materialize Phase 0 decisions (this file and the checkpoint record) | Written, **uncommitted** |
 | 1 | Repo-owned Supabase baseline (Staging-only) | **PHASE 1 = COMPLETE**. Baseline `20260919230054`, Staging history reconciled, local parity exact |
-| SD4 | Cloud schema design gate | Not started. Blocked until these documents are accepted and Phase 1 completes |
+| SD4 | Cloud schema design gate | **Design complete.** Hostile design quality **PASS** (P0 = 0, P1 = 0). Four owner decisions applied 2026-09-19 (HR-01..HR-04). **Implementation authorization PENDING-OWNER**: 30 PROPOSED + 2 DEFERRED decisions unapproved. Artifacts: `BUILD4_SD4_CLOUD_SCHEMA.md`, `BUILD4_SD4_DELTA_MATRIX.md`, `drafts/BUILD4_SD4_PROPOSED_SCHEMA.sql` (design only, unverified, never executed) |
 | 2 | Local persistence schema v3 | Not started |
 | 3 | Environment configuration | Not started |
 | 4 | Supabase client | Not started |
@@ -127,7 +127,7 @@ Phase numbers follow the original Build 4 execution prompt. The master implement
 1. **Checkpoint #1**: approved.
 2. **Repo authority repair**: owner review of this file and the checkpoint record.
 3. **Phase 1**: owner-executed credentialed CLI steps, then the completion report and owner review.
-4. **SD4**: owner review and explicit authorization before any schema implementation.
+4. **SD4**: owner review and explicit authorization before any schema implementation. HR-01..HR-04 were resolved on 2026-09-19; **this gate remains open** for the remaining implementation authorization package (SD4 section 14).
 5. **Each Staging schema change**: shown before it runs, per phase authorization.
 6. **Checkpoint #2**: before any Production mutation. Exact SQL, Staging evidence, advisors, fingerprints, destructive-change assessment, backup and recovery posture (OD-2), forward-fix plan and expected impact. Nothing changes between approval and apply.
 7. **Push, PR and merge**: only on explicit owner authorization.

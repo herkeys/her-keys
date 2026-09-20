@@ -10,6 +10,7 @@
 | Branch | `build/04-cloud-identity-sync` (local; not pushed) |
 | Checkpoint #1 | Owner **APPROVED**, subject to the owner addendum (section 19) |
 | Phase 1 | **PHASE 1 = COMPLETE** (`docs/builds/BUILD4_PHASE1_COMPLETION.md`), awaiting owner review |
+| SD4 | **Design complete, hostile quality PASS.** Four decisions owner-approved 2026-09-19 (HR-01..HR-04). **Implementation authorization PENDING-OWNER.** See section 18 for which Phase 0 PENDING items SD4 answers, and with what status |
 
 > **Read this first.** Phase 1 baseline capture must complete before SD4 (the cloud schema design gate) can use the repo baseline as database authority. Nothing in this document is a repo-owned database baseline. The catalog observations in section 5 were made by read-only inspection during Phase 0 and Phase 1 discovery. They do not substitute for Phase 1 completion.
 
@@ -421,6 +422,25 @@ Environment and process:
 15. A pure `SELECT` inside `BEGIN` / `ROLLBACK` is used for all read-only remote inspection; deparsed catalog text is stable only with `search_path` pinned.
 
 ## 18. Unresolved and pending decisions
+
+> **SD4 cross-reference (added 2026-09-19).** SD4 has produced answers for most of these. **A PROPOSED SD4 answer does not make a PENDING Phase 0 decision approved.** Only two rows below carry owner approval, and both were approved during SD4, not inherited from Phase 0. Nothing in Phase 0 history is rewritten. Full register: [BUILD4_SD4_CLOUD_SCHEMA.md](BUILD4_SD4_CLOUD_SCHEMA.md) section 2; remaining unapproved items: section 14.
+
+| ID | SD4 answer | SD4 status |
+|---|---|---|
+| B4-P0-007 | Native PostgreSQL `uuid` cloud PKs (SD4-001) | **PROPOSED — NOT owner-approved** |
+| B4-P0-008 | `local_id text`, uniqueness per ownership boundary (SD4-004) | **PROPOSED** |
+| B4-P0-009 | Soft references stored as cloud uuids, reversing the Phase 0 sketch (SD4-007) | **PROPOSED** |
+| B4-P0-026 | `change_log` on `committed_xid` behind an xmin barrier (SD4-012) | **PROPOSED** |
+| B4-P0-027 | Status tombstones, `deleted_at` on discovery, `cleared` on One Move (SD4-014) | **PROPOSED** |
+| B4-P0-028 | Conflict evidence local-only, no cloud table (SD4-015) | **PROPOSED** |
+| B4-P0-034 | `account_claims` is required (SD4-022) | **PROPOSED** |
+| B4-P0-038 | `owner_profile_id` on the five content tables; **not** on `household_members` (SD4-009, SD4-009a) | **OWNER-APPROVED 2026-09-19** (HR-01) — the placement question only |
+| B4-P0-040 | Three-layer privilege defense: secure default privileges, per-object grants, fingerprint drift gate (SD4-026) | **OWNER-APPROVED 2026-09-19** (HR-02) |
+| B4-P0-059 | One Move state machine (SD4-016) and typed targets (SD4-018) | **PROPOSED** |
+| B4-P0-059 | Logical-day authority: `profiles.timezone`, frozen `logical_day` + `timezone_at_decision` (SD4-017) | **OWNER-APPROVED 2026-09-19** (HR-03) |
+| B4-P0-064 | Full proposed schema (`drafts/BUILD4_SD4_PROPOSED_SCHEMA.sql`) | **PROPOSED — design only, never executed** |
+
+The original Phase 0 table follows unchanged.
 
 | ID | Question | Resolved by |
 |---|---|---|
