@@ -2,6 +2,7 @@ import { conversationStarters, discoveryTopics } from '../data/seed/talkItOutScr
 import { advance, createInitialState, createOpeningMessage, openingQuickReplies } from '../features/talk-it-out/engine';
 import type { ClarificationOption, ConversationState, TalkItOutMessage } from '../types';
 import type { TransitionContext } from './context';
+import { classifyConversationOutcome } from './reasoning/conversationBoundary';
 import type { AppState, DiscoveryRecord } from './state';
 
 /**
@@ -57,26 +58,34 @@ export function replayDiscovery(record: DiscoveryRecord | null): DiscoveryReplay
   return { conversation: turn.state, quickReplies: turn.quickReplies, messages };
 }
 
-/** Stores the conversation's structure, or clears it when no topic is open. Unchanged structure writes nothing. */
+/**
+ * Stores the conversation's structure, or clears it when no topic is open.
+ * Unchanged structure writes nothing.
+ *
+ * The decision itself lives in `classifyConversationOutcome`, so whether a
+ * given turn is talk or a household change can be asserted without going
+ * through the store (B4-INGESTION-LOCK section 19).
+ */
 export function applyDiscoveryConversation(state: AppState, ctx: TransitionContext, conversation: ConversationState): AppState {
-  if (conversation.topicId === null) return clearDiscovery(state);
-
-  const answers = conversation.evidence.map(({ questionId, optionId }) => ({ questionId, optionId }));
   const current = state.discovery;
-  const sameTopic = current !== null && current.topicId === conversation.topicId;
-  const sameAnswers =
-    sameTopic &&
-    current.answers.length === answers.length &&
-    current.answers.every((a, i) => a.questionId === answers[i].questionId && a.optionId === answers[i].optionId);
-  if (sameAnswers) return state;
+  const outcome = classifyConversationOutcome(conversation, current);
 
-  const record: DiscoveryRecord = {
-    id: sameTopic ? current.id : ctx.createId('discovery'),
-    topicId: conversation.topicId,
-    answers,
-    scope: 'personal',
-  };
-  return { ...state, discovery: record };
+  switch (outcome.kind) {
+    case 'conversation-only':
+      return state;
+    case 'clear-discovery':
+      return clearDiscovery(state);
+    case 'structured-discovery': {
+      const sameTopic = current !== null && current.topicId === outcome.topicId;
+      const record: DiscoveryRecord = {
+        id: sameTopic ? current.id : ctx.createId('discovery'),
+        topicId: outcome.topicId,
+        answers: outcome.answers,
+        scope: 'personal',
+      };
+      return { ...state, discovery: record };
+    }
+  }
 }
 
 export function clearDiscovery(state: AppState): AppState {
