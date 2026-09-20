@@ -491,3 +491,10 @@ byte-identical. The count did not move, so no routine was added or removed.
 None. No Staging, no Production, no `supabase login`, no `db push`, no
 `db remote commit`, no migration repair, no credential read, no push, no merge.
 Every database touched is a disposable local one on `supabase_db_Her_Keys`.
+
+## Correction commit
+
+`24e9fae7403adaff45ec38743d44a694b7fabf2c` — *fix(build4): preserve one move targets during household claim*.
+Preceded by `59c1e2c0e894718bbc8ec99f52aec9ecb34307b5`, the unrelated reporting
+correction, banked separately so it is not mixed into the migration fix.
+No amend, no rebase, no squash, no push. G1-G4 untouched.
