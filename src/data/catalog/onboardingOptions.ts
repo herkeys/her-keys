@@ -46,3 +46,22 @@ export function isOnboardingOptionId(group: OnboardingGroup, id: string): boolea
 export function onboardingLabels(group: OnboardingGroup, ids: readonly string[]): string[] {
   return onboardingOptions[group].filter((option) => ids.includes(option.id)).map((option) => option.label);
 }
+
+/**
+ * The stable id for a stored answer, accepting either form.
+ *
+ * Answers are stored by id, so an id is what this normally receives. The label
+ * branch exists for one reason: a caller that resolved ids to display text
+ * before handing them on. Matching such a value by label keeps that path
+ * working, but it is a compatibility shim, not an identity — reasoning keys on
+ * the id returned here, so rewording a label can never change a conclusion.
+ */
+export function resolveOnboardingOptionId(group: OnboardingGroup, value: string | undefined): string | null {
+  if (!value) return null;
+
+  const byId = onboardingOptions[group].find((option) => option.id === value);
+  if (byId) return byId.id;
+
+  const byLabel = onboardingOptions[group].find((option) => option.label === value);
+  return byLabel ? byLabel.id : null;
+}

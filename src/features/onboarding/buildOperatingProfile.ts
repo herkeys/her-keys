@@ -1,3 +1,4 @@
+import { resolveOnboardingOptionId } from '../../data/catalog/onboardingOptions';
 import type { OnboardingAnswers, OperatingProfile } from '../../types';
 
 /**
@@ -6,7 +7,10 @@ import type { OnboardingAnswers, OperatingProfile } from '../../types';
  * build would raise these to 'likely' / 'established' as real behavioral
  * evidence accumulates (see HER_KEYS_PRODUCT.md section 15, AI Confidence).
  */
-export function buildOperatingProfile(answers: OnboardingAnswers): OperatingProfile {
+export function buildOperatingProfile(
+  answers: OnboardingAnswers,
+  struggleIds?: readonly string[]
+): OperatingProfile {
   const insights: OperatingProfile['insights'] = [];
 
   if (answers.goals.length > 0) {
@@ -33,25 +37,33 @@ export function buildOperatingProfile(answers: OnboardingAnswers): OperatingProf
     });
   }
 
-  return { insights, stillLearning: describeUnknown(answers) };
+  return { insights, stillLearning: describeUnknown(answers, struggleIds) };
 }
 
-/** Naming the open question is how Her Keys signals it is still forming a view. */
-function describeUnknown(answers: OnboardingAnswers): string {
-  const first = answers.struggles[0];
+/**
+ * Naming the open question is how Her Keys signals it is still forming a view.
+ *
+ * Keyed on the stable option id, never on display text: the wording of a
+ * struggle is presentation and may be rewritten at any time, but which struggle
+ * she picked is identity. `struggleIds` is the authoritative input; the
+ * `answers` fallback resolves a legacy label-shaped value through the catalog
+ * so an older caller still lands on the same id.
+ */
+function describeUnknown(answers: OnboardingAnswers, struggleIds?: readonly string[]): string {
+  const first = struggleIds?.[0] ?? resolveOnboardingOptionId('struggles', answers.struggles[0]);
 
   switch (first) {
-    case 'Financial avoidance':
+    case 'financial-avoidance':
       return 'Whether money feels heavy because of cash flow, or because of the decisions attached to it.';
-    case 'Paperwork piling up':
+    case 'paperwork-piling-up':
       return 'Whether paperwork piles up from lack of time, or from having nowhere to put it.';
-    case 'Overcommitting':
+    case 'overcommitting':
       return 'Whether your days are genuinely overfull, or just packed too tightly together.';
-    case 'Becoming frozen when overloaded':
+    case 'frozen-when-overloaded':
       return 'What usually tips a day from full into frozen.';
-    case 'Last-minute meals':
+    case 'last-minute-meals':
       return 'Whether dinner is a planning problem or an energy problem.';
-    case 'Unrealistic calendars':
+    case 'unrealistic-calendars':
       return 'Whether the calendar is wrong, or the time estimates behind it are.';
     default:
       return 'Which parts of your week actually cost you the most.';

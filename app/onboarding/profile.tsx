@@ -6,8 +6,8 @@ import { buildOperatingProfile } from '../../src/features/onboarding/buildOperat
 import { useOnboarding } from '../../src/store/OnboardingContext';
 
 export default function ProfileResult() {
-  const { answers, recordStep } = useOnboarding();
-  const profile = buildOperatingProfile(answers);
+  const { answers, selected, recordStep } = useOnboarding();
+  const profile = buildOperatingProfile(answers, selected.struggleIds);
 
   return (
     <Screen>
