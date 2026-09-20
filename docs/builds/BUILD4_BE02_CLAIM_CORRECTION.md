@@ -498,3 +498,86 @@ Every database touched is a disposable local one on `supabase_db_Her_Keys`.
 Preceded by `59c1e2c0e894718bbc8ec99f52aec9ecb34307b5`, the unrelated reporting
 correction, banked separately so it is not mixed into the migration fix.
 No amend, no rebase, no squash, no push. G1-G4 untouched.
+
+---
+
+# B4-BACKEND-02 implementation results
+
+| | |
+|---|---|
+| Final HEAD | `4fca9613fb2e2bc04b4c2198a674b0bb3550262b` |
+| Worktree | clean |
+| Backend harness | **281/281** (233 at entry) |
+| App tests | **419/419**, 87 suites (362 at entry) |
+| TypeScript | `tsc --noEmit` clean |
+| Expo Doctor | 20/21 — one **pre-existing** failure, see below |
+| P0 | **0** |
+| P1 | **0** open. The original claim P1 is CLOSED: both branches are green |
+
+## Commits
+
+```
+59c1e2c  docs(build4): withdraw the unsupported P2/P3 defect count
+24e9fae  fix(build4): preserve one move targets during household claim
+11fa05b  docs(build4): record the claim correction commit sha
+c1a2207  feat(build4): remediate legacy catalog one moves into local evidence
+4fca961  feat(build4): connect the app to supabase identity
+```
+
+No amend, no rebase, no squash, no push. G1–G4 untouched.
+
+## What the wave delivered
+
+| Requirement | Where |
+|---|---|
+| One account state boundary | `src/domain/account/authState.ts` — nine states as a reducer |
+| Secure session storage | `secureSession.ts` + `platform/secureStore.ts`, own key, never the household blob |
+| Provider adapters, typed results | `provider.ts`, `platform/appleProvider.ts`, `platform/googleProvider.ts` |
+| Local persistence v3 + v2→v3 migration | `persistence/envelope.ts`, `legacySchemasV2.ts` |
+| Legacy catalog remediation | `migrateV2ToV3` → `AppState.migrationEvidence` |
+| Stable-ID normalization (AMD-01) | `normalizeOnboardingIds` |
+| Bootstrap / claim orchestration | `accountRuntime.ts` |
+| Exact onboarding resume | `onboardingResume` — claim never restarts onboarding |
+| Crash / retry recovery | claim receipt written before the request leaves; same key replays |
+| Cross-account quarantine | `boundOther` + `app/account-conflict.tsx` |
+| Logout and account switching | `signOut` keeps the binding; a second account is quarantined |
+| RevenueCat identity | `identifyRevenueCatAccount(uuid)` before any paywall |
+| State-driven routing | `routeAccess.ts` — account is one more guard condition |
+| Demo isolation | demo is never claimed; the server refuses it independently |
+| Auth-degraded mode | expired or unreachable keychain degrades, never signs out |
+
+## Expo Doctor
+
+**METHOD.** `npx expo-doctor`, then `git show 30d46b7:package.json` for the same
+three ranges at the entry HEAD.
+
+**RAW OUTPUT**
+
+```
+20/21 checks passed. 1 checks failed.
+✖ Check that packages match versions required by installed Expo SDK
+package         expected  found
+expo            ~57.0.24  57.0.22
+expo-constants  ~57.0.19  57.0.18
+expo-router     ~57.0.22  57.0.21
+
+at entry HEAD: {"expo":"~57.0.22","expo-constants":"~57.0.18","expo-router":"~57.0.21"}
+now:           {"expo":"~57.0.22","expo-constants":"~57.0.18","expo-router":"~57.0.21"}
+```
+
+**INTERPRETATION.** The three ranges are byte-identical to the entry HEAD, so
+the failure predates this wave and is unchanged by it. Every package added here
+(`expo-secure-store`, `expo-apple-authentication`, `expo-auth-session`,
+`expo-web-browser`, `expo-crypto`) matches its SDK 57 expectation — none appears
+in the failure list. Left alone deliberately: bumping the router and the SDK
+runtime mid-wave, with no way to smoke-test the running app from here, is the
+riskier of the two options. It is a one-command fix (`npx expo install --check`)
+whenever a device run is available to confirm it.
+
+## Remote command status
+
+None. No Staging, no Production, no `supabase login`, no `db push`, no
+`db remote commit`, no migration repair, no credential read, no push, no merge.
+Every database touched is a disposable local one on `supabase_db_Her_Keys`, and
+the ad-hoc probe databases are now dropped deterministically by the harness at
+every start.
