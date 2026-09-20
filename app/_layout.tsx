@@ -4,6 +4,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { colors } from '../src/design/tokens';
 import { canOpenScreen, isSettled, type RootScreen } from '../src/domain/routeAccess';
 import { RevenueCatProvider } from '../src/monetization/RevenueCatProvider';
+import { AccountProvider, useAccount } from '../src/store/AccountProvider';
 import { AppStateProvider, useStoreSnapshot } from '../src/store/AppStateProvider';
 import { appStore, internalTools } from '../src/store/appStoreInstance';
 import { OnboardingProvider } from '../src/store/OnboardingContext';
@@ -23,7 +24,9 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <RevenueCatProvider>
         <AppStateProvider store={appStore}>
-          <RootNavigator />
+          <AccountProvider>
+            <RootNavigator />
+          </AccountProvider>
         </AppStateProvider>
       </RevenueCatProvider>
     </SafeAreaProvider>
@@ -33,10 +36,12 @@ export default function RootLayout() {
 /**
  * The routing authority. Every root screen is declared inside its own guard
  * from the access table, so a link can't reach the app before onboarding is
- * finished, or onboarding after it.
+ * finished, or onboarding after it — and a device holding another account's
+ * household opens nothing but the conflict screen.
  */
 function RootNavigator() {
   const snapshot = useStoreSnapshot();
+  const account = useAccount();
   const settled = isSettled(snapshot.status);
 
   useEffect(() => {
@@ -50,7 +55,7 @@ function RootNavigator() {
   // is then checked against the guards — nothing is decided, or shown, early.
   if (!settled || !snapshot.state) return null;
 
-  const access = { status: snapshot.status, onboarding: snapshot.state.onboarding, internalTools };
+  const access = { status: snapshot.status, onboarding: snapshot.state.onboarding, internalTools, account: account.state };
   const allow = (screen: RootScreen) => canOpenScreen(screen, access);
 
   return (
@@ -98,6 +103,12 @@ function RootNavigator() {
               </Stack.Protected>
               <Stack.Protected guard={allow('dev-tools')}>
                 <Stack.Screen name="dev-tools" options={{ headerShown: true, title: 'Internal tools' }} />
+              </Stack.Protected>
+              <Stack.Protected guard={allow('sign-in')}>
+                <Stack.Screen name="sign-in" options={{ presentation: 'modal', headerShown: true, title: 'Your account' }} />
+              </Stack.Protected>
+              <Stack.Protected guard={allow('account-conflict')}>
+                <Stack.Screen name="account-conflict" />
               </Stack.Protected>
             </Stack>
           </TalkItOutProvider>

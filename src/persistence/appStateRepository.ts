@@ -1,3 +1,4 @@
+import { UNBOUND_IDENTITY, type IdentityRecord } from '../domain/account/binding';
 import type { AppState } from '../domain/state';
 import { toInstant } from '../domain/logicalDay';
 import { decodeStoredState, encodeStoredState, migrationPlan, type InvalidReason, type MigrationPlan } from './envelope';
@@ -12,12 +13,23 @@ import type { StorageAdapter } from './storageAdapter';
 export interface AppStateRepository {
   loadAppState(): Promise<LoadOutcome>;
   saveAppState(state: AppState, writeSeq: number): Promise<void>;
+  /**
+   * Who this household belongs to, as the repository will write it on the next
+   * save. Held here rather than threaded through every save because the write
+   * queue serializes `(state, seq)` and identity changes far more rarely than
+   * state does.
+   *
+   * Binding is only durable once a save lands, so an account is not treated as
+   * bound until one has: `setIdentity` then `saveAppState`, in that order.
+   */
+  setIdentity(identity: IdentityRecord): void;
+  currentIdentity(): IdentityRecord;
   resetAppState(): Promise<void>;
 }
 
 export type LoadOutcome =
   | { kind: 'empty' }
-  | { kind: 'loaded'; state: AppState; writeSeq: number; migratedFrom: number | null }
+  | { kind: 'loaded'; state: AppState; writeSeq: number; migratedFrom: number | null; identity: IdentityRecord }
   | { kind: 'invalid'; reason: InvalidReason; issues: string[]; quarantined: boolean }
   | { kind: 'future_version'; storedVersion: number; preserved: boolean }
   | { kind: 'read_failed' };
@@ -46,6 +58,7 @@ const preciseNow = () => globalThis.performance?.now() ?? Date.now();
 
 export function createAppStateRepository(options: RepositoryOptions): AppStateRepository {
   const { storage } = options;
+  let identity: IdentityRecord = UNBOUND_IDENTITY;
 
   async function preserveFutureState(raw: string, storedVersion: number): Promise<boolean> {
     try {
@@ -90,7 +103,10 @@ export function createAppStateRepository(options: RepositoryOptions): AppStateRe
       options.onTiming?.('decode', preciseNow() - decodeStarted);
       switch (decoded.kind) {
         case 'valid':
-          return { kind: 'loaded', state: decoded.state, writeSeq: decoded.writeSeq, migratedFrom: decoded.migratedFrom };
+          // Adopt what the blob says before anything account-bound can run, so a
+          // save that happens before the orchestrator speaks cannot drop a binding.
+          identity = decoded.identity;
+          return { kind: 'loaded', state: decoded.state, writeSeq: decoded.writeSeq, migratedFrom: decoded.migratedFrom, identity };
         case 'future_version':
           return { kind: 'future_version', storedVersion: decoded.storedVersion, preserved: await preserveFutureState(raw, decoded.storedVersion) };
         case 'invalid':
@@ -100,7 +116,7 @@ export function createAppStateRepository(options: RepositoryOptions): AppStateRe
 
     async saveAppState(state, writeSeq) {
       const encodeStarted = preciseNow();
-      const encoded = encodeStoredState(state, { appVersion: options.appVersion, savedAt: toInstant(options.now()), writeSeq });
+      const encoded = encodeStoredState(state, { appVersion: options.appVersion, savedAt: toInstant(options.now()), writeSeq, identity });
       options.onTiming?.('encode', preciseNow() - encodeStarted);
 
       const writeStarted = preciseNow();
@@ -108,7 +124,15 @@ export function createAppStateRepository(options: RepositoryOptions): AppStateRe
       options.onTiming?.('write', preciseNow() - writeStarted);
     },
 
+    setIdentity(next) {
+      identity = next;
+    },
+
+    currentIdentity: () => identity,
+
     async resetAppState() {
+      // A reset ends the local household, so it ends the binding with it.
+      identity = UNBOUND_IDENTITY;
       // Diagnostic cleanup is secondary. Do it first so its failure can never
       // delete the canonical household while leaving reset incomplete.
       if (options.quarantineCorruptState) await storage.remove(STORAGE_KEYS.corrupt);

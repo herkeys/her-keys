@@ -42,14 +42,46 @@ export function configureRevenueCat(): ConfigureResult {
 
   try {
     if (__DEV__) void Purchases.setLogLevel(LOG_LEVEL.INFO);
-    // Anonymous App User ID for Build 2.5 — Her Keys has no production
-    // authentication yet. See docs/builds/BUILD25_MONETIZATION_FOUNDATION.md
-    // for the future Purchases.logIn migration once accounts exist.
+    // Still anonymous at configure time. Identity arrives separately through
+    // `identifyRevenueCatAccount`, because the account is not known until she
+    // has signed in and the app may run entirely locally before then.
     Purchases.configure({ apiKey });
     configured = true;
     return { configured: true, reason: 'configured' };
   } catch {
     return { configured: false, reason: 'sdk_error' };
+  }
+}
+
+export type IdentifyResult = 'identified' | 'signed_out' | 'not_configured' | 'sdk_error';
+
+/**
+ * Bind RevenueCat's App User ID to the Supabase account uuid (B4-P0-036).
+ *
+ * The uuid is the ONLY identity RevenueCat is given. No email, no provider
+ * subject, no household id — an entitlement system does not need to know who
+ * she is, only which account is asking.
+ *
+ * Called before any paywall can appear, so a purchase can never be attributed
+ * to an anonymous id and then stranded there. Passing `null` logs out, which
+ * returns RevenueCat to an anonymous id rather than leaving the previous
+ * account's entitlements visible to the next person to sign in on this device.
+ *
+ * Every failure is REPORTED, never thrown. Entitlement is not identity: a
+ * RevenueCat outage must not be able to undo a claim the server has already
+ * committed, so the caller logs this and carries on.
+ */
+export async function identifyRevenueCatAccount(accountId: string | null): Promise<IdentifyResult> {
+  if (!configured) return 'not_configured';
+  try {
+    if (accountId === null) {
+      await Purchases.logOut();
+      return 'signed_out';
+    }
+    await Purchases.logIn(accountId);
+    return 'identified';
+  } catch {
+    return 'sdk_error';
   }
 }
 

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { AppStateSchema, validateAppState, type AppState } from '../domain/state';
+import { IdentityRecordSchema, UNBOUND_IDENTITY, type IdentityRecord } from '../domain/account/binding';
 import { isValidV1AppState } from './legacySchemas';
 import { isValidV2AppState } from './legacySchemasV2';
 import { MAX_WRITE_SEQUENCE } from './writeQueue';
@@ -28,7 +29,7 @@ export type InvalidReason =
   | 'integrity_violation';
 
 export type DecodedState =
-  | { kind: 'valid'; state: AppState; writeSeq: number; migratedFrom: number | null }
+  | { kind: 'valid'; state: AppState; writeSeq: number; migratedFrom: number | null; identity: IdentityRecord }
   | { kind: 'future_version'; storedVersion: number }
   | { kind: 'invalid'; reason: InvalidReason; issues: string[] };
 
@@ -37,6 +38,18 @@ const EnvelopeSchema = z.strictObject({
   appVersion: z.string().min(1).max(40),
   savedAt: z.iso.datetime(),
   writeSeq: z.number().int().min(0).max(MAX_WRITE_SEQUENCE),
+  /**
+   * Which account this household belongs to, if any.
+   *
+   * It sits beside `data` rather than inside it because it describes the blob,
+   * not the household -- the same axis as appVersion and writeSeq -- and because
+   * one atomic write then keeps the binding and the content it refers to
+   * consistent with each other. It holds NO credential: access and refresh
+   * tokens never reach ordinary household storage (B4-P0-013).
+   *
+   * Absent in every v2 blob, which is exactly what an unbound device means.
+   */
+  identity: IdentityRecordSchema.nullish(),
   data: z.unknown().refine((value) => value !== undefined, { message: 'Missing data' }),
 });
 
@@ -231,11 +244,15 @@ export function decodeStoredState(raw: string, plan: MigrationPlan = migrationPl
     state: validated.state,
     writeSeq: envelope.data.writeSeq,
     migratedFrom: version === plan.currentVersion ? null : version,
+    identity: envelope.data.identity ?? UNBOUND_IDENTITY,
   };
 }
 
 /** Refuses to write anything it wouldn't accept back, so a bug can't persist a state that fails the next launch. */
-export function encodeStoredState(state: AppState, meta: { appVersion: string; savedAt: string; writeSeq: number }): string {
+export function encodeStoredState(
+  state: AppState,
+  meta: { appVersion: string; savedAt: string; writeSeq: number; identity?: IdentityRecord }
+): string {
   const validated = validateAppState(state);
   if (!validated.ok) throw new Error(`Refusing to store invalid state (${validated.reason}): ${validated.issues.join('; ')}`);
 
@@ -244,6 +261,7 @@ export function encodeStoredState(state: AppState, meta: { appVersion: string; s
     appVersion: meta.appVersion,
     savedAt: meta.savedAt,
     writeSeq: meta.writeSeq,
+    identity: meta.identity ?? UNBOUND_IDENTITY,
     data: validated.state,
   });
   return JSON.stringify(envelope);

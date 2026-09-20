@@ -3,6 +3,7 @@ import { describe, test } from 'node:test';
 import { AppStateSchema } from '../src/domain/state.ts';
 import { STORAGE_KEYS } from '../src/persistence/appStateRepository.ts';
 import { CURRENT_SCHEMA_VERSION, decodeStoredState, encodeStoredState, migrateStoredState } from '../src/persistence/envelope.ts';
+import { UNBOUND_IDENTITY } from '../src/domain/account/binding.ts';
 import { MAX_WRITE_SEQUENCE } from '../src/persistence/writeQueue.ts';
 import { demoState, harness, onboardedState, rawEnvelope, stored } from './support/fixtures.mjs';
 
@@ -17,9 +18,15 @@ describe('Storage envelope', () => {
     const raw = stored(state, 7);
     const envelope = JSON.parse(raw);
 
-    assert.deepEqual(Object.keys(envelope), ['schemaVersion', 'appVersion', 'savedAt', 'writeSeq', 'data']);
+    assert.deepEqual(Object.keys(envelope), ['schemaVersion', 'appVersion', 'savedAt', 'writeSeq', 'identity', 'data']);
     assert.equal(envelope.schemaVersion, CURRENT_SCHEMA_VERSION);
-    assert.deepEqual(decodeStoredState(raw), { kind: 'valid', state, writeSeq: 7, migratedFrom: null });
+    assert.deepEqual(decodeStoredState(raw), { kind: 'valid', state, writeSeq: 7, migratedFrom: null, identity: UNBOUND_IDENTITY });
+
+    // The household blob never carries a credential, bound or not.
+    const serialized = JSON.stringify(envelope);
+    for (const secret of ['accessToken', 'refreshToken', 'access_token', 'refresh_token']) {
+      assert.ok(!serialized.includes(secret), `${secret} must never appear in household storage`);
+    }
   });
 
   test('the encoder refuses to store a state it would not accept back', () => {

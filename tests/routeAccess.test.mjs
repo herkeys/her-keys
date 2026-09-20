@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import { describe, test } from 'node:test';
 import { initialOnboarding, recordOnboardingStep, toggleOnboardingOption } from '../src/domain/onboarding.ts';
+import { INITIAL_ACCOUNT_STATE } from '../src/domain/account/authState.ts';
 import { canOpenScreen, ROOT_SCREEN_GUARDS, rootScreenForPath } from '../src/domain/routeAccess.ts';
 import { demoState, onboardedState } from './support/fixtures.mjs';
 
@@ -9,7 +10,7 @@ const PROTECTED_LINKS = ['/today', '/life', '/life/kids', '/calendar', '/systems
 const SCREENS = Object.keys(ROOT_SCREEN_GUARDS);
 const unfinished = initialOnboarding();
 const finished = onboardedState().onboarding;
-const access = (onboarding, status = 'ready', internalTools = false) => ({ status, onboarding, internalTools });
+const access = (onboarding, status = 'ready', internalTools = false, account = INITIAL_ACCOUNT_STATE) => ({ status, onboarding, internalTools, account });
 const opens = (path, input) => canOpenScreen(rootScreenForPath(path), input);
 
 describe('Route access', () => {

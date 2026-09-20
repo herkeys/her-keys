@@ -295,9 +295,85 @@ function migrationQuality() {
   check('quality: its timestamp sorts strictly after the baseline', after[0]?.split('_')[0] > '20260919230054', after[0]);
 }
 
+// ------------------------------------------ CLIENT PAYLOAD INTEGRATION ----
+/**
+ * The other half of the contract.
+ *
+ * Every other check here hand-writes its payload, which proves the RPC does
+ * what it says but not that the APP sends what the RPC expects. This builds a
+ * payload with the real `buildClaimPayload` from a real AppState and feeds it
+ * to the real RPC, so a drift between the two sides fails here rather than on
+ * a device.
+ */
+async function clientPayloadIntegration() {
+  console.log('\n  client payload -> real RPC');
+
+  // The same loader the app's own tests use, so this imports the real modules
+  // rather than a copy that could drift from them.
+  await import(`file://${join(REPO, 'tests', 'support', 'register-ts.mjs')}`);
+  const { buildClaimPayload } = await import(`file://${join(REPO, 'src', 'domain', 'account', 'claim.ts')}`);
+  const { createEmptyState } = await import(`file://${join(REPO, 'src', 'state', 'initialState.ts')}`);
+
+  const base = createEmptyState('America/Chicago');
+  const state = {
+    ...base,
+    children: [{ id: 'child-1', displayName: 'Mia', birthDate: '2016-04-02', scope: 'child' }],
+    tasks: [{
+      id: 'task-1', title: 'Return the library books', categoryId: 'cat-home', subjectMemberId: 'child-1',
+      durationMinutes: 15, commitment: 'flexible', dueDate: '2026-09-18', plan: { kind: 'day', date: '2026-09-18' },
+      notes: null, status: 'completed', completedAt: '2026-09-18T18:00:00.000Z',
+      createdAt: '2026-09-17T09:00:00.000Z', updatedAt: '2026-09-18T18:00:00.000Z', scope: 'child',
+    }],
+    needsMe: [{ id: 'needsme-1', title: 'Call the dentist back', status: 'open', dueDate: null, categoryId: null, createdAt: '2026-09-15T08:30:00.000Z', scope: 'personal' }],
+    oneMoves: [
+      { id: 'onemove-2026-09-18', forDate: '2026-09-18', targetId: 'task-1', targetType: 'task', status: 'completed', decidedAt: '2026-09-18T12:00:00.000Z', completedAt: '2026-09-18T18:00:00.000Z', scope: 'personal' },
+      { id: 'onemove-2026-09-17', forDate: '2026-09-17', targetId: 'needsme-1', targetType: 'needsMe', status: 'selected', decidedAt: '2026-09-17T12:00:00.000Z', completedAt: null, scope: 'personal' },
+    ],
+  };
+
+  const payload = buildClaimPayload(state);
+  check('client: buildClaimPayload emits claimPayloadVersion 1', payload.claimPayloadVersion === 1);
+  check('client: the closure carries exactly its two targets and the one required category',
+    payload.tasks.length === 1 && payload.needsMeItems.length === 1 && payload.categories.length === 1 && payload.childMembers.length === 1,
+    `tasks=${payload.tasks.length} needsMe=${payload.needsMeItems.length} categories=${payload.categories.length} children=${payload.childMembers.length}`);
+
+  const uid = '5c000000-0000-4000-8000-00000000000c';
+  psql('b4_env_c', `INSERT INTO auth.users (id, email) VALUES ('${uid}','client@local.test') ON CONFLICT (id) DO NOTHING;`,
+    { label: 'client fixture user' });
+
+  const literal = JSON.stringify(payload).replace(/'/g, "''");
+  const status = scalar('b4_env_c', `
+    BEGIN;
+    SET LOCAL ROLE authenticated;
+    SET LOCAL request.jwt.claims = '{"sub":"${uid}"}';
+    SELECT public.claim_local_household('5c000000-0000-4000-8000-0000000000c1'::uuid,'America/Chicago','${literal}'::jsonb, NULL) ->> 'status';
+    COMMIT;`).split('\n').map((line) => line.trim()).find((line) => line === 'complete' || line === 'rejected');
+  check('client: the real RPC accepts the payload the real client builds', status === 'complete', `status=${status}`);
+
+  const shape = scalar('b4_env_c', `
+    SELECT (SELECT count(*) FROM public.tasks t JOIN public.household_members m ON m.household_id=t.household_id AND m.profile_id='${uid}' AND m.role='owner')
+        || '/' || (SELECT count(*) FROM public.needs_me_items WHERE profile_id='${uid}')
+        || '/' || (SELECT count(*) FROM public.one_move_records WHERE profile_id='${uid}')
+        || '/' || (SELECT count(*) FROM public.one_move_records WHERE profile_id='${uid}' AND target_task_id IS NOT NULL)
+        || '/' || (SELECT count(*) FROM public.one_move_records WHERE profile_id='${uid}' AND target_needs_me_id IS NOT NULL);`);
+  check('client: both historical targets resolved to cloud uuids', shape === '1/1/2/1/1', `tasks/needsMe/moves/taskTargets/needsMeTargets = ${shape}`);
+
+  const preserved = scalar('b4_env_c', `
+    SELECT t.status || '|' || t.subject_member_type || '|' || (t.completed_at = '2026-09-18T18:00:00Z'::timestamptz)::text
+    FROM public.tasks t JOIN public.household_members m ON m.household_id=t.household_id AND m.profile_id='${uid}' AND m.role='owner';`);
+  check('client: the completed child-scoped target arrives completed, typed by the server', preserved === 'completed|child|true', preserved);
+}
+
 // ------------------------------------------------------------------ main ----
 const only = process.argv[2];
 console.log(`Her Keys local backend harness — container ${CONTAINER} (LOCAL ONLY, no remote project is contacted)`);
+
+// Ad-hoc databases from a manual investigation are dropped here, so a probe
+// can never be mistaken later for unexplained local state. Durable evidence
+// belongs in this directory, not in a leftover database.
+for (const stray of ['b4_probe', 'b4_fp_pre', 'b4_fp_post']) {
+  admin(`DROP DATABASE IF EXISTS ${stray} WITH (FORCE);`);
+}
 
 try {
   if (!only) {
@@ -306,6 +382,7 @@ try {
     envB();
   }
   envC(only);
+  if (!only) await clientPayloadIntegration();
 } catch (err) {
   console.error(`\nHARNESS ERROR: ${err.message}`);
   process.exit(1);

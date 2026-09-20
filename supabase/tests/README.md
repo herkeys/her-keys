@@ -142,6 +142,11 @@ concurrent sessions.
 
 ## Cleanup
 
+The runner drops `b4_probe`, `b4_fp_pre` and `b4_fp_post` on every start. Those
+are ad-hoc databases a manual investigation may leave behind; clearing them
+deterministically means a stray database is never mistaken for unexplained
+local state, and durable evidence has to live here instead.
+
 The runner drops and recreates its databases at the start of each run, so state
 never leaks between runs. It does not drop them afterwards, which leaves the
 last run inspectable. `herkeys_test_definer`, a cluster-wide role created by the

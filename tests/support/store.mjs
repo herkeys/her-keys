@@ -1,3 +1,4 @@
+import { INITIAL_ACCOUNT_STATE } from '../../src/domain/account/authState.ts';
 import { completeOnboarding, toggleOnboardingOption } from '../../src/domain/onboarding.ts';
 import { resolveOneMoveForToday } from '../../src/domain/oneMove.ts';
 
@@ -10,7 +11,7 @@ export async function finishOnboarding(store) {
   await store.flush();
 }
 
-export function accessFor(store, internalTools = false) {
+export function accessFor(store, internalTools = false, account = INITIAL_ACCOUNT_STATE) {
   const { status, state } = store.getSnapshot();
-  return { status, onboarding: state?.onboarding ?? null, internalTools };
+  return { status, onboarding: state?.onboarding ?? null, internalTools, account };
 }

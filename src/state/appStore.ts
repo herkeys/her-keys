@@ -5,6 +5,7 @@ import { deviceTimeZone, logicalDateAt, type LocalDate } from '../domain/logical
 import { resolveOneMoveForToday } from '../domain/oneMove';
 import type { HydrationStatus } from '../domain/routeAccess';
 import { validateAppState, type AppState } from '../domain/state';
+import type { IdentityRecord } from '../domain/account/binding';
 import type { AppStateRepository, LoadOutcome } from '../persistence/appStateRepository';
 import type { InvalidReason } from '../persistence/envelope';
 import { createWriteQueue } from '../persistence/writeQueue';
@@ -48,7 +49,8 @@ export type StoreDiagnostic =
   | { type: 'saved'; seq: number; ms: number }
   | { type: 'recovered'; reason: RecoveryReason; quarantined: boolean }
   | { type: 'repaired'; repairs: string[] }
-  | { type: 'persistence_degraded' };
+  | { type: 'persistence_degraded' }
+  | { type: 'identity_saved' };
 
 export interface AppStore {
   getSnapshot(): StoreSnapshot;
@@ -71,6 +73,17 @@ export interface AppStore {
   flush(): Promise<void>;
   /** Stop writing for the rest of the session (used after simulating stored-state damage). */
   suspendPersistence(): void;
+
+  /** Which account this household belongs to, as recorded on disk. */
+  currentIdentity(): IdentityRecord;
+  /** Stage a new binding. It is not durable until `saveIdentity` resolves. */
+  setIdentity(identity: IdentityRecord): void;
+  /**
+   * Write the staged identity together with the current household, in one
+   * envelope. Resolving is what makes a binding real: the account runtime does
+   * not report `accountBound` until this has.
+   */
+  saveIdentity(): Promise<void>;
 }
 
 export interface AppStoreOptions {
@@ -309,6 +322,30 @@ export function createAppStore(options: AppStoreOptions): AppStore {
       const next = resolveOneMoveForToday(state, contextFor(current));
       publish({ today: current, state: next });
       if (next !== state) persist(next);
+    },
+
+    currentIdentity: () => options.repository.currentIdentity(),
+
+    setIdentity(identity) {
+      options.repository.setIdentity(identity);
+    },
+
+    saveIdentity() {
+      // On the commit chain, so a binding write cannot interleave with a
+      // household commit and lose one of them.
+      return inTurn(async () => {
+        const state = snapshot.state;
+        if (state === null) throw new Error('Cannot record an account binding before hydration finished.');
+        if (snapshot.persistence === 'disabled') {
+          throw new Error('This session is memory-only, so an account binding cannot be made durable.');
+        }
+        // Goes through the ordinary write path so the binding is sequenced
+        // with household writes rather than racing them.
+        persist(state);
+        await queue.flush();
+        if (queue.status().degraded) throw new Error('The account binding could not be written to storage.');
+        report({ type: 'identity_saved' });
+      });
     },
 
     reset() {
