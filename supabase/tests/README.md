@@ -96,6 +96,11 @@ SET LOCAL request.jwt.claims = '{"sub":"11111111-1111-4111-8111-111111111111"}';
 ROLLBACK;
 ```
 
+**Fixture keyword presence is not coverage.** A B4-BACKEND-01 claim test looked
+like it exercised a targeted historical One Move insert; it actually landed on an
+existing row and took the conflict branch, so the insert path was never tested at
+all. Assert the branch or outcome, not the presence of a word in a fixture.
+
 `herkeys_test.test_denied('<sql>')` returns true when a statement is refused,
 which is how denial cases are asserted without aborting the file.
 
@@ -123,6 +128,7 @@ because any file can be run alone.
 | `50-privileges.sql` | three-layer PUBLIC/anon posture, load-bearing grants, platform untouched |
 | `60-trusted-context.sql` | NHR-06 attacks on `is_trusted_server_context()` |
 | `70-claim-bootstrap.sql` | bootstrap, claim, idempotent retry, demo refusal, conflict evidence |
+| `72-claim-closure.sql` | B4-BE02-OR-001 dependency closure: targeted historical One Moves, child/category closure, server-enforced boundedness, retry identity, divergent-retry refusal, rollback census |
 | `80-revision-cas.sql` | optimistic concurrency; revision is not the cursor |
 | `90-change-cursor.sql` | change_log, committed_xid, snapshot barrier |
 | `92-one-move.sql` | logical day server-derived and frozen, typed targets, uniqueness |

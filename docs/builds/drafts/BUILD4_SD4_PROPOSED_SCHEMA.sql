@@ -2207,6 +2207,10 @@ SELECT private.assert_app_schema_secured();
 --     Starter local ids are deterministic and need no reconciliation: a pristine
 --     install always has household-1, user-1 and cat-kids..cat-coparenting.
 --
+--   ANNOTATION ONLY (2026-09-20), design content unchanged: the implemented
+--   claim payload shape and its dependency-closure rule are recorded in
+--   B4-BE02-OR-001 / B4-BE02-OR-002, docs/builds/BUILD4_BE02_CLAIM_CORRECTION.md.
+--
 --   public.claim_local_household(
 --     p_claim_key uuid, p_timezone text, p_device_id uuid, p_payload jsonb
 --   ) RETURNS jsonb

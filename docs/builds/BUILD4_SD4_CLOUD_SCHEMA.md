@@ -2112,3 +2112,25 @@ Re-run after the four closures, in all four directions the owner specified.
 **Tier counts unchanged: T1 = 7 · T2 = 20 · T3 = 3 · total 30.** No tier conflict to report.
 
 **Deletion cross-register linkage (addendum N).** The T3 decision whose rationale reads *"needed at the deletion phase"* is **SD4-030** (mandatory purge order). It depends explicitly on **B4-P0-049** (deletion mechanism, **PENDING** under its own authority). SD4 tier classification does **not** decide B4-P0-049, and a later B4-P0-049 decision must not silently change SD4-030 without reconciliation; at final authorization the two must be dispositionally consistent. This linkage does **not** make SD4-030 implementation-blocking now, because its mechanism (`private.purge_account`) exists in the draft only as a signature, not as executable DDL.
+
+---
+
+## Annotation only — implementation cross-reference (added 2026-09-20)
+
+**SD4 is CLOSED. Nothing above is reopened, and no decision content is altered.**
+This note exists so a reader of the closed proposal is not left with a stale
+picture of what the claim RPC actually carries.
+
+The RPC contract in §10 of `drafts/BUILD4_SD4_PROPOSED_SCHEMA.sql` specifies
+`p_payload` as carrying **local content only** and designs bodies nowhere. The
+first implementation carried One Move records and nothing else, which made any
+real household with a targeted One Move unclaimable. The implemented claim
+dependency closure — and the `claimPayloadVersion: 1` payload shape — are
+recorded in:
+
+- **B4-BE02-OR-001** — CLAIM-ONE-MOVE-DEPENDENCY-CLOSURE
+- **B4-BE02-OR-002** — LEGACY-REAL-CATALOG-ONE-MOVE-REMEDIATION
+
+both in `docs/builds/BUILD4_BE02_CLAIM_CORRECTION.md`. They are
+implementation-level corrections satisfying requirements SD4 already approved,
+not new proposals.

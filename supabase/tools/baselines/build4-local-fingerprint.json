@@ -80,5 +80,57 @@
     ]
   },
 
+  "current_local_gating_digest": "0fc7b9bf380faaf9fa20b4859e8adf6d",
+  "current_local_fact_count": 1294,
+  "digest_history": "actual_local_gating_digest above is the PRE-CORRECTION digest captured at G4 and is kept as history, not overwritten. current_local_gating_digest is the digest of the repository as it stands now, after B4-BE02-OR-001.",
+
+  "b4_be02_or_001_correction": {
+    "what": "Forward correction to the shipping migration: public.claim_local_household now ingests the minimum transitive dependency closure of the historical One Move records being claimed. See docs/builds/BUILD4_BE02_CLAIM_CORRECTION.md.",
+    "authorized_by": "Owner resolution B4-BE02-OR-001 (bounded Option A) and its addendum, 2026-09-20. The migration had never been applied remotely, so a forward local correction was authorized. SD4 remains CLOSED and no SD4 decision row was created.",
+    "baseline_migration_sha256_unchanged": "8bc38d66fcffbb9fa83502329bd4738a53a8446dd5ce89327013751872f8f16f",
+    "shipping_migration_sha256": {
+      "convention": "sha256 of the WORKING-TREE file, which is CRLF on this machine (core.autocrlf=true, no .gitattributes). The git blob is LF-normalized and hashes differently; the working-tree value is the authoritative one for a later Staging preflight.",
+      "pre_b4_be02_or_001": "44603a279325514c27b55fe9a5875906e275d3757ca167230f62dcebbb08a935",
+      "current": "9feac67283896d310ed4239776dcd10f3d624cc57be742683e8fa5de35e06b86",
+      "pre_hash_reverified": "The committed G2 blob, converted back to CRLF, reproduces 44603a27... exactly. The pre-correction hash and the hashing convention are both confirmed rather than asserted."
+    },
+    "fingerprint": {
+      "pre_correction_digest": "c70ee89ba3e8bf67155cf7cadfa42b81",
+      "post_correction_digest": "0fc7b9bf380faaf9fa20b4859e8adf6d",
+      "fact_count_before": 1294,
+      "fact_count_after": 1294,
+      "result_rows": 17,
+      "dimensions_changed": 1,
+      "unexplained_differences": 0,
+      "changed": [
+        {
+          "dimension": "functions",
+          "count_before": 19,
+          "count_after": 19,
+          "digest_before": "4659d82b89ba1525239ef5e35fc0c75d",
+          "digest_after": "619edaa84036cd31cfd7914f2f20afb7",
+          "classification": "EXPLAINED-AUTHORIZED",
+          "governing_authority": "B4-BE02-OR-001 (bounded Option A)",
+          "method": "Two disposable local databases built from the SAME auth stub and baseline -- one with the committed G2 migration normalized back to CRLF, one with the corrected file -- then a diff of the locked tool's functions-dimension line for every routine in public and private.",
+          "raw_output": [
+            "11c11",
+            "< public.claim_local_household(p_claim_key uuid, p_timezone text, p_payload jsonb, p_device_id uuid)|body_md5=204c8021a8b6d3c9a6259da952e18dc5",
+            "---",
+            "> public.claim_local_household(p_claim_key uuid, p_timezone text, p_payload jsonb, p_device_id uuid)|body_md5=9ee5d8e8115f8251d1b056d1a683e5a3"
+          ],
+          "interpretation": "Exactly one routine line differs, and only in body_md5. Signature, return type, language, kind, security mode, volatility, leakproof, strict, parallel, config and owner are unchanged, and the other 18 routines are byte-identical. The function count did not move, so no routine was added or removed."
+        }
+      ],
+      "unchanged": "The other 16 dimensions are byte-identical to the pre-correction capture: schemas, relations, columns, constraints, indexes, triggers, policies, types, info.event_triggers, info.extensions, and every privilege dimension (relations, columns, functions, effective, schemas, default_acl). Relation topology, RLS and the privilege posture were not touched -- extracted, not assumed.",
+      "tool_hashes_unchanged": {
+        "supabase/tools/schema-lines.sql": "1b159be53544cabf94d0893ac728561c9d6df7d8c23a599e29d8099ff7945a6b",
+        "supabase/tools/schema-fingerprint.mjs": "5ba8c323f4f7e678d3a89da6de806f1f1315e95f073ac6e5769239772d2a1379"
+      },
+      "capture_method": "supabase db reset --local, then the UNMODIFIED locked Phase 1 tool executed read-only via psql against the local `postgres` database. Same method as the pre-correction capture."
+    },
+    "backend_harness": { "checks_before": 233, "checks_after": 276, "new": 43, "removed": 0, "failures": 0 },
+    "test_construction_defect_recorded": "B4-BACKEND-01's claim suite had no insert-reaching historical One Move with status selected or completed. Its two withheld payloads were the only ones to reach the INSERT; its single selected payload landed on an existing logical_day and took the conflict-evidence branch. Insert-reaching non-withheld cases: 0. The old claim-suite PASS is therefore not evidence for targeted historical insertion. This is the fifth test-construction defect, alongside the four listed above."
+  },
+
   "atomicity_finding": "The Supabase CLI does NOT wrap a migration file in a transaction. `supabase db reset --local` failed at the LOCK TABLE guard with SQLSTATE 25P01 before any destructive DDL ran. The migration now opens its own transaction (BEGIN first, COMMIT last), and a poisoned-migration test proves a late failure rolls the whole restructuring back."
 }
