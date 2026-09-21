@@ -1,5 +1,5 @@
 import { parseLocalDate, wallClockMinutesAt, weekdayOf, type LocalDate } from '../../domain/logicalDay';
-import type { HomeItem, HomeSectionKey, RecurrenceFact } from './model/types';
+import type { HomeItem, HomeSectionKey, RecurrenceFact, ResolutionState, UnknownFact } from './model/types';
 import type { HomeRefusal } from './model/mutations';
 
 /**
@@ -352,6 +352,96 @@ export const spoken = (text: string): string =>
   text
     .replace(/(\d{1,2}:\d{2} [AP]M)–(\d{1,2}:\d{2} [AP]M)/g, '$1 to $2')
     .replace(/\s[—–]\s/g, ', ');
+
+// ----------------------------------------------------------------------------------------------------------------- detail
+
+export const KIND_LABEL: Record<HomeItem['canonicalKind'], string> = { task: 'Task', event: 'Visit', system: 'Routine' };
+
+/** Where the item stands, in words that claim no more than the record does. */
+export const RESOLUTION_PHRASE: Record<ResolutionState, string> = {
+  unresolved: 'Not marked done',
+  marked_done: 'Marked done',
+  set_aside: 'Removed',
+  scheduled: 'Scheduled',
+  past_visit: 'The time has passed',
+  removed_visit: 'Removed',
+  not_applicable: 'A routine',
+};
+
+/**
+ * What Her Keys does NOT know about an item, as a plain phrase under "What Her Keys doesn’t know". Every one of these is a
+ * statement of not-knowing, which is the only place a word like "fixed" or "verified" may appear.
+ */
+export const UNKNOWN_PHRASE: Record<UnknownFact, string> = {
+  duration_unrecorded: 'How long it takes isn’t recorded',
+  duration_default_estimate: 'How long it takes is a planning estimate, not from you',
+  duration_inferred_estimate: 'How long it takes was estimated by Her Keys',
+  no_completion_recorded: 'No completion is recorded',
+  condition_not_verified: 'Whether the problem is actually fixed',
+  visit_outcome_unknown: 'Whether the visit happened, and what came of it',
+  next_date_not_derivable: 'The next date, because it repeats after each time it’s done',
+  no_due_date: 'When it’s due',
+  provider_not_verified: 'Who’s qualified for this',
+};
+
+export type FactGroup = 'attention' | 'when' | 'who' | 'needs' | 'time' | 'repeat' | 'done' | 'unknown';
+
+export const GROUP_LABEL: Record<FactGroup, string> = {
+  attention: 'Needs attention',
+  when: 'When',
+  who: 'Who has it',
+  needs: 'Needs first',
+  time: 'Time it takes',
+  repeat: 'Repeats',
+  done: 'Last done',
+  unknown: 'Not checked',
+};
+
+export function factGroup(code: string): FactGroup {
+  if (code.startsWith('attention_')) return 'attention';
+  if (code.startsWith('due_') || code.startsWith('planned_') || code.startsWith('visit_') || code === 'no_due_date') return code === 'visit_outcome_unknown' ? 'unknown' : 'when';
+  if (code.startsWith('coverage_')) return 'who';
+  if (code.startsWith('dependency_')) return 'needs';
+  if (code.startsWith('duration_')) return 'time';
+  if (code.startsWith('repeat_') || code === 'next_expected') return 'repeat';
+  if (code === 'last_done' || code === 'no_completion_recorded') return 'done';
+  return 'unknown';
+}
+
+export interface DetailCopy {
+  kind: string;
+  status: string;
+  groups: Array<{ group: FactGroup; label: string; lines: string[] }>;
+  /** Plain statements of what is not known, from the item's explicit unknown facts. */
+  notKnown: string[];
+  notes: string | null;
+  location: string | null;
+}
+
+const GROUP_ORDER: FactGroup[] = ['attention', 'when', 'needs', 'who', 'time', 'repeat', 'done', 'unknown'];
+
+/**
+ * The detail screen's rows, from the SAME facts as the hub row. A group with no fact says what its absence means — "Nobody has
+ * been asked", "No repeat set" — and never that the state is fine.
+ */
+export function describeDetail(item: HomeItem, context: CopyContext): DetailCopy {
+  const row = describeItem(item, context);
+  const groups = new Map<FactGroup, string[]>();
+  for (const fact of row.facts) {
+    const group = factGroup(fact.code);
+    groups.set(group, [...(groups.get(group) ?? []), fact.text]);
+  }
+  if (item.canonicalKind !== 'system' && !groups.has('who') && item.responsibility.coverage === 'not_delegated') groups.set('who', ['Nobody has been asked']);
+  if (item.canonicalKind === 'task' && item.recurrence.state === 'none') groups.set('repeat', ['No repeat set']);
+  return {
+    kind: KIND_LABEL[item.canonicalKind],
+    status: RESOLUTION_PHRASE[item.resolutionState],
+    groups: GROUP_ORDER.filter((g) => g !== 'unknown' && groups.has(g)).map((g) => ({ group: g, label: GROUP_LABEL[g], lines: groups.get(g) ?? [] })),
+    notKnown: item.unknownFacts.map((code) => UNKNOWN_PHRASE[code]),
+    notes: item.notes,
+    location: item.location,
+  };
+}
 
 /** Words Home may never ASSERT. They may appear only in a fact whose code is in `NOT_A_CLAIM`. */
 export const NEVER_ASSERTED = /\b(fixed|repaired|safe|safely|verified|resolved|handled|all clear|all set|caught up|nothing needs attention|nothing to worry|never done|no problems?|is fine|are fine)\b/i;

@@ -39,8 +39,10 @@ const MUTANTS = [
     file: `${M}homeContext.ts`, from: "return category.status === 'active' ? { kind: 'active', category } : { kind: 'archived', category };", to: "return category.status === 'active' ? { kind: 'active', category } : { kind: 'missing' };", tests: [...CONTEXT, ...VIEW] },
 
   // ---- required 3: DURATION PROVENANCE ---------------------------------------------------------------------------------------
-  { id: 'H7', required: '3 DURATION', what: 'a defaulted duration is recorded as user-provided at creation',
-    file: `${M}mutations.ts`, from: "    ...(draft.durationMinutes === undefined ? {} : { durationMinutes: draft.durationMinutes, durationSource: 'user' as const }),", to: "    durationSource: 'user' as const,\n    ...(draft.durationMinutes === undefined ? {} : { durationMinutes: draft.durationMinutes }),", tests: MUT },
+  // (An earlier form of H7 only forced `durationSource: 'user'` and SURVIVED: it was an EQUIVALENT mutant, because the shared addTask itself
+  // ignores a supplied source when no number is given. This is the realistic defect: Home pre-fills the planning default and calls it hers.)
+  { id: 'H7', required: '3 DURATION', what: 'Home pre-fills the planning default (15) and records it as user-provided at creation',
+    file: `${M}mutations.ts`, from: "    ...(draft.durationMinutes === undefined ? {} : { durationMinutes: draft.durationMinutes, durationSource: 'user' as const }),", to: "    durationMinutes: draft.durationMinutes ?? 15,\n    durationSource: 'user' as const,", tests: MUT },
   { id: 'H8', required: '3 DURATION', what: 'an edit that never touched duration upgrades a default (or unknown) source to user-provided',
     file: `${M}mutations.ts`, from: "const durationPatch = edit.durationMinutes === undefined ? {} : { durationMinutes: edit.durationMinutes, durationSource: durationSourceForSave({ touched: true, existing: task }) };", to: "const durationPatch = { durationSource: 'user' as const, ...(edit.durationMinutes === undefined ? {} : { durationMinutes: edit.durationMinutes }) };", tests: MUT },
   { id: 'H9', required: '3 DURATION', what: 'the copy states a planning default as if she had said it',
