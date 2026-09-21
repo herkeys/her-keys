@@ -1,3 +1,4 @@
+import { intentLifecycle } from '../../../domain/authorization';
 import type { ContentRefKind } from '../../../domain/foundation/typedRef';
 import type { LocalDate } from '../../../domain/logicalDay';
 import type { AppState } from '../../../domain/state';
@@ -61,6 +62,8 @@ function actionEvidenceOf(state: AppState, systemId: string): ActionEvidenceView
       return {
         intentId: intent.id,
         category: intent.category,
+        stage: intentLifecycle(state, intent.id)?.stage ?? 'proposed',
+        latestOutcome: outcomes.length === 0 ? null : outcomes[outcomes.length - 1].kind,
         decision: withdrawn ? 'withdrawn' : (answered?.decision as 'approved' | 'declined' | undefined) ?? null,
         decisionBasis: answered?.basis ?? null,
         attempts: executions.map((e) => ({ attempt: e.attempt, result: e.result, attemptedAt: e.attemptedAt })),

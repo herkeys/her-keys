@@ -404,6 +404,8 @@ describe('SCENARIO AF — execution / outcome claim truth', () => {
     const first = failed.actionEvidence[0];
     assert.equal(first.decision, 'approved');
     assert.deepEqual(first.attempts.map((a) => a.result), ['failed'], 'an attempt that failed is recorded as failed — not as done');
+    assert.deepEqual([first.stage, first.latestOutcome], ['failed', null], 'the foundation derives the stage: a failed attempt is never presented as succeeded');
+    assert.equal(failed.actionEvidence[1].stage, 'proposed', 'and an unanswered proposal is only a proposal');
     assert.deepEqual(first.outcomes, [], 'no outcome was observed, so none is claimed');
     assert.equal(failed.actionEvidence[1].decision, null, 'a proposal she has not answered is only a proposal');
     assert.deepEqual(failed.actionEvidence[1].attempts, [], 'and nothing was attempted for it');
@@ -419,6 +421,7 @@ describe('SCENARIO AF — execution / outcome claim truth', () => {
     const ok = detailOf(done, 'sys-1').actionEvidence[0];
     assert.deepEqual(ok.attempts.map((a) => a.result), ['succeeded']);
     assert.deepEqual(ok.outcomes.map((o) => o.kind), ['verified']);
+    assert.deepEqual([ok.stage, ok.latestOutcome], ['succeeded', 'verified']);
     assertEvidence('AF-execution-claims', { scenario: 'AF.2', failedAttempt: evidenceOfDetail(failed).system.actionEvidence, succeededAndVerified: evidenceOfDetail(detailOf(done, 'sys-1')).system.actionEvidence });
   });
 });

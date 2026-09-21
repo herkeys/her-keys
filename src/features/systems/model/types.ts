@@ -1,3 +1,5 @@
+import type { IntentStage } from '../../../domain/authorization';
+import type { OutcomeKind } from '../../../domain/foundation/authorization';
 import type { ConfidenceLevel, ProvenanceSource } from '../../../domain/foundation/provenance';
 import type { ResponsibilityState } from '../../../domain/foundation/responsibility';
 import type { ContentRefKind } from '../../../domain/foundation/typedRef';
@@ -113,6 +115,10 @@ export interface RefView {
 export interface ActionEvidenceView {
   intentId: string;
   category: string;
+  /** Where the action stands, from the foundation's one derivation (`intentLifecycle`) — never computed here. */
+  stage: IntentStage;
+  /** The latest thing observed AFTER an execution, or null when nothing was observed. */
+  latestOutcome: OutcomeKind | null;
   /** Her decision on the proposal, or null while it is unanswered. */
   decision: 'approved' | 'declined' | 'withdrawn' | null;
   decisionBasis: 'explicit' | 'standing_authority' | null;
