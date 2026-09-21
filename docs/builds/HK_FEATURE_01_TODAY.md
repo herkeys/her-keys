@@ -468,3 +468,46 @@ decision, document options, request an owner decision.
 | D-05 | Whether "Approve" belongs on Today for a proposed intent, given no executor exists | Only as an explicit, confirmed decision through the existing `decideIntent`; the copy never promises it will run. Decision recorded, semantics unchanged. | 3 agency, 1 truth |
 
 **Owner-decision requests:** none open.
+
+## 10. Owner visual evidence (Addendum §AD)
+
+Captured from the running app on the `HerKeys_Runtime` Android emulator (Pixel-class, 1344×2992) in Expo Go, against
+the real Today components. These are for owner judgment of hierarchy, calmness, density, tone and progressive
+disclosure. They are **not** acceptance evidence — the mechanical tests are (§6, §11).
+
+| Scenario | Screenshots (`docs/builds/hk-feature-01-today/after/`) |
+|---|---|
+| A — ordinary day | `a-ordinary-1-first-glance.png`, `a-ordinary-2-why-expanded.png` |
+| B — overloaded day | `b-overloaded-1-first-glance.png`, `b-overloaded-2-expanded.png` |
+| C — delegation risk *(bonus)* | `c-delegation-risk.png` |
+| D — nearly empty day | `d-nearly-empty.png` |
+| E — uncertain inference | `e-uncertain-1-first-glance.png`, `e-uncertain-2-one-move-badge.png` |
+| Before (inherited, K9) | `docs/builds/hk-feature-01-today/before/t0-today-k9.png` |
+
+**How they were made — stated so nothing is assumed.** No gallery was added and nothing was committed for it. A
+*temporary, untracked* dev route built each scenario with the same domain operations the tests use, committed the state
+to the local store (data mode `empty` through a gitignored `.env`), and rendered the real `TodayBriefing` at a
+**pinned clock time** (A 08:00, B and C 14:00, D and E 09:00) on the emulator's own calendar day, so the date label in
+the shots is the emulator's date, not the tests'. The route and the `.env` were deleted afterwards (`git status` is clean
+of both); Metro was stopped and `adb reverse` removed. The emulator's stored household on that dedicated scratch AVD was
+replaced by the scenario state. Expanded states were reached by real taps (`adb input`), not by a special mode.
+
+**What the shots show** (each claim is also a test): the household-day label; one clay action on the first screen where
+the inherited baseline had two; a bounded "What matters" list; the One Move with "See why" collapsed and then open
+(reasons → what "I did it" does → evidence one level down); B's neutral-ink meter labelled "Full" in amber, the preserved
+decision card with its reasons and actions, a specific "2 days overdue" row, and the withheld move named as an
+observation; D with no meter, no empty module and no capacity drama; E's `POSSIBLE — Her Keys inferred this` on the
+inferred task, nothing on the stated one, `LIKELY — From an external source` on the imported event, and C's unanswered
+handoff with only the two actions that exist.
+
+**Observations offered for the owner's eye (not changed, not hidden):**
+1. *Weight of the ghost "Open" button on attention rows.* With two due-today rows (E) the card carries two "Open"
+   buttons. Making the whole row the target (a `›` as `StatusList` does) would be quieter, at the cost of a less explicit
+   affordance and a more careful accessible label; left explicit for now.
+2. *Two "NEEDS YOU" cards in B.* The preserved decision card and the attention card both carry the tag. They are different
+   things (a decision, and an overdue item) but the repetition is visible.
+3. *Vertical rhythm of the quiet rows.* "See why", "Everything today" and "Also checked" each sit on a 44pt row plus the
+   24pt block gap; the lower half of A reads a little airy. That is the cost of the accessible target.
+4. *The One Move and an attention row can name the same task* (E: it is due today *and* it is the recommendation). The
+   attention row says the fact and its source; the card says the action. `What matters` de-duplicates against both.
+5. *The time is pinned, the day is not:* the label is the emulator's date.
