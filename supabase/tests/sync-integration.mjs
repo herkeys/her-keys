@@ -607,7 +607,11 @@ async function journeyOneMoveAndLedger(check, m, accountId, psql) {
   a.enqueue('task', 'task-move', 'create');
   await a.coordinator.request('localMutation');
 
-  const today = new Date().toISOString().slice(0, 10);
+  // The household's logical day is America/Chicago local time — the server
+  // owns logical_day from the timezone at decision, so "today" must be
+  // computed in that timezone, not UTC (between 00:00 and 06:00 UTC the two
+  // days differ, and this check failed there through no product change).
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: TZ, dateStyle: 'short' }).format(new Date());
   a.setState({
     ...a.state(),
     oneMoves: [{
