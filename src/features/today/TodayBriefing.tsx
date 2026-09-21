@@ -84,6 +84,7 @@ function renderSection(key: SectionKey, view: TodayReady, completeOneMove: () =>
             {
               key: 'upcoming',
               text: view.upcoming.statement,
+              source: view.upcoming.source,
               onPress: view.upcoming.route ? () => router.push(view.upcoming!.route!) : undefined,
               hint: view.upcoming.route ? 'Opens the thing to do first' : undefined,
             },

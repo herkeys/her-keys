@@ -4,6 +4,15 @@ import { spacing } from '../../design/tokens';
 import type { SourceLine } from './model';
 
 /**
+ * The same words, for assistive technology. A button that carries its own `accessibilityLabel` hides its children from a
+ * screen reader, so a row that is itself a button must add this to its label — otherwise an unconfirmed claim is seen and
+ * never heard.
+ */
+export function sourceLabelOf(source: SourceLine): string {
+  return `${PROVENANCE_LABEL[source.producer]}${source.confidence ? `. Confidence: ${source.confidence}` : ''}`;
+}
+
+/**
  * Where a row came from, in the permanent provenance and confidence language.
  *
  * At first glance it appears only for Her Keys' unconfirmed claim (a stored confidence of
@@ -15,9 +24,8 @@ import type { SourceLine } from './model';
 export function TodaySourceLine({ source, always = false }: { source: SourceLine; always?: boolean }) {
   if (!always && !source.uncertain) return null;
   const confidence = source.confidence;
-  const label = `${PROVENANCE_LABEL[source.producer]}${confidence ? `. Confidence: ${confidence}` : ''}`;
   return (
-    <View style={styles.row} accessible accessibilityLabel={label}>
+    <View style={styles.row} accessible accessibilityLabel={sourceLabelOf(source)}>
       {confidence ? <ConfidenceBadge level={confidence} /> : null}
       <ProvenanceLabel source={source.producer} />
     </View>

@@ -4,10 +4,10 @@ import { addDays, epochMsOf, zonedTimeToEpochMs, type LocalDate } from '../../..
 import { projectStateDay } from '../../../domain/projectDay';
 import { assessDailyLoadIssues } from '../../../domain/dailyLoadIssues';
 import type { AppState } from '../../../domain/state';
-import { blockersOf } from '../../../domain/structure';
 import { tomorrowPreview } from '../../../domain/tomorrowPreview';
 import { computeDailyLoad } from '../../daily-load/computeDailyLoad';
-import { describeRef, taskRoute, timeLabelAt } from './refs';
+import { taskRoute, timeLabelAt } from './refs';
+import { requirementsOf, speakable, type Requirement } from './requirements';
 import type { UpcomingSection } from './types';
 
 /**
@@ -26,6 +26,10 @@ import type { UpcomingSection } from './types';
  *
  * Nothing about a merely "early" start or a merely busy tomorrow is said: that would need a
  * threshold Feature 01 does not own. `null` when none of the three is true.
+ *
+ * A dependency is a stored relationship with its own provenance. One she stated is said flatly ("needs");
+ * one Her Keys inferred and she has not confirmed is a possibility and is said as one ("may need", with the
+ * permanent unconfirmed badge) — and only when there is no stated requirement to speak of instead.
  */
 export function upcomingSection(state: AppState, nowMs: number, today: LocalDate): UpcomingSection | null {
   const tz = state.user.timezone;
@@ -33,42 +37,45 @@ export function upcomingSection(state: AppState, nowMs: number, today: LocalDate
   const horizonMs = zonedTimeToEpochMs(addDays(tomorrow, 1), 0, tz);
 
   // 1 — unmet dependency
-  type Pending = { at: number; statement: (blockerTitle: string, more: number) => string; blockers: ReturnType<typeof blockersOf> };
+  type Pending = { at: number; requirements: Requirement[]; statement: (verb: string, blockerTitle: string, more: number) => string };
   const pending: Pending[] = [];
+  const more = (n: number) => (n > 0 ? ` and ${n} more` : '');
 
   for (const event of state.events) {
     if (event.status !== 'active') continue;
     const start = epochMsOf(event.startsAt);
     if (start < nowMs || start >= horizonMs) continue;
-    const blockers = blockersOf(state, { kind: 'event', id: event.id });
-    if (blockers.length === 0) continue;
+    const requirements = requirementsOf(state, { kind: 'event', id: event.id });
+    if (requirements.length === 0) continue;
     const startsToday = zonedTimeToEpochMs(tomorrow, 0, tz) > start;
     const when = `${startsToday ? 'today' : 'tomorrow'} at ${timeLabelAt(event.startsAt, tz)}`;
     pending.push({
       at: start,
-      blockers,
-      statement: (blocker, more) => `“${event.title}” ${when} needs “${blocker}”${more > 0 ? ` and ${more} more` : ''} first.`,
+      requirements,
+      statement: (verb, blocker, rest) => `“${event.title}” ${when} ${verb} “${blocker}”${more(rest)} first.`,
     });
   }
   for (const task of state.tasks) {
     if (task.status !== 'open' || task.dueDate === null || task.dueDate < today || task.dueDate > tomorrow) continue;
-    const blockers = blockersOf(state, { kind: 'task', id: task.id });
-    if (blockers.length === 0) continue;
+    const requirements = requirementsOf(state, { kind: 'task', id: task.id });
+    if (requirements.length === 0) continue;
     pending.push({
       at: zonedTimeToEpochMs(addDays(task.dueDate, 1), 0, tz) - 1,
-      blockers,
-      statement: (blocker, more) => `“${task.title}” is due ${task.dueDate === today ? 'today' : 'tomorrow'} and needs “${blocker}”${more > 0 ? ` and ${more} more` : ''} first.`,
+      requirements,
+      statement: (verb, blocker, rest) => `“${task.title}” is due ${task.dueDate === today ? 'today' : 'tomorrow'} and ${verb} “${blocker}”${more(rest)} first.`,
     });
   }
   pending.sort((a, b) => a.at - b.at);
   for (const candidate of pending) {
-    const named = candidate.blockers.map((ref) => describeRef(state, ref)).filter((info) => info.title !== null);
-    if (named.length === 0) continue;
+    const spoken = speakable(candidate.requirements);
+    if (spoken === null) continue;
+    const [first] = spoken.items;
     return {
       kind: 'unmet_dependency',
-      statement: candidate.statement(named[0].title as string, named.length - 1),
-      ref: named[0].ref,
-      route: named[0].route,
+      statement: candidate.statement(spoken.unconfirmed ? 'may need' : 'needs', first.title, spoken.items.length - 1),
+      ref: first.ref,
+      route: first.route,
+      source: spoken.unconfirmed ? first.source : null,
     };
   }
 
@@ -76,7 +83,7 @@ export function upcomingSection(state: AppState, nowMs: number, today: LocalDate
   const day = projectStateDay(state, tomorrow);
   const issues = assessDailyLoadIssues(day.events, day.tasks, computeDailyLoad(day.events, day.tasks));
   if (issues.overlaps.length > 0 || issues.transitionConflict !== null) {
-    return { kind: 'tomorrow_timing', statement: tomorrowPreview(state, { nowMs, today, createId: () => '' }).headline, ref: null, route: null };
+    return { kind: 'tomorrow_timing', statement: tomorrowPreview(state, { nowMs, today, createId: () => '' }).headline, ref: null, route: null, source: null };
   }
 
   // 3 — a consequential deadline tomorrow
@@ -84,7 +91,7 @@ export function upcomingSection(state: AppState, nowMs: number, today: LocalDate
     if (task.status !== 'open' || task.dueDate !== tomorrow) continue;
     const consequence = commitmentFacetsOf({ kind: 'task', row: task }).consequence;
     if (consequence === null || consequenceRank(consequence) < consequenceRank('high')) continue;
-    return { kind: 'consequential_due', statement: `“${task.title}” is due tomorrow. If it slips, the cost is ${consequence}.`, ref: { kind: 'task', id: task.id }, route: taskRoute(task.id) };
+    return { kind: 'consequential_due', statement: `“${task.title}” is due tomorrow. If it slips, the cost is ${consequence}.`, ref: { kind: 'task', id: task.id }, route: taskRoute(task.id), source: null };
   }
 
   return null;

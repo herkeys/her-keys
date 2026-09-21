@@ -73,12 +73,17 @@ export function OneMoveCard({ section, onComplete }: { section: OneMoveSection; 
                 {COMPLETION_TEXT[completion]}
               </AppText>
             ) : null}
-            {why.evidence.length > 0 || source || open ? (
+            {why.evidence.length > 0 || why.context.length > 0 || source || open ? (
               <View style={styles.deeper}>
                 <TodayDisclosure title="Evidence and source">
                   {why.evidence.map((row) => (
                     <AppText key={`${row.code}:${row.aboutTitle ?? ''}`} variant="supporting" color={color.text.secondary} style={styles.evidenceRow}>
                       {row.aboutTitle ? `${row.label} — ${row.aboutTitle}` : row.label}
+                    </AppText>
+                  ))}
+                  {why.context.map((line) => (
+                    <AppText key={line} variant="supporting" color={color.text.secondary} style={styles.evidenceRow}>
+                      {line}
                     </AppText>
                   ))}
                   {source ? <TodaySourceLine source={source} always /> : null}

@@ -1,12 +1,16 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { AppText } from '../../design/components';
 import { color, interaction, sizing, spacing } from '../../design/tokens';
+import type { SourceLine } from './model';
 import { SectionLabel, TodayDisclosure } from './TodayDisclosure';
+import { sourceLabelOf, TodaySourceLine } from './TodaySourceLine';
 
 export interface TodayListRow {
   key: string;
   text: string;
   meta?: string | null;
+  /** Shown (as the permanent unconfirmed badge) only when the line rests on Her Keys' unconfirmed claim. */
+  source?: SourceLine | null;
   onPress?: () => void;
   hint?: string;
 }
@@ -55,6 +59,7 @@ function Row({ row, last }: { row: TodayListRow; last: boolean }) {
           {row.meta}
         </AppText>
       ) : null}
+      {row.source ? <TodaySourceLine source={row.source} /> : null}
     </View>
   );
   if (!row.onPress) return content;
@@ -62,7 +67,7 @@ function Row({ row, last }: { row: TodayListRow; last: boolean }) {
     <Pressable
       onPress={row.onPress}
       accessibilityRole="button"
-      accessibilityLabel={row.text}
+      accessibilityLabel={row.source?.uncertain ? `${row.text} ${sourceLabelOf(row.source)}.` : row.text}
       accessibilityHint={row.hint}
       style={({ pressed }) => (pressed ? styles.pressed : null)}
     >

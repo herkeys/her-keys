@@ -4,7 +4,7 @@ import { AppText, Card } from '../../design/components';
 import { color, interaction, sizing, spacing } from '../../design/tokens';
 import type { MatterItem, MattersSection } from './model';
 import { SectionLabel } from './TodayDisclosure';
-import { TodaySourceLine } from './TodaySourceLine';
+import { sourceLabelOf, TodaySourceLine } from './TodaySourceLine';
 
 /**
  * What matters today: a handful of anchors, not the whole day. The full list is one
@@ -31,7 +31,8 @@ export function TodayMatters({ section }: { section: MattersSection }) {
 
 function MatterRow({ item, last }: { item: MatterItem; last: boolean }) {
   const meta = item.isNext ? 'Next up' : item.dueToday ? 'Due today' : null;
-  const label = [item.title, item.timeLabel, item.isNext ? 'next up' : null, item.dueToday ? 'due today' : null].filter(Boolean).join(', ');
+  // The row is itself a button, so its label hides the badge inside it from a screen reader: an unconfirmed claim is said here too.
+  const label = [item.title, item.timeLabel, item.isNext ? 'next up' : null, item.dueToday ? 'due today' : null, item.source?.uncertain ? sourceLabelOf(item.source) : null].filter(Boolean).join(', ');
   return (
     <Pressable
       onPress={() => router.push(item.route)}

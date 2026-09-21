@@ -94,6 +94,11 @@ export interface OneMoveWhy {
   reasons: string[];
   /** Deeper: the structured evidence, one row per known code. */
   evidence: Array<{ code: string; label: string; aboutTitle: string | null }>;
+  /**
+   * Deeper: what the target waits on and what waits on it, read from the typed relation as it stands now. Context about the
+   * row, never a reason for the choice, and never evidence — the stored decision did not cite it.
+   */
+  context: string[];
 }
 
 export interface OneMoveSection {
@@ -209,6 +214,8 @@ export interface UpcomingSection {
   statement: string;
   ref: TypedRef | null;
   route: TodayRoute | null;
+  /** Present only when the statement rests on a relationship Her Keys inferred and she has not confirmed. */
+  source: SourceLine | null;
 }
 
 // ------------------------------------------------------------------ composition --

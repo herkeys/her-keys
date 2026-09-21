@@ -7,6 +7,7 @@ import type { AppState, OneMoveRecord, OneMoveTargetType } from '../../../domain
 import type { OneMoveItem } from '../../../types';
 import { relativeDay } from '../formatDay';
 import { describeRef, eventRoute, needsMeRoute, sourceOf, taskRoute } from './refs';
+import { dependentsOf, requirementsOf, speakable } from './requirements';
 import type { OneMoveCompletion, OneMoveSection, OneMoveWhy, SourceLine, TodayRoute } from './types';
 
 /**
@@ -109,9 +110,39 @@ function targetSource(state: AppState, targetType: OneMoveTargetType | null, tar
   return describeRef(state, { kind: targetType, id: targetId }).source;
 }
 
+/**
+ * What the target waits on, and what waits on it — from the typed `requires` relation as it stands NOW.
+ *
+ * This is context about the row, not a reason for the choice: the stored decision did not cite it, so it is kept out of
+ * `reasons` and never changes `basis`. It is said the way the relationship's own provenance allows — a `requires` edge
+ * Her Keys inferred and she has not confirmed is "may need", never "needs".
+ */
+function contextFor(state: AppState, record: OneMoveRecord): string[] {
+  const kind = record.targetType;
+  if ((kind !== 'task' && kind !== 'event' && kind !== 'needsMe') || record.targetId === null) return [];
+  const ref = { kind, id: record.targetId };
+  const lines: string[] = [];
+
+  const waitsOn = speakable(requirementsOf(state, ref));
+  if (waitsOn !== null) {
+    const [first] = waitsOn.items;
+    lines.push(`It ${waitsOn.unconfirmed ? 'may need' : 'needs'} “${first.title}”${moreCount(waitsOn.items.length - 1)} first.`);
+  }
+  const waitedOnBy = speakable(dependentsOf(state, ref));
+  if (waitedOnBy !== null) {
+    const [first] = waitedOnBy.items;
+    const verb = waitedOnBy.unconfirmed ? 'may need' : waitedOnBy.items.length > 1 ? 'need' : 'needs';
+    lines.push(`“${first.title}”${moreCount(waitedOnBy.items.length - 1)} ${verb} it first.`);
+  }
+  return lines;
+}
+
+const moreCount = (n: number): string => (n > 0 ? ` and ${n} more` : '');
+
 function whyFor(state: AppState, today: LocalDate, day: DayView, record: OneMoveRecord, move: OneMoveItem): OneMoveWhy {
   const reasons: string[] = [];
   const evidence: OneMoveWhy['evidence'] = [];
+  const context = contextFor(state, record);
 
   for (const link of explain(state, { kind: 'oneMove', id: record.id })) {
     const label = EVIDENCE_LABEL.get(link.code);
@@ -124,12 +155,12 @@ function whyFor(state: AppState, today: LocalDate, day: DayView, record: OneMove
   }
 
   // A reason survives only if the row still says so. A stale link is dropped, not repeated.
-  if (reasons.length === 0) return { basis: 'item_observation', reasons: [move.observation], evidence };
+  if (reasons.length === 0) return { basis: 'item_observation', reasons: [move.observation], evidence, context };
 
   if (move.estimatedMinutes !== undefined && move.estimatedMinutes > 0) {
     reasons.push(`It should take about ${move.estimatedMinutes} minute${move.estimatedMinutes === 1 ? '' : 's'}.`);
   }
-  return { basis: 'recorded_evidence', reasons, evidence };
+  return { basis: 'recorded_evidence', reasons, evidence, context };
 }
 
 function supportedReason(code: string, support: { kind: string; id: string }, state: AppState, today: LocalDate, day: DayView): string | null {
