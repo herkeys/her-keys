@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { AppText, Button, Card, Overline, Tag } from '../../design/components';
+import { AppText, Button, Card, Overline, Tag, WhyThis } from '../../design/components';
 import { colors, spacing } from '../../design/tokens';
 import { CAPACITY_DAY_END_MINUTES, CAPACITY_DAY_START_MINUTES } from '../../domain/dailyLoadIssues';
 import { canShortenTask } from '../../domain/recommendationActions';
@@ -191,30 +191,21 @@ export function DailyLoadCard() {
         <AppText variant="headline" style={styles.headline}>
           Today has more work than time.
         </AppText>
-        <View style={styles.reasoning}>
-          <View style={styles.reasonBlock}>
-            <Overline color={colors.attention}>What Her Keys noticed</Overline>
-            <AppText variant="bodySm" color={colors.textSecondary}>
-              Today’s tasks need about {primary.neededMinutes} minutes, and your calendar leaves about {primary.availableMinutes} between {DAY_WINDOW}.
-            </AppText>
-          </View>
-          <View style={styles.reasonBlock}>
-            <Overline color={colors.attention}>Why it matters</Overline>
-            <AppText variant="bodySm" color={colors.textSecondary}>
-              That’s {primary.pressureMinutes} minutes more than today realistically holds.
-            </AppText>
-          </View>
-          <View style={styles.reasonBlock}>
-            <Overline color={colors.attention}>What Her Keys recommends</Overline>
-            <AppText variant="bodySm" color={colors.textSecondary}>
-              {target
-                ? canShortenTask(primary.largestTaskMinutes ?? 0)
-                  ? `Shorten or drop “${primary.largestTaskTitle}”.`
-                  : `Drop “${primary.largestTaskTitle}” for today.`
-                : 'Everything left on today’s list is due today or fixed, so Her Keys won’t drop or shorten any of it. Consider what else could give.'}
-            </AppText>
-          </View>
-        </View>
+        <WhyThis
+          style={styles.reasoning}
+          reasons={[
+            `Today’s tasks need about ${primary.neededMinutes} minutes, and your calendar leaves about ${primary.availableMinutes} between ${DAY_WINDOW}.`,
+            `That’s ${primary.pressureMinutes} minutes more than today realistically holds.`,
+          ]}
+        />
+        <Overline color={colors.attention}>What Her Keys recommends</Overline>
+        <AppText variant="bodySm" color={colors.textSecondary} style={styles.impact}>
+          {target
+            ? canShortenTask(primary.largestTaskMinutes ?? 0)
+              ? `Shorten or drop “${primary.largestTaskTitle}”.`
+              : `Drop “${primary.largestTaskTitle}” for today.`
+            : 'Everything left on today’s list is due today or fixed, so Her Keys won’t drop or shorten any of it. Consider what else could give.'}
+        </AppText>
 
         {failureNote}
         {target && (
@@ -338,20 +329,7 @@ export function DailyLoadCard() {
         That turns your tightest {candidate.currentBufferMinutes} minutes into {candidate.projectedBufferMinutes}.
       </AppText>
 
-      <View style={styles.reasoning}>
-        <View style={styles.reasonBlock}>
-          <Overline color={colors.attention}>What Her Keys noticed</Overline>
-          <AppText variant="bodySm" color={colors.textSecondary}>
-            {candidate.observation}
-          </AppText>
-        </View>
-        <View style={styles.reasonBlock}>
-          <Overline color={colors.attention}>Why it matters</Overline>
-          <AppText variant="bodySm" color={colors.textSecondary}>
-            {candidate.reason}
-          </AppText>
-        </View>
-      </View>
+      <WhyThis style={styles.reasoning} reasons={[candidate.observation, candidate.reason]} />
 
       {failureNote}
       <Button
@@ -389,10 +367,8 @@ const styles = StyleSheet.create({
     paddingTop: spacing.lg,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.attentionBorder,
-    gap: spacing.lg,
     marginBottom: spacing.xl,
   },
-  reasonBlock: { gap: spacing.xs },
   secondaryRow: { flexDirection: 'row', marginTop: spacing.xs, gap: spacing.sm },
   secondaryButton: { flex: 1 },
 });

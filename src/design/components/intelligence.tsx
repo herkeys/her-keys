@@ -87,6 +87,14 @@ interface RecommendationBlockProps {
    * APPROVAL-REQUIRED must never look interchangeable (§15).
    */
   approvalRequired: boolean;
+  /**
+   * Overrides the primary action label when the gesture means more than
+   * "do that" — e.g. One Move's "I did it", where she performs the
+   * recommendation herself and the decision recorded is hers.
+   */
+  actionLabel?: string;
+  /** Right-aligned metadata (e.g. "ABOUT 15 MINUTES"), when the domain provides it. */
+  meta?: string;
   onApprove?: () => void;
   onShowAlternative?: () => void;
   onNotToday?: () => void;
@@ -102,11 +110,14 @@ interface RecommendationBlockProps {
 export function RecommendationBlock({
   body,
   approvalRequired,
+  actionLabel,
+  meta,
   onApprove,
   onShowAlternative,
   onNotToday,
   style,
 }: RecommendationBlockProps) {
+  const primaryLabel = actionLabel ?? (approvalRequired ? 'Yes, do that' : 'Do that');
   return (
     <Card tone="surface" style={style}>
       <View style={styles.recHeader}>
@@ -117,6 +128,10 @@ export function RecommendationBlock({
               NEEDS YOUR YES
             </AppText>
           </View>
+        ) : meta ? (
+          <AppText variant="statusLabel" color={color.text.muted}>
+            {meta}
+          </AppText>
         ) : null}
       </View>
       <AppText variant="bodyStrong" style={styles.recBody}>
@@ -124,7 +139,7 @@ export function RecommendationBlock({
       </AppText>
       <View style={styles.recActions}>
         <Button
-          label={approvalRequired ? 'Yes, do that' : 'Do that'}
+          label={primaryLabel}
           onPress={onApprove ?? (() => {})}
           disabled={!onApprove}
           accessibilityHint={approvalRequired ? 'Approves this one recommendation' : undefined}

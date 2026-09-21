@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { AppText } from '../../design/components';
-import { colors, spacing } from '../../design/tokens';
+import { colors, interaction, spacing } from '../../design/tokens';
 import { useSchedule } from '../../store/ScheduleContext';
 import { formatTime } from '../daily-load/computeDailyLoad';
 
@@ -87,5 +87,5 @@ const styles = StyleSheet.create({
   time: { width: 72, paddingTop: 2 },
   body: { flex: 1 },
   meta: { marginTop: spacing.xxs },
-  pressed: { opacity: 0.6 },
+  pressed: { opacity: interaction.pressedOpacity },
 });

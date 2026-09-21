@@ -25,10 +25,10 @@ export default function TodayScreen() {
     <Screen>
       <View style={styles.header}>
         <Overline>{`Today · ${weekdayName(today)}`}</Overline>
-        <AppText variant="hero" style={styles.greeting}>
+        <AppText variant="display" style={styles.greeting}>
           {firstName ? `Hi, ${firstName}` : 'Hi there'}
         </AppText>
-        <AppText variant="title" color={colors.textSecondary} style={styles.state}>
+        <AppText variant="sectionTitle" color={colors.textSecondary} style={styles.state}>
           {describeDayState(assessment, decision, issues)}
         </AppText>
         <PersistenceNotice />

@@ -63,7 +63,7 @@ No REPLACE is used where REFINE suffices.
 
 | Screen | Class | Status |
 |---|---|---|
-| Today (`app/(app)/today.tsx` + today features) | **REFINE** (migrates K4) | NOT-STARTED |
+| Today (`app/(app)/today.tsx` + today features) | **REFINE** | **MIGRATED** (K4): full surface already consumed the permanent primitives; K4 finished the migration — canonical type rungs on the header, `LoadMeter` capacity segments neutral ink with amber label only for tight/full (owner decision 4), One Move renders in the K3 intelligence language (RecommendationBlock + WhyThis; withheld = selective InsightBlock; completed = her decision, success tone), Daily Load evidence unified through `WhyThis`, ad-hoc pressed opacities replaced by the `interaction.pressedOpacity` token |
 | Talk It Out (`app/talk-it-out.tsx`, ai tab, TalkItOutView) | **REFINE** (migrates K5) | NOT-STARTED |
 | Onboarding surface — chosen route **`/onboarding/goals`** (most comprehensively exercises inputs/selectable controls/action hierarchy; recorded here per section 17 before any edit) | **REFINE** (migrates K6) | NOT-STARTED |
 | Life (`app/(app)/life/index.tsx` + lists) | **REFINE** (migrates K7) | NOT-STARTED |

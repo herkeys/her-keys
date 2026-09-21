@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { Pressable, StyleSheet } from 'react-native';
 import { AppText, Overline } from '../../design/components';
-import { colors, radius, spacing } from '../../design/tokens';
+import { colors, interaction, radius, spacing } from '../../design/tokens';
 
 /**
  * Inline entry point rather than a floating button: an overlay pill covered
@@ -36,5 +36,5 @@ const styles = StyleSheet.create({
     minHeight: 44,
   },
   copy: { marginTop: spacing.sm },
-  pressed: { opacity: 0.75 },
+  pressed: { opacity: interaction.pressedOpacity },
 });

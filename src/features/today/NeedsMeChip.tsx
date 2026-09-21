@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { Pressable, StyleSheet } from 'react-native';
 import { AppText } from '../../design/components';
-import { colors, radius, spacing } from '../../design/tokens';
+import { colors, interaction, radius, spacing } from '../../design/tokens';
 import { useHouseholdState } from '../../store/AppStateProvider';
 
 /**
@@ -37,5 +37,5 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceSubtle,
     marginBottom: spacing.xxl,
   },
-  pressed: { opacity: 0.7 },
+  pressed: { opacity: interaction.pressedOpacity },
 });
