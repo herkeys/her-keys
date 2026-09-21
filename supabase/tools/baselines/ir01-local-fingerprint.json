@@ -1,0 +1,80 @@
+{
+  "tool": "herkeys-schema-fingerprint",
+  "toolVersion": 1,
+  "label": "HK-INTEGRATION-READINESS-01: local database after the additive migration 20260921120000_ir01_duration_source_and_claim_v3.sql (tasks.duration_source, claim payload v3). Supersedes build4-foundation-local-fingerprint.json (199ed4d4..., 3613 facts) for the local stack.",
+  "searchPath": "''",
+  "scope": [
+    "public",
+    "private"
+  ],
+  "dimensions": {
+    "columns": {
+      "items": 714,
+      "digest": "615f3edb21f7bdeaffe274f96d764dd0"
+    },
+    "constraints": {
+      "items": 679,
+      "digest": "728c9f294d2ff64f0ddf3e35a85308a0"
+    },
+    "functions": {
+      "items": 27,
+      "digest": "76d9b9898024f761b0a1d83fa3d2335f"
+    },
+    "indexes": {
+      "items": 284,
+      "digest": "7dcfc54f3ff8ab1e3102e937caffd51f"
+    },
+    "info.event_triggers": {
+      "items": 7,
+      "digest": "460fef42355350673d98786b2395e9f7"
+    },
+    "info.extensions": {
+      "items": 6,
+      "digest": "7d12895eecbafc55a6fb3f91e7ce78b7"
+    },
+    "policies": {
+      "items": 85,
+      "digest": "20fa34345c0e4e530506aad4c23a315f"
+    },
+    "privileges.columns": {
+      "items": 721,
+      "digest": "69b4ff815c41dc5e85270120ad9325a3"
+    },
+    "privileges.default_acl": {
+      "items": 7,
+      "digest": "84cba4e765aaa559cf174135e54549ff"
+    },
+    "privileges.effective": {
+      "items": 309,
+      "digest": "39dfa952fdc247aa7124a8efa21763c6"
+    },
+    "privileges.functions": {
+      "items": 53,
+      "digest": "8775bb50208682d596a25715ef7fd642"
+    },
+    "privileges.relations": {
+      "items": 587,
+      "digest": "6dcc6008d4f6c463d266c44a5345f816"
+    },
+    "privileges.schemas": {
+      "items": 10,
+      "digest": "eda0330fda8cc1898fa30c327ab67768"
+    },
+    "relations": {
+      "items": 35,
+      "digest": "d96433fa6acf2a1c49f23c5a2afecccc"
+    },
+    "schemas": {
+      "items": 2,
+      "digest": "0e57bd8fd092941a34193a365f9fd211"
+    },
+    "triggers": {
+      "items": 104,
+      "digest": "3349217a986a8890446692fc1f918324"
+    }
+  },
+  "gating": {
+    "items": 3617,
+    "digest": "43e7c8a4402a3387cb2e1add4170921e"
+  }
+}

@@ -116,6 +116,14 @@ from a `superseded_by` pointer, as the "before" side of the reconciliation. Veri
 Two captures are only comparable when both apply the shipping migration in its authoritative form — the working-tree file, CRLF on this machine — because
 function bodies hash their line endings.
 
+## Current baseline (HK-INTEGRATION-READINESS-01)
+
+`baselines/ir01-local-fingerprint.json` is the CURRENT approved local baseline: 3,617 facts, gating digest `43e7c8a4402a3387cb2e1add4170921e`.
+It follows the additive migration `20260921120000_ir01_duration_source_and_claim_v3.sql`, which changes exactly four dimensions of the previous
+baseline (`columns`, `constraints`, `privileges.columns`, and the `functions` digest for `claim_local_household`). `build4-foundation-local-fingerprint.json`
+(199ed4d4..., 3,613 facts) remains the PRE-REPAIR reference and is kept unchanged; do not verify current state against it.
+The IR01 migration is pinned to LF by `.gitattributes` so its function digest does not depend on the checkout.
+
 ## When to update a baseline
 
 Only when a migration is *intended* to change the schema and has been reviewed. The new
