@@ -33,7 +33,7 @@
         "producer": "ai-inference"
       },
       "scope": "child",
-      "subjectMemberId": null
+      "subjectMemberId": "child-1"
     }
   },
   "scenario": "AI",
@@ -186,17 +186,15 @@
         "schedule": "none"
       },
       "subject": {
-        "kind": "child_not_recorded"
+        "id": "child-1",
+        "kind": "child",
+        "name": "Josie"
       }
     },
     "unknownStates": [
       {
         "field": "consequence",
         "reason": "not_represented_for_systems"
-      },
-      {
-        "field": "subject",
-        "reason": "child_not_recorded"
       }
     ]
   }

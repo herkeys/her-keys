@@ -22,9 +22,11 @@ import type { DraftSchedule } from '../commands/draft';
  * WHAT A PROPOSAL MAY EXPRESS is exactly what a System can actually hold at the common fork — a
  * name, a purpose, an area, ordered steps with minutes that are either known or null, a calendar
  * schedule the foundation can derive dates for, and an existing person or child to hand it to. It
- * has no field for anything the foundation cannot store: no child subject (MP-02), no step-level
- * responsibility or dependency (MP-09), no consequence (MP-07), no run, no notification, no
- * arbitrary JSON, and no place to put a payload that a later stage might interpret.
+ * has no field for anything the foundation cannot store: no step-level responsibility or
+ * dependency (MP-09), no consequence (MP-07), no run, no notification, no arbitrary JSON, and no
+ * place to put a payload that a later stage might interpret. (A System's child subject, MP-02, IS
+ * storable since HA-011 — `HouseholdSystem.subjectMemberId` — but this types-only contract does not
+ * carry one yet: adding it is integration's, and it would be an existing child's id, never a name.)
  *
  * WHAT A PROPOSAL MAY NEVER DO
  *   - write canonical state. It is a proposal; only her acceptance writes, through the producer.

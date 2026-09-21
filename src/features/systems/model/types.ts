@@ -161,8 +161,20 @@ export interface ActionAvailability {
 export type SubjectView =
   /** No child is claimed: a household System. */
   | { kind: 'none' }
-  /** The System is child-scoped but the canonical row cannot say which child (MP-02). Never guessed. */
+  /** The System is about this child: the canonical `subjectMemberId`, resolved against the household's own children. */
+  | { kind: 'child'; id: string; name: string }
+  /**
+   * The row says it is about a child but the household cannot name one: child scope with no subject, or a subject that is
+   * not one of this household's children. Valid state can no longer hold either (HA-011), so this is only the defensive
+   * reading of a row that arrived unvalidated. Never guessed, never defaulted to a child.
+   */
   | { kind: 'child_not_recorded' };
+
+/** A child an editor may offer as "who it is for": an EXISTING child of this household, by id. */
+export interface SubjectChoice {
+  id: string;
+  name: string;
+}
 
 export interface UnknownState {
   field: string;

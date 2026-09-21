@@ -22,7 +22,7 @@ export const EVIDENCE_MANIFEST = [
   'E-reorder',
   'F-recurrence-saved',
   'F-recurrence-weekly',
-  'H-child-unavailable',
+  'H-child-subject',
   'I-two-children',
   'J-responsibility',
   'K-unknown-person',

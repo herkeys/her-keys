@@ -107,6 +107,11 @@ export function SystemDetail({ systemId }: { systemId: string }) {
         <AppText variant="screenTitle" accessibilityRole="header" style={styles.title}>
           {view.name}
         </AppText>
+        {view.subject.kind === 'child' ? (
+          <AppText variant="supporting" color={color.text.secondary} style={styles.purpose}>
+            {copy.detail.forChild(view.subject.name)}
+          </AppText>
+        ) : null}
         {view.purpose.length > 0 ? (
           <AppText variant="body" color={color.text.secondary} style={styles.purpose}>
             {view.purpose}

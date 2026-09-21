@@ -6,9 +6,9 @@ import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 import { CURRENT_SCHEMA_VERSION } from '../../src/persistence/envelope.ts';
 import { STORAGE_KEYS, rawEnvelope } from '../support/fixtures.mjs';
-import { AUTOMATION, CHILDREN, T0, USER, realHousehold, ruleRow, snapshot, stepRow, systemRow, withRows } from './support/canon.mjs';
+import { AUTOMATION, CHILDREN, DAY, MORNING, T0, USER, childSystemRow, realHousehold, ruleRow, stepRow, systemRow, withRows } from './support/canon.mjs';
 import { systemsHarness } from './support/store.mjs';
-import { allText, buttonLabels, navigation, press, pressLast, readyStore, withScreen } from './support/ui.mjs';
+import { allText, buttonLabels, navigation, press, pressLast, withScreen } from './support/ui.mjs';
 
 const { SystemDetail } = await import('../../src/features/systems/ui/SystemDetail.tsx');
 
@@ -18,6 +18,12 @@ async function storeWith(rows, { children = CHILDREN } = {}) {
   return store;
 }
 const stateOf = (store) => store.getSnapshot().state;
+
+/** A store that shows exactly the state it is handed WITHOUT validating it: the only way to see how a screen reads a row the household cannot resolve. */
+const showing = (state) => {
+  const snapshot = { status: 'ready', state, today: DAY, recovery: null, persistence: 'enabled', nowMs: MORNING };
+  return { getSnapshot: () => snapshot, subscribe: () => () => {}, hydrate: async () => {}, refreshDay: () => {}, commit: async () => false };
+};
 
 const schoolNight = () => ({
   systems: [systemRow({ id: 'sys-1', name: 'School-night reset', description: 'Bag, bottle, uniform.', categoryId: 'cat-kids' })],
@@ -183,20 +189,39 @@ describe('System detail — who is responsible', () => {
 });
 
 describe('System detail — details, provenance and what Her Keys itself recorded', () => {
-  test('AI — a child-scoped System that cannot name its child says so; nothing guesses', async () => {
-    // Legacy data predating the child-subject invariant: a child-scoped System that never recorded one.
-    // The store's write/load paths now refuse this shape outright (it can no longer be committed or
-    // hydrated), so it is rendered directly here to prove the screen's own defensive path — never a
-    // guess — still holds if such a row were ever encountered.
-    const legacySystem = systemRow({ id: 'sys-1', name: 'Old bedtime routine', scope: 'child', provenance: { producer: 'ai-inference', artifactId: null, confidence: 'possible' } });
-    const state = { ...realHousehold({ children: CHILDREN }), systems: [legacySystem] };
-    const store = readyStore(snapshot(state));
+  // DELIBERATELY CHANGED (HA-011). This test built a child-scoped System with NO subject and pinned "says the child is not recorded". That
+  // state can no longer be committed (validation refuses child scope without a child), so it is now two tests: the System that names its
+  // child says WHO (from the household's own children), and the defensive reading of a row the household cannot resolve is exercised
+  // through a store that shows an unvalidated state, which is the only way such a row can reach the screen.
+  test('AI — a child-scoped System names its child; the detail says who it is for and still guesses nothing', async () => {
+    const store = await storeWith({ systems: [childSystemRow('child-1', { id: 'sys-1', name: 'Old bedtime routine', provenance: { producer: 'ai-inference', artifactId: null, confidence: 'possible' } })] });
     await withScreen(store, <SystemDetail systemId="sys-1" />, async (r) => {
+      assert.match(allText(r), /For Josie/, 'the child is named where the System is introduced, not only behind Show details');
+      assert.doesNotMatch(allText(r), /Theo/, 'and only the child it names');
       await press(r, 'Show details');
-      assert.match(allText(r), /marked as being for a child, but Her Keys doesn’t have which child recorded/);
+      assert.doesNotMatch(allText(r), /doesn’t have which child recorded/, 'no "not recorded" claim once a subject exists');
       assert.match(allText(r), /Her Keys inferred this/);
       assert.match(allText(r), /POSSIBLE/);
     });
+  });
+
+  test('AI — a household System reads exactly as before: no child line, no "for a child" claim', async () => {
+    const store = await storeWith(schoolNight());
+    await withScreen(store, <SystemDetail systemId="sys-1" />, async (r) => {
+      await press(r, 'Show details');
+      assert.doesNotMatch(allText(r), /For (Josie|Theo)|for a child|which child/i);
+    });
+  });
+
+  test('AI — a row that says child but names no child THIS household has is shown as exactly that, never guessed', async () => {
+    const shown = (system) => showing({ ...realHousehold({ children: CHILDREN }), systems: [system] });
+    for (const system of [systemRow({ id: 'sys-1', name: 'Bedtime', scope: 'child' }), systemRow({ id: 'sys-1', name: 'Bedtime', scope: 'child', subjectMemberId: 'child-gone' })]) {
+      await withScreen(shown(system), <SystemDetail systemId="sys-1" />, async (r) => {
+        assert.doesNotMatch(allText(r), /For (Josie|Theo)/, 'it did not turn into the first child');
+        await press(r, 'Show details');
+        assert.match(allText(r), /marked as being for a child, but Her Keys doesn’t have which child recorded/);
+      });
+    }
   });
 
   test('AF — a failed attempt reads as not working, a proposal as waiting, and no dead approve/decline buttons appear', async () => {

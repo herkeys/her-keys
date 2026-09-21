@@ -42,7 +42,7 @@ describe('SCENARIO B — create a simple System', () => {
     assert.equal(state.systems.length, 1);
     const [system] = state.systems;
     assert.equal(system.name, 'School-night reset');
-    assert.equal(system.scope, 'household', 'never child-scoped: a System cannot carry a child subject');
+    assert.deepEqual([system.scope, system.subjectMemberId], ['household', null], 'a draft that names no child is a household routine: household scope and an explicit null subject');
     assert.equal(system.provenance.producer, 'user-action', 'a real household: stated by her');
     assert.deepEqual([system.automationMode, system.effortMinutes, system.energyDemand], ['manual', null, null], 'facets are honestly unknown, never defaulted to a plausible value');
     assert.deepEqual(stepsInOrder(state, 'sys-b').map((s) => [s.title, s.position, s.effortMinutes]), [['Pack uniform', 0, null], ['Fill water bottle', 10, null], ['Put bag by door', 20, null]]);
@@ -338,38 +338,38 @@ describe('SCENARIO Y — a stale editor never overwrites newer truth', () => {
 });
 
 describe('SCENARIO AI — editing a System that already exists (demo seed, legacy, child-scoped)', () => {
-  test('a legacy child-scoped System with foreign facets keeps every field the editor does not own', async () => {
+  // DELIBERATELY CHANGED (HA-011). This fixture was a child-scoped System with NO subject, and the assertion below pinned "the view says the
+  // child is not recorded". State validation now refuses child scope without a child (the cloud always did), so that row can no longer exist;
+  // the honest equivalent is a child-scoped System that NAMES its child, and the assertion is that the editor keeps it and the view resolves it.
+  test('an existing child-scoped System with foreign facets keeps every field the editor does not own, and the child it is about', async () => {
     const legacy = systemRow({
       id: 'sys-legacy',
       name: 'Old bedtime routine',
       description: 'From before.',
       scope: 'child',
+      subjectMemberId: 'child-1',
       automationMode: 'suggest',
       effortMinutes: 20,
       energyDemand: 'high',
       provenance: { producer: 'ai-inference', artifactId: null, confidence: 'possible' },
     });
-    // Built directly, not through withRows: this fixture is deliberately legacy data that predates the
-    // child-subject invariant (a child-scoped System that never recorded one) — withRows proves its
-    // result would be ACCEPTED by the current app, which this row, by design, would not be.
-    const start = { ...realHousehold({ children: [{ id: 'child-1', displayName: 'Josie', birthDate: '2018-03-04', scope: 'child' }] }), systems: [legacy] };
+    const start = withRows(realHousehold({ children: [{ id: 'child-1', displayName: 'Josie', birthDate: '2018-03-04', scope: 'child' }] }), { systems: [legacy] });
+    const sh = systemsHarness({ initial: {} });
+    const store = await sh.open();
+    await store.commit(() => start);
 
-    const view = projectSystemDetail(start, 'sys-legacy', CLOCK);
-    assert.deepEqual(view.subject, { kind: 'child_not_recorded' }, 'a child-scoped System that cannot name its child says exactly that — it does not guess');
+    const view = detail(store, 'sys-legacy');
+    assert.deepEqual(view.subject, { kind: 'child', id: 'child-1', name: 'Josie' }, 'the System names its child, and the view resolves her from the household — never from a guess');
 
-    // No store: this fixture is invalid by the current write-path invariant (it could never be committed
-    // for real), so the save half of this scenario exercises the pure domain command directly — exactly
-    // what the store's commit wraps and validates in the ordinary path.
-    const { draft, base } = draftFromState(start, 'sys-legacy', keyFor);
+    const { draft, base } = draftFromState(stateOf(store), 'sys-legacy', keyFor);
     draft.name = 'Bedtime routine';
     draft.steps = [...draft.steps, ...steps(['Brush teeth'])];
-    const result = applySystemDraft(start, ctxAt(), draft, base);
-    assert.equal(result.outcome.kind, 'saved');
+    assert.equal((await saveSystemDraft(store, draft, base)).kind, 'saved');
 
-    const [row] = result.state.systems;
-    assert.equal(result.state.systems.length, 1, 'no duplicate');
-    assert.deepEqual(row, { ...legacy, name: 'Bedtime routine' }, 'scope, automation mode, effort, energy and provenance are preserved verbatim');
-    assertEvidence('AI-legacy-edit', { scenario: 'AI', canonical: canonicalOf(result.state, 'sys-legacy'), view: evidenceOfDetail(projectSystemDetail(result.state, 'sys-legacy', CLOCK)) });
+    const [row] = stateOf(store).systems;
+    assert.equal(stateOf(store).systems.length, 1, 'no duplicate');
+    assert.deepEqual(row, { ...legacy, name: 'Bedtime routine' }, 'scope, subject, automation mode, effort, energy and provenance are preserved verbatim');
+    assertEvidence('AI-legacy-edit', { scenario: 'AI', canonical: canonicalOf(stateOf(store), 'sys-legacy'), view: evidenceOfDetail(detail(store, 'sys-legacy')) });
   });
 
   test('a demo-seed System edits in place and stays demo-provenance', async () => {

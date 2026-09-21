@@ -99,6 +99,13 @@ export function SystemEditor({ systemId }: { systemId?: string }) {
             {errors('area')}
           </AppText>
         ) : null}
+        {/* A child this routine names that is not one of the household's children is said in words, never dropped. The chooser
+            that would set one is integration's; this only keeps a refused save from being silent. */}
+        {errors('subject') !== null ? (
+          <AppText variant="metadata" color={color.status.attention} style={styles.fieldError}>
+            {errors('subject')}
+          </AppText>
+        ) : null}
 
         {/* ---------------------------------------------------------------- steps */}
         <Overline style={[styles.label, styles.section]}>{copy.editor.stepsTitle}</Overline>

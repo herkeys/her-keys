@@ -5,8 +5,14 @@ import { rulesForSystem } from './schedule';
 
 /**
  * A content fingerprint of everything the System editor reads or writes for ONE System: the
- * definition row, its steps in order, every recurrence rule about it, and every responsibility
- * about it.
+ * definition row (INCLUDING the child it is about, `subjectMemberId`, and its scope), its steps in
+ * order, every recurrence rule about it, and every responsibility about it.
+ *
+ * The subject is named explicitly and normalised (`?? null`) rather than left to whatever the row
+ * happens to spell: an editor opened before the routine's child was set, changed or cleared (by
+ * another edit, or by a sync pull from another device) can therefore never save over that change,
+ * and a row written before the field existed does not read as changed merely because it now says
+ * `null` (HA-011).
  *
  * The editor records this when it opens. At save time the same function runs on the state the
  * commit is about to write; if the two differ, canonical state moved underneath the editor (a
@@ -18,8 +24,9 @@ import { rulesForSystem } from './schedule';
  * strongest honest signal available.
  */
 export function systemFingerprint(state: AppState, systemId: string): string {
+  const row = state.systems.find((system) => system.id === systemId);
   return canonicalJson({
-    system: state.systems.find((system) => system.id === systemId) ?? null,
+    system: row === undefined ? null : { ...row, subjectMemberId: row.subjectMemberId ?? null },
     steps: stepsInOrder(state, systemId),
     rules: rulesForSystem(state, systemId),
     responsibilities: state.responsibilities

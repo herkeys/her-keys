@@ -1,8 +1,9 @@
 import { categoriesInOrder } from '../../../domain/categories';
-import type { AppState } from '../../../domain/state';
+import type { AppState, HouseholdSystem } from '../../../domain/state';
 import { systemFingerprint } from '../model/fingerprint';
 import { currentRuleFor, liveRuleFor } from '../model/schedule';
 import { stepViewsFor } from '../model/steps';
+import { isChildOf } from '../model/subject';
 import type { ScheduleFrequency } from '../model/types';
 import { MAX_STEPS_PER_SYSTEM } from './stepOrder';
 
@@ -62,6 +63,15 @@ export interface SystemDraft {
   name: string;
   purpose: string;
   categoryId: string;
+  /**
+   * The child this routine is about: the id of one of the household's EXISTING children, or null for a household-level
+   * routine (HA-011). An id, never a name. It is checked against `state.children` before anything is written, and a
+   * subject that is not one of them is refused rather than dropped, guessed or replaced.
+   *
+   * A draft that does not say (undefined) asks for whatever the System already has, so a caller that predates the field
+   * can never erase a child by omission.
+   */
+  subjectMemberId: string | null;
   steps: DraftStep[];
   scheduleMode: ScheduleMode;
   schedule: DraftSchedule | null;
@@ -78,6 +88,8 @@ export type DraftIssueCode =
   | 'purpose_too_long'
   | 'area_missing'
   | 'area_unavailable'
+  /** The named subject is not one of this household's children (unknown, an adult, a delegate, or a name). */
+  | 'subject_unavailable'
   | 'too_many_steps'
   | 'step_title_blank'
   | 'step_title_too_long'
@@ -95,9 +107,16 @@ export type DraftIssueCode =
 
 export interface DraftIssue {
   code: DraftIssueCode;
-  /** `name`, `purpose`, `area`, `steps`, `step:<key>`, `schedule`. */
+  /** `name`, `purpose`, `area`, `subject`, `steps`, `step:<key>`, `schedule`. */
   field: string;
 }
+
+/**
+ * The subject a draft asks for. `undefined` (a draft that never mentions one) means "whatever the System already has",
+ * so omission can never erase a child; a new System with no mention is household-level.
+ */
+export const requestedSubject = (draft: Pick<SystemDraft, 'subjectMemberId'>, existing: Pick<HouseholdSystem, 'subjectMemberId'> | null): string | null =>
+  draft.subjectMemberId === undefined ? (existing?.subjectMemberId ?? null) : draft.subjectMemberId;
 
 const isWholeNumber = (value: number, min: number, max: number) => Number.isInteger(value) && value >= min && value <= max;
 
@@ -117,6 +136,11 @@ export function validateDraft(state: AppState, draft: SystemDraft): DraftIssue[]
     add('area_unavailable', 'area');
   }
   if (draft.isNew && state.systems.length >= SYSTEM_LIMITS.systems) add('system_limit_reached', 'name');
+
+  // The child it is about must be one of the household's own children. Refused, never dropped or guessed: an unknown id,
+  // the account user, a delegate's id and a display name all fail here the same way (they are not `state.children` ids).
+  const subject = requestedSubject(draft, existing);
+  if (subject !== null && !isChildOf(state, subject)) add('subject_unavailable', 'subject');
 
   if (!draft.isNew) {
     const present = new Set(draft.steps.flatMap((step) => (step.id === null ? [] : [step.id])));
@@ -180,6 +204,8 @@ export function draftFromState(state: AppState, systemId: string, keyFor: (index
       name: system.name,
       purpose: system.description,
       categoryId: system.categoryId,
+      // carried, never re-derived from a name or a scope: the editor may not lose the child a routine is about
+      subjectMemberId: system.subjectMemberId ?? null,
       steps: stepViewsFor(state, systemId).map((step, index) => ({ key: keyFor(index), id: step.id, title: step.title, effortMinutes: step.effortMinutes })),
       scheduleMode,
       schedule,
@@ -191,7 +217,18 @@ export function draftFromState(state: AppState, systemId: string, keyFor: (index
 /** A blank draft for a NEW System. The area is a visible default (the household's Home area), never hidden. */
 export function newDraft(state: AppState, systemId: string, defaultCategoryId: string | null): { draft: SystemDraft; base: DraftBase } {
   return {
-    draft: { systemId, isNew: true, name: '', purpose: '', categoryId: defaultCategoryId ?? categoriesInOrder(state)[0]?.id ?? '', steps: [], scheduleMode: 'none', schedule: null },
+    draft: {
+      systemId,
+      isNew: true,
+      name: '',
+      purpose: '',
+      categoryId: defaultCategoryId ?? categoriesInOrder(state)[0]?.id ?? '',
+      // a household routine until she names a child; never defaulted to one
+      subjectMemberId: null,
+      steps: [],
+      scheduleMode: 'none',
+      schedule: null,
+    },
     base: { fingerprint: null },
   };
 }

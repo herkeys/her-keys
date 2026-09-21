@@ -77,7 +77,7 @@ describe('tone and claims — every user-facing sentence', () => {
     all(words.attentionLine({ kind: 'child', id: 'c', name: 'Josie' }));
     for (const category of Object.keys(words.ACTION_CATEGORY_LABEL).concat('unknown')) all(words.evidenceSummary({ category }));
     for (const body of Object.values(words.UNAVAILABLE_BODY)) all(body);
-    const issueCodes = ['name_blank', 'name_too_long', 'purpose_too_long', 'area_missing', 'area_unavailable', 'too_many_steps', 'step_title_blank', 'step_title_too_long', 'step_minutes_invalid', 'system_limit_reached', 'interval_invalid', 'weekday_invalid', 'month_day_invalid', 'time_invalid', 'schedule_missing', 'schedule_ends_before_start', 'identifier_invalid', 'step_removal_unsupported'];
+    const issueCodes = ['name_blank', 'name_too_long', 'purpose_too_long', 'area_missing', 'area_unavailable', 'subject_unavailable', 'too_many_steps', 'step_title_blank', 'step_title_too_long', 'step_minutes_invalid', 'system_limit_reached', 'interval_invalid', 'weekday_invalid', 'month_day_invalid', 'time_invalid', 'schedule_missing', 'schedule_ends_before_start', 'identifier_invalid', 'step_removal_unsupported'];
     for (const code of issueCodes) {
       all(words.issueMessage({ code, field: 'step:a' }, () => 2));
       all(words.issueMessage({ code, field: 'name' }));

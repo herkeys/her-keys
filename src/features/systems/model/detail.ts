@@ -6,7 +6,8 @@ import { actionsFor } from './actions';
 import { attentionReasonsFor, holderChoicesFor, responsibilityViewFor } from './responsibility';
 import { scheduleViewFor } from './schedule';
 import { durationFor, stepViewsFor } from './steps';
-import type { ActionEvidenceView, RefView, SubjectView, SystemDetailView, UnknownState } from './types';
+import { subjectViewFor } from './subject';
+import type { ActionEvidenceView, RefView, SystemDetailView, UnknownState } from './types';
 
 export interface Clock {
   nowMs: number;
@@ -88,8 +89,7 @@ export function projectSystemDetail(state: AppState, systemId: string, clock: Cl
   const holderChoices = holderChoicesFor(state);
   const { needs, neededBy } = dependenciesOf(state, systemId);
 
-  // A child-scoped System that cannot name its child (MP-02) is shown as exactly that — never a guess.
-  const subject: SubjectView = system.scope === 'child' ? { kind: 'child_not_recorded' } : { kind: 'none' };
+  const subject = subjectViewFor(state, system);
 
   const unknownStates: UnknownState[] = [{ field: 'consequence', reason: 'not_represented_for_systems' }];
   if (subject.kind === 'child_not_recorded') unknownStates.push({ field: 'subject', reason: 'child_not_recorded' });

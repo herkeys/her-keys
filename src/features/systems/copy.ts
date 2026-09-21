@@ -183,6 +183,8 @@ export const copy = {
     needs: 'Needs',
     neededBy: 'Needed by',
     childNotRecorded: 'This System is marked as being for a child, but Her Keys doesn’t have which child recorded.',
+    /** The child a System is about, on the detail screen. Only ever read from the recorded subject, never guessed. */
+    forChild: (name: string) => `For ${name}`,
     timeTitle: 'Time',
     pause: 'Pause schedule',
     resume: 'Resume schedule',
@@ -223,6 +225,13 @@ export const copy = {
     purpose: 'What it’s for (optional)',
     purposePlaceholder: 'Bags, bottles and uniforms ready before bed',
     area: 'Area',
+    /**
+     * Words for a "who it’s for" chooser. Feature 04 provides the words and the model (`useSystemEditor().subjectChoices` /
+     * `.actions.setSubject`), and leaves the control itself to integration: it lists the household’s existing children and
+     * nobody else, and the first choice means no child at all.
+     */
+    subjectTitle: 'Who it’s for (optional)',
+    subjectHousehold: 'The whole household',
     stepsTitle: 'Steps',
     stepsHelp: 'In the order they usually happen.',
     step: (n: number) => `Step ${n}`,
@@ -295,6 +304,8 @@ export function issueMessage(issue: DraftIssue, stepNumber?: (key: string) => nu
       return 'Choose an area.';
     case 'area_unavailable':
       return 'That area isn’t available. Choose another.';
+    case 'subject_unavailable':
+      return 'That child isn’t in your household. Choose one of your children, or leave it for the whole household.';
     case 'too_many_steps':
       return 'That’s more steps than Her Keys can hold.';
     case 'step_title_blank':

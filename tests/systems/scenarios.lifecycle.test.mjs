@@ -19,7 +19,7 @@ import { evidenceOfDetail } from '../../src/features/systems/model/evidence.ts';
 import { systemFingerprint } from '../../src/features/systems/model/fingerprint.ts';
 import { projectSystemsHub } from '../../src/features/systems/model/hub.ts';
 import { scheduleViewFor } from '../../src/features/systems/model/schedule.ts';
-import { CHILDREN, DAY, MORNING, assertEvidence, assertValid, ctxAt, realHousehold, ruleRow, snapshot, stepRow, systemRow, withRows } from './support/canon.mjs';
+import { CHILDREN, DAY, MORNING, assertEvidence, assertValid, childSystemRow, ctxAt, realHousehold, ruleRow, snapshot, stepRow, systemRow, withRows } from './support/canon.mjs';
 
 const CLOCK = { nowMs: MORNING, today: DAY };
 const canonicalOf = (state, id) => JSON.parse(systemFingerprint(state, id));
@@ -34,38 +34,61 @@ beforeEach(() => {
   ctx = ctxAt();
 });
 
-describe('SCENARIO H — child-scoped System: SAFE-UNAVAILABLE at the fork, and the editor can never fake it', () => {
-  test('the cloud REQUIRES a subject for a child-scoped System, and the client can neither store nor send one', () => {
+// DELIBERATELY REWRITTEN (HK-INTEGRATION-READINESS-01 / HA-011). This scenario used to pin the fork's LIMITATION: "HouseholdSystem
+// has no subjectMemberId, so a child-scoped System is SAFE-UNAVAILABLE and the draft has no way to name a child". The repaired
+// foundation stores the subject, so the same scenario now pins the opposite, and its evidence file is renamed
+// (H-child-unavailable -> H-child-subject) so no stale "unavailable" claim survives.
+describe('SCENARIO H — a System names its child: the cloud requires it, the model stores it, and the editor authors it truthfully', () => {
+  test('the cloud REQUIRES a subject for a child-scoped System, and the client now stores and sends one', () => {
     const migration = readFileSync(join(REPO, 'supabase', 'migrations', '20260919231500_build4_cloud_schema.sql'), 'utf8');
     assert.match(migration, /household_systems_child_scope_subject_check[\s\S]{0,120}scope <> 'child'::text OR subject_member_id IS NOT NULL/, 'a child-scoped System without a subject is refused by the database');
 
-    const state = withRows(base(), {});
-    const namespace = { ...emptyNamespace({ accountId: 'acct', householdId: 'hh', deviceId: 'dev' }), mappings: {} };
-    // the row a device would send for a household-scoped System — subject_member_id is present, and null
-    const withCategory = { ...namespace, mappings: { 'category:cat-home': { kind: 'category', localId: 'cat-home', cloudId: 'cloud-cat-home', revision: 1 } } };
-    const row = toCloudRow(state, { householdId: 'hh', profileId: 'p', namespace: withCategory }, 'system', 'sys-1');
-    assert.equal(row.subject_member_id, null, 'a household-scoped System never carries a subject');
+    const state = withRows(base(), { systems: [childSystemRow('child-1', { id: 'sys-kid', name: 'Josie bedtime' })] });
+    const namespace = {
+      ...emptyNamespace({ accountId: 'acct', householdId: 'hh', deviceId: 'dev' }),
+      mappings: {
+        'category:cat-home': { kind: 'category', localId: 'cat-home', cloudId: 'cloud-cat-home', revision: 1 },
+        'member:child-1': { kind: 'member', localId: 'child-1', cloudId: 'cloud-child-1', revision: 1 },
+      },
+    };
+    const context = { householdId: 'hh', profileId: 'p', namespace };
+    const childRow = toCloudRow(state, context, 'system', 'sys-kid');
+    assert.deepEqual([childRow.scope, childRow.subject_member_id], ['child', 'cloud-child-1'], 'the projection sends the child the System names');
+    const householdRow = toCloudRow(state, context, 'system', 'sys-1');
+    assert.deepEqual([householdRow.scope, householdRow.subject_member_id], ['household', null], 'and a household System sends no subject');
   });
 
-  test('so a System Feature 04 creates is NEVER child-scoped, and the draft has no way to say otherwise', () => {
-    const draft = { systemId: 'sys-h', isNew: true, name: 'Josie bedtime', purpose: '', categoryId: 'cat-kids', steps: [], scheduleMode: 'none', schedule: null };
-    assert.deepEqual(Object.keys(draft).sort(), ['categoryId', 'isNew', 'name', 'purpose', 'schedule', 'scheduleMode', 'steps', 'systemId'], 'a draft has no scope and no subject field');
-    const created = saveDraftModule.applySystemDraft(realHousehold({ children: CHILDREN }), ctx, draft, { fingerprint: null });
-    assert.equal(created.state.systems[0].scope, 'household');
-    assertEvidence('H-child-unavailable', {
+  test('a System Feature 04 authors for a child is child-scoped WITH that child; a household draft keeps a null subject', () => {
+    const start = realHousehold({ children: CHILDREN });
+    const draftFor = (over) => ({ systemId: 'sys-h', isNew: true, name: 'Bedtime', purpose: '', categoryId: 'cat-kids', subjectMemberId: null, steps: [], scheduleMode: 'none', schedule: null, ...over });
+    assert.deepEqual(Object.keys(draftFor()).sort(), ['categoryId', 'isNew', 'name', 'purpose', 'schedule', 'scheduleMode', 'steps', 'subjectMemberId', 'systemId'], 'a draft names a child by id and has NO scope field: scope can only follow the subject');
+
+    const forChild = saveDraftModule.applySystemDraft(start, ctx, draftFor({ systemId: 'sys-h1', name: 'Josie bedtime', subjectMemberId: 'child-1' }), { fingerprint: null });
+    const forHousehold = saveDraftModule.applySystemDraft(start, ctx, draftFor({ systemId: 'sys-h2', name: 'Sunday reset' }), { fingerprint: null });
+    assert.equal(forChild.outcome.kind, 'saved');
+    assert.equal(forHousehold.outcome.kind, 'saved');
+    const [child] = forChild.state.systems;
+    const [household] = forHousehold.state.systems;
+    assert.deepEqual([child.scope, child.subjectMemberId], ['child', 'child-1']);
+    assert.deepEqual([household.scope, household.subjectMemberId], ['household', null]);
+    assertValid(forChild.state);
+    assertValid(forHousehold.state);
+    assertEvidence('H-child-subject', {
       scenario: 'H',
-      status: 'SAFE-UNAVAILABLE',
+      status: 'AVAILABLE',
       evidence: [
-        'HouseholdSystem has no subjectMemberId',
+        'HouseholdSystem carries subjectMemberId (HA-011), an existing child id or null',
         "cloud household_systems_child_scope_subject_check requires a subject when scope = 'child'",
-        'toCloudRow(system) emits no subject_member_id',
+        'toCloudRow(system) emits subject_member_id; a child with no mapping refuses to leave the device',
+        'a draft that names a child writes child scope and that child id; an unknown, adult or delegate id is refused',
       ],
-      created: { scope: created.state.systems[0].scope },
+      child: { scope: child.scope, subjectMemberId: child.subjectMemberId },
+      household: { scope: household.scope, subjectMemberId: household.subjectMemberId },
     });
   });
 });
 
-describe('SCENARIO I — two children are never collapsed (holder distinctness; subject is SAFE-UNAVAILABLE)', () => {
+describe('SCENARIO I — two children are never collapsed (holder distinctness; the subject is a separate fact)', () => {
   test('System A held by Josie and System B held by Theo stay distinct, and each view names only its own', () => {
     let state = base();
     state = responsibilityCommands.assignResponsibility(state, ctx, 'sys-1', { kind: 'child', id: 'child-1' });
@@ -105,9 +128,7 @@ describe('SCENARIO J — responsibility keeps assigned, acknowledged and accepte
     step((s) => responsibilityCommands.recordAnswer(s, ctx, 'sys-1', 'acknowledged'));
     step((s) => responsibilityCommands.recordAnswer(s, ctx, 'sys-1', 'accepted'));
     assert.deepEqual(states, ['acknowledged', 'accepted'], 'seen, then yes — two separate facts');
-    // AUDIT W2-04: saying yes is not, by itself, proof the load left her — recordAnswer('accepted') must not
-    // silently mark a System as no longer needing her attention.
-    assert.equal(detail(state, 'sys-1').responsibility.stillNeedsMe, true, 'accepting a System is not proof the work is covered');
+    assert.equal(detail(state, 'sys-1').responsibility.stillNeedsMe, true, 'yes is not proof the load left her');
     assert.equal(state.observations.filter((o) => o.about.kind === 'responsibility').map((o) => o.outcome).join(), 'delegated,acknowledged,accepted');
 
     const declined = responsibilityCommands.recordAnswer(responsibilityCommands.assignResponsibility(base(), ctx, 'sys-1', { kind: 'child', id: 'child-1' }), ctx, 'sys-1', 'declined');

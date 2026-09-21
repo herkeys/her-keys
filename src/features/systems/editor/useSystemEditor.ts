@@ -22,6 +22,7 @@ import { MAX_STEPS_PER_SYSTEM } from '../commands/stepOrder';
 import { parseClock, formatClock } from '../format';
 import { systemFingerprint } from '../model/fingerprint';
 import { liveRuleFor, previewOccurrences } from '../model/schedule';
+import { subjectChoicesFor } from '../model/subject';
 import type { ScheduleFrequency } from '../model/types';
 import { saveSystemDraft } from '../useCases/commit';
 
@@ -242,6 +243,11 @@ export function useSystemEditor(systemId: string | undefined) {
     hasOtherRule,
     schedulePaused,
     categories: categoriesInOrder(state),
+    /**
+     * Who a routine may be marked as being for: the household's EXISTING children, and no one else (HA-011). The control that
+     * shows them is left to integration; the choices and `actions.setSubject` are the whole contract it needs.
+     */
+    subjectChoices: subjectChoicesFor(state),
     stepNumber: (key: string): number | null => {
       const index = draft?.steps.findIndex((s) => s.key === key) ?? -1;
       return index < 0 ? null : index + 1;
@@ -250,6 +256,8 @@ export function useSystemEditor(systemId: string | undefined) {
       setName: (name: string) => update((d) => ({ ...d, name })),
       setPurpose: (purpose: string) => update((d) => ({ ...d, purpose })),
       setCategory: (categoryId: string) => update((d) => ({ ...d, categoryId })),
+      /** A child's id from `subjectChoices`, or null for a household routine. Anything else is refused at save with `subject_unavailable`. */
+      setSubject: (subjectMemberId: string | null) => update((d) => ({ ...d, subjectMemberId })),
       setTitle,
       setMinutes,
       addStep,

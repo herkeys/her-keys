@@ -1,0 +1,18 @@
+{
+  "child": {
+    "scope": "child",
+    "subjectMemberId": "child-1"
+  },
+  "evidence": [
+    "HouseholdSystem carries subjectMemberId (HA-011), an existing child id or null",
+    "cloud household_systems_child_scope_subject_check requires a subject when scope = 'child'",
+    "toCloudRow(system) emits subject_member_id; a child with no mapping refuses to leave the device",
+    "a draft that names a child writes child scope and that child id; an unknown, adult or delegate id is refused"
+  ],
+  "household": {
+    "scope": "household",
+    "subjectMemberId": null
+  },
+  "scenario": "H",
+  "status": "AVAILABLE"
+}

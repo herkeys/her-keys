@@ -7,7 +7,8 @@ import { ID_PATTERN } from '../../../domain/schemaPrimitives';
 import type { AppState, HouseholdSystem } from '../../../domain/state';
 import { stepsInOrder } from '../../../domain/structure';
 import { systemFingerprint } from '../model/fingerprint';
-import { validateDraft, type DraftBase, type DraftIssue, type SystemDraft } from './draft';
+import { scopeForSubject } from '../model/subject';
+import { requestedSubject, validateDraft, type DraftBase, type DraftIssue, type SystemDraft } from './draft';
 import { setCalendarSchedule, stopSchedule } from './schedule';
 import { layoutPositions } from './stepOrder';
 
@@ -25,8 +26,12 @@ import { layoutPositions } from './stepOrder';
  *  - stale-safe — if the rows the editor opened on changed underneath it, nothing is written;
  *  - idempotent — a create replays as `already_saved`; new steps get ids derived from stable draft
  *    keys, so a retry re-applies to the same rows instead of duplicating them;
- *  - conservative — untouched rows keep their identity and their `updatedAt`; scope, facets
- *    (automation mode, effort, energy) and provenance are preserved verbatim, never rewritten;
+ *  - conservative — untouched rows keep their identity and their `updatedAt`; facets (automation
+ *    mode, effort, energy) and provenance are preserved verbatim, never rewritten; scope changes only
+ *    when the child the routine is about changes (HA-011, `model/subject.ts`);
+ *  - truthful about who it is for — a draft that names a child writes that child's id (an existing
+ *    child of the household, or the save is refused) and child scope; a household draft keeps a null
+ *    subject. The subject is never guessed from a name, defaulted, or dropped;
  *  - step order never becomes dependency, and no step is ever removed (there is no retire semantic).
  */
 
@@ -63,23 +68,35 @@ function identifierIssues(draft: SystemDraft): DraftIssue[] {
 function upsertSystem(state: AppState, draft: SystemDraft, existing: HouseholdSystem | null): AppState {
   const name = draft.name.trim();
   const description = draft.purpose.trim();
+  // The child it is about (HA-011). `validateDraft` has already refused anything that is not one of `state.children`, so this
+  // is only ever an existing child's id or null; and the scope follows it truthfully: a child means child scope (the cloud
+  // requires a subject for that scope), and no child is a household routine.
+  const subjectMemberId = requestedSubject(draft, existing);
   if (existing === null) {
     const created: HouseholdSystem = {
       id: draft.systemId,
       name,
       description,
       categoryId: draft.categoryId,
+      subjectMemberId,
       ...emptySystemFacets(),
       provenance: provenanceFor(state.origin, userProvenance()),
-      // A household routine. Never 'child': the cloud requires a subject for that and a System cannot carry one (MP-02).
-      scope: 'household',
-      subjectMemberId: null,
+      scope: scopeForSubject(null, subjectMemberId),
     };
     return { ...state, systems: [...state.systems, created] };
   }
-  if (existing.name === name && existing.description === description && existing.categoryId === draft.categoryId) return state;
-  // Only what the editor edits. Scope, facets and provenance stay exactly as they were.
-  const updated: HouseholdSystem = { ...existing, name, description, categoryId: draft.categoryId };
+  const scope = scopeForSubject(existing, subjectMemberId);
+  if (
+    existing.name === name &&
+    existing.description === description &&
+    existing.categoryId === draft.categoryId &&
+    (existing.subjectMemberId ?? null) === subjectMemberId &&
+    existing.scope === scope
+  ) {
+    return state;
+  }
+  // Only what the editor edits. Facets and provenance stay exactly as they were; scope moves only with the child it is about.
+  const updated: HouseholdSystem = { ...existing, name, description, categoryId: draft.categoryId, subjectMemberId, scope };
   return { ...state, systems: state.systems.map((system) => (system.id === existing.id ? updated : system)) };
 }
 
