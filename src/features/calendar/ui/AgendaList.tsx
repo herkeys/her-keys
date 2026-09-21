@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { AppText } from '../../../design/components';
+import { AppText, Button } from '../../../design/components';
 import { colors, interaction, sizing, spacing } from '../../../design/tokens';
 import { COPY, detailLines, itemAccessibilityLabel, itemLine, responsibilityLine, type CopyContext } from '../copy';
 import type { DayItem, ItemRef } from '../model/types';
@@ -11,6 +11,9 @@ export interface AgendaListProps {
   ctx: CopyContext;
   /** Pressing a row opens that item’s own editor (the inherited behaviour, preserved). */
   onOpenItem: (ref: ItemRef) => void;
+  /** Items the action map says can be protected right now. Absent means the list is read-only. */
+  protectable?: ReadonlySet<string>;
+  onProtect?: (ref: ItemRef) => void;
 }
 
 /**
@@ -18,17 +21,24 @@ export interface AgendaListProps {
  * so nothing here depends on color. First glance is the time, the title and one quiet line; subject,
  * place, what she entered for getting there and dependencies are one “Details” press away.
  */
-export function AgendaList({ items, ctx, onOpenItem }: AgendaListProps) {
+export function AgendaList({ items, ctx, onOpenItem, protectable, onProtect }: AgendaListProps) {
   return (
     <View accessibilityRole="list" accessibilityLabel={COPY.agendaHeading}>
       {items.map((item, index) => (
-        <AgendaRow key={`${item.ref.kind}:${item.ref.id}`} item={item} ctx={ctx} last={index === items.length - 1} onOpen={() => onOpenItem(item.ref)} />
+        <AgendaRow
+          key={`${item.ref.kind}:${item.ref.id}`}
+          item={item}
+          ctx={ctx}
+          last={index === items.length - 1}
+          onOpen={() => onOpenItem(item.ref)}
+          onProtect={onProtect !== undefined && protectable?.has(`${item.ref.kind}:${item.ref.id}`) ? () => onProtect(item.ref) : undefined}
+        />
       ))}
     </View>
   );
 }
 
-export function AgendaRow({ item, ctx, last, onOpen }: { item: DayItem; ctx: CopyContext; last: boolean; onOpen: () => void }) {
+export function AgendaRow({ item, ctx, last, onOpen, onProtect }: { item: DayItem; ctx: CopyContext; last: boolean; onOpen: () => void; onProtect?: () => void }) {
   const [open, setOpen] = useState(false);
   const details = detailLines(item);
   const responsibility = item.responsibility === null ? null : responsibilityLine(item.responsibility);
@@ -61,7 +71,7 @@ export function AgendaRow({ item, ctx, last, onOpen }: { item: DayItem; ctx: Cop
           ) : null}
         </View>
       </Pressable>
-      {details.length > 0 ? (
+      {details.length > 0 || onProtect !== undefined ? (
         <View style={styles.detailsWrap}>
           <ToggleLink
             label={COPY.details}
@@ -70,7 +80,13 @@ export function AgendaRow({ item, ctx, last, onOpen }: { item: DayItem; ctx: Cop
             onPress={() => setOpen((value) => !value)}
             accessibilityLabel={`${open ? COPY.hideDetails : COPY.details}: ${item.title}`}
           />
-          {open ? <DetailLines lines={details} /> : null}
+          {open ? (
+            <DetailLines lines={details}>
+              {onProtect !== undefined ? (
+                <Button label={COPY.protect} variant="secondary" size="sm" onPress={onProtect} style={styles.protect} accessibilityHint="Shows what this does before anything changes" />
+              ) : null}
+            </DetailLines>
+          ) : null}
         </View>
       ) : null}
     </View>
@@ -86,4 +102,5 @@ const styles = StyleSheet.create({
   body: { flex: 1 },
   line: { marginTop: spacing.xxs },
   detailsWrap: { paddingLeft: 76 + spacing.md },
+  protect: { alignSelf: 'flex-start', marginTop: spacing.sm },
 });

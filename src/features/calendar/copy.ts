@@ -1,5 +1,6 @@
 import { formatClock, formatClockRange, formatDayTitle, formatMinutes, formatWeekdayShort, formatDayNumber } from './format';
 import { REQUIRED_TRANSITION_BUFFER_MINUTES } from '../daily-load/computeDailyLoad';
+import type { ActionPreview, PreviewableIntent } from './model/preview';
 import type {
   CalendarDayViewModel,
   CapacityCategory,
@@ -57,7 +58,25 @@ export const COPY = {
   demoMarker: 'Demo household',
   previewBanner: 'Preview — nothing has changed yet.',
   previewStale: 'The schedule changed while you were looking, so this preview no longer applies.',
+  previewUpdated: 'The schedule changed, so this preview was updated to match.',
+  previewOutOfDate: 'The schedule changed. Preview again before applying this.',
+  saveFailed: 'Her Keys couldn’t save that yet. Try again.',
+  cancel: 'Cancel',
+  previewAgain: 'Preview again',
+  protect: 'Protect this',
+  undo: 'Undo',
+  keepAsPlanned: 'Not today',
 } as const;
+
+export const undoLine = (title: string): string => `You moved ${title} to tomorrow. That can still be undone today.`;
+
+export const ACCEPT_LABEL: Record<PreviewableIntent['kind'], string> = {
+  move_event: 'Move to tomorrow',
+  move_task: 'Move to tomorrow',
+  shorten_task: 'Shorten it',
+  drop_task: 'Drop it',
+  protect: 'Protect it',
+};
 
 const FIXED = 'Fixed';
 const FLEXIBLE = 'Flexible';
@@ -354,6 +373,115 @@ export function headlineFor(view: CalendarDayViewModel, ctx: CopyContext): Headl
   }
   if (view.dayItems.length === 0) return { kind: 'empty', text: COPY.emptyDayTitle, more: 0 };
   return { kind: 'clear', text: 'Everything scheduled fits.', more: 0 };
+}
+
+// ---------------------------------------------------------- recommendations ---
+
+/**
+ * What the foundation is offering, in words. Calendar does not rank or invent these: every offer is a legitimate
+ * mutation the foundation says is available right now (the action map), presented so she can preview it first.
+ */
+export interface Offer {
+  key: string;
+  body: string;
+  primary: { label: string; intent: PreviewableIntent };
+  alternative: { intent: PreviewableIntent } | null;
+  keep: 'timing' | 'capacity';
+  why: string[];
+}
+
+export function offersFor(view: CalendarDayViewModel, ctx: CopyContext): Offer[] {
+  if (view.dayMode !== 'today') return [];
+  const offered = (action: string) => view.availableActions.filter((a) => a.action === action && a.available && a.itemRef !== null);
+  const offers: Offer[] = [];
+
+  const timingWhy = (() => {
+    const first = view.conflicts.find((c) => c.type === 'FIXED_OVERLAP' || c.type === 'TRANSITION_CONFLICT');
+    if (first) return conflictCopy(first, ctx).why;
+    return view.narrowTransitions.length > 0 ? narrowCopy(view.narrowTransitions[0], ctx).why : [];
+  })();
+
+  for (const action of offered('MOVE')) {
+    const ref = action.itemRef!;
+    const item = ctx.item(ref);
+    const title = ctx.titleOf(ref);
+    offers.push({
+      key: `move:${ref.id}`,
+      body:
+        ref.kind === 'event'
+          ? `Moving ${title} to tomorrow, at the same time, would open up the time around it today.`
+          : `Moving ${title} to tomorrow would free about ${item === undefined || item.durationMinutes === null ? 'its time' : formatMinutes(item.durationMinutes)} today.`,
+      primary: { label: 'Preview the move', intent: ref.kind === 'event' ? { kind: 'move_event', id: ref.id } : { kind: 'move_task', id: ref.id } },
+      alternative: null,
+      keep: 'timing',
+      why: timingWhy,
+    });
+  }
+
+  const shorten = offered('SHORTEN')[0];
+  const drop = offered('DROP')[0];
+  const pressure = view.capacityState?.pressure ?? null;
+  const named = shorten ?? drop;
+  if (named !== undefined && named.itemRef !== null && pressure !== null) {
+    const ref = named.itemRef;
+    const title = ctx.titleOf(ref);
+    offers.push({
+      key: `capacity:${ref.id}`,
+      body: shorten !== undefined ? `Shortening ${title} would bring today back within what fits.` : `Dropping ${title} would bring today back within what fits.`,
+      primary: shorten !== undefined ? { label: 'Preview shortening it', intent: { kind: 'shorten_task', id: ref.id } } : { label: 'Preview dropping it', intent: { kind: 'drop_task', id: ref.id } },
+      alternative: shorten !== undefined && drop !== undefined ? { intent: { kind: 'drop_task', id: ref.id } } : null,
+      keep: 'capacity',
+      why: [`${formatMinutes(pressure.neededMinutes)} is planned.`, `${formatMinutes(pressure.availableMinutes)} is available in the household day.`, `That is ${formatMinutes(pressure.pressureMinutes)} more than fits.`],
+    });
+  }
+  return offers;
+}
+
+// ------------------------------------------------------------------ preview ---
+
+const CATEGORY_WORD = (category: CapacityCategory | null): string => categoryLabel(category).toLowerCase();
+
+/** The plain-language effect of a previewed action. It describes a hypothesis, never a done thing. */
+export function previewLines(preview: ActionPreview, ctx: CopyContext): string[] {
+  const intent = preview.intent;
+  const id = intent.kind === 'protect' ? intent.targetId : intent.id;
+  const kind = intent.kind === 'protect' ? intent.targetType : intent.kind === 'move_event' ? 'event' : 'task';
+  const known = ctx.titleOf({ kind, id });
+  const title = known === 'that item' ? 'This item' : known;
+  const lines: string[] = [];
+
+  if (intent.kind === 'move_event' || intent.kind === 'move_task') {
+    const landed = preview.destination?.after.dayItems.find((item) => item.ref.id === id);
+    const at =
+      landed !== undefined && landed.timing.kind === 'timed' && preview.destination !== null
+        ? ` at ${formatClock(preview.destination.after.frameStartMs + landed.timing.startMinute * 60_000, preview.destination.after.timeZone)}`
+        : '';
+    lines.push(`${title} would move to tomorrow${at}.`);
+  } else if (intent.kind === 'shorten_task') {
+    const before = preview.before.dayItems.find((item) => item.ref.id === id)?.durationMinutes;
+    const after = preview.after.dayItems.find((item) => item.ref.id === id)?.durationMinutes;
+    lines.push(before != null && after != null ? `${title} would go from about ${formatMinutes(before)} to about ${formatMinutes(after)}.` : `${title} would be shortened.`);
+  } else if (intent.kind === 'drop_task') {
+    lines.push(`${title} would be removed from your task list. It can’t be restored here.`);
+  } else {
+    lines.push(`${title} would become fixed. Her Keys would stop suggesting to move, shorten or drop it. You can change it back by editing it.`);
+  }
+
+  const before = preview.before.capacityState;
+  const after = preview.after.capacityState;
+  if (before !== null && after !== null) {
+    lines.push(before.category === after.category ? `Today would stay ${CATEGORY_WORD(after.category)}.` : `Today would go from ${CATEGORY_WORD(before.category)} to ${CATEGORY_WORD(after.category)}.`);
+  }
+  if (preview.destination !== null) {
+    const existing = new Set(preview.destination.before.conflicts.map((c) => c.id));
+    const added = preview.destination.after.conflicts.filter((c) => !existing.has(c.id));
+    if (added.length === 0) lines.push('Nothing new would conflict tomorrow.');
+    else {
+      const destinationCtx = copyContextFor(preview.destination.after);
+      for (const conflict of added) lines.push(`Tomorrow: ${conflictCopy(conflict, destinationCtx).sentence}`);
+    }
+  }
+  return lines;
 }
 
 // -------------------------------------------------------------------- week ---
