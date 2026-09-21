@@ -1,4 +1,5 @@
 import type { AppState } from '../state';
+import { titleForCloud, type Interpretation } from '../foundation/interpretation';
 import { KIND_CLOUD } from '../foundation/typedRef';
 import { FOUNDATION_SPECS, columnsOfSpec, type FoundationKind, type FoundationSpec } from './foundationSpecs';
 import {
@@ -92,6 +93,11 @@ export function foundationToCloudRow(state: AppState, ctx: ProjectionContext, ki
       out[field.col] = value ?? null;
     }
   }
+
+  // OD-A: a reading's title is copied from or derived from her words, so until she accepts it the cloud is given a neutral label.
+  // Decided here, at the boundary, from the row as it is when it is SENT: a reading queued while pending and accepted before the
+  // push goes out with its accepted title, and a superseded or rejected one never carries its title at all.
+  if (kind === 'interpretation') out.title = titleForCloud(row as unknown as Interpretation);
 
   if (spec.provenance === 'standard') Object.assign(out, provenanceColumns(ctx, kind, localId, row.provenance as never));
   out.scope = 'personal';

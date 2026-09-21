@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
+import { titleForCloud } from '../src/domain/foundation/interpretation.ts';
 import { applyCloudRow } from '../src/domain/sync/apply.ts';
 import { insertableColumnsOf } from '../src/domain/sync/foundationProjection.ts';
 import { FOUNDATION_SPECS } from '../src/domain/sync/foundationSpecs.ts';
@@ -99,13 +100,19 @@ describe('every synced kind projects to the cloud and back without loss', () => 
     }
 
     const byId = (rows) => [...rows].sort((a, b) => a.id.localeCompare(b.id));
+    // OD-A: the ONE deliberate loss. A reading that she has not accepted crosses the boundary under a neutral label, because its title
+    // is copied or derived from her words. Everything else about it round-trips; only an accepted reading carries its own title.
+    const expected = (spec) => (spec.kind === 'interpretation' ? state.interpretations.map((r) => ({ ...r, title: titleForCloud(r) })) : state[spec.collection]);
     for (const spec of FOUNDATION_SPECS) {
       if (spec.singleton) {
         assert.deepEqual(device[spec.collection], state[spec.collection], spec.kind);
       } else {
-        assert.deepEqual(byId(device[spec.collection]), byId(state[spec.collection]), `${spec.kind} differs after a round trip`);
+        assert.deepEqual(byId(device[spec.collection]), byId(expected(spec)), `${spec.kind} differs after a round trip`);
       }
     }
+    const undecided = state.interpretations.filter((r) => r.state !== 'accepted');
+    assert.ok(undecided.length > 0, 'the household holds an undecided reading, so the deliberate difference is exercised');
+    assert.ok(undecided.every((r) => device.interpretations.find((d) => d.id === r.id).title !== r.title), 'and its title really did not cross');
     for (const [kind, collection] of CORE) {
       assert.deepEqual(byId(device[collection]), byId(state[collection]), `${kind} differs after a round trip`);
     }

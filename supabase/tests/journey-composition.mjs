@@ -177,6 +177,52 @@ export async function productionCompositionJourneys(check, psql) {
     taskRequests.length > 1 && taskRequests.every((count) => count <= 100) && taskRequests.reduce((sum, count) => sum + count, 0) === BULK && bigB.persisted().identity.sync.queue.length === 0 && bigCount() === String(BULK),
     `requests ${taskRequests.join('+')}`);
 
+  // ---- OD-A: an undecided reading reaches PostgreSQL as structured state, under a neutral label -------------------------------
+  const U = crypto.randomUUID();
+  psql('postgres', `INSERT INTO auth.users (id, email, aud, role) VALUES ('${U}','comp-${U}@local.test','authenticated','authenticated') ON CONFLICT (id) DO NOTHING;`, { label: 'composition reading user' });
+  const FIRST = 'Call Dr. Okonkwo about the cardiology referral';
+  const SECOND = 'Book the orthodontist for Theo';
+  const giveaways = ['Okonkwo', 'cardiology', 'referral', 'orthodontist', 'Theo'];
+  const rd = await device(m, { account: U, sent });
+  await mutate(rd, (s) => ({ ...s, oneMoves: [WITHHELD_MOVE] }));
+  await mutate(rd, (s, ctx) => m.interpretations.recordArtifact(s, ctx, { kind: 'message', origin: 'user-submitted', contentRef: 'capture:od-a', contentDigest: null }).state);
+  const readingArtifact = rd.store.getSnapshot().state.sourceArtifacts[0].id;
+  const propose = (title) => (s, ctx) => m.interpretations.proposeInterpretation(s, ctx, { artifactId: readingArtifact, proposedKind: 'task', title, dueDate: '2026-09-24', durationMinutes: 20, categoryHint: 'kids' });
+  await mutate(rd, propose(FIRST));
+  await rd.store.flush();
+  const rdBound = await rd.signIn();
+  const readings = () => sql(`SELECT string_agg(state || ':' || title, '|' ORDER BY state, title) FROM public.interpretations WHERE household_id='${rdBound.householdId}';`);
+  const inCloud = (word) => sql(`SELECT count(*) FROM (
+      SELECT i::text AS x FROM public.interpretations i WHERE i.household_id='${rdBound.householdId}'
+      UNION ALL SELECT a::text FROM public.source_artifacts a WHERE a.household_id='${rdBound.householdId}'
+      UNION ALL SELECT t::text FROM public.tasks t WHERE t.household_id='${rdBound.householdId}'
+      UNION ALL SELECT n::text FROM public.needs_me_items n WHERE n.profile_id='${U}') z WHERE z.x ILIKE '%${word}%';`);
+  check('composition: an UNDECIDED reading is in PostgreSQL as structured state under the neutral label (not held out of sync, and not her words)',
+    rdBound.kind === 'accountBound' && readings() === 'pending:To-do to review'
+      && sql(`SELECT proposed_kind || ':' || due_date || ':' || duration_minutes || ':' || category_hint FROM public.interpretations WHERE household_id='${rdBound.householdId}';`) === 'task:2026-09-24:20:kids', readings());
+  check('composition: nothing of her words - no give-away word - is in ANY row the household holds, or in any row the client sent',
+    giveaways.every((word) => inCloud(word) === '0') && sent.filter((row) => giveaways.some((word) => JSON.stringify(row).includes(word))).length === 0);
+
+  const firstReading = rd.store.getSnapshot().state.interpretations[0].id;
+  await mutate(rd, (s, ctx) => m.interpretations.acceptInterpretation(s, ctx, firstReading, { categoryId: s.categories[0].id }));
+  await rd.settle();
+  check('composition: after explicit acceptance the canonical title travels in the SAME update that records the decision, and the real freeze trigger allows it',
+    readings() === `accepted:${FIRST}` && sql(`SELECT count(*) FROM public.tasks WHERE household_id='${rdBound.householdId}' AND title='${FIRST}';`) === '1'
+      && rd.persisted().identity.sync.queue.length === 0 && rd.persisted().identity.sync.evidence.length === 0, readings());
+
+  await mutate(rd, propose(SECOND));
+  await rd.settle();
+  check('composition: a later undecided reading is neutral again; the accepted one keeps its title', readings() === `accepted:${FIRST}|pending:To-do to review`, readings());
+
+  const rd2 = await device(m, { account: U, sent });
+  await bindAsNewDevice(m, rd2, U, rdBound.householdId);
+  await rd2.signIn();
+  const there = rd2.store.getSnapshot().state.interpretations;
+  const undecided = there.find((r) => r.state === 'pending');
+  check('composition: a second device sees the accepted title, the undecided reading under its neutral label, and cannot accept that one as it stands',
+    there.length === 2 && there.find((r) => r.state === 'accepted')?.title === FIRST && undecided?.title === 'To-do to review'
+      && m.interpretations.canAccept(undecided, { categoryId: rd2.store.getSnapshot().state.categories[0].id }).reason === 'needs_title', JSON.stringify(there.map((r) => [r.state, r.title])));
+
   // ---- local-only kinds never travel ----------------------------------------------------------------------------
   const leaked = sent.filter((row) => JSON.stringify(row).includes(CANARY)).length;
   check('composition: a local-only record (migration evidence) never appears in ANY row the client sent', leaked === 0, `${leaked} rows`);
@@ -187,7 +233,7 @@ export async function productionCompositionJourneys(check, psql) {
 
 async function loadModules() {
   const at = (p) => `file://${join(REPO, 'src', ...p)}`;
-  const [compose, appStore, observer, repo, storage, provider, secure, cloud, transport, claimSeam, events, tasks, struct, initial, envelope] = await Promise.all([
+  const [compose, appStore, observer, repo, storage, provider, secure, cloud, transport, claimSeam, events, tasks, struct, initial, envelope, interpretations] = await Promise.all([
     import(at(['store', 'composeAccountApp.ts'])),
     import(at(['state', 'appStore.ts'])),
     import(at(['domain', 'sync', 'changeObserver.ts'])),
@@ -203,8 +249,9 @@ async function loadModules() {
     import(at(['domain', 'structure.ts'])),
     import(at(['state', 'initialState.ts'])),
     import(at(['persistence', 'envelope.ts'])),
+    import(at(['domain', 'interpretations.ts'])),
   ]);
-  return { compose, appStore, observer, repo, storage, provider, secure, cloud, transport, claimSeam, events, tasks, struct, initial, envelope };
+  return { compose, appStore, observer, repo, storage, provider, secure, cloud, transport, claimSeam, events, tasks, struct, initial, envelope, interpretations };
 }
 
 /**

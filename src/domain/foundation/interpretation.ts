@@ -92,3 +92,30 @@ export const InterpretationSchema = z
   });
 
 export type Interpretation = z.infer<typeof InterpretationSchema>;
+
+/**
+ * WHAT A READING SAYS TO THE CLOUD BEFORE SHE HAS DECIDED (owner decision OD-A).
+ *
+ * An undecided reading MAY sync as structured state: its kind, dates, amount, child, category hint, state and open question are
+ * typed metadata, not her words. Its `title`, though, is copied from or materially derived from what she said, so until she
+ * explicitly ACCEPTS the reading the cloud is given a neutral label that says only what kind of thing is waiting for her.
+ *
+ * Only an accepted reading carries its own title across: by then she has seen it and approved it, and it is the canonical
+ * title of the row it became. A reading that was rejected or superseded was never approved, so it stays neutral for good.
+ *
+ * The other side of the same rule: a reading that ARRIVES from the cloud with one of these labels was never told its title
+ * (the device that heard her keeps her words). It cannot be accepted as it stands, because the row it would become would be
+ * called "To-do to review". She names it first (`canAccept` says `needs_title`).
+ */
+export const UNDECIDED_READING_TITLE: Readonly<Record<InterpretationKind, string>> = {
+  task: 'To-do to review',
+  event: 'Event to review',
+  needsMe: 'Note to review',
+};
+
+/** Whether a title is one of the neutral labels, not a title anyone chose. */
+export const isUndecidedReadingTitle = (title: string): boolean => Object.values(UNDECIDED_READING_TITLE).includes(title.trim());
+
+/** The title a reading may show the cloud. Its own only once accepted; otherwise the neutral label for its kind. */
+export const titleForCloud = (reading: Pick<Interpretation, 'state' | 'proposedKind' | 'title'>): string =>
+  reading.state === 'accepted' ? reading.title : UNDECIDED_READING_TITLE[reading.proposedKind];

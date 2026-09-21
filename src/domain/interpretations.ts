@@ -1,5 +1,5 @@
 import type { TransitionContext } from './context';
-import type { Interpretation, InterpretationKind } from './foundation/interpretation';
+import { isUndecidedReadingTitle, type Interpretation, type InterpretationKind } from './foundation/interpretation';
 import type { Money } from './foundation/money';
 import type { ConfidenceLevel } from './foundation/provenance';
 import { userProvenance } from './foundation/provenance';
@@ -185,12 +185,18 @@ export interface AcceptInput {
   commitment?: 'fixed' | 'flexible';
 }
 
-export type AcceptRefusal = 'not_open' | 'needs_category' | 'unknown';
+export type AcceptRefusal = 'not_open' | 'needs_title' | 'needs_category' | 'unknown';
 
-/** Whether an interpretation can become a real row given what she has supplied. */
+/**
+ * Whether an interpretation can become a real row given what she has supplied.
+ *
+ * A reading that still wears the neutral label the cloud is given for an undecided reading (owner decision OD-A) arrived from
+ * another device that kept her words: nobody chose that title, so it cannot become the title of a real row. She names it first.
+ */
 export function canAccept(reading: Interpretation | undefined, input: AcceptInput): { ok: true } | { ok: false; reason: AcceptRefusal } {
   if (!reading) return { ok: false, reason: 'unknown' };
   if (reading.state !== 'pending') return { ok: false, reason: 'not_open' };
+  if (isUndecidedReadingTitle(reading.title)) return { ok: false, reason: 'needs_title' };
   if (reading.proposedKind !== 'needsMe' && !input.categoryId) return { ok: false, reason: 'needs_category' };
   return { ok: true };
 }

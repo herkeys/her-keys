@@ -16,6 +16,8 @@ import { createMemorySecureStorage, createSecureSessionStore } from '../../src/d
 import { addEvent } from '../../src/domain/events.ts';
 import { starterCategories } from '../../src/domain/categories.ts';
 import { addTask, updateTask } from '../../src/domain/tasks.ts';
+import { UNDECIDED_READING_TITLE } from '../../src/domain/foundation/interpretation.ts';
+import { acceptInterpretation, canAccept, proposeInterpretation, recordArtifact, rejectInterpretation, supersedeInterpretation } from '../../src/domain/interpretations.ts';
 import { createChangeObserver } from '../../src/domain/sync/changeObserver.ts';
 import { namespaceForNewDevice } from '../../src/domain/sync/claimSeam.ts';
 import { SourceArtifactSchema } from '../../src/domain/foundation/sourceArtifact.ts';
@@ -804,6 +806,130 @@ describe('HA-001 — a source artifact carries arrival metadata and NEVER her wo
     assert.equal(row.content_digest, 'a'.repeat(64), 'as a digest');
     assert.deepEqual(Object.keys(row).filter((key) => RAW_TEXT.test(key)), [], 'and in no text-shaped column');
     assert.equal(a.persisted().identity.sync.queue.length, 0);
+  });
+});
+
+describe('OD-A — an undecided reading syncs as structured state, and never with a title derived from her words', () => {
+  const SAID = 'Remind me to call Dr. Okonkwo about Mia’s cardiology referral before Thursday';
+  const TITLE = 'Call Dr. Okonkwo about Mia’s cardiology referral';
+  // Any word of her sentence that is long enough to be a give-away, and every 12-character run of the sentence and of the title.
+  const GIVEAWAYS = ['Okonkwo', 'cardiology', 'referral', 'Thursday', 'Remind'];
+  const runsOf = (text, size = 12) => Array.from({ length: Math.max(0, text.length - size + 1) }, (_, i) => text.slice(i, i + size));
+  const leaks = (haystack) => [...GIVEAWAYS, ...runsOf(SAID), ...runsOf(TITLE)].filter((needle) => haystack.toLowerCase().includes(needle.toLowerCase()));
+  const everythingTheCloudHolds = (cloud) => JSON.stringify([...cloud.rows.values()]);
+
+  const withPendingReading = async (device) => {
+    await mutate(device, (s) => ({ ...s, oneMoves: [withheldMove] }));
+    await mutate(device, (s, ctx) => recordArtifact(s, ctx, { kind: 'message', origin: 'user-submitted', contentRef: 'capture:one', contentDigest: null }).state);
+    const artifactId = device.store.getSnapshot().state.sourceArtifacts[0].id;
+    await mutate(device, (s, ctx) => proposeInterpretation(s, ctx, { artifactId, proposedKind: 'task', title: TITLE, dueDate: '2026-09-24', durationMinutes: 20, categoryHint: 'kids' }));
+    await device.store.flush();
+    return { artifactId, readingId: device.store.getSnapshot().state.interpretations[0].id };
+  };
+
+  test('a pending reading is in the cloud as structured state under the neutral label; nothing of her words is in ANY row the cloud holds', async () => {
+    const cloud = createFakeCloud();
+    const accountCloud = accountCloudFor(cloud, ACCOUNT_A);
+    const a = await makeDevice({ cloud, accountId: ACCOUNT_A, accountCloud });
+    await withPendingReading(a);
+    await a.signIn();
+
+    const [row] = cloud.table('interpretations');
+    assert.ok(row, 'the reading is NOT held out of sync: it travels as structured interpretation state');
+    assert.deepEqual([row.state, row.proposed_kind, row.due_date, row.duration_minutes, row.category_hint], ['pending', 'task', '2026-09-24', 20, 'kids']);
+    assert.equal(row.title, UNDECIDED_READING_TITLE.task, 'under a neutral label, not a title copied or derived from her words');
+    assert.deepEqual(leaks(everythingTheCloudHolds(cloud)), [], 'no word, and no 12-character run of her sentence or of the title, is anywhere in the cloud');
+    assert.equal(cloud.table('tasks').length, 0, 'and no canonical row exists: she has not accepted anything');
+    assert.equal(a.persisted().identity.sync.queue.length, 0);
+    assert.ok(a.store.getSnapshot().state.interpretations[0].title === TITLE, 'the device that heard her keeps the reading as it is');
+  });
+
+  test('after explicit acceptance the canonical title travels, through the ordinary queue, and the row it became travels with it', async () => {
+    const cloud = createFakeCloud();
+    const accountCloud = accountCloudFor(cloud, ACCOUNT_A);
+    const a = await makeDevice({ cloud, accountId: ACCOUNT_A, accountCloud });
+    const { readingId } = await withPendingReading(a);
+    await a.signIn();
+    assert.equal(cloud.table('interpretations')[0].title, UNDECIDED_READING_TITLE.task);
+
+    await mutate(a, (s, ctx) => acceptInterpretation(s, ctx, readingId, { categoryId: s.categories[0].id }));
+    await a.settle();
+    const [row] = cloud.table('interpretations');
+    assert.deepEqual([row.state, row.title], ['accepted', TITLE], 'she approved it, so its canonical title may travel');
+    assert.deepEqual(cloud.table('tasks').map((t) => t.title), [TITLE]);
+    assert.equal(row.revision, 2, 'an UPDATE of the row the cloud already had, not a second reading');
+    assert.equal(a.persisted().identity.sync.evidence.length, 0);
+  });
+
+  test('a reading that was corrected, and one that was rejected, never carry a title: only the ACCEPTED reading does', async () => {
+    const cloud = createFakeCloud();
+    const accountCloud = accountCloudFor(cloud, ACCOUNT_A);
+    const a = await makeDevice({ cloud, accountId: ACCOUNT_A, accountCloud });
+    const { readingId } = await withPendingReading(a);
+    await a.signIn();
+
+    await mutate(a, (s, ctx) => supersedeInterpretation(s, ctx, readingId, { proposedKind: 'task', title: 'Phone the heart clinic for Mia', dueDate: '2026-09-24', categoryHint: 'kids' }));
+    await a.settle();
+    const byState = () => Object.fromEntries(cloud.table('interpretations').map((r) => [r.state, r.title]));
+    assert.deepEqual(byState(), { superseded: UNDECIDED_READING_TITLE.task, pending: UNDECIDED_READING_TITLE.task }, 'a correction does not release a title until she accepts');
+    const successor = a.store.getSnapshot().state.interpretations.find((r) => r.state === 'pending');
+
+    await mutate(a, (s, ctx) => rejectInterpretation(s, ctx, successor.id));
+    await a.settle();
+    assert.deepEqual(cloud.table('interpretations').map((r) => [r.state, r.title]).sort(), [['rejected', UNDECIDED_READING_TITLE.task], ['superseded', UNDECIDED_READING_TITLE.task]]);
+    assert.deepEqual(leaks(everythingTheCloudHolds(cloud)), [], 'nothing of hers, in any row, after a correction and a rejection');
+  });
+
+  test('a device that finishes a whole chain OFFLINE sends only the decided end of it: no earlier title ever goes out', async () => {
+    const cloud = createFakeCloud();
+    cloud.state.offline = true;
+    const accountCloud = accountCloudFor(cloud, ACCOUNT_A);
+    const a = await makeDevice({ cloud, accountId: ACCOUNT_A, accountCloud });
+    const { readingId } = await withPendingReading(a);
+    await a.signIn();
+    await mutate(a, (s, ctx) => supersedeInterpretation(s, ctx, readingId, { proposedKind: 'task', title: 'Phone the heart clinic for Mia', dueDate: '2026-09-24', categoryHint: 'kids' }));
+    const successor = a.store.getSnapshot().state.interpretations.find((r) => r.state === 'pending');
+    await mutate(a, (s, ctx) => acceptInterpretation(s, ctx, successor.id, { categoryId: s.categories[0].id }));
+    cloud.state.offline = false;
+    await a.syncRuntime.request('networkRestored');
+
+    assert.deepEqual(cloud.table('interpretations').map((r) => [r.state, r.title]).sort(), [
+      ['accepted', 'Phone the heart clinic for Mia'],
+      ['superseded', UNDECIDED_READING_TITLE.task],
+    ]);
+    assert.deepEqual(leaks(everythingTheCloudHolds(cloud)), [], 'the first reading’s wording never left the device, even though the chain was sent all at once');
+  });
+
+  test('a SECOND device sees the undecided reading under the neutral label, cannot accept it as it stands, and receives the canonical title once the first device accepts', async () => {
+    const cloud = createFakeCloud();
+    const accountCloud = accountCloudFor(cloud, ACCOUNT_A);
+    const a = await makeDevice({ cloud, accountId: ACCOUNT_A, accountCloud });
+    const { readingId } = await withPendingReading(a);
+    await a.signIn();
+
+    const b = await makeDevice({ cloud, accountId: ACCOUNT_A, accountCloud });
+    await bindAsNewDevice(b, accountCloud);
+    await b.signIn();
+    const seen = b.store.getSnapshot().state.interpretations;
+    assert.equal(seen.length, 1, 'the reading is on the second device');
+    assert.deepEqual([seen[0].state, seen[0].title, seen[0].dueDate, seen[0].categoryHint], ['pending', UNDECIDED_READING_TITLE.task, '2026-09-24', 'kids'], 'structured state arrives; her words do not');
+    assert.deepEqual(leaks(JSON.stringify(b.persisted())), [], 'and they are not in anything the second device holds');
+    assert.deepEqual(canAccept(seen[0], { categoryId: b.store.getSnapshot().state.categories[0].id }), { ok: false, reason: 'needs_title' });
+    await mutate(b, (s, ctx) => acceptInterpretation(s, ctx, seen[0].id, { categoryId: s.categories[0].id }));
+    assert.equal(b.store.getSnapshot().state.tasks.length, 0, 'accepting it as it stands creates nothing: no row is called "To-do to review"');
+
+    await mutate(a, (s, ctx) => acceptInterpretation(s, ctx, readingId, { categoryId: s.categories[0].id }));
+    await a.settle();
+    await b.syncRuntime.request('foreground');
+    const after = b.store.getSnapshot().state;
+    assert.deepEqual([after.interpretations[0].state, after.interpretations[0].title], ['accepted', TITLE], 'the accepted, canonical title reaches the second device');
+    assert.deepEqual(after.tasks.map((t) => t.title), [TITLE]);
+  });
+
+  test('the scan can see: a reading whose title were sent as it is WOULD be caught', () => {
+    const planted = JSON.stringify([{ title: TITLE, state: 'pending' }]);
+    assert.ok(leaks(planted).length > 0, 'the leak scan finds a derived title in a payload');
+    assert.deepEqual(leaks(JSON.stringify([{ title: UNDECIDED_READING_TITLE.task, state: 'pending' }])), [], 'and finds nothing in a neutral one');
   });
 });
 

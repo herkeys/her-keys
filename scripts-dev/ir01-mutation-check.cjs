@@ -87,6 +87,16 @@ const MUTANTS = [
     file: 'src/domain/state.ts', from: "if (system.scope === 'child' && system.subjectMemberId === null) {", to: 'if (false) {', tests: [`${T}systemSubject.test.mjs`] },
   { id: 'M29', guards: 'HA-011', what: 'the adult account user is accepted as a System\'s subject',
     file: 'src/domain/state.ts', from: 'if (system.subjectMemberId !== null && !childIds.has(system.subjectMemberId)) {', to: 'if (system.subjectMemberId !== null && !childIds.has(system.subjectMemberId) && system.subjectMemberId !== state.user.id) {', tests: [`${T}systemSubject.test.mjs`] },
+
+  // ---- OD-A: an undecided reading never shows the cloud a title derived from her words ---------------------------------
+  { id: 'M32', guards: 'OD-A', what: 'the projection sends a reading\'s own title before she has accepted it (her derived words leave the device)',
+    file: 'src/domain/sync/foundationProjection.ts', from: "if (kind === 'interpretation') out.title = titleForCloud(row as unknown as Interpretation);", to: '/* the derived title travels */', tests: [`${T}readingTitle.test.mjs`, ...COMPOSITION] },
+  { id: 'M33', guards: 'OD-A', what: 'a rejected or superseded reading releases its title (it was never approved)',
+    file: 'src/domain/foundation/interpretation.ts', from: "reading.state === 'accepted' ? reading.title", to: "reading.state === 'accepted' || reading.state === 'rejected' || reading.state === 'superseded' ? reading.title", tests: [`${T}readingTitle.test.mjs`, ...COMPOSITION] },
+  { id: 'M34', guards: 'OD-A', what: 'the neutral label carries a slice of her title (quasi-verbatim)',
+    file: 'src/domain/foundation/interpretation.ts', from: ': UNDECIDED_READING_TITLE[reading.proposedKind];', to: ': `${UNDECIDED_READING_TITLE[reading.proposedKind]}: ${reading.title.slice(0, 20)}`;', tests: [`${T}readingTitle.test.mjs`, ...COMPOSITION] },
+  { id: 'M35', guards: 'OD-A', what: 'a reading that arrived neutral can be accepted as it stands (a real row called "To-do to review")',
+    file: 'src/domain/interpretations.ts', from: "  if (isUndecidedReadingTitle(reading.title)) return { ok: false, reason: 'needs_title' };\n", to: '', tests: [`${T}readingTitle.test.mjs`, ...COMPOSITION] },
 ];
 
 function runTests(files) {
