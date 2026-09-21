@@ -248,14 +248,14 @@ No test is removed or rewritten at T0.
 | FR-08 | What can wait — bounded, only when provably safe (§17, T) | IMPLEMENTED | model: scenario H (six look-alikes stay unlisted; bounded at three); UI: `TodayList` "Can wait today" |
 | FR-09 | Responsibility / waiting; delegated ≠ covered (§18) | IMPLEMENTED | model: scenario C; UI: `TodayAttention`, `TodayList` "Waiting"; take-back through `useTodayActions` -> `returnToSelf` |
 | FR-10 | "Handled by Her Keys" only with execution **and** outcome (§19, O) | IMPLEMENTED | model: scenario G (execution AND success outcome; unconfirmed / approved-not-run / failed / undone / yesterday); UI: `TodayHandled` (`attentionUi.test.mjs`) |
-| FR-11 | Upcoming constraint — one, only if material (§20) | IN PROGRESS | model only; test pending |
-| FR-12 | What changed — no presentation markers in state (§21, P) | IN PROGRESS | model: scenario J; rollover / time-of-day pending |
+| FR-11 | Upcoming constraint — one, only if material (§20) | IMPLEMENTED | `tests/today/lifecycle.test.mjs` "the upcoming constraint": dependency (today and tomorrow, several blockers), tomorrow overlap verbatim, consequential deadline, none = null, strongest wins, four days out = null |
+| FR-12 | What changed — no presentation markers in state (§21, P) | IMPLEMENTED | scenario C (`changedToday` from dated observations); `lifecycle.test.mjs` "what changed": no presentation marker in `AppState` or the model; yesterday is not "today" |
 | FR-13 | Correction / adjustment through existing paths only (§22, H) | IMPLEMENTED | Scenario M (`tests/today/correction.test.mjs`): real store, persisted, re-derived; task edit, take-back, approve / decline; MP-01..04 offer nothing |
 | FR-14 | Progressive disclosure, accessible (§23) | IMPLEMENTED | UI: `TodayDisclosure` (`components.test.mjs`); "See why" -> "Evidence and source"; "More that needs you"; "N more"; "Everything today"; "Also checked"; "Changes you approved" |
 | FR-15 | Adaptive density; ≤3 primary blocks on an ordinary day (§24, S) | IN PROGRESS | model: scenarios A, D, I |
-| FR-16 | Time: household timezone, logical day, DST, time-of-day, rollover (§25, P, W) | NOT STARTED | |
-| FR-17 | Local-first; unknown ≠ light; unrecovered ≠ light; sync stays infrastructure (§26, J, K, M) | IN PROGRESS | model: `availability`; UI: `TodayStateNotice` (`components.test.mjs`); lifecycle scenarios pending |
-| FR-18 | Demo isolation and onboarding guard intact (L) | NOT STARTED | |
+| FR-16 | Time: household timezone, logical day, DST, time-of-day, rollover (§25, P, W) | IMPLEMENTED | scenarios J (zone, near-midnight, spring-forward, fall-back), P (08:00 / 15:00 / 21:00), W (real store + real hook across midnight: `lifecycle.test.mjs`, `hooks.test.mjs`) |
+| FR-17 | Local-first; unknown ≠ light; unrecovered ≠ light; sync stays infrastructure (§26, J, K, M) | IMPLEMENTED | scenarios K, O (`lifecycle.test.mjs`): real-store recoveries — newer version, unreadable storage, other mode, corrupt — Today is unavailable or honestly empty, never "light"; no sync surface in Today |
+| FR-18 | Demo isolation and onboarding guard intact (L) | IMPLEMENTED | scenario L (`lifecycle.test.mjs`): demo renders, is pure, claims no handled work, names no account/cloud; the model imports no account/storage/network module; onboarding guard and single Today route intact |
 | FR-19 | Typed future-LLM seam, nothing wired (§27) | NOT STARTED | |
 | FR-20 | Tone: calm, precise, adult; no cheerleading / dramatization (Q) | NOT STARTED | |
 | FR-21 | Minimum sensitive detail at first glance (R) | NOT STARTED | |
@@ -298,6 +298,8 @@ No test is removed or rewritten at T0.
 | `src/features/today/useTodayActions.ts` | The two existing domain mutations the attention rows can make (`returnToSelf`, `decideIntent`), through `store.commit` | T5 |
 | `tests/today/attentionUi.test.mjs` | Attention / approval / handled render and interaction contract | T5 |
 | `tests/today/correction.test.mjs` | Scenario M: correction end to end through a real store; every route is an existing screen; no fake affordance | T6 |
+| `tests/today/lifecycle.test.mjs` | Scenarios K, L, O, P, W; the upcoming constraint; what changed | T7 |
+| `tests/today/hooks.test.mjs`, `tests/today/support/rn-with-appstate.mjs`, `stub-appstate.mjs` | The real `useTodayView` under the real `AppStateProvider` across midnight; a test-local `AppState` stub (shared test support untouched) | T7 |
 
 **Existing Today files modified** are listed with their classification in §2.8 and their commits in the commit series (§10).
 
