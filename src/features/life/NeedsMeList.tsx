@@ -28,7 +28,7 @@ export function NeedsMeList() {
     <View style={styles.list}>
       {open.map((item) => (
         <Card key={item.id} tone="surface" style={styles.card}>
-          <AppText variant="title">{item.title}</AppText>
+          <AppText variant="cardTitle">{item.title}</AppText>
           <View style={styles.row}>
             <Button
               label="Promote to task"

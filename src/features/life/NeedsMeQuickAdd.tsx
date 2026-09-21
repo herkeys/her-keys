@@ -38,7 +38,7 @@ export function NeedsMeQuickAdd() {
       </AppText>
       <TextField label="Needs Me" value={title} onChangeText={setTitle} placeholder="Call insurance" maxLength={FIELD_LIMITS.titleLength} />
       {note && (
-        <AppText variant="bodySm" color={colors.attention} style={styles.note} accessibilityRole="alert">
+        <AppText variant="supporting" color={colors.attention} style={styles.note} accessibilityRole="alert">
           {note}
         </AppText>
       )}

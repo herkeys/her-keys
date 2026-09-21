@@ -16,8 +16,8 @@ export default function LifeHub() {
   return (
     <Screen>
       <View style={styles.header}>
-        <AppText variant="hero">Life</AppText>
-        <AppText variant="title" color={colors.textSecondary} style={styles.subtitle}>
+        <AppText variant="display">Life</AppText>
+        <AppText variant="supporting" color={colors.textSecondary} style={styles.subtitle}>
           Five areas, one picture. Everything here is what Her Keys reads when it looks at your day.
         </AppText>
       </View>
