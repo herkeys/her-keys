@@ -59,7 +59,7 @@ export async function syncIntegration(check, psql) {
 
 async function load() {
   const at = (p) => `file://${join(REPO, 'src', ...p)}`;
-  const [types, queue, claimSeam, push, pull, coordinator, apply, projection, transport, initial, rules, specs, rich, auth, resp, struct, tasksOps, state, interp] = await Promise.all([
+  const [types, queue, claimSeam, push, pull, coordinator, apply, projection, transport, initial, rules, specs, rich, auth, resp, struct, tasksOps, state, interp, interpModel] = await Promise.all([
     import(at(['domain', 'sync', 'syncTypes.ts'])),
     import(at(['domain', 'sync', 'queue.ts'])),
     import(at(['domain', 'sync', 'claimSeam.ts'])),
@@ -79,8 +79,9 @@ async function load() {
     import(at(['domain', 'tasks.ts'])),
     import(at(['domain', 'state.ts'])),
     import(at(['domain', 'interpretations.ts'])),
+    import(at(['domain', 'foundation', 'interpretation.ts'])),
   ]);
-  return { types, queue, claimSeam, push, pull, coordinator, apply, projection, transport, initial, rules, specs, rich, auth, resp, struct, tasksOps, state, interp };
+  return { types, queue, claimSeam, push, pull, coordinator, apply, projection, transport, initial, rules, specs, rich, auth, resp, struct, tasksOps, state, interp, interpModel };
 }
 
 const TZ = 'America/Chicago';
@@ -805,7 +806,9 @@ async function journeyFoundation(check, m, accountId, strangerId, psql) {
   const byId = (rows) => [...rows].sort((x, y) => x.id.localeCompare(y.id));
   const differing = [];
   for (const spec of specs.filter((s) => !s.serverWritten)) {
-    const mine = a.state()[spec.collection];
+    // OD-A: the ONE deliberate difference. A reading she has not accepted crosses under a neutral label, because its title is
+    // copied or derived from her words; everything else about it, and every accepted title, crosses intact.
+    const mine = spec.kind === 'interpretation' ? a.state()[spec.collection].map((r) => ({ ...r, title: m.interpModel.titleForCloud(r) })) : a.state()[spec.collection];
     const theirs = b.state()[spec.collection];
     const same = spec.singleton
       ? JSON.stringify(mine) === JSON.stringify(theirs)
@@ -817,6 +820,11 @@ async function journeyFoundation(check, m, accountId, strangerId, psql) {
   }
   check('sync: F8. SECOND-DEVICE HYDRATION: the new device holds exactly what the first wrote — every kind, provenance and reference intact',
     differing.length === 0, differing.join(', ') || 'identical');
+  const undecided = a.state().interpretations.filter((r) => r.state !== 'accepted');
+  check('sync: F8b. OD-A: the deliberate difference really happened - an undecided reading\'s title did not cross; an accepted one did',
+    undecided.length > 0 && undecided.every((r) => b.state().interpretations.find((x) => x.id === r.id)?.title === m.interpModel.UNDECIDED_READING_TITLE[r.proposedKind])
+      && a.state().interpretations.filter((r) => r.state === 'accepted').every((r) => b.state().interpretations.find((x) => x.id === r.id)?.title === r.title),
+    `${undecided.length} undecided`);
   const valid = m.state.validateAppState(b.state());
   check('sync: F9. and what it hydrated is a valid household the app would accept from disk', valid.ok, valid.ok ? '' : valid.issues.slice(0, 3).join('; '));
 
