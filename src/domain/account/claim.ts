@@ -351,7 +351,7 @@ export function cloudDisplayName(name: string): string {
     .normalize('NFC')
     // eslint-disable-next-line no-control-regex
     .replace(/[ --]/g, ' ')
-    .replace(/s+/g, ' ')
+    .replace(/\s+/g, ' ')
     .trim();
   return cleaned === '' ? name : cleaned;
 }

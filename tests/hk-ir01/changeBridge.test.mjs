@@ -7,6 +7,7 @@
  */
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
+import { addChild } from '../../src/domain/children.ts';
 import { addEvent } from '../../src/domain/events.ts';
 import { starterCategories } from '../../src/domain/categories.ts';
 import { addTask, updateTask } from '../../src/domain/tasks.ts';
@@ -19,8 +20,11 @@ import {
   unsyncedRows,
 } from '../../src/domain/sync/changeBridge.ts';
 import { createChangeObserver } from '../../src/domain/sync/changeObserver.ts';
+import { cloudDisplayName } from '../../src/domain/account/claim.ts';
+import { FOUNDATION_SPECS } from '../../src/domain/sync/foundationSpecs.ts';
+import { toCloudRow } from '../../src/domain/sync/projection.ts';
 import { mergePushResult } from '../../src/domain/sync/cycleMerge.ts';
-import { ALLOWED_OPS, MAX_QUEUE_ITEMS, SYNC_ENTITY_KINDS, emptyNamespace } from '../../src/domain/sync/syncTypes.ts';
+import { ALLOWED_OPS, DEPENDENCY_RANK, MAX_QUEUE_ITEMS, SYNC_ENTITY_KINDS, emptyNamespace } from '../../src/domain/sync/syncTypes.ts';
 import { PUSHABLE_KINDS, collectionRef, rowsOf } from '../../src/domain/sync/syncKinds.ts';
 import { UNBOUND_IDENTITY } from '../../src/domain/account/binding.ts';
 import { createEmptyState } from '../../src/state/initialState.ts';
@@ -41,11 +45,24 @@ const ctx = () => {
 const withTask = (s, c, title = 'A task') => addTask(s, c, { title, categoryId: s.categories[0].id, scope: 'household', durationMinutes: 10, durationSource: 'user' });
 
 describe('HA-001 — the inventory of sync-capable canonical kinds', () => {
-  test('28 kinds: 26 are pushed, and exactly the two server-written kinds are pull-only', () => {
-    assert.equal(SYNC_ENTITY_KINDS.length, 28);
-    assert.equal(PUSHABLE_KINDS.length, 26);
+  test('29 kinds: 27 are pushed, and exactly the two server-written kinds are pull-only', () => {
+    // 28 + `member` (a child; HK-FEATURE-05, owner checkpoint OC-01). The account holder's own member row is not a kind of ours.
+    assert.equal(SYNC_ENTITY_KINDS.length, 29);
+    assert.equal(PUSHABLE_KINDS.length, 27);
     const pullOnly = SYNC_ENTITY_KINDS.filter((kind) => ALLOWED_OPS[kind].length === 0);
     assert.deepEqual([...pullOnly].sort(), ['execution', 'outcome']);
+  });
+
+  test('`member` is a CHILD kind: create-only, first in dependency order, over the household\'s children and nothing else', () => {
+    assert.deepEqual(ALLOWED_OPS.member, ['create'], 'a child is created and never edited or removed by a client');
+    assert.equal(PUSHABLE_KINDS[0], 'member', 'a child is sent before everything that can name it');
+    // Every kind whose rows can name a child as their subject: the four core kinds and every foundation kind with a link to `member`.
+    const namesAChild = ['category', 'task', 'event', 'system', ...FOUNDATION_SPECS.filter((spec) => spec.fields.some((f) => f.type === 'link' && f.to === 'member')).map((spec) => spec.kind)];
+    assert.ok(namesAChild.length > 4, 'the foundation kinds that name a child were found');
+    for (const kind of namesAChild) assert.ok(DEPENDENCY_RANK[kind] > DEPENDENCY_RANK.member, `${kind} names a child, so it must rank after member`);
+    const state = { ...createEmptyState(TZ), children: [{ id: 'child-1', displayName: 'Mia', birthDate: '2016-04-02', scope: 'child' }] };
+    assert.deepEqual(rowsOf(state, 'member', null).map((row) => row.id), ['child-1'], 'the rows of the member kind are the children');
+    assert.equal(rowsOf(state, 'member', null).some((row) => row.id === state.user.id), false, 'the account holder is never a row of it');
   });
 
   test('every pushed kind can be found in a household that holds one of everything: nothing is invisible to the seed', () => {
@@ -361,5 +378,78 @@ describe('HA-001 — merging a push cycle into what she did while it ran', () =>
     const during = { ...queued, backlog: true, queue: [...queued.queue] };
     const merged = mergePushResult({ basis: { state: s0, namespace: queued }, result, current: { state: s0, namespace: during } });
     assert.equal(merged.backlog, true);
+  });
+});
+
+describe('HK-FEATURE-05 / OC-01 — a child in the change bridge', () => {
+  const kid = (state, c, name = 'Ava') => addChild(state, c, { displayName: name, birthDate: '2019-03-04' });
+  const child = (id, displayName = 'Ava') => ({ id, displayName, birthDate: '2019-03-04', scope: 'child' });
+  const mapping = (kind, localId, n) => ({ kind, localId, cloudId: cloud(n), revision: 1 });
+  const bound = (sync) => ({ binding: { accountId: ACCOUNT, householdId: HOUSEHOLD, boundAt: AT, kind: 'claim', idMap: {} }, receipt: null, quarantine: null, sync });
+
+  test('adding a child is a CREATE intent; a local change to a child the cloud already holds queues nothing (a child has no update)', () => {
+    const c = ctx();
+    const a = createEmptyState(TZ);
+    const b = kid(a, c);
+    const intents = changedRows(a, b, ns());
+    assert.deepEqual(intents, [{ kind: 'member', localId: 'child-1', op: 'upsert' }]);
+    assert.deepEqual(queueIntents(ns(), intents, AT).namespace.queue.map((q) => [q.kind, q.localId, q.op]), [['member', 'child-1', 'create']]);
+
+    const known = ns({ mappings: { 'member:child-1': mapping('member', 'child-1', 1) } });
+    const edited = { ...b, children: b.children.map((row) => ({ ...row, displayName: 'Changed locally' })) };
+    const again = changedRows(b, edited, known);
+    assert.equal(again.length, 1, 'the bridge sees the change');
+    assert.equal(queueIntents(known, again, AT).namespace.queue.length, 0, 'but the child has no update operation, so nothing is queued');
+  });
+
+  test('a claimed child is mapped and NOT owed; an unmapped child is owed; the account holder is never owed as a member', () => {
+    const state = { ...createEmptyState(TZ), children: [child('child-1', 'Mia'), child('child-2', 'Theo')] };
+    const namespace = ns({ mappings: { 'member:child-1': mapping('member', 'child-1', 1), [`member:${state.user.id}`]: mapping('member', state.user.id, 2) } });
+    const owed = unsyncedRows(state, namespace, 100).filter((intent) => intent.kind === 'member');
+    assert.deepEqual(owed.map((intent) => intent.localId), ['child-2']);
+    assert.equal(owed.some((intent) => intent.localId === state.user.id), false);
+  });
+
+  test('a child whose CREATE ended as evidence (the server refused it) is not owed again, so it is never retried forever', () => {
+    const state = { ...createEmptyState(TZ), children: [child('child-2', 'Theo')] };
+    const refused = { id: 'e-1', evidence: 'forbidden', kind: 'member', localId: 'child-2', cloudId: null, attemptedOp: 'create', baseRevision: null, serverRevision: null, detail: 'permission denied', recordedAt: AT, resolved: false };
+    assert.equal(unsyncedRows(state, ns({ evidence: [refused] }), 100).some((intent) => intent.kind === 'member'), false);
+    assert.equal(unsyncedRows(state, ns(), 100).some((intent) => intent.kind === 'member'), true, 'without the evidence it would have been');
+  });
+
+  test('the projection of a child is exactly what a person states about a child, and a name with the letter s survives it', () => {
+    const state = { ...createEmptyState(TZ), children: [child('child-1', 'Josie Elias Mason')] };
+    const row = toCloudRow(state, { householdId: HOUSEHOLD, profileId: ACCOUNT, namespace: ns() }, 'member', 'child-1');
+    assert.deepEqual(Object.keys(row).sort(), ['birth_date', 'display_name', 'household_id', 'local_id', 'member_type', 'scope'], 'no id, role, profile or revision: those are the server\'s');
+    assert.deepEqual(row, { household_id: HOUSEHOLD, local_id: 'child-1', member_type: 'child', display_name: 'Josie Elias Mason', birth_date: '2019-03-04', scope: 'child' });
+  });
+
+  test('cloudDisplayName cleans NFC, control characters and runs of whitespace and touches nothing else (an "s" is not whitespace)', () => {
+    // A defect found by the real-database journey: `/s+/` (no backslash) turned every letter s into a space, so a claim, and later a
+    // child added after binding, reached the cloud as "Jo ie". The claim path had no test of the cleaner at all.
+    for (const name of ['Josie', 'Elias', 'Mason Ross', 'Sasha', 'Ava-Rose', "O'Neil"]) assert.equal(cloudDisplayName(name), name, name);
+    assert.equal(cloudDisplayName('  Mary   Ann \t Lee '), 'Mary Ann Lee');
+    assert.equal(cloudDisplayName(`Ava${String.fromCharCode(1)}Rose`), 'Ava Rose');
+    assert.equal(cloudDisplayName(`e${String.fromCharCode(0x301)}`), String.fromCharCode(0xe9), 'NFC');
+    assert.equal(cloudDisplayName('   '), '   ', 'blank stays blank, so the server refuses it visibly instead of the client inventing a name');
+  });
+
+  test('the observer queues a child for a bound account, and for nothing else: not a demo household, not another account\'s namespace, not an unbound one', () => {
+    const observer = createChangeObserver({ now: () => NOW });
+    const a = createEmptyState(TZ);
+    const b = kid(a, ctx());
+
+    const queued = observer.observe({ previous: a, next: b, identity: bound(ns()) });
+    assert.deepEqual(queued.sync.queue.map((q) => [q.kind, q.op]), [['member', 'create']], 'a bound household owes its new child');
+
+    const demo = observer.observe({ previous: { ...a, origin: 'demo' }, next: { ...b, origin: 'demo' }, identity: bound(ns()) });
+    assert.equal(demo.sync.queue.length, 0, 'fiction never syncs');
+
+    const foreign = ns({ accountId: '99999999-9999-4999-8999-999999999999' });
+    const other = bound(foreign);
+    assert.equal(observer.observe({ previous: a, next: b, identity: other }), other, 'a namespace that belongs to another account is left exactly as it was');
+
+    const unbound = { binding: null, receipt: null, quarantine: null, sync: null };
+    assert.equal(observer.observe({ previous: a, next: b, identity: unbound }), unbound, 'an unbound household has no queue to write to');
   });
 });

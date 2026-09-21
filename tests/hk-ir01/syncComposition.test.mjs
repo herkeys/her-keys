@@ -13,16 +13,20 @@ import { randomUUID } from 'node:crypto';
 import { describe, test } from 'node:test';
 import { createProviderRegistry, createScriptedProvider } from '../../src/domain/account/provider.ts';
 import { createMemorySecureStorage, createSecureSessionStore } from '../../src/domain/account/secureSession.ts';
+import { addChild } from '../../src/domain/children.ts';
 import { addEvent } from '../../src/domain/events.ts';
 import { starterCategories } from '../../src/domain/categories.ts';
 import { addTask, updateTask } from '../../src/domain/tasks.ts';
 import { UNDECIDED_READING_TITLE } from '../../src/domain/foundation/interpretation.ts';
 import { acceptInterpretation, canAccept, proposeInterpretation, recordArtifact, rejectInterpretation, supersedeInterpretation } from '../../src/domain/interpretations.ts';
 import { createChangeObserver } from '../../src/domain/sync/changeObserver.ts';
+import { applyPullBatch } from '../../src/domain/sync/pullEngine.ts';
+import { enqueue } from '../../src/domain/sync/queue.ts';
 import { namespaceForNewDevice } from '../../src/domain/sync/claimSeam.ts';
 import { SourceArtifactSchema } from '../../src/domain/foundation/sourceArtifact.ts';
 import { FOUNDATION_SPECS } from '../../src/domain/sync/foundationSpecs.ts';
-import { PULL_FETCH_CHUNK } from '../../src/domain/sync/syncTypes.ts';
+import { PULL_FETCH_CHUNK, emptyNamespace } from '../../src/domain/sync/syncTypes.ts';
+import { createEmptyState } from '../../src/state/initialState.ts';
 import { decodeStoredState } from '../../src/persistence/envelope.ts';
 import { STORAGE_KEYS, createAppStateRepository } from '../../src/persistence/appStateRepository.ts';
 import { createMemoryStorage } from '../../src/persistence/storageAdapter.ts';
@@ -955,6 +959,374 @@ describe('HA-001 — cost', () => {
     const perEdit = (performance.now() - t1) / 50;
     assert.ok(perEdit < 5, `one edit inside a 5,000-row collection cost ${perEdit.toFixed(3)} ms`);
     console.log(`      observe: untouched collection ${perCall.toFixed(4)} ms, one edit in 5,000 rows ${perEdit.toFixed(4)} ms`);
+  });
+});
+
+/**
+ * HK-FEATURE-05, owner checkpoint OC-01 (RESOLVED): a child added AFTER the household is bound to an account.
+ *
+ * The owner's decision: a bound household MUST be able to add a child, through the EXISTING household-member identity and the EXISTING
+ * sync path. So every test here begins where Kids does: a canonical `addChild` transition committed to the store, and nothing else. No
+ * test calls the queue, the transport or an RPC; if the child reaches the cloud it is because the change observer, the queue, the
+ * coordinator and `sync_push` did their ordinary work. The REAL PostgreSQL / PostgREST proof of the same journeys is
+ * supabase/tests/journey-kids.mjs, and the authority and RLS proof is supabase/tests/77-f05-child-after-binding.sql.
+ */
+describe('HK-FEATURE-05 / OC-01 — a child added after the household is bound to an account', () => {
+  const addKid = (displayName, birthDate = '2019-03-04') => (state, ctx) => addChild(state, ctx, { displayName, birthDate });
+  const kids = (device) => device.store.getSnapshot().state.children;
+  const kidNamed = (device, name) => kids(device).filter((c) => c.displayName === name);
+  const memberRows = (cloud) => cloud.table('household_members').filter((r) => r.member_type === 'child');
+  const memberCreates = (cloud) => cloud.calls.filter((c) => c.op === 'create' && c.table === 'household_members');
+  const mappingOf = (device, id) => device.persisted().identity.sync.mappings[`member:${id}`];
+  const queuedFor = (device, id) => device.persisted().identity.sync.queue.filter((q) => q.kind === 'member' && q.localId === id);
+  const eventFor = (childId, title) => (state, ctx) =>
+    addEvent(state, ctx, { title, categoryId: state.categories[0].id, subjectMemberId: childId, startsAt: '2026-09-28T22:00:00.000Z', endsAt: '2026-09-28T23:00:00.000Z', commitment: 'fixed', scope: 'child' });
+
+  /** Account A, bound on device `a`, whose household already holds the claimed child `Mia` and some content. */
+  async function bound() {
+    const cloud = createFakeCloud();
+    const accountCloud = accountCloudFor(cloud, ACCOUNT_A);
+    const a = await makeDevice({ cloud, accountId: ACCOUNT_A, accountCloud });
+    await householdWithContent(a);
+    await a.signIn();
+    return { cloud, accountCloud, a };
+  }
+  async function secondDevice({ cloud, accountCloud }) {
+    const b = await makeDevice({ cloud, accountId: ACCOUNT_A, accountCloud });
+    await bindAsNewDevice(b, accountCloud);
+    await b.signIn();
+    return b;
+  }
+
+  test('1-3. a child added BEFORE binding keeps its identity through the claim, and sync never creates it a second time', async () => {
+    const cloud = createFakeCloud();
+    const accountCloud = accountCloudFor(cloud, ACCOUNT_A);
+    const a = await makeDevice({ cloud, accountId: ACCOUNT_A, accountCloud });
+    await mutate(a, (s) => ({ ...s, oneMoves: [withheldMove] }));
+    await mutate(a, addKid('Ava'));
+    const before = kids(a)[0].id;
+    await a.signIn();
+
+    assert.deepEqual(kids(a).map((c) => c.id), [before], 'the child is the same child, under the same id');
+    assert.equal(memberRows(cloud).length, 1);
+    assert.equal(memberRows(cloud)[0].local_id, before, 'the cloud row was made from that local id by the claim');
+    assert.equal(mappingOf(a, before).cloudId, memberRows(cloud)[0].id, 'and the mapping is the claim\'s');
+    assert.equal(memberCreates(cloud).length, 0, 'the claim carried it, so the ordinary queue created nothing');
+    assert.equal(queuedFor(a, before).length, 0);
+  });
+
+  test('4, 10, 12. a child added AFTER binding is durable, owed, sent through the ordinary queue and mapped; work naming it follows', async () => {
+    const { cloud, a } = await bound();
+    assert.equal(memberCreates(cloud).length, 0, 'the claim made Mia; nothing has been pushed as a member yet');
+
+    await mutate(a, addKid('Theo', '2021-02-03'));
+    const theo = kidNamed(a, 'Theo')[0];
+    assert.ok(theo, 'she sees the child immediately');
+    assert.equal(queuedFor(a, theo.id).length, 1, 'the intent is durable in the SAME write as the change itself');
+    assert.equal(queuedFor(a, theo.id)[0].op, 'create');
+    assert.equal(a.persisted().state.children.some((c) => c.id === theo.id), true, 'and so is the child');
+    assert.equal(memberRows(cloud).length, 1, 'nothing has reached the cloud yet: the change is owed, not sent');
+
+    await a.settle();
+    assert.equal(memberRows(cloud).length, 2);
+    const row = memberRows(cloud).find((r) => r.local_id === theo.id);
+    assert.deepEqual([row.display_name, row.birth_date, row.member_type, row.scope], ['Theo', '2021-02-03', 'child', 'child']);
+    assert.equal(row.profile_id, undefined, 'a child is never given an account');
+    assert.equal(row.role, undefined, 'or a role');
+    assert.equal(mappingOf(a, theo.id).cloudId, row.id, 'the cloud identity is recorded against the SAME local id');
+    assert.equal(queuedFor(a, theo.id).length, 0);
+    assert.equal(a.syncRuntime.snapshot().needsAttention, false);
+
+    await mutate(a, task('Book the checkup', { subjectMemberId: theo.id, scope: 'child' }));
+    await mutate(a, eventFor(theo.id, 'Swim practice'));
+    await a.settle();
+    assert.equal(cloud.table('tasks').find((t) => t.title === 'Book the checkup').subject_member_id, row.id, 'a task for the new child points at its cloud identity');
+    assert.equal(cloud.table('events').find((e) => e.title === 'Swim practice').subject_member_id, row.id, 'and so does an event');
+    assert.equal(a.persisted().identity.sync.queue.length, 0);
+    assert.equal(memberCreates(cloud).length, 1, 'the child was created exactly once');
+  });
+
+  test('a name with the letter s in it reaches the cloud, and a second device, EXACTLY as she typed it (found by the real-database journey)', async () => {
+    const ctx = await bound();
+    const { cloud, a } = ctx;
+    await mutate(a, addKid('Elias Mason', '2020-10-10'));
+    await a.settle();
+    const row = memberRows(cloud).find((r) => r.local_id === kidNamed(a, 'Elias Mason')[0].id);
+    assert.equal(row.display_name, 'Elias Mason', 'the cloud row carries the name she typed');
+    const b = await secondDevice(ctx);
+    assert.equal(kidNamed(b, 'Elias Mason').length, 1, 'and so does the second device');
+    assert.equal(kidNamed(a, 'Elias Mason').length, 1, 'and the pull did not rewrite it on the first');
+  });
+
+  test('7, 11. a second device hydrates BOTH children under the same identities, and the new child\'s task and event resolve to the right child', async () => {
+    const ctx = await bound();
+    const { cloud, a } = ctx;
+    await mutate(a, addKid('Theo', '2021-02-03'));
+    const theo = kidNamed(a, 'Theo')[0];
+    await a.settle();
+    await mutate(a, task('Book the checkup', { subjectMemberId: theo.id, scope: 'child' }));
+    await mutate(a, eventFor(theo.id, 'Swim practice'));
+    await a.settle();
+
+    const b = await secondDevice(ctx);
+    assert.deepEqual(kids(b).map((c) => c.id).sort(), kids(a).map((c) => c.id).sort(), 'both children arrived under the SAME local ids');
+    assert.deepEqual(kids(b).map((c) => c.displayName).sort(), ['Mia', 'Theo']);
+    const theoB = kidNamed(b, 'Theo')[0];
+    assert.equal(theoB.id, theo.id);
+    assert.equal(theoB.birthDate, '2021-02-03');
+    const stateB = b.store.getSnapshot().state;
+    assert.equal(stateB.tasks.find((t) => t.title === 'Book the checkup').subjectMemberId, theoB.id, 'the task names the right child on device B');
+    assert.equal(stateB.events.find((e) => e.title === 'Swim practice').subjectMemberId, theoB.id, 'so does the event');
+    assert.equal(stateB.tasks.find((t) => t.title === 'Book the dentist').subjectMemberId, kidNamed(b, 'Mia')[0].id, 'and the earlier child\'s work still names the earlier child');
+    assert.equal(b.persisted().identity.sync.queue.length, 0, 'hydration produced no outbound work: a pulled child is not pushed back');
+    assert.equal(memberCreates(cloud).length, 1, 'device B created nothing');
+  });
+
+  test('5, 6. restart: both children remain, and nothing is created or duplicated', async () => {
+    const { cloud, accountCloud, a } = await bound();
+    await mutate(a, addKid('Theo', '2021-02-03'));
+    await a.settle();
+    await a.store.flush();
+    const ids = kids(a).map((c) => c.id).sort();
+    const creates = memberCreates(cloud).length;
+    a.syncRuntime.stop();
+
+    const restarted = await makeDevice({ cloud, accountId: ACCOUNT_A, accountCloud, storage: a.storage, secure: a.secure });
+    assert.deepEqual(kids(restarted).map((c) => c.id).sort(), ids, 'the same children, read back from disk');
+    await restarted.accountRuntime.restore();
+    await restarted.syncRuntime.idle();
+    await restarted.settle();
+    assert.deepEqual(kids(restarted).map((c) => c.id).sort(), ids, 'still the same two after the sync runtime resumed');
+    assert.equal(memberRows(cloud).length, 2);
+    assert.equal(memberCreates(cloud).length, creates, 'and the restart created nothing');
+    assert.equal(restarted.persisted().identity.sync.queue.length, 0);
+  });
+
+  test('8. two children with the SAME name are two children, here and on a second device; work follows the id, not the name', async () => {
+    const ctx = await bound();
+    const { cloud, a } = ctx;
+    await mutate(a, addKid('Sam', '2020-05-05'));
+    await mutate(a, addKid('Sam', '2020-05-05'));
+    const sams = kidNamed(a, 'Sam');
+    assert.equal(sams.length, 2);
+    assert.notEqual(sams[0].id, sams[1].id, 'identical name AND birth date, distinct identities');
+    await a.settle();
+    await mutate(a, task('For the second Sam', { subjectMemberId: sams[1].id, scope: 'child' }));
+    await a.settle();
+    assert.equal(memberRows(cloud).filter((r) => r.display_name === 'Sam').length, 2);
+    assert.equal(new Set(memberRows(cloud).filter((r) => r.display_name === 'Sam').map((r) => r.id)).size, 2);
+
+    const b = await secondDevice(ctx);
+    const samsB = kidNamed(b, 'Sam');
+    assert.deepEqual(samsB.map((c) => c.id).sort(), sams.map((c) => c.id).sort(), 'both Sams arrived, under their own ids');
+    assert.equal(b.store.getSnapshot().state.tasks.find((t) => t.title === 'For the second Sam').subjectMemberId, sams[1].id, 'the task stayed with the SECOND Sam');
+  });
+
+  test('9. a cloud-side rename is the same child: identity kept, name updated in place on every device, no duplicate, no echo', async () => {
+    const ctx = await bound();
+    const { cloud, a } = ctx;
+    await mutate(a, addKid('Theo', '2021-02-03'));
+    const theo = kidNamed(a, 'Theo')[0];
+    await a.settle();
+    await mutate(a, task('Book the checkup', { subjectMemberId: theo.id, scope: 'child' }));
+    await a.settle();
+    const b = await secondDevice(ctx);
+
+    cloud.editRow('household_members', memberRows(cloud).find((r) => r.local_id === theo.id).id, { display_name: 'Theodore' });
+    await a.syncRuntime.request('manual');
+    await b.syncRuntime.request('manual');
+    for (const device of [a, b]) {
+      assert.equal(kids(device).length, 2, 'no second child appeared');
+      assert.equal(kids(device).find((c) => c.id === theo.id).displayName, 'Theodore', 'the same child, renamed');
+      assert.equal(kidNamed(device, 'Theo').length, 0);
+      assert.equal(device.store.getSnapshot().state.tasks.find((t) => t.title === 'Book the checkup').subjectMemberId, theo.id, 'and its work still points at it');
+      assert.equal(device.persisted().identity.sync.queue.length, 0, 'a pulled rename is not pushed back');
+    }
+    assert.equal(memberCreates(cloud).length, 1);
+  });
+
+  test('13, 14. offline: the child is visible at once and owed durably; reconnecting creates it EXACTLY once, before the work that names it', async () => {
+    const { cloud, a } = await bound();
+    cloud.state.offline = true;
+    await mutate(a, addKid('Theo', '2021-02-03'));
+    const theo = kidNamed(a, 'Theo')[0];
+    await mutate(a, task('Book the checkup', { subjectMemberId: theo.id, scope: 'child' }));
+    await a.settle();
+
+    assert.equal(memberRows(cloud).length, 1, 'nothing reached the cloud');
+    assert.notEqual(a.syncRuntime.snapshot().phase, 'idle', 'and the device does not claim to be in sync');
+    const owed = a.persisted().identity.sync.queue.map((q) => `${q.kind}:${q.op}`);
+    assert.ok(owed.includes('member:create') && owed.includes('task:create'), `both are owed on disk: ${owed.join(', ')}`);
+
+    cloud.state.offline = false;
+    await a.syncRuntime.request('networkRestored');
+    await a.syncRuntime.request('manual');
+    await a.syncRuntime.request('manual');
+    const rows = memberRows(cloud).filter((r) => r.local_id === theo.id);
+    assert.equal(rows.length, 1, 'exactly one cloud child');
+    assert.equal(cloud.table('tasks').find((t) => t.title === 'Book the checkup').subject_member_id, rows[0].id);
+    assert.equal(a.persisted().identity.sync.queue.length, 0);
+    assert.equal(a.syncRuntime.snapshot().needsAttention, false);
+    const settledCreates = memberCreates(cloud).length;
+    await a.syncRuntime.request('manual');
+    assert.equal(memberCreates(cloud).length, settledCreates, 'a further cycle sends nothing more');
+  });
+
+  test('14. a LOST acknowledgement settles on the same child: the pull adopts the device\'s own row, nothing is duplicated', async () => {
+    const { cloud, a } = await bound();
+    cloud.state.loseNextAck = 1;
+    await mutate(a, addKid('Theo', '2021-02-03'));
+    const theo = kidNamed(a, 'Theo')[0];
+    await a.settle();
+    assert.equal(memberRows(cloud).filter((r) => r.local_id === theo.id).length, 1, 'the server committed');
+    assert.equal(mappingOf(a, theo.id), undefined, 'but the device never heard');
+
+    cloud.state.loseNextAck = 0;
+    await a.syncRuntime.request('manual');
+    await a.syncRuntime.request('manual');
+    assert.equal(kids(a).length, 2, 'the pull did not mint a second local child for its own row');
+    assert.equal(kidNamed(a, 'Theo').length, 1);
+    assert.equal(memberRows(cloud).filter((r) => r.display_name === 'Theo').length, 1, 'and the retry did not create a second cloud child');
+    assert.equal(mappingOf(a, theo.id).cloudId, memberRows(cloud).find((r) => r.local_id === theo.id).id);
+    assert.equal(a.persisted().identity.sync.queue.length, 0);
+    assert.equal(a.syncRuntime.snapshot().needsAttention, false);
+  });
+
+  test('15, 16. a server refusal is kept as evidence, is never retried, deletes nothing and blocks nothing else', async () => {
+    const { cloud, a } = await bound();
+    cloud.hooks.refuse = (table) => (table === 'household_members' ? { kind: 'failure', failure: 'forbidden', detail: 'permission denied for household_members', code: '42501' } : null);
+    await mutate(a, addKid('Theo', '2021-02-03'));
+    const theo = kidNamed(a, 'Theo')[0];
+    await a.settle();
+
+    const sync = () => a.persisted().identity.sync;
+    const evidence = sync().evidence.filter((e) => e.kind === 'member' && e.localId === theo.id);
+    assert.equal(evidence.length, 1);
+    assert.deepEqual([evidence[0].evidence, evidence[0].attemptedOp, evidence[0].resolved], ['forbidden', 'create', false], 'refused, truthfully, and inspectable');
+    assert.equal(a.syncRuntime.snapshot().needsAttention, true, 'and surfaced through the ordinary signal');
+    assert.equal(kidNamed(a, 'Theo').length, 1, 'her child is not silently deleted');
+    assert.equal(queuedFor(a, theo.id).length, 0, 'it left the queue: one refused row cannot block the others');
+
+    for (let round = 0; round < 3; round += 1) await a.syncRuntime.request('manual');
+    assert.equal(memberCreates(cloud).length, 1, 'the refused create was sent ONCE and never again');
+    assert.equal(sync().evidence.filter((e) => e.kind === 'member').length, 1, 'no fresh evidence each cycle either');
+
+    await mutate(a, task('For the refused child', { subjectMemberId: theo.id, scope: 'child' }));
+    await mutate(a, task('Something unrelated'));
+    await a.settle();
+    assert.ok(sync().evidence.some((e) => e.kind === 'task' && e.evidence === 'unresolvable-dependency'), 'work naming a child the cloud refused is kept as evidence, not sent with an invented reference');
+    assert.ok(cloud.table('tasks').some((t) => t.title === 'Something unrelated'), 'and an unrelated row syncs normally');
+    assert.equal(cloud.table('tasks').some((t) => t.title === 'For the refused child'), false);
+  });
+
+  test('17. account switching: account A\'s pending child is never uploaded under account B', async () => {
+    const cloud = createFakeCloud();
+    const cloudA = accountCloudFor(cloud, ACCOUNT_A);
+    const storage = createMemoryStorage({});
+    const a = await makeDevice({ cloud, accountId: ACCOUNT_A, accountCloud: cloudA, storage });
+    await householdWithContent(a);
+    await a.signIn();
+    cloud.state.offline = true;
+    await mutate(a, addKid('Pending', '2021-02-03'));
+    await a.settle();
+    cloud.state.offline = false;
+    await a.accountRuntime.signOut();
+    const callsBefore = cloud.calls.length;
+
+    const cloudB = accountCloudFor(cloud, ACCOUNT_B);
+    const b = await makeDevice({ cloud, accountId: ACCOUNT_B, accountCloud: cloudB, storage });
+    const state = await b.signIn();
+    assert.equal(state.kind, 'boundOther', 'the household belongs to another account: quarantined');
+    await b.settle();
+    assert.equal(cloud.calls.length, callsBefore, 'not one request was made on B\'s behalf');
+    assert.equal(memberRows(cloud).filter((r) => r.display_name === 'Pending').length, 0, 'A\'s child never reached the cloud under B');
+    assert.equal(cloud.table('household_members').filter((r) => r.household_id === cloudB.ids.householdId).length, 0, 'B\'s household holds no child of A\'s');
+    assert.ok(b.persisted().identity.quarantine);
+    assert.equal(b.persisted().state.children.some((c) => c.displayName === 'Pending'), true, 'and nothing of A\'s was deleted to make room');
+  });
+
+  test('20. a demo household, and a household that is not bound, never sync a child', async () => {
+    const cloud = createFakeCloud();
+    const accountCloud = accountCloudFor(cloud, ACCOUNT_A);
+    const demo = await makeDevice({ cloud, accountId: ACCOUNT_A, accountCloud, mode: 'demo' });
+    assert.equal((await demo.signIn()).kind, 'authenticatedUnbound', 'a demo household is refused as a whole');
+    await mutate(demo, addKid('Demo child'));
+    await demo.settle();
+    assert.equal(kidNamed(demo, 'Demo child').length, 1, 'she can still add one; it is just local');
+    assert.equal(cloud.calls.length, 0);
+    assert.equal(demo.persisted().identity.sync, null);
+
+    const local = await makeDevice({ cloud, accountId: ACCOUNT_A, accountCloud });
+    await mutate(local, addKid('Local child'));
+    await local.settle();
+    assert.equal(kidNamed(local, 'Local child').length, 1);
+    assert.equal(cloud.calls.length, 0, 'never signed in: nothing leaves the device');
+    assert.equal(local.persisted().identity.sync, null);
+    assert.equal(cloud.table('household_members').length, 0);
+  });
+
+  describe('the pull side, attacked directly (applyPullBatch)', () => {
+    const HOUSEHOLD = uuid();
+    const DEVICE = uuid();
+    const pullCtx = { transport: null, now: () => NOW, applyRow: (state) => state, applyTombstone: (state) => state, mintLocalId: (_kind, wanted) => `${wanted}-xminted` };
+    const cloudChild = (over = {}) => ({
+      id: uuid(), household_id: HOUSEHOLD, local_id: 'child-9', member_type: 'child', display_name: 'Ava', birth_date: '2019-03-04', scope: 'child',
+      revision: 1, origin_device_id: uuid(), created_at: '2026-09-21T15:00:00.000Z', ...over,
+    });
+    const batch = (rows) => ({ nextCursor: '9', tables: [{ table: 'household_members', kind: 'member', ids: rows.map((r) => r.id), rows }] });
+    const held = (id, name) => ({ id, displayName: name, birthDate: '2019-03-04', scope: 'child' });
+    const namespaceOwing = (localId) => {
+      const base = { ...emptyNamespace({ accountId: ACCOUNT_A, householdId: HOUSEHOLD, deviceId: DEVICE }), hydration: 'ready' };
+      const queued = enqueue(base, { kind: 'member', localId, op: 'create', at: '2026-09-21T15:00:00.000Z' });
+      assert.equal(queued.ok, true);
+      return queued.namespace;
+    };
+
+    test('a row THIS device created, coming home after a lost acknowledgement, is ADOPTED: one child, mapped, its pending create settled', () => {
+      const state = { ...createEmptyState(TZ), children: [held('child-9', 'Ava')] };
+      const row = cloudChild({ origin_device_id: DEVICE });
+      const out = applyPullBatch(state, namespaceOwing('child-9'), batch([row]), pullCtx);
+      assert.equal(out.kind, 'applied');
+      assert.deepEqual(out.state.children.map((c) => c.id), ['child-9'], 'no second local child');
+      assert.equal(out.namespace.mappings['member:child-9'].cloudId, row.id);
+      assert.equal(out.namespace.queue.length, 0, 'the create it was waiting to make has been made');
+    });
+
+    test('a row from ANOTHER device that reuses a local id is a different child (SD4-006): both kept, never merged', () => {
+      const state = { ...createEmptyState(TZ), children: [held('child-9', 'Ava')] };
+      const row = cloudChild({ origin_device_id: uuid() });
+      const out = applyPullBatch(state, namespaceOwing('child-9'), batch([row]), pullCtx);
+      assert.equal(out.kind, 'applied');
+      assert.deepEqual(out.state.children.map((c) => c.id).sort(), ['child-9', 'child-9-xminted']);
+      assert.equal(out.namespace.mappings['member:child-9-xminted'].cloudId, row.id);
+      assert.equal(out.namespace.mappings['member:child-9'], undefined, 'the local child is not given the other device\'s identity');
+      assert.equal(out.namespace.queue.length, 1, 'and its own create is still owed');
+    });
+
+    test('hydration never matches by NAME: a cloud child named like a local one is a second child, and a cloud rename is the same child', () => {
+      const state = { ...createEmptyState(TZ), children: [held('child-1', 'Ava')] };
+      const other = cloudChild({ local_id: 'child-5', display_name: 'Ava' });
+      const out = applyPullBatch(state, { ...emptyNamespace({ accountId: ACCOUNT_A, householdId: HOUSEHOLD, deviceId: DEVICE }), hydration: 'ready' }, batch([other]), pullCtx);
+      assert.deepEqual(out.state.children.map((c) => c.id).sort(), ['child-1', 'child-5'], 'same name, different children');
+
+      const renamed = { ...other, display_name: 'Avery', revision: 2 };
+      const again = applyPullBatch(out.state, out.namespace, batch([renamed]), pullCtx);
+      assert.deepEqual(again.state.children.map((c) => `${c.id}:${c.displayName}`).sort(), ['child-1:Ava', 'child-5:Avery'], 'renamed in place, still two children');
+    });
+
+    test('a child that arrives twice (a duplicate delivery) is one child', () => {
+      const row = cloudChild();
+      const first = applyPullBatch(createEmptyState(TZ), { ...emptyNamespace({ accountId: ACCOUNT_A, householdId: HOUSEHOLD, deviceId: DEVICE }), hydration: 'ready' }, batch([row]), pullCtx);
+      const second = applyPullBatch(first.state, first.namespace, batch([row, row]), pullCtx);
+      assert.equal(second.state.children.length, 1);
+      assert.equal(Object.values(second.namespace.mappings).filter((m) => m.kind === 'member').length, 1);
+    });
+
+    test('an adult member row is never applied as a child', () => {
+      const adult = cloudChild({ member_type: 'adult', local_id: 'user-1', display_name: null, birth_date: null, scope: 'personal' });
+      const out = applyPullBatch(createEmptyState(TZ), { ...emptyNamespace({ accountId: ACCOUNT_A, householdId: HOUSEHOLD, deviceId: DEVICE }), hydration: 'ready' }, batch([adult]), pullCtx);
+      assert.equal(out.state.children.length, 0);
+    });
   });
 });
 

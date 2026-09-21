@@ -10,12 +10,16 @@ import { ALLOWED_OPS, DEPENDENCY_RANK, SYNC_ENTITY_KINDS, type SyncEntityKind, t
  *
  * Classification (the full table, with the reason for each, is in HK_INTEGRATION_READINESS_01_BACKEND.md):
  *   PUSHED         a kind with at least one allowed operation: created and updated (or tombstoned) through the ordinary queue.
+ *                  `member` is pushed for CREATE only, and only ever holds a child (`AppState.children`): the household's owner adds a
+ *                  child through the same queue and `sync_push` as every other kind (HK-FEATURE-05, OC-01). The account holder's own
+ *                  member row is not in `children`, so it is never owed and never pushed.
  *   PULL-ONLY      a server-written kind (`execution`, `outcome`): a device cannot forge one, so nothing is ever queued for it.
- *   MAPPING-ONLY   `household`, `member`: claim creates them and claim alone; they are not kinds in this file.
+ *   MAPPING-ONLY   `household`: claim creates it and claim alone; it is not a kind in this file.
  *   LOCAL-ONLY     migration evidence and lineage, session-only source text, presentation state: not in AppState's sync kinds at all.
  */
 
 const CORE_COLLECTION: Partial<Record<SyncEntityKind, keyof AppState>> = {
+  member: 'children',
   category: 'categories',
   event: 'events',
   task: 'tasks',
