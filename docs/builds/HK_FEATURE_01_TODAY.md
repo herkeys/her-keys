@@ -238,8 +238,8 @@ No test is removed or rewritten at T0.
 
 | ID | Requirement (prompt §) | State | Evidence |
 |---|---|---|---|
-| FR-01 | Orientation: logical-day label + concise framing (§9A, J) | IN PROGRESS | model: `tests/today/scenarios.test.mjs` A, `scenarios2` J |
-| FR-02 | "What matters today" prioritized, not every item (§11) | IN PROGRESS | model: scenario A, I |
+| FR-01 | Orientation: logical-day label + concise framing (§9A, J) | IN PROGRESS | model: scenarios A, J; UI: `TodayHeader` |
+| FR-02 | "What matters today" prioritized, not every item (§11) | IN PROGRESS | model: scenarios A, I; UI: `TodayMatters` (`components.test.mjs`) |
 | FR-03 | One Move — full presentation lifecycle, all registered target kinds (§15, N) | IN PROGRESS | model: scenarios D, F |
 | FR-04 | "Why this One Move" from structured evidence, progressive (§16) | IN PROGRESS | model: scenario F |
 | FR-05 | Needs Me — things that exist vs things that need her (§12) | IN PROGRESS | model: scenario B, C |
@@ -251,10 +251,10 @@ No test is removed or rewritten at T0.
 | FR-11 | Upcoming constraint — one, only if material (§20) | IN PROGRESS | model only; test pending |
 | FR-12 | What changed — no presentation markers in state (§21, P) | IN PROGRESS | model: scenario J; rollover / time-of-day pending |
 | FR-13 | Correction / adjustment through existing paths only (§22, H) | IN PROGRESS | seam in `model/narrative.ts`; test pending |
-| FR-14 | Progressive disclosure, accessible (§23) | NOT STARTED | |
-| FR-15 | Adaptive density; ≤3 primary blocks on an ordinary day (§24, S) | NOT STARTED | |
+| FR-14 | Progressive disclosure, accessible (§23) | IN PROGRESS | UI: `TodayDisclosure` (`components.test.mjs`) |
+| FR-15 | Adaptive density; ≤3 primary blocks on an ordinary day (§24, S) | IN PROGRESS | model: scenarios A, D, I |
 | FR-16 | Time: household timezone, logical day, DST, time-of-day, rollover (§25, P, W) | NOT STARTED | |
-| FR-17 | Local-first; unknown ≠ light; unrecovered ≠ light; sync stays infrastructure (§26, J, K, M) | NOT STARTED | |
+| FR-17 | Local-first; unknown ≠ light; unrecovered ≠ light; sync stays infrastructure (§26, J, K, M) | IN PROGRESS | model: `availability`; UI: `TodayStateNotice` (`components.test.mjs`); lifecycle scenarios pending |
 | FR-18 | Demo isolation and onboarding guard intact (L) | NOT STARTED | |
 | FR-19 | Typed future-LLM seam, nothing wired (§27) | NOT STARTED | |
 | FR-20 | Tone: calm, precise, adult; no cheerleading / dramatization (Q) | NOT STARTED | |
@@ -286,16 +286,31 @@ No test is removed or rewritten at T0.
 | `src/features/today/model/index.ts` | Public surface of the model | T2 |
 | `tests/today/fixtures.mjs` | Scenario builders (domain operations; server-written rows as literals, validated) | T2 |
 | `tests/today/scenarios.test.mjs`, `scenarios2.test.mjs` | Scenarios A–J, mechanical | T2 |
+| `src/features/today/useTodayView.ts` | The one place the screen reads the clock; ticks each minute and on foreground, first asking the store to pick up a new day | T3 |
+| `src/features/today/TodayBriefing.tsx` | Renders the projection in the order it composed; no layout logic of its own | T3 |
+| `src/features/today/TodayHeader.tsx`, `TodayMatters.tsx`, `TodayList.tsx`, `TodayStateNotice.tsx` | Orientation; the anchors; the quiet one-line rung; unknown / unavailable / sparse states | T3 |
+| `src/features/today/TodayDisclosure.tsx` (`TodayDisclosure`, `SectionLabel`) | MGP-01: the accessible expand/collapse and the real-heading label | T3 |
+| `src/features/today/TodaySourceLine.tsx` | Provenance / confidence in the permanent design-system language | T3 |
+| `tests/today/components.test.mjs`, `tests/today/support/*` | Render / props contract tests; a recording `expo-router` stub scoped to this feature's tests | T3 |
 
 **Existing Today files modified** are listed with their classification in §2.8 and their commits in the commit series (§10).
 
-**SHARED FILES TOUCHED** (path · reason · commit · likely sibling collision · reconciliation need): none yet.
+**SHARED FILES TOUCHED** (path · reason · commit · likely sibling collision · reconciliation need). Only Today consumes
+any of these, but they live outside `src/features/today/`, so a sibling branch that edits the same file will collide:
+
+| Path | Reason | Commit | Likely sibling collision | Reconciliation |
+|---|---|---|---|---|
+| `src/features/daily-load/DailyLoadCard.tsx` | REFINE: remove the filler branches (empty household, nothing scheduled, overdue, "nothing needs moving") the view model now owns; every action and guard untouched | T3 | **Feature 03 (Calendar / Capacity)** is the likeliest to edit `daily-load/*` | Small, deletion-only diff in one region; take Feature 03's version and re-apply the four deletions |
+| `src/features/daily-load/LoadMeter.tsx` | REFINE: takes the estimate as a prop from the view model instead of reading `useSchedule()`; adds the optional capacity-profile note | T3 | Feature 03 | Only Today imports it |
+| `src/features/life/LifeStatusSummary.tsx` | REFINE: wrapped in a collapsed disclosure | T3 | Feature 02 (Life Inbox mount) | Only Today imports it; one wrapper |
+| `src/features/one-move/OneMoveCard.tsx` | REFINE: props from the view model; Why disclosure | T4 | Feature 04 (`system` One Move targets) | Only Today imports it |
 
 **MISSING GLOBAL PRIMITIVE register** (semantic need · current limitation · feature-local solution · sibling relevance):
 
 | # | Need | Limitation | Feature-local solution | Sibling relevance |
 |---|---|---|---|---|
-| MGP-01 | An accessible expand/collapse ("Why this?", "Everything today", "Can wait") | `WhyThis` always renders open; `HandledLedger` has an ad-hoc `Pressable`+`Overline` toggle; no design-system disclosure exists | `TodayDisclosure` in `src/features/today/` built only from `AppText`/`Overline`/tokens, with `accessibilityState.expanded` | High — Talk It Out, Calendar, Systems will each want one. Integration wave should promote **one** shared disclosure. |
+| MGP-01 | An accessible expand/collapse ("Why this?", "Everything today", "Can wait") | `WhyThis` always renders open; `HandledLedger` had an ad-hoc `Pressable`+`Overline` toggle; no design-system disclosure exists | `TodayDisclosure` (+ `SectionLabel`, a real heading) in `src/features/today/TodayDisclosure.tsx`, built only from `AppText` and tokens, exposing `accessibilityState.expanded`, a 44pt target, chevron hidden from a screen reader. `HandledLedger` now uses it too | High — Talk It Out, Calendar, Systems will each want one. Integration wave should promote **one** shared disclosure. |
+| MGP-02 | A heading role for the design-system `Overline` | `Overline` renders `Text` with no way to pass `accessibilityRole="header"`, so a section eyebrow cannot be a heading | `SectionLabel`: `AppText variant="label"` upper-cased, `accessibilityRole="header"` | Medium — every screen with eyebrow section titles |
 
 ---
 

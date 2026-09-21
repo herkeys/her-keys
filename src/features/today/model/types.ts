@@ -130,7 +130,7 @@ export interface AttentionRow {
     holderKind: ResponsibleKind;
     holder: string | null;
   };
-  approval: null | { intentId: string; phrase: string; consequence: ConsequenceLevel; reversibility: Reversibility };
+  approval: null | { intentId: string; phrase: string; summary: string; consequence: ConsequenceLevel; reversibility: Reversibility };
   /** "Accepted today at 2:10 PM." — present only when a dated observation says it changed today. */
   changedToday: string | null;
   source: SourceLine | null;

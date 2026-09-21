@@ -218,16 +218,17 @@ function rowFor(state: AppState, item: AttentionItem, about: TypedRef, nowMs: nu
       const target = intent.about ? describeRef(state, intent.about) : null;
       const phrase = ACTION_VERB[intent.category];
       const forWhat = target?.title ? ` for “${target.title}”` : '';
+      const summary = `Her Keys would like to ${phrase}${forWhat}.`;
       return {
         key: `intent:${intent.id}`,
         reason: 'approval_required',
         urgency: item.urgency,
         ref: intent.about,
         title: target?.title ?? null,
-        statement: `Her Keys would like to ${phrase}${forWhat}. It needs your yes.`,
+        statement: `${summary} It needs your yes.`,
         needsMe: true,
         responsibility: null,
-        approval: { intentId: intent.id, phrase, consequence: intent.consequence, reversibility: intent.reversibility },
+        approval: { intentId: intent.id, phrase, summary, consequence: intent.consequence, reversibility: intent.reversibility },
         changedToday: null,
         source: null,
         actions: [{ kind: 'review_approval', label: 'Review', intentId: intent.id }],
