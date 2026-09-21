@@ -42,6 +42,7 @@ export function projectCalendarDay({ state, date, today, nowMs, includeActions =
     selectedDate: date,
     dayMode: mode,
     timeZone: frame.timeZone,
+    frameStartMs: frame.startMs,
     asOfMs: nowMs,
     householdOrigin: state.origin === 'demo' ? ('demo' as const) : ('real' as const),
     dayItems: items,

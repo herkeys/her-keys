@@ -283,6 +283,8 @@ export interface CapacityState {
   /** Exactly what the foundation classifier returned, before completeness was considered. */
   foundationTier: LoadTier;
   verdict: 'overlap' | 'transition_conflict' | 'capacity_pressure' | 'tight_window' | 'overdue' | null;
+  /** The foundation's own numbers when the verdict is capacity pressure: what the household day has left vs what is planned. */
+  pressure: { availableMinutes: number; neededMinutes: number; pressureMinutes: number } | null;
   evidence: { status: 'complete' | 'insufficient'; missing: MissingEvidence[] };
   evidenceRefs: EvidenceRef[];
 }
@@ -316,6 +318,8 @@ export interface CalendarDayViewModel {
   selectedDate: LocalDate;
   dayMode: DayMode;
   timeZone: string;
+  /** The instant this logical day starts. Used only to turn elapsed minutes into clock times for display. */
+  frameStartMs: number;
   /** The clock the projection was computed against (elapsed items and unacknowledged requests depend on it). */
   asOfMs: number;
   householdOrigin: 'demo' | 'real';

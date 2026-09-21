@@ -59,6 +59,7 @@
     },
     "evidenceRefs": [],
     "foundationTier": "open",
+    "pressure": null,
     "tier": "open",
     "verdict": null
   },

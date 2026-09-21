@@ -91,6 +91,11 @@
       }
     ],
     "foundationTier": "overloaded",
+    "pressure": {
+      "availableMinutes": 240,
+      "neededMinutes": 300,
+      "pressureMinutes": 60
+    },
     "tier": "overloaded",
     "verdict": "capacity_pressure"
   },

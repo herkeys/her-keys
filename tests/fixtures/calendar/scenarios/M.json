@@ -98,6 +98,7 @@
       }
     ],
     "foundationTier": "tight",
+    "pressure": null,
     "tier": "tight",
     "verdict": "tight_window"
   },

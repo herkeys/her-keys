@@ -103,6 +103,10 @@ export function capacityStateOf(issues: DailyLoadIssues, missing: MissingEvidenc
     tier: issues.tier === 'open' && incomplete ? null : issues.tier,
     foundationTier: issues.tier,
     verdict: issues.primary?.kind ?? null,
+    pressure:
+      issues.primary?.kind === 'capacity_pressure'
+        ? { availableMinutes: issues.primary.availableMinutes, neededMinutes: issues.primary.neededMinutes, pressureMinutes: issues.primary.pressureMinutes }
+        : null,
     evidence: { status: incomplete ? 'insufficient' : 'complete', missing },
     evidenceRefs: evidenceRefsOf(issues.primary),
   };
