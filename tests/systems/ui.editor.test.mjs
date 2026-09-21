@@ -176,6 +176,17 @@ describe('Editor — the schedule and its preview', () => {
     });
   });
 
+  test('a PAUSED schedule says so in the editor, and saving other changes keeps it paused', async () => {
+    const { store } = await open({ rows: { ...existing(), recurrences: [ruleRow({ id: 'r-1', byWeekday: [0], status: 'paused' })] } });
+    await withScreen(store, <SystemEditor systemId="sys-1" />, async (r) => {
+      assert.match(allText(r), /This schedule is paused. You can resume it from the System screen./);
+      await typeInto(r, 'Name', 'School-night reset (renamed)');
+      await press(r, 'Save changes');
+      assert.equal(stateOf(store).recurrences[0].status, 'paused', 'editing the definition does not silently resume it');
+      assert.equal(stateOf(store).systems[0].name, 'School-night reset (renamed)');
+    });
+  });
+
   test('a rule this editor cannot author is left alone unless she replaces or stops it', async () => {
     const rows = { ...existing(), recurrences: [ruleRow({ id: 'r-1', trigger: 'after_completion', frequency: 'weekly' })] };
     const { store } = await open({ rows });

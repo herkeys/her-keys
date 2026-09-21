@@ -164,6 +164,9 @@ export function SystemEditor({ systemId }: { systemId?: string }) {
 
             {draft.scheduleMode === 'calendar' && schedule !== null ? (
               <View>
+                {e.schedulePaused ? (
+                  <InlineNotice tone="waiting" title={copy.editor.pausedNote} style={styles.block} />
+                ) : null}
                 <View style={styles.chipRow} accessibilityRole="radiogroup" accessibilityLabel={copy.editor.frequencyGroup}>
                   {FREQUENCIES.map(([value, label]) => (
                     <ChipToggle key={value} label={label} selected={schedule.frequency === value} onPress={() => actions.setFrequency(value)} />

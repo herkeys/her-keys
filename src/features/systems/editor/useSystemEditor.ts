@@ -186,6 +186,8 @@ export function useSystemEditor(systemId: string | undefined) {
   }, [draft, issues, state, today]);
 
   const hasOtherRule = draft !== null && !draft.isNew && hasUnauthorableRule(state, draft.systemId);
+  // Editing a paused schedule must not read as an active one: say so, and let save keep it paused.
+  const schedulePaused = draft !== null && !draft.isNew && liveRuleFor(state, draft.systemId)?.status === 'paused';
 
   // ---- save / reload
   const save = async () => {
@@ -238,6 +240,7 @@ export function useSystemEditor(systemId: string | undefined) {
     today,
     saveDisabled: persistence === 'disabled',
     hasOtherRule,
+    schedulePaused,
     categories: categoriesInOrder(state),
     stepNumber: (key: string): number | null => {
       const index = draft?.steps.findIndex((s) => s.key === key) ?? -1;

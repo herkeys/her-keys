@@ -229,10 +229,14 @@ absent System lifecycle do **not** invalidate it (contract §83: none of those i
    `loading` ≠ `empty`. When `persistence === 'disabled'` (future-version / read-failed / real-data-under-demo) the session is
    memory-only and its state is a stand-in, so Systems are **not shown and not editable** — a "saved" that isn't durable would
    be a lie. After a normal start-over recovery the fresh state is authoritative and a calm notice is shown.
-6. **Step positions are sparse (stride 10) and a reorder moves one row when it can** (MP-04). The cloud holds
-   `UNIQUE(system_id, position)`, pushes are one coalesced row at a time, so any swap collides. Moving a single step into a free
-   integer between its new neighbours changes exactly one row and never collides; renumbering (multi-row) is the fallback only
-   when no slot exists, and is reported. `stepsInOrder` already sorts by position, so nothing downstream changes.
+6. **Step positions are sparse (stride 10) and a reorder moves the fewest rows onto slots nobody holds** (MP-04). The cloud
+   holds `UNIQUE(system_id, position)` and pushes are one coalesced row at a time, so any swap collides. `layoutPositions`
+   keeps the largest feasible set of rows in place (a small DP) and puts every other row on an integer no current row holds, so
+   no push order can collide. There is **no renumber path**: a layout in which every row moves onto a free slot always exists,
+   and it is collision-safe where a renumber is not. `stepsInOrder` already sorts by position, so nothing downstream changes.
+   Proven three ways: unit + an 800-trial seeded property test (`stepOrder.test.mjs`), and against the REAL `pushPending`
+   with a fake transport that enforces the constraint (`syncReorder.test.mjs`: the defect reproduced; the mitigation under every
+   push order).
 7. **Recurrence edits are in place**, on the single live rule (cloud grants UPDATE on every rule field; history is in
    observations). Change-frequency keeps the row; stop = `ended`; nothing is ever deleted.
 8. **Category default.** `categoryId` is required by the schema. The editor pre-selects the household's Home category (visible,

@@ -252,6 +252,7 @@ export const copy = {
     previewTitle: 'The next three expected dates',
     previewNote: 'A preview only. Nothing is scheduled, and no reminder is sent.',
     previewNone: 'No upcoming dates with these settings.',
+    pausedNote: 'This schedule is paused. You can resume it from the System screen.',
     keepTitle: 'This System repeats after it’s done.',
     keepBody: 'That kind of schedule can’t be changed here.',
     useCalendar: 'Use a calendar schedule instead',
