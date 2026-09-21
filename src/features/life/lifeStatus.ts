@@ -110,9 +110,14 @@ function describeHome(tasks: TaskItem[], systems: HouseholdSystem[]): Reading {
   return { value: `${systems.length} systems running`, needsAttention: false };
 }
 
+/**
+ * `meals` are the ACTIVE meal decisions from today on, soonest first. The row names the next one and nothing more: the last
+ * entry's date would read as planning coverage ("planned through Friday") that a sparse plan does not have, and a blank plan is
+ * described, never counted as a problem.
+ */
 function describeMeals(meals: Array<{ label: string }>): Reading {
-  const last = meals[meals.length - 1];
-  return { value: last ? `Planned through ${last.label}` : 'Nothing planned', needsAttention: false };
+  const next = meals[0];
+  return { value: next ? `Next: ${next.label}` : 'No meals planned yet', needsAttention: false };
 }
 
 function describeWork(events: CalendarEventItem[]): Reading {
