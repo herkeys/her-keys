@@ -22,7 +22,7 @@ export function SyncNotice() {
 
   return (
     <View style={styles.wrap} accessibilityLiveRegion="polite">
-      <AppText variant="caption" color={colors.textTertiary}>
+      <AppText variant="metadata" color={colors.textTertiary}>
         {count === 1 ? 'One change needs your attention.' : `${count} changes need your attention.`}
       </AppText>
     </View>

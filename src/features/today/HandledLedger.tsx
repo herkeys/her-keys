@@ -95,17 +95,17 @@ export function HandledLedger() {
       {expanded && (
         <Card tone="subtle" style={styles.card}>
           {note && (
-            <AppText variant="bodySm" color={colors.attention} accessibilityRole="alert">
+            <AppText variant="supporting" color={colors.attention} accessibilityRole="alert">
               {note}
             </AppText>
           )}
           {entries.map((entry, index) => (
             <View key={entry.key} style={[styles.row, index === entries.length - 1 ? null : styles.rowDivider]}>
               <View style={styles.summary}>
-                <AppText variant="bodySm" color={colors.textSecondary}>
+                <AppText variant="supporting" color={colors.textSecondary}>
                   {entry.summary}
                 </AppText>
-                <AppText variant="caption" color={colors.textTertiary}>
+                <AppText variant="metadata" color={colors.textTertiary}>
                   {entry.when} · approved by you
                 </AppText>
               </View>

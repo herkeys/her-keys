@@ -21,7 +21,7 @@ export function NeedsMeChip() {
       accessibilityLabel={`On your mind: ${open.length} captured, starting with ${open[0].title}`}
       style={({ pressed }) => [styles.chip, pressed ? styles.pressed : null]}
     >
-      <AppText variant="bodySm" color={colors.textSecondary}>
+      <AppText variant="supporting" color={colors.textSecondary}>
         On your mind: {open[0].title}
         {open.length > 1 ? ` (+${open.length - 1} more)` : ''}
       </AppText>

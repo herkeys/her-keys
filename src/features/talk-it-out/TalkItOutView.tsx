@@ -82,7 +82,7 @@ export function TalkItOutView({ showHeader = false }: { showHeader?: boolean }) 
               onPress={() => setVoiceNoteVisible((v) => !v)}
               style={({ pressed }) => [styles.voiceButton, pressed ? styles.pressed : null]}
             >
-              <AppText variant="caption" color={colors.accent}>
+              <AppText variant="metadata" color={colors.accent}>
                 Voice
               </AppText>
             </Pressable>

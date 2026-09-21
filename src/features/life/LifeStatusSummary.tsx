@@ -17,7 +17,7 @@ export function LifeStatusSummary() {
     <View style={styles.wrap}>
       <View style={styles.header}>
         <Overline>Also checked</Overline>
-        <AppText variant="micro" color={colors.textTertiary}>
+        <AppText variant="statusLabel" color={colors.textTertiary}>
           {clear} of {statuses.length} clear
         </AppText>
       </View>

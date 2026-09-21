@@ -19,7 +19,7 @@ export function PersistenceNotice() {
   return (
     <View style={styles.wrap} accessibilityLiveRegion="polite">
       {lines.map((line) => (
-        <AppText key={line} variant="caption" color={colors.textTertiary}>
+        <AppText key={line} variant="metadata" color={colors.textTertiary}>
           {line}
         </AppText>
       ))}

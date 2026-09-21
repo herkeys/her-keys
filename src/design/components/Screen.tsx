@@ -43,5 +43,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: sizing.screenMargin,
     paddingTop: spacing.xl,
     flexGrow: 1,
+    // Readability cap: on tablets and foldables the measure stays book-width
+    // and centered instead of stretching edge to edge.
+    maxWidth: sizing.contentWidth,
+    width: '100%',
+    alignSelf: 'center',
   },
 });

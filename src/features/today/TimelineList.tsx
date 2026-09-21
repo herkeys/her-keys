@@ -49,13 +49,13 @@ export function TimelineList({ onPressItem }: TimelineListProps = {}) {
       {items.map((item, idx) => {
         const row = (
           <View style={[styles.row, idx === items.length - 1 ? null : styles.rowDivider]}>
-            <AppText variant="caption" color={colors.textTertiary} style={styles.time}>
+            <AppText variant="metadata" color={colors.textTertiary} style={styles.time}>
               {formatTime(item.time)}
             </AppText>
             <View style={styles.body}>
               <AppText variant="body">{item.title}</AppText>
               {item.meta && (
-                <AppText variant="caption" color={colors.textTertiary} style={styles.meta}>
+                <AppText variant="metadata" color={colors.textTertiary} style={styles.meta}>
                   {item.meta}
                 </AppText>
               )}

@@ -27,7 +27,7 @@ export function LoadMeter() {
         </AppText>
       </View>
       <SegmentBar filled={load.filled} total={load.total} tone="neutral" />
-      <AppText variant="caption" color={color.text.muted} style={styles.caption}>
+      <AppText variant="metadata" color={color.text.muted} style={styles.caption}>
         {load.caption}
       </AppText>
     </View>

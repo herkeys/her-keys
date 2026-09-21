@@ -1,4 +1,4 @@
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, type ViewStyle } from 'react-native';
 import { colors, radius } from '../tokens';
 
 type Tone = 'accent' | 'attention' | 'neutral';
@@ -7,6 +7,7 @@ interface SegmentBarProps {
   filled: number;
   total: number;
   tone?: Tone;
+  style?: ViewStyle;
 }
 
 const toneColor: Record<Tone, string> = {
@@ -20,9 +21,9 @@ const toneColor: Record<Tone, string> = {
  * estimate is approximate, and segments read as "about this much" instead of
  * implying measurement.
  */
-export function SegmentBar({ filled, total, tone = 'accent' }: SegmentBarProps) {
+export function SegmentBar({ filled, total, tone = 'accent', style }: SegmentBarProps) {
   return (
-    <View style={styles.row}>
+    <View style={[styles.row, style]}>
       {Array.from({ length: total }, (_, i) => (
         <View
           key={i}

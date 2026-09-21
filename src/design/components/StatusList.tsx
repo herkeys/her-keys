@@ -35,7 +35,7 @@ function Row({ item, isLast }: { item: StatusItem; isLast: boolean }) {
       <View style={styles.valueWrap}>
         {item.needsAttention && <View style={styles.dot} />}
         <AppText
-          variant="bodySm"
+          variant="supporting"
           color={item.needsAttention ? colors.attention : colors.textSecondary}
           style={styles.value}
         >

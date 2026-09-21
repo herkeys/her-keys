@@ -112,8 +112,14 @@ export default function DesignGallery() {
       </GallerySection>
 
       <GallerySection title="Capacity + progress">
-        <SegmentBar filled={2} total={4} tone="accent" />
-        <AppText variant="supporting" color={color.text.secondary} style={styles.tight}>Estimated load — “about this much”, never a fake percentage.</AppText>
+        <SegmentBar filled={2} total={4} tone="neutral" />
+        <AppText variant="supporting" color={color.text.secondary} style={styles.tight}>
+          Estimated load — neutral ink, “about this much”, never a fake percentage. Capacity is informational, not an action (owner decision 4).
+        </AppText>
+        <SegmentBar filled={3} total={4} tone="neutral" style={styles.stack} />
+        <AppText variant="supporting" color={color.text.secondary} style={styles.tight}>
+          A tight day signals through its label, not a louder fill.
+        </AppText>
       </GallerySection>
 
       <GallerySection title="Notices">

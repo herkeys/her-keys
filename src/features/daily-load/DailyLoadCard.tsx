@@ -41,7 +41,7 @@ export function DailyLoadCard() {
   };
 
   const failureNote = note && (
-    <AppText variant="bodySm" color={colors.attention} style={styles.note} accessibilityRole="alert">
+    <AppText variant="supporting" color={colors.attention} style={styles.note} accessibilityRole="alert">
       {note}
     </AppText>
   );
@@ -52,10 +52,10 @@ export function DailyLoadCard() {
       return (
         <Card tone="success" style={styles.card}>
           <Tag label="Adjusted" tone="success" />
-          <AppText variant="headline" style={styles.headline}>
+          <AppText variant="screenTitle" style={styles.headline}>
             “{appliedMove.eventTitle}” moved to tomorrow.
           </AppText>
-          <AppText variant="title" color={colors.textSecondary} style={styles.impact}>
+          <AppText variant="sectionTitle" color={colors.textSecondary} style={styles.impact}>
             {appliedMove.overlapped
               ? `It no longer runs into “${appliedMove.otherTitle}” today.`
               : `It no longer sits in the tight spot next to “${appliedMove.otherTitle}” today.`}
@@ -66,10 +66,10 @@ export function DailyLoadCard() {
     return (
       <Card tone="success" style={styles.card}>
         <Tag label="Adjusted" tone="success" />
-        <AppText variant="headline" style={styles.headline}>
+        <AppText variant="screenTitle" style={styles.headline}>
           “{appliedMove.taskTitle}” moved to tomorrow.
         </AppText>
-        <AppText variant="title" color={colors.textSecondary} style={styles.impact}>
+        <AppText variant="sectionTitle" color={colors.textSecondary} style={styles.impact}>
           That window now has {appliedMove.projectedBufferMinutes} minutes instead of {appliedMove.currentBufferMinutes} —{' '}
           {appliedMove.resolvesShortfall
             ? `enough room before ${appliedMove.windowAfterTitle}.`
@@ -83,7 +83,7 @@ export function DailyLoadCard() {
     return (
       <Card tone="subtle" style={styles.card}>
         <Tag label="Kept as planned" />
-        <AppText variant="headline" style={styles.headline}>
+        <AppText variant="screenTitle" style={styles.headline}>
           Today stays as you had it.
         </AppText>
         <AppText variant="body" color={colors.textSecondary} style={styles.impact}>
@@ -96,7 +96,7 @@ export function DailyLoadCard() {
   if (everEmpty) {
     return (
       <Card tone="subtle" style={styles.card}>
-        <AppText variant="headline">Nothing entered yet.</AppText>
+        <AppText variant="screenTitle">Nothing entered yet.</AppText>
         <AppText variant="body" color={colors.textSecondary} style={styles.impact}>
           Add your first event or task to see what Her Keys notices about your day.
         </AppText>
@@ -107,7 +107,7 @@ export function DailyLoadCard() {
   if (events.length === 0 && tasks.length === 0) {
     return (
       <Card tone="subtle" style={styles.card}>
-        <AppText variant="headline">Nothing scheduled today.</AppText>
+        <AppText variant="screenTitle">Nothing scheduled today.</AppText>
       </Card>
     );
   }
@@ -120,10 +120,10 @@ export function DailyLoadCard() {
       return (
         <Card tone="attention" raised style={styles.card}>
           <Tag label="Needs you" tone="attention" />
-          <AppText variant="headline" style={styles.headline}>
+          <AppText variant="screenTitle" style={styles.headline}>
             “{primary.eventATitle}” and “{primary.eventBTitle}” overlap.
           </AppText>
-          <AppText variant="title" color={colors.textSecondary} style={styles.impact}>
+          <AppText variant="sectionTitle" color={colors.textSecondary} style={styles.impact}>
             They overlap by {primary.overlapMinutes} minutes. “{movable.title}” is flexible, so Her Keys can move it to tomorrow.
           </AppText>
           {failureNote}
@@ -146,10 +146,10 @@ export function DailyLoadCard() {
     return (
       <Card tone="attention" raised style={styles.card}>
         <Tag label="Needs your attention" tone="attention" />
-        <AppText variant="headline" style={styles.headline}>
+        <AppText variant="screenTitle" style={styles.headline}>
           “{primary.eventATitle}” and “{primary.eventBTitle}” overlap.
         </AppText>
-        <AppText variant="title" color={colors.textSecondary} style={styles.impact}>
+        <AppText variant="sectionTitle" color={colors.textSecondary} style={styles.impact}>
           {bothFixed
             ? `They overlap by ${primary.overlapMinutes} minutes, and both are fixed commitments — Her Keys can’t move either one automatically.`
             : `They overlap by ${primary.overlapMinutes} minutes. Both are flexible, so either one could change — Her Keys won’t pick between them for you.`}
@@ -164,7 +164,7 @@ export function DailyLoadCard() {
       return (
         <Card tone="subtle" style={styles.card}>
           <Tag label="Kept as planned" />
-          <AppText variant="headline" style={styles.headline}>
+          <AppText variant="screenTitle" style={styles.headline}>
             Today’s workload stays as you had it.
           </AppText>
         </Card>
@@ -174,7 +174,7 @@ export function DailyLoadCard() {
       return (
         <Card tone="success" style={styles.card}>
           <Tag label="Adjusted" tone="success" />
-          <AppText variant="headline" style={styles.headline}>
+          <AppText variant="screenTitle" style={styles.headline}>
             Today’s workload was adjusted.
           </AppText>
           <AppText variant="body" color={colors.textSecondary} style={styles.impact}>
@@ -188,7 +188,7 @@ export function DailyLoadCard() {
     return (
       <Card tone="attention" raised style={styles.card}>
         <Tag label={target ? 'Needs you' : 'Needs your attention'} tone="attention" />
-        <AppText variant="headline" style={styles.headline}>
+        <AppText variant="screenTitle" style={styles.headline}>
           Today has more work than time.
         </AppText>
         <WhyThis
@@ -199,7 +199,7 @@ export function DailyLoadCard() {
           ]}
         />
         <Overline color={colors.attention}>What Her Keys recommends</Overline>
-        <AppText variant="bodySm" color={colors.textSecondary} style={styles.impact}>
+        <AppText variant="supporting" color={colors.textSecondary} style={styles.impact}>
           {target
             ? canShortenTask(primary.largestTaskMinutes ?? 0)
               ? `Shorten or drop “${primary.largestTaskTitle}”.`
@@ -237,7 +237,7 @@ export function DailyLoadCard() {
     return (
       <Card tone="subtle" style={styles.card}>
         <Tag label="Overdue" />
-        <AppText variant="headline" style={styles.headline}>
+        <AppText variant="screenTitle" style={styles.headline}>
           “{primary.taskTitle}” is {primary.daysOverdue} day{primary.daysOverdue === 1 ? '' : 's'} overdue.
         </AppText>
         <AppText variant="body" color={colors.textSecondary} style={styles.impact}>
@@ -252,7 +252,7 @@ export function DailyLoadCard() {
     return (
       <Card tone="success" style={styles.card}>
         <Tag label="Nothing needs moving" tone="success" />
-        <AppText variant="headline" style={styles.headline}>
+        <AppText variant="screenTitle" style={styles.headline}>
           Your commitments have room between them.
         </AppText>
         <AppText variant="body" color={colors.textSecondary} style={styles.impact}>
@@ -276,10 +276,10 @@ export function DailyLoadCard() {
     return (
       <Card tone="attention" raised style={styles.card}>
         <Tag label={verdict.kind === 'tight_window' ? 'Tight window' : 'Tight day ahead'} tone="attention" />
-        <AppText variant="headline" style={styles.headline}>
+        <AppText variant="screenTitle" style={styles.headline}>
           Leave a few minutes early this afternoon.
         </AppText>
-        <AppText variant="title" color={colors.textSecondary} style={styles.impact}>
+        <AppText variant="sectionTitle" color={colors.textSecondary} style={styles.impact}>
           {squeeze}, and nothing flexible is scheduled there to move.
         </AppText>
         <View style={styles.secondaryRow}>
@@ -293,10 +293,10 @@ export function DailyLoadCard() {
     return (
       <Card tone="attention" raised style={styles.card}>
         <Tag label="Needs you" tone="attention" />
-        <AppText variant="headline" style={styles.headline}>
+        <AppText variant="screenTitle" style={styles.headline}>
           Move “{flexibleEvent.title}” to tomorrow.
         </AppText>
-        <AppText variant="title" color={colors.textSecondary} style={styles.impact}>
+        <AppText variant="sectionTitle" color={colors.textSecondary} style={styles.impact}>
           {squeeze}.
         </AppText>
         {failureNote}
@@ -322,10 +322,10 @@ export function DailyLoadCard() {
     <Card tone="attention" raised style={styles.card}>
       <Tag label="Needs you" tone="attention" />
 
-      <AppText variant="headline" style={styles.headline}>
+      <AppText variant="screenTitle" style={styles.headline}>
         Move “{candidate.task.title}” to tomorrow.
       </AppText>
-      <AppText variant="title" color={colors.textSecondary} style={styles.impact}>
+      <AppText variant="sectionTitle" color={colors.textSecondary} style={styles.impact}>
         That turns your tightest {candidate.currentBufferMinutes} minutes into {candidate.projectedBufferMinutes}.
       </AppText>
 

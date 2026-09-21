@@ -340,4 +340,6 @@ export const sizing = {
   control: { height: 48, heightSmall: 44 },
   icon: { sm: 16, md: 20, lg: 24 },
   screenMargin: spacing.xl,
+  /** Maximum content measure on wide layouts (tablets, foldables). */
+  contentWidth: 680,
 } as const;

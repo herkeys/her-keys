@@ -20,7 +20,7 @@ export function Tag({ label, tone = 'neutral' }: TagProps) {
   const { bg, fg } = toneMap[tone];
   return (
     <View style={[styles.tag, { backgroundColor: bg }]}>
-      <AppText variant="overline" color={fg}>
+      <AppText variant="label" color={fg}>
         {label.toUpperCase()}
       </AppText>
     </View>
