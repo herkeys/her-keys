@@ -227,6 +227,21 @@ export const SCENARIOS = [
 
   scenario('P', 1, 'Sparse day', () => household().event('evt-dentist', { title: 'Dentist', start: '14:00', end: '15:00' })),
 
+  // Week of Sun 13 - Sat 19 September, today = Sunday. Looked at on Wednesday the 16th (the insufficient-information day).
+  scenario('R', 2, 'Week overview — room, tight, conflict and insufficient-information days', () =>
+    household()
+      .event('evt-sun', { title: 'Family lunch', start: '14:00', end: '15:00', date: '2026-09-13' })
+      .event('evt-mon-1', { title: 'Standup', start: '10:00', end: '11:00', date: '2026-09-14' })
+      .event('evt-mon-2', { title: 'Design review', start: '11:30', end: '12:30', date: '2026-09-14' })
+      .event('evt-tue-1', { title: 'Dentist', start: '10:00', end: '11:00', date: '2026-09-15' })
+      .event('evt-tue-2', { title: 'Parent-teacher call', start: '10:30', end: '11:30', date: '2026-09-15' })
+      .event('evt-wed-1', { title: 'School conference', start: '10:00', end: '11:00', date: '2026-09-16', location: 'Lincoln Elementary' })
+      .event('evt-wed-2', { title: 'Clinic visit', start: '11:45', end: '12:30', date: '2026-09-16', location: 'Downtown Clinic' })
+      .event('evt-fri-1', { title: 'Workshop', start: '06:00', end: '12:00', date: '2026-09-18' })
+      .event('evt-fri-2', { title: 'Client day', start: '12:30', end: '18:00', date: '2026-09-18' })
+      .event('evt-fri-3', { title: 'Evening class', start: '18:30', end: '22:00', date: '2026-09-18' })
+      .task('tsk-report', { title: 'Write the quarterly report', minutes: 90, due: '2026-09-18' }), { date: '2026-09-16', today: '2026-09-13' }),
+
   scenario('AC', 3, 'Recurrence foundation input', () =>
     household()
       .event('evt-standup', { title: 'Weekly standup', start: '09:00', end: '09:30' })

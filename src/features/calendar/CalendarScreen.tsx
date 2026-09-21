@@ -8,11 +8,12 @@ import { useStoreSnapshot } from '../../store/AppStateProvider';
 import { COPY } from './copy';
 import { calendarAvailability } from './model/availability';
 import { initialPresentation, reducePresentation, selectedDateOf, type CalendarPresentation, type PresentationAction } from './model/presentation';
-import { projectCalendarDay } from './model/projectCalendar';
+import { projectCalendarDay, projectCalendarWeek } from './model/projectCalendar';
 import type { ItemRef } from './model/types';
 import { CalendarDayView } from './ui/CalendarDayView';
 import { CalendarDegradedNotice, CalendarLoading, CalendarRecovery } from './ui/CalendarStates';
-import { DayNavigator } from './ui/DayHeader';
+import { DayNavigator, ViewSwitch } from './ui/DayHeader';
+import { WeekOverview } from './ui/WeekOverview';
 
 /** The wall clock, re-read once a minute so elapsed items stop reading as upcoming. Presentation only. */
 function useNow(intervalMs = 60_000): number {
@@ -56,7 +57,9 @@ function ReadyCalendar({ state, today, degraded }: { state: AppState; today: str
     initialPresentation
   );
   const selectedDate = selectedDateOf(presentation, today);
-  const view = useMemo(() => projectCalendarDay({ state, date: selectedDate, today, nowMs }), [state, selectedDate, today, nowMs]);
+  const week = presentation.view === 'week';
+  const view = useMemo(() => (week ? null : projectCalendarDay({ state, date: selectedDate, today, nowMs })), [week, state, selectedDate, today, nowMs]);
+  const weekView = useMemo(() => (week ? projectCalendarWeek({ state, selectedDate, today, nowMs }) : null), [week, state, selectedDate, today, nowMs]);
 
   // The inherited behaviour, preserved: pressing an item opens that item's own editor.
   const onOpenItem = (ref: ItemRef) => {
@@ -74,8 +77,25 @@ function ReadyCalendar({ state, today, degraded }: { state: AppState; today: str
       </View>
       <Button label={COPY.addEvent} onPress={() => router.push('/event-editor')} style={styles.add} />
       {degraded ? <CalendarDegradedNotice /> : null}
-      <DayNavigator date={selectedDate} today={today} view="day" onStep={(direction) => dispatch({ type: 'step', days: direction })} onToday={() => dispatch({ type: 'goToday' })} />
-      <CalendarDayView view={view} onOpenItem={onOpenItem} />
+      <ViewSwitch view={presentation.view} onChange={(next) => dispatch({ type: 'setView', view: next })} />
+      <DayNavigator
+        date={selectedDate}
+        today={today}
+        view={presentation.view}
+        onStep={(direction) => dispatch({ type: 'step', days: week ? direction * 7 : direction })}
+        onToday={() => dispatch({ type: 'goToday' })}
+      />
+      {weekView !== null ? (
+        <WeekOverview
+          week={weekView}
+          today={today}
+          onSelectDay={(date) => {
+            dispatch({ type: 'select', date });
+            dispatch({ type: 'setView', view: 'day' });
+          }}
+        />
+      ) : null}
+      {view !== null ? <CalendarDayView view={view} onOpenItem={onOpenItem} /> : null}
     </Screen>
   );
 }
