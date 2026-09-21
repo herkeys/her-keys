@@ -1,6 +1,6 @@
 # HK-FEATURE-08-MEALS — Meals OS build ledger
 
-Status: **IN PROGRESS** (ML0 and ML1 complete; no implementation code exists yet). This ledger is appended phase by phase; the 55 required sections are filled as each phase closes. Companion files: `HK_FEATURE_08_MISSING_PRIMITIVES.md`, `HK_FEATURE_08_SCENARIO_MAP.md` (generated), `tests/fixtures/meals/scenario-map.json` (source of truth).
+Status: **COMPLETE. `HK-FEATURE-08-MEALS = PASS WITH DOCUMENTED DEBT`** (section 55). All 55 required sections are filled. Companion files: `HK_FEATURE_08_MISSING_PRIMITIVES.md`, `HK_FEATURE_08_SCENARIO_MAP.md` (generated), `tests/fixtures/meals/scenario-map.json` (source of truth).
 Scope: LOCAL ONLY. No push, PR, merge, rebase, squash or amend. Explicit staging only. Nothing remote is touched.
 
 ---
@@ -410,18 +410,429 @@ Pre-existing, already owner-gated (not a build question): approval to apply the 
 
 ---
 
+---
+
+## 35. Tier 1 scenario results (A-AQ and the resume-brief additions)
+
+Core truth, domain and durability scenarios. Every row is a titled test (`[ID] ...`) whose named assertions passed in the final full run; the integrity test (`tests/meals/scenarioMap.test.mjs`) fails if a scenario has no test.
+
+Result: 46 scenarios; 45 PASS, 1 NOT-APPLICABLE. No scenario FAILED, was SKIPPED or is UNVERIFIED.
+
+| ID | Scenario | Result | Evidence (test set) | Mutants |
+| --- | --- | --- | --- | --- |
+| A | No meal entries | PASS | `VIEW` `COPY` | M3 |
+| B | Loading / hydrating state | PASS | `VIEW` `SCREEN` | M13 |
+| C | One entry | PASS | `VIEW` | - |
+| D | Several dates | PASS | `VIEW` | - |
+| E | Several entries on one date | PASS | `VIEW` | M20 |
+| F | Several entries on one date and slot | PASS | `VIEW` `ACT` | M9 M20 |
+| G | UNSPECIFIED slot | PASS | `ACT` `VIEW` `SCREEN` | - |
+| H | Other closed-enum slots | PASS | `ENTRY` `SYNC` `VIEW` | - |
+| I | Create | PASS | `ACT` `ENTRY` `SYNC` | - |
+| J | Edit title | PASS | `ACT` | - |
+| K | Move date | PASS | `ACT` `DATE` | M8 |
+| L | Change slot | PASS | `ACT` | - |
+| M | Move into an occupied date and slot | PASS | `ACT` | M9 |
+| N | Archive / remove | PASS | `ACT` `VIEW` `LIFE` | M18 |
+| O | Archive propagates to a second device | PASS | `SYNC` `JRN` | M14 |
+| P | Removed does not become skipped or eaten | PASS | `ACT` `COPY` | M18 |
+| Q | A past planned entry does not become eaten | PASS | `VIEW` | M2 |
+| R | A blank date stays neutral | PASS | `VIEW` `COPY` | M3 |
+| S | No planning score or streak | PASS | `VIEW` `COPY` | - |
+| T | Plan This Again creates a new stable entry | PASS | `ACT` | M19 |
+| U | The original is unchanged after Plan This Again | PASS | `ACT` | M19 |
+| V | Grocery task creation | PASS | `TASK` `COPY` | - |
+| W | Prep task creation | PASS | `TASK` | - |
+| X | Meals context present: task discoverable | PASS | `TASK` | - |
+| Y | Meals context absent: truthful degradation | PASS | `TASK` `VIEW` `SCREEN` | - |
+| Z | Unknown task duration | PASS | `TASK` `VIEW` | - |
+| AA | Default duration remains default | PASS | `TASK` | M17 |
+| AB | A due-date default is not laundered into a user fact | PASS | `TASK` | M15 |
+| AC | An assigned task is not automatically covered | PASS | `TASK` `COPY` | M7 |
+| AD | Grocery completion is not pantry inventory | PASS | `TASK` `COPY` | M4 |
+| AE | Prep completion is not a meal served | PASS | `TASK` `VIEW` | M5 |
+| AF | Restart preserves the MealPlanEntry | PASS | `ENTRY` `SYNC` | - |
+| AG | Offline create then reconnect | PASS | `SYNC` | M11 |
+| AH | A second client receives the logical date | PASS | `SYNC` `JRN` | M1 |
+| AI | A device timezone change does not move the logical date | PASS | `DATE` | M1 |
+| AJ | Household timezone follows the logical-date contract | PASS | `DATE` | M1 |
+| AK | Account switch isolates households | PASS | `SYNC` | - |
+| AL | An unrelated account is denied (backend introduced) | PASS | `SQL77` `JRN` | M10 |
+| AM | No allergy record does not produce a safe claim | PASS | `VIEW` `COPY` | M6 |
+| AN | A user-provided dietary fact stays attributed | NOT-APPLICABLE | `BOUND` | - |
+| AO | A meal plan does not become Calendar scheduled time | PASS | `LIFE` `VIEW` | - |
+| AP | The same title on several dates stays separate | PASS | `VIEW` `REC` `COPY` | - |
+| AQ | A stale editor cannot silently overwrite | PASS | `ACT` `SYNC` | M12 |
+| CE | Today never treats an empty meal slot as unfinished work (resume brief) | PASS | `LIFE` | M3 |
+| CF | Account bind keeps Tuesday (resume brief) | PASS | `SYNC` | M1 |
+| CG | Life hub row is truthful (resume brief) | PASS | `LIFE` `COPY` | - |
+
+## 36. Tier 2 scenario results (AR-BV)
+
+Adversarial, scale, sync, offline, concurrency and boundary scenarios.
+
+Result: 31 scenarios; 31 PASS. No scenario FAILED, was SKIPPED or is UNVERIFIED.
+
+| ID | Scenario | Result | Evidence (test set) | Mutants |
+| --- | --- | --- | --- | --- |
+| AR | Dense 60+ MealPlanEntries | PASS | `VIEW` | - |
+| AS | 100+ Meals-context tasks | PASS | `VIEW` `TASK` | - |
+| AT | UTC midnight | PASS | `DATE` | M1 |
+| AU | Spring-forward | PASS | `DATE` | - |
+| AV | Fall-back | PASS | `DATE` | - |
+| AW | Travel timezone change | PASS | `DATE` | - |
+| AX | Malformed MealPlanEntry | PASS | `SYNC` `ENTRY` | - |
+| AY | Double save | PASS | `ACT` | - |
+| AZ | Move while a second client edits | PASS | `SYNC` | M12 |
+| BA | Archive while a second client edits | PASS | `SYNC` | M12 M14 |
+| BB | Sync retry | PASS | `SYNC` | - |
+| BC | Permanent server refusal | PASS | `SYNC` | - |
+| BD | A large household above historical limits | PASS | `SYNC` `ACT` | - |
+| BE | Demo and account isolation | PASS | `SYNC` | - |
+| BF | Local-only state is excluded | PASS | `ACT` `SYNC` | - |
+| BG | Stable same-slot ordering | PASS | `VIEW` `SYNC` | M20 |
+| BH | Screen-reader logical date and slot | PASS | `SCREEN` | - |
+| BI | Screen-reader unknown and default task state | PASS | `SCREEN` | - |
+| BJ | Loading is not empty (rendered) | PASS | `SCREEN` | M13 |
+| BK | Quarantined or recovered is not empty | PASS | `SCREEN` `VIEW` | M13 |
+| BL | Life-hub integration is not required | PASS | `BOUND` | - |
+| BM | No sibling imports | PASS | `BOUND` | - |
+| BN | Copy-truth audit | PASS | `COPY` | - |
+| BO | Secret and privacy scan | PASS | `BOUND` `SYNC` | - |
+| BP | Fresh-install migration | PASS | `SQL77` | - |
+| BQ | Populated upgrade | PASS | `SQL77` | - |
+| BR | RLS owner behavior | PASS | `SQL77` | - |
+| BS | Same-household RLS | PASS | `SQL77` | M10 |
+| BT | Unrelated-account RLS | PASS | `SQL77` `JRN` | M10 |
+| BU | A disconnected central sync composition is caught | PASS | `SYNC` | M11 |
+| BV | Semantic-boundary scan | PASS | `BOUND` | M16 |
+
+## 37. Tier 3 scenario results (BW-CD)
+
+Capability probes for primitives the foundation may or may not have. A probe row is `PASS` when Meals behaves correctly with the capability, `SAFE-UNAVAILABLE` when the capability exists but no UI exposes it (Meals then sets nothing and claims nothing), and `NOT-APPLICABLE` when the foundation has no such capability (a test fails loudly if one appears, so the row is revisited).
+
+Result: 8 scenarios; 1 PASS, 3 SAFE-UNAVAILABLE, 4 NOT-APPLICABLE. No scenario FAILED, was SKIPPED or is UNVERIFIED.
+
+| ID | Scenario | Result | Evidence (test set) | Mutants |
+| --- | --- | --- | --- | --- |
+| BW | Existing Meals systemRole / context | PASS | `TASK` | - |
+| BX | Existing amount / value task facet | SAFE-UNAVAILABLE | `TASK` `COPY` | - |
+| BY | Existing dietary / allergy canonical context | NOT-APPLICABLE | `BOUND` | - |
+| BZ | Existing meal-related System | SAFE-UNAVAILABLE | `REC` | - |
+| CA | Existing recurring meal-prep task | SAFE-UNAVAILABLE | `REC` | - |
+| CB | Existing generic MealPlanEntry to Task relationship | NOT-APPLICABLE | `BOUND` `TASK` | - |
+| CC | Existing observation / behavior hook | NOT-APPLICABLE | `ACT` | M18 |
+| CD | Existing external recipe reference | NOT-APPLICABLE | `BOUND` | - |
+
+Test-set keys used in the tables above:
+
+- `ENTRY` = `tests/meals/mealPlanEntry.test.mjs`
+- `ACT` = `tests/meals/mealActions.test.mjs`
+- `DATE` = `tests/meals/logicalDate.test.mjs`
+- `VIEW` = `tests/meals/mealsView.test.mjs`
+- `TASK` = `tests/meals/mealTasks.test.mjs`
+- `REC` = `tests/meals/recurringWork.test.mjs`
+- `SYNC` = `tests/meals/sync.test.mjs`
+- `COPY` = `tests/meals/copyAudit.test.mjs`
+- `BOUND` = `tests/meals/boundary.test.mjs`
+- `LIFE` = `tests/meals/lifeIntegration.test.mjs`
+- `SCREEN` = `tests/meals/screen.test.mjs`
+- `SQL77` = `supabase/tests/77-meals-slot-status.sql`
+- `JRN` = `supabase/tests/journey-composition.mjs`
+
+## 38. Mutation evidence (test the tests)
+
+`scripts-dev/meals-mutation-check.cjs` injects each defect below into the real source (the SQL mutant, M10, into a scratch database through the `HERKEYS_MUTANT_SQL` hook of the harness), runs only the tests the scenario map names for it, counts a mutant CAUGHT only when a test fails on a genuine assertion (a crash, a timeout or a compile error does not count), restores the file, and verifies the restore byte for byte. It refuses to start on a dirty target, and the tree was clean before and after. Final run:
+
+| Mutant | Truth it guards | Defect injected | Result | Guarding tests: failed / passed |
+| --- | --- | --- | --- | --- |
+| M1 | logical date | apply reads the meal date through an explicit-zone instant, so Tuesday becomes Monday | CAUGHT | 2 failed, 25 passed |
+| M2 | planned is not eaten | a past plan offered again is marked eaten | CAUGHT | 1 failed, 28 passed |
+| M3 | a blank day is not a failure | a day with no meals is projected as needing attention | CAUGHT | 1 failed, 28 passed |
+| M4 | grocery is not inventory | completed tasks are projected as items in stock | CAUGHT | 1 failed, 28 passed |
+| M5 | prep is not served | completing any task marks the day's meals served | CAUGHT | 2 failed, 27 passed |
+| M6 | no allergy record is not safe | an entry is projected with an allergen status of safe | CAUGHT | 1 failed, 28 passed |
+| M7 | assigned is not covered | a task someone was asked to do is projected as covered | CAUGHT | 1 failed, 28 passed |
+| M8 | a move keeps one stable identity | moving a date creates a copy instead of moving the entry | CAUGHT | 8 failed, 29 passed |
+| M9 | several entries may share a date and slot | moving into an occupied date and slot overwrites the entry already there | CAUGHT | 2 failed, 35 passed |
+| M10 | account isolation (RLS) | the meal select policy is opened to every authenticated account (a scratch database) | CAUGHT | 2 check(s) failed |
+| M11 | the central sync composition | the production composition no longer starts the sync runtime when an account binds | CAUGHT | 12 failed, 4 passed |
+| M12 | a stale editor never overwrites | an edit is allowed against a snapshot that no longer matches | CAUGHT | 1 failed, 36 passed |
+| M13 | loading is not empty | the screen gate reports ready while an account-bound device has not finished its first pull | CAUGHT | 1 failed, 28 passed |
+| M14 | removal propagates | the projection never sends the archived status, so the other device keeps the meal active | CAUGHT | 3 failed, 13 passed |
+| M15 | a proposed due date is not a stated one | a meal-derived due date is stored without her confirmation | CAUGHT | 2 failed, 27 passed |
+| M16 | no second durable Meals semantic | a second durable Meals model (MealIdea) is added to the domain | CAUGHT | 1 failed, 8 passed |
+| M17 | a default is not user-provided | a duration she did not state is recorded as hers | CAUGHT | 2 failed, 27 passed |
+| M18 | removal is not skipping | archiving a meal records a skipped outcome | CAUGHT | 2 failed, 35 passed |
+| M19 | plan again never changes the original | Plan This Again rewrites the date of the entry it copies from | CAUGHT | 1 failed, 36 passed |
+| M20 | deterministic ordering | entries are ordered by a locale compare of their ids | CAUGHT | 2 failed, 27 passed |
+
+**20 / 20 mutants caught** (the contract required 16). Each mutant's guarded scenarios are in the map (`tests/fixtures/meals/scenario-map.json`, column "Mutants" in the tier tables), and an integrity test fails if a mutant the map lists is not implemented by the script, or if a mutant names a test file that does not exist. The script is committed so an auditor can re-run it (`node scripts-dev/meals-mutation-check.cjs`); it rewrites source files temporarily, so nothing may be edited while it runs.
+
+## 39. Semantic-boundary scan
+
+`scripts-dev/meals-boundary-scan.cjs` (also asserted by `tests/meals/boundary.test.mjs`, 9 tests; `--json` for machine output, exit 1 on any finding). It compares the working tree (tracked, staged and untracked files) with the certified baseline `14bd58e` and enumerates, mechanically:
+
+| Check | Expected | 
+| --- | --- |
+| A new migrations | exactly the one F08 migration |
+| B new durable domain types | none; `MealPlanEntry` gains exactly `slot` and `status` |
+| C new tables or durable collections | none (no `CREATE TABLE`; the `AppState` root keys are unchanged) |
+| D new sync kinds | none |
+| E shared-file changes | every one mapped to a permitted reason (MealPlanEntry / canonical task integration / tests / approved repair): 19 files, each mapped in the script; protected files (`taskLists.ts`, `routeAccess.ts`, the root and Life layouts, `claim.ts`, shipped migrations, v3 fixtures, `app.json`, `package*.json`) untouched |
+| F a second Meals durable model | none (Recipe, Ingredient, PantryItem, GroceryList, MealIdea, MealPreference, DietProfile, FavoriteMeal, FoodInventory, ShoppingTrip, MealHistory, MealExecution, MealConsumption, ...) |
+| G sibling imports | none, by import scan and by git ancestry |
+
+A finding is a failure that needs an owner checkpoint, not a workaround. Result at the final tip: **PASS** (output recorded in §54).
+
+## 40. Defects found and repaired
+
+Every item below was found by a test, an audit script, a real database run, or reading the code, reproduced, repaired inside the approved Feature 08 semantic, and regression-tested. None needed an owner checkpoint.
+
+| # | Defect | Found by | Repair |
+| --- | --- | --- | --- |
+| D-01 | **A retired coverage claim on the Life hub.** The Meals row read "Planned through Tuesday" (implying contiguous coverage from the last entry's date alone) and "Nothing planned". | inheritance inventory | The row now reads "Next: Today / Tomorrow / <weekday> / <date>" and "No meals planned yet"; the internal gallery sample matches; tests `[CG]`, copy audit. |
+| D-02 | **Archived plans would have read as planned.** `useHousehold().upcomingMeals` had no lifecycle filter, so once removal existed a removed meal still counted. | ML1 read of the consumers | `upcomingMealsOf` (active only, from today on), shared by the hook and its test. |
+| D-03 | **A device-dependent order.** The inherited sort compared ids with `localeCompare`, so two devices could order the same entries differently. | ML1 read, then `[BG]` | One order everywhere: date, slot, id by code unit (mutant M20 breaks it). |
+| D-04 | **A whole-household validation cliff.** `meals` was capped at 1000; archive-only retention would eventually stop the entire state validating, and a refused add is silently dropped by the store. | ML1 read of `state.ts` and the store gate | Cap 5000 (parity with tasks and events), `addMeal` refuses with `plan-full` instead of corrupting state, test `[BD]`. |
+| D-05 | **An ambiguous day label.** `dayLabel` printed a bare weekday for any date ("Thursday" for a date 12 days out). | ML1 read | `mealDayLabel`: a weekday only for the next six days, otherwise the calendar date. |
+| D-06 | **A false-empty risk.** In recovery the store holds a fresh EMPTY household, and a newly bound second device is empty until its first pull; both would have read "No meals planned yet". | ML1 read of the store and sync namespace | `mealsGate` (loading / recovery / ready), rendered tests `[BJ] [BK]`, mutant M13. |
+| D-07 | **My own ML1 scenario map was wrong about the pull integrity gate.** Its AX2 assertion expected valid rows in a batch containing a malformed row to still apply; the real engine refuses the whole batch and keeps the cursor. | writing test `[AX]` | The scenario map was corrected; `apply` passes an unknown value through raw so the gate refuses it by name and nothing is coerced; a pull-level test pins the atomic-batch behavior. |
+| D-08 | **Invisible characters written by the authoring layer.** The file-writing layer expanded the backslash escape sequences for U+2028, U+2029 and U+0085 (line terminators) inside a regular expression into the literal characters, and the escape for U+0000 into a real NUL byte, so `tsc` reported an unterminated regex literal and a fingerprint tool contained a NUL. | `tsc` and a byte scan | The patterns are built from `String.fromCharCode`; every file this build wrote was scanned for U+0000, U+0085, U+2028 and U+2029 (none remain), and the assembled ledger is scanned the same way. Recorded as a tooling trap in memory. |
+| D-09 | **The harness would have migrated the shared database.** `run.mjs ensureLocalStackCurrent` applies migrations to the shared default database, which other sessions verify against the IR01 fingerprint. | ML1 read of `run.mjs` | Feature 08 never migrates it: scratch databases for every check, a derived fingerprint, and a private PostgREST stack for the journeys (§31). |
+| D-10 | **Audit and test-of-the-test defects caught by my own gates** (not product defects): a scenario-map path to a file I never created, two scenarios with no titled test, over-broad key scans (they matched `recurringWork`, `availableActions`, `preparationMinutes`), a copy rule that flagged the app's own "started fresh", a fixture that minted a new task id per variant, and a Git-Bash path handed to Node. | the scenario-integrity test, the copy audit and first runs | Each rule or fixture was narrowed to what it guards; the integrity test now fails when a scenario has no test. |
+
+### Observed and NOT repaired (out of scope: no opportunistic cleanup)
+
+- `SyncNamespace.backlog` is set when the queue fills and never clears (IR01 note D10). All 620 meals in the overflow test were delivered exactly once; the flag itself is not asserted.
+- `src/domain/sync/applySupport.ts:63` — a regex written `/^d{4}-d{2}.../` (backslashes missing), so `looksLikeInstant` never matches.
+- `src/domain/account/claim.ts` contains a raw NUL byte at offset 13423 (search tools treat the file as binary).
+- `src/domain/responsibility.ts` `accept()` defaults `stillNeedsMe` to false, contradicting its comment; `attention.ts:60-62` and `oneMove.ts:118` treat acknowledged/accepted as handled. Feature 08 does not reuse either.
+- Hard-coded run-state copy elsewhere ("Working", "N systems running").
+
+## 41. Missing primitives
+
+See `docs/builds/HK_FEATURE_08_MISSING_PRIMITIVES.md` (16 items): the Meals-specific #1 candidate `HK-MISSING-MEALS-LINK-01` (a meal to its grocery/prep work), a Meals task-list role, a common behavior/observation hook, due-date provenance, a responsibility surface and delivery, recurrence and Systems creation, archive retention, meal creation/last-change time, dietary and allergy context, per-record conflict handling, cloud hydration exposed to screens, household timezone change, child-scoped meals, a notes field, a same-household product path, and Plan This Again lineage.
+
+## 42. Integration candidates
+
+Recorded, not implemented (`HK_FEATURE_08_MISSING_PRIMITIVES.md` part B): `HK-INT-MEALS-TODAY-01`, `-CALENDAR-01`, `-SYSTEMS-01`, `-KIDS-01`, `-MONEY-01`, `-HOME-01`, `-COPARENT-01`, `HK-INT-TIO-MEALS-01`, `HK-INT-MEALS-PATTERN-01`, `HK-INT-MEALS-TASKLIST-ROLE-01`, `HK-INT-WAVE2-LIFE-REGISTRATION` (the Meals route and Life row already exist at the baseline), and `HK-INT-MEALS-RUNMJS-01` (every branch that adds a migration edits the "exactly N migrations" check in `run.mjs`, so integration will conflict there).
+
+## 43. Accessibility
+
+Evidence is rendered-component tests and the copy audit, not a screen-reader session (see §49).
+
+- Every pressable has an accessibility label and a role; an entry row announces the title, the meal type only when it was stated, and the full date ("Tacos, Dinner, Tuesday 22 September"); day and meal-type choices are `ChipToggle`s that announce label and selected state; each sheet has an accessibility label and a visible Cancel button.
+- Defaults are visible before saving ("Day: Today, Monday 21 September", "Meal type: Not set") and announced through polite live regions.
+- An entry row's minimum height is asserted at 44 points (`sizing.minTouchTarget`); shared controls keep the design system's own asserted minimums.
+- Every disabled control is explained on screen (a read-only notice, or the unavailable-context notice).
+- A meal-task row is worded by the same helper the Life hub already uses for open tasks (`openTaskLabel`) plus the responsibility text, so a due date is stated exactly as elsewhere in the app and never invented; the Meals hub shows no duration at all, so an assumed duration cannot be announced as stated; the due-date proposal in the task sheet is worded as a proposal ("Due Tue 23 Sep, the day of this meal") and has a separate full-date announcement.
+- Not verified: dynamic type behavior (the design system has no font-scale caps and no adaptive density mechanism, so text scales uncapped at the OS setting), keyboard avoidance of the sheets on a real device, contrast beyond the design system's own token tests.
+
+## 44. Performance
+
+Measured, not asserted (`tests/meals/mealsView.test.mjs`, scenarios AR and AS; Node v24.14.0, win32/x64, warm, 25 samples each, on a host that was memory-starved throughout, so these are pessimistic):
+
+| Scenario | Input | Median | p95 |
+| --- | --- | --- | --- |
+| AR | `buildMealsView` over a plan of 80 entries across 30 dates and every slot | 0.29 ms | 0.77 ms |
+| AS | the same projection over 120 open tasks in the Meals category (plus one entry) | 0.19 ms | 1.03 ms |
+
+Each test asserts a generous ceiling (median under 100 ms) and prints the measured figures with the Node version, platform and architecture, so a slow host does not flake and the numbers above are reproducible by re-running `node --test tests/meals/mealsView.test.mjs`. Design bounds that keep the screen cheap: the hub renders dated groups only for today through +14 days and reports everything beyond as a count ("N more later"), it renders at most a bounded number of task rows and reports the rest as a count, and the plan is capped at 5000 entries with a refusal (`plan-full`) instead of unbounded growth. Sync cost is the foundation's (one `meal` kind, chunked row requests of 100, complete pull per range); 620 meals pushed offline in the overflow test were delivered exactly once. Not measured: rendering time on a real device (see §49).
+
+## 45. Privacy
+
+- The only meal text that crosses the account boundary is `title` in `meal_plan_entries`, exactly as a task title does. There is no notes field, no ingredient field and no dietary field; the push payload keys are asserted against an allow-list; a title appears in no other table's row, in the client's other outbound rows, or in any log (Meals code makes no network call and no `console` call).
+- No analytics or logging of any meal title, dietary or allergy information, or household food routine was added.
+- A meal is `household` scope on creation; another account of another household sees none of it (real PostgreSQL over HTTP and SQL). Account switch quarantines rather than merges. Demo meals never queue or sync.
+- No secret or credential pattern appears in any line Feature 08 added (regex scan over the added diff, in the suite). The private stack reuses the running stack's PostgREST settings by copying them into a container it removes afterwards; it never prints or stores a value.
+
+## 46. Test accounting
+
+| Suite | Baseline (IR01 @ `14bd58e`) | Final | Delta |
+| --- | --- | --- | --- |
+| App suite (`node --test`, serial) | 975 / 975 | **1177 / 1177** | +202 |
+| Backend harness (`node supabase/tests/run.mjs`, full) | 800 / 800 | **876 / 876** | +76 |
+
+The 202 new app tests, by file (`tests/meals/`): `mealPlanEntry` 13, `mealActions` 37, `sync` 16 (two-device harness in `support/twoDevice.mjs`), `mealsView` 29, `recurringWork` 8, `logicalDate` 11 (`support/tzProbe.mjs` runs the probe in six process timezones), `lifeIntegration` 9, `mealTasks` 29, `screen` 29 (rendered components), `boundary` 9, `copyAudit` 7, `scenarioMap` 5. Existing tests whose typed literals had to carry the two new fields were edited, never weakened or deleted (`tests/support/legacyShapes.mjs`, `richHousehold.mjs`, `foundationAcceptance{,3}.test.mjs`); no baseline test was skipped, removed, or had an assertion loosened.
+
+The 76 new harness checks are the Feature 08 additions to ENV A (fresh install of all three migrations), ENV C (the post-apply security environment, including the SQL RLS suite `supabase/tests/77-meals-slot-status.sql`, 42 assertions in one rolled-back transaction with real roles and JWT claims), the new ENV E (populated pre-F08 upgrade), the migration-quality and fingerprint checks, and 17 `meals:` journey checks run over a real PostgREST. `node supabase/tests/run.mjs f08` (the F08-only mode) = 95 / 95; `node supabase/tests/run.mjs journeys` = 158 / 158 including the 17 meals checks. The shared foundation, sync, claim and IR01 regression suites are inside the 1177 and the 876 and are green.
+
+## 47. Schema and fingerprint
+
+| Item | IR01 baseline | Feature 08 (derived) |
+| --- | --- | --- |
+| Gated fingerprint | `43e7c8a4402a3387cb2e1add4170921e` | `2e15a718a7cf696e94c966233c7c1f81` |
+| Gated facts | 3617 | 3625 |
+| `columns` | 714 | 716 (+2: `meal_plan_entries.meal_slot`, `.status`) |
+| `constraints` | 679 | 681 (+2: `meal_plan_entries_meal_slot_check`, `_status_check`) |
+| `privileges.columns` | 721 | 725 (+4: INSERT and UPDATE on each new column for `authenticated`) |
+| functions / policies / triggers / indexes | 27 / 85 / 104 / 284 | unchanged |
+| `privileges.effective` / `privileges.relations` | 309 / 587 | unchanged |
+
+Method: the tool's own SELECT-only catalog SQL was run on a scratch database before and after the migration, the delta was applied to the IR01 fact set, and the Node digest was replicated and shown to reproduce the IR01 baseline exactly (`43e7c8a4…` / 3617) before it was trusted for the new value. The new baseline is `supabase/tools/baselines/f08-local-fingerprint.json`, produced by `supabase/tools/f08-fingerprint.mjs`. Any other movement would be drift and fails the comparison.
+
+**The shared local database was never migrated by Feature 08.** It is used by other sessions, which verify it against the IR01 baseline, so Feature 08 measured it read-only and put all of its database evidence on scratch databases and a private PostgREST stack (§48). It read `43e7c8a4…` / 3617 (MATCH) at the start of this build. **Measured again at the end it no longer matches IR01, and the difference is not Feature 08's:** exactly three dimensions moved (`functions` 27 → 28, `privileges.effective` 309 → 310, `privileges.functions` 53 → 55), all explained by one added function, `private.push_household_child(...)`, which is defined only in the Feature 05 (Kids OS) worktree's migrations, so that session applied its migration to the shared database while this build ran. Every dimension Feature 08 would touch is still at the IR01 value (`columns` 714, `constraints` 679, `privileges.columns` 721, and policies, triggers, indexes and `privileges.relations`), which is direct proof that the Feature 08 migration never reached it, and no Feature 08 file contains that function. The shared-database drift is recorded here as an environmental fact for the integration step, not as a Feature 08 defect. It also means the Feature 08 fingerprint above stays a *derived* baseline (scratch before/after), as designed, rather than a measurement of the shared database.
+
+## 48. Migration evidence
+
+- **Migration:** `supabase/migrations/20260921160000_f08_meal_slot_and_status.sql`, LF-pinned by `.gitattributes`; content sha256 `fdfa8aabd1188346…`. Additive only: two `ADD COLUMN ... NOT NULL DEFAULT`, two named CHECKs, two column GRANTs, the standing `private.assert_app_schema_secured()` call, inside BEGIN/COMMIT. No policy, no DELETE grant, no trigger, no index, no function replaced.
+- **Shipped migrations unchanged:** the baseline migration (blob `8bc38d66fcffbb9f…`; the worktree's CRLF checkout hash `81909daa46a9a2d1…` is the documented `core.autocrlf` artifact), the shipping migration (`1e9169de4cf21c46…`, blob `7582e5e6db96b973…`) and the IR01 migration (`73db663974354f0c…`) all match, and `git diff 14bd58e -- supabase/migrations` shows only the one new file.
+- **Real PostgreSQL evidence (scratch databases):** ENV A fresh install of all migrations; ENV C post-apply security environment; **ENV E** an upgrade of a *populated* pre-F08 database whose existing meal rows come out `unspecified` / `active`; the 42-assertion RLS suite (vocabulary CHECKs by reason, column grants, archive as a revision-bumping UPDATE, hard DELETE denied, anon denied, an unrelated account cannot read, insert, patch or archive, a same-household second account constructed at SQL level sees only household-scope meals, scope flips across the owner boundary refused: recorded as 42501 by RLS, not by the owner trigger).
+- **Real PostgREST evidence:** a private PostgREST container (same image and settings as the running stack, copied into a container the harness removes afterwards) served from scratch database `f08_stack` on ports 54391/54392 behind a small Node proxy; the two-device meals journey (create, move, archive with a revision bump, removal reaching device two, stale write producing `cas-conflict` evidence, cross-account isolation, the title appearing only in `meal_plan_entries` rows) passed as the 17 `meals:` checks of the 158 journey checks.
+- **Rollback assumption (documented, not automated):** dropping the two columns undoes the schema; archive states written in the meantime cannot be reconstructed.
+- **Release order (owner-gated, unchanged from IR01's posture):** the migration must reach an environment before a client that sends `meal_slot` and `status` ships; otherwise pushes fail with 42703 and stall as validation-failure evidence. Nothing here was applied to any real environment.
+
+## 49. Device evidence
+
+**NOT EXECUTED — ENVIRONMENTAL LIMITATION.** An emulator (`emulator-5554`) was running, but it belongs to another session, and the host had 0.29 GB of physical memory free. Installing onto a shared device, or starting a second Metro (`preview_start` also runs in the original checkout, not this worktree), under those conditions would risk other sessions' work. No screenshot was taken and none is claimed. Substitutes, all real: 29 rendered tests of the actual components in every state (empty, loading, recovery, unavailable, read-only, planned, dense, sheets in every mode), the copy and affordance audit over every string she can read or hear, and the Android bundle export (§54). What this does NOT prove: visual proportion and Paper and Ink fidelity on a real screen, sheet behavior with the software keyboard, and touch ergonomics.
+
+## 50. Shared-file changes
+
+Mechanically enumerated by `scripts-dev/meals-boundary-scan.cjs` (each mapped to a permitted reason there and in §ML1-A): `src/domain/state.ts`, `src/domain/meals.ts`, `src/domain/sync/{syncTypes,projection,apply}.ts`, `src/data/seed/demoHousehold.ts`, `src/store/useHousehold.ts`, `src/features/life/lifeStatus.ts`, `app/gallery.tsx`, `app/(app)/life/meals.tsx`, the additive migration and its `.gitattributes` pin, and test infrastructure (`supabase/tests/run.mjs`, `journey-composition.mjs`, `sync-integration.mjs`, `tests/support/legacyShapes.mjs`, `tests/support/richHousehold.mjs`, `tests/foundationAcceptance{,3}.test.mjs`). Protected files that must not change (`taskLists.ts`, `routeAccess.ts`, the root and Life layouts, `claim.ts`, the shipped migrations, the v3 fixtures, `app.json`, `package*.json`, responsibility, structure, tasks, foundation, persistence) are unchanged.
+
+## 51. Sibling-import result
+
+**CLEAN BY ISOLATED-BRANCH CONSTRUCTION + MECHANICAL VERIFICATION.** No Meals file imports a feature module outside the baseline set (`meals`, `life`, `today`); none of `feature/01..07`, `validate/hk-ir01-*` or the audit tips above the baseline is an ancestor of HEAD, and every sibling's merge base with HEAD is at or below `14bd58e`; the diff touches no sibling-namespace path. Enforced by the scan and by `[BM]` in the suite.
+
+## 52. Owner checkpoints
+
+**None required.** Every open question was resolvable from the doctrine or existing repaired semantics; they are recorded as decisions DD-1 to DD-13 in ML1 supplement E. Pre-existing and owner-gated, not a build question: approval to apply the additive migration to any real environment, and to do so before a client that sends `meal_slot` and `status` ships.
+
+## 53. Considered and deferred
+
+- **Restore of an archived plan**, a **delegate/ask action**, a **meal to task link**, **meal recurrence**, **notes**, **hard delete or archive pruning**, a **date picker** (dates are chips or `YYYY-MM-DD`, the repo's own pattern), **per-record conflict UI**, and **meal `createdAt`/`updatedAt`** (needs no SQL if added later) were each considered and deliberately not built; each is in the missing-primitives register or the decision list.
+- **Editing a Meals task in place**: the row opens the one task editor she already has (`/task-editor`); Meals builds no second task editor.
+- **An `Intl`-based date formatter**: rejected; labels come from the date's own parts so no instant is ever involved.
+- **A new task role for Meals**: deferred to integration (`HK-INT-MEALS-TASKLIST-ROLE-01`); a Meals task therefore appears both on the Meals screen and under the Life hub's "Other open tasks" (one canonical task, two read-only views, nothing hidden).
+- **Today, Calendar and capacity reading, suggestions, and any AI**: out of Feature 08 by contract.
+
+## 54. Exit gates
+
+Code state under test: `65216221d0e5f5fb3ea465ea234962de1145bfc4` (`6521622`). The only commit above the last runtime/SQL change (`e50fec6`) is `6521622`, which adds the per-scenario results script and rewrites the map's results; the harness, mutation, Doctor and export runs below were made at `e50fec6`, whose runtime and SQL are byte-identical to `6521622`. The ledger commit above `6521622` is documentation only.
+
+| Gate | Result | Evidence |
+| --- | --- | --- |
+| TypeScript, `tsc --noEmit` | **PASS**, exit 0 | at `6521622` |
+| Full app suite, serial (`--test-concurrency=1`) | **PASS**, 1177 / 1177, 279 suites, 0 fail, 0 skipped | at `6521622` (baseline 975 + 202 new) |
+| Feature 08 targeted suite (`tests/meals`) | **PASS**, 202 / 202 | inside the 1177 |
+| Shared foundation, sync, claim and IR01 regression suites | **PASS** | inside the 1177 and the 876; no baseline test edited except typed literals (§46) |
+| Backend harness, full (`node supabase/tests/run.mjs`) | **PASS**, 876 / 876 | at `e50fec6`; baseline 800 |
+| F08-only harness mode (`run.mjs f08`) | **PASS**, 95 / 95 | scratch databases only |
+| Real PostgreSQL and PostgREST journeys (`run.mjs journeys`) | **PASS**, 158 / 158, including 17 `meals:` checks | private PostgREST stack, scratch database `f08_stack` |
+| Logical-date timezone and DST tests | **PASS**, 11 tests (`tests/meals/logicalDate.test.mjs`) | 23:30 New York against UTC, 00:30 Auckland, spring-forward and fall-back, a date surviving serialize and rehydrate under six process timezones (the host applied the requested `TZ` in five of the six, so the sixth is a repeat and not independent evidence) |
+| Mutation / adversarial tests | **PASS**, 20 / 20 mutants caught | §38, at `e50fec6` |
+| Expo Doctor | **PASS**, 21 / 21 checks | in the F08 worktree |
+| Android export | **PASS**, exit 0, 1635 modules, one 6.4 MB Hermes bundle | scratch-copy recipe; the bundle was control-tested (a baseline string present) and contains five Feature 08-only strings while the retired baseline Life copy ("Planned through", "Nothing planned") is absent, so it is this tree and not another checkout's |
+| Schema fingerprint comparison | **PASS**, movement is exactly the intended delta | §47: columns +2, constraints +2, privileges.columns +4, nothing else; the shared local database drifted for a reason that is not Feature 08's (§47) |
+| Semantic-boundary scan | **PASS** | §39, at `6521622` |
+| Sibling-import and ancestry scan | **PASS** | §51 |
+| Copy-truth and affordance audit | **PASS**: 217 strings, 8 forbidden claim classes, 0 hits, 0 unsupported claims | `tests/meals/copyAudit.test.mjs` |
+| Secret scan | **PASS**: no credential pattern in any line added | inside the suite |
+| Scenario map integrity | **PASS**: 85 scenarios, 77 PASS, 3 SAFE-UNAVAILABLE, 5 NOT-APPLICABLE, none failed, skipped or unverified | §35-37 |
+| Clean-tree verification | **PASS**: `git status` empty at `6521622` and after the ledger commit | |
+| On-device validation | **NOT EXECUTED: environmental limitation** | §49 |
+| Remote actions | **NONE** | §55 item 21 |
+
+## 55. Final verdict
+
+```
+HK-FEATURE-08-MEALS = PASS WITH DOCUMENTED DEBT
+
+READY FOR INDEPENDENT FEATURE 08 AUDIT = YES
+
+READY FOR WAVE 2 INTEGRATION = YES
+```
+
+**This does not authorize a merge.**
+
+Why "with documented debt" and not plain PASS: every automated gate is green and no defect is open inside Feature 08's scope, but (1) no on-device pass was possible (§49), so visual proportion, keyboard behavior and touch ergonomics are unproven; (2) sixteen missing primitives (`HK_FEATURE_08_MISSING_PRIMITIVES.md`) limit what Meals can honestly do today, most importantly a meal cannot be linked to its grocery or prep work; (3) the additive migration must be approved and applied before a client that sends `meal_slot` and `status` ships (owner-gated, as IR01 was); (4) five pre-existing defects outside this scope are recorded, not repaired (§40).
+
+Conditions on integration (they belong to the integration step, not to this feature): an independent audit of this tip first; owner approval of the migration before any environment receives it; an on-device pass of the Meals screen before release; and the known merge points listed in §42 (`HK-INT-MEALS-RUNMJS-01`: the "exactly N migrations" check in `supabase/tests/run.mjs` will conflict with every other branch that adds a migration; `HK-INT-MEALS-TASKLIST-ROLE-01`; `HK-INT-WAVE2-LIFE-REGISTRATION`).
+
+**Complete: "After Feature 08, a woman can ______."** After Feature 08, a woman can open Meals from the Life hub and see the meals she has already decided for the next two weeks, grouped by day; add one in a few taps with the day and the meal type visible before she saves (today, and "Not set" unless she says otherwise); change its name, move it to another day, set or clear its meal type, plan the same meal again as a fresh entry, and remove one, knowing that the removal reaches her other device and does not mean the meal was eaten or skipped; add a grocery or prep task to her ordinary task list and be told where it went ("Added to your meal tasks."), with a due date only if she chose one; and leave any day blank without Her Keys treating the blank as a gap, a failure or a job.
+
+### Final questions
+
+1. **Can she see what meals she already decided without reconstructing the plan?** Yes. The hub groups active entries by logical day from today through 14 days out, with the day, the meal type when stated, and the title; entries beyond the horizon are reported as a count. `[AR]`, screen tests.
+2. **Can a blank day remain neutral?** Yes. Blank days and slots render nothing and score nothing; the empty copy is "No meals planned yet."; no streak, gap or catch-up wording exists (copy audit, 8 forbidden classes, 0 hits); Today never treats an empty meal slot as unfinished work. `[R] [S] [A] [CE]`, mutant M3.
+3. **Does MealPlanEntry remain a planning record rather than Task or Calendar?** Yes. It has no execution, time, duration, responsibility or capacity fields; the projection labels it `semantic: 'planning-record'`, `plannedState: 'planned'`, `executionState: 'not-tracked'`; creating, moving or removing one changes no task or event and reads no capacity. `[AO]`, mutants M2, M16.
+4. **Can she quick-add with truthful defaults?** Yes. The sheet states the defaults before saving ("Day: Today, Monday 21 September", "Meal type: Not set"); only a title is required.
+5. **Can slot remain UNSPECIFIED rather than assuming dinner?** Yes. The default is `unspecified`; tapping a chosen meal type again returns it to "Not set"; nothing infers a slot from a title or the time of day. `[G] [H] [L]`.
+6. **Can she create, edit, move and archive a meal decision?** Yes, all four, in-screen on the existing route, each durable before it is shown (`store.commit`). `mealActions`, `screen`.
+7. **Does archive propagate to another device?** Yes. Removal is an ordinary revision-bumping update of `status` to `archived`; on real PostgreSQL over PostgREST the second device drops it, and a stale write produces `cas-conflict` evidence instead of overwriting. Mutant M14.
+8. **Can several entries occupy the same date and slot without overwrite?** Yes; each has its own id and nothing keys on date plus slot. Mutant M9.
+9. **Is ordering deterministic?** Yes: date, then a fixed slot rank with unspecified last, then id by code unit, never `localeCompare`; identical on every device. Mutant M20.
+10. **Does logical date survive timezone and device changes?** Yes. An entry stores a `YYYY-MM-DD` string that is never derived from an instant; "today" comes from the household timezone; a device or process timezone change moves nothing; DST days are exact calendar arithmetic. Household timezone travel itself is deferred by the foundation (no writer exists; recorded). Mutant M1.
+11. **Can she use Plan This Again without creating recurrence semantics?** Yes. It opens a draft that carries the title and meal type, she picks the day, and it saves as an independent new entry with no link to the original and no repeat rule; the original is never changed. Mutant M19.
+12. **Can she create canonical grocery or prep work?** Yes, as ordinary canonical tasks through the existing `addTask` in the Meals category (household scope, unplanned). One "meal task" flow; grocery and prep are not distinguished in stored state.
+13. **If no Meals task context exists, does the product degrade truthfully rather than losing work invisibly?** Yes. With no Meals category, Meals says "Meals isn't set up on this household yet.", creates neither meal nor task, and never lists "all tasks". (Not reachable in the shipped UI; covered by tests.)
+14. **Can a meal-context due-date default masquerade as user-entered?** No. The meal's date is only a proposal behind an unchecked toggle; a due date is stored only when she turns it on; the projection reports `dueDateSource: 'not-recorded'` because the foundation cannot say who chose a date. Mutant M15.
+15. **Does duration provenance remain truthful?** Yes (HA-010 not regressed). Typed minutes are recorded as `user`; an untouched field stays `default` (assumed); the Meals hub shows no duration. Mutant M17.
+16. **Does responsibility remain truthful?** Yes. It is displayed read-only from the canonical model; `coverage` is always `not-established`, so assigned, asked, acknowledged and accepted never read as handled; Meals offers no delegate action because nothing would notify the holder. Mutant M7.
+17. **Can grocery completion become pantry inventory?** No. There is no inventory, quantity or purchase field anywhere; completing a meal task changes only that task. Mutant M4, copy audit.
+18. **Can prep completion become meal served or eaten?** No. Meals tasks and meal entries are not linked, and no copy or field says served, cooked or eaten. Mutant M5.
+19. **Can past planning become consumption history?** No. A past date is still a plan (`executionState: 'not-tracked'`); no history, streak or "you ate" surface exists, and removal is never recorded as skipped. Mutant M18.
+20. **Does Feature 08 avoid diet and body scoring?** Yes. No calorie, macro, weight, score, "healthy" or "on track" wording (copy audit), no such field.
+21. **Does it avoid allergy and medical certainty?** Yes. The foundation has no dietary or allergy field and Meals adds none; the projection lists allergens, ingredients, nutrition and pantry as unknown facts; no allergy record is never rendered as safe. `[AM]`, mutant M6.
+22. **Does it avoid food-safety certification?** Yes. No fresh, expired, safe-to-eat, in-stock or storage claim exists (copy audit).
+23. **Does MealPlanEntry reuse the common concurrency and sync architecture?** Yes. It is the existing sync kind `meal` with two more columns; revision compare-and-set, the change bridge, queued intents in the same envelope, the pull integrity gate and column grants are the foundation's; there is no Meals queue, engine or direct Supabase call. Mutants M11, M12.
+24. **Did the branch add exactly zero or one approved durable Meals semantic?** Exactly one: `MealPlanEntry`, already in the foundation, extended with `slot` and a `status` lifecycle. The boundary scan confirms no second model, table, root collection or sync kind.
+25. **Were any second semantics attempted?** No. Every candidate (recipe, ingredient, pantry, grocery list, preference, history, execution, meal-to-task link) is in the non-goals and missing-primitives register, and mutant M16 guards it.
+26. **Does future intelligence receive MealPlanEntry explicitly as a planning record?** Yes. `buildMealsView` is the one place that says what a meal is: a planning record, planned, execution not tracked, ingredients, allergens, nutrition and pantry unknown; a meal task has coverage not established. No consumer exists yet (Today, Pattern and Talk It Out integrations are integration candidates, §42).
+27. **Were sibling imports introduced?** No (§51): no import of another feature's module, no sibling branch in the ancestry, no sibling-namespace path in the diff.
+
+### Completion report
+
+1. **Starting HEAD:** `14bd58ed3bdcb557ba308dfe2ecbc65253dba5e1` (`repair/hk-integration-readiness-01`, tested code state `9dbe02a`).
+2. **Final HEAD:** the commit that contains this ledger, on `feature/08-meals-os` (a commit cannot record its own hash; `git log -1`). Code state tested: `65216221d0e5f5fb3ea465ea234962de1145bfc4`; the commit above it changes documentation only (`git diff --name-only 6521622 HEAD`).
+3. **Branch / worktree:** `feature/08-meals-os`, `C:\Users\jsmit\Her-Keys-F08` (new, isolated; no sibling ancestry). Local only.
+4. **Commits** (all local, explicit staging, none amended): `843a9aa` ML0-ML1 · `94fe2ae` ML2a · `10abd7e` ML2b · `0d0f848` ML3a · `82e627f` ML5a · `95cdbde` ML3b-ML5b · `f1cf48b` ML6 · `e50fec6` ML7a · `6521622` ML7b · the ledger commit.
+5. **ML1 contracts:** §4-34 and supplements A-E (19 required contracts, closed field contract, architecture, truth contract, minimum shippable, non-goals, decision register DD-1 to DD-13). Deviations: see "Deviations from the ML1 contract".
+6. **Durable semantics added or reused:** reused and extended exactly one, `MealPlanEntry` (`slot`, `status`, cap 5000). Zero new models, tables, root collections or sync kinds.
+7. **Schema / migration status:** one additive migration, `20260921160000_f08_meal_slot_and_status.sql`, proven on scratch PostgreSQL databases only (fresh install, populated upgrade, RLS attacks); **not applied to any real, staging or production environment and not applied to the shared local database.** Approval is owner-gated and precedes any client that sends the new columns.
+8. **Fingerprint status:** IR01 `43e7c8a4…` / 3617 → Feature 08 derived `2e15a718…` / 3625; movement exactly columns +2, constraints +2, privileges.columns +4. The shared local database has since drifted because of another session's migration (`private.push_household_child`, Feature 05), not Feature 08's (§47).
+9. **Sync and claim behavior:** kind `meal` gains two columns end to end (`syncTypes`, `projection`, `apply`, migration, grants); claim v3 does not carry meals and is untouched (local meals reach the cloud as ordinary creates through the top-up); an unknown `meal_slot` or `status` is refused by the pull integrity gate by name and never coerced; removal propagates.
+10. **UI and routes:** the existing `life/meals` route (now a thin file that passes task-editor navigation in) renders `MealsOverview`: the hub, an add/edit sheet (title, day chips or a typed `YYYY-MM-DD`, meal-type chips, Cancel, Save, Remove), Plan This Again, a meal-task sheet, and read-only recurring meal work. No new route, tab or root modal. **Limitation to state explicitly:** `TASK_LIST_ROLES` has no `meals` role (option B, decided in §17), so a Meals-category task appears in the Meals hub (a projection over the stable Meals category, never a title match) **and also** under the Life hub's "Other open tasks"; it is one canonical task with two read-only views and is never hidden; a meal task is not linked to a specific meal.
+11. **Today / Life integration:** the Life hub's Meals row now says only what the data supports ("Next: Today / Tomorrow / <weekday> / <date>", "No meals planned yet"); the retired "Planned through ..." and "Nothing planned" claims are gone. No Today, Calendar or capacity integration, by contract (integration candidates are recorded).
+12. **Truth invariants:** planned is not executed; empty is not failure; a logical date is not a timestamp; a plan is not a Calendar or capacity claim; grocery and prep work is canonical task work; a grocery task is not inventory; prep is not served; no allergy record is not safe; no diet or body scoring; no food-safety claim; assigned is not covered; a default is not user-provided; removal is not skipped or eaten; removal propagates. Each is enforced by named tests and at least one mutant (§27, supplement B, §38).
+13. **Logical-date evidence:** §54 row and `tests/meals/logicalDate.test.mjs` (11 tests), mutant M1.
+14. **Test counts:** app suite 975 → 1177 (+202); backend harness 800 → 876 (+76); F08 mode 95; journeys 158; RLS suite 42 assertions; mutation 20 / 20 (§46).
+15. **Mutation and adversarial results:** 20 / 20 caught (§38); semantic-boundary scan PASS (§39); copy audit 217 strings, 0 hits.
+16. **Real PostgreSQL evidence:** §48: scratch databases for fresh install, populated upgrade and RLS attacks with real roles and JWT claims; a private PostgREST stack for the two-device journey; 876 / 876 harness.
+17. **Security and privacy findings:** no new policy, no DELETE grant, column-level grants for the two new columns only, RLS posture unchanged and re-attacked (anon denied, unrelated account denied, same-household second account constructed at SQL level); the only meal text that leaves the device is the title, exactly as a task title does, and is asserted to appear only in `meal_plan_entries` rows; no analytics, logging or network call in Meals code; account switch quarantines; demo data never syncs; no secret in any added line. No open security or privacy finding.
+18. **Defects repaired:** D-01 to D-09 (§40); D-10 lists defects found in my own gates.
+19. **Documented debt:** no on-device pass (§49); sixteen missing primitives, first `HK-MISSING-MEALS-LINK-01` (§41); Meals tasks also appear in Life "Other open tasks" until `HK-INT-MEALS-TASKLIST-ROLE-01`; no restore, no archive pruning (the 5000-entry cap refuses with `plan-full`); responsibility and recurring meal work are read-only; five pre-existing out-of-scope defects observed and not repaired (§40); the `run.mjs` migration-count merge point (`HK-INT-MEALS-RUNMJS-01`); accessibility verified by rendered tests and audit, not by a screen reader or dynamic type on a device (§43).
+20. **Owner decisions:** none required (§52). One owner-gated release step already exists and is unchanged: approval to apply the additive migration to any real environment.
+21. **Remote actions:** **NONE.** No push, PR, merge, rebase, squash, amend or deploy; no remote migration; no Production or Staging change; no OAuth or provider configuration change; K Scan untouched; no Apple, Google, EAS, Gemini, RevenueCat, grocery or delivery service touched. Everything ran on this machine, on scratch databases and a private PostgREST container that was removed afterwards; the shared local database was never migrated by this build.
+22. **Final verdict:** `HK-FEATURE-08-MEALS = PASS WITH DOCUMENTED DEBT`, `READY FOR INDEPENDENT FEATURE 08 AUDIT = YES`, `READY FOR WAVE 2 INTEGRATION = YES`. This does not authorize a merge.
+
+---
+
+## Deviations from the ML1 contract
+
+Nothing below changes a truth rule, a semantic, or the schema decision; each is an implementation detail that turned out different from what ML1 planned, recorded so an auditor is not surprised.
+
+| # | ML1 said | What was built | Why |
+| --- | --- | --- | --- |
+| 1 | `mealsGate` takes a `recovery` flag beside the store status | `mealsGate` takes the store's own status, which already includes `recovery`, plus persistence and sync hydration | one input instead of two that could disagree |
+| 2 | the meals journey in a new `supabase/tests/journey-meals.mjs` | a `mealsJourney` module inside the existing `supabase/tests/journey-composition.mjs` | that file already owns the two-device harness and the served-database name; a copy would drift |
+| 3 | a private PostgREST stack "if feasible", otherwise SQL-level evidence only | the private stack was feasible and is built (`supabase/tests/private-stack.mjs`); the journeys run on it by default and `HERKEYS_SHARED_STACK=1` opts out | the real-PostgREST gap could be closed without touching the shared database |
+| 4 | shared-file table of 13 rows | 19 files; the additions are `app/gallery.tsx` (its sample Life row would otherwise contradict the new copy), `app/(app)/life/meals.tsx` (the thin route, named in the architecture table but not in the shared-file table), `supabase/tests/journey-composition.mjs` and `supabase/tests/sync-integration.mjs` (the served-database name) | each is mapped to a permitted reason in the boundary scan |
+| 5 | fingerprint baseline "measured" | a *derived* baseline (scratch before/after plus Node digest replication verified against IR01) | the shared local database must not be migrated by this build (§47) |
+| 6 | §18 did not state limits for a meal task's fields | the title uses the foundation's own limit (`FIELD_LIMITS.titleLength`, 200) and typed minutes must be a whole number from 1 to 1440 (a Meals-side constant, `MEAL_TASK_MAX_MINUTES`) | a whole-number-of-minutes field needs a stated ceiling, and the foundation has none for it |
+| 7 | the ML1 scenario map (AX2) expected valid rows to apply beside a malformed one | the engine refuses the whole batch and keeps its cursor; `apply` passes an unknown `meal_slot` or `status` through raw so the gate refuses it by name | found while writing test `[AX]` (defect D-07); the map was corrected |
+
 ## Phase log
 
-| Phase | Status | Notes |
-| --- | --- | --- |
-| ML0 baseline / inheritance | complete | §1–3 |
-| ML1 domain / capability contracts | complete | §4–34 and supplements; scenario map and missing-primitives register written before any code |
-| ML2 MealPlanEntry domain / durability | pending | |
-| ML3 Meals hub | pending | |
-| ML4 create / edit / move / archive / plan again | pending | |
-| ML5 grocery / prep work | pending | |
-| ML6 account / backend validation | pending | |
-| ML7 adversarial hardening | pending | |
-| ML8 completion | pending | |
-
-Sections 35–55 (tier results, mutation evidence, semantic-boundary scan, defects, missing primitives, integration candidates, accessibility, performance, privacy, test accounting, schema/fingerprint, migration evidence, device evidence, shared-file changes, sibling-import result, owner checkpoints, considered/deferred, exit gates, final verdict) are completed at ML8. Missing primitives and integration candidates already exist in `docs/builds/HK_FEATURE_08_MISSING_PRIMITIVES.md`.
+| Phase | Status | Commit | Notes |
+| --- | --- | --- | --- |
+| ML0 baseline / inheritance | complete | `843a9aa` | §1-3 |
+| ML1 domain / capability contracts | complete | `843a9aa` | §4-34 and supplements; scenario map and missing-primitives register written before any code |
+| ML2 MealPlanEntry domain / durability | complete | `94fe2ae`, `10abd7e` | slot and lifecycle, canonical actions, sync registration; additive migration, 42-assertion RLS suite, derived fingerprint |
+| ML3 Meals hub | complete | `0d0f848`, `95cdbde` | projection, gate, copy, dates, Life row; the screen |
+| ML4 create / edit / move / archive / plan again | complete | `95cdbde` | in-screen sheets on the existing route |
+| ML5 grocery / prep work | complete | `82e627f`, `95cdbde` | `addMealTask` over the canonical `addTask`; the task sheet |
+| ML6 account / backend validation | complete | `f1cf48b` | private PostgREST stack, two-device journey on real PostgreSQL |
+| ML7 adversarial hardening | complete | `e50fec6`, `6521622` | boundary scan, copy audit, scenario-map integrity, 20-mutant check; per-scenario results |
+| ML8 completion | complete | the commit that contains this ledger | §35-55 |
