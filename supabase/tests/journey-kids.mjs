@@ -1,15 +1,10 @@
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createClient } from '@supabase/supabase-js';
 import { NOW, WITHHELD_MOVE, bindAsNewDevice, device, loadModules, mutate } from './journey-composition.mjs';
-import { apiReachable, clientFor } from './support/syncDevice.mjs';
+import { anonClient, apiReachable, clientFor } from './support/syncDevice.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = join(HERE, '..', '..');
-const API_URL = process.env.HERKEYS_LOCAL_API_URL ?? 'http://127.0.0.1:54321';
-const ANON_KEY =
-  process.env.HERKEYS_LOCAL_ANON_KEY ??
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0';
 
 /**
  * HK-FEATURE-05 — Kids OS against REAL PostgreSQL, PostgREST, RLS and the real claim RPC.
@@ -165,7 +160,7 @@ export async function kidsJourneys(check, psql) {
   check('kids: and on the first device too', soccerPlan(state(a)).label === 'NEEDS_A_PLAN');
 
   // ---- 8. Row-level security, attacked over real PostgREST with valid foreign identifiers -------------------------------------------------
-  const anon = createClient(API_URL, ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } });
+  const anon = anonClient();
   const stranger = clientFor(R);
   const owner = clientFor(P);
   const childCloudId = sql(`SELECT id FROM public.household_members WHERE household_id='${household}' AND local_id='${older}';`);
