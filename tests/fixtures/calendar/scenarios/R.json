@@ -64,6 +64,7 @@
   "capacityState": {
     "category": "not_known",
     "evidence": {
+      "estimated": [],
       "missing": [
         {
           "betweenWith": {

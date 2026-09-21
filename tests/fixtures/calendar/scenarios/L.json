@@ -76,6 +76,7 @@
   "capacityState": {
     "category": "room",
     "evidence": {
+      "estimated": [],
       "missing": [],
       "status": "complete"
     },
@@ -112,6 +113,7 @@
     },
     {
       "blockedBy": [],
+      "durationBasis": "task_recorded",
       "flexibility": "fixed",
       "progress": "untimed",
       "ref": {
@@ -133,6 +135,7 @@
     },
     {
       "blockedBy": [],
+      "durationBasis": "task_recorded",
       "flexibility": "flexible",
       "progress": "untimed",
       "ref": {
@@ -176,6 +179,7 @@
   "unknownStates": [],
   "unplacedItems": [
     {
+      "durationBasis": "task_recorded",
       "durationKnown": true,
       "itemRef": {
         "id": "tsk-invoice",
@@ -187,6 +191,7 @@
       "state": "fixed_without_time"
     },
     {
+      "durationBasis": "task_recorded",
       "durationKnown": true,
       "itemRef": {
         "id": "tsk-email",

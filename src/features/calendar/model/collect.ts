@@ -5,6 +5,7 @@ import { refKey } from '../../../domain/foundation/typedRef';
 import { needsMePersonally } from '../../../domain/responsibility';
 import type { AppState, CalendarEvent, Task } from '../../../domain/state';
 import { isDone } from '../../../domain/structure';
+import { durationBasisOfTask } from './durationBasis';
 import { daysBetween, minuteOf, type DayFrame } from './timeFrame';
 import type {
   Blocker,
@@ -134,17 +135,18 @@ function blockersFor(state: AppState, indexes: Indexes, frame: DayFrame, nowMs: 
       if (!event || event.status !== 'active') continue;
       const finishMs = epochMsOf(event.endsAt);
       if (finishMs <= nowMs) continue;
-      blockers.push({ edgeId: edge.id, ref: { kind: 'event', id: target.id }, title: event.title, finishMs, finishMinute: minuteOf(frame, finishMs) });
+      blockers.push({ edgeId: edge.id, ref: { kind: 'event', id: target.id }, title: event.title, finishMs, finishMinute: minuteOf(frame, finishMs), finishBasis: 'event_span' });
       continue;
     }
     if (isDone(state, target)) continue;
     if (target.kind === 'task') {
       const task = indexes.tasks.get(target.id);
       const timed = task && task.plan.kind === 'timed' && task.durationMinutes > 0 ? epochMsOf(task.plan.startsAt) + task.durationMinutes * MINUTE_MS : null;
-      blockers.push({ edgeId: edge.id, ref: { kind: 'task', id: target.id }, title: task?.title ?? null, finishMs: timed, finishMinute: timed === null ? null : minuteOf(frame, timed) });
+      // The predecessor's finish is its start plus its duration, so it is exactly as certain as that duration is.
+      blockers.push({ edgeId: edge.id, ref: { kind: 'task', id: target.id }, title: task?.title ?? null, finishMs: timed, finishMinute: timed === null ? null : minuteOf(frame, timed), finishBasis: timed === null || !task ? null : durationBasisOfTask(task) });
       continue;
     }
-    blockers.push({ edgeId: edge.id, ref: { kind: target.kind, id: target.id }, title: null, finishMs: null, finishMinute: null });
+    blockers.push({ edgeId: edge.id, ref: { kind: target.kind, id: target.id }, title: null, finishMs: null, finishMinute: null, finishBasis: null });
   }
   return blockers;
 }
@@ -308,7 +310,8 @@ export function collectDayItems({ state, frame, nowMs, mode }: CollectInput): Da
         preparation: entered(task.preparationMinutes),
       },
       durationMinutes: usable,
-      durationBasis: usable === null ? 'none' : 'task_estimate',
+      // How far that number may be trusted as a fact, from the foundation. The number is used for computing either way.
+      durationBasis: durationBasisOfTask(task),
       window,
       responsibility: responsibilityMark(state, indexes, ref, nowMs),
       blockedBy: blockersFor(state, indexes, frame, nowMs, ref),

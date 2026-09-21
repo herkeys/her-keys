@@ -2,7 +2,7 @@ import { loadTierForBuffer } from '../../../domain/loadThresholds';
 import type { LocalDate } from '../../../domain/logicalDay';
 import type { AppState } from '../../../domain/state';
 import { actionAvailability } from './actions';
-import { assessFoundation, capacityStateOf, dedupeMissing } from './capacity';
+import { assessFoundation, capacityStateOf, dedupeMissing, estimatedDurationsOf, takesPartInCapacity } from './capacity';
 import { collectDayItems } from './collect';
 import { buildConflicts } from './conflicts';
 import { evidenceOf, gapsWithin, isTimed, occupiedUnions, placementFor, transitionsOf, type PlacementResult } from './geometry';
@@ -83,7 +83,7 @@ export function projectCalendarDay({ state, date, today, nowMs, includeActions =
   // between consecutive events, and whatever an item's own placement could not establish.
   const durationMissing = (onlyCapacity: boolean): MissingEvidence[] =>
     items
-      .filter((item) => item.ref.kind === 'task' && item.durationBasis === 'none' && (!onlyCapacity || item.timing.kind !== 'date_only' || item.timing.daysOverdue === 0))
+      .filter((item) => item.ref.kind === 'task' && item.durationBasis === 'none' && (!onlyCapacity || takesPartInCapacity(item)))
       .map((item) => ({ field: 'durationMinutes' as const, itemRef: item.ref, betweenWith: null, reason: 'no_usable_duration' as const }));
   const travelMissing: MissingEvidence[] = transitions
     .filter((transition) => transition.travelUnknown)
@@ -108,6 +108,7 @@ export function projectCalendarDay({ state, date, today, nowMs, includeActions =
       after: evidenceOf(transition.after),
       gapMinutes: transition.gapMinutes,
       scheduledMinutes: transition.scheduledMinutes,
+      estimatedTasks: transition.estimatedTasks,
       storedTransitionMinutes: transition.storedMinutes,
       slackMinutes: transition.slackMinutes,
       tier: loadTierForBuffer(transition.slackMinutes),
@@ -119,7 +120,8 @@ export function projectCalendarDay({ state, date, today, nowMs, includeActions =
     narrowTransitions,
     unplacedItems,
     openWindows,
-    capacityState: capacityStateOf(issues, capacityMissing, conflicts),
+    // Computed with these numbers, and said to rest on them: a verdict over an assumed length is an assumption too.
+    capacityState: capacityStateOf(issues, capacityMissing, conflicts, estimatedDurationsOf(items)),
     unknownStates,
     availableActions,
   };
@@ -136,6 +138,7 @@ export function summarizeDay(view: CalendarDayViewModel, isSelected: boolean): W
     tier: view.capacityState === null ? null : view.capacityState.tier,
     category: view.capacityState === null ? null : view.capacityState.category,
     evidenceStatus: view.capacityState === null ? 'not_applicable' : view.capacityState.evidence.status,
+    estimatedDurations: view.capacityState !== null && view.capacityState.evidence.estimated.length > 0,
     conflictTypes,
     conflictCount: view.conflicts.length,
     unplacedCount: view.unplacedItems.filter((unplaced) => unplaced.state !== 'fixed_without_time').length,

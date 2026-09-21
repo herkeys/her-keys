@@ -64,6 +64,7 @@
   "capacityState": {
     "category": "tight",
     "evidence": {
+      "estimated": [],
       "missing": [],
       "status": "complete"
     },
@@ -151,6 +152,7 @@
         },
         "startMinute": 600
       },
+      "estimatedTasks": [],
       "gapMinutes": 30,
       "scheduledMinutes": 0,
       "slackMinutes": 15,

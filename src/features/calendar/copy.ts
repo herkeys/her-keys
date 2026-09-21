@@ -1,5 +1,6 @@
 import { formatClock, formatClockRange, formatDayTitle, formatMinutes, formatWeekdayShort, formatDayNumber } from './format';
 import { REQUIRED_TRANSITION_BUFFER_MINUTES } from '../daily-load/computeDailyLoad';
+import { isEstimatedBasis } from './model/durationBasis';
 import type { ActionPreview, PreviewableIntent } from './model/preview';
 import type {
   CalendarDayViewModel,
@@ -8,6 +9,9 @@ import type {
   ConflictType,
   Coverage,
   DayItem,
+  DurationBasis,
+  EstimatedBasis,
+  EstimatedDuration,
   MissingEvidence,
   NarrowTransition,
   Opening,
@@ -90,6 +94,47 @@ const FLEXIBLE = 'Flexible';
 
 export const flexibilityLabel = (flexibility: 'fixed' | 'flexible'): string => (flexibility === 'fixed' ? FIXED : FLEXIBLE);
 
+// ------------------------------------------------------- duration knowledge ---
+
+/**
+ * A number of minutes is a fact only when she gave it (HA-010: DEFAULT != USER-PROVIDED). Every other basis is an estimate and
+ * is worded as one, from this section and nowhere else, so a claim can never carry more confidence than its number has.
+ * Nothing here says or implies "you said" or "you entered" for a length she did not give, and a length of unknown origin is
+ * called unconfirmed, never assumed to be hers and never assumed to be a default.
+ */
+const ESTIMATE_WORD: Record<EstimatedBasis, string> = { task_default: 'assumed', task_inferred: 'estimated', task_unrecorded: 'not confirmed' };
+const LENGTH_KIND: Record<EstimatedBasis, string> = { task_default: 'an assumed length', task_inferred: 'an estimated length', task_unrecorded: 'a length that isn’t confirmed' };
+
+/** " (assumed)", " (estimated)", " (not confirmed)" — or nothing, for a length she gave or an event's own span. */
+const lengthQualifier = (basis: DurationBasis): string => (isEstimatedBasis(basis) ? ` (${ESTIMATE_WORD[basis]})` : '');
+
+/** One length, worded by how far it can be trusted: "about 30 min" when hers, "about 15 min (assumed)" when not. */
+const aboutLength = (minutes: number, basis: DurationBasis): string => `about ${formatMinutes(minutes)}${lengthQualifier(basis)}`;
+
+/** What a claim counts, when it counts lengths that are not hers. Only a length of unknown origin is called unconfirmed. */
+const countedPhrase = (estimated: readonly EstimatedDuration[]): string =>
+  estimated.every((entry) => entry.basis === 'task_unrecorded') ? 'task lengths that aren’t confirmed' : 'estimated task lengths';
+
+/** The clause a fit / no-fit / capacity claim carries when it counts a length that is not hers. Empty when it counts none. */
+const countingClause = (estimated: readonly EstimatedDuration[]): string => (estimated.length === 0 ? '' : `, counting ${countedPhrase(estimated)}`);
+
+/** The clause for a claim that rests on ONE task's length. */
+const goingBy = (basis: DurationBasis): string => (isEstimatedBasis(basis) ? `, going by ${LENGTH_KIND[basis]}` : '');
+
+/** Why one length is an estimate, as a sentence. `null` when the length is hers or there is none. */
+function basisExplanation(basis: DurationBasis): string | null {
+  switch (basis) {
+    case 'task_default': return 'No length was entered for it, so its length is a planning assumption.';
+    case 'task_inferred': return 'Her Keys estimated its length.';
+    case 'task_unrecorded': return 'Where its length came from isn’t recorded, so it isn’t confirmed.';
+    default: return null;
+  }
+}
+
+/** Which tasks a claim counts with an estimated length, and how each one is estimated. */
+const estimatedNote = (estimated: readonly EstimatedDuration[], ctx: { titleOf: (ref: { kind: string; id: string }) => string }): string =>
+  `Some task lengths are estimates: ${estimated.map((entry) => `${ctx.titleOf(entry.itemRef)} (${ESTIMATE_WORD[entry.basis]})`).join(', ')}.`;
+
 /**
  * A word for a whole day: the foundation’s tiers, worded by the physical facts (see `CapacityCategory`), plus “not
  * known”. Never a score, never a percentage.
@@ -159,7 +204,12 @@ function recurrenceLine(rule: RecurrenceNote): string | null {
   return rule.interval === 1 ? `Repeats every ${unit}` : `Repeats every ${rule.interval} ${unit}s`;
 }
 
-const estimateLine = (item: DayItem): string => (item.durationMinutes === null ? 'No duration recorded' : `About ${formatMinutes(item.durationMinutes)}`);
+const estimateLine = (item: DayItem): string =>
+  item.durationMinutes === null ? 'No duration recorded' : `About ${formatMinutes(item.durationMinutes)}${lengthQualifier(item.durationBasis)}`;
+
+/** A timed task's end is its start plus its length, so an end that rests on a length that is not hers is said to. */
+const endNote = (item: DayItem): string | null =>
+  item.timing.kind === 'timed' && item.timing.endKnown && isEstimatedBasis(item.durationBasis) ? `Length ${ESTIMATE_WORD[item.durationBasis]}` : null;
 
 /** The second line under an item’s title. Text marks fixed/flexible and state, so nothing depends on color. */
 export function itemLine(item: DayItem, ctx: CopyContext): string {
@@ -167,6 +217,8 @@ export function itemLine(item: DayItem, ctx: CopyContext): string {
   if (item.timing.kind === 'timed') {
     parts.push(item.timing.endKnown ? ctx.range(item.timing.startMinute, item.timing.endMinute) : `${ctx.clock(item.timing.startMinute)}, end not known`);
     parts.push(flexibilityLabel(item.flexibility));
+    const note = endNote(item);
+    if (note !== null) parts.push(note);
     if (item.timing.continuesFromPreviousDay) parts.push('Continues from the day before');
     if (item.timing.continuesIntoNextDay) parts.push('Continues into the next day');
     if (item.progress === 'in_progress') parts.push('Happening now');
@@ -196,6 +248,8 @@ export function detailLines(item: DayItem): string[] {
   if (preparation !== null) lines.push(`Preparation you entered: ${formatMinutes(preparation)}`);
   if (travelBefore !== null) lines.push(`Travel before you entered: ${formatMinutes(travelBefore)}`);
   if (travelAfter !== null) lines.push(`Travel after you entered: ${formatMinutes(travelAfter)}`);
+  const lengthWhy = basisExplanation(item.durationBasis);
+  if (lengthWhy !== null) lines.push(lengthWhy);
   for (const blocker of item.blockedBy) lines.push(`Needs ${blocker.title ?? 'another item'} first`);
   if (item.repeats !== null) {
     const repeat = recurrenceLine(item.repeats);
@@ -242,29 +296,47 @@ export function conflictCopy(conflict: Conflict, ctx: CopyContext): ConflictCopy
       if (e.entered.travelBefore !== null) why.push(`You entered ${formatMinutes(e.entered.travelBefore)} of travel before ${b}.`);
       if (e.entered.preparation !== null) why.push(`You entered ${formatMinutes(e.entered.preparation)} of preparation for ${b}.`);
       if (e.scheduledMinutes > 0) why.push(`${formatMinutes(e.scheduledMinutes)} of tasks are already scheduled in that time.`);
+      if (e.estimatedTasks.length > 0) why.push(estimatedNote(e.estimatedTasks, ctx));
       why.push(`That is ${formatMinutes(-e.slackMinutes)} more than the time between them.`);
       return {
         label: 'Not enough time',
-        sentence: `The ${formatMinutes(e.gapMinutes)} between ${a} and ${b} is shorter than what you entered for getting there.`,
+        // Tasks scheduled in the gap count against it by their length, so a length that is not hers makes this a "may be".
+        sentence:
+          e.estimatedTasks.length === 0
+            ? `The ${formatMinutes(e.gapMinutes)} between ${a} and ${b} is shorter than what you entered for getting there.`
+            : `The ${formatMinutes(e.gapMinutes)} between ${a} and ${b} may be shorter than what you entered for getting there${countingClause(e.estimatedTasks)}.`,
         why,
       };
     }
     case 'dependency': {
       const item = ctx.titleOf(e.item);
       const predecessor = ctx.titleOf(e.predecessor);
+      // A task's finish is its start plus its length: exactly as certain as that length. An event's end is a fact.
+      const estimated = isEstimatedBasis(e.predecessorFinishBasis);
+      const lengthWhy = basisExplanation(e.predecessorFinishBasis);
       return {
         label: 'Out of order',
-        sentence: `${item} is scheduled before ${predecessor} is done, and it needs ${predecessor} first.`,
-        why: [`${item} starts at ${ctx.clock(e.itemStartMinute)}.`, `${predecessor} finishes at ${ctx.clock(e.predecessorFinishMinute)}.`],
+        sentence: estimated
+          ? `${item} may be scheduled before ${predecessor} is done, and it needs ${predecessor} first.`
+          : `${item} is scheduled before ${predecessor} is done, and it needs ${predecessor} first.`,
+        why: [
+          `${item} starts at ${ctx.clock(e.itemStartMinute)}.`,
+          estimated ? `${predecessor} is expected to finish at ${ctx.clock(e.predecessorFinishMinute)}.` : `${predecessor} finishes at ${ctx.clock(e.predecessorFinishMinute)}.`,
+          ...(lengthWhy === null ? [] : [lengthWhy]),
+        ],
       };
     }
     case 'placement': {
       const item = ctx.titleOf(e.item);
       const longest = e.gaps.reduce((max, gap) => Math.max(max, gap.lengthMinutes), 0);
-      const why = [`${item} needs about ${formatMinutes(e.durationMinutes)}.`];
+      // "Needs about 15 min (assumed)": the number is worded by what it rests on, so the no-fit is as certain as the number is.
+      const needs = aboutLength(e.durationMinutes, e.durationBasis);
+      const why = [`${item} needs ${needs}.`];
       why.push(e.windowEndMinute > e.windowStartMinute ? `The time it can use runs ${ctx.range(e.windowStartMinute, e.windowEndMinute)}.` : 'No time is left inside the window it can use.');
       why.push(longest > 0 ? `The longest open stretch in that time is ${formatMinutes(longest)}.` : 'Everything in that time is already taken.');
-      return { label: 'Needs a place', sentence: `${item} needs about ${formatMinutes(e.durationMinutes)}, and no open stretch is long enough.`, why };
+      const lengthWhy = basisExplanation(e.durationBasis);
+      if (lengthWhy !== null) why.push(lengthWhy);
+      return { label: 'Needs a place', sentence: `${item} needs ${needs}, and no open stretch is long enough.`, why };
     }
     case 'responsibility': {
       const item = ctx.titleOf(e.item);
@@ -295,10 +367,12 @@ export function narrowCopy(narrow: NarrowTransition, ctx: CopyContext): Conflict
   const why = [`${a} ends at ${ctx.clock(narrow.before.endMinute)}; ${b} starts at ${ctx.clock(narrow.after.startMinute)}. That is ${formatMinutes(narrow.gapMinutes)}.`];
   if (narrow.storedTransitionMinutes > 0) why.push(`You entered ${formatMinutes(narrow.storedTransitionMinutes)} for getting there.`);
   if (narrow.scheduledMinutes > 0) why.push(`${formatMinutes(narrow.scheduledMinutes)} of tasks are already scheduled in that time.`);
+  if (narrow.estimatedTasks.length > 0) why.push(estimatedNote(narrow.estimatedTasks, ctx));
   why.push(`That leaves ${formatMinutes(narrow.slackMinutes)}. Her Keys looks for ${formatMinutes(REQUIRED_TRANSITION_BUFFER_MINUTES)} between commitments.`);
   return {
     label: 'Fits narrowly',
-    sentence: `${a} to ${b} fits, with ${formatMinutes(narrow.slackMinutes)} to spare.`,
+    // "It fits" counts the scheduled tasks by their length: when a length is not hers, the fit is said to count it.
+    sentence: `${a} to ${b} fits, with ${formatMinutes(narrow.slackMinutes)} to spare${countingClause(narrow.estimatedTasks)}.`,
     why,
   };
 }
@@ -316,10 +390,12 @@ export function narrowGroupCopy(narrow: NarrowTransition[], ctx: CopyContext): C
     const b = ctx.titleOf(entry.after.ref);
     return `${a} to ${b}: ${formatMinutes(entry.gapMinutes)} between them, ${formatMinutes(entry.slackMinutes)} to spare.`;
   });
+  const estimated = narrow.flatMap((entry) => entry.estimatedTasks);
+  if (estimated.length > 0) why.push(estimatedNote(estimated, ctx));
   why.push(`Her Keys looks for ${formatMinutes(REQUIRED_TRANSITION_BUFFER_MINUTES)} between commitments.`);
   return {
     label: 'Fits narrowly',
-    sentence: `${narrow.length} windows between commitments are tight. Each one fits.`,
+    sentence: `${narrow.length} windows between commitments are tight. Each one fits${countingClause(estimated)}.`,
     why,
   };
 }
@@ -338,25 +414,27 @@ function openingText(opening: Opening, ctx: CopyContext): string {
 
 export function unplacedCopy(unplaced: UnplacedItem, ctx: CopyContext): UnplacedCopy {
   const title = ctx.titleOf(unplaced.itemRef);
+  // Whether it fits, or has nowhere to go, is decided by ITS length: a length that is not hers makes the answer an assumption.
+  const lengthWhy = basisExplanation(unplaced.durationBasis);
   switch (unplaced.state) {
     case 'has_opening': {
       const first = unplaced.openings[0];
       const more = unplaced.openings.length - 1;
       return {
         label: null,
-        sentence: `There’s room from ${openingText(first, ctx)}${more > 0 ? `, and ${more} more ${more === 1 ? 'window' : 'windows'}` : ''}. Nothing is scheduled for it.`,
-        why: unplaced.openings.slice(0, 3).map((o) => `${openingText(o, ctx)} is free for about ${formatMinutes(o.lengthMinutes)}.`),
+        sentence: `There’s room from ${openingText(first, ctx)}${more > 0 ? `, and ${more} more ${more === 1 ? 'window' : 'windows'}` : ''}${goingBy(unplaced.durationBasis)}. Nothing is scheduled for it.`,
+        why: [...unplaced.openings.slice(0, 3).map((o) => `${openingText(o, ctx)} is free for about ${formatMinutes(o.lengthMinutes)}.`), ...(lengthWhy === null ? [] : [lengthWhy])],
       };
     }
     case 'needs_a_place':
-      return { label: 'Needs a place', sentence: 'No open stretch today is long enough for it.', why: [] };
+      return { label: 'Needs a place', sentence: `No open stretch today is long enough for it${goingBy(unplaced.durationBasis)}.`, why: lengthWhy === null ? [] : [lengthWhy] };
     case 'insufficient_information':
       return {
         label: 'Not confirmed',
         sentence:
           unplaced.reason === 'no_usable_duration'
             ? 'No duration is recorded, so Her Keys can’t say whether it fits.'
-            : 'It might fit, but travel time isn’t entered, so that isn’t confirmed.',
+            : `It might fit${goingBy(unplaced.durationBasis)}, but travel time isn’t entered, so that isn’t confirmed.`,
         why: missingLines(unplaced.missing, ctx),
       };
     case 'waiting_on_predecessor':
@@ -403,28 +481,54 @@ const HEADLINE_BY_TYPE: Record<ConflictType, string> = {
   PROTECTED_TIME_CONFLICT: 'A protected time conflicts with something.',
 };
 
+/** The same kinds of problem, for a conflict whose proof counts a length that is not hers: a "may", not a "does". */
+const HEADLINE_BY_TYPE_ESTIMATED: Partial<Record<ConflictType, string>> = {
+  TRANSITION_CONFLICT: 'There may not be enough time to get between two commitments.',
+  DEPENDENCY_CONFLICT: 'Something may be scheduled before what it needs.',
+  PLACEMENT_FAILURE: 'Something may not have a place today.',
+};
+
+/** Whether the proof of a conflict counts a task length that is not something she gave. */
+function restsOnEstimate(conflict: Conflict): boolean {
+  const e = conflict.evidence;
+  switch (e.kind) {
+    case 'placement': return isEstimatedBasis(e.durationBasis);
+    case 'transition': return e.estimatedTasks.length > 0;
+    case 'dependency': return isEstimatedBasis(e.predecessorFinishBasis);
+    default: return false;
+  }
+}
+
 export function headlineFor(view: CalendarDayViewModel, ctx: CopyContext): Headline {
   if (view.dayMode === 'past') return { kind: 'past', text: COPY.pastDay, more: 0 };
   const state = view.capacityState;
   const listed = view.conflicts;
+  // What the day's capacity verdict was computed with that is not a fact she gave (HA-010).
+  const estimated = state === null ? [] : state.evidence.estimated;
 
   // The headline says WHAT KIND of problem there is; the cards below say which commitments. It never repeats a card’s sentence.
-  if (listed.length === 1) return { kind: 'problem', text: HEADLINE_BY_TYPE[listed[0].type], more: 0 };
+  if (listed.length === 1) {
+    const only = listed[0];
+    return { kind: 'problem', text: (restsOnEstimate(only) ? HEADLINE_BY_TYPE_ESTIMATED[only.type] : undefined) ?? HEADLINE_BY_TYPE[only.type], more: 0 };
+  }
   if (listed.length > 1) return { kind: 'problem', text: `${listed.length} things need a look.`, more: 0 };
 
   if (state !== null && state.verdict === 'capacity_pressure' && state.pressure !== null) {
-    return { kind: 'problem', text: `More is planned than the day has room for: ${formatMinutes(state.pressure.neededMinutes)} planned, ${formatMinutes(state.pressure.availableMinutes)} available.`, more: 0 };
+    const base = `More is planned than the day has room for: ${formatMinutes(state.pressure.neededMinutes)} planned, ${formatMinutes(state.pressure.availableMinutes)} available.`;
+    return { kind: 'problem', text: estimated.length === 0 ? base : `${base} That counts ${countedPhrase(estimated)}.`, more: 0 };
   }
   if (view.narrowTransitions.length > 0) {
     // Names the kind of thing, never a card’s own sentence.
     const count = view.narrowTransitions.length;
-    return { kind: 'tight', text: count === 1 ? 'One window between commitments is tight.' : `${count} windows between commitments are tight.`, more: 0 };
+    const counted = view.narrowTransitions.flatMap((entry) => entry.estimatedTasks);
+    const base = count === 1 ? 'One window between commitments is tight.' : `${count} windows between commitments are tight.`;
+    return { kind: 'tight', text: counted.length === 0 ? base : `${base} That counts ${countedPhrase(counted)}.`, more: 0 };
   }
   if (state !== null && state.tier === null) {
     return { kind: 'unknown', text: 'Not enough is entered to say whether this day fits.', more: 0 };
   }
   if (view.dayItems.length === 0) return { kind: 'empty', text: COPY.emptyDayTitle, more: 0 };
-  return { kind: 'clear', text: 'Everything scheduled fits.', more: 0 };
+  return { kind: 'clear', text: `Everything scheduled fits${countingClause(estimated)}.`, more: 0 };
 }
 
 // ---------------------------------------------------------- recommendations ---
@@ -462,7 +566,7 @@ export function offersFor(view: CalendarDayViewModel, ctx: CopyContext): Offer[]
       body:
         ref.kind === 'event'
           ? `Moving ${title} to tomorrow, at the same time, would open up the time around it today.`
-          : `Moving ${title} to tomorrow would free about ${item === undefined || item.durationMinutes === null ? 'its time' : formatMinutes(item.durationMinutes)} today.`,
+          : `Moving ${title} to tomorrow would free ${item === undefined || item.durationMinutes === null ? 'about its time' : aboutLength(item.durationMinutes, item.durationBasis)} today.`,
       primary: { label: 'Preview the move', intent: ref.kind === 'event' ? { kind: 'move_event', id: ref.id } : { kind: 'move_task', id: ref.id } },
       alternative: null,
       keep: 'timing',
@@ -473,17 +577,27 @@ export function offersFor(view: CalendarDayViewModel, ctx: CopyContext): Offer[]
   const shorten = offered('SHORTEN')[0];
   const drop = offered('DROP')[0];
   const pressure = view.capacityState?.pressure ?? null;
+  // "Within what fits" is a verdict over every counted task length, so it carries the ones that are not hers (HA-010).
+  const counted = view.capacityState?.evidence.estimated ?? [];
   const named = shorten ?? drop;
   if (named !== undefined && named.itemRef !== null && pressure !== null) {
     const ref = named.itemRef;
     const title = ctx.titleOf(ref);
     offers.push({
       key: `capacity:${ref.id}`,
-      body: shorten !== undefined ? `Shortening ${title} would bring today back within what fits.` : `Dropping ${title} would bring today back within what fits.`,
+      body:
+        shorten !== undefined
+          ? `Shortening ${title} would bring today back within what fits${countingClause(counted)}.`
+          : `Dropping ${title} would bring today back within what fits${countingClause(counted)}.`,
       primary: shorten !== undefined ? { label: 'Preview shortening it', intent: { kind: 'shorten_task', id: ref.id } } : { label: 'Preview dropping it', intent: { kind: 'drop_task', id: ref.id } },
       alternative: shorten !== undefined && drop !== undefined ? { intent: { kind: 'drop_task', id: ref.id } } : null,
       keep: 'capacity',
-      why: [`${formatMinutes(pressure.neededMinutes)} is planned.`, `${formatMinutes(pressure.availableMinutes)} is available in the household day.`, `That is ${formatMinutes(pressure.pressureMinutes)} more than fits.`],
+      why: [
+        `${formatMinutes(pressure.neededMinutes)} is planned.`,
+        `${formatMinutes(pressure.availableMinutes)} is available in the household day.`,
+        `That is ${formatMinutes(pressure.pressureMinutes)} more than fits.`,
+        ...(counted.length === 0 ? [] : [estimatedNote(counted, ctx)]),
+      ],
     });
   }
   return offers;
@@ -510,9 +624,14 @@ export function previewLines(preview: ActionPreview, ctx: CopyContext): string[]
         : '';
     lines.push(`${title} would move to tomorrow${at}.`);
   } else if (intent.kind === 'shorten_task') {
-    const before = preview.before.dayItems.find((item) => item.ref.id === id)?.durationMinutes;
-    const after = preview.after.dayItems.find((item) => item.ref.id === id)?.durationMinutes;
-    lines.push(before != null && after != null ? `${title} would go from about ${formatMinutes(before)} to about ${formatMinutes(after)}.` : `${title} would be shortened.`);
+    // The shortened length is one Her Keys sets (approving it records it as an estimate, never as hers), so it is worded as one.
+    const before = preview.before.dayItems.find((item) => item.ref.id === id);
+    const after = preview.after.dayItems.find((item) => item.ref.id === id);
+    lines.push(
+      before?.durationMinutes != null && after?.durationMinutes != null
+        ? `${title} would go from ${aboutLength(before.durationMinutes, before.durationBasis)} to ${aboutLength(after.durationMinutes, after.durationBasis)}.`
+        : `${title} would be shortened.`
+    );
   } else if (intent.kind === 'drop_task') {
     lines.push(`${title} would be removed from your task list. It can’t be restored here.`);
   } else {
@@ -522,7 +641,13 @@ export function previewLines(preview: ActionPreview, ctx: CopyContext): string[]
   const before = preview.before.capacityState;
   const after = preview.after.capacityState;
   if (before !== null && after !== null) {
-    lines.push(before.category === after.category ? `Today would stay ${CATEGORY_WORD(after.category)}.` : `Today would go from ${CATEGORY_WORD(before.category)} to ${CATEGORY_WORD(after.category)}.`);
+    // The "after" day is the day as it would be, so it counts whatever lengths it would then hold (a shortened one is an estimate).
+    const counting = countingClause(after.evidence.estimated);
+    lines.push(
+      before.category === after.category
+        ? `Today would stay ${CATEGORY_WORD(after.category)}${counting}.`
+        : `Today would go from ${CATEGORY_WORD(before.category)} to ${CATEGORY_WORD(after.category)}${counting}.`
+    );
   }
   if (preview.destination !== null) {
     const existing = new Set(preview.destination.before.conflicts.map((c) => c.id));
@@ -545,6 +670,7 @@ export function weekDayLabel(summary: WeekDaySummary): string {
   if (summary.conflictCount > 0) parts.push(`${summary.conflictCount} ${summary.conflictCount === 1 ? 'conflict' : 'conflicts'}`);
   if (summary.unplacedCount > 0) parts.push(`${summary.unplacedCount} not on the schedule yet`);
   if (summary.evidenceStatus === 'insufficient' && summary.tier !== null) parts.push('some facts missing');
+  if (summary.estimatedDurations && summary.tier !== null) parts.push('some task lengths estimated');
   return `${name}: ${parts.join(', ')}`;
 }
 
@@ -570,6 +696,8 @@ export function weekDayLines(summary: WeekDaySummary): { word: string; lines: st
   if (summary.conflictTypes.length > 0) lines.push(summary.conflictTypes.map((type) => CONFLICT_LABELS[type]).join(' · '));
   if (summary.unplacedCount > 0) lines.push(`${summary.unplacedCount} not on the schedule yet`);
   if (summary.evidenceStatus === 'insufficient' && summary.tier !== null) lines.push('Some facts missing');
+  // The capacity word for the day counts task lengths; where one is not hers the word is not more certain than it.
+  if (summary.estimatedDurations && summary.tier !== null) lines.push('Some task lengths estimated');
   if (lines.length === 0 && summary.itemCount === 0) lines.push('Nothing scheduled');
   return { word: categoryLabel(summary.category), lines };
 }

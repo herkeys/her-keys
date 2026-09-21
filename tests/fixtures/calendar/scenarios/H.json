@@ -76,6 +76,7 @@
   "capacityState": {
     "category": "not_known",
     "evidence": {
+      "estimated": [],
       "missing": [
         {
           "betweenWith": null,
@@ -178,6 +179,7 @@
     },
     {
       "blockedBy": [],
+      "durationBasis": "task_recorded",
       "flexibility": "flexible",
       "progress": "untimed",
       "ref": {
@@ -253,6 +255,7 @@
   ],
   "unplacedItems": [
     {
+      "durationBasis": "task_recorded",
       "durationKnown": true,
       "itemRef": {
         "id": "tsk-form",

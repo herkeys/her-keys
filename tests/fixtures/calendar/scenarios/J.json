@@ -55,6 +55,7 @@
   "capacityState": {
     "category": "room",
     "evidence": {
+      "estimated": [],
       "missing": [],
       "status": "complete"
     },

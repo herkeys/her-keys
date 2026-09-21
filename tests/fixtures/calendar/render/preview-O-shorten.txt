@@ -1,7 +1,7 @@
 # SHOWN
 Preview — nothing has changed yet.
-Deep clean the garage would go from about 3 hr 20 min to about 2 hr 20 min.
-Today would stay more than fits.
+Deep clean the garage would go from about 3 hr 20 min to about 2 hr 20 min (estimated).
+Today would stay more than fits, counting estimated task lengths.
 Shorten it
 Cancel
 

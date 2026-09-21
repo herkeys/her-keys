@@ -88,6 +88,29 @@ export interface ResponsibilityMark {
   stillNeedsMe: boolean | null;
 }
 
+/**
+ * HOW FAR A DURATION MAY BE TRUSTED AS A FACT (HA-010). This is the basis an item already carried, extended, not a parallel
+ * model. It is `durationKnowledgeOf(task)` from the foundation, kept on the item:
+ *
+ *   event_span       an event's own interval: a fact of the event
+ *   task_recorded    she gave the number herself (`user-provided`)
+ *   task_default     nobody supplied one and the planning default stands in (`default-estimate`): an assumption
+ *   task_inferred    Her Keys read or derived it and she approved it (`inferred-estimate`): approved, not stated
+ *   task_unrecorded  a number is stored and nothing records where it came from (`unrecorded`): not hers, not a known default
+ *   none             no usable duration (a stored 0): the number is not used at all
+ *
+ * Calendar computes with the number under every basis but `none`. Only `task_recorded` and `event_span` may be spoken as fact.
+ */
+export type DurationBasis = 'event_span' | 'task_recorded' | 'task_default' | 'task_inferred' | 'task_unrecorded' | 'none';
+export type EstimatedBasis = Extract<DurationBasis, 'task_default' | 'task_inferred' | 'task_unrecorded'>;
+
+/** A task whose number takes part in a claim but is not something she gave. */
+export interface EstimatedDuration {
+  itemRef: ItemRef;
+  basis: EstimatedBasis;
+  minutes: number;
+}
+
 /** A required predecessor that is not done. */
 export interface Blocker {
   /** The dependency edge this came from. */
@@ -97,6 +120,8 @@ export interface Blocker {
   /** Known only when the predecessor has a known finish (a timed event, or a timed task with a usable duration). */
   finishMs: number | null;
   finishMinute: number | null;
+  /** What that finish rests on: an event's own end, or the basis of the timed predecessor task's duration. `null` with no finish. */
+  finishBasis: DurationBasis | null;
 }
 
 /** Recurrence RULE metadata only. Calendar never evaluates a rule or generates an occurrence. */
@@ -125,9 +150,9 @@ export interface DayItem {
   subject: Subject;
   location: string | null;
   transition: EnteredTransition;
-  /** The recorded estimate for a task (null when the recorded value is 0), the elapsed span for an event. */
+  /** The stored number for a task, for computing (null when the stored value is 0), the elapsed span for an event. Not a fact unless `durationBasis` says so. */
   durationMinutes: number | null;
-  durationBasis: 'event_span' | 'task_estimate' | 'none';
+  durationBasis: DurationBasis;
   window: WindowFacets | null;
   responsibility: ResponsibilityMark | null;
   blockedBy: Blocker[];
@@ -178,6 +203,8 @@ export type ConflictEvidence =
       gapMinutes: number;
       /** Minutes of tasks already scheduled inside the gap. */
       scheduledMinutes: number;
+      /** The scheduled tasks whose length is not something she gave: the conflict rests on those minutes too. */
+      estimatedTasks: EstimatedDuration[];
       /** Only what she entered. */
       entered: { travelAfter: number | null; travelBefore: number | null; preparation: number | null };
       storedTransitionMinutes: number;
@@ -187,13 +214,24 @@ export type ConflictEvidence =
   | {
       kind: 'placement';
       item: ItemRef;
+      /** What the item needs: its duration plus what she entered for getting ready and getting there. */
       durationMinutes: number;
+      /** The basis of the item's own duration, which the failure rests on. */
+      durationBasis: DurationBasis;
       windowStartMinute: number;
       windowEndMinute: number;
       occupied: IntervalEvidence[];
       gaps: GapEvidence[];
     }
-  | { kind: 'dependency'; item: ItemRef; predecessor: EvidenceRef; itemStartMinute: number; predecessorFinishMinute: number }
+  | {
+      kind: 'dependency';
+      item: ItemRef;
+      predecessor: EvidenceRef;
+      itemStartMinute: number;
+      predecessorFinishMinute: number;
+      /** What the predecessor's finish rests on: an event's own end, or the basis of a timed task's duration. */
+      predecessorFinishBasis: DurationBasis;
+    }
   | { kind: 'responsibility'; item: ItemRef; responsibilityId: string; state: ResponsibilityState; coverage: Coverage; unacknowledged: boolean };
 
 export interface Conflict {
@@ -214,6 +252,8 @@ export interface NarrowTransition {
   after: IntervalEvidence;
   gapMinutes: number;
   scheduledMinutes: number;
+  /** The scheduled tasks whose length is not something she gave: "it fits" rests on those minutes too. */
+  estimatedTasks: EstimatedDuration[];
   storedTransitionMinutes: number;
   slackMinutes: number;
   tier: LoadTier;
@@ -259,7 +299,10 @@ export interface UnplacedItem {
     | 'no_usable_duration'
     | 'splittable_not_evaluated'
     | 'fixed_commitment_no_time';
+  /** A usable number exists (it is not 0). It says nothing about where the number came from: see `durationBasis`. */
   durationKnown: boolean;
+  /** What the fit / no-fit conclusion rests on. */
+  durationBasis: DurationBasis;
   openings: Opening[];
   missing: MissingEvidence[];
 }
@@ -293,7 +336,12 @@ export interface CapacityState {
   verdict: 'overlap' | 'transition_conflict' | 'capacity_pressure' | 'tight_window' | 'overdue' | null;
   /** The foundation's own numbers when the verdict is capacity pressure: what the household day has left vs what is planned. */
   pressure: { availableMinutes: number; neededMinutes: number; pressureMinutes: number } | null;
-  evidence: { status: 'complete' | 'insufficient'; missing: MissingEvidence[] };
+  /**
+   * `missing` is what could not be established. `estimated` is what WAS used but is not a fact she gave: the tasks that take part
+   * in the day's capacity with an assumed, Her-Keys-estimated or unrecorded length. Capacity computes with those numbers and may
+   * not speak of them as anything else: a verdict that rests on them is worded as resting on an estimate.
+   */
+  evidence: { status: 'complete' | 'insufficient'; missing: MissingEvidence[]; estimated: EstimatedDuration[] };
   evidenceRefs: EvidenceRef[];
 }
 
@@ -359,6 +407,8 @@ export interface WeekDaySummary {
   tier: LoadTier | null;
   category: CapacityCategory | null;
   evidenceStatus: 'complete' | 'insufficient' | 'not_applicable';
+  /** The day's capacity word rests on at least one task length that is not something she gave. */
+  estimatedDurations: boolean;
   conflictTypes: ConflictType[];
   conflictCount: number;
   unplacedCount: number;

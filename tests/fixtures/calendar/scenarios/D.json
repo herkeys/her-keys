@@ -64,6 +64,7 @@
   "capacityState": {
     "category": "more_than_fits",
     "evidence": {
+      "estimated": [],
       "missing": [],
       "status": "complete"
     },
@@ -106,6 +107,7 @@
           "travelAfter": 30,
           "travelBefore": 20
         },
+        "estimatedTasks": [],
         "gapMinutes": 20,
         "kind": "transition",
         "scheduledMinutes": 0,

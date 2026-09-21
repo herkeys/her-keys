@@ -85,6 +85,7 @@
   "capacityState": {
     "category": "tight",
     "evidence": {
+      "estimated": [],
       "missing": [],
       "status": "complete"
     },
@@ -180,6 +181,7 @@
     },
     {
       "blockedBy": [],
+      "durationBasis": "task_recorded",
       "flexibility": "flexible",
       "progress": "untimed",
       "ref": {
@@ -222,6 +224,7 @@
         },
         "startMinute": 960
       },
+      "estimatedTasks": [],
       "gapMinutes": 30,
       "scheduledMinutes": 0,
       "slackMinutes": 30,
@@ -254,6 +257,7 @@
   "unknownStates": [],
   "unplacedItems": [
     {
+      "durationBasis": "task_recorded",
       "durationKnown": true,
       "itemRef": {
         "id": "tsk-form",

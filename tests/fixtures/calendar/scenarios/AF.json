@@ -94,6 +94,7 @@
   "capacityState": {
     "category": "not_known",
     "evidence": {
+      "estimated": [],
       "missing": [
         {
           "betweenWith": null,
@@ -205,6 +206,7 @@
     },
     {
       "blockedBy": [],
+      "durationBasis": "none",
       "flexibility": "flexible",
       "progress": "untimed",
       "ref": {
@@ -226,6 +228,7 @@
     },
     {
       "blockedBy": [],
+      "durationBasis": "task_recorded",
       "flexibility": "flexible",
       "progress": "untimed",
       "ref": {
@@ -310,6 +313,7 @@
   ],
   "unplacedItems": [
     {
+      "durationBasis": "none",
       "durationKnown": false,
       "itemRef": {
         "id": "tsk-renewal",
@@ -331,6 +335,7 @@
       "state": "insufficient_information"
     },
     {
+      "durationBasis": "task_recorded",
       "durationKnown": true,
       "itemRef": {
         "id": "tsk-form",

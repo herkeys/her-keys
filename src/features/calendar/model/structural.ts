@@ -43,15 +43,17 @@ export function dayEvidence(view: CalendarDayViewModel): unknown {
         item.timing.kind === 'timed'
           ? { kind: 'timed', startMinute: item.timing.startMinute, endMinute: item.timing.endMinute, endKnown: item.timing.endKnown, continuesFromPreviousDay: item.timing.continuesFromPreviousDay, continuesIntoNextDay: item.timing.continuesIntoNextDay }
           : { kind: 'date_only', basis: item.timing.basis, dueDate: item.timing.dueDate, daysOverdue: item.timing.daysOverdue },
+      // What a task's number may be trusted as (HA-010). An event's span is a constant fact of the event, so it is not repeated on every event.
+      ...(item.ref.kind === 'task' ? { durationBasis: item.durationBasis } : {}),
       progress: item.progress,
       subject: item.subject,
       responsibility: item.responsibility === null ? null : { coverage: item.responsibility.coverage, state: item.responsibility.state, covered: item.responsibility.covered, unacknowledged: item.responsibility.unacknowledged },
-      blockedBy: item.blockedBy.map((blocker) => ({ ref: blocker.ref, finishMinute: blocker.finishMinute })),
+      blockedBy: item.blockedBy.map((blocker) => ({ ref: blocker.ref, finishMinute: blocker.finishMinute, finishBasis: blocker.finishBasis })),
       repeats: item.repeats === null ? null : { frequency: item.repeats.frequency, interval: item.repeats.interval },
     })),
     narrowTransitions: view.narrowTransitions,
     conflicts: view.conflicts.map((conflict) => ({ type: conflict.type, itemRefs: conflict.itemRefs, evidenceRefs: conflict.evidenceRefs, evidence: conflict.evidence })),
-    unplacedItems: view.unplacedItems.map((item) => ({ itemRef: item.itemRef, state: item.state, reason: item.reason, durationKnown: item.durationKnown, openings: item.openings, missing: item.missing })),
+    unplacedItems: view.unplacedItems.map((item) => ({ itemRef: item.itemRef, state: item.state, reason: item.reason, durationKnown: item.durationKnown, durationBasis: item.durationBasis, openings: item.openings, missing: item.missing })),
     openWindows: view.openWindows,
     capacityState: view.capacityState,
     availableActions: view.availableActions,

@@ -1,6 +1,7 @@
 import { loadTierForBuffer } from '../../../domain/loadThresholds';
+import { isEstimatedBasis } from './durationBasis';
 import { normalizePlace } from './timeFrame';
-import type { DayItem, GapEvidence, IntervalEvidence, MissingEvidence, Opening, TimedSpan, UnplacedItem } from './types';
+import type { DayItem, DurationBasis, EstimatedDuration, GapEvidence, IntervalEvidence, MissingEvidence, Opening, TimedSpan, UnplacedItem } from './types';
 
 /**
  * Interval geometry for one day. Everything here is a bounded projection over currently known
@@ -130,6 +131,8 @@ export interface TransitionCalc {
   gapMinutes: number;
   /** Task minutes already scheduled inside the gap (the foundation subtracts these too). */
   scheduledMinutes: number;
+  /** Which of those scheduled tasks carry a length that is not something she gave. */
+  estimatedTasks: EstimatedDuration[];
   entered: { travelAfter: number | null; travelBefore: number | null; preparation: number | null };
   storedMinutes: number;
   /** gap - scheduled - stored. Negative means the transition does not fit. */
@@ -154,9 +157,11 @@ export function transitionsOf(items: TimedItem[]): TransitionCalc[] {
     if (next.timing.startMinute >= latest.timing.endMinute) {
       const from = latest.timing.endMinute;
       const to = next.timing.startMinute;
-      const scheduledMinutes = tasks
-        .filter((task) => task.timing.startMinute >= from && task.timing.startMinute < to)
-        .reduce((sum, task) => sum + (task.source.rawDurationMinutes ?? 0), 0);
+      const inGap = tasks.filter((task) => task.timing.startMinute >= from && task.timing.startMinute < to);
+      const scheduledMinutes = inGap.reduce((sum, task) => sum + (task.source.rawDurationMinutes ?? 0), 0);
+      const estimatedTasks = inGap.flatMap((task): EstimatedDuration[] =>
+        isEstimatedBasis(task.durationBasis) ? [{ itemRef: task.ref, basis: task.durationBasis, minutes: task.source.rawDurationMinutes ?? 0 }] : []
+      );
       const parts = { travelAfter: latest.transition.travelAfter, travelBefore: next.transition.travelBefore, preparation: next.transition.preparation };
       const storedMinutes = entered(parts.travelAfter) + entered(parts.travelBefore) + entered(parts.preparation);
       const sameKnownPlace = normalizePlace(latest.location) !== null && normalizePlace(latest.location) === normalizePlace(next.location);
@@ -167,6 +172,7 @@ export function transitionsOf(items: TimedItem[]): TransitionCalc[] {
         after: next,
         gapMinutes: to - from,
         scheduledMinutes,
+        estimatedTasks,
         entered: parts,
         storedMinutes,
         slackMinutes: to - from - scheduledMinutes - storedMinutes,
@@ -193,13 +199,13 @@ export interface PlacementContext {
 export interface PlacementResult {
   unplaced: UnplacedItem;
   /** Present only for a definite failure, so the conflict can carry its evidence. */
-  failure: { windowStartMinute: number; windowEndMinute: number; occupied: IntervalEvidence[]; gaps: GapEvidence[]; durationMinutes: number } | null;
+  failure: { windowStartMinute: number; windowEndMinute: number; occupied: IntervalEvidence[]; gaps: GapEvidence[]; durationMinutes: number; durationBasis: DurationBasis } | null;
 }
 
 const noOpenings: Opening[] = [];
 
 function unplaced(item: DayItem, state: UnplacedItem['state'], reason: UnplacedItem['reason'], extra: Partial<UnplacedItem> = {}): UnplacedItem {
-  return { itemRef: item.ref, state, reason, durationKnown: item.durationMinutes !== null, openings: noOpenings, missing: [], ...extra };
+  return { itemRef: item.ref, state, reason, durationKnown: item.durationMinutes !== null, durationBasis: item.durationBasis, openings: noOpenings, missing: [], ...extra };
 }
 
 /**
@@ -270,6 +276,7 @@ export function placementFor(item: DayItem, context: PlacementContext): Placemen
       windowStartMinute: lo,
       windowEndMinute: hi,
       durationMinutes: need,
+      durationBasis: item.durationBasis,
       occupied: context.timed.filter((timedItem) => timedItem.timing.endMinute > lo && timedItem.timing.startMinute < hi).map(evidenceOf),
       gaps: gaps.map((gap) => ({ startMinute: gap.startMinute, endMinute: gap.endMinute, lengthMinutes: gap.lengthMinutes, uncertain: gap.uncertain })),
     },

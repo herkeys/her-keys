@@ -76,7 +76,8 @@ export function revisionOf(state: AppState): string {
     mix(`e|${e.id}|${e.status}|${e.commitment}|${e.startsAt}|${e.endsAt}|${e.location ?? ''}|${e.travelMinutesBefore ?? ''}|${e.travelMinutesAfter ?? ''}|${e.preparationMinutes ?? ''}|${e.subjectMemberId ?? ''}`);
   }
   for (const t of state.tasks) {
-    mix(`t|${t.id}|${t.status}|${t.commitment}|${t.durationMinutes}|${t.dueDate ?? ''}|${JSON.stringify(t.plan)}|${t.earliestStartAt ?? ''}|${t.latestFinishAt ?? ''}|${t.dueAt ?? ''}|${t.splittable ?? ''}|${t.subjectMemberId ?? ''}`);
+    // The source is part of the identity of a duration: default -> user with the same number is a change (HA-010).
+    mix(`t|${t.id}|${t.status}|${t.commitment}|${t.durationMinutes}|${t.durationSource ?? ''}|${t.dueDate ?? ''}|${JSON.stringify(t.plan)}|${t.earliestStartAt ?? ''}|${t.latestFinishAt ?? ''}|${t.dueAt ?? ''}|${t.splittable ?? ''}|${t.subjectMemberId ?? ''}`);
   }
   for (const d of state.dependencies) mix(`d|${d.id}|${d.status}|${d.relation}`);
   for (const r of state.responsibilities) mix(`r|${r.id}|${r.state}|${r.updatedAt}`);

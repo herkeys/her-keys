@@ -202,6 +202,7 @@
   "capacityState": {
     "category": "tight",
     "evidence": {
+      "estimated": [],
       "missing": [],
       "status": "complete"
     },
@@ -502,6 +503,7 @@
     },
     {
       "blockedBy": [],
+      "durationBasis": "task_recorded",
       "flexibility": "flexible",
       "progress": "untimed",
       "ref": {
@@ -542,6 +544,7 @@
         },
         "startMinute": 420
       },
+      "estimatedTasks": [],
       "gapMinutes": 40,
       "scheduledMinutes": 0,
       "slackMinutes": 40,
@@ -565,6 +568,7 @@
         },
         "startMinute": 480
       },
+      "estimatedTasks": [],
       "gapMinutes": 40,
       "scheduledMinutes": 0,
       "slackMinutes": 40,
@@ -588,6 +592,7 @@
         },
         "startMinute": 540
       },
+      "estimatedTasks": [],
       "gapMinutes": 40,
       "scheduledMinutes": 0,
       "slackMinutes": 30,
@@ -611,6 +616,7 @@
         },
         "startMinute": 600
       },
+      "estimatedTasks": [],
       "gapMinutes": 40,
       "scheduledMinutes": 0,
       "slackMinutes": 30,
@@ -634,6 +640,7 @@
         },
         "startMinute": 660
       },
+      "estimatedTasks": [],
       "gapMinutes": 40,
       "scheduledMinutes": 0,
       "slackMinutes": 40,
@@ -657,6 +664,7 @@
         },
         "startMinute": 720
       },
+      "estimatedTasks": [],
       "gapMinutes": 40,
       "scheduledMinutes": 0,
       "slackMinutes": 40,
@@ -680,6 +688,7 @@
         },
         "startMinute": 780
       },
+      "estimatedTasks": [],
       "gapMinutes": 40,
       "scheduledMinutes": 0,
       "slackMinutes": 40,
@@ -703,6 +712,7 @@
         },
         "startMinute": 840
       },
+      "estimatedTasks": [],
       "gapMinutes": 40,
       "scheduledMinutes": 0,
       "slackMinutes": 40,
@@ -726,6 +736,7 @@
         },
         "startMinute": 900
       },
+      "estimatedTasks": [],
       "gapMinutes": 40,
       "scheduledMinutes": 0,
       "slackMinutes": 40,
@@ -749,6 +760,7 @@
         },
         "startMinute": 960
       },
+      "estimatedTasks": [],
       "gapMinutes": 40,
       "scheduledMinutes": 0,
       "slackMinutes": 40,
@@ -772,6 +784,7 @@
         },
         "startMinute": 1020
       },
+      "estimatedTasks": [],
       "gapMinutes": 40,
       "scheduledMinutes": 0,
       "slackMinutes": 40,
@@ -799,6 +812,7 @@
   "unknownStates": [],
   "unplacedItems": [
     {
+      "durationBasis": "task_recorded",
       "durationKnown": true,
       "itemRef": {
         "id": "tsk-email",

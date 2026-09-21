@@ -85,6 +85,7 @@
   "capacityState": {
     "category": "more_than_fits",
     "evidence": {
+      "estimated": [],
       "missing": [],
       "status": "complete"
     },
@@ -106,6 +107,7 @@
   "conflicts": [
     {
       "evidence": {
+        "durationBasis": "task_recorded",
         "durationMinutes": 90,
         "gaps": [
           {
@@ -254,6 +256,7 @@
     },
     {
       "blockedBy": [],
+      "durationBasis": "task_recorded",
       "flexibility": "flexible",
       "progress": "untimed",
       "ref": {
@@ -294,6 +297,7 @@
         },
         "startMinute": 750
       },
+      "estimatedTasks": [],
       "gapMinutes": 30,
       "scheduledMinutes": 0,
       "slackMinutes": 30,
@@ -317,6 +321,7 @@
         },
         "startMinute": 870
       },
+      "estimatedTasks": [],
       "gapMinutes": 15,
       "scheduledMinutes": 0,
       "slackMinutes": 15,
@@ -339,6 +344,7 @@
   "unknownStates": [],
   "unplacedItems": [
     {
+      "durationBasis": "task_recorded",
       "durationKnown": true,
       "itemRef": {
         "id": "tsk-report",

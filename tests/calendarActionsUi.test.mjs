@@ -130,7 +130,9 @@ describe('the preview panel', () => {
     const drop = previewLines(previewOf('O', { kind: 'drop_task', id: 'tsk-garage' }), copyContextFor(view('O')));
     assert.ok(drop[0].includes('can’t be restored here'));
     const shorten = previewLines(previewOf('O', { kind: 'shorten_task', id: 'tsk-garage' }), copyContextFor(view('O')));
-    assert.match(shorten[0], /Deep clean the garage would go from about 3 hr 20 min to about 2 hr 20 min\./);
+    // The numbers are unchanged. What changed (HA-010): the shortened length is one Her Keys sets, so it is worded as an estimate,
+    // and the length she entered for the task stays worded as hers.
+    assert.match(shorten[0], /^Deep clean the garage would go from about 3 hr 20 min to about 2 hr 20 min \(estimated\)\.$/);
     const protect = previewLines(previewOf('N', { kind: 'protect', targetType: 'event', targetId: 'evt-b' }), copyContextFor(view('N')));
     assert.match(protect[0], /would become fixed\. Her Keys would stop suggesting to move, shorten or drop it\. You can change it back by editing it\./);
   });

@@ -86,7 +86,9 @@ describe('R — the week', () => {
 describe('the week is categorical: no scores, no ranking, no composite', () => {
   test('a day summary carries only words, kinds and counts', () => {
     for (const d of weekOfR().days) {
-      assert.deepEqual(Object.keys(d).sort(), ['category', 'conflictCount', 'conflictTypes', 'date', 'dayMode', 'evidenceStatus', 'isSelected', 'itemCount', 'tier', 'unplacedCount']);
+      // `estimatedDurations` is a yes/no about what the day's word rests on (HA-010), a kind of fact and never a measure.
+      assert.deepEqual(Object.keys(d).sort(), ['category', 'conflictCount', 'conflictTypes', 'date', 'dayMode', 'estimatedDurations', 'evidenceStatus', 'isSelected', 'itemCount', 'tier', 'unplacedCount']);
+      assert.equal(typeof d.estimatedDurations, 'boolean');
       assert.ok(d.tier === null || ['open', 'tight', 'overloaded'].includes(d.tier));
       assert.ok(d.category === null || ['room', 'tight', 'more_than_fits', 'not_known'].includes(d.category));
     }

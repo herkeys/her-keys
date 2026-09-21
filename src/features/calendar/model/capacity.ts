@@ -1,8 +1,9 @@
 import { assessDailyLoadIssues, type DailyLoadIssue, type DailyLoadIssues } from '../../../domain/dailyLoadIssues';
 import { computeDailyLoad } from '../../daily-load/computeDailyLoad';
 import type { CalendarEventItem, TaskItem } from '../../../types';
+import { isEstimatedBasis } from './durationBasis';
 import { daysBetween } from './timeFrame';
-import type { CapacityCategory, CapacityState, Conflict, DayItem, EvidenceRef, MissingEvidence } from './types';
+import type { CapacityCategory, CapacityState, Conflict, DayItem, EstimatedDuration, EvidenceRef, MissingEvidence } from './types';
 
 /**
  * CAPACITY IS THE FOUNDATION'S CLASSIFICATION, NOT CALENDAR'S.
@@ -73,6 +74,23 @@ function evidenceRefsOf(primary: DailyLoadIssue | null): EvidenceRef[] {
   }
 }
 
+/**
+ * Whether a task's number takes part in the day's capacity: every timed task, and every dated one that is not overdue
+ * (overdue work is its own issue and never enters the foundation's capacity arithmetic).
+ */
+export const takesPartInCapacity = (item: DayItem): boolean => item.ref.kind === 'task' && (item.timing.kind !== 'date_only' || item.timing.daysOverdue === 0);
+
+/**
+ * The numbers the day's capacity was COMPUTED with that are not facts she gave: assumed, Her-Keys-estimated or of unknown
+ * origin. They stay in the arithmetic (capacity needs a number) but travel with the verdict, so the verdict can be worded
+ * as resting on them (HA-010).
+ */
+export function estimatedDurationsOf(items: DayItem[]): EstimatedDuration[] {
+  return items.flatMap((item): EstimatedDuration[] =>
+    takesPartInCapacity(item) && isEstimatedBasis(item.durationBasis) ? [{ itemRef: item.ref, basis: item.durationBasis, minutes: item.source.rawDurationMinutes ?? 0 }] : []
+  );
+}
+
 /** One entry per canonical field that is null on one item, however many gaps it borders. */
 const missingKey = (m: MissingEvidence): string => `${m.field}|${m.itemRef.kind}:${m.itemRef.id}|${m.reason}`;
 
@@ -120,7 +138,7 @@ export function categoryOf(tier: CapacityState['tier'], verdict: CapacityState['
  * `open` is a claim of room and is withheld — `null`, the foundation's "not known" — unless the
  * evidence behind it is complete. There is no unknown tier and none is invented.
  */
-export function capacityStateOf(issues: DailyLoadIssues, missing: MissingEvidence[], conflicts: Conflict[]): CapacityState {
+export function capacityStateOf(issues: DailyLoadIssues, missing: MissingEvidence[], conflicts: Conflict[], estimated: EstimatedDuration[]): CapacityState {
   const incomplete = missing.length > 0;
   const tier = issues.tier === 'open' && incomplete ? null : issues.tier;
   return {
@@ -132,7 +150,7 @@ export function capacityStateOf(issues: DailyLoadIssues, missing: MissingEvidenc
       issues.primary?.kind === 'capacity_pressure'
         ? { availableMinutes: issues.primary.availableMinutes, neededMinutes: issues.primary.neededMinutes, pressureMinutes: issues.primary.pressureMinutes }
         : null,
-    evidence: { status: incomplete ? 'insufficient' : 'complete', missing },
+    evidence: { status: incomplete ? 'insufficient' : 'complete', missing, estimated },
     evidenceRefs: evidenceRefsOf(issues.primary),
   };
 }
