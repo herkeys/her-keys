@@ -135,3 +135,133 @@ ENTRY 808 → PRESERVED 808 · REWRITTEN 0 · REPLACED 0 · REMOVED 0. (ADDED / 
 - **Visual language (Addendum C):** every *new or materially modified* Feature 04 composition uses the permanent HK-FE-UI-01
   primitives and canonical tokens (`color.*`, `type.*`, `spacing`, `radius`, `sizing`). Untouched legacy sub-surfaces
   (Home/Money overviews, Life hub) are not restyled.
+
+---
+
+## 4. Foundation consumption trace (R1 gate)
+
+Governance IDs are not evidence; the **actual module, export and test** are. Verdicts: CONSUME-AS-IS · CONSUME-PARTIAL · NOT-FOUND.
+
+| Capability | Gov. ID | Actual module · export | Tests that pin it | Feature 04 use | Verdict |
+|---|---|---|---|---|---|
+| System definition | B4-FE01-015/-016 | `domain/state.ts` `HouseholdSystemSchema`, `AppState.systems` | foundationAcceptance3 FE-25; `foundationSpecs` | read + F04 producer | **PARTIAL** (type/storage yes, no producer) |
+| System step | B4-FE01-022 | `domain/foundation/structure.ts` `SystemStepSchema`; `domain/structure.ts` `addSystemStep`, `stepsInOrder` | foundationOps "system steps keep their order" | read order; F04 producer for add/edit/reorder | **PARTIAL** (no edit/reorder/remove) |
+| Recurrence | B4-FE01-018 (ADR-017) | `structure.ts` `addRecurrence`, `setRecurrenceStatus`, `occurrencesOf`, `nextOccurrence`, `skipOccurrence` | foundationOps recurrence ×2 | create, stop, pause/resume, skip, derive next/preview | **PARTIAL** (no in-place edit) |
+| Commitment facets | B4-FE01-015/-016 (ADR-015) | `foundation/commitment.ts` `systemFacetFields`, `commitmentFacetsOf`, `emptySystemFacets` | foundationAcceptance | preserve `automationMode/effortMinutes/energyDemand`; read `effortMinutes` | **PARTIAL** (no consequence on Systems) |
+| Responsibility + people | B4-FE01-013/-014 (ADR-019) | `domain/responsibility.ts` `delegate/acknowledge/accept/decline/returnToSelf/reassign/liveResponsibilityFor/unacknowledgedResponsibilities`; `foundation/responsibility.ts` | foundationOps lifecycle, FE-11/12 | System-level assignment + honest state | **AS-IS** (`addPerson` no caller; not offered) |
+| Child references | — | `AppState.children`; `Responsibility.responsibleChildId` | foundationOps | a child may **hold** a responsibility | **PARTIAL** — child as System *subject*: **NOT-FOUND** |
+| Dependencies | B4-FE01-017 (ADR-016) | `structure.ts` `addDependency`, `blockersOf`, `isBlocked`, `isDone`; endpoints = content kinds (a System, never a step) | foundationOps | read-only, neutral ("Needs …"); `isDone('system')` is always false, so **no "blocked" claim** is made | **PARTIAL** |
+| Goals | B4-FE01-021 | `Goal`, `goalProgress` | foundationOps | not used | n/a |
+| Consequence / reversibility | B4-FE01-007..010 | `foundation/authorization.ts` (task/event facets only) | — | none | **NOT-FOUND** for System/step → MP-07 |
+| Action intent / execution / outcome | B4-FE01-009..012 | `ActionIntentSchema` (`about` may be a System), `IntentDecisionSchema`, `ActionExecutionSchema` + `ActionOutcomeSchema` (**server-written**) | foundationAcceptance3 SCENARIO D | read-only evidence line; no execution language without a real row | **PARTIAL** |
+| Reasoning: attention | B4-FE01-019 (ADR-018) | `reasoning/attention.ts` `attentionFor` (delegation → `unacknowledged_delegation` about the responsibility) | foundationAcceptance3 | Systems hub reads the same primitive (`unacknowledgedResponsibilities`) so Today can already see it | **AS-IS** |
+| Reasoning: related / evidence | B4-FE01-031 | `reasoning/related.ts` `relatedTo` | foundationAcceptance | not needed | n/a |
+| Household context / timezone / logical day | — | `domain/context.ts`, `logicalDay.ts` (`logicalDateAt`, `zonedTimeToEpochMs`, …), `state.user.timezone` | logicalDay | all date/"today" logic | **AS-IS** |
+| Provenance | B4-FE01-001/-005 (ADR-001) | `foundation/provenance.ts` `userProvenance`, `provenanceFor` (demo → `demo-seed`); `PROVENANCE_LABEL` in `design/components/intelligence.tsx` | provenance tests | stamp new rows; show origin only when not user-stated | **AS-IS** |
+| Confidence | — | `Provenance.confidence` (only for `ai-inference`/`import-sync`); `ConfidenceBadge` | — | display only when present; never set | **AS-IS** |
+| Canonical mutation | — | `state/appStore.ts` `commit`/`dispatch(Transition)`; `store/AppStateProvider` `useAppStore`/`useStoreSnapshot` | appStore | the only write path | **AS-IS** |
+| Cross-domain refs | B4-FE01-027 (ADR-005) | `foundation/typedRef.ts` `TypedRef`, `refExists` | tokenBoundary/foundationSpecs | refs for responsibility/recurrence/skip | **AS-IS** |
+
+## 5. System / occurrence / run model map (R1 gate)
+
+| Concept | Repository type | Storage | Canonical or derived | Mutable | Creation path | Completion path | Exists |
+|---|---|---|---|---|---|---|---|
+| SYSTEM DEFINITION | `HouseholdSystem` | `AppState.systems` | canonical | yes (no `updatedAt`) | none in production → **F04 producer** | — | **YES** |
+| STEP DEFINITION | `SystemStep` | `AppState.systemSteps` | canonical | yes | `addSystemStep` (uncalled) → **F04 producer** | — | **YES** |
+| RECURRENCE RULE | `RecurrenceRule` | `AppState.recurrences` | canonical | status + fields | `addRecurrence` (uncalled) | end via `status:'ended'` | **YES** |
+| MATERIALIZED OCCURRENCE | — | — | **derived only** (`occurrencesOf`) | — | none | — | **ABSENT** |
+| Occurrence exception | `BehaviorObservation(system, skipped, plannedDate)` | `AppState.observations` | canonical, append-only | no | `skipOccurrence` | — | **YES** |
+| ACTIVE RUN / EXECUTION | — | — | — | — | none | — | **ABSENT** |
+| STEP COMPLETION | — | — | — | — | none | — | **ABSENT** |
+| Her Keys acting on a System | `ActionIntent`/`ActionExecution`/`ActionOutcome` | `AppState.intents…outcomes` | canonical, server-written | no | trusted server only | — | **YES (evidence only)** |
+| Responsibility for a System | `Responsibility(about:{system})` | `AppState.responsibilities` | canonical | state machine | `delegate` (uncalled) | `accept`/`completeResponsibility` | **YES** |
+
+`RUN = ABSENT` — recorded, not manufactured. The definition screen is a blueprint: **no completion checkboxes.**
+
+## 5b. Lifecycle map (R1 gate)
+
+- **System entity:** no lifecycle. There is no status; nothing can be paused, archived, activated or deleted (MP-01).
+- **Schedule (`RecurrenceRule.status`):** `active ⇄ paused`; `active|paused → ended`; `ended` is terminal for that row (a new rule may be set).
+  Presented as *schedule* state only: "Repeats …", "Schedule paused", "Stopped repeating", "No schedule".
+- **Responsibility:** `owned` · `requested → acknowledged → accepted` · `declined` · `completed` · `returned`
+  (assigned ≠ acknowledged ≠ accepted; delegated ≠ covered).
+- **Steps:** none.
+
+## 6. R1 gate answers (Addendum AC)
+
+```
+SYSTEM DEFINITION TYPE:        PRESENT
+STEP TYPE:                     PRESENT
+CANONICAL STORAGE HOME:        PRESENT   (AppState.systems / systemSteps; persisted; synced kinds)
+EXISTING PRODUCTION PRODUCER:  ABSENT    (no addSystem anywhere; addSystemStep/addRecurrence/delegate have no callers)
+SECTION A FALLBACK ELIGIBLE:   YES       (types ✓, storage ✓, store.commit ✓, no new persisted shape needed)
+CREATE CAPABILITY:             FALLBACK-PRODUCER
+MEANINGFUL EDIT:               FALLBACK-PRODUCER   (rename, add/edit/reorder steps, change schedule, change responsibility)
+RECURRENCE:                    PRESENT
+OCCURRENCE MATERIALIZATION:    ABSENT
+RUN:                           ABSENT
+STEP COMPLETION:               ABSENT
+HISTORICAL STEP REFERENCES:    ABSENT    (verified: no durable type references a systemStep)
+```
+
+Section A proof obligations (verified at exit): no new AppState key, no envelope/schema-version change, no new sync kind or op,
+no migration/RLS/Supabase change, no touch to `src/domain/**`, `src/persistence/**`, `src/state/**`, `supabase/**`.
+
+**Minimum-real-feature feasibility = YES.** Create ✓ (F04 producer) · meaningful edit ✓ (rename, add/edit/reorder steps,
+schedule, responsibility) · ordered typed steps ✓ · canonical local state ✓. The remove-step gap, the absent run and the
+absent System lifecycle do **not** invalidate it (contract §83: none of those is a STOP condition).
+
+## 7. Design decisions (each resolves an ambiguity by the WHY doctrine)
+
+1. **One route stack, no shell change.** `app/(app)/systems.tsx` → `app/(app)/systems/{_layout,index,[id],edit}.tsx`, the same
+   nested-stack shape as `life/`. `Tabs.Screen name="systems"` and `rootScreenForPath` already cover it; `app/_layout.tsx`,
+   `(app)/_layout.tsx`, `routeAccess.ts` are **not touched**. The editor is a `presentation:'modal'` screen inside that stack.
+2. **Explicit save; draft ≠ canonical.** Editor state is component state. Nothing is written until Save. There is no draft
+   persistence in the app and none is added (restart drops an unsaved draft; canonical rows are untouched).
+3. **Idempotent save.** The draft carries a stable system id and stable step keys; new step ids are derived from them, so a
+   double-tap or retry re-applies to the same rows instead of creating duplicates. A same-frame `inFlight` guard (as `TaskForm`).
+4. **Stale-editor guard.** The editor records a content fingerprint of the rows it loaded (system, steps, live rule, live
+   responsibility). The check runs **inside** the commit transition, on the state that commit will write, so it cannot race.
+   Changed underneath ⇒ refuse, keep canonical, show "This System changed while you were editing" and offer *Load latest*.
+   No merge is invented. (`store.commit` returns `true` for a no-op transition, so the use-case reads the transition's own
+   outcome rather than trusting the boolean.)
+5. **Availability before content (Scenarios AB/AC).** The hub reads `useStoreSnapshot()` (not `useHouseholdState`, which throws).
+   `loading` ≠ `empty`. When `persistence === 'disabled'` (future-version / read-failed / real-data-under-demo) the session is
+   memory-only and its state is a stand-in, so Systems are **not shown and not editable** — a "saved" that isn't durable would
+   be a lie. After a normal start-over recovery the fresh state is authoritative and a calm notice is shown.
+6. **Step positions are sparse (stride 10) and a reorder moves one row when it can** (MP-04). The cloud holds
+   `UNIQUE(system_id, position)`, pushes are one coalesced row at a time, so any swap collides. Moving a single step into a free
+   integer between its new neighbours changes exactly one row and never collides; renumbering (multi-row) is the fallback only
+   when no slot exists, and is reported. `stepsInOrder` already sorts by position, so nothing downstream changes.
+7. **Recurrence edits are in place**, on the single live rule (cloud grants UPDATE on every rule field; history is in
+   observations). Change-frequency keeps the row; stop = `ended`; nothing is ever deleted.
+8. **Category default.** `categoryId` is required by the schema. The editor pre-selects the household's Home category (visible,
+   one tap to change) — a form default, not a claim. `scope` stays `household`; never `child` (MP-02). Provenance goes through
+   `provenanceFor(state.origin, userProvenance())`, so demo Systems stay `demo-seed` and never sync.
+9. **Duration truth.** Unknown ≠ 0. A total is stated only when every step has a minute value; otherwise "at least N min · M of K
+   steps estimated" or "No estimate yet". A System's own stated `effortMinutes` is read, never authored.
+10. **Hub order (Scenario AH), no score.** (1) needs attention (unanswered delegation past due; handed back) → (2) next expected
+    date ascending → (3) everything without a derivable date, by title → id. Grouping tags come from canonical facts only.
+11. **Editor form factor (Addendum N).** One primary editor surface (`Screen` + `TextField` + `ChipToggle` + `Button`),
+    sections disclosed progressively (Steps, Schedule, Who's responsible). `ConfirmationSheet` only for the irreversible skip.
+    No wizard, no property sheet, no nested modals. Needs two primitives the system lacks → MP-10, MP-11.
+12. **Copy is centralized** in `src/features/systems/copy.ts`; JSX carries no operational sentences.
+
+## 8. Shared files touched (planned, updated at each commit)
+
+| Path | Why | Commit | Likely sibling collision | Integration need |
+|---|---|---|---|---|
+| `app/(app)/systems.tsx` → moved to `app/(app)/systems/index.tsx` | Systems tab becomes a nested stack (hub/detail/editor), like `life/` | R3 | none expected (Features 01–03 do not own the Systems tab) | record the move; the tab registration is unchanged |
+| *(none other planned)* | Feature code lives under `src/features/systems/**`, `tests/systems/**`, `tests/fixtures/systems/**`, `docs/builds/HK_FEATURE_04_*` | — | — | — |
+
+## 9. Common-fork assumptions (§78 — template the integration wave applies to Features 01–03)
+
+What Feature 04 assumed existed at `5007b0f`, each verified against code:
+- **System primitives:** `HouseholdSystem` (id, name ≤120, description ≤500, required `categoryId`, `automationMode`, `effortMinutes`, `energyDemand`, provenance, scope), in `AppState.systems` ≤ 500.
+- **Step primitives:** `SystemStep` (position 0–999, title ≤200, `effortMinutes` nullable); unique `(systemId, position)` in state integrity **and** in the cloud.
+- **Recurrence primitives:** §RECURRENCE_AT_FORK_FACTS.
+- **Mutation APIs:** `store.commit/dispatch(Transition)`; foundation transitions listed in §4. **No System producer.**
+- **Runtime state:** `useStoreSnapshot()` → `status`, `state`, `today`, `recovery`, `persistence`; hydration is complete before `(app)` mounts; `recovery` still mounts the app on a stand-in state.
+- **UI primitives:** `Screen, AppText, Overline, Card, Button, ChipToggle, Tag, StatusList, TextField, Sheet, ConfirmationSheet, InlineNotice, EmptyState, LoadingState, ErrorState, SegmentBar`, intelligence set; tokens `color/type/spacing/radius/sizing`.
+- **Shell route:** Systems is one of five tabs; nested routes under a tab map to the `(app)` guard by first segment.
+- **Run / execution:** none. **Notifications:** none. **AI/Gemini:** none.
