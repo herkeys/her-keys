@@ -43,6 +43,16 @@ describe('Empty, loading, recovery and isolation: never a reassuring silence', (
     assert.deepEqual(availabilityOf(settled, { kind: 'authenticating' }), { kind: 'loading' }, 'a provider flow in flight is not a settled account');
   });
 
+  test('AZ: LOADING is decided by the STATUS, not only by whether a state object exists — an unhydrated/hydrating store is loading even with a state in hand', () => {
+    // A store may already hold a (default or partial) state object while it is still hydrating. Rendering the projection of THAT would
+    // present "nothing recorded" for a household that simply has not finished loading.
+    for (const status of ['unhydrated', 'hydrating']) {
+      assert.deepEqual(availabilityOf({ status, state: {}, recovery: null }, INITIAL_ACCOUNT_STATE), { kind: 'loading' }, status);
+      assert.deepEqual(availabilityOf({ status, state: {}, recovery: { reason: 'invalid_json', quarantined: true } }, INITIAL_ACCOUNT_STATE), { kind: 'loading' }, `${status} + recovery`);
+    }
+    assert.deepEqual(availabilityOf({ status: 'ready', state: {}, recovery: null }, INITIAL_ACCOUNT_STATE), { kind: 'ready' });
+  });
+
   test('BA: an unrecovered household (damaged, newer, unreadable, other mode) is NOT empty — it is its own state, whatever the fresh state contains', () => {
     for (const reason of ['invalid_json', 'future_version', 'read_failed', 'mode_mismatch']) {
       const a = availabilityOf({ status: 'recovery', state: {}, recovery: { reason, quarantined: reason === 'invalid_json' } }, INITIAL_ACCOUNT_STATE);
@@ -212,6 +222,20 @@ describe('Density, order and single truth', () => {
       const text = readFileSync(new URL(name, dir), 'utf8');
       assert.doesNotMatch(text, /^(let|var) /m, `${name}: a module-level let/var could hold state across accounts`);
       assert.doesNotMatch(text, /^(const|export const) \w+ = new (Map|Set|WeakMap)\(/m, `${name}: a module-level cache could hold state across accounts`);
+    }
+  });
+
+  test('AW: handoffs at the SAME moment are ordered by id, never by array position (reversing the stored arrays changes nothing)', () => {
+    const w = world({ children: [JOSIE, MILO, RUBY] });
+    const a = handoff(w, { child: JOSIE, title: 'Pickup A', date: '2026-09-18' });
+    const b = handoff(w, { child: MILO, title: 'Pickup B', date: '2026-09-18' });
+    const c = handoff(w, { child: RUBY, title: 'Pickup C', date: '2026-09-18' });
+    const forward = view(w).transitions.map((t) => t.id);
+    assert.deepEqual(forward, [a, b, c].sort(), 'ties are broken by id');
+    const s = w.state;
+    for (const events of [[...s.events].reverse(), [s.events[1], s.events[2], s.events[0]]]) {
+      const shuffled = { ...s, events };
+      assert.deepEqual(buildCoParentLogisticsView(shuffled, shuffled.household.id, { nowMs: w.nowMs }).transitions.map((t) => t.id), forward);
     }
   });
 

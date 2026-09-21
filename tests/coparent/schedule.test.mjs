@@ -105,6 +105,19 @@ describe('Recurrence: an operational pattern she recorded — never a custody sc
     assert.equal(JSON.stringify(w.state.recurrences), before);
   });
 
+  test('an unrelated edit leaves a rule whose anchor is EARLIER than the handoff exactly as recorded (a biweekly phase is never silently re-anchored)', () => {
+    const w = world();
+    const id = handoff(w, { repeat: 'every_2_weeks' });
+    // The pattern she recorded began two weeks before this handoff's own date; the phase depends on that anchor.
+    w.state = { ...w.state, recurrences: w.state.recurrences.map((r) => ({ ...r, anchorDate: '2026-09-04' })) };
+    const before = JSON.stringify(w.state.recurrences);
+    const seed = handoffEditorSeed(w.state, id);
+    assert.equal(seed.fields.repeat, 'every_2_weeks');
+    w.run((s, c) => editHandoff(s, c, { eventId: id, baseUpdatedAt: seed.baseUpdatedAt, fields: { ...seed.fields, notes: 'Bring the blue bag' } }), { ms: NOW + 1000 });
+    assert.equal(JSON.stringify(w.state.recurrences), before, 'the anchor and phase she recorded are untouched');
+    assert.equal(rulesOf(w, id).length, 1);
+  });
+
   test('moving the handoff re-anchors the rule by REPLACING it: the old rule ends, a new one starts, one active at a time', () => {
     const w = world();
     const id = handoff(w, { repeat: 'weekly' });

@@ -137,6 +137,17 @@ describe('Identity: child and counterpart are ids, never names', () => {
     assert.equal(t.section, 'needs_review');
   });
 
+  test('the NEXT handoff is the chronologically next one — even when it is the one that needs review (it is never skipped to look tidy)', () => {
+    const w = world({ children: [JOSIE, MILO] });
+    const earlier = handoff(w, { child: JOSIE, title: 'Earlier, no child', date: '2026-09-17' });
+    const later = handoff(w, { child: MILO, title: 'Later, fine', date: '2026-09-19' });
+    w.state = { ...w.state, events: w.state.events.map((e) => (e.id === earlier ? { ...e, subjectMemberId: null } : e)) };
+    const v = view(w);
+    assert.equal(v.nextTransitionId, earlier);
+    assert.equal(byId(v, earlier).section, 'needs_review');
+    assert.notEqual(v.nextTransitionId, later);
+  });
+
   test('AP: a responsibility naming a person who is not in the household is NEEDS REVIEW and keeps the id', () => {
     const w = world();
     const alex = w.person('Alex');

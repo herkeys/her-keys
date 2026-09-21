@@ -273,17 +273,96 @@ claim of confidentiality: Today/Calendar (out of scope) still show an event's lo
 
 ---
 
-## 21. Hub — PENDING (CP3)
-## 22. Transition detail — PENDING (CP4)
-## 23. Backend / sync — PENDING (CP6)
-## 24. RLS / security — PENDING (CP6)
-## 25. Offline / restart — PENDING (CP6)
+## 21. Hub
+
+* **Route.** ONE new file, `app/(app)/life/coparent.tsx` (path `/life/coparent`), composing `CoParentScreen`. Its `mode` param selects the view (hub when absent; `handoff`, `followup`, `new-handoff`, `edit-handoff`, `new-prep`, `new-followup`, `edit-followup`), so a detail or editor is the same route pushed with different params and Back returns to the hub. The header title is set inside the screen with `<Stack.Screen options={{ title }} />` (Expo Router SDK 57). `_layout.tsx` and the Life `index.tsx` are untouched (HK-INT-WAVE2-LIFE-REGISTRATION).
+* **Availability first.** `availabilityOf(snapshot, account)` runs before anything renders: *loading* shows only a loading state; *unrecovered* (damaged / newer / unreadable / other-mode storage → a FRESH household) shows only that notice, with no hub and no create action; *another account's household* renders nothing. So an empty projection can never be shown while hydration is incomplete or for data that could not be read (tests AZ / BA, mutants M28 / M29).
+* **Organised by child + need, never by the other adult.** Sections in fixed order, each shown only when it has content: **Next handoff** (the chronologically next one — never skipped because it needs review), **Needs you**, **Waiting on someone**, **Needs review**, **Coming up** (collapsed to five with "Show N more"), **Preparation** (grouped under each child), **Money to follow up**, **Recently completed**. Every handoff appears in exactly ONE place (sections hold ids; test BC), and no sentence or heading is about an adult.
+* **Truth on the face of a row.** Each row says child, day and time, title, and — in words — who is recorded as responsible and how far it got, or that nobody is; whether preparation is recorded; whether anything needs review. Status tags ("Needs you", "Waiting", "Covered", "Repeats") are never the only carrier of a state.
+* **No location on the hub** (§36). No score, percentage, rating, streak or "reliability" anywhere. A zone note appears only when the device zone differs from the household zone.
+* **Named blocked states** instead of dead controls: no child → "A child comes first"; no or archived co-parenting category. The create buttons are disabled and the notice above them is the explanation.
+* **Empty state** says only "Nothing coming up is recorded here" and that the screen shows what she recorded in Her Keys — never "all caught up", never a claim about the relationship or the legal situation.
+* **Footnote** on every hub: it shows only what was recorded, it isn't a legal record, and it doesn't say what anyone agreed to; and "Her Keys hasn't contacted anyone."
+
+## 22. Transition detail
+
+* **Facts:** child, title, when (household zone; "Next: …" for a derived repeat date), status ("Happening now" / "This time has passed. Nothing is recorded about whether it happened."), then, only where they apply, the repeat pattern ("Repeats every 2 weeks on Friday. This is the pattern you recorded."; a derived date adds "Recorded for <date>. Nothing is recorded for this date."), responsibility, "needs you" reasons, preparation, review notices, and what is **not recorded** (needs-you, outcome).
+* **Location:** the row says only "A location is recorded" or "No location recorded". With a location there is a **Show location** control; the text renders only while revealed, and the reveal is keyed by household + handoff so it resets on leaving or switching account.
+* **Responsibility actions come only from `availableResponsibilityActions(view)`** (the domain rules said up front): "Record that you've asked someone"; then *acknowledged*, *accepted and I need do nothing more*, *accepted and I still need to act*, *declined*, *their part complete*, *a different person*, *take it back*, *it still / no longer needs me*. An unavailable counterpart is offered only "Record a different person" and "Take it back" — never a positive recording. Every label begins "Record …": it records what SHE says happened; nothing is sent.
+* **Preparation:** the readiness sentence and each linked item with its exact standing ("Open", "Marked done", "Removed from the list. Not marked done."), "Mark done" and "Remove from the list" for open items, "Unlink" for a linked one, and "Add preparation" pre-linked to this handoff.
+* **Edit** opens the handoff editor from the row as it is (child, times, location, notes, commitment, "needs you", repeat — the counterpart is a responsibility action, not an editor field). **Remove handoff** is a two-step in-place confirm; removal is "Removed", never "completed".
+* **Owner-only line:** "Only your account can open this in Her Keys." — shown only when the row really is owner-only.
+* **Follow-up detail:** title, child, "Amount you entered: 80.00 USD" with "An amount you entered isn't an agreed amount.", follow-up date, status ("Follow-up open" / "Marked done. Her Keys has no record of a payment."), the responsibility lines and actions, and — only from a real `paid` outcome — "A connected service reported a payment."
+* **Editors** open empty — no child among several, no date, no time, no length, no direction, no currency is guessed (one child is pre-selected *visibly*; a currency she already used is pre-selected *and labelled* as such). Title starters only fill the title text. An unfinished new person in the picker is never silently dropped. A stale row turns Save off and says why.
+
+## 23. Backend / sync
+
+* **No schema change and no feature-specific sync.** Feature 07 writes only kinds that are already pushable and mutable (`event`, `task`, `person`, `responsibility`, `dependency`, `recurrence`, plus append-only `observation` from the shared transitions). Every write is a canonical mutation the store's change observer queues; there is no queue, transport, coordinator or table of its own.
+* **Proofs of the production composition.**
+  * `tests/coparent/syncComposition.test.mjs` — **6** tests through `composeAccountApp` against the in-model cloud: the representative journey and a second device (identical projection), only synced canonical kinds written, offline create + edit → restart offline → reconnect (one row, edit applied), lost acknowledgement (no duplicate), permanent refusal (record kept, surfaced, not hammered), a 460-row household above the queue and pull thresholds.
+  * `supabase/tests/run-coparent.mjs` — **34 checks** against real local PostgreSQL / PostgREST / RLS / the real claim RPC (§24), including client A → queue → PostgreSQL → client B in both directions, restart, and account switch.
+  * `node supabase/tests/run.mjs` at the final head — **800 / 800** (the repair ledger's figure), run once, alone.
+  * Mutants M25 / M26 (disconnect the production composition; stop the observer queueing) fail the composition suite.
+* **A real defect found by this journey** (§31, D1): the claim corrupted child names containing an "s" ("Josie" → "Jo ie"), which the pull then wrote back to the device. Repaired with one line and pinned by `tests/claimDisplayName.test.mjs` and mutant M27.
+* `owner_profile_id` is set by the existing projection for `coparent-shared` (`ownerFor`), which the real database journey proved (the `owner_scope_check` CHECK would otherwise refuse the row).
+
+## 24. RLS / security
+
+**Materially applicable, so attacked** — Feature 07 files its rows as owner-only `coparent-shared`, and "scope label ≠ sharing" is a headline claim. There is **no new backend representation**, so the inherited certified common posture is otherwise unchanged and the common RLS suite was not duplicated. Against the real rows Feature 07 wrote (`run-coparent.mjs`):
+
+| Actor | Attack / read | Result |
+|---|---|---|
+| **Owner** (P) | read own `coparent-shared` events (2) and tasks (3) | **allowed** — 2 / 3 |
+| **Same-household member** (Q, legitimately added) | read household-scope rows | **allowed** (the session works — blocking everyone is not a PASS) |
+| Same-household member | read the owner's `coparent-shared` events and tasks | **0 rows** — `coparent-shared` is not sharing |
+| Same-household member | read the owner-private people, responsibilities, dependencies, recurrence rules | **0 rows** |
+| Same-household member | update an owner-only handoff; insert an owner-only row as a forged owner | **0 rows updated; refused, `42501`** |
+| **Unrelated authenticated account** (R) | read events / tasks / people / responsibilities; update; plant an event | **0 rows; nothing changed; plant refused `42501`** |
+| **Anonymous** | read any of the above | **0 rows / refused** |
+| Account switch on one device | P's household under account R | **quarantined (`boundOther`), no sync started, 0 requests** |
+
+The attacks changed nothing (no location rewritten, nothing planted, same event count). Security facts also inspected mechanically: the shipping `private.can_access_scoped_row` opens only `household` / `child` to members (`tests/coparent/sharing.test.mjs`).
+
+## 25. Offline / restart
+
+* **Create → edit → restart (local).** `editing.test.mjs › J`: a real store persists; a relaunch on the same storage brings back the same child id, counterpart id, recurrence and responsibility.
+* **Offline create + edit → restart offline → reconnect.** `syncComposition.test.mjs › K`: the change and its intent are durable in one write; a fresh runtime from the persisted envelope alone shows the handoff with its child and counterpart identities intact; on reconnect the cloud holds exactly one event / person / responsibility, the edit is applied, and a second device converges — with **no upgrade**: a recorded request never arrives as accepted.
+* **Restart against the real database.** No duplicate rows and no second claim (`run-coparent.mjs`, counts unchanged across restart).
+* **No** data loss, duplicate handoff, lost child or counterpart identity, responsibility upgrade, false agreement, false payment or stale preparation state was observed in any of these.
 ## 26. Scenario assertion map — PENDING (CP7/CP8)
 ## 27. Tier 1 results — PENDING
 ## 28. Tier 2 results — PENDING
 ## 29. Tier 3 results — PENDING
 ## 30. Mutation evidence — PENDING (CP7)
-## 31. Defects found / repaired — PENDING
+## 31. Defects found / repaired
+
+Found by reproduction (real-database journey, store tests, golden-fixture review, source audits, UI build), repaired inside approved Feature 07 semantics unless marked.
+
+| ID | Sev | Where | Defect | Found by | Result |
+|---|---|---|---|---|---|
+| **D1** | **P1** | **shared** `src/domain/account/claim.ts` `cloudDisplayName` | the whitespace collapse was `/s+/g` (the LETTER s): a child named Josie reached PostgreSQL as "Jo ie", Chris → "Chri", Ross → "Ro", and the pull wrote the corrupted name back to the device. Present on every branch forked from `14bd58e` | real-PostgreSQL journey (a check on the child's stored name) | **REPAIRED** (one line, `61e9af1`), `tests/claimDisplayName.test.mjs` (4), mutant M27; **include once at integration** (HK-INT-COPARENT-CLAIM-NAME-01) |
+| D2 | P2 | feature `mutations.ts` | stale-edit check compared `updatedAt` alone: two edits inside one clock tick let an old editor overwrite newer content | store test `commitMutation reports the NAMED outcome` | **REPAIRED** — revision token = `updatedAt` + content digest (+ recorded schedule); mutants M30 / M31 |
+| D3 | P2 | feature `projection.ts` | an accepted counterpart who was later archived still reported `needsMe: false` (a stale "no longer needs you") | golden-fixture review of scenario Z | **REPAIRED** — needs her review (`needsMe: true`); mutant M42 |
+| D4 | P3 | feature `present.ts` | doubled full stops in screen-reader labels; the detail repeated "No one is recorded as responsible" as both a line and an "unknown" | copy-truth run | **REPAIRED** (`spoken()`, `alreadyStated`) |
+| D5 | P3 | feature `mutations.ts` | a handoff with no recorded child could not be opened for editing — the very repair for it | UI build | **REPAIRED** — seed opens with the child unchosen; save refused until one is chosen |
+| D6 | P3 | feature `copy.ts` | the empty state said "Nothing recorded here yet", untrue for a household with only past handoffs | review of the empty-state contract | **REPAIRED** — "Nothing coming up is recorded here" |
+| D7 | P3 | feature `present.ts` | status tags were inline strings outside `COPY`; prep "For:" labels were identical for two same-title handoffs on one day | UI build | **REPAIRED** (`COPY.tags`; label includes the time) |
+| D8 | P4 | shared `reasoning/attention.ts` | `attentionFor`'s `risk` branch treats an *acknowledged* delegation as "handled elsewhere" (contradicts ACKNOWLEDGED ≠ ACCEPTED ≠ COVERED) | foundation trace | **RECORDED, not repaired** (MP-07-13); Feature 07 does not import it |
+| D9 | P4 | shared `features/calendar/EventForm.tsx` | files every event as `household` scope even in the co-parenting category | foundation trace | **RECORDED** (MP-07-14) |
+| D10 | P4 | shared `responsibility.ts` `accept()` | defaults `stillNeedsMe` to `false` ("no longer needs her") | foundation trace | **RECORDED**; Feature 07 never relies on it — she always chooses |
+| D11 | P5 | feature semantics | removing a handoff leaves its responsibility row as it was (history is not rewritten); the hub excludes it | design review | **DOCUMENTED** |
+
+No P0 defect was found. Nothing above required a schema change.
+
+## 34. Accessibility
+
+* **State is never carried by colour alone.** Every row's `accessibilityLabel` speaks child, day and time, tags, and the responsibility / coverage / preparation / unknown sentences *in words*; tags ("Needs you", "Covered", …) are also spoken. Copy-truth audit: every hub row label matches its child, a clock time, and a recorded-responsibility phrase; no doubled full stops.
+* **Unknown is said, not implied** (`No one is recorded as responsible`, `No preparation recorded`, `Not recorded whether this needs you personally`, `No location recorded`) — in the row, in the detail and in the spoken label.
+* **Roles and labels.** Every pressable has `accessibilityRole` and a label (UI render tests (c)); headings are `header`; errors are `alert`; live notices are polite.
+* **No swipe-only or gesture-only action.** Everything is a button; removal is an in-place two-step confirm, not an alert or a swipe.
+* **Touch targets.** The UI render test asserts none is below the design system's touch floor.
+* **Disabled controls are explained.** Create buttons disabled by a blocked state carry an `accessibilityHint` and a visible notice.
+* **Not verified:** real screen-reader behaviour (TalkBack/VoiceOver) and colour contrast on a device — see §39. The design-system contrast suite covers the tokens used.
 ## 32. Missing primitives — see `HK_FEATURE_07_MISSING_PRIMITIVES.md` (MP-07-01 … MP-07-14)
 ## 33. Integration candidates
 
