@@ -316,7 +316,7 @@ any of these, but they live outside `src/features/today/`, so a sibling branch t
 
 | Path | Reason | Commit | Likely sibling collision | Reconciliation |
 |---|---|---|---|---|
-| `src/features/daily-load/DailyLoadCard.tsx` | REFINE: remove the filler branches (empty household, nothing scheduled, overdue, "nothing needs moving") the view model now owns; every action and guard untouched | T3 | **Feature 03 (Calendar / Capacity)** is the likeliest to edit `daily-load/*` | Small, deletion-only diff in one region; take Feature 03's version and re-apply the four deletions |
+| `src/features/daily-load/DailyLoadCard.tsx` | REFINE: remove the filler branches (empty household, nothing scheduled, overdue, "nothing needs moving") the view model now owns; every action and guard untouched | T3 | **Feature 03 (Calendar / Capacity)** is the likeliest to edit `daily-load/*` | Small, deletion-dominant diff in one region (56 lines changed: the filler branches go; one early `return null` and two comment lines are added — no action or guard is touched); take Feature 03's version and re-apply the four deletions and the one guard |
 | `src/features/daily-load/LoadMeter.tsx` | REFINE: takes the estimate as a prop from the view model instead of reading `useSchedule()`; adds the optional capacity-profile note | T3 | Feature 03 | Only Today imports it |
 | `src/features/life/LifeStatusSummary.tsx` | REFINE: wrapped in a collapsed disclosure | T3 | Feature 02 (Life Inbox mount) | Only Today imports it; one wrapper |
 | `src/features/one-move/OneMoveCard.tsx` | REFINE: props from the view model; Why disclosure; T9 adds the relationship context lines under "Evidence and source" | T4, T9 | Feature 04 (`system` One Move targets) | Only Today imports it |
@@ -615,7 +615,8 @@ The gate outputs live in this session's scratchpad (`gates/*.txt`), not in the r
 
 `node scripts-dev/today-mutation-check.cjs` (optionally `ONLY=M07,M19`) puts each defect back into the Today source, runs the Today
 suite serially, requires it to **fail**, and restores the file byte for byte. It refuses a dirty worktree and an unmutated baseline
-that is not green and substantial (see TODAY-TCD-003). "Failing" is the number of Today tests that fail with the defect in.
+that is not green and substantial (see TODAY-TCD-003). "Failing" is the number of Today tests that fail with the defect in. The table is
+**one serial run of all 24 at head `63ba2fe`** (baseline 210 / 210 green; the worktree was clean before and after: `gates/mutation-all24.txt`).
 
 | # | Defect put back | File | Failing | Result |
 |---|---|---|---:|---|
@@ -628,7 +629,7 @@ that is not green and substantial (see TODAY-TCD-003). "Failing" is the number o
 | M07 | a stale One Move evidence link is kept as evidence | `oneMoveView.ts` | 1 | CAUGHT |
 | M08 | elapsed commitments still count as what matters | `mattersView.ts` | 4 | CAUGHT |
 | M09 | the three-primary-block cap is removed | `todayView.ts` | 2 | CAUGHT |
-| M10 | an unconfirmed claim is presented like a stated fact | `refs.ts` | 6 | CAUGHT |
+| M10 | an unconfirmed claim is presented like a stated fact | `refs.ts` | 14 | CAUGHT |
 | M11 | the approval confirmation is bypassed (one tap approves) | `TodayAttention.tsx` | 4 | CAUGHT |
 | M12 | a timing decision is offered after its window ended | `decisionView.ts` | 2 | CAUGHT |
 | M13 | exclamation-mark cheerleading in copy | `narrative.ts` | 4 | CAUGHT |
@@ -637,7 +638,7 @@ that is not green and substantial (see TODAY-TCD-003). "Failing" is the number o
 | M16 | the day comes from UTC, not the household's timezone | `todayView.ts` | 9 | CAUGHT |
 | M17 | take-back is offered for an accepted handoff | `attentionView.ts` | 1 | CAUGHT |
 | M18 | the foundation's order of what needs her is reversed | `attentionView.ts` | 1 | CAUGHT (*) |
-| M19 | a dependency Her Keys inferred is stated as fact ("needs") | `requirements.ts` | 10 | CAUGHT |
+| M19 | a dependency Her Keys inferred is stated as fact ("needs") | `requirements.ts` | 7 | CAUGHT |
 | M20 | a dropped / finished / removed commitment is still "waiting" | `requirements.ts` | 1 | CAUGHT |
 | M21 | the One Move's context leaks into its reasons | `oneMoveView.ts` | 1 | CAUGHT (*) |
 | M22 | the unconfirmed badge is dropped from "Coming up" | `upcoming.ts` | 3 | CAUGHT |
@@ -823,7 +824,7 @@ Stacking only — no amend, no rebase, no squash, no push, no PR, no merge. Expl
 | T6 correction | `c5c0a82` |
 | T7 lifecycle | `66d72ac` |
 | T8 guarantees, owner evidence | `41d6f76`, `f7090e2` |
-| T9 builder validation and repair | `855dcb1`, `fde2bc8`, `5d776d6`, `c0e13f9`, `c50f07e`, `1989711`, `9e1374f`, and the ledger-finalization commit(s) that carry this section |
+| T9 builder validation and repair | `855dcb1`, `fde2bc8`, `5d776d6`, `c0e13f9`, `c50f07e`, `1989711`, `9e1374f`, `63ba2fe` (the ledger), and the last commit on the branch, which only records the final mutation run in this ledger (docs only: `git diff --stat 9e1374f HEAD` lists this file alone) |
 
 ### 11.13 LLM readiness (report F)
 
