@@ -3,6 +3,7 @@ import { AppText } from '../../design/components';
 import { colors, spacing } from '../../design/tokens';
 import { needsSyncAttention, needsSyncAttentionCount } from '../../domain/sync/syncTypes';
 import { useAccount } from '../../store/AccountProvider';
+import { syncNoticeLine } from './syncNoticeLine';
 
 /**
  * One quiet line when changes are waiting for her, and nothing at all
@@ -23,7 +24,7 @@ export function SyncNotice() {
   return (
     <View style={styles.wrap} accessibilityLiveRegion="polite">
       <AppText variant="metadata" color={colors.textTertiary}>
-        {count === 1 ? 'One change needs your attention.' : `${count} changes need your attention.`}
+        {syncNoticeLine(count)}
       </AppText>
     </View>
   );
