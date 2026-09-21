@@ -288,6 +288,12 @@ async function device(m, { account, sent, fetched = [], storage = m.storage.crea
       if (gate.offline) return unreachable;
       if (gate.refuse?.(table, row)) return { kind: 'failure', failure: 'validation', detail: 'refused by the server', code: '23514' };
       sent.push({ table, row });
+      // A LOST ACKNOWLEDGEMENT: the server really commits the row (the real RPC runs), and the client never hears. `loseAck` counts how many.
+      if (gate.loseAck > 0) {
+        gate.loseAck -= 1;
+        await real.create(table, deviceId, row);
+        return unreachable;
+      }
       return real.create(table, deviceId, row);
     },
     async update(table, cloudId, base, patch, column) { if (gate.offline) return unreachable; sent.push({ table, patch }); return real.update(table, cloudId, base, patch, column); },

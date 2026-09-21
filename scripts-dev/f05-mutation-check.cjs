@@ -18,6 +18,11 @@ const T = 'tests/kids/';
 const K = 'src/features/kids/';
 const ALL = ['children', 'identity', 'time', 'projection', 'mutations', 'views', 'reachability', 'boundaries', 'copyTruth'].map((n) => `${T}${n}.test.mjs`);
 const JOURNEY = { command: ['node', ['supabase/tests/run.mjs', 'kids']] };
+// The closeout repair (OC-01): fast unit-level judges for the TypeScript mutants, the SQL security suite for the migration's.
+const BRIDGE = 'tests/hk-ir01/changeBridge.test.mjs';
+const COMPOSITION = 'tests/hk-ir01/syncComposition.test.mjs';
+const F05_MIGRATION = 'supabase/migrations/20260921190000_f05_add_child_after_binding.sql';
+const SQL_SUITE = { command: ['node', ['supabase/tests/run.mjs', '77']] };
 
 const MUTANTS = [
   // ---- CHILD IDENTITY -------------------------------------------------------------------------------------------------------
@@ -71,12 +76,50 @@ const MUTANTS = [
     file: `${K}projection.ts`, from: '      urgency: item.urgency,\n      date: dateOfRef(c, resolved.ref),', to: "      urgency: 'now',\n      date: dateOfRef(c, resolved.ref),", tests: [`${T}projection.test.mjs`] },
   { id: 'K-M16', guards: 'household boundary', what: 'a request for another household is answered with this one\'s children',
     file: `${K}projection.ts`, from: '  if (state.household.id !== householdId) return { householdId,', to: '  if (false as boolean) return { householdId,', tests: [`${T}projection.test.mjs`, `${T}boundaries.test.mjs`, `${T}views.test.mjs`] },
-  { id: 'K-M7', guards: 'account gate (OC-01)', what: 'a child may be added to an account-bound household',
-    file: `${K}mutations.ts`, from: 'export const canAddChild = (identity: IdentityRecord): boolean => isUnbound(identity);', to: 'export const canAddChild = (identity: IdentityRecord): boolean => true;', tests: [`${T}children.test.mjs`] },
+  // OC-01 was RESOLVED by the owner: a household bound to an account MUST be able to add a child. The gate's meaning was reversed on
+  // purpose, so K-M7 now guards the one household that still cannot take one (it belongs to ANOTHER account), and K-M23 guards the
+  // owner's decision itself (the old "only while unbound" gate must not come back).
+  { id: 'K-M7', guards: 'account gate (OC-01)', what: 'a child may be added to a household that belongs to ANOTHER account (quarantined)',
+    file: `${K}mutations.ts`, from: 'export const canAddChild = (identity: IdentityRecord): boolean => identity.quarantine === null;', to: 'export const canAddChild = (identity: IdentityRecord): boolean => true;', tests: [`${T}children.test.mjs`] },
+  { id: 'K-M23', guards: 'account gate (OC-01)', what: 'the old gate comes back: a child cannot be added to a household bound to an account',
+    file: `${K}mutations.ts`, from: 'export const canAddChild = (identity: IdentityRecord): boolean => identity.quarantine === null;', to: 'export const canAddChild = (identity: IdentityRecord): boolean => identity.quarantine === null && identity.binding === null;', tests: [`${T}children.test.mjs`, `${T}views.test.mjs`] },
   { id: 'K-M4', guards: 'stale editor', what: 'a stale editor overwrites a newer version',
     file: `${K}mutations.ts`, from: "  if (taskFingerprint(current) !== draft.baseline) return { state, outcome: 'stale' };", to: "  if (false as boolean) return { state, outcome: 'stale' };", tests: [`${T}mutations.test.mjs`] },
   { id: 'K-M20', guards: 'time / DST', what: 'a time inside the spring-forward gap is no longer reported',
     file: `${K}time.ts`, from: '  if (wallClockMinutesAt(epochMs, timeZone) !== minutesOfDay || logicalDateAt(epochMs, timeZone) !== date) {', to: '  if (false as boolean) {', tests: [`${T}time.test.mjs`, `${T}mutations.test.mjs`, `${T}views.test.mjs`] },
+
+  // ---- A CHILD ADDED AFTER BINDING (owner checkpoint OC-01, closeout repair) ------------------------------------------------------
+  // The five REQUIRED new mutants are S-N1, S-N2, S-N3, S-N4 and S-N5. The rest guard the parts of the same path the five do not name.
+  // TypeScript mutants are judged by the sync composition and bridge tests; SQL mutants (a line of the F05 migration) are judged by the
+  // SQL security suite in a disposable database (`run.mjs 77`), so a weakened function never touches the shared local database.
+  { id: 'S-N1', guards: 'post-bind child write', what: 'a child added after binding is never queued: its create is not an allowed operation',
+    file: 'src/domain/sync/syncTypes.ts', from: "  member: ['create'],", to: '  member: [],', tests: [BRIDGE, COMPOSITION] },
+  { id: 'S-N1b', guards: 'post-bind child write', what: 'the change bridge cannot see the household\'s children, so a new one is never observed',
+    file: 'src/domain/sync/syncKinds.ts', from: "  member: 'children',", to: '', tests: [BRIDGE, COMPOSITION] },
+  { id: 'S-N2', guards: 'child id round trip (out)', what: 'the child\'s local id changes on its way to the cloud',
+    file: 'src/domain/sync/projection.ts', from: "        ...base,\n        member_type: 'child',", to: "        ...base,\n        local_id: `${localId}-x`,\n        member_type: 'child',", tests: [COMPOSITION] },
+  { id: 'S-N2b', guards: 'child id round trip (in)', what: 'the pull gives a child it already knows a NEW local id',
+    file: 'src/domain/sync/pullEngine.ts', from: "    const localId = existing?.localId ?? (taken ? ctx.mintLocalId('member', wanted) : wanted);", to: "    const localId = ctx.mintLocalId('member', wanted);", tests: [COMPOSITION] },
+  { id: 'S-N3', guards: 'hydration identity', what: 'hydration matches an incoming child to a local one by NAME instead of by id',
+    file: 'src/domain/sync/pullEngine.ts', from: '    const known = nextState.children.find((candidate) => candidate.id === localId);', to: '    const known = nextState.children.find((candidate) => candidate.displayName === child.displayName);', tests: [COMPOSITION] },
+  { id: 'S-N4', guards: 'authority (SQL)', what: 'the function no longer checks that the caller OWNS the household: a member, or an unrelated account calling it, can add a child',
+    file: F05_MIGRATION, from: '  IF v_house IS NULL OR NOT private.is_household_owner(v_house) THEN', to: '  IF v_house IS NULL THEN', ...SQL_SUITE },
+  { id: 'S-N4b', guards: 'authority (SQL)', what: 'sync_push no longer checks household membership before the child is written',
+    file: F05_MIGRATION, from: '  IF NOT private.is_household_member(v_house) THEN', to: '  IF false THEN', ...SQL_SUITE },
+  { id: 'S-N5', guards: 'second device hydration', what: 'a second device applies children only while it holds none, so a newly created child never arrives',
+    file: 'src/domain/sync/pullEngine.ts', from: "    if (row.member_type !== 'child') continue;", to: "    if (row.member_type !== 'child' || nextState.children.length > 0) continue;", tests: [COMPOSITION] },
+  { id: 'S-N6', guards: 'lost acknowledgement', what: 'the pull does not adopt a child this device created, so a lost acknowledgement makes a duplicate child',
+    file: 'src/domain/sync/pullEngine.ts', from: '    const adopts = existing === null && ownRow && heldLocally &&', to: '    const adopts = false && existing === null && ownRow && heldLocally &&', tests: [COMPOSITION] },
+  { id: 'S-N7', guards: 'dependency order', what: 'a child ranks AFTER the work that names it, so a task is sent before its child has a cloud id',
+    file: 'src/domain/sync/syncTypes.ts', from: '  member: 0,', to: '  member: 9,', tests: [BRIDGE, 'tests/foundationSpecs.test.mjs', COMPOSITION] },
+  { id: 'S-N8', guards: 'no child mapped to the account holder (SQL)', what: 'the collision probe also matches the account holder\'s own member row, so a child can be reported as "already created" and mapped to the adult',
+    file: F05_MIGRATION, from: "         WHEN p_entity_table = 'household_members' THEN ' AND member_type = ''child'''", to: "         WHEN p_entity_table = 'household_members' THEN ''", ...SQL_SUITE },
+  { id: 'S-N9', guards: 'child bound (SQL)', what: 'the 20-child bound is gone (200)',
+    file: F05_MIGRATION, from: '  IF v_children >= 20 THEN', to: '  IF v_children >= 200 THEN', ...SQL_SUITE },
+  { id: 'S-N11', guards: 'child name across the boundary', what: 'the name cleaner loses its backslash again: `/s+/` turns every letter s into a space ("Josie" -> "Jo ie")',
+    file: 'src/domain/account/claim.ts', from: "    .replace(/\\s+/g, ' ')", to: "    .replace(/s+/g, ' ')", tests: [BRIDGE, COMPOSITION, 'tests/claimPayload.test.mjs'] },
+  { id: 'S-N10', guards: 'server-owned columns (SQL)', what: 'the function accepts columns a client must not state (an account, a role) instead of refusing them',
+    file: F05_MIGRATION, from: "    IF v_key <> ALL (ARRAY['household_id', 'local_id', 'origin_device_id', 'member_type', 'display_name', 'birth_date', 'scope']) THEN", to: '    IF false THEN', ...SQL_SUITE },
 ];
 
 const NODE_ARGS = ['--import', './tests/support/register-ts.mjs', '--import', './tests/support/register-jsx.mjs', '--test', '--test-concurrency=1'];
