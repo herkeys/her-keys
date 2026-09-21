@@ -1,0 +1,11 @@
+{
+  "scenario": "P2",
+  "tier": 1,
+  "title": "Home context missing: nothing listed, nothing creatable, not \"empty\"",
+  "label": "Home",
+  "context": "missing",
+  "canCreate": false,
+  "recordsConsidered": 0,
+  "sections": {},
+  "items": []
+}

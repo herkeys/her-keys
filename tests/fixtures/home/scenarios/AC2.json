@@ -1,0 +1,41 @@
+{
+  "scenario": "AC2",
+  "tier": 1,
+  "title": "A past visit: outcome unknown, never completed",
+  "label": "Home",
+  "context": "active",
+  "canCreate": true,
+  "recordsConsidered": 1,
+  "sections": {
+    "pastVisits": [
+      "event:ac2-evt-3"
+    ]
+  },
+  "items": [
+    {
+      "homeItemId": "event:ac2-evt-3",
+      "canonicalKind": "event",
+      "homeContextId": "cat-home",
+      "homeSystemRole": "home",
+      "attentionFacts": [],
+      "responsibilityState": "none",
+      "coverageState": "not_delegated",
+      "dependencyStanding": "none",
+      "durationSource": "not_applicable",
+      "recurrenceState": "none",
+      "lastDone": null,
+      "lastDoneEvidenceType": null,
+      "lastDoneApplicable": false,
+      "nextExpected": null,
+      "scheduledState": "past_visit",
+      "resolutionState": "past_visit",
+      "unknownFacts": [
+        "visit_outcome_unknown"
+      ],
+      "availableActions": [
+        "edit",
+        "remove"
+      ]
+    }
+  ]
+}

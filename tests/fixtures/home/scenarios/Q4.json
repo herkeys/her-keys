@@ -1,0 +1,44 @@
+{
+  "scenario": "Q4",
+  "tier": 1,
+  "title": "Declined and taken back are hers again",
+  "label": "Home",
+  "context": "active",
+  "canCreate": true,
+  "recordsConsidered": 1,
+  "sections": {
+    "unresolved": [
+      "task:q4-task-3"
+    ]
+  },
+  "items": [
+    {
+      "homeItemId": "task:q4-task-3",
+      "canonicalKind": "task",
+      "homeContextId": "cat-home",
+      "homeSystemRole": "home",
+      "attentionFacts": [],
+      "responsibilityState": "declined",
+      "coverageState": "declined",
+      "dependencyStanding": "none",
+      "durationSource": "user",
+      "recurrenceState": "none",
+      "lastDone": null,
+      "lastDoneEvidenceType": null,
+      "lastDoneApplicable": true,
+      "nextExpected": null,
+      "scheduledState": "not_scheduled",
+      "resolutionState": "unresolved",
+      "unknownFacts": [
+        "no_due_date",
+        "provider_not_verified"
+      ],
+      "availableActions": [
+        "edit",
+        "mark_done",
+        "ask_someone",
+        "remove"
+      ]
+    }
+  ]
+}

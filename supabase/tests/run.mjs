@@ -570,12 +570,19 @@ try {
     const { productionCompositionJourneys } = await import(`file://${join(HERE, 'journey-composition.mjs')}`);
     await productionCompositionJourneys(check, psql);
   }
+  if (only === 'home') {
+    ensureLocalStackCurrent();
+    const { homeJourneys } = await import(`file://${join(HERE, 'journey-home.mjs')}`);
+    await homeJourneys(check, psql);
+  }
   if (!only) {
     ensureLocalStackCurrent();
     const { syncIntegration } = await import(`file://${join(HERE, 'sync-integration.mjs')}`);
     await syncIntegration(check, psql);
     const { productionCompositionJourneys } = await import(`file://${join(HERE, 'journey-composition.mjs')}`);
     await productionCompositionJourneys(check, psql);
+    const { homeJourneys } = await import(`file://${join(HERE, 'journey-home.mjs')}`);
+    await homeJourneys(check, psql);
   }
 } catch (err) {
   console.error(`\nHARNESS ERROR: ${err.message}`);

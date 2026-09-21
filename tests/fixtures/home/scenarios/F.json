@@ -1,0 +1,40 @@
+{
+  "scenario": "F",
+  "tier": 1,
+  "title": "One upcoming Home service visit",
+  "label": "Home",
+  "context": "active",
+  "canCreate": true,
+  "recordsConsidered": 1,
+  "sections": {
+    "comingUp": [
+      "event:f-evt-3"
+    ]
+  },
+  "items": [
+    {
+      "homeItemId": "event:f-evt-3",
+      "canonicalKind": "event",
+      "homeContextId": "cat-home",
+      "homeSystemRole": "home",
+      "attentionFacts": [],
+      "responsibilityState": "none",
+      "coverageState": "not_delegated",
+      "dependencyStanding": "none",
+      "durationSource": "not_applicable",
+      "recurrenceState": "none",
+      "lastDone": null,
+      "lastDoneEvidenceType": null,
+      "lastDoneApplicable": false,
+      "nextExpected": null,
+      "scheduledState": "scheduled_visit",
+      "resolutionState": "scheduled",
+      "unknownFacts": [],
+      "availableActions": [
+        "edit",
+        "ask_someone",
+        "remove"
+      ]
+    }
+  ]
+}

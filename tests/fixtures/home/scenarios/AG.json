@@ -1,0 +1,47 @@
+{
+  "scenario": "AG",
+  "tier": 1,
+  "title": "One canonical item, several sections, one truth",
+  "label": "Home",
+  "context": "active",
+  "canCreate": true,
+  "recordsConsidered": 1,
+  "sections": {
+    "comingUp": [
+      "task:ag-task-3"
+    ],
+    "repeats": [
+      "task:ag-task-3"
+    ]
+  },
+  "items": [
+    {
+      "homeItemId": "task:ag-task-3",
+      "canonicalKind": "task",
+      "homeContextId": "cat-home",
+      "homeSystemRole": "home",
+      "attentionFacts": [],
+      "responsibilityState": "none",
+      "coverageState": "not_delegated",
+      "dependencyStanding": "none",
+      "durationSource": "user",
+      "recurrenceState": "active",
+      "lastDone": null,
+      "lastDoneEvidenceType": null,
+      "lastDoneApplicable": true,
+      "nextExpected": "2026-09-25",
+      "scheduledState": "not_scheduled",
+      "resolutionState": "unresolved",
+      "unknownFacts": [
+        "no_completion_recorded"
+      ],
+      "availableActions": [
+        "edit",
+        "mark_done",
+        "ask_someone",
+        "stop_repeating",
+        "remove"
+      ]
+    }
+  ]
+}
