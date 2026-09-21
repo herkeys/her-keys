@@ -383,5 +383,166 @@ than needed) — no threshold is introduced. Tests pin both the category and the
 
 ---
 
-*Sections 17–20 (scenarios, structural evidence, performance, defects, integration candidates, considered/deferred, completion
-status) are added as each checkpoint lands.*
+## 17. Scenario matrix (A–AI)
+
+Every applicable scenario maps to a fixture, foundation inputs, view-model assertions, action assertions where relevant, structural
+evidence and render evidence. **Scenario prose is not coverage**: each row names where it is asserted.
+
+Files — projection `calendarProjection` · time `calendarTime` · UI `calendarUi` · week `calendarWeek` · actions `calendarActions` · action UI
+`calendarActionsUi` · hardening `calendarHardening` · a11y `calendarA11y` · render `calendarRender` · validation `calendarValidation` · perf `calendarPerformance`.
+Fixtures are built through the app's own domain mutations in `tests/support/calendarScenarios.mjs`.
+Evidence: `tests/fixtures/calendar/scenarios/<ID>.json` (structural) · `tests/fixtures/calendar/render/day-<ID>.txt` (render).
+
+| ID | Tier | Scenario | Status | Where asserted | Structural / render evidence |
+|---|---|---|---|---|---|
+| A | 1 | Ordinary feasible day | **PASS** | projection "A —"; UI first-glance | A.json · day-A |
+| B | 1 | Fixed overlap | **PASS** | projection "B —"; UI | B.json · day-B |
+| D | 1 | Impossible transition | **PASS** | projection "C / D"; UI | D.json · day-D |
+| F | 1 | Flexible item cannot fit | **PASS** | projection "E / F", category | F.json · day-F |
+| G | 1 | Unknown duration | **PASS** (representable subset — see OD-01) | projection "G / H / AF"; UI | G.json · day-G |
+| I | 1 | Delegated but unresolved | **PASS** | projection "I / J"; UI | I.json · day-I |
+| L | 1 | Date-only | **PASS** | projection "L"; UI | L.json · day-L |
+| P | 1 | Sparse day | **PASS** | projection "P"; UI | P.json · day-P |
+| W | 1 | Correction / edit route | **PASS** | projection "W" (a real `updateEvent` changes the conclusion); UI (press → that item's editor); validation (route is a one-line re-export) | — |
+| AF | 1 | Insufficient information | **PASS** | projection "G / H / AF" (all five assertions); UI | AF.json · day-AF |
+| C | 2 | Tight but feasible transition | **PASS** | projection "C / D" + category; UI | C.json · day-C |
+| E | 2 | Flexible item fits | **PASS** | projection "E / F"; UI | E.json · day-E |
+| H | 2 | Unknown travel | **PASS** | projection "G / H / AF"; UI | H.json · day-H |
+| K | 2 | Dependency order | **PASS** | projection "K" (control included) | K.json · day-K |
+| M | 2 | Child-scoped commitments | **PASS** | projection "M" | M.json · day-M |
+| N | 2 | Move preview | **PASS** on today; **SAFE-UNAVAILABLE** on any other day (F03-FG-08) | actions "N"; action UI | N.json · day-N · preview-N-current/-stale |
+| Q | 2 | Dense day | **PASS** | UI "never a wall of cards", "dense"; perf | Q.json · day-Q · day-dense |
+| R | 2 | Week overview | **PASS** | week suite | R.json · R.week.json · week-R |
+| S | 2 | Timezone | **PASS** | projection "S"; hardening "S" | — |
+| V | 2 | Logical-day rollover | **PASS** | projection "V"; UI presentation state | — |
+| AG | 2 | Preview staleness | **PASS** | actions "AG"; action UI (stale + updated panels) | preview-N-stale |
+| J | 3 | Accepted responsibility | **PASS** | projection "I / J" | J.json · day-J |
+| O | 3 | DROP / SHORTEN / PROTECT | **PASS** — only these render | actions "O"; action UI | O.json · day-O · preview-O-shorten |
+| T | 3 | DST spring forward | **PASS** | time "T"; hardening "T" | — |
+| U | 3 | DST fall back | **PASS** | time "U"; hardening "U" | — |
+| X | 3 | Demo isolation | **PASS** | hardening "X" | — |
+| Y | 3 | Loading vs empty | **PASS** | hardening gate; UI | state-loading |
+| Z | 3 | Recovery / quarantine | **PASS** | hardening gate (projection never reached) | state-recovery |
+| AA | 3 | Preview cancel | **PASS** | actions "AA" (same state object, no write) | — |
+| AB | 3 | Idempotent accepted move | **PASS** | actions "AB" (concurrent double accept) | — |
+| AC | 3 | Recurrence foundation input | **PASS** (rule metadata only; no engine, no Feature 04) | projection "AC/AD"; validation scan | AC.json · day-AC |
+| AD | 3 | Multi-day | **PASS** (supported at the common fork via instants) | projection "AC/AD"; UI | AD.json · day-AD |
+| AE | 3 | Same day at 08:00 / 15:00 / 21:00 | **PASS** | projection "AE" | — |
+| AH | 3 | Restart during preview | **PASS** | actions "AH" | — |
+| AI | — | Move then emergent conflict | **PASS** | projection "AI" | — |
+
+**Summary:** 0 FAIL · 0 DEFERRED-IN-RUN · 0 NOT-APPLICABLE · PASS 35 (all 35 scenarios in the contract) · SAFE-UNAVAILABLE noted for N off-today
+and for the PLACE / COMPLETE actions (§11, §21). All Tier 1 and Tier 2 resolved; all Tier 3 resolved.
+
+## 18. Structural and render evidence
+
+| Artifact | Path | Count |
+|---|---|---|
+| Structural evidence, day view model | `tests/fixtures/calendar/scenarios/<ID>.json` | 21 (A–R, AC, AD, AF) |
+| Structural evidence, week | `tests/fixtures/calendar/scenarios/R.week.json` | 1 |
+| Render evidence (what is shown + what a screen reader announces) | `tests/fixtures/calendar/render/*.txt` | 29 |
+| Entry test inventory | `docs/builds/HK_FEATURE_03_ENTRY_TEST_INVENTORY.txt` | 808 |
+
+Each is compared byte-for-byte by a test. A changed conclusion is a visible diff; regenerate only after review with
+`UPDATE_CALENDAR_EVIDENCE=1`. **Evidence review changed the product four times** (§20: DEF-04..DEF-07) — the point of committing it.
+
+**Not captured — pixel screenshots.** A second Android emulator could not start (host commit charge exhausted: 3.8 GB free, 4 GB
+needed) and the only running emulator was in active use by another session, serving another branch on Metro 8081 — it was not
+touched. **Layout, color and native focus behaviour are therefore NOT verified at runtime**; they are verified only by the
+component-tree assertions above and by design-system reuse. This is the honest gap in this run, recorded as EXTERNAL-CONSTRAINT.
+
+## 19. Performance (contract §65, §70) — medians of repeated runs, local reference environment
+
+| Measurement | Fixture | Median | Target |
+|---|---|---|---|
+| Single-day projection | 60 commitments + 20 tasks | **11.3 ms** | < 50 ms |
+| Seven-day projection | 210 commitments + 70 tasks | **5.3 ms** | < 150 ms |
+| Day with 10 handoffs + 9 dependencies | 30 commitments + 12 tasks | 4.8 ms | < 50 ms |
+| One day of a household with 3000 stored rows | — | 8.5 ms (digest of the whole state 8.9 ms) | < 50 ms |
+| Growth: 25 → 100 commitments (4× input) | dense | **×3.3** | not combinatorial |
+
+**A regression I introduced was found by measuring and fixed** (DEF-02): action availability dry-ran every flexible item's mutation and
+each foundation mutation recomputes the whole day's verdict, so a dense day cost **108 ms** and 4× input cost **×28.7**. Availability now
+reads which items the foundation's own verdict names (computed once) and still confirms each with the real dry-run: **11.3 ms, ×3.3**.
+A test now guards the growth ratio. No cache, optimizer shortcut or duplicated truth was added.
+
+## 20. Defects found and repaired (builder validation — not the independent audit)
+
+| ID | Defect | How found | Repair | Guard |
+|---|---|---|---|---|
+| DEF-01 | Capacity word contradicted the sentence: the foundation tiers a transition that fits with 15 min to spare as `overloaded`, so a tag read "More than fits" over "fits, with 15 min to spare" (scenario C vs D) | re-reading the UI against the scenarios | deterministic `category` from tier + physical facts; tier untouched | projection + UI tests |
+| DEF-02 | Cubic-cost action availability (108 ms dense day) | performance measurement | candidates from the foundation's verdict, dry-run to confirm | growth-ratio test |
+| DEF-03 | Fall-back day displayed an event across the repeated hour as "1:30–1:30 AM" although geometry was right | reading the DST scenario's output | frame finds the repeated hour; labels inside it carry the zone | hardening "U" tests |
+| DEF-04 | Headline repeated the conflict card's own sentence | reading render evidence | headline names the kind; card names the commitments | UI "never repeats" test |
+| DEF-05 | A task with **no place anywhere** sat under a "Tight" tag | reading render evidence | `PLACEMENT_FAILURE` counts as more than fits, at any tier | projection tests |
+| DEF-06 | "Not known yet" list was alphabetical | reading render evidence | day order, then travel-to, travel-after | UI test |
+| DEF-07 | Dense day rendered **eleven** identical "fits narrowly" cards ahead of the schedule | adding scenario Q | more than two tight windows become one grouped card; headline no longer echoes a card | UI tests, Q evidence |
+| DEF-08 | Screen-reader hints hard-coded in components, outside `copy.ts` | copy-verification scan | moved to `copy.ts` | scan |
+
+Test-authoring errors caught by running tests (wrong expected string, a fixture with a hidden 5-hour gap, an over-broad regex matching
+"log**ical**Day") were corrected in the tests; the product was right each time and each is recorded in the commit history, not as a defect.
+
+## 21. Owner decisions and CONSIDERED + DEFERRED (contract §78)
+
+### OD-01 — Unknown task duration is not representable (owner decision; not resolvable by the WHY-doctrine)
+
+`addTask` stamps 15 minutes when none is given; the form pre-fills 15; an interpretation with a null duration becomes a 15-minute task.
+A defaulted 15 is indistinguishable from an entered 15 (F03-FG-01). Calendar words every duration as an **estimate**, treats a recorded
+`0` as *no usable duration* (no fit claimed either way, never counted as zero time), and cannot detect a defaulted 15.
+Options (each needs a **new durable semantic**, which this build may not invent): **(A)** make task duration nullable (the cloud column
+`duration_minutes` is already nullable in `foundationSpecs`); **(B)** add a provenance / `durationSource` marker (`entered` | `defaulted`);
+**(C)** keep the default and label every duration "about" everywhere. The doctrine ranks *preserve truth* first, which favours A or B,
+but choosing between them changes canonical state and migration — an owner call.
+
+| Item | State | Why not built here |
+|---|---|---|
+| PLACE a task at a time (`updateTask` plan) | **PENDING-OWNER** | the domain allows it but no UI sets a task's time; adding one is a new interaction, not an inherited action. Calendar shows *where room exists*, never fabricates a time |
+| COMPLETE a task from Calendar | **PENDING-OWNER** | a mutation exists (`completeTask`, no reopen); completing work is an execution flow owned by Today/Life |
+| Task time-of-day editing (MGP-08) | **PENDING-INTEGRATION** | prerequisite for PLACE |
+| Timed-task vs event overlap as a conflict | **PENDING-INTEGRATION** | the foundation's tier does not classify it; reporting it would make the word contradict the tier |
+| Splittable-task chunk planning | **PENDING-INTEGRATION** | reported as *not evaluated*, never as "cannot fit" (§65 forbids a chunk solver) |
+| `PROTECTED_TIME_CONFLICT` | **ABSENT** | no typed protected-time fact exists (protect = flip to fixed) |
+| Month view | **DROPPED** | not inherited and not needed for "can my life fit" |
+| Filtering | **DROPPED** | not inherited; not introduced (§52) |
+| All-day events | **ABSENT in foundation** | events are two Instants; date-only exists only for tasks (F03-FG-09) |
+| Per-date recommendation actions | **PENDING-INTEGRATION** | foundation is today-only by design (F03-FG-08) |
+| Household capacity profile overrides | **PENDING-INTEGRATION** | stored but unread by Daily Load (F03-FG-02); reading it here would make a second threshold source |
+| External calendar providers / sync | **PERMANENT-DEFER (out of scope)** | no provider, credential, OAuth or polling exists anywhere in Calendar (validation scan) |
+| Planner (LLM) implementation | **PENDING-INTEGRATION** | contract documented in `HK_FEATURE_03_PLANNING_CONTRACT.md`; no code |
+| Gallery section for Calendar scenes | **DROPPED** | would touch the shared `app/gallery.tsx`; replaced by committed render evidence |
+| Meals and Needs Me items on the day | **DROPPED for now** | date-only sources outside events/tasks; Needs Me is excluded from capacity by the foundation |
+| Pixel screenshots | **EXTERNAL-CONSTRAINT** | see §18 |
+
+## 22. Integration candidates (contract §77)
+
+| Candidate | Feature 03 side | Expected other side | Common-fork assumption | No-direct-dependency proof | Future question |
+|---|---|---|---|---|---|
+| Calendar capacity → Today | `capacityState` (foundation tier + word) and conflicts, derived per day | Today renders the same states from `computeDailyLoad` | both read the same foundation classification; equal on every non-DST day (equivalence-tested) | no `features/today` import (validation scan) | one wording (§15); Today gains a "not known" state; DST projection fix (F03-FG-03) |
+| Shared capacity/conflict/unknown copy | `copy.ts` | Today's strings | wording lives feature-locally | no shared module created | reconcile into one product voice |
+| Talk It Out accepted commitments → Calendar | reads `events`/`tasks` from canonical state | Feature 02 writes accepted interpretations as rows | rows appear in canonical state | Calendar reads state only | do accepted rows carry duration/travel, or default (OD-01)? |
+| Talk It Out unresolved time-sensitive attention | none (Calendar does not read attention) | shared attention layer | — | no import | should an unplaced due-today item feed attention? |
+| Systems recurrence → Calendar | shows rule *metadata* on an existing concrete row; never evaluates a rule | Feature 04 produces occurrence rows or a projection | occurrence = a concrete event/task row (no occurrence collection exists) | no `structure.ts` occurrence calls (scan) | where do generated occurrences live, and do they carry a rule ref? |
+| External calendar providers | none | provider adapters | `externalReferences` exist as provenance | no provider code | mapping provider events → canonical events |
+| LLM planning | typed contract only | planner | previews run the real mutation | no AI code (scan) | who validates suggestions? (answer given: dry-run through `computePreview`) |
+| Store revision | reference-identity token (F03-FG-12) | a real revision on the store | — | Calendar-local | replace the token with the store's revision |
+
+## 23. Future planning contract / LLM readiness
+
+Defined in `docs/builds/HK_FEATURE_03_PLANNING_CONTRACT.md`: `CalendarPlanningInput`, `CalendarPlanningSuggestion`,
+`CalendarPlanningResult`, and the rules that keep the deterministic projection authoritative. **No planner code, prompt, model
+configuration, Gemini call or generic AI service exists** (validation scan). The *downstream half* of the flow — typed suggestion →
+review → legitimate mutation — is built and tested (`PreviewableIntent`, `computePreview`, `acceptIntent`).
+
+## 24. Missing global primitive register — additions found in C3–C8
+
+| # | Need | Where | Limitation | Temporary composition | Likely elsewhere | Type |
+|---|---|---|---|---|---|---|
+| MGP-09 | **Disclosure toggle** for evidence | conflict cards, rows | `WhyThis` is always visible | `ToggleLink` + `WhyDisclosure` (feature-local) | Today, Talk It Out | UI |
+| MGP-10 | **Grouped summary card** so dense days are not a card wall | narrow transitions | no grouping primitive | `MAX_INDIVIDUAL_NARROW_CARDS` + one grouped card | Today, Life | UI |
+| MGP-11 | **Repeated-hour clock label** | fall-back day | no shared time formatter knows the zone | `formatClock(..., { ambiguous })` in `format.ts` | Today, Systems | UI |
+| MGP-12 | **RecommendationBlock secondary label control** | capacity offer | "Show another option" label is fixed | primary + alternative wired to preview | Today | UI |
+| MGP-13 | **Reading order / heading contract** for a day | day view | no shared rule for heading count | one heading per view (tested) | Life | UI |
+
+---
+
+*Section 25 (exit gates, completion status, verdicts) is appended when the gates finish.*
