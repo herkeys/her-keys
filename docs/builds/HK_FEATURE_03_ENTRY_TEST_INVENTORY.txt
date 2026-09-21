@@ -1,0 +1,808 @@
+ActionStateBlock > declined and withdrawn are honest quiet states
+ActionStateBlock > failed renders as needing attention, structurally distinct from success
+ActionStateBlock > proposed is approval-required and offers yes/no; approved is only prepared
+ActionStateBlock > succeeded with outcome renders as settled, never as failed
+B4-BE02-OR-001 — claim payload closure > a Needs Me item with no category pulls no category in
+B4-BE02-OR-001 — claim payload closure > a One Move naming a target that is not in local state is refused, not skipped
+B4-BE02-OR-001 — claim payload closure > a completed One Move with no target is refused rather than downgraded
+B4-BE02-OR-001 — claim payload closure > a timed plan lands in plannedStartsAt and leaves plannedDate null
+B4-BE02-OR-001 — claim payload closure > a withheld One Move carries no target and pulls nothing into the closure
+B4-BE02-OR-001 — claim payload closure > canonical task state is preserved, including completion and plan
+B4-BE02-OR-001 — claim payload closure > no server-owned field is ever emitted
+B4-BE02-OR-001 — claim payload closure > only categories a carried target requires are sent — not all ten
+B4-BE02-OR-001 — claim payload closure > only the Needs Me items a One Move targets are carried, out of six
+B4-BE02-OR-001 — claim payload closure > only the child a carried target names is sent — not both children
+B4-BE02-OR-001 — claim payload closure > only the tasks a One Move targets are carried, out of ten
+B4-BE02-OR-001 — claim payload closure > the payload carries its explicit version and the true origin
+B4-BE02-OR-002 — legacy catalog One Move remediation > a DEMO catalog One Move is left alone and is never turned into evidence
+B4-BE02-OR-002 — legacy catalog One Move remediation > a REAL v1 household with One Move history really does decode to catalog historical state
+B4-BE02-OR-002 — legacy catalog One Move remediation > a completed catalog One Move becomes evidence with its status and metadata intact
+B4-BE02-OR-002 — legacy catalog One Move remediation > a migration that fails validation returns a failure rather than half-migrated data
+B4-BE02-OR-002 — legacy catalog One Move remediation > a selected catalog One Move keeps status selected, not rewritten to withheld
+B4-BE02-OR-002 — legacy catalog One Move remediation > buildClaimPayload REFUSES a residual catalog record instead of filtering it
+B4-BE02-OR-002 — legacy catalog One Move remediation > re-running the migration creates no duplicate evidence
+B4-BE02-OR-002 — legacy catalog One Move remediation > several legacy records produce one evidence entry each, in order
+B4-BE02-OR-002 — legacy catalog One Move remediation > task and needsMe One Moves stay claimable
+B4-BE02-OR-002 — legacy catalog One Move remediation > the decoded envelope is remediated and valid as a whole, or not valid at all
+B4-BE02-OR-002 — legacy catalog One Move remediation > the remediated record is gone from the claimable One Moves
+B4-FE01-001/-005 — stored provenance and durable confidence > a confidence exists exactly where a claim does: inference and external observation carry one, nothing else may
+B4-FE01-001/-005 — stored provenance and durable confidence > a demo household lets no truth stand: provenanceFor is the single dominance rule
+B4-FE01-001/-005 — stored provenance and durable confidence > a row with no confidence has nothing to promote — legacy-unknown can never acquire a level
+B4-FE01-001/-005 — stored provenance and durable confidence > one producer is not corroboration: rows from one email are one sighting; two different days are two
+B4-FE01-001/-005 — stored provenance and durable confidence > only an explicit confirmation reaches established, and a model cannot promote its own inference however often it repeats
+B4-FE01-001/-005 — stored provenance and durable confidence > persistence never promotes: a stored confidence reads back exactly, on every level
+B4-FE01-001/-005 — stored provenance and durable confidence > rows that were never derived from anything cannot name an artifact
+B4-FE01-001/-005 — stored provenance and durable confidence > the nine producers, and exactly which are user-stated
+B4-FE01-001/-005 — stored provenance and durable confidence > user-stated, inferred and external are three different things, and none of them is another
+B4-FE01-002 — source artifacts: evidence of arrival, never content > a spoken utterance is voice, and a connector-delivered artifact says which connector
+B4-FE01-002 — source artifacts: evidence of arrival, never content > an artifact carries no content field at all — a transcript or body cannot be stored, by schema
+B4-FE01-002 — source artifacts: evidence of arrival, never content > duplicate detection: the same digest is the same artifact, and state refuses two rows sharing one
+B4-FE01-002 — source artifacts: evidence of arrival, never content > every source kind the ambition needs is representable: voice, email, calendar, document, screenshot, notice, receipt, bill, message, connected object
+B4-FE01-002 — source artifacts: evidence of arrival, never content > lineage: one email yields several structured rows and every one names it — and a name that resolves to nothing is refused
+B4-FE01-002 — source artifacts: evidence of arrival, never content > retraction is the only edit an artifact takes, and it can be made once
+B4-FE01-002/-003 — from a source to a row, with lineage > ACCEPTANCE: the row keeps the inference producer at established confidence — never user-action — and names its source
+B4-FE01-002/-003 — from a source to a row, with lineage > a clarification is a durable pending question; her answer is a correction, and neither promotes anything
+B4-FE01-002/-003 — from a source to a row, with lineage > a reading needs a real artifact
+B4-FE01-002/-003 — from a source to a row, with lineage > an external observation accepted keeps ITS producer too — external is not inference is not user
+B4-FE01-002/-003 — from a source to a row, with lineage > forwarding the same document twice stores it once and says so
+B4-FE01-002/-003 — from a source to a row, with lineage > one email yields several structured readings, each naming the email, held outside canonical state
+B4-FE01-002/-003 — from a source to a row, with lineage > reject and supersede: the reading is kept, decided, and reprocessing chains back to what it replaced
+B4-FE01-002/-003 — from a source to a row, with lineage > retraction marks the source withdrawn once; the readings and the rows already derived keep their lineage
+B4-FE01-004 — external reference identity and feedback-loop prevention > THE LOOP: Her Keys writes an external object, the provider hands it back, and no duplicate is required
+B4-FE01-004 — external reference identity and feedback-loop prevention > THE TOKEN BOUNDARY: no credential can be stored — the shape has no field for one and refuses any that is added
+B4-FE01-004 — external reference identity and feedback-loop prevention > a returning object is recognised by IDENTITY, never by title or time
+B4-FE01-004 — external reference identity and feedback-loop prevention > a server-side connector has no device to mint a local id, so its rows use ext:<provider>:<hash> — a legal id
+B4-FE01-004 — external reference identity and feedback-loop prevention > origin is honest: a Her Keys write records when it was written; an external object was not written by us
+B4-FE01-004 — external reference identity and feedback-loop prevention > the tuple every integration needs: provider, account, object, version, origin, direction, authority, last observed
+B4-FE01-004 — external reference identity and feedback-loop prevention > two rows may never claim the same external identity — that is what makes the loop detectable
+B4-FE01-006 — behavioral history is recorded as it happens > One Move: selected, completed and cleared are all durable, and a cleared one outlives its removed row
+B4-FE01-006 — behavioral history is recorded as it happens > accepting a Daily Load move records the deferral it caused, beside the ledger row
+B4-FE01-006 — behavioral history is recorded as it happens > archive, event removal and Needs Me resolution each record the outcome they represent
+B4-FE01-006 — behavioral history is recorded as it happens > completing a task appends a fact; the mutable timestamp is no longer the only evidence
+B4-FE01-006 — behavioral history is recorded as it happens > history is append-only: recording never edits an earlier observation
+B4-FE01-006 — behavioral history is recorded as it happens > moving a task to a LATER day is a deferral; moving it earlier, or editing its title, is not
+B4-FE01-006 — behavioral history is recorded as it happens > the vocabulary is closed and checked: an outcome that means nothing for that kind is refused
+B4-FE01-007..012 — authorization, consequence, intent, decision > CONSEQUENCE: the five example actions are all distinguishable, and every category has a profile
+B4-FE01-007..012 — authorization, consequence, intent, decision > COVERAGE names the first reason an authority does not reach an intent
+B4-FE01-007..012 — authorization, consequence, intent, decision > SAFETY: an execution is authorized only by an approval that stands, or an execute-mode authority that covers it and is unspent
+B4-FE01-007..012 — authorization, consequence, intent, decision > a proposal records its category profile and the autonomy allowed at that moment
+B4-FE01-007..012 — authorization, consequence, intent, decision > a standing authority approves as Her Keys acting on her earlier grant, never as her deciding now
+B4-FE01-007..012 — authorization, consequence, intent, decision > an AMOUNT LIMIT is exact and per currency
+B4-FE01-007..012 — authorization, consequence, intent, decision > an intent may be MORE serious than its category, never less
+B4-FE01-007..012 — authorization, consequence, intent, decision > one answer per intent; withdrawal is new evidence, not an edit
+B4-FE01-007..012 — authorization, consequence, intent, decision > only she can grant authority, only outside a demo, and a standing financial permission must state how much
+B4-FE01-007..012 — authorization, consequence, intent, decision > permittedMode is the most autonomy any covering authority allows, and suggest when none does
+B4-FE01-007..012 — authorization, consequence, intent, decision > the ActionRecord ledger is untouched: no new state can be smuggled into it, and its actor is still only the user
+B4-FE01-007..012 — authorization, consequence, intent, decision > the lifecycle is DERIVED — proposed, approved, attempted, succeeded — from append-only rows
+B4-FE01-013/-014 — people and the responsibility lifecycle > DID IT TAKE THE LOAD OFF? It stops needing her only when she says so — and comes back if unanswered or refused
+B4-FE01-013/-014 — people and the responsibility lifecycle > a delegate must exist, and the thing delegated must exist
+B4-FE01-013/-014 — people and the responsibility lifecycle > a missed acknowledgement is a durable observation exactly once — never invented, never repeated
+B4-FE01-013/-014 — people and the responsibility lifecycle > a person is not a household member: they have a name, a relationship and a channel — no account, no contact details
+B4-FE01-013/-014 — people and the responsibility lifecycle > one item never has two owners; reassignment closes the earlier handoff and chains to it
+B4-FE01-013/-014 — people and the responsibility lifecycle > the whole lifecycle, each step recorded: requested, acknowledged, accepted, completed
+B4-FE01-015/-016 — one facet contract across kinds > NULL MEANS NOT KNOWN: a freshly captured task invents no estimate, window, energy or consequence
+B4-FE01-015/-016 — one facet contract across kinds > a scheduling window must open before it closes, and a chunk cannot outlast the task
+B4-FE01-015/-016 — one facet contract across kinds > every kind answers through the same shape, and says which questions it can answer at all
+B4-FE01-017/-018/-021/-022/-016 — dependencies, recurrence, goals, steps, capacity > ONE dependency convention across domains: requires, part_of, alternative_to — and a cycle is refused
+B4-FE01-017/-018/-021/-022/-016 — dependencies, recurrence, goals, steps, capacity > a routine with a rule: its next occurrence skips a recorded exception, and the exception is history, not an edit
+B4-FE01-017/-018/-021/-022/-016 — dependencies, recurrence, goals, steps, capacity > decomposition: a goal, its steps (part_of), and a low-energy alternative; progress is DERIVED
+B4-FE01-017/-018/-021/-022/-016 — dependencies, recurrence, goals, steps, capacity > recurrence is ONE convention: daily, weekly, monthly (clamped), yearly — and derived, never stored
+B4-FE01-017/-018/-021/-022/-016 — dependencies, recurrence, goals, steps, capacity > system steps keep their order, and capacity overrides fall back to the shipped defaults
+B4-FE01-020 — money is exact > 0.1 + 0.2 is exactly 0.30 — because nothing here is ever a fraction
+B4-FE01-020 — money is exact > currencies and directions are never mixed or coerced; limits are per currency
+B4-FE01-020 — money is exact > parsing works on the digits, never a float, and refuses what it would have to round
+B4-FE01-020 — money is exact > the stored shape has no floating-point money anywhere: a fractional or negative amount is invalid state
+B4-FE01-023/-024 — patterns stand on observations; confidence moves only through the boundary > PERSISTENCE NEVER PROMOTES: a stored pattern reads back at exactly its level, on both sides of a round trip
+B4-FE01-023/-024 — patterns stand on observations; confidence moves only through the boundary > a pattern is an inference at "possible", standing on the observations it names, and never a stored fact
+B4-FE01-023/-024 — patterns stand on observations; confidence moves only through the boundary > a pattern needs real evidence: an unknown observation creates nothing
+B4-FE01-023/-024 — patterns stand on observations; confidence moves only through the boundary > confidence rises with INDEPENDENT evidence only: three separate days reach likely; repeats of one day do not
+B4-FE01-023/-024 — patterns stand on observations; confidence moves only through the boundary > only she can establish it, and doing so confirms it; a confirmed pattern cannot be forged
+B4-FE01-027 — the typed reference convention > a reference is a KIND and an id — never a bare id whose meaning depends on a second field
+B4-FE01-027 — the typed reference convention > one registry names every referenceable kind, its collection and its cloud column
+B4-FE01-027 — the typed reference convention > resolution is by kind: the same id under two kinds is two different things
+B4-FOUNDATION-BUILDOUT-01 register reconciliation > each FE row carries the audit capability it claims
+B4-FOUNDATION-BUILDOUT-01 register reconciliation > every FE row records all thirteen required fields
+B4-FOUNDATION-BUILDOUT-01 register reconciliation > every audit expansion row maps to exactly one FE row, and no FE row maps to anything else
+B4-FOUNDATION-BUILDOUT-01 register reconciliation > every classified row cites the evidence that closed it
+B4-FOUNDATION-BUILDOUT-01 register reconciliation > every governance ID referenced in the register is defined in the governance table
+B4-FOUNDATION-BUILDOUT-01 register reconciliation > every row that is not still open carries exactly one of the three final classifications
+B4-FOUNDATION-BUILDOUT-01 register reconciliation > row status uses only the defined progress states
+B4-FOUNDATION-BUILDOUT-01 register reconciliation > the audit matrix has 39 rows and exactly 27 are FOUNDATION EXPANSION REQUIRED
+B4-FOUNDATION-BUILDOUT-01 register reconciliation > the audit's POST-B4-FOUNDATION-BUILDOUT DELTA states before and after counts equal to the ones derived from the matrix and the register
+B4-FOUNDATION-BUILDOUT-01 register reconciliation > the ledger never uses a row-state word outside the three final classifications
+B4-FOUNDATION-BUILDOUT-01 register reconciliation > the ledger's own outcome table equals the counts derived from the register, and success means ACCEPTED + EXTENSION = 27 with STOPPED = 0
+B4-FOUNDATION-BUILDOUT-01 register reconciliation > the register has exactly 27 rows, numbered FE-01..FE-27 with no gap
+B4-INGESTION-LOCK — conversation / state-mutation boundary > a matched investigation is structured-discovery and stores only the structure
+B4-INGESTION-LOCK — conversation / state-mutation boundary > an unmatched turn with nothing stored is conversation-only and writes nothing
+B4-INGESTION-LOCK — conversation / state-mutation boundary > leaving the topic clears the stored record rather than reading as idle talk
+B4-INGESTION-LOCK — conversation / state-mutation boundary > re-submitting the same answers is conversation-only, not a rewrite
+B4-INGESTION-LOCK — information semantics > inference and pattern may never mutate durable state on their own
+B4-INGESTION-LOCK — information semantics > recommendations and inferences require approval; decisions do not
+B4-INGESTION-LOCK — information semantics > the operating profile is an inference and the action ledger is a decision
+B4-INGESTION-LOCK — reasoning primitives > a user-stated claim promotes sooner than an inference, and neither falls
+B4-INGESTION-LOCK — reasoning primitives > an explicit legacy-unknown is stored, reported as unknown, and is never treated as something she told us
+B4-INGESTION-LOCK — reasoning primitives > an onboarding selection lands in the structured field the profile reads
+B4-INGESTION-LOCK — reasoning primitives > an unknown confidence level does not silently rank as established
+B4-INGESTION-LOCK — reasoning primitives > confidence ordering is the product vocabulary and nothing else
+B4-INGESTION-LOCK — reasoning primitives > confidence survives a persistence round trip unchanged
+B4-INGESTION-LOCK — reasoning primitives > demo-origin data is never syncable and real data is
+B4-INGESTION-LOCK — reasoning primitives > every producer in the product stores its own provenance
+B4-INGESTION-LOCK — reasoning primitives > persistence never promotes an inference to established
+B4-INGESTION-LOCK — reasoning primitives > provenance survives a persistence round trip
+B4-INGESTION-LOCK — reasoning primitives > stated and inferred provenance stay distinguishable
+B4-INGESTION-LOCK — reasoning primitives > there is no fallback: a row that stores no provenance is not valid state, so nothing can be silently attributed
+B4-INGESTION-LOCK — scope and subject > a child-scoped event names a child, and the subject survives a round trip
+B4-INGESTION-LOCK — scope and subject > a child-scoped record naming nobody is rejected by local integrity
+Build 3 audit — "I did it" does the item (B3-AUD-011) > "I did it" twice, or with no move selected, changes nothing
+Build 3 audit — "I did it" does the item (B3-AUD-011) > completing a Needs Me-based move resolves the item
+Build 3 audit — "I did it" does the item (B3-AUD-011) > completing a task-based move completes the task, so it is not reported overdue tomorrow
+Build 3 audit — "I did it" does the item (B3-AUD-011) > the demo catalog move is unchanged: completing it touches no task
+Build 3 audit — One Move honors the whole verdict (B3-AUD-008) > a double booking: a move that adds work is withheld
+Build 3 audit — One Move honors the whole verdict (B3-AUD-008) > a travel-aware conflict: a move that adds work is withheld
+Build 3 audit — One Move honors the whole verdict (B3-AUD-008) > capacity pressure: a move that adds work is withheld
+Build 3 audit — One Move without a restart (B3-AUD-020) > a change that alters nothing is still not written
+Build 3 audit — One Move without a restart (B3-AUD-020) > a real household's first capture gets today's One Move in the same saved change
+Build 3 audit — One Move without a restart (B3-AUD-020) > an existing decision is never revisited by later changes
+Build 3 audit — Tomorrow Preview counts only tomorrow (B3-AUD-010) > a double booking tomorrow that involves a flexible event is named, and nothing is written
+Build 3 audit — Tomorrow Preview counts only tomorrow (B3-AUD-010) > overdue items and today’s open items are not "due tomorrow"
+Build 3 audit — Undo is safe and honest (B3-AUD-009) > a completed or removed item is left alone
+Build 3 audit — Undo is safe and honest (B3-AUD-009) > a move from an earlier day is history, not something Undo can reach
+Build 3 audit — Undo is safe and honest (B3-AUD-009) > a move she has since re-planned is not undone over her newer choice
+Build 3 audit — Undo is safe and honest (B3-AUD-009) > an event she has since protected (now fixed) or rescheduled is never moved back by Undo
+Build 3 audit — Undo is safe and honest (B3-AUD-009) > the undo survives a relaunch: the item stays back and Today still reads "kept"
+Build 3 audit — Undo is safe and honest (B3-AUD-009) > undoing an event move puts the event back at its original time
+Build 3 audit — Undo is safe and honest (B3-AUD-009) > undoing today’s task move puts it back, records the decision to keep the plan, and Today stops saying "moved"
+Build 3 audit — a done move stays done (B3-AUD-003) > a completed move is never replaced, even if its task is removed later
+Build 3 audit — a done move stays done (B3-AUD-003) > an unfinished move whose task she removed is still replaced, as designed
+Build 3 audit — a done move stays done (B3-AUD-003) > finishing the offered task from her list counts as doing the move — no second move that day
+Build 3 audit — a done move stays done (B3-AUD-003) > finishing the task from her list afterwards keeps the "done" card, across a relaunch, with no new move
+Build 3 audit — a done move stays done (B3-AUD-003) > resolving the offered Needs Me item from the inbox counts as doing the move
+Build 3 audit — a done move stays done (B3-AUD-003) > the next morning decides afresh and never re-offers what was done
+Build 3 audit — an edit changes only what she edited (B3-AUD-019) > a completed task cannot be archived into a state the store would refuse
+Build 3 audit — an edit changes only what she edited (B3-AUD-019) > an explicit null still clears a field
+Build 3 audit — an edit changes only what she edited (B3-AUD-019) > editing a task or event keeps its visibility scope, status and history
+Build 3 audit — an edit changes only what she edited (B3-AUD-019) > the editors send scope only when creating
+Build 3 audit — authentic v1 data migrates without loss > accepted history keeps its meaning after the upgrade: the approved move and completed One Move still read as done
+Build 3 audit — authentic v1 data migrates without loss > backfills are conservative and never invent a fact: events fixed, tasks open, timestamps unknown, plans kept
+Build 3 audit — authentic v1 data migrates without loss > customized categories keep id, role, order and archive status across the migration
+Build 3 audit — authentic v1 data migrates without loss > every envelope decodes as migrated state that keeps every section v2 did not change
+Build 3 audit — authentic v1 data migrates without loss > migrating is not repeated: the migrated state re-encodes as the current version and reads back identical, unmigrated
+Build 3 audit — authentic v1 data migrates without loss > the fixture set really is Build 2.5 schema v1 output, and the frozen v1 validator still accepts all of it
+Build 3 audit — capacity counts all of today’s work (B3-AUD-007) > drop and shorten only ever touch the named flexible task, once per day, and only while the verdict is showing
+Build 3 audit — capacity counts all of today’s work (B3-AUD-007) > flexible events use up the day too, and time shared by two events is counted once
+Build 3 audit — capacity counts all of today’s work (B3-AUD-007) > protecting the named task does not make the overload disappear
+Build 3 audit — capacity counts all of today’s work (B3-AUD-007) > twenty hours of due work on a nearly empty calendar is not "room between them"
+Build 3 audit — capacity counts all of today’s work (B3-AUD-007) > work due today that cannot fit is flagged, with nothing offered to drop
+Build 3 audit — capture limits match what can be stored (B3-AUD-018) > the editors and quick capture cap every text field at the stored limit, and refuse out-of-range minutes
+Build 3 audit — capture limits match what can be stored (B3-AUD-018) > the limits the screens use are the ones the schema enforces
+Build 3 audit — every open task is reachable (B3-AUD-004) > archiving a category moves its open tasks to "Other open tasks" instead of hiding them
+Build 3 audit — every open task is reachable (B3-AUD-004) > each open task appears in exactly one list; closed tasks appear in none
+Build 3 audit — every open task is reachable (B3-AUD-004) > every Life screen with a task list is wired to its role, and the hub links to the rest
+Build 3 audit — every open task is reachable (B3-AUD-004) > order and labels: what wants her first, then what’s coming, then what has no date
+Build 3 audit — every open task is reachable (B3-AUD-004) > the "on today" standings are exactly the tasks Today’s projection includes
+Build 3 audit — every open task is reachable (B3-AUD-004) > the undated default and a far-off due date are listed, not lost
+Build 3 audit — hostile v1 input fails closed, never into a false fact > a mislabeled version is not reinterpreted: v1 data claiming a later version is invalid, and a newer version is left alone
+Build 3 audit — hostile v1 input fails closed, never into a false fact > broken relationships are integrity violations, and a household id is never rewritten
+Build 3 audit — hostile v1 input fails closed, never into a false fact > partial, unknown, mixed-version and malformed v1 records are refused instead of guessed
+Build 3 audit — hostile v1 input fails closed, never into a false fact > the largest stored write sequence still migrates
+Build 3 audit — migrated data through a real launch > demo/real isolation survives the migration in both directions
+Build 3 audit — migrated data through a real launch > loading migrated state writes nothing; the first change writes the current version (v4) and continues the sequence
+Build 3 audit — migrated data through a real launch > migrated history across a day boundary: yesterday stays done and nothing is re-offered
+Build 3 audit — one timing decision per day, events included (B3-AUD-014) > after a task move, an event move is refused the same day
+Build 3 audit — one timing decision per day, events included (B3-AUD-014) > an event move is the day’s decision: Today shows it, and nothing else is decided on top of it
+Build 3 audit — one timing decision per day, events included (B3-AUD-014) > keeping the plan is the day’s decision too: nothing is recorded or moved on top of it, though the day stays tight
+Build 3 audit — overlapping saves (B3-AUD-001) > a failed commit does not decide the outcome of the one queued behind it
+Build 3 audit — overlapping saves (B3-AUD-001) > each commit sees what the previous one left, so identical commits apply one after another
+Build 3 audit — overlapping saves (B3-AUD-001) > two different commits in flight both apply, each with its own outcome, and both survive a relaunch
+Build 3 audit — overlaps involving a flexible event (B3-AUD-006) > a double-booked flexible errand is flagged, never "room between them"
+Build 3 audit — overlaps involving a flexible event (B3-AUD-006) > keeping the plan is recorded; protecting the errand turns the verdict into a notice
+Build 3 audit — overlaps involving a flexible event (B3-AUD-006) > only the flexible side can be moved; the fixed pickup never moves
+Build 3 audit — overlaps involving a flexible event (B3-AUD-006) > two flexible events overlapping are a notice: Her Keys does not pick one
+Build 3 audit — promoting a Needs Me item never loses it (B3-AUD-002) > a failed promotion changes nothing: the item stays open and no task appears
+Build 3 audit — promoting a Needs Me item never loses it (B3-AUD-002) > backing out of the editor leaves the item open and in the inbox, across a relaunch
+Build 3 audit — promoting a Needs Me item never loses it (B3-AUD-002) > promotion adds the task and resolves the item in one change
+Build 3 audit — promoting a Needs Me item never loses it (B3-AUD-002) > the inbox screen only navigates on promote; the editor resolves the item when the task is saved
+Build 3 audit — recommendations never apply to stale state > a recommendation only touches the item it names — nothing else in the household changes
+Build 3 audit — recommendations never apply to stale state > a task completed, removed or protected after the card rendered cannot be moved
+Build 3 audit — recommendations never apply to stale state > an event that stopped bounding the named window, or became fixed, cannot be moved
+Build 3 audit — recommendations never apply to stale state > no Her Keys control moves, drops or shortens a fixed commitment
+Build 3 audit — recommendations never apply to stale state > renaming the category after the card rendered changes nothing about what is offered
+Build 3 audit — refused changes are not storage failures (B3-AUD-018) > a capture beyond the stored limits is refused before storage, without a false "may not be saved" notice
+Build 3 audit — taps during a save (B3-AUD-017) > "I did it" pressed while a capture is saving is applied after it, not dropped
+Build 3 audit — taps during a save (B3-AUD-017) > a reset requested while a commit is saving runs after it, and the commit cannot resurrect cleared state
+Build 3 audit — taps during a save (B3-AUD-017) > order is kept: a tap queued behind a commit cannot be overwritten by that commit
+Build 3 audit — the same day always reads the same way (B3-AUD-013) > entry order never changes the verdict, the transition it names, or what is offered
+Build 3 audit — the same day always reads the same way (B3-AUD-013) > equally sized candidates are offered in the same order however the stored list happens to be arranged
+Build 3 audit — the same day always reads the same way (B3-AUD-013) > two commitments starting together are a double booking; moving the flexible one leaves the transition read the same way
+Build 3 audit — the travel-aware card explains itself honestly (B3-AUD-015, B3-AUD-016) > "Keep today as planned" is recorded for a travel-aware verdict even though the raw gap looks open
+Build 3 audit — the travel-aware card explains itself honestly (B3-AUD-015, B3-AUD-016) > the candidate numbers and reason use the travel-aware buffer, never a negative shortfall
+Build 3 audit — travel counts on every transition (B3-AUD-005) > a pickup with only 15 real minutes is flagged even when another gap is tighter on the raw calendar
+Build 3 audit — travel counts on every transition (B3-AUD-005) > a travel-aware conflict outranks a merely tight raw window elsewhere
+Build 3 audit — travel counts on every transition (B3-AUD-005) > no travel entered anywhere: nothing travel-aware is ever reported, however many gaps there are
+Build 3 audit — travel counts on every transition (B3-AUD-005) > the recommendation is for the window the verdict names, never the raw tightest one
+Button > disabled ghost stays transparent
+Button > disabled: real color pair, not opacity
+Button > renders label with button role and accessibility label
+Button > sizes keep the touch floor
+Button > variants resolve to token-derived treatments
+Capacity pressure > a fixed commitment consumes its own entered travel and preparation minutes from the window too
+Capacity pressure > a genuinely reasonable day reports no pressure
+Capacity pressure > due-today minutes count toward demand, but a due-today task is never named to drop or shorten
+Capacity pressure > flexible events outside the day window do not appear at all
+Capacity pressure > flexible workload exceeding what the day window has left is flagged, naming the largest task
+Capacity pressure > overdue minutes are excluded from demand — an overdue task never worsens the capacity verdict
+Card > tones map to semantic families; raised adds elevation
+ChipToggle > selected state derives from action tokens and exposes selected state
+ChipToggle > unselected is a quiet surface
+ClarificationPrompt > states Her Keys’ reading as a claim with confirm + correct exits
+ConfidenceBadge > no percentages, no invented tiers in the label
+ConfidenceBadge > the only levels are the frozen vocabulary possible/likely/established
+ConfidenceBadge > uncertain claims read as inference; established reads as confirmation
+Control-identifying boundaries (WCAG 1.4.11, 3:1) > control border against both adjacent surfaces
+DROP / SHORTEN / keep — capacity pressure > DROP archives exactly the task the verdict named, and nothing else
+DROP / SHORTEN / keep — capacity pressure > DROP refuses a task the current verdict does not name
+DROP / SHORTEN / keep — capacity pressure > SHORTEN reduces duration by exactly the reported shortfall, floored at 15 minutes, and no fabricated numbers
+DROP / SHORTEN / keep — capacity pressure > a genuinely reasonable day has no capacity verdict to approve or decline
+DROP / SHORTEN / keep — capacity pressure > one decision per day across DROP, SHORTEN and keep — approving after declining changes nothing further
+DROP / SHORTEN / keep — capacity pressure > rejection (keep the plan) changes no facts, only records the decision
+Daily Load decisions > after a relaunch the task is still moved and Daily Load is recomputed from it
+Daily Load decisions > an overdue flexible task in the tight window is never recommended or moved
+Daily Load decisions > approving "Move it to tomorrow" plans the task for tomorrow and records a typed, approved action
+Daily Load decisions > keeping the plan records her decision and changes no facts
+Daily Load decisions > nothing about the analysis is stored: a changed fact changes the recomputed day
+Daily Load decisions > one decision per day, and only for a task that is still a recommendation
+Daily Load decisions > the next day starts without a decision
+Daily Load on the seeded day > approving the first recommendation leaves the day balanced
+Daily Load on the seeded day > explains the shortfall against a default, not something it claims to know about her
+Daily Load on the seeded day > finds the pickup -> soccer window and offers both flexible tasks, largest first
+Daily Load recommendations > does not offer a zero-minute task as a way to recover time
+Daily Load recommendations > flags a move that would still leave the window short
+Daily Load recommendations > never recommends moving a task that is due today, but still counts its time
+Daily Load recommendations > the day state does not claim room after a move that left the day overloaded
+Daily Load windows > a fixed task scheduled inside a window still uses up its time
+Daily Load windows > a gap is only measured once every earlier commitment has finished
+Daily Load windows > events nested inside a longer commitment do not open a gap of their own
+Day rollover > a new day keeps yesterday as history and decides today afresh
+Day rollover > midnight passing while the app stays open is picked up
+Day rollover > yesterday's unfinished One Move doesn't become today's — today gets its own decision
+Demo reset > a storage removal failure leaves current memory in place and is reported without rejecting
+Demo reset > reset re-anchors the demo to the current day
+Demo reset > restores the demo household for today with onboarding back at the start, the same way every time
+Design independence of stored state > no stored field describes presentation
+Design independence of stored state > no stored value is a color, a route, a visual token or display copy
+Design independence of stored state > stored statuses and kinds are semantic values
+Direct overlap > a flexible event overlapping a fixed one is an overlap, and only the flexible side is movable
+Direct overlap > back-to-back (touching, not overlapping) commitments are not flagged
+Direct overlap > deterministic order: earliest start first, then id
+Direct overlap > two fixed commitments that intersect are flagged
+Direct overlap > two fixed, or two flexible, overlapping commitments are a notice with nothing to move
+Divider > renders a hairline rule
+Entitlement state > a fake or unrelated entitlement never resolves to plus (M1)
+Entitlement state > an unresolvable check (RevenueCat unavailable, offline, unconfigured) is unknown, never a false free/plus claim
+Entitlement state > her_keys_plus active resolves to plus
+FE-01 — stored provenance: "where did this come from, and may you trust it?" > a trust decision reads what the row SAYS about itself, not what kind of row it is
+FE-02 — an autonomous action the product will one day take is REPRESENTABLE — and is not possible to perform > book the dentist: authority, proposal, approval, attempt, result and what happened after — all recorded, nothing executed
+FE-03 — a commitment answers the same questions whatever it is > a school form, a field trip, a meal to prepare and a weekly routine are read through ONE shape
+FE-04 — voice-first Talk It Out stores WHAT WAS SAID ABOUT, never her words > a spoken note is an artifact with a digest and an opaque reference; the readings are structured; no transcript exists anywhere
+FE-05 — a life inbox: many sources, one household, nothing silently merged > an email, a screenshot, a school notice and a bill each arrive as an artifact; a repeat is recognised; one email yields several readings
+FE-06 — a full daily briefing is one function over shared primitives > what matters, what changed, what is at risk, what needs her, what was delegated, what was handled, what needs approval
+FE-07 — capacity is her day, stated once, overriding only what she overrode > a shorter day and a bigger buffer are read by anything that needs them, and never invented
+FE-08 — adaptive scheduling has everything it needs as typed, queryable facts > a window, chunking, energy, a preferred time, a prerequisite and her capacity are all readable without a parser
+FE-09 — One Move can name more than a task or a Needs Me item > an event, a routine and a delegated responsibility are storable targets, each checked against its own collection
+FE-10 — AI decomposition: a goal becomes steps, each saying who proposed it > "plan the school trip" splits into part_of steps, with a low-energy alternative; progress is derived, never stored
+FE-11 — delegation: to a person, or to one of her children > a task is handed to Grandma with a window to answer, another to a child; both are owner-private state
+FE-12 — closed-loop responsibility: it stops needing her only when she says so > a refusal returns it to her; silence is noticed exactly once; a stated hand-over ends the need
+FE-13 — proactive automation: what Her Keys WOULD do is recorded; nothing is done > proposals carry a permitted mode derived from her authority; no code in the domain can reach the network or a provider
+FE-14 — autonomy: four modes, standing or one-time, revocable, and never inferred > the most autonomy any covering authority allows is what is permitted; revoking takes it away at once
+FE-15 — a consequence model that tells a reminder from a payment > a $35 payment through a bank is a critical, irreversible, monetary intent — representable without a new table
+FE-16 — observe the outcome: what happened after, over time, without editing what came before > a first attempt fails transiently, a retry succeeds, then delivery, acknowledgement and completion are each recorded
+FE-17 — smart notifications are DERIVED intents to get her attention, and deliver nothing > attention items are typed and reasoned; no delivery channel, token or schedule exists in stored state
+FE-18 — cross-domain reasoning: one question, every domain, per-fact provenance > "what else does this touch?" is answered from typed relations across tasks, events, goals, people, artifacts and evidence
+FE-19 — explainability: one contract answers "why?" for a pattern, a One Move and a proposal > an explanation is a code and a reference to the thing that supports it — structured evidence, never a chain of thought
+FE-20 — calendar OS: external calendars are referenced by identity, not copied > two providers, linked to local events; a changed version is recognised as the same object and flagged for attention
+FE-21 — external identity: (provider, account, object) is the key, and a connector can mint ids no device chose > two references cannot claim one identity; a server-originated local id fits the id pattern
+FE-22 — the integration feedback loop: what Her Keys wrote comes back as itself, not as something new > a calendar event Her Keys created externally is recognised on the echo — even renamed — and a stranger is still new
+FE-23 — co-parent logistics: a co-parent is a person she works with, never an account > exchange days, pickups and messages live in her coparent-shared scope, owner-only, addressed to a person with no access
+FE-24 — Money OS starts from exact amounts on the things that carry them > bills, a repair, a school fee and a refund add up per currency and direction — never floating point, never mixed
+FE-25 — a household system is an engine: steps, a schedule, an autonomy setting and an effort > "Sunday reset" has ordered steps, a weekly rule that honours a skipped week, and says how much Her Keys may do
+FE-26 — pattern intelligence: what she does, noticed, kept at the confidence it earned > a pattern stands on independent days; only she can establish it; it reads back at exactly its level
+FE-27 — shared household participation is REPRESENTED and refused: everything stays hers > every foundation row is owner-private by schema; a household-visible scope is not accepted for any of them
+FE-27 — shared household participation is REPRESENTED and refused: everything stays hers > no JSON bag anywhere: every foundation field is a typed scalar, a typed reference or a typed structure
+Feature access > Build 2.5 does not lock the whole Her Keys+ package sight unseen — only a small, explicit manifest
+Feature access > a free feature is allowed independent of entitlement, including when entitlement is unknown (M6)
+Feature access > a plus feature requires plus specifically; unknown reports why rather than claiming unsubscribed
+Feature access > the feature-access layer does not import RevenueCat directly
+Hostile / negative controls > M3: subscription truth is not persisted into AppStateV1
+Hostile / negative controls > M4: no production price is hard-coded anywhere under app/ or src/monetization
+Hostile / negative controls > M6: RevenueCat being unavailable cannot lock existing free Today
+Hostile / negative controls > M7: no RevenueCat secret key pattern (sk_...) appears in client source
+Hostile category, history and privacy behavior > corrupted Talk It Out ids are refused and repeated Start Over stays idempotent
+Hostile category, history and privacy behavior > later fact changes never rewrite the historical Daily Load reason
+Hostile category, history and privacy behavior > prototype-looking and very long unmatched Talk It Out input never enters persisted state
+Hostile category, history and privacy behavior > rename, duplicate display name, archive, restore and reorder survive one persisted state
+Hostile hydration and mode isolation > a future-version launch in empty mode exposes no household facts and writes the primary key zero times
+Hostile hydration and mode isolation > concurrent and sequential hydrate calls share one delayed read and create no write
+Hostile hydration and mode isolation > demo to empty to demo never carries the opposite origin across the boundary
+Hostile logical-day behavior > 23:59, 00:00 and 00:01 switch logical authority exactly at local midnight
+Hostile logical-day behavior > foregrounding after several days keeps history and initializes only the current day
+Hostile logical-day behavior > overdue facts stay on their original date and cannot be approved for an automatic move
+Hostile persistence sequencing > Daily Load and One Move publish before native persistence settles, making the durability window explicit
+Hostile persistence sequencing > a completely failed cycle is followed by a successful latest-state catch-up
+Hostile persistence sequencing > state can change while an old snapshot writes, but only the newest snapshot becomes canonical
+Household categories > Daily Load works the same when commitments belong to custom categories
+Household categories > a custom category with a similar name does not become the system category
+Household categories > a dangling category reference fails validation, in memory and when loaded
+Household categories > a household can add its own category and attach commitments to it without a schema change
+Household categories > a reorder that does not list every category exactly once changes nothing
+Household categories > an archived category stays a valid reference, leaves Life, and can be restored
+Household categories > category order survives being stored and loaded
+Household categories > category structure is checked: household, unique roles and orders, known roles
+Household categories > no behavior changes when every category is renamed
+Household categories > no source file compares a category or any name against a display string
+Household categories > renaming a category keeps its references, its filtering and its system role
+Household categories > the default household starts with all eight starter categories, in order, with their roles
+Hydration lifecycle > a burst of actions costs at most two writes, and the newest state is what lands
+Hydration lifecycle > a commit that exhausts its retry is not shown as completed
+Hydration lifecycle > a first launch seeds the demo household for today, onboarding not started, in exactly one write
+Hydration lifecycle > an action that changes nothing is not written
+Hydration lifecycle > commit saves a change before showing it
+Hydration lifecycle > hydrating again — as a remount or StrictMode double effect would — loads once and writes once
+Hydration lifecycle > moves from unhydrated through hydrating to ready, with no household state until ready
+Hydration lifecycle > relaunching with valid state writes nothing, and numbering continues from the stored sequence
+InsightBlock (HER KEYS INSIGHT) > dismiss is an explicit affordance, present only when asked for
+InsightBlock (HER KEYS INSIGHT) > names the register in text and uses the selective plum treatment
+InterpretationReview > renders exactly the typed fields passed in, with accept/reject/correct exits
+Load tiers > a day with no transitions between commitments is open
+Load tiers > boundaries: 45 open, 44 and 23 tight, 22 and below overloaded
+Load tiers > the load meter reads the tier instead of keeping its own thresholds
+Load tiers > the seeded demo day, with 35 minutes before soccer, is tight
+Load tiers > the tier comes from the Daily Load assessment of the tightest transition
+Logical day > calendar arithmetic handles month ends, leap days and birthdays
+Logical day > only real calendar dates are accepted
+Logical day > the platform timezone data reproduces the known answers
+Logical day > today is the calendar date in the household timezone, not in UTC
+Logical day > wall-clock times on daylight-saving change days resolve predictably
+MOVE — flexible event bounding the tightest transition > a flexible event bounding the tight window can be moved to the same time tomorrow, preserving duration
+MOVE — flexible event bounding the tightest transition > an event that is not part of today's tightest gap is not moved
+MOVE — flexible event bounding the tightest transition > negative control: a FIXED event is never moved, even if it bounds the tight window
+MOVE — flexible event bounding the tightest transition > shares the same one-decision-per-day gate as the existing task move
+Migration seam > a missing, throwing or invalid migration fails instead of guessing
+Migration seam > older data is carried forward one validated step at a time
+Migration seam > the current schema passes through untouched
+Migration seam > v1 data is carried all the way forward with conservative, honest backfills
+Needs Me inbox > a category, once assigned, must be a real reference — integrity is still enforced
+Needs Me inbox > can later receive a category and a due date without having required them at capture
+Needs Me inbox > classifying an unknown item changes nothing
+Needs Me inbox > persists across a relaunch
+Needs Me inbox > quick capture needs only a title — no category, no due date, no classification
+Needs Me inbox > resolve marks it done without deleting the record
+Needs Me inbox > resolving twice, or an unknown item, changes nothing further
+Negative controls > cross-household mutation is impossible: an action can only ever target ids already present in this single-household state
+Negative controls > no fabricated durations: SHORTEN and DROP reasons only ever carry numbers computed from real events and tasks
+Onboarding persistence > a partly finished onboarding resumes at the furthest step reached, with its choices
+Onboarding persistence > answers are settled once onboarding is complete
+Onboarding persistence > choices are stored by catalog id, toggle on and off, and unknown ids are ignored
+Onboarding persistence > finished onboarding survives a relaunch and opens the app instead of onboarding
+Onboarding persistence > going back never rewinds the furthest step, so there is nothing to write
+Onboarding persistence > onboarding cannot be completed without the choices the audit needs
+Onboarding persistence > resume falls back to the furthest step that can still be opened
+Onboarding resolution policy > Build 2.5 default is soft
+Onboarding resolution policy > a real purchase or restore always resolves onboarding
+Onboarding resolution policy > already entitled resolves regardless of policy — never a forced routing loop
+Onboarding resolution policy > continuing without Plus, or falling back with no Offering, resolves only under the soft policy (M2)
+Onboarding: Her Keys+ is the final step > completion only succeeds once the plus step is reachable, and records lastStep as plus
+Onboarding: Her Keys+ is the final step > force-stop and resume at the plus step returns to it, with earlier choices intact (M5)
+Onboarding: Her Keys+ is the final step > no paywall loop after completion: the plus step and every other onboarding screen close once for good
+Onboarding: Her Keys+ is the final step > reaching the plus step does not, by itself, open the app — only completion does
+Onboarding: Her Keys+ is the final step > the step order ends with plus, right after profile
+One Move > a decision whose move left the catalog is replaced by a fresh one
+One Move > a new day decides afresh, and a move already done is not offered again
+One Move > a real household with nothing entered yet is offered no One Move
+One Move > a tight day is offered its One Move, stored as that day's decision
+One Move > a withheld day stays withheld after she frees up time, across a relaunch
+One Move > boundary: 23 minutes of buffer still gets a One Move; 22 gets none
+One Move > completion survives a relaunch, and completing twice changes nothing
+One Move > nothing is decided before onboarding is finished
+One Move > the day's decision isn't swapped when the rest of the day changes
+One Move on real household data > One Move never fabricates a hidden task: it only ever points at an id that already existed before the decision
+One Move on real household data > a Needs Me item never claims a duration it does not have
+One Move on real household data > a new logical day makes its own fresh decision, independent of today's
+One Move on real household data > a small open task on today's radar is offered, using its own real duration as the estimate
+One Move on real household data > a task not due today and not scheduled today is not in today's pool
+One Move on real household data > on an overloaded day, a larger task or a Needs Me item (unknown size) is withheld — "no additional move today"
+One Move on real household data > on an overloaded day, a small (<=15 minute) real task is still offered — it does not add meaningful work
+One Move on real household data > persists across a relaunch
+One Move on real household data > the smallest eligible task is preferred over a larger one
+Operating Profile option identity > a historical display-label value still resolves to the same conclusion
+Operating Profile option identity > a stable option id drives the reasoning
+Operating Profile option identity > an unknown id or label falls back to the neutral question
+Operating Profile option identity > both forms agree for every struggle in the catalog
+Operating Profile option identity > rewording a label cannot change a stable-id conclusion
+Operating Profile option identity > the insight list is unchanged by the identity hardening
+Operating Profile option identity > the resolver accepts either form and refuses anything else
+Overdue reporting > overdue tasks are reported, sorted most-overdue first, and never treated as movable
+Overline > uppercases and uses the label rung color
+PROTECT > flips a flexible event to fixed
+PROTECT > flips a flexible task to fixed and records why
+PROTECT > is a no-op on something already fixed, and on an unknown id
+Paywall placements > placement ids are a fixed, typed set
+Projecting stored facts onto a day > a task is on a day when it is due or overdue, planned for it, or timed on it in local time
+Projecting stored facts onto a day > an event running past midnight is clipped to each day it touches
+ProvenanceLabel > covers exactly the stored producer vocabulary — no more, no fewer
+ProvenanceLabel > legacy-unknown is rendered honestly, never as user-stated
+ProvenanceLabel > user-stated and ai-inference producers read differently
+Real events > an event on the day it belongs to projects onto that logical date, timezone-correctly
+Real events > create: a real household starts with none and can add one
+Real events > edit: updating fields leaves the rest untouched and stamps updatedAt
+Real events > editing an unknown event changes nothing
+Real events > fixed vs flexible is recorded exactly as entered, never inferred
+Real events > persists across a relaunch
+Real events > remove: soft-deletes so history keeps a valid reference, and it drops out of the projected day
+Real events > removing twice, or an unknown event, changes nothing further
+Real events > travel and preparation minutes are absent unless she enters them
+Real tasks > a quick capture only needs a title and a category — everything else defaults sensibly
+Real tasks > archive: intentional removal keeps the record but drops it from the day
+Real tasks > complete: marks status and stamps completedAt, and disappears from the projected day
+Real tasks > completing twice, or an unknown task, changes nothing further
+Real tasks > due today: a task due today is due today, and counted as such by the projected day
+Real tasks > edit: fields can be filled in later without losing what is already there
+Real tasks > editing an unknown task changes nothing
+Real tasks > no due date: an undated task does not appear on any particular day unless scheduled
+Real tasks > overdue: a task due yesterday still shows up today, marked overdue, and is never offered as movable
+Real tasks > persists across a relaunch
+RecommendationBlock (HER KEYS RECOMMENDATION) > approval-required and suggested are structurally different
+RecommendationBlock (HER KEYS RECOMMENDATION) > the primary action label reflects whether approval is required
+Recovery from unusable stored state > a build for real users never shows a demo household left behind by a demo build
+Recovery from unusable stored state > a demo build never treats an empty-mode household as its demo fixture
+Recovery from unusable stored state > a newer schema version is left untouched: no primary writes for the whole session
+Recovery from unusable stored state > answers the app no longer offers are let go without discarding the household
+Recovery from unusable stored state > dangling category: recovers to a fresh household through the normal launch path
+Recovery from unusable stored state > impossible values: recovers to a fresh household through the normal launch path
+Recovery from unusable stored state > invalid ids: recovers to a fresh household through the normal launch path
+Recovery from unusable stored state > malformed JSON: recovers to a fresh household through the normal launch path
+Recovery from unusable stored state > missing schema version: recovers to a fresh household through the normal launch path
+Recovery from unusable stored state > partial snapshot: recovers to a fresh household through the normal launch path
+Recovery from unusable stored state > storage that cannot be read is never overwritten
+Repository > a diagnostic-cleanup failure cannot delete the canonical household
+Repository > a storage read failure is reported without discarding anything
+Repository > loads nothing, then exactly what was saved
+Repository > newer-version state is preserved and never replaced by an older copy
+Repository > reset clears household state and its diagnostic copy but keeps newer-version data
+Repository > unreadable state is kept aside for inspection in development, and not otherwise
+RevenueCat API key configuration > an unset key is reported as not configured, never guessed or defaulted
+RevenueCat API key configuration > keys are read from EXPO_PUBLIC_ env vars only, never a literal default
+Route access > a link cannot skip past an onboarding choice
+Route access > every root route is in the guard table, and the root layout wraps each one in its own guard
+Route access > internal tools open only in internal builds, independent of onboarding
+Route access > links resolve to the root screen whose guard applies
+Route access > recovery routes exactly like ready
+Route access > the root stack never names a guarded screen as its fixed initial route
+Route access > until state has loaded, nothing opens — protected or not
+Route access > with onboarding finished, every protected link opens and onboarding does not
+Route access > with onboarding unfinished, every protected link is refused and onboarding opens
+SCENARIO A — the school trip: a form, a fee, a child, and a work conflict > one email becomes an event and two obligations; the trip waits on both; the work meeting collides; the $35 is exact; everything traces to the email
+SCENARIO B — money pressure: a bill, a car repair and a school fee in one week > exact obligations, ranked by consequence and date, with no authority to pay any of them — Her Keys may only suggest
+SCENARIO C — practice, travel, dinner and the end of her workday > a transition that does not fit is derivable from typed travel, preparation and capacity — no scheduler guesses
+SCENARIO D — a delegated pickup that nobody acknowledged, on a day her work overlaps it > silence is noticed once, the pickup comes back to her, and the briefing puts it in front of her — with the meeting it collides with
+Schema v1 validation > a stored __proto__ key is rejected and never reaches Object.prototype
+Schema v1 validation > an action record must point at facts that exist
+Schema v1 validation > relationship problems are rejected
+Schema v1 validation > shape problems are rejected
+Schema v1 validation > the demo household and a real empty household are both valid
+Schema v1 validation > validation issues name paths and ids, never stored values
+Screen > non-scroll variant renders a plain view
+Screen > scrolls by default with safe-area edges and app background
+SegmentBar > renders exactly total segments, filling the first `filled`
+Shape restraint > card-scale radii stay at or below lg; only pills are infinite
+Sheet + ConfirmationSheet > ConfirmationSheet labels both paths explicitly
+Sheet + ConfirmationSheet > Sheet projects a modal with a scrim dismiss control
+StatusList > attention row pairs the dot with attention text — never color alone
+StatusList > pressable row derives its accessibility label from label and value
+Storage envelope > hostile stored text is classified rather than trusted
+Storage envelope > state from a newer schema version is recognized, not parsed with older rules
+Storage envelope > state round-trips through the versioned envelope unchanged
+Storage envelope > the encoder refuses to store a state it would not accept back
+System states > EmptyState explains and offers at most one action
+System states > ErrorState is an alert with a retry path
+System states > InlineNotice accepts only the fixed tone union and derives treatment from it
+System states > LoadingState announces itself as a progress bar
+System states > OfflineState says what still works
+Tag > every allowed tone maps to its semantic token family
+Tag > label renders as uppercase status text
+Talk It Out confidence > a conversation on its own never concludes more than a possible pattern
+Talk It Out conversation memory > each free-text reply is read as an answer to the question on the table
+Talk It Out conversation memory > input with no words to go on does not open a topic
+Talk It Out persistence > a rebuilt conversation shows her side as recalled answers, never as typed messages
+Talk It Out persistence > a record that no longer fits the script is refused rather than guessed at
+Talk It Out persistence > every conversation path replays to exactly the state the live conversation reached
+Talk It Out persistence > messages that change nothing — unmatched, or after the conclusion — store nothing new
+Talk It Out persistence > only the structure is stored — never her words, and never what Her Keys said
+Talk It Out persistence > the investigation resumes after a relaunch, and Start over clears it
+TextField > identifying border uses the control border token
+TextField > label drives accessibilityLabel; error is text plus border, not color alone
+TextField > uneditable is a declared state, not a visual shrug
+Tomorrow Preview > a genuinely light tomorrow says so plainly, not "reasonable" or manufactured concern
+Tomorrow Preview > an overlap tomorrow is surfaced, not silently absorbed into a commitment count
+Tomorrow Preview > counts fixed commitments already on tomorrow's calendar
+Tomorrow Preview > counts tasks due tomorrow
+Tomorrow Preview > does not read today's events as tomorrow's
+Tomorrow Preview > is exactly today plus one day, in the household timezone
+Tomorrow Preview > never mutates tomorrow's facts — a pure read
+Tomorrow Preview > surfaces a tight transition risk on tomorrow, naming the real commitments
+Transition conflict vs tight window (kept as separate detections) > a gap already overloaded on tasks alone does not get a redundant travel-aware duplicate
+Transition conflict vs tight window (kept as separate detections) > raw-gap overloaded is a transition_conflict with zero travel used
+Transition conflict vs tight window (kept as separate detections) > raw-gap tight (not yet overloaded) is a tight_window issue
+Transition conflict vs tight window (kept as separate detections) > the canonical scenario: an open raw gap becomes a genuine risk once entered travel time is counted
+Transition conflict vs tight window (kept as separate detections) > travel time never invented: entered travel that keeps the day open produces no issue
+Transition conflict vs tight window (kept as separate detections) > travel time never invented: no travel minutes entered anywhere means no travel-aware issue, however tight the raw gap is
+WCAG AA contrast matrix (canonical pairings) > action.primary on action.primarySoft = 4.85:1 (floor 3:1)
+WCAG AA contrast matrix (canonical pairings) > action.primary on background = 5.62:1 (floor 3:1)
+WCAG AA contrast matrix (canonical pairings) > action.primary on surface.primary = 6.12:1 (floor 3:1)
+WCAG AA contrast matrix (canonical pairings) > action.primary on surface.secondary = 5.15:1 (floor 3:1)
+WCAG AA contrast matrix (canonical pairings) > ai.action on ai.actionSoft = 4.85:1 (floor 3:1)
+WCAG AA contrast matrix (canonical pairings) > ai.action on background = 5.62:1 (floor 3:1)
+WCAG AA contrast matrix (canonical pairings) > ai.action on surface.primary = 6.12:1 (floor 3:1)
+WCAG AA contrast matrix (canonical pairings) > ai.confirmation on ai.confirmationSoft = 7.15:1 (floor 3:1)
+WCAG AA contrast matrix (canonical pairings) > ai.confirmation on background = 7.97:1 (floor 3:1)
+WCAG AA contrast matrix (canonical pairings) > ai.confirmation on surface.primary = 8.68:1 (floor 3:1)
+WCAG AA contrast matrix (canonical pairings) > ai.inference on ai.inferenceSoft = 6.73:1 (floor 3:1)
+WCAG AA contrast matrix (canonical pairings) > ai.inference on background = 7.13:1 (floor 3:1)
+WCAG AA contrast matrix (canonical pairings) > ai.inference on surface.primary = 7.77:1 (floor 3:1)
+WCAG AA contrast matrix (canonical pairings) > ai.insight on ai.insightSoft = 9.45:1 (floor 3:1)
+WCAG AA contrast matrix (canonical pairings) > ai.insight on background = 10.53:1 (floor 3:1)
+WCAG AA contrast matrix (canonical pairings) > ai.insight on surface.primary = 11.46:1 (floor 3:1)
+WCAG AA contrast matrix (canonical pairings) > attack list: muted on ivory, clay accent text, AI treatments, disabled
+WCAG AA contrast matrix (canonical pairings) > matrix covers every canonical text token
+WCAG AA contrast matrix (canonical pairings) > neutral.deep on ai.insightSoft = 9.45:1 (floor 3:1)
+WCAG AA contrast matrix (canonical pairings) > neutral.deep on background = 10.53:1 (floor 3:1)
+WCAG AA contrast matrix (canonical pairings) > neutral.deep on surface.primary = 11.46:1 (floor 3:1)
+WCAG AA contrast matrix (canonical pairings) > status.attention on background = 7.13:1 (floor 3:1)
+WCAG AA contrast matrix (canonical pairings) > status.attention on status.attentionSoft = 6.73:1 (floor 3:1)
+WCAG AA contrast matrix (canonical pairings) > status.attention on surface.primary = 7.77:1 (floor 3:1)
+WCAG AA contrast matrix (canonical pairings) > status.attention on surface.secondary = 6.54:1 (floor 3:1)
+WCAG AA contrast matrix (canonical pairings) > status.risk on background = 7.03:1 (floor 3:1)
+WCAG AA contrast matrix (canonical pairings) > status.risk on status.riskSoft = 6.18:1 (floor 3:1)
+WCAG AA contrast matrix (canonical pairings) > status.risk on surface.primary = 7.66:1 (floor 3:1)
+WCAG AA contrast matrix (canonical pairings) > status.risk on surface.secondary = 6.45:1 (floor 3:1)
+WCAG AA contrast matrix (canonical pairings) > status.success on background = 7.97:1 (floor 3:1)
+WCAG AA contrast matrix (canonical pairings) > status.success on status.successSoft = 7.15:1 (floor 3:1)
+WCAG AA contrast matrix (canonical pairings) > status.success on surface.primary = 8.68:1 (floor 3:1)
+WCAG AA contrast matrix (canonical pairings) > status.success on surface.secondary = 7.31:1 (floor 3:1)
+WCAG AA contrast matrix (canonical pairings) > status.waiting on background = 6.04:1 (floor 3:1)
+WCAG AA contrast matrix (canonical pairings) > status.waiting on status.waitingSoft = 5.54:1 (floor 3:1)
+WCAG AA contrast matrix (canonical pairings) > status.waiting on surface.primary = 6.58:1 (floor 3:1)
+WCAG AA contrast matrix (canonical pairings) > status.waiting on surface.secondary = 5.54:1 (floor 3:1)
+WCAG AA contrast matrix (canonical pairings) > text.inverse on action.primary = 5.82:1 (floor 3:1)
+WCAG AA contrast matrix (canonical pairings) > text.muted on action.primarySoft = 5.28:1 (floor 3:1)
+WCAG AA contrast matrix (canonical pairings) > text.muted on ai.actionSoft = 5.28:1 (floor 3:1)
+WCAG AA contrast matrix (canonical pairings) > text.muted on ai.confirmationSoft = 5.47:1 (floor 3:1)
+WCAG AA contrast matrix (canonical pairings) > text.muted on ai.insightSoft = 5.48:1 (floor 3:1)
+WCAG AA contrast matrix (canonical pairings) > text.muted on background = 6.10:1 (floor 3:1)
+WCAG AA contrast matrix (canonical pairings) > text.muted on status.attentionSoft = 5.76:1 (floor 3:1)
+WCAG AA contrast matrix (canonical pairings) > text.muted on status.successSoft = 5.47:1 (floor 3:1)
+WCAG AA contrast matrix (canonical pairings) > text.muted on status.waitingSoft = 5.59:1 (floor 3:1)
+WCAG AA contrast matrix (canonical pairings) > text.muted on surface.primary = 6.65:1 (floor 3:1)
+WCAG AA contrast matrix (canonical pairings) > text.muted on surface.secondary = 5.60:1 (floor 3:1)
+WCAG AA contrast matrix (canonical pairings) > text.primary on background = 15.31:1 (floor 3:1)
+WCAG AA contrast matrix (canonical pairings) > text.primary on surface.elevated = 16.67:1 (floor 3:1)
+WCAG AA contrast matrix (canonical pairings) > text.primary on surface.primary = 16.67:1 (floor 3:1)
+WCAG AA contrast matrix (canonical pairings) > text.primary on surface.secondary = 14.04:1 (floor 3:1)
+WCAG AA contrast matrix (canonical pairings) > text.secondary on background = 6.13:1 (floor 3:1)
+WCAG AA contrast matrix (canonical pairings) > text.secondary on surface.elevated = 6.68:1 (floor 3:1)
+WCAG AA contrast matrix (canonical pairings) > text.secondary on surface.primary = 6.68:1 (floor 3:1)
+WCAG AA contrast matrix (canonical pairings) > text.secondary on surface.secondary = 5.62:1 (floor 3:1)
+WhyThis (structured evidence, no chain-of-thought) > absent evidence renders nothing
+WhyThis (structured evidence, no chain-of-thought) > renders caller-provided evidence lines and nothing of its own
+Write failures > memory stays authoritative, degraded is reported after repeated failures, and a later write catches up
+Write queue > a disabled queue writes nothing
+Write queue > a failed write is retried once straight away
+Write queue > a slow older write can never land after a newer one
+Write queue > numbering continues after the sequence already stored
+Write queue > repeated failures mark the queue degraded until a write succeeds
+Write queue > sequence rollover cannot strand flush or suppress later writes
+Write queue > the retry carries the newest state if one arrived during the failed write
+Write queue > writes one at a time, skipping straight to the newest waiting value
+assessDailyLoadIssues: deterministic single verdict > a genuinely reasonable day reports no material issue and the open tier
+assessDailyLoadIssues: deterministic single verdict > priority order: an overlap outranks every other issue on the same day
+assessDailyLoadIssues: deterministic single verdict > priority order: capacity pressure outranks tight window
+assessDailyLoadIssues: deterministic single verdict > priority order: overdue is the lowest-ranked issue, surfaced only when nothing else is true
+assessDailyLoadIssues: deterministic single verdict > priority order: transition conflict outranks capacity pressure and tight window
+bootstrap and claim > 10. an empty real household bootstraps and lands bound
+bootstrap and claim > 11. a real household with content claims, and carries its closure
+bootstrap and claim > 12. a demo household is never claimed, and stays usable
+bootstrap and claim > 13. the claim key is recorded BEFORE the request leaves
+bootstrap and claim > 14. the complete id map is durable before the account is called bound
+bootstrap and claim > 15. a server refusal is not retried, and is recorded as the server worded it
+bootstrap and claim > 16. an unreachable server leaves a retryable receipt and no binding
+bootstrap and claim > 17. a retry reuses the SAME claim key rather than starting a second household
+bootstrap and claim > 18. a claim that succeeds but cannot be recorded stays retryable and does not claim to be bound
+bootstrap and claim > 19. an unreadable server answer is a failure, not an optimistic success
+claim decision boundary > a claim interrupted by another account quarantines on the receipt alone
+claim decision boundary > a demo household is refused as a whole, whatever it contains
+claim decision boundary > an empty real household bootstraps; one with content claims
+claim decision boundary > the same account resumes; a different account is quarantined, never merged
+claim result parsing > a complete result yields the whole id map
+claim result parsing > a rejected result is read as rejected even though it carries a household id
+claim result parsing > anything else is unreadable rather than optimistically accepted
+every synced kind projects to the cloud and back without loss > a row of every one of the 25 synced kinds is present
+every synced kind projects to the cloud and back without loss > a second device applying those rows, in dependency order, holds exactly what the first held
+every synced kind projects to the cloud and back without loss > authority: it sends only columns the client may name on INSERT, and every editable column is in the row
+every synced kind projects to the cloud and back without loss > capacity: it sends only columns the client may name on INSERT, and every editable column is in the row
+every synced kind projects to the cloud and back without loss > decision: it sends only columns the client may name on INSERT, and every editable column is in the row
+every synced kind projects to the cloud and back without loss > dependency: it sends only columns the client may name on INSERT, and every editable column is in the row
+every synced kind projects to the cloud and back without loss > evidenceLink: it sends only columns the client may name on INSERT, and every editable column is in the row
+every synced kind projects to the cloud and back without loss > execution: it sends only columns the client may name on INSERT, and every editable column is in the row
+every synced kind projects to the cloud and back without loss > externalReference: it sends only columns the client may name on INSERT, and every editable column is in the row
+every synced kind projects to the cloud and back without loss > facets and exact money arrive as they were sent — NULL stays "not known", an amount stays exact
+every synced kind projects to the cloud and back without loss > goal: it sends only columns the client may name on INSERT, and every editable column is in the row
+every synced kind projects to the cloud and back without loss > intent: it sends only columns the client may name on INSERT, and every editable column is in the row
+every synced kind projects to the cloud and back without loss > interpretation: it sends only columns the client may name on INSERT, and every editable column is in the row
+every synced kind projects to the cloud and back without loss > no server-owned column is ever sent, and no credential-shaped column is ever produced
+every synced kind projects to the cloud and back without loss > observation: it sends only columns the client may name on INSERT, and every editable column is in the row
+every synced kind projects to the cloud and back without loss > outcome: it sends only columns the client may name on INSERT, and every editable column is in the row
+every synced kind projects to the cloud and back without loss > pattern: it sends only columns the client may name on INSERT, and every editable column is in the row
+every synced kind projects to the cloud and back without loss > person: it sends only columns the client may name on INSERT, and every editable column is in the row
+every synced kind projects to the cloud and back without loss > recurrence: it sends only columns the client may name on INSERT, and every editable column is in the row
+every synced kind projects to the cloud and back without loss > responsibility: it sends only columns the client may name on INSERT, and every editable column is in the row
+every synced kind projects to the cloud and back without loss > sourceArtifact: it sends only columns the client may name on INSERT, and every editable column is in the row
+every synced kind projects to the cloud and back without loss > systemStep: it sends only columns the client may name on INSERT, and every editable column is in the row
+every v3 fixture migrates losslessly to v4 > auth-degraded: decodes valid at v4, keeps its write sequence and identity, and every row survives intact
+every v3 fixture migrates losslessly to v4 > auth-degraded: migration lineage accounts for every classified row exactly once, and is recorded apart from the rows
+every v3 fixture migrates losslessly to v4 > auth-degraded: re-encoding reads back identical and is not migrated a second time
+every v3 fixture migrates losslessly to v4 > claimed: decodes valid at v4, keeps its write sequence and identity, and every row survives intact
+every v3 fixture migrates losslessly to v4 > claimed: migration lineage accounts for every classified row exactly once, and is recorded apart from the rows
+every v3 fixture migrates losslessly to v4 > claimed: re-encoding reads back identical and is not migrated a second time
+every v3 fixture migrates losslessly to v4 > demo: decodes valid at v4, keeps its write sequence and identity, and every row survives intact
+every v3 fixture migrates losslessly to v4 > demo: migration lineage accounts for every classified row exactly once, and is recorded apart from the rows
+every v3 fixture migrates losslessly to v4 > demo: re-encoding reads back identical and is not migrated a second time
+every v3 fixture migrates losslessly to v4 > fresh-empty: decodes valid at v4, keeps its write sequence and identity, and every row survives intact
+every v3 fixture migrates losslessly to v4 > fresh-empty: migration lineage accounts for every classified row exactly once, and is recorded apart from the rows
+every v3 fixture migrates losslessly to v4 > fresh-empty: re-encoding reads back identical and is not migrated a second time
+every v3 fixture migrates losslessly to v4 > legacy-catalog-remediated: decodes valid at v4, keeps its write sequence and identity, and every row survives intact
+every v3 fixture migrates losslessly to v4 > legacy-catalog-remediated: migration lineage accounts for every classified row exactly once, and is recorded apart from the rows
+every v3 fixture migrates losslessly to v4 > legacy-catalog-remediated: re-encoding reads back identical and is not migrated a second time
+every v3 fixture migrates losslessly to v4 > one-move-states: decodes valid at v4, keeps its write sequence and identity, and every row survives intact
+every v3 fixture migrates losslessly to v4 > one-move-states: migration lineage accounts for every classified row exactly once, and is recorded apart from the rows
+every v3 fixture migrates losslessly to v4 > one-move-states: re-encoding reads back identical and is not migrated a second time
+every v3 fixture migrates losslessly to v4 > pending-queue: decodes valid at v4, keeps its write sequence and identity, and every row survives intact
+every v3 fixture migrates losslessly to v4 > pending-queue: migration lineage accounts for every classified row exactly once, and is recorded apart from the rows
+every v3 fixture migrates losslessly to v4 > pending-queue: re-encoding reads back identical and is not migrated a second time
+every v3 fixture migrates losslessly to v4 > real-child-scoped: decodes valid at v4, keeps its write sequence and identity, and every row survives intact
+every v3 fixture migrates losslessly to v4 > real-child-scoped: migration lineage accounts for every classified row exactly once, and is recorded apart from the rows
+every v3 fixture migrates losslessly to v4 > real-child-scoped: re-encoding reads back identical and is not migrated a second time
+every v3 fixture migrates losslessly to v4 > real-populated: decodes valid at v4, keeps its write sequence and identity, and every row survives intact
+every v3 fixture migrates losslessly to v4 > real-populated: migration lineage accounts for every classified row exactly once, and is recorded apart from the rows
+every v3 fixture migrates losslessly to v4 > real-populated: re-encoding reads back identical and is not migrated a second time
+every v3 fixture migrates losslessly to v4 > real-with-actions: decodes valid at v4, keeps its write sequence and identity, and every row survives intact
+every v3 fixture migrates losslessly to v4 > real-with-actions: migration lineage accounts for every classified row exactly once, and is recorded apart from the rows
+every v3 fixture migrates losslessly to v4 > real-with-actions: re-encoding reads back identical and is not migrated a second time
+every v3 fixture migrates losslessly to v4 > sync-active: decodes valid at v4, keeps its write sequence and identity, and every row survives intact
+every v3 fixture migrates losslessly to v4 > sync-active: migration lineage accounts for every classified row exactly once, and is recorded apart from the rows
+every v3 fixture migrates losslessly to v4 > sync-active: re-encoding reads back identical and is not migrated a second time
+every v3 fixture migrates losslessly to v4 > unresolved-conflict: decodes valid at v4, keeps its write sequence and identity, and every row survives intact
+every v3 fixture migrates losslessly to v4 > unresolved-conflict: migration lineage accounts for every classified row exactly once, and is recorded apart from the rows
+every v3 fixture migrates losslessly to v4 > unresolved-conflict: re-encoding reads back identical and is not migrated a second time
+every v3 fixture migrates losslessly to v4 > unstamped-legacy-rows: decodes valid at v4, keeps its write sequence and identity, and every row survives intact
+every v3 fixture migrates losslessly to v4 > unstamped-legacy-rows: migration lineage accounts for every classified row exactly once, and is recorded apart from the rows
+every v3 fixture migrates losslessly to v4 > unstamped-legacy-rows: re-encoding reads back identical and is not migrated a second time
+isolation across accounts, devices and modes > 15/26. an unrelated local household is quarantined with its sync state intact
+isolation across accounts, devices and modes > 16/W. signing out keeps A intact and hands RevenueCat back an anonymous identity
+isolation across accounts, devices and modes > 25/36. OR-002 migration evidence survives sync activity and has no cloud destination
+isolation across accounts, devices and modes > 30. a duplicate push acknowledgement is idempotent
+isolation across accounts, devices and modes > I. the attention signal is derived, and says nothing about revisions or queues
+no credential can be stored, queued, claimed or sent > no row a device sends to the cloud, for any of the 25 synced kinds, carries none
+no credential can be stored, queued, claimed or sent > nothing in the foundation or the sync engine even NAMES a provider credential in code
+no credential can be stored, queued, claimed or sent > stored household state has no credential-shaped field
+no credential can be stored, queued, claimed or sent > the claim payload for a household holding every foundation kind carries none
+no credential can be stored, queued, claimed or sent > the sync namespace — queue, mappings and conflict evidence — has none either
+onboarding across a claim > AMD-01: a stored label normalizes to its stable id before binding, and an unknown value is reported
+onboarding across a claim > completed onboarding is not asked again; an incomplete one resumes where she left it
+push and pull against a scripted transport > 16(retriable). an unreachable server defers the work and counts the attempt
+push and pull against a scripted transport > 18(auth). an unauthorized push pauses the cycle without burning the queue
+push and pull against a scripted transport > 21. scope and child subject survive the round trip in both directions
+push and pull against a scripted transport > 26. a server validation failure becomes durable failed evidence, not a retry loop
+push and pull against a scripted transport > 35. a One Move round trip keeps the server-owned logical day and the typed target
+push and pull against a scripted transport > 37. a pulled action record is never regenerated or re-targeted
+push and pull against a scripted transport > 38. transport does not reinterpret onboarding — it carries the stable ids as they are
+push and pull against a scripted transport > AA. an action whose reference can NEVER resolve becomes evidence, with the reference intact
+push and pull against a scripted transport > AA. an action whose reference has no mapping yet waits for it rather than pushing malformed
+push and pull against a scripted transport > S. a tombstone arriving for a row with a pending edit preserves her intent
+push and pull against a scripted transport > Y/SD4-006. a pulled local_id already in use for a DIFFERENT row mints a fresh one
+push and pull against a scripted transport > an UPDATE carries only columns the grant allows
+queue: coalescing and bounds > 10. work is scheduled in dependency order, then by enqueue order
+queue: coalescing and bounds > 11. at the queue bound nothing is evicted; the namespace goes into backlog
+queue: coalescing and bounds > 17. retry backoff is bounded and rises
+queue: coalescing and bounds > E. a second edit to the same row coalesces, keeping the original base and order
+queue: coalescing and bounds > F. a create followed by an update stays ONE create carrying the latest state
+queue: coalescing and bounds > F. an action record cannot be turned into an update — it is immutable
+queue: coalescing and bounds > F. an edit racing a tombstone collapses to the tombstone, keeping the base revision
+queue: coalescing and bounds > G. a terminal failure leaves the queue and becomes evidence
+queue: coalescing and bounds > H. at the evidence bound work stops rather than producing unrecordable conflicts
+restore, degrade, quarantine and switching > 20. a stored session restores and re-identifies the account
+restore, degrade, quarantine and switching > 21. an expired session degrades instead of signing her out, and local work continues
+restore, degrade, quarantine and switching > 22. a keychain that will not answer degrades a bound device rather than offering a fresh start
+restore, degrade, quarantine and switching > 23. a second account is quarantined: nothing renders, nothing uploads, nothing is deleted
+restore, degrade, quarantine and switching > 24. signing out clears the credential but keeps the binding, so the same account resumes
+restore, degrade, quarantine and switching > 25. a RevenueCat failure never undoes a claim the server already committed
+secure session boundary > 1. the credential lives under its own key, never the household one
+secure session boundary > 2. a stored session round-trips, and every field is checked on the way back
+secure session boundary > 3. anything malformed is refused rather than half-trusted
+secure session boundary > 4. an unreadable credential is discarded; a store failure discards nothing
+secure session boundary > 5. expiry is reported, not acted on, by the store
+sign-in > 6. a cancelled sign-in returns her exactly where she was
+sign-in > 7. a misconfigured build is an unrecoverable auth error, a flaky provider a recoverable one
+sign-in > 8. a successful sign-in stores the credential and identifies the account before anything else
+sign-in > 9. an unknown provider is refused without reaching an adapter
+the backfill attributes only what v3 can PROVE > OR-002 migration evidence is carried verbatim, and lineage does not merge into it
+the backfill attributes only what v3 can PROVE > One Move history keeps every status it had, and each record is system-derived
+the backfill attributes only what v3 can PROVE > a demo household is classified as a whole: every row is demo-seed, whoever typed it
+the backfill attributes only what v3 can PROVE > a fresh household: the eight starters are system-derived and the intake record is onboarding — nothing is hers yet
+the backfill attributes only what v3 can PROVE > a real household with pre-Build-3 leftovers: unprovable rows are LEGACY/UNKNOWN, provable ones are not demoted
+the backfill attributes only what v3 can PROVE > a real user-populated household: what she made stays hers, and a rename or archive does not change who made a row
+the backfill attributes only what v3 can PROVE > child-scoped state keeps its children, subjects and scope intact
+the backfill attributes only what v3 can PROVE > identity-bearing fixtures keep their sync state: queue, cursor, mappings, evidence and device id all survive
+the backfill attributes only what v3 can PROVE > legacy-unknown is conservative everywhere: it is not user-stated and it can never lower a promotion threshold
+the backfill attributes only what v3 can PROVE > the action ledger is untouched: it already stores its own durable provenance
+the claim seam and namespace isolation > 16/17/41. account A and account B namespaces share nothing, and A survives the round trip
+the claim seam and namespace isolation > 18. a demo household has no sync state at all
+the claim seam and namespace isolation > 7. the namespace is built from the claim id map, with kinds resolved from local state
+the claim seam and namespace isolation > J. a new device starts unhydrated at cursor zero
+the claim seam and namespace isolation > kindOfLocalId asks the household what an id is rather than parsing its prefix
+the classification rules > a demo household dominates every rule
+the classification rules > no rule attributes a row to the user without a durable proof, and none ever answers "migration"
+the coordinator > 19/V. a cycle for a different active account does nothing at all
+the coordinator > 42. lifecycle is a phase, and attention is derived from evidence
+the coordinator > 43/O. five simultaneous triggers collapse into ONE cycle
+the coordinator > M. the pull batch size is a named constant, not a literal
+the generated SQL is the manifest, not a hand edit > both generated regions exist exactly once
+the generated SQL is the manifest, not a hand edit > every foundation table is created, secured and given a policy
+the generated SQL is the manifest, not a hand edit > no foundation table is an untyped bag: no jsonb column, and no polymorphic id column
+the generated SQL is the manifest, not a hand edit > the migration matches what the generator emits from the manifest
+the manifest agrees with the local schemas > authority: every stored field is described, and nothing is described that is not stored
+the manifest agrees with the local schemas > capacity: every stored field is described, and nothing is described that is not stored
+the manifest agrees with the local schemas > decision: every stored field is described, and nothing is described that is not stored
+the manifest agrees with the local schemas > dependency: every stored field is described, and nothing is described that is not stored
+the manifest agrees with the local schemas > every one of the nine content kinds carries provenance locally, and states it in the cloud
+the manifest agrees with the local schemas > evidenceLink: every stored field is described, and nothing is described that is not stored
+the manifest agrees with the local schemas > execution: every stored field is described, and nothing is described that is not stored
+the manifest agrees with the local schemas > externalReference: every stored field is described, and nothing is described that is not stored
+the manifest agrees with the local schemas > goal: every stored field is described, and nothing is described that is not stored
+the manifest agrees with the local schemas > intent: every stored field is described, and nothing is described that is not stored
+the manifest agrees with the local schemas > interpretation: every stored field is described, and nothing is described that is not stored
+the manifest agrees with the local schemas > observation: every stored field is described, and nothing is described that is not stored
+the manifest agrees with the local schemas > outcome: every stored field is described, and nothing is described that is not stored
+the manifest agrees with the local schemas > pattern: every stored field is described, and nothing is described that is not stored
+the manifest agrees with the local schemas > person: every stored field is described, and nothing is described that is not stored
+the manifest agrees with the local schemas > recurrence: every stored field is described, and nothing is described that is not stored
+the manifest agrees with the local schemas > responsibility: every stored field is described, and nothing is described that is not stored
+the manifest agrees with the local schemas > sourceArtifact: every stored field is described, and nothing is described that is not stored
+the manifest agrees with the local schemas > systemStep: every stored field is described, and nothing is described that is not stored
+the manifest agrees with the local schemas > the existing kinds' facets are exactly the facet fields their local schemas gained
+the manifest agrees with the sync engine > a client can UPDATE only what the manifest says, and never provenance's producer or artifact
+the manifest agrees with the sync engine > every foundation kind is a sync kind with a table, an identity and its operations
+the manifest agrees with the sync engine > the migration's change log can carry every foundation table, and push can reach every client-written one
+the manifest agrees with the sync engine > the nine content kinds may move only their confidence out of provenance
+the manifest agrees with the sync engine > typed references agree with the registry: one cloud column per kind, on the table that holds it
+the reference graph is acyclic, so a push order exists > authority ranks after everything it references
+the reference graph is acyclic, so a push order exists > capacity ranks after everything it references
+the reference graph is acyclic, so a push order exists > decision ranks after everything it references
+the reference graph is acyclic, so a push order exists > dependency ranks after everything it references
+the reference graph is acyclic, so a push order exists > evidenceLink ranks after everything it references
+the reference graph is acyclic, so a push order exists > execution ranks after everything it references
+the reference graph is acyclic, so a push order exists > externalReference ranks after everything it references
+the reference graph is acyclic, so a push order exists > goal ranks after everything it references
+the reference graph is acyclic, so a push order exists > intent ranks after everything it references
+the reference graph is acyclic, so a push order exists > interpretation ranks after everything it references
+the reference graph is acyclic, so a push order exists > no two kinds point at each other (the two back-pointers that would have made a cycle are gone)
+the reference graph is acyclic, so a push order exists > observation ranks after everything it references
+the reference graph is acyclic, so a push order exists > outcome ranks after everything it references
+the reference graph is acyclic, so a push order exists > pattern ranks after everything it references
+the reference graph is acyclic, so a push order exists > person ranks after everything it references
+the reference graph is acyclic, so a push order exists > recurrence ranks after everything it references
+the reference graph is acyclic, so a push order exists > responsibility ranks after everything it references
+the reference graph is acyclic, so a push order exists > sourceArtifact ranks after everything it references
+the reference graph is acyclic, so a push order exists > systemStep ranks after everything it references
+the reference graph is acyclic, so a push order exists > the content kinds that name their source artifact rank after it too
+v3 fixtures are frozen and genuinely v3 > each is a v3 envelope whose data passes the FROZEN v3 schema — and fails the live v4 one
+v3 fixtures are frozen and genuinely v3 > every required v3 shape has a fixture, and the manifest matches the files on disk
+v3 fixtures are frozen and genuinely v3 > no fixture has been altered: the SHA-256 of each file is the one recorded when the v3 code wrote it
