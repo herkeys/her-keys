@@ -12,6 +12,7 @@ import type { Provenance } from '../foundation/provenance';
 import type { SourceArtifact } from '../foundation/sourceArtifact';
 import type { AccountId } from './identity';
 import type { ClaimKind, IdentityRecord, RejectedReason } from './binding';
+import { starterCategories } from '../categories';
 
 /**
  * THE CLAIM DECISION BOUNDARY.
@@ -30,16 +31,45 @@ export interface LocalHousehold {
 }
 
 export function describeLocalHousehold(state: AppState): LocalHousehold {
+  const starters = starterCategories(state.household.id);
+  const categoriesChanged =
+    state.categories.length !== starters.length ||
+    state.categories.some((category, index) => JSON.stringify(category) !== JSON.stringify(starters[index]));
+
   return {
     origin: state.origin,
     hasContent:
+      state.household.displayName !== null ||
+      state.user.displayName !== null ||
+      categoriesChanged ||
       state.events.length > 0 ||
       state.tasks.length > 0 ||
+      state.systems.length > 0 ||
+      state.meals.length > 0 ||
       state.needsMe.length > 0 ||
       state.oneMoves.length > 0 ||
       state.actions.length > 0 ||
       state.children.length > 0 ||
       state.discovery !== null ||
+      state.migrationEvidence.length > 0 ||
+      state.sourceArtifacts.length > 0 ||
+      state.externalReferences.length > 0 ||
+      state.interpretations.length > 0 ||
+      state.observations.length > 0 ||
+      state.authorities.length > 0 ||
+      state.intents.length > 0 ||
+      state.decisions.length > 0 ||
+      state.executions.length > 0 ||
+      state.outcomes.length > 0 ||
+      state.people.length > 0 ||
+      state.responsibilities.length > 0 ||
+      state.dependencies.length > 0 ||
+      state.recurrences.length > 0 ||
+      state.goals.length > 0 ||
+      state.systemSteps.length > 0 ||
+      state.capacity !== null ||
+      state.patterns.length > 0 ||
+      state.evidenceLinks.length > 0 ||
       state.onboarding.goalIds.length > 0 ||
       state.onboarding.strengthIds.length > 0 ||
       state.onboarding.struggleIds.length > 0,

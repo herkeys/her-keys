@@ -227,6 +227,43 @@ describe('claim decision boundary', () => {
     assert.deepEqual(decideBinding(real(), UNBOUND_IDENTITY, ACCOUNT_A), { mode: 'claim', onboardingComplete: false });
   });
 
+  test('content outside the historical claim closure still prevents an empty bootstrap', () => {
+    const base = createEmptyState(TZ);
+    const systemOnly = {
+      ...base,
+      systems: [{
+        id: 'system-1',
+        name: 'School morning',
+        description: null,
+        categoryId: 'cat-home',
+        scope: 'household',
+        provenance: USER,
+        createdAt: '2026-09-20T12:00:00.000Z',
+        updatedAt: '2026-09-20T12:00:00.000Z',
+      }],
+    };
+    const sourceOnly = {
+      ...base,
+      sourceArtifacts: [{
+        id: 'artifact-1',
+        kind: 'voice-utterance',
+        origin: 'voice',
+        provider: null,
+        receivedAt: '2026-09-20T12:00:00.000Z',
+        contentDigest: null,
+        contentRef: null,
+        retractedAt: null,
+        createdAt: '2026-09-20T12:00:00.000Z',
+        scope: 'personal',
+      }],
+    };
+
+    assert.equal(describeLocalHousehold(systemOnly).hasContent, true, 'a System is durable household content');
+    assert.equal(describeLocalHousehold(sourceOnly).hasContent, true, 'capture provenance is durable household content');
+    assert.equal(describeLocalHousehold({ ...base, user: { ...base.user, displayName: 'Ari' } }).hasContent, true);
+    assert.equal(describeLocalHousehold({ ...base, categories: [...base.categories, { ...base.categories[0], id: 'cat-custom', systemRole: null, name: 'Garden', sortOrder: 8 }] }).hasContent, true);
+  });
+
   test('a demo household is refused as a whole, whatever it contains', () => {
     const demo = describeLocalHousehold({ ...createEmptyState(TZ), origin: 'demo', tasks: [task('task-1')] });
     assert.deepEqual(decideBinding(demo, UNBOUND_IDENTITY, ACCOUNT_A), { mode: 'refuseDemo' });
