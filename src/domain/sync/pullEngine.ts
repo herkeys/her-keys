@@ -89,7 +89,39 @@ export type PullOutcome =
    */
   | { kind: 'integrityRefused'; detail: string; namespace: SyncNamespace };
 
-export async function pullOnce(state: AppState, namespace: SyncNamespace, ctx: PullContext): Promise<PullOutcome> {
+/**
+ * One pull round trip, in two halves.
+ *
+ * FETCH is the network: it needs only the cursor and never touches state. APPLY is pure: it needs the state and namespace it is
+ * applied to. They are separate so that a caller who can be edited while the network is busy applies the fetched batch to the
+ * state and namespace as they are AFTER the wait, not as they were before it (see the sync runtime). `pullOnce` is their
+ * composition and behaves exactly as it always did.
+ */
+
+/** One table's worth of a fetched batch. `kind` is null for a table this client does not sync. */
+export interface FetchedTable {
+  table: string;
+  kind: SyncEntityKind | 'member' | null;
+  ids: string[];
+  rows: Array<Record<string, unknown>>;
+}
+
+export interface FetchedBatch {
+  /** The cursor to adopt once this batch is durable. Equals the current cursor when there is more to fetch. */
+  nextCursor: string;
+  more: boolean;
+  tables: FetchedTable[];
+}
+
+export type FetchOutcome =
+  | { kind: 'fetched'; batch: FetchedBatch }
+  | { kind: 'paused'; detail: string }
+  | { kind: 'failed'; detail: string; retriable: boolean };
+
+/** The table a household's members live in. Members are claim-only, so a device only ever READS them. */
+const MEMBER_TABLE = 'household_members';
+
+export async function fetchPullBatch(namespace: SyncNamespace, ctx: PullContext): Promise<FetchOutcome> {
   const limit = ctx.batchSize ?? PULL_BATCH_SIZE;
   const result = await ctx.transport.pull(namespace.cursor, limit, namespace.householdId);
 
@@ -105,31 +137,60 @@ export async function pullOnce(state: AppState, namespace: SyncNamespace, ctx: P
   const more = result.rows.length > limit;
   const nextCursor = more ? namespace.cursor : result.nextCursor;
 
-  if (rows.length === 0) {
-    return { kind: 'upToDate', state, namespace: { ...namespace, cursor: nextCursor } };
-  }
-
-  const wanted = groupByTable(rows);
-  let nextState = state;
-  let nextNamespace = namespace;
-  let changed = 0;
-
-  for (const [table, ids] of wanted) {
-    const kind = TABLE_TO_KIND[table];
+  const tables: FetchedTable[] = [];
+  for (const [table, ids] of groupByTable(rows)) {
+    const kind: FetchedTable['kind'] = table === MEMBER_TABLE ? 'member' : (TABLE_TO_KIND[table] ?? null);
     // A table this client does not sync is not an error. change_log carries
     // everything; the matrix decides what this device is interested in.
-    if (!kind) continue;
+    if (kind === null) continue;
 
-    const fetched = await ctx.transport.fetchRows(table, [...ids], IDENTITY_COLUMN[kind]);
+    const fetched = await ctx.transport.fetchRows(table, [...ids], kind === 'member' ? 'id' : IDENTITY_COLUMN[kind]);
     if (isFailure(fetched)) {
       if (fetched.failure === 'unauthorized') return { kind: 'paused', detail: fetched.detail };
       return { kind: 'failed', detail: fetched.detail, retriable: fetched.failure !== 'forbidden' };
     }
+    tables.push({ table, kind, ids: [...ids], rows: fetched.rows });
+  }
+
+  return { kind: 'fetched', batch: { nextCursor, more, tables } };
+}
+
+export type ApplyOutcome = Exclude<PullOutcome, { kind: 'paused' } | { kind: 'failed' }>;
+
+/**
+ * Where hydration stands once this batch is durable. A device that has never heard from the cloud is `unhydrated`; it is
+ * `hydrating` while there is more to fetch and `ready` when the last batch lands. Until then it must neither render an empty
+ * household as hers nor send anything (it would create rows the cloud already holds). A namespace that starts from a claim is
+ * already `ready`.
+ */
+function hydrationAfter(namespace: SyncNamespace, more: boolean): SyncNamespace['hydration'] {
+  if (namespace.hydration === 'ready') return 'ready';
+  return more ? 'hydrating' : 'ready';
+}
+
+export function applyPullBatch(state: AppState, namespace: SyncNamespace, batch: FetchedBatch, ctx: PullContext): ApplyOutcome {
+  if (batch.tables.length === 0) {
+    return { kind: 'upToDate', state, namespace: { ...namespace, cursor: batch.nextCursor, hydration: hydrationAfter(namespace, batch.more) } };
+  }
+
+  let nextState = state;
+  let nextNamespace = namespace;
+  let changed = 0;
+
+  for (const { table, kind, ids, rows } of batch.tables) {
+    if (kind === 'member') {
+      const members = applyMembers(nextState, nextNamespace, rows, ctx);
+      nextState = members.state;
+      nextNamespace = members.namespace;
+      changed += members.changed;
+      continue;
+    }
+    if (kind === null) continue;
 
     // Oldest first. A row can point at an EARLIER row of its own kind (a correction names what it
     // supersedes, a handoff names the one before it, an undo names what it undoes), and a reference
     // only resolves once its target has been applied.
-    const ordered = [...fetched.rows].sort(
+    const ordered = [...rows].sort(
       (a, b) => String(a.created_at ?? '').localeCompare(String(b.created_at ?? '')) || String(a.id ?? '').localeCompare(String(b.id ?? ''))
     );
     for (const row of ordered) {
@@ -142,7 +203,7 @@ export async function pullOnce(state: AppState, namespace: SyncNamespace, ctx: P
     // Rows named by change_log that did not come back are rows RLS refuses to
     // show this caller, or rows deleted outright. Either way the local side has
     // nothing to apply, and inventing something would be worse than nothing.
-    const returned = new Set(fetched.rows.map((row) => cloudIdOf(kind, row)));
+    const returned = new Set(rows.map((row) => cloudIdOf(kind, row)));
     for (const id of ids) {
       if (returned.has(id)) continue;
       const tombstoned = tombstoneFor(nextState, nextNamespace, kind, id, ctx);
@@ -150,6 +211,7 @@ export async function pullOnce(state: AppState, namespace: SyncNamespace, ctx: P
       nextNamespace = tombstoned.namespace;
       if (tombstoned.changed) changed += 1;
     }
+    void table;
   }
 
   // THE INTEGRITY GATE. The candidate state has to be something the app would
@@ -166,10 +228,69 @@ export async function pullOnce(state: AppState, namespace: SyncNamespace, ctx: P
   return {
     kind: 'applied',
     state: validated.state,
-    namespace: { ...nextNamespace, cursor: nextCursor, lastSyncedAt: new Date(ctx.now()).toISOString() },
+    namespace: {
+      ...nextNamespace,
+      cursor: batch.nextCursor,
+      hydration: hydrationAfter(nextNamespace, batch.more),
+      lastSyncedAt: new Date(ctx.now()).toISOString(),
+    },
     changed,
-    more,
+    more: batch.more,
   };
+}
+
+export async function pullOnce(state: AppState, namespace: SyncNamespace, ctx: PullContext): Promise<PullOutcome> {
+  const fetched = await fetchPullBatch(namespace, ctx);
+  if (fetched.kind !== 'fetched') return fetched;
+  return applyPullBatch(state, namespace, fetched.batch, ctx);
+}
+
+/**
+ * Children, read-only.
+ *
+ * Membership is claim-only: a device can never create, change or remove one, so there is nothing to conflict with and nothing
+ * queued. But a second device has to learn that a child exists, or every task, event and routine that names that child arrives
+ * with a subject it cannot resolve. A child arrives under the local id it was created with when that is free here; a local id
+ * that already means something else keeps its own row and the pulled child gets a fresh one — two entities are never merged
+ * because they happen to share a device-relative id (SD4-006). Adult members are accounts, not children, and are not applied.
+ */
+function applyMembers(
+  state: AppState,
+  namespace: SyncNamespace,
+  rows: Array<Record<string, unknown>>,
+  ctx: PullContext
+): { state: AppState; namespace: SyncNamespace; changed: number } {
+  let nextState = state;
+  let nextNamespace = namespace;
+  let changed = 0;
+
+  const ordered = [...rows].sort(
+    (a, b) => String(a.created_at ?? '').localeCompare(String(b.created_at ?? '')) || String(a.id ?? '').localeCompare(String(b.id ?? ''))
+  );
+  for (const row of ordered) {
+    if (row.member_type !== 'child') continue;
+    const cloudId = String(row.id ?? '');
+    const existing = Object.values(nextNamespace.mappings).find((mapping) => mapping.kind === 'member' && mapping.cloudId === cloudId);
+
+    const wanted = String(row.local_id ?? cloudId);
+    const taken =
+      nextNamespace.mappings[mappingKey('member', wanted)] !== undefined ||
+      nextState.user.id === wanted ||
+      nextState.children.some((child) => child.id === wanted);
+    const localId = existing?.localId ?? (taken ? ctx.mintLocalId('member' as unknown as SyncEntityKind, wanted) : wanted);
+
+    const child = { id: localId, displayName: String(row.display_name ?? ''), birthDate: String(row.birth_date ?? ''), scope: 'child' as const };
+    const known = nextState.children.find((candidate) => candidate.id === localId);
+    if (known === undefined || known.displayName !== child.displayName || known.birthDate !== child.birthDate) {
+      nextState = {
+        ...nextState,
+        children: known === undefined ? [...nextState.children, child] : nextState.children.map((candidate) => (candidate.id === localId ? child : candidate)),
+      };
+      changed += 1;
+    }
+    nextNamespace = rememberMapping(nextNamespace, { kind: 'member', localId, cloudId, revision: typeof row.revision === 'number' ? row.revision : 1 });
+  }
+  return { state: nextState, namespace: nextNamespace, changed };
 }
 
 /**

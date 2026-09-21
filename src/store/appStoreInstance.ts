@@ -2,6 +2,7 @@ import Constants from 'expo-constants';
 import { diagnosticsEnabled, internalToolsEnabled, resolveDataMode } from '../config/dataMode';
 import { checkTimeZoneSupport } from '../domain/logicalDay';
 import type { AppState } from '../domain/state';
+import { createChangeObserver } from '../domain/sync/changeObserver';
 import { asyncStorageAdapter } from '../persistence/asyncStorageAdapter';
 import { createAppStateRepository } from '../persistence/appStateRepository';
 import { simulateStoredStateDamage, type SimulatedDamage } from '../persistence/damageSimulation';
@@ -14,7 +15,14 @@ const configuredTools = process.env.EXPO_PUBLIC_HERKEYS_INTERNAL_TOOLS;
 export const dataMode = resolveDataMode(configuredMode, __DEV__);
 export const internalTools = internalToolsEnabled(dataMode, __DEV__, configuredTools);
 
+/**
+ * The seam between canonical state and synchronization. It runs on every state change and records the intent to send it in the
+ * same envelope write; features never see it. `composeAccountApp` wires its nudge to the sync runtime.
+ */
+export const changeObserver = createChangeObserver({ now: Date.now });
+
 export const appStore = createAppStore({
+  observe: changeObserver.observe,
   repository: createAppStateRepository({
     storage: asyncStorageAdapter,
     appVersion: Constants.expoConfig?.version ?? 'unknown',

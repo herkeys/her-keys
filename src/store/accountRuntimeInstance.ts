@@ -1,26 +1,33 @@
 import Constants from 'expo-constants';
 import * as Crypto from 'expo-crypto';
-import { createAccountRuntime, type AccountRuntime } from '../domain/account/accountRuntime';
-import { UNBOUND_IDENTITY } from '../domain/account/binding';
+import type { AccountRuntime } from '../domain/account/accountRuntime';
 import type { CloudAccountClient } from '../domain/account/cloudClient';
 import { createProviderRegistry, type AuthProviderAdapter } from '../domain/account/provider';
 import { createSecureSessionStore } from '../domain/account/secureSession';
 import { deviceTimeZone } from '../domain/logicalDay';
+import type { SyncRuntime } from '../domain/sync/syncRuntime';
+import type { SyncTransport } from '../domain/sync/transport';
 import { identifyRevenueCatAccount } from '../monetization/revenueCatClient';
 import { createAppleProvider } from '../platform/appleProvider';
 import { createGoogleProvider } from '../platform/googleProvider';
 import { createDeviceSecureStorage } from '../platform/secureStore';
 import { createSupabaseAccountClient, createSupabaseClient } from '../platform/supabaseCloud';
-import { appStore } from './appStoreInstance';
+import { createSupabaseSyncTransport } from '../platform/supabaseSyncTransport';
+import { appStore, changeObserver } from './appStoreInstance';
+import { composeAccountApp } from './composeAccountApp';
 
 /**
  * The account composition root.
  *
  * Every dependency the identity wave needs is assembled here and nowhere else,
  * so the domain stays free of `expo-*` and `@supabase/*` imports and can be
- * tested without a device. If Supabase is not configured for this build there
- * is no runtime at all — the app runs locally, exactly as it did before
- * accounts existed.
+ * tested without a device. If Supabase is not configured for this build no
+ * account can bind: cloud calls are honest refusals, the sync runtime is still
+ * composed (so the composition never differs between builds) but never starts,
+ * and the app runs locally exactly as it did before accounts existed.
+ *
+ * Binding an account and synchronizing it are one composition, in
+ * `composeAccountApp`. This file only supplies the platform pieces.
  */
 
 const client = createSupabaseClient();
@@ -46,26 +53,43 @@ const adapters: AuthProviderAdapter[] = client === null ? [] : [createAppleProvi
 /** Which providers this device can actually offer. Asked, not assumed. */
 export const accountProviders = createProviderRegistry(adapters);
 
-export const accountRuntime: AccountRuntime = createAccountRuntime({
-  sessions: createSecureSessionStore(createDeviceSecureStorage()),
-  providers: accountProviders,
-  cloud: client === null ? unconfiguredCloud : createSupabaseAccountClient(client),
-  identity: {
-    current: () => appStore.currentIdentity() ?? UNBOUND_IDENTITY,
-    set: (identity) => appStore.setIdentity(identity),
-    save: () => appStore.saveIdentity(),
+/**
+ * With no Supabase project there is nothing to transport to. The runtime is still composed (so the composition never differs
+ * between builds), but no account can bind, so it never starts.
+ */
+const unconfiguredTransport: SyncTransport = (() => {
+  const refusal = async () => ({ kind: 'failure' as const, failure: 'unreachable' as const, detail: 'This build has no Supabase project configured.', code: null });
+  return { create: refusal, update: refusal, pull: refusal, fetchRows: refusal };
+})();
+
+const report = __DEV__ ? (event: { type: string; detail?: string }) => console.info(`[herkeys] ${JSON.stringify(event)}`) : undefined;
+
+/**
+ * THE composition: the account runtime AND the sync runtime, wired by the same function every test calls. Everything platform
+ * specific — Expo, Supabase, the keychain — is supplied here and nowhere else.
+ */
+const app = composeAccountApp({
+  store: appStore,
+  observer: changeObserver,
+  account: {
+    sessions: createSecureSessionStore(createDeviceSecureStorage()),
+    providers: accountProviders,
+    cloud: client === null ? unconfiguredCloud : createSupabaseAccountClient(client),
+    timezone: deviceTimeZone,
+    now: Date.now,
+    newClaimKey: () => Crypto.randomUUID(),
+    deviceId: Constants.sessionId ?? null,
+    onAccountIdentified: async (accountId) => {
+      await identifyRevenueCatAccount(accountId);
+    },
+    report,
   },
-  localState: () => {
-    const state = appStore.getSnapshot().state;
-    if (state === null) throw new Error('The account runtime read household state before hydration finished.');
-    return state;
+  sync: {
+    transport: client === null ? unconfiguredTransport : createSupabaseSyncTransport(client),
+    newDeviceId: () => Crypto.randomUUID(),
+    report,
   },
-  timezone: deviceTimeZone,
-  now: Date.now,
-  newClaimKey: () => Crypto.randomUUID(),
-  deviceId: Constants.sessionId ?? null,
-  onAccountIdentified: async (accountId) => {
-    await identifyRevenueCatAccount(accountId);
-  },
-  report: __DEV__ ? (event) => console.info(`[herkeys] ${JSON.stringify(event)}`) : undefined,
 });
+
+export const accountRuntime: AccountRuntime = app.accountRuntime;
+export const syncRuntime: SyncRuntime = app.syncRuntime;

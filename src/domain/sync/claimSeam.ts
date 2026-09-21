@@ -1,4 +1,5 @@
 import type { AppState } from '../state';
+import { seedNamespace } from './changeBridge';
 import { foundationLocalRow } from './foundationProjection';
 import { FOUNDATION_SPECS } from './foundationSpecs';
 import { emptyNamespace, mappingKey, type MappedKind, type Mapping, type SyncNamespace } from './syncTypes';
@@ -46,6 +47,12 @@ export function kindOfLocalId(state: AppState, localId: string): MappedKind | nu
  * means the first ordinary edit to a claimed row carries the right CAS base and
  * does not manufacture a stale conflict against itself.
  *
+ * SEEDING (HK-INTEGRATION-READINESS-01). A claim carries only what its closure needs, so on its own this namespace starts with an
+ * empty queue and everything else she already had would stay on the device. When the caller passes `seed`, the namespace also
+ * adopts the rows the server created for her, queues her local content over them, queues every row the claim did not carry, and
+ * queues anything she edited while the claim was in flight — see `seedNamespace`. Omitting `seed` keeps the old, pure behaviour
+ * (the engine tests build namespaces that way on purpose).
+ *
  * The cursor starts at `'0'`, so the first pull sees the claim's OWN change_log
  * rows. That is deliberate: those rows resolve straight onto the mappings below,
  * which is exactly how the pull-side seam proves it creates nothing twice.
@@ -56,6 +63,7 @@ export function namespaceFromClaim(input: {
   householdId: string;
   deviceId: string;
   idMap: Record<string, string>;
+  seed?: { at: string; claimedState?: AppState; carried?: ReadonlySet<string> };
 }): SyncNamespace {
   const namespace = emptyNamespace(input);
   const mappings: Record<string, Mapping> = {};
@@ -69,7 +77,16 @@ export function namespaceFromClaim(input: {
     mappings[mappingKey(kind, localId)] = { kind, localId, cloudId, revision: 1 };
   }
 
-  return { ...namespace, mappings, hydration: 'ready' };
+  const mapped: SyncNamespace = { ...namespace, mappings, hydration: 'ready' };
+  if (input.seed === undefined) return mapped;
+  return seedNamespace({
+    state: input.state,
+    namespace: mapped,
+    accountId: input.accountId,
+    at: input.seed.at,
+    claimedState: input.seed.claimedState,
+    carried: input.seed.carried,
+  });
 }
 
 /**

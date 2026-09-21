@@ -258,6 +258,11 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
         return apply({ type: 'bindingFailed', detail: 'could not record the claim before sending it', recoverable: true });
       }
 
+      // The household the claim is built from. Anything she changes while the request is out differs from this, and the seed
+      // queues it, so an edit made during the network call is not stranded behind a binding that says everything is safe.
+      const claimedState = options.localState();
+      const payload = kind === 'claim' ? buildClaimPayload(claimedState) : null;
+
       const call =
         kind === 'bootstrap'
           ? await options.cloud.bootstrapAccount({
@@ -269,7 +274,7 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
               claimKey: receipt.claimKey,
               timezone: options.timezone(),
               deviceId: options.deviceId ?? null,
-              payload: buildClaimPayload(options.localState()),
+              payload: payload as NonNullable<typeof payload>,
             });
 
       if (call.kind !== 'ok') {
@@ -311,12 +316,19 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
       // adopts what claim established rather than rediscovering the cloud by
       // guessing, which is what stops the first sync re-creating the rows the
       // claim just made (B4-BACKEND-03 section 8).
+      const carried = new Set<string>(
+        payload === null
+          ? []
+          : [...payload.categories, ...payload.tasks, ...payload.needsMeItems, ...payload.oneMoves, ...payload.sourceArtifacts].map((row) => row.localId)
+      );
       const sync = namespaceFromClaim({
         state: options.localState(),
         accountId: session.accountId,
         householdId: outcome.householdId,
         deviceId: options.deviceId ?? session.accountId,
         idMap: outcome.idMap,
+        // Seeded in the SAME write as the binding: durable outbound work exists the moment the account is called bound.
+        seed: { at: new Date(options.now()).toISOString(), claimedState, carried },
       });
       options.identity.set({ binding, receipt: null, quarantine: options.identity.current().quarantine, sync });
 

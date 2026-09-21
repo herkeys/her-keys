@@ -1,8 +1,9 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { AppState } from 'react-native';
 import { INITIAL_ACCOUNT_STATE, type AccountState } from '../domain/account/authState';
 import type { AuthProvider } from '../domain/account/identity';
 import type { SyncNamespace } from '../domain/sync/syncTypes';
-import { accountRuntime, accountsAvailable } from './accountRuntimeInstance';
+import { accountRuntime, accountsAvailable, syncRuntime } from './accountRuntimeInstance';
 import { useStoreSnapshot } from './AppStateProvider';
 
 /**
@@ -53,6 +54,14 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       live = false;
     };
   }, [hydrated]);
+
+  useEffect(() => {
+    // Coming back to the app is when a second device's changes should arrive. No polling: this is the event.
+    const subscription = AppState.addEventListener('change', (next) => {
+      if (next === 'active') void syncRuntime.request('foreground');
+    });
+    return () => subscription.remove();
+  }, []);
 
   const run = useCallback(async (work: () => Promise<AccountState>) => {
     setBusy(true);

@@ -46,6 +46,17 @@ export interface StoreSnapshot {
 
 export type Transition = (state: AppState, ctx: TransitionContext) => AppState;
 
+/**
+ * Sees every canonical state change and may stage a new identity block beside it. That is how a change and the intent to send it
+ * to the cloud become ONE envelope write: the store sets the identity it returns before it persists the state, so a crash can
+ * neither keep the change and lose the intent nor the reverse. The store knows nothing about sync; this is the only seam.
+ * It must be pure, fast (it runs on every change) and must return the SAME object when there is nothing to record.
+ */
+export type StateObserver = (change: { previous: AppState; next: AppState; identity: IdentityRecord }) => IdentityRecord;
+
+/** Work against the CURRENT household and identity, made durable together. Null means there is nothing to write. */
+export type SyncWork = (current: { state: AppState; identity: IdentityRecord }) => { state: AppState; identity: IdentityRecord } | null;
+
 export type StoreDiagnostic =
   | { type: 'hydrated'; outcome: LoadOutcome['kind']; ms: number }
   | { type: 'saved'; seq: number; ms: number }
@@ -86,6 +97,12 @@ export interface AppStore {
    * not report `accountBound` until this has.
    */
   saveIdentity(): Promise<void>;
+  /**
+   * Run `work` against the household and identity as they are AT THAT MOMENT, in the same turn as commits, and write the result
+   * in one envelope. This is how a sync cycle applies what it fetched without discarding what she did while it waited.
+   * Resolves false when the result was refused as invalid or could not be made durable.
+   */
+  applySync(work: SyncWork): Promise<boolean>;
 }
 
 export interface AppStoreOptions {
@@ -95,6 +112,8 @@ export interface AppStoreOptions {
   timeZone?: () => string;
   createId?: (prefix: string) => string;
   report?: (event: StoreDiagnostic) => void;
+  /** See `StateObserver`. Optional: a store without one behaves exactly as before. */
+  observe?: StateObserver;
 }
 
 export function createAppStore(options: AppStoreOptions): AppStore {
@@ -159,6 +178,18 @@ export function createAppStore(options: AppStoreOptions): AppStore {
   }
 
   /**
+   * The identity block that goes with `next`. Staged on the repository BEFORE the state is persisted, because the repository
+   * writes whatever identity it holds when a save runs; the caller publishes it together with the state.
+   */
+  function stageIdentity(previous: AppState, next: AppState): IdentityRecord {
+    const current = snapshot.identity;
+    if (!options.observe) return current;
+    const staged = options.observe({ previous, next, identity: current });
+    if (staged !== current) options.repository.setIdentity(staged);
+    return staged;
+  }
+
+  /**
    * Today's One Move is decided the moment there is something to decide from,
    * not only at launch or midnight — so a real household's first capture gets
    * its move without a restart. An existing decision is never touched here.
@@ -178,7 +209,8 @@ export function createAppStore(options: AppStoreOptions): AppStore {
     // transition must not become the session's authoritative state while the
     // repository repeatedly refuses to encode it.
     if (!validateAppState(next).ok) return;
-    publish({ state: next });
+    const identity = stageIdentity(state, next);
+    publish({ state: next, identity });
     persist(next);
   }
 
@@ -193,16 +225,22 @@ export function createAppStore(options: AppStoreOptions): AppStore {
     // queued — it is not a storage failure and must not look like one.
     if (!validateAppState(next).ok) return false;
 
+    const before = snapshot.identity;
+    const identity = stageIdentity(state, next);
     const seq = persist(next);
     // A future-version/read-failed recovery session is deliberately memory-only,
     // but must remain usable. There is no storage claim to wait for in that case.
     if (seq === null) {
-      publish({ state: next });
+      publish({ state: next, identity });
       return true;
     }
     await queue.flush();
-    if (queue.status().committedSeq !== seq) return false;
-    publish({ state: next });
+    if (queue.status().committedSeq !== seq) {
+      // The change was not shown, so the intent staged with it must not survive either.
+      if (identity !== before && options.repository.currentIdentity() === identity) options.repository.setIdentity(before);
+      return false;
+    }
+    publish({ state: next, identity });
     return true;
   }
 
@@ -223,6 +261,8 @@ export function createAppStore(options: AppStoreOptions): AppStore {
     let persistence: StoreSnapshot['persistence'] = 'enabled';
     let repairs: string[] = [];
     let changed = false;
+    // The state exactly as it was stored, before hydration repaired or extended it.
+    let loadedState: AppState | null = null;
 
     switch (outcome.kind) {
       case 'empty':
@@ -244,6 +284,7 @@ export function createAppStore(options: AppStoreOptions): AppStore {
             persistence = 'disabled';
           }
         } else {
+          loadedState = outcome.state;
           ({ state, repairs } = repairCatalogReferences(outcome.state));
           changed = repairs.length > 0;
         }
@@ -276,6 +317,13 @@ export function createAppStore(options: AppStoreOptions): AppStore {
     changed ||= resolved !== state;
     state = resolved;
 
+    // Whatever hydration itself changed (a catalog repair, today's One Move) is a canonical change like any other.
+    let hydratedIdentity = options.repository.currentIdentity();
+    if (loadedState !== null && state !== loadedState && options.observe) {
+      hydratedIdentity = options.observe({ previous: loadedState, next: state, identity: hydratedIdentity });
+      options.repository.setIdentity(hydratedIdentity);
+    }
+
     const hydrationMs = round(preciseNow() - started);
     publish({
       status,
@@ -287,7 +335,7 @@ export function createAppStore(options: AppStoreOptions): AppStore {
       diagnostics: { hydrationMs, loadOutcome: outcome.kind, repairs },
       // Whatever the blob said about who this household belongs to, published
       // once hydration settles so nothing account-bound reads it earlier.
-      identity: options.repository.currentIdentity(),
+      identity: hydratedIdentity,
     });
     if (changed) persist(state);
 
@@ -330,7 +378,8 @@ export function createAppStore(options: AppStoreOptions): AppStore {
       if (current === today) return;
 
       const next = resolveOneMoveForToday(state, contextFor(current));
-      publish({ today: current, state: next });
+      const identity = next === state ? snapshot.identity : stageIdentity(state, next);
+      publish({ today: current, state: next, identity });
       if (next !== state) persist(next);
     },
 
@@ -359,6 +408,32 @@ export function createAppStore(options: AppStoreOptions): AppStore {
       });
     },
 
+    applySync(work) {
+      return inTurn(async () => {
+        const { state } = snapshot;
+        if (state === null) return false;
+        const before = snapshot.identity;
+        const result = work({ state, identity: before });
+        if (result === null) return true;
+        // The result of applying somebody else's rows onto her CURRENT household is checked exactly like any other change.
+        if (result.state !== state && !validateAppState(result.state).ok) return false;
+
+        options.repository.setIdentity(result.identity);
+        const seq = persist(result.state);
+        if (seq === null) {
+          publish({ state: result.state, identity: result.identity });
+          return true;
+        }
+        await queue.flush();
+        if (queue.status().committedSeq !== seq) {
+          if (options.repository.currentIdentity() === result.identity) options.repository.setIdentity(before);
+          return false;
+        }
+        publish({ state: result.state, identity: result.identity });
+        return true;
+      });
+    },
+
     reset() {
       return inTurn(async () => {
         // A memory-only recovery session must not overwrite state it is preserving.
@@ -381,6 +456,8 @@ export function createAppStore(options: AppStoreOptions): AppStore {
           persistence: 'enabled',
           persistenceDegraded: false,
           diagnostics: { ...snapshot.diagnostics, repairs: [] },
+          // A reset ends the local household, and the binding with it (the repository has already forgotten it).
+          identity: options.repository.currentIdentity(),
         });
         persist(state);
         await queue.flush();

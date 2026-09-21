@@ -1,5 +1,6 @@
 import type { AppState } from '../state';
-import { pullOnce, type PullContext } from './pullEngine';
+import { mergePushResult, type Current } from './cycleMerge';
+import { applyPullBatch, fetchPullBatch, type ApplyOutcome, type PullContext } from './pullEngine';
 import { pushPending, type PushContext } from './pushEngine';
 import { canAcceptWork } from './queue';
 import {
@@ -31,6 +32,24 @@ export interface SyncSnapshot {
 
 export type SyncTrigger = 'foreground' | 'networkRestored' | 'authRestored' | 'localMutation' | 'manual';
 
+/**
+ * How the coordinator touches durable state.
+ *
+ * A cycle spends most of its time waiting on the network, and she keeps using the app meanwhile. A coordinator that derives a
+ * new state from the one it read at the start and then REPLACES the durable state with it would silently discard whatever she
+ * did during the wait. So every step that changes state is expressed as work against the state and namespace as they are AT THE
+ * MOMENT it runs, executed exclusively, and made durable together.
+ */
+export interface SyncTurn {
+  /** The state and namespace as they are right now, or null before the household has loaded. */
+  current(): Current | null;
+  /**
+   * Run `work` against the CURRENT state and namespace, exclusively, and make what it returns durable in one write.
+   * `null` means nothing needs writing. Resolves false when the write could not be made durable.
+   */
+  apply(work: (current: Current) => Current | null): Promise<boolean>;
+}
+
 export interface CoordinatorOptions {
   /** The account this coordinator serves. A cycle never runs for any other. */
   accountId: string;
@@ -40,6 +59,12 @@ export interface CoordinatorOptions {
   state: () => AppState | null;
   /** Make the applied batch and its cursor durable, together, or not at all. */
   commit: (state: AppState, namespace: SyncNamespace) => Promise<void>;
+  /**
+   * Optional. When another writer exists (the app itself), the composition supplies this so nothing is derived from a stale
+   * read. Without it, the coordinator reads `state()`/`namespace()` and writes through `commit` — correct only when nothing
+   * else writes while a cycle runs.
+   */
+  turn?: SyncTurn;
   push: Omit<PushContext, 'state'>;
   pull: PullContext;
   householdId: string;
@@ -71,6 +96,21 @@ export function createSyncCoordinator(options: CoordinatorOptions): SyncCoordina
   /** Set when a trigger arrives mid-cycle, so the work it brought is not stranded. */
   let again = false;
 
+  const turn: SyncTurn = options.turn ?? {
+    current() {
+      const state = options.state();
+      const namespace = options.namespace();
+      return state === null || namespace === null ? null : { state, namespace };
+    },
+    async apply(work) {
+      const current = this.current();
+      if (current === null) return false;
+      const next = work(current);
+      if (next !== null) await options.commit(next.state, next.namespace);
+      return true;
+    },
+  };
+
   const snapshot = (): SyncSnapshot => {
     const namespace = options.namespace();
     return {
@@ -99,14 +139,13 @@ export function createSyncCoordinator(options: CoordinatorOptions): SyncCoordina
   const accountMatches = (): boolean => options.activeAccountId() === options.accountId;
 
   async function runCycle(): Promise<SyncSnapshot> {
-    const namespace = options.namespace();
-    const state = options.state();
+    const start = turn.current();
 
-    if (namespace === null || state === null) {
+    if (start === null) {
       publish('idle');
       return snapshot();
     }
-    if (namespace.accountId !== options.accountId) {
+    if (start.namespace.accountId !== options.accountId) {
       publish('error', 'this namespace belongs to a different account');
       return snapshot();
     }
@@ -115,7 +154,7 @@ export function createSyncCoordinator(options: CoordinatorOptions): SyncCoordina
       options.report?.({ type: 'sync.account_mismatch' });
       return snapshot();
     }
-    if (!canAcceptWork(namespace)) {
+    if (!canAcceptWork(start.namespace)) {
       // Doing more work could produce a conflict that cannot be recorded, and an
       // unrecordable conflict is indistinguishable from a lost one.
       publish('backlog', 'there are changes waiting for you');
@@ -125,8 +164,6 @@ export function createSyncCoordinator(options: CoordinatorOptions): SyncCoordina
     // --- PULL first. Reconciling before pushing means her queue is measured
     // --- against what the cloud actually holds, not what it held last time.
     publish('pulling');
-    let current = namespace;
-    let currentState = state;
 
     for (let batch = 0; batch < 50; batch += 1) {
       if (!accountMatches()) {
@@ -135,43 +172,68 @@ export function createSyncCoordinator(options: CoordinatorOptions): SyncCoordina
         return snapshot();
       }
 
-      const pulled = await pullOnce(currentState, current, options.pull);
+      const before = turn.current();
+      if (before === null) {
+        publish('idle');
+        return snapshot();
+      }
 
-      if (pulled.kind === 'paused') {
-        publish('offline', pulled.detail);
+      // The network half. It needs only the cursor: nothing here is derived from state that may be stale by the time it lands.
+      const fetched = await fetchPullBatch(before.namespace, options.pull);
+
+      if (fetched.kind === 'paused') {
+        publish('offline', fetched.detail);
         return snapshot();
       }
-      if (pulled.kind === 'failed') {
-        publish(pulled.retriable ? 'offline' : 'error', pulled.detail);
+      if (fetched.kind === 'failed') {
+        publish(fetched.retriable ? 'offline' : 'error', fetched.detail);
         return snapshot();
       }
-      if (pulled.kind === 'integrityRefused') {
+
+      // The pure half, against the state and namespace as they are NOW. Durable BEFORE the loop continues: state, mappings,
+      // revisions and cursor in one operation. A crash before this replays the batch; a crash after it never reapplies it.
+      let applied: ApplyOutcome | null = null as ApplyOutcome | null;
+      const wrote = await turn.apply((current) => {
+        applied = applyPullBatch(current.state, current.namespace, fetched.batch, options.pull);
+        if (applied.kind === 'integrityRefused') return null;
+        if (
+          applied.kind === 'upToDate' &&
+          applied.namespace.cursor === current.namespace.cursor &&
+          applied.namespace.hydration === current.namespace.hydration
+        ) {
+          return null;
+        }
+        return { state: applied.state, namespace: applied.namespace };
+      });
+
+      const outcome = applied as ApplyOutcome | null;
+      if (outcome === null) {
+        publish('idle');
+        return snapshot();
+      }
+      if (outcome.kind === 'integrityRefused') {
         // The cursor stays exactly where it was. Replaying a bad batch forever
         // is better than persisting a household that does not add up.
         publish('error', 'some cloud changes could not be applied safely');
-        options.report?.({ type: 'sync.integrity_refused', detail: pulled.detail });
+        options.report?.({ type: 'sync.integrity_refused', detail: outcome.detail });
         return snapshot();
       }
-      if (pulled.kind === 'upToDate') {
-        if (pulled.namespace.cursor !== current.cursor) {
-          await options.commit(pulled.state, pulled.namespace);
-        }
-        current = pulled.namespace;
-        currentState = pulled.state;
-        break;
+      if (!wrote) {
+        publish('error', 'the household could not be saved');
+        return snapshot();
       }
-
-      // Durable BEFORE the loop continues: state, mappings, revisions and cursor
-      // in one operation. A crash before this replays the batch; a crash after
-      // it never reapplies it.
-      await options.commit(pulled.state, pulled.namespace);
-      current = pulled.namespace;
-      currentState = pulled.state;
-      if (!pulled.more) break;
+      if (outcome.kind === 'upToDate') break;
+      if (!outcome.more) break;
     }
 
     // --- PUSH what is left and not conflicted.
-    if (current.queue.length > 0) {
+    const basis = turn.current();
+    if (basis === null) {
+      publish('idle');
+      return snapshot();
+    }
+
+    if (basis.namespace.queue.length > 0) {
       if (!accountMatches()) {
         publish('idle', 'the signed-in account changed');
         options.report?.({ type: 'sync.account_mismatch' });
@@ -179,9 +241,9 @@ export function createSyncCoordinator(options: CoordinatorOptions): SyncCoordina
       }
 
       publish('pushing');
-      const result = await pushPending(current, { ...options.push, state: currentState });
-      current = result.namespace;
-      await options.commit(currentState, current);
+      const result = await pushPending(basis.namespace, { ...options.push, state: basis.state });
+      // She may have edited while the network was busy. Merge what the cycle did into what is durable now.
+      await turn.apply((current) => ({ state: current.state, namespace: mergePushResult({ basis, result: result.namespace, current }) }));
 
       if (result.paused) {
         publish('offline', 'signed out while syncing');
@@ -189,9 +251,10 @@ export function createSyncCoordinator(options: CoordinatorOptions): SyncCoordina
       }
     }
 
-    if (needsSyncAttention(current)) {
+    const finished = turn.current()?.namespace ?? basis.namespace;
+    if (needsSyncAttention(finished)) {
       publish('conflicted', 'some changes need your attention');
-    } else if (current.queue.length > 0) {
+    } else if (finished.queue.length > 0) {
       publish('offline', 'not everything has reached the cloud yet');
     } else {
       publish('idle');
