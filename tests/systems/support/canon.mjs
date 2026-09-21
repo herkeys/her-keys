@@ -47,6 +47,8 @@ export function systemRow(over = {}) {
     name: 'A System',
     description: '',
     categoryId: 'cat-home',
+    // HA-011: a household-level routine says so explicitly. A child System passes `scope: 'child', subjectMemberId: '<child id>'`.
+    subjectMemberId: null,
     ...emptySystemFacets(),
     provenance: USER,
     scope: 'household',
@@ -54,6 +56,9 @@ export function systemRow(over = {}) {
     ...over,
   };
 }
+
+/** A System about one of `CHILDREN`: child scope AND that child's id, the only shape state validation accepts for child scope. */
+export const childSystemRow = (subjectMemberId = 'child-1', over = {}) => systemRow({ scope: 'child', subjectMemberId, ...over });
 
 export function stepRow(over = {}) {
   return {
