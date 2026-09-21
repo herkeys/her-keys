@@ -126,7 +126,11 @@ describe('Feature 03 does not run recurrence, routines or scheduling', () => {
     assert.deepEqual(summary, {
       dailyLoadDecisions: ['approveDailyLoadMove', 'keepDailyLoadPlan', 'latestTransitionDecision', 'todaysIssues', 'undoRecommendedMove', 'undoableMove'],
       recommendationActions: ['approveDropTask', 'approveMoveEvent', 'approveProtectItem', 'approveShortenTask', 'keepCapacityPlan'],
-      structure: ['isDone'],
+      // DELIBERATELY changed from ['isDone'] (hk-ir01, HA-009). `isDone` answered only "finished?", and Calendar answered the rest
+      // itself (skipping a removed or missing event as if met). Calendar now asks the foundation where a prerequisite STANDS
+      // (satisfied / pending / unavailable), so it can no longer disagree with Today or Systems. It is one read-only function:
+      // nothing here adds a mutation, and `removeDependency` (the correction path) is still not Calendar's to call.
+      structure: ['standingOf'],
       responsibility: ['needsMePersonally'],
     });
   });

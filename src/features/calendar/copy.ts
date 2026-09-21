@@ -77,6 +77,9 @@ export const COPY = {
   hintProtect: 'Shows what this does before anything changes',
   hintAccept: 'Applies this change',
   hintCancelPreview: 'Discards the preview and changes nothing',
+  // A dependent whose prerequisite is no longer there (HA-009). Neutral, never "handled", "done", "ready" or "needs {the thing that is gone}".
+  reviewNeeded: 'Review needed',
+  prerequisiteGone: 'Something this needed is no longer there — worth a look.',
 } as const;
 
 export const undoLine = (title: string): string => `You moved ${title} to tomorrow. That can still be undone today.`;
@@ -196,6 +199,19 @@ export function responsibilityLine(mark: ResponsibilityMark): string | null {
   return lines[mark.coverage];
 }
 
+// ------------------------------------------------------------ prerequisites ---
+
+/**
+ * A dependent that lost a prerequisite (HA-009: REMOVED != COMPLETED, MISSING != SATISFIED). It says what is true and nothing
+ * more: something it needed is no longer there. It is not an error and not a conflict, it never calls the prerequisite done,
+ * handled or completed, and it never says the item "needs" the thing that is gone.
+ */
+export function prerequisiteReviewLine(item: DayItem): string | null {
+  const gone = item.unavailablePrerequisites.length;
+  if (gone === 0) return null;
+  return gone === 1 ? COPY.prerequisiteGone : `${gone} things this needed are no longer there — worth a look.`;
+}
+
 // ------------------------------------------------------------------- items ---
 
 function recurrenceLine(rule: RecurrenceNote): string | null {
@@ -229,6 +245,8 @@ export function itemLine(item: DayItem, ctx: CopyContext): string {
     parts.push(flexibilityLabel(item.flexibility));
     parts.push(estimateLine(item));
   }
+  // Not presented as cleanly ready: a prerequisite that is gone is not one that was met.
+  if (item.unavailablePrerequisites.length > 0) parts.push(COPY.reviewNeeded);
   return parts.join(' · ');
 }
 
@@ -251,6 +269,8 @@ export function detailLines(item: DayItem): string[] {
   const lengthWhy = basisExplanation(item.durationBasis);
   if (lengthWhy !== null) lines.push(lengthWhy);
   for (const blocker of item.blockedBy) lines.push(`Needs ${blocker.title ?? 'another item'} first`);
+  const review = prerequisiteReviewLine(item);
+  if (review !== null) lines.push(review);
   if (item.repeats !== null) {
     const repeat = recurrenceLine(item.repeats);
     if (repeat !== null) lines.push(repeat);
@@ -412,7 +432,18 @@ function openingText(opening: Opening, ctx: CopyContext): string {
   return ctx.range(opening.startMinute, opening.endMinute);
 }
 
+/**
+ * What to say about work that has a day but no time. Whatever the time-fit conclusion is, an item that lost a prerequisite
+ * also carries the neutral review line (HA-009), so a fit is never the whole story for something not cleanly ready.
+ */
 export function unplacedCopy(unplaced: UnplacedItem, ctx: CopyContext): UnplacedCopy {
+  const base = unplacedFitCopy(unplaced, ctx);
+  const item = ctx.item(unplaced.itemRef);
+  const review = item === undefined ? null : prerequisiteReviewLine(item);
+  return review === null ? base : { ...base, why: [...base.why, review] };
+}
+
+function unplacedFitCopy(unplaced: UnplacedItem, ctx: CopyContext): UnplacedCopy {
   const title = ctx.titleOf(unplaced.itemRef);
   // Whether it fits, or has nowhere to go, is decided by ITS length: a length that is not hers makes the answer an assumption.
   const lengthWhy = basisExplanation(unplaced.durationBasis);

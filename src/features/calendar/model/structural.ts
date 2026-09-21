@@ -49,6 +49,8 @@ export function dayEvidence(view: CalendarDayViewModel): unknown {
       subject: item.subject,
       responsibility: item.responsibility === null ? null : { coverage: item.responsibility.coverage, state: item.responsibility.state, covered: item.responsibility.covered, unacknowledged: item.responsibility.unacknowledged },
       blockedBy: item.blockedBy.map((blocker) => ({ ref: blocker.ref, finishMinute: blocker.finishMinute, finishBasis: blocker.finishBasis })),
+      // Present only where something it required is gone (HA-009): an empty list is not repeated on every item.
+      ...(item.unavailablePrerequisites.length > 0 ? { unavailablePrerequisites: item.unavailablePrerequisites.map((gone) => ({ ref: gone.ref, cause: gone.cause })) } : {}),
       repeats: item.repeats === null ? null : { frequency: item.repeats.frequency, interval: item.repeats.interval },
     })),
     narrowTransitions: view.narrowTransitions,

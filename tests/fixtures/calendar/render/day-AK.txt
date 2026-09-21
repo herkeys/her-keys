@@ -1,0 +1,17 @@
+# SHOWN
+ROOM
+Everything scheduled fits.
+SCHEDULE
+10:00 AM
+Morning appointment
+10:00–11:00 AM · Fixed
+NOT ON THE SCHEDULE YET
+File the reimbursement
+Due this day · Flexible · About 20 min · Review needed
+There’s room from 7:00–10:00 AM, and 1 more window. Nothing is scheduled for it.
+Why
+
+# ANNOUNCED
+button: Morning appointment. 10:00–11:00 AM · Fixed
+button: File the reimbursement. Due this day · Flexible · About 20 min · Review needed. There’s room from 7:00–10:00 AM, and 1 more window. Nothing is scheduled for it.
+button: Why: File the reimbursement {"expanded":false}

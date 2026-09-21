@@ -111,7 +111,21 @@ export interface EstimatedDuration {
   minutes: number;
 }
 
-/** A required predecessor that is not done. */
+/**
+ * A required predecessor that can no longer be met as recorded (HA-009): set aside (an archived task, a removed event, an
+ * abandoned goal) or not there at all. It is neither done nor something to wait for, so it is NOT a `Blocker` and never a timing
+ * conflict — what depended on it needs a look. REMOVED != COMPLETED and MISSING != SATISFIED. Calendar never rewrites the edge:
+ * the correction (retire the edge, or replace what it needs) belongs to whoever owns dependencies.
+ */
+export interface UnavailablePrerequisite {
+  /** The dependency edge, exactly as recorded. */
+  edgeId: string;
+  ref: EvidenceRef;
+  /** `retired`: it was set aside, not finished. `missing`: there is no such row. */
+  cause: 'retired' | 'missing';
+}
+
+/** A LIVE required predecessor that is not done: the thing it is still waiting for. */
 export interface Blocker {
   /** The dependency edge this came from. */
   edgeId: string;
@@ -156,6 +170,8 @@ export interface DayItem {
   window: WindowFacets | null;
   responsibility: ResponsibilityMark | null;
   blockedBy: Blocker[];
+  /** What it required that is no longer there. Never treated as satisfied, never a blocker: the item is not presented as cleanly ready. */
+  unavailablePrerequisites: UnavailablePrerequisite[];
   repeats: RecurrenceNote | null;
   /** Raw values the foundation classifier needs; also the audit trail. */
   source: { categoryId: string; subjectMemberId: string | null; rawDurationMinutes: number | null; dueDate: LocalDate | null };

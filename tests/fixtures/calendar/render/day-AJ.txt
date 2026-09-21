@@ -1,0 +1,17 @@
+# SHOWN
+ROOM
+Everything scheduled fits.
+SCHEDULE
+1:00 PM
+Team sync
+1:00–1:30 PM · Fixed
+NOT ON THE SCHEDULE YET
+Submit the permit form
+Due this day · Flexible · About 20 min · Review needed
+There’s room from 7:00 AM–1:00 PM, and 1 more window. Nothing is scheduled for it.
+Why
+
+# ANNOUNCED
+button: Team sync. 1:00–1:30 PM · Fixed
+button: Submit the permit form. Due this day · Flexible · About 20 min · Review needed. There’s room from 7:00 AM–1:00 PM, and 1 more window. Nothing is scheduled for it.
+button: Why: Submit the permit form {"expanded":false}

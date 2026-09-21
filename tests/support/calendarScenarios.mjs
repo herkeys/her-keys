@@ -6,11 +6,11 @@
  *
  * Times are written as 'HH:MM' on a date in the household's zone (New York unless stated).
  */
-import { addEvent } from '../../src/domain/events.ts';
+import { addEvent, removeEvent } from '../../src/domain/events.ts';
 import { toInstant, zonedTimeToEpochMs } from '../../src/domain/logicalDay.ts';
 import { accept, addPerson, delegate } from '../../src/domain/responsibility.ts';
 import { addDependency, addRecurrence } from '../../src/domain/structure.ts';
-import { addTask } from '../../src/domain/tasks.ts';
+import { addTask, archiveTask } from '../../src/domain/tasks.ts';
 import { createEmptyState } from '../../src/state/initialState.ts';
 
 export const TZ = 'America/New_York';
@@ -273,6 +273,26 @@ export const SCENARIOS = [
 
   scenario('AD', 3, 'Multi-day event', () =>
     household().event('evt-trip', { title: 'Grandma visit', start: '20:00', date: '2026-09-15', end: '10:00', endDate: '2026-09-17' })),
+
+  // HA-009 (hk-ir01). A prerequisite that was set aside is neither done nor something to wait for. The dependent gets no blocker, no
+  // "out of order" and no "waiting" — and it is not presented as cleanly ready either: it is flagged for review, neutrally.
+  scenario('AJ', 2, 'Removed event prerequisite', () => {
+    const b = household()
+      .event('evt-notary', { title: 'Notary appointment', start: '11:00', end: '12:00' })
+      .event('evt-later', { title: 'Team sync', start: '13:00', end: '13:30' })
+      .task('tsk-permit', { title: 'Submit the permit form', minutes: 20, due: DAY })
+      .requires(tsk('tsk-permit'), evt('evt-notary'));
+    return b.with((s) => removeEvent(s, b.ctx(), 'evt-notary'));
+  }),
+
+  scenario('AK', 2, 'Archived task prerequisite', () => {
+    const b = household()
+      .event('evt-a', { title: 'Morning appointment', start: '10:00', end: '11:00' })
+      .task('tsk-receipt', { title: 'Get the receipt', minutes: 15, due: DAY })
+      .task('tsk-file', { title: 'File the reimbursement', minutes: 20, due: DAY })
+      .requires(tsk('tsk-file'), tsk('tsk-receipt'));
+    return b.with((s) => archiveTask(s, b.ctx(), 'tsk-receipt'));
+  }),
 
   scenario('AF', 1, 'Insufficient information — feasible only if unknown were zero', () =>
     household()

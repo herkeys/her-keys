@@ -4,7 +4,7 @@ import type { Dependency, RecurrenceRule } from '../../../domain/foundation/stru
 import { refKey } from '../../../domain/foundation/typedRef';
 import { needsMePersonally } from '../../../domain/responsibility';
 import type { AppState, CalendarEvent, Task } from '../../../domain/state';
-import { isDone } from '../../../domain/structure';
+import { standingOf } from '../../../domain/structure';
 import { durationBasisOfTask } from './durationBasis';
 import { daysBetween, minuteOf, type DayFrame } from './timeFrame';
 import type {
@@ -18,6 +18,7 @@ import type {
   ResponsibilityMark,
   Subject,
   TimedSpan,
+  UnavailablePrerequisite,
   WindowFacets,
 } from './types';
 
@@ -118,37 +119,63 @@ function responsibilityMark(
   };
 }
 
+interface Prerequisites {
+  /** Live and unfinished: what the item is still waiting for. */
+  blockedBy: Blocker[];
+  /** Set aside or not there: neither done nor something to wait for. */
+  unavailable: UnavailablePrerequisite[];
+}
+
 /**
- * The direct, unmet `requires` predecessors of an item (one hop, as the foundation offers).
- * A predecessor EVENT is resolved by its own interval rather than by `isDone`, which is true
- * only for a removed event and would block forever once an event has simply elapsed
- * (F03-FG-04). Nothing here is transitive.
+ * The direct `requires` predecessors of an item (one hop, as the foundation offers), sorted by where each one STANDS.
+ * Standing is the foundation's (`standingOf`), so Calendar cannot hold a different answer from Today or Systems:
+ *
+ *   satisfied    finished in the way its kind finishes: nothing to say.
+ *   pending      live and unfinished: a `Blocker` (with its known finish, if it has one).
+ *   unavailable  set aside (a removed event, an archived task) or not there: NOT a blocker and NOT satisfied. It
+ *                creates no timing constraint and no "out of order" conflict against a thing that no longer exists;
+ *                the item is set apart for review instead (HA-009: REMOVED != COMPLETED, MISSING != SATISFIED).
+ *
+ * A LIVE event is still resolved by its own interval rather than by completion, which an event does not have: once it has
+ * simply elapsed nothing is waiting on it (F03-FG-04). That is a statement about time and is never worded as "done".
+ * Nothing here is transitive. `standingOf` reads the row it is asked about, once per edge; a day's items have few edges.
  */
-function blockersFor(state: AppState, indexes: Indexes, frame: DayFrame, nowMs: number, ref: { kind: 'event' | 'task'; id: string }): Blocker[] {
+function prerequisitesFor(state: AppState, indexes: Indexes, frame: DayFrame, nowMs: number, ref: { kind: 'event' | 'task'; id: string }): Prerequisites {
+  const result: Prerequisites = { blockedBy: [], unavailable: [] };
   const edges = indexes.requires.get(refKey(ref));
-  if (!edges) return [];
-  const blockers: Blocker[] = [];
+  if (!edges) return result;
   for (const edge of edges) {
     const target = edge.to;
-    if (target.kind === 'event') {
-      const event = indexes.events.get(target.id);
-      if (!event || event.status !== 'active') continue;
-      const finishMs = epochMsOf(event.endsAt);
-      if (finishMs <= nowMs) continue;
-      blockers.push({ edgeId: edge.id, ref: { kind: 'event', id: target.id }, title: event.title, finishMs, finishMinute: minuteOf(frame, finishMs), finishBasis: 'event_span' });
+    const standing = standingOf(state, target);
+    if (standing.standing === 'satisfied') continue;
+    const gone = (cause: UnavailablePrerequisite['cause']) => result.unavailable.push({ edgeId: edge.id, ref: { kind: target.kind, id: target.id }, cause });
+    if (standing.standing === 'unavailable') {
+      gone(standing.cause);
       continue;
     }
-    if (isDone(state, target)) continue;
+
+    // From here the prerequisite is live and unfinished.
+    if (target.kind === 'event') {
+      const event = indexes.events.get(target.id);
+      if (!event) {
+        gone('missing'); // the foundation and this index disagree about a row: it is not "met", so it is not silently dropped
+        continue;
+      }
+      const finishMs = epochMsOf(event.endsAt);
+      if (finishMs <= nowMs) continue;
+      result.blockedBy.push({ edgeId: edge.id, ref: { kind: 'event', id: target.id }, title: event.title, finishMs, finishMinute: minuteOf(frame, finishMs), finishBasis: 'event_span' });
+      continue;
+    }
     if (target.kind === 'task') {
       const task = indexes.tasks.get(target.id);
       const timed = task && task.plan.kind === 'timed' && task.durationMinutes > 0 ? epochMsOf(task.plan.startsAt) + task.durationMinutes * MINUTE_MS : null;
       // The predecessor's finish is its start plus its duration, so it is exactly as certain as that duration is.
-      blockers.push({ edgeId: edge.id, ref: { kind: 'task', id: target.id }, title: task?.title ?? null, finishMs: timed, finishMinute: timed === null ? null : minuteOf(frame, timed), finishBasis: timed === null || !task ? null : durationBasisOfTask(task) });
+      result.blockedBy.push({ edgeId: edge.id, ref: { kind: 'task', id: target.id }, title: task?.title ?? null, finishMs: timed, finishMinute: timed === null ? null : minuteOf(frame, timed), finishBasis: timed === null || !task ? null : durationBasisOfTask(task) });
       continue;
     }
-    blockers.push({ edgeId: edge.id, ref: { kind: target.kind, id: target.id }, title: null, finishMs: null, finishMinute: null, finishBasis: null });
+    result.blockedBy.push({ edgeId: edge.id, ref: { kind: target.kind, id: target.id }, title: null, finishMs: null, finishMinute: null, finishBasis: null });
   }
-  return blockers;
+  return result;
 }
 
 function recurrenceNote(indexes: Indexes, ref: { kind: 'event' | 'task'; id: string }): RecurrenceNote | null {
@@ -218,6 +245,7 @@ export function collectDayItems({ state, frame, nowMs, mode }: CollectInput): Da
       continuesIntoNextDay: end > frame.endMs,
     };
     const ref = { kind: 'event' as const, id: event.id };
+    const prerequisites = prerequisitesFor(state, indexes, frame, nowMs, ref);
     timed.push({
       ref,
       title: event.title,
@@ -235,7 +263,8 @@ export function collectDayItems({ state, frame, nowMs, mode }: CollectInput): Da
       durationBasis: 'event_span',
       window: null,
       responsibility: responsibilityMark(state, indexes, ref, nowMs),
-      blockedBy: blockersFor(state, indexes, frame, nowMs, ref),
+      blockedBy: prerequisites.blockedBy,
+      unavailablePrerequisites: prerequisites.unavailable,
       repeats: recurrenceNote(indexes, ref),
       source: { categoryId: event.categoryId, subjectMemberId: event.subjectMemberId, rawDurationMinutes: null, dueDate: null },
     });
@@ -296,6 +325,7 @@ export function collectDayItems({ state, frame, nowMs, mode }: CollectInput): Da
       progress = 'untimed';
     }
 
+    const prerequisites = prerequisitesFor(state, indexes, frame, nowMs, ref);
     const item: DayItem = {
       ref,
       title: task.title,
@@ -314,7 +344,8 @@ export function collectDayItems({ state, frame, nowMs, mode }: CollectInput): Da
       durationBasis: durationBasisOfTask(task),
       window,
       responsibility: responsibilityMark(state, indexes, ref, nowMs),
-      blockedBy: blockersFor(state, indexes, frame, nowMs, ref),
+      blockedBy: prerequisites.blockedBy,
+      unavailablePrerequisites: prerequisites.unavailable,
       repeats: recurrenceNote(indexes, ref),
       source: { categoryId: task.categoryId, subjectMemberId: task.subjectMemberId, rawDurationMinutes: task.durationMinutes, dueDate: task.dueDate },
     };
