@@ -76,6 +76,19 @@ describe('structure — complexity follows the day', () => {
     }
   });
 
+  test('what needs her is ordered most urgent first — across the first-glance rows and the rest — in every scenario', () => {
+    const rank = { now: 0, today: 1, soon: 2 };
+    let multi = 0;
+    for (const { name, view: v } of ready) {
+      if (!v.attention) continue;
+      const rows = [...v.attention.rows, ...v.attention.moreRows];
+      const ranks = rows.map((r) => rank[r.urgency]);
+      assert.deepEqual(ranks, [...ranks].sort((a, b) => a - b), `${name}: ${rows.map((r) => r.urgency).join(' > ')}`);
+      if (new Set(ranks).size > 1) multi += 1;
+    }
+    assert.ok(multi >= 2, 'the corpus must include days with rows of DIFFERENT urgency, or this proves nothing');
+  });
+
   test('the whole corpus is deterministic: the same state and instant give byte-identical views', () => {
     for (const { name, state, nowMs } of all) assert.equal(JSON.stringify(view(state, nowMs)), JSON.stringify(view(state, nowMs)), name);
   });
