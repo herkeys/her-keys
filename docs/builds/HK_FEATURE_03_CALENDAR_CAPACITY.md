@@ -169,6 +169,147 @@ Each was located in real code. None is repaired in this branch.
 
 ---
 
-*Sections 7–20 (consumption trace, capacity mapping, projection scope, action map, shared files, UI consumption, copy
-candidate, missing primitives, scenarios, structural evidence, performance, defects, integration candidates, considered/
-deferred, minimum-shippable checkpoint, completion status) are added as each checkpoint lands.*
+## 7. Foundation consumption trace (actual code, not governance IDs)
+
+Legend: **AS-IS** consume unchanged · **PARTIAL** consume part, compose the rest feature-locally · **NOT-FOUND**.
+Paths are under `src/`. "UI reads it today?" = whether any screen consumes it (none of the foundation collections do).
+
+| Capability | Gov. ID | Actual module · export | Tests | Feature 03 use | Class |
+|---|---|---|---|---|---|
+| Fixed / flexible | B4-FE01-015 | `domain/state.ts` `commitment` (event, task); `domain/foundation/commitment.ts` `commitmentFacetsOf().flexibility` | `foundationOps` | Read `commitment` directly; never inferred; fixed is never treated as movable | AS-IS |
+| Start / end / window | B4-FE01-015/016 | Events: `startsAt`/`endsAt` Instants. Tasks: `plan` (`unplanned`/`day`/`timed`), `dueDate`, `dueAt`, `earliestStartAt`, `latestFinishAt` (facets; no form sets them) | `events`, `tasks` | Instant-based intervals; date-only stays date-only; windows used only when present | PARTIAL |
+| Effort / duration | B4-FE01-015 | `commitmentFacetsOf().effortMinutes`; task `durationMinutes` (always a number, F03-FG-01); event effort = end − start | `foundationOps` | Estimate wording; `0` = no usable duration | PARTIAL |
+| Capacity profile | B4-FE01-016 ADR-025 | `domain/structure.ts` `capacityWindowFor`, `DEFAULT_CAPACITY` — **unused by Daily Load** (F03-FG-02) | `foundationOps:563` | Not read for classification (would be a second threshold source) | PARTIAL / gap recorded |
+| Daily Load reasoning | Build 3 | `features/daily-load/computeDailyLoad.ts` `computeDailyLoad`, `listTransitionGaps`, `isMovable`, `rankMoveCandidates`; `domain/dailyLoadIssues.ts` `assessDailyLoadIssues`, `detectOverlaps`, `detectTransitionIssues`, `detectCapacityPressure`; `domain/loadThresholds.ts` `loadTierForBuffer` | `dailyLoad`, `dailyLoadIssues`, `loadTier`, `build3Audit.*` | The classifier. Fed elapsed-minute coordinates (D-04) | AS-IS (logic) / PARTIAL (inputs) |
+| Day projection | Build 3 | `domain/projectDay.ts` `projectStateDay` | `logicalDay` | Equivalence oracle on non-DST days; not used for geometry (F03-FG-03/06) | PARTIAL |
+| Dependencies | B4-FE01-017 ADR-016 | `domain/foundation/structure.ts` `DependencySchema`; `domain/structure.ts` `blockersOf`, `isBlocked`, `isDone`; `domain/reasoning/related.ts` `relatedTo().requires` | `foundationOps`, `foundationAcceptance` | Direct `requires` edges only; predecessor events resolved by known interval (F03-FG-04/05) | PARTIAL |
+| Attention | B4-FE01-* | `domain/reasoning/attention.ts` `attentionFor` — today-only, no UI consumer | — | Not consumed (Feature 01 territory) | NOT USED |
+| Consequence | B4-FE01-015 | nullable `consequence` facet on event/task | — | Not used to rank; may be shown in Why only | PARTIAL |
+| Reversibility | — | exists on intents/executions only | — | Not represented on event/task | NOT-FOUND |
+| Responsibility lifecycle | B4-FE01-013/014 ADR-019 | `domain/foundation/responsibility.ts` states `owned/requested/acknowledged/accepted/declined/completed/returned`, `isActiveResponsibility`, `isUnacknowledged`; `domain/responsibility.ts` `liveResponsibilityFor`, `needsMePersonally` | `foundationOps` | Projected per item; delegated ≠ covered | AS-IS (data) |
+| Child / person refs | NHR-01 | `subjectMemberId` on event/task; `checkSubject` (`state.ts:617-624`); `children[]`; `people[]` | `schema`, supabase 30 | Subject preserved verbatim; never collapsed to household | AS-IS |
+| One Move / recommendation | Build 3 | `domain/recommendationActions.ts`, `domain/dailyLoadDecisions.ts` (§ action map) | `recommendationActions` | The only MOVE/DROP/SHORTEN/PROTECT source | AS-IS |
+| Reasoning evidence | B4-FE01-* | `domain/patterns.ts` `explain`; Daily Load "why" is string fields | — | Structured evidence in the view model; `WhyThis` strings come from Calendar copy | PARTIAL |
+| Logical day / timezone | Build 2 | `domain/logicalDay.ts` (see trace); household zone = `state.user.timezone` | `logicalDay`, `hostileAudit` | Sole time abstraction; no device-local assumptions | AS-IS |
+| External references | B4-FE01-004 | `state.externalReferences`; `relatedTo().externalReferences` | — | Display-only provenance; no provider wiring | PARTIAL |
+| Recurrence metadata | B4-FE01-018 ADR-017 | `state.recurrences` (rule only); `relatedTo().recurrences`; **occurrence records do not exist** | `foundationOps` | Show "repeats" from rule metadata on an existing concrete row. `occurrencesOf`/`nextOccurrence` are **not called** (Feature 04) | PARTIAL |
+| Cross-domain projection | B4-FE01-031 | `domain/reasoning/related.ts` `relatedTo` | — | Item-detail evidence | AS-IS |
+| Canonical mutation APIs | Build 2/3 | `domain/events.ts`, `tasks.ts`, `recommendationActions.ts`, `dailyLoadDecisions.ts` | many | § action map | AS-IS |
+| Store / hydration | Build 2/4 | `state/appStore.ts` (`getSnapshot`, `subscribe`, `commit`, `dispatch`); `store/AppStateProvider.tsx` `useHouseholdState`, `useStoreSnapshot` | `appStore`, `hostileAudit` | Reference-identity staleness token; closure flag for applied | PARTIAL (no revision, F03-FG-12) |
+
+## 8. Capacity classification mapping (foundation governs)
+
+Calendar introduces **no threshold, score or percentage**. Every classification below is produced by foundation code.
+
+| Calendar concept | Foundation source | Values | Note |
+|---|---|---|---|
+| Day tier | `assessDailyLoadIssues(events, tasks, computeDailyLoad(events, tasks)).tier` | `open` · `tight` · `overloaded` | Identical to Today on non-DST days (equivalence test) |
+| Per-gap tier | `loadTierForBuffer(bufferMinutes)` | `open` ≥ 45 · `tight` 23–44 · `overloaded` ≤ 22 | Constants `REQUIRED_TRANSITION_BUFFER_MINUTES` 45, `TIGHT_MINIMUM_BUFFER_MINUTES` 23 |
+| Verdict source | `issues.primary.kind` | `overlap` · `transition_conflict` (`raw`/`travel_aware`) · `capacity_pressure` · `tight_window` · `overdue` | Priority order is the foundation's |
+| Household day window | `CAPACITY_DAY_START_MINUTES` 360, `CAPACITY_DAY_END_MINUTES` 1320 | 06:00–22:00 | Profile overrides are ignored by the foundation (F03-FG-02) and therefore by Calendar, to stay consistent with Today |
+| **Unknown / insufficient** | The foundation's only "not known" convention is `null` (`commitment.ts:22`); there is no unknown tier | `tier: null` + `evidence: { status: 'insufficient', missing: [...] }` | Maps AF to the *actual* representation; no `UNKNOWN_INSUFFICIENT_INFORMATION` enum is invented |
+| Week comparison | the same day tier + counts | categorical only | No ranking, no composite, no heat-map percentage |
+| **Not used** | `LoadLevel` (`open/steady/tight/full`, `BUSY_SHARE = 0.25`), `DailyLoadStatus`, `describeLoad` | — | Extra presentational threshold; `DailyLoadStatus.overloaded` means < 45 (naming trap F03-FG-11) |
+
+**Gap the foundation cannot express (recorded, not invented):** it collapses "known transition physically fits but leaves
+≤ 22 minutes" and "known transition does not fit" into one tier, `overloaded`. Calendar keeps the tier as the foundation
+gives it and adds a *geometric fact* (slack < 0 ⇒ the transition does not fit) to separate scenarios C and D. The slack
+comparison is arithmetic on stored values, not a threshold.
+
+**Monotonic rule (D-03).** Unknown travel/duration can only reduce capacity. Therefore an `overloaded` verdict is stated
+regardless of unknowns, while `open`/`tight`/"fits" require complete evidence; without it `tier` is `null` and the missing
+facts are listed.
+
+## 9. Projection scope plan (contract §65)
+
+Calendar is a **projection engine**, not a scheduler. Allowed, deterministic, and the only operations implemented:
+
+1. fixed/flexible classification (read from `commitment`)
+2. interval normalisation (instants → elapsed minutes from the day's start)
+3. chronological ordering with the foundation's tie-break (start, end, id)
+4. overlap detection (foundation `detectOverlaps`)
+5. known-transition conflict (slack = gap − stored transition; stored values only)
+6. feasible-gap computation against currently known occupied intervals (merge + single sweep)
+7. direct dependency validation (one hop, typed edges)
+8. responsibility projection (index by ref)
+9. foundation tier classification
+10. current-state action availability (§ action map)
+
+**Prohibited and absent:** schedule search, permutations, backtracking, multi-step rearrangement, alternative-schedule
+generation, transitive dependency solving, splittable-task chunk planning (a `splittable` task is reported as
+*not evaluated*, never as "cannot fit"), heuristics that imitate an LLM planner.
+
+**Complexity:** sorting/indexing, not repeated scans — day projection O(n log n + t·g) where *n* = commitments, *t* =
+unplaced tasks, *g* = gaps; week = 7 day projections. No combinatorial growth. Measured on dense fixtures in C8 against the
+soft targets (< 50 ms day, < 150 ms week, median).
+
+**Placement rule (E/F/G/H/K/AF).** For a flexible, dated-or-planned, unscheduled task with usable duration *D* and window *W*:
+- *certain fit* — a gap ≥ D exists whose edges carry no material unknown → **opening** (never auto-scheduled);
+- else an *optimistic fit* (unknowns as zero) exists → **insufficient information**, missing facts named;
+- else → **PLACEMENT_FAILURE** ("Needs a place") with the gaps considered as evidence.
+Dependency lower bounds (a predecessor's known end) shrink *W* before any of this. `DUE BY 5 PM` is a window upper bound,
+never a scheduled time.
+
+## 10. Shared files touched (parallel-branch collision ledger)
+
+Planned minimal surface. Filled in with commits as they land.
+
+| Path | Reason | Commit | Likely sibling collision | Integration reconciliation |
+|---|---|---|---|---|
+| `app/(app)/calendar.tsx` | Calendar's own tab route; content becomes the projection-driven screen (REFINE) | C3 | none expected (Today = `today.tsx`; Life, Systems, AI have their own files) | none |
+| `app/gallery.tsx` *(only if used for visual evidence)* | one import + one section rendering feature-owned scenes | C8 | **likely** — every sibling may add a section | trivial merge; each section is feature-owned |
+
+New feature-owned paths (no sibling collision): `src/features/calendar/**` (new files; `EventForm.tsx` unchanged),
+`tests/calendar*.test.mjs`, `tests/support/calendar*.mjs`, `tests/fixtures/calendar/**`, `docs/builds/HK_FEATURE_03_*`.
+**Not touched:** `app/(app)/_layout.tsx`, `app/_layout.tsx`, `src/domain/**`, `src/design/**`, `src/persistence/**`,
+`supabase/**`, `package.json`, `package-lock.json`, `app.json`.
+
+## 11. Action availability map
+
+Committed separately: `docs/builds/HK_FEATURE_03_ACTION_MAP.md` (T1 gate). Summary: MOVE (event, task), KEEP, DROP,
+SHORTEN, PROTECT and UNDO are available **on the logical day only** for what the live foundation verdict offers (PROTECT
+for any non-elapsed flexible item); EDIT is available on any day through the existing editors; COMPLETE, PLACE, DELEGATE
+and recurrence edits are deliberately not surfaced.
+
+## 12. Missing global primitives register (single authority)
+
+Encountered while planning. Feature-local composition noted; likely to be re-discovered by sibling features.
+
+| # | Need | Where | Limitation | Temporary composition | Likely elsewhere | Type |
+|---|---|---|---|---|---|---|
+| MGP-01 | **Agenda row**: time range + title + state marks + optional detail affordance | day list | no time-list primitive; `TimelineList` is Today-coupled and single-day | feature-local presentational `AgendaRow` from `AppText` + `Tag` + `Divider` | Today, Systems | UI |
+| MGP-02 | **Day selector / segmented control** | week strip, Day/Week switch | `SegmentBar` is a progress bar, not a selector; `ChipToggle` has no `disabled`/hint | compose with `ChipToggle` (role button + selected) | Life, Systems | UI |
+| MGP-03 | **`waiting` Card tone** and accessibility passthrough on `Card`/`Tag`/`SegmentBar` | responsibility marks, notes | `Card` tones lack `waiting`; no `accessibilityLabel` props | wrap in a labelled `View`; use `InlineNotice tone="waiting"` | Today, Talk It Out | UI |
+| MGP-04 | **Capacity / conflict / unknown-state wording** | Calendar + Today | each feature writes its own strings | Calendar-owned `copy.ts` (see §15 shared-copy candidate) | Today | COPY |
+| MGP-05 | **Time formatting** (12-hour clock, range, elapsed duration) | agenda rows | `formatTime` lives inside `daily-load/computeDailyLoad.ts` | feature-local `format.ts` (does not import Today) | Today, Systems | UI |
+| MGP-06 | **Per-date schedule projection** with DST-correct elapsed minutes and no future-overdue backlog | Calendar, week | `projectDay` is wall-clock and backlog-inflating (F03-FG-03/06) | feature-local `model/` projection | Today (tomorrow preview), Systems | DOMAIN-PROJECTION |
+| MGP-07 | **Store revision / snapshot token** | preview staleness | no revision counter (F03-FG-12) | reference identity of the slices Calendar reads | Talk It Out (pending interpretations) | DOMAIN-PROJECTION |
+| MGP-08 | **Task time-of-day editing** | Needs a place → act | `TaskForm` has no plan/time field | none; Calendar shows openings only | Today, Systems | ACTION-MAP |
+
+---
+
+## 13. C1 internal engineering checkpoint — self-review
+
+Re-read §4–§12 against each other for contradictions.
+
+| Check | Result |
+|---|---|
+| Does any planned classification use a Calendar-owned threshold? | No — every tier comes from `loadTierForBuffer` / `assessDailyLoadIssues`. |
+| Does any planned display convert unknown → zero? | No — the `null` tier + missing-evidence list is the only unknown representation; inherited `?? 0` sites are not extended. |
+| Does any planned action lack a mutation? | No — every **Yes** row in the action map names an existing function. |
+| Does preview need a mutation Calendar would invent? | No — preview runs the *same pure transition* on an in-memory copy of state and re-projects. It cannot diverge from accept. |
+| Is a second source of truth created? | No — nothing derived is persisted; `RevisionToken` is in-memory. |
+| Is shared foundation modified? | No — every gap is worked around feature-locally (§6). |
+| Missing foundation semantics that block a requirement? | **G/AF partially** (F03-FG-01) — handled by D-01 and recorded as OD-01; not a blocker for the feature. **No blocker found.** |
+| Conflicting capacity truth? | The DST divergence from Today (D-04) is deliberate, bounded to two days a year, and recorded as an integration candidate. |
+| Action mutation ambiguity? | None — all actions are today-only by foundation design; read-only elsewhere. |
+| Shared-foundation change required? | No. |
+
+**Result: coherent. Continue autonomously to C2.** No owner decision is required to proceed; OD-01 and the deferred
+actions (PLACE, COMPLETE) are recorded for the owner and do not block the build.
+
+---
+
+*Sections 14–20 (UI-system consumption, shared-copy candidate, scenarios, structural evidence, performance, defects,
+integration candidates, considered/deferred, minimum-shippable checkpoint, completion status) are added as each
+checkpoint lands.*
