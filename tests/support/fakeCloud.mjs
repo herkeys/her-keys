@@ -32,6 +32,9 @@ export function createFakeCloud() {
       calls.push({ op: 'create', table, localId: row.local_id });
       await hooks.duringCreate?.(table, row);
       if (state.offline) return down();
+      // A scripted refusal: the server will say no to this row every time (a content rule, not a network problem).
+      const refusal = hooks.refuse?.(table, row);
+      if (refusal) return refusal;
       if (table === 'onboarding_state') {
         return { kind: 'failure', failure: 'validation', detail: 'sync_push: onboarding_state is not a pushable entity table', code: '22023' };
       }

@@ -151,6 +151,7 @@ journey, sending 450 rows and pulling them back, runs in about one second).
 | IR-D6 | P3 | UI-DEFAULT | `TaskForm.tsx:34` | Prefilled `'15'` indistinguishable from typed 15 (audit missed) | **REPAIRED** (touched vs default) |
 | IR-D10 | P3 | SYNC | `syncRuntime.request` (my own new loop) | A household above the queue ceiling (400) was sent only in part: the loop stopped when the first cycle drained the queue, leaving the held-back rows until some later trigger. Found by the 450-task test | **REPAIRED** (look again after each cycle; 450 tasks now leave in ONE sign-in — in-model and against PostgreSQL) |
 | IR-D11 | P2 | SYNC | `pullEngine.fetchPullBatch`, `supabaseSyncTransport.pull` (pre-existing since B4) | A pull response of more than one batch (200 rows) kept the first 200 and left the cursor unmoved → the same 200 re-read forever; a second device never hydrated a household with more than ~200 changed rows, and a fake that ignored the limit hid it | **REPAIRED** (a pull is complete for its range; only row requests are chunked; `PULL_BATCH_SIZE` → `PULL_FETCH_CHUNK`, transport `limit` argument removed). 450 tasks hydrate through the real `sync_pull` |
+| IR-D12 | P3 | SYNC | `changeBridge.unsyncedRows` (my own new top-up) | A row the server refuses for its CONTENT leaves the queue as evidence and never gets a mapping, so the stateless top-up derived it as "owed" again on every trigger: the same refused row re-sent forever, with a new piece of evidence each time. Found by attacking the top-up with a scripted refusal | **REPAIRED** (a row whose create already ended as evidence is not owed; it waits for a decision). Asked once, recorded once, new work flows past it |
 | IR-D7 | P4 | SEMANTICS | `needsMe.ts:56` | `resolved` also means "promoted to a task" | recorded |
 | IR-D8 | P4 | PARITY | Task/Event integrity | local rule admits the adult user id as subject; the cloud FK does not | recorded |
 | IR-D9 | P4 | PARITY | Meal, Category | cloud has `subject_member_id`, local has none | recorded |
@@ -166,4 +167,9 @@ row (`table, id, op, revision`, ~100 bytes) per change-log row since its cursor,
 row body. Bounding that on the server needs a composite `(xid, seq)` cursor — an owner-gated server change, not a client one, and not needed
 at household scale (the real-database journey pulls a 450-task household in five row requests); D9 a device's own pushes return through its
 next pull and are fetched again although the revision it already holds is current (in the in-model journey device A re-read 400 rows it
-had just written). Skipping a row whose mapped revision is already ≥ the change row's revision is a safe optimisation, deliberately not made here.
+had just written). Skipping a row whose mapped revision is already ≥ the change row's revision is a safe optimisation, deliberately not made here;
+D10 `SyncNamespace.backlog` is only ever set (queue overflow, or 200 unresolved evidence entries) and nothing clears it, and no path exists to
+resolve evidence (`resolved` is never set to true), so a transient overflow leaves the "needs attention" state on for good. Conservative on
+purpose — an update that overflowed is not auto-recovered (D3), so clearing it would be a lie — but it needs a resolve/recover flow (found by the
+F01 validation; F01's `SyncNotice` no longer prints "0 changes need your attention" for it); D11 HA-014 is a little sharper now: the pull batch is
+everything settled, so one incompatible row refuses the whole household's batch (the cursor still does not move and nothing is corrupted).

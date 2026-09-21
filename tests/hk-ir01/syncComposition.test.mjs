@@ -18,6 +18,8 @@ import { starterCategories } from '../../src/domain/categories.ts';
 import { addTask, updateTask } from '../../src/domain/tasks.ts';
 import { createChangeObserver } from '../../src/domain/sync/changeObserver.ts';
 import { namespaceForNewDevice } from '../../src/domain/sync/claimSeam.ts';
+import { SourceArtifactSchema } from '../../src/domain/foundation/sourceArtifact.ts';
+import { FOUNDATION_SPECS } from '../../src/domain/sync/foundationSpecs.ts';
 import { PULL_FETCH_CHUNK } from '../../src/domain/sync/syncTypes.ts';
 import { decodeStoredState } from '../../src/persistence/envelope.ts';
 import { STORAGE_KEYS, createAppStateRepository } from '../../src/persistence/appStateRepository.ts';
@@ -504,6 +506,32 @@ describe('HA-001 — false success is impossible', () => {
     assert.notEqual(state.kind, 'accountBound', 'a binding cannot be made durable, so it is not made');
     assert.equal(a.syncRuntime.running(), null);
   });
+
+  test('a row the server refuses for its CONTENT is recorded once and asked about once: the top-up never re-queues it into a retry loop', async () => {
+    const cloud = createFakeCloud();
+    cloud.hooks.refuse = (_table, row) => (row.title === 'Poison' ? { kind: 'failure', failure: 'validation', detail: 'title refused', code: '23514' } : null);
+    const accountCloud = accountCloudFor(cloud, ACCOUNT_A);
+    const a = await makeDevice({ cloud, accountId: ACCOUNT_A, accountCloud });
+    await householdWithContent(a);
+    await mutate(a, task('Poison'));
+    await a.signIn();
+    const poisonId = a.store.getSnapshot().state.tasks.find((t) => t.title === 'Poison').id;
+    const attempts = () => cloud.calls.filter((c) => c.op === 'create' && c.localId === poisonId).length;
+
+    assert.equal(attempts(), 1, 'the server was asked once');
+    assert.equal(cloud.table('tasks').length, 2, 'the rest of her household still arrived');
+    const [evidence, ...others] = a.persisted().identity.sync.evidence.filter((e) => !e.resolved);
+    assert.deepEqual([evidence.evidence, evidence.localId, others.length], ['validation-failure', poisonId, 0], 'and it is recorded, once, for her to see');
+
+    // Every later trigger leaves it alone: a refused row is waiting for HER, not for another attempt.
+    await a.syncRuntime.request('foreground');
+    await a.syncRuntime.request('networkRestored');
+    await mutate(a, task('Another'));
+    await a.settle();
+    assert.equal(attempts(), 1, 'still asked once after later triggers and another edit');
+    assert.equal(a.persisted().identity.sync.evidence.filter((e) => !e.resolved).length, 1, 'still one piece of evidence, not one per trigger');
+    assert.equal(cloud.table('tasks').length, 3, 'and new work still flows past it');
+  });
 });
 
 describe('HA-001 — she keeps using the app while the network is busy (no silent loss)', () => {
@@ -741,6 +769,41 @@ describe('HA-001 — initial sync attack matrix (the rows the journeys above do 
     assert.equal(new Set(tasks.map((t) => t.id)).size, 250, 'with no duplicate row');
     assert.deepEqual([done.identity.sync.hydration, done.identity.sync.queue.length], ['ready', 0]);
     assert.equal(cloud.rows.size, rowsBefore, 'and the cloud was not written to by a device that only reads');
+  });
+});
+
+describe('HA-001 — a source artifact carries arrival metadata and NEVER her words (the foundation half of raw-source exclusion)', () => {
+  const artifact = {
+    id: 'artifact-1', kind: 'voice-utterance', origin: 'voice', provider: null, receivedAt: '2026-09-21T14:00:00.000Z',
+    contentDigest: 'a'.repeat(64), contentRef: null, retractedAt: null, createdAt: '2026-09-21T14:00:00.000Z', scope: 'personal',
+  };
+  const RAW_TEXT = /text|body|transcript|utterance|words|message/i;
+
+  test('the model has no place to put text: a source artifact with any of the obvious fields is refused', () => {
+    assert.equal(SourceArtifactSchema.safeParse(artifact).success, true);
+    for (const field of ['text', 'body', 'transcript', 'utterance', 'content', 'words']) {
+      assert.equal(SourceArtifactSchema.safeParse({ ...artifact, [field]: 'CANARY-RAW-WORDS' }).success, false, `"${field}" is not a field of a source artifact`);
+    }
+  });
+
+  test('the cloud projection has no column that could hold text', () => {
+    const spec = FOUNDATION_SPECS.find((s) => s.kind === 'sourceArtifact');
+    assert.deepEqual(spec.fields.map((f) => f.col).filter((col) => RAW_TEXT.test(col)), []);
+    assert.deepEqual(spec.fields.map((f) => f.col).sort(), ['content_digest', 'content_ref', 'kind', 'origin', 'provider', 'received_at', 'retracted_at']);
+  });
+
+  test('a bound household\'s source artifact reaches the cloud as arrival metadata and a digest, in no column that could be text', async () => {
+    const cloud = createFakeCloud();
+    const accountCloud = accountCloudFor(cloud, ACCOUNT_A);
+    const a = await makeDevice({ cloud, accountId: ACCOUNT_A, accountCloud });
+    await mutate(a, (s) => ({ ...s, oneMoves: [withheldMove], sourceArtifacts: [artifact] }));
+    await a.store.flush();
+    await a.signIn();
+    const [row] = cloud.table('source_artifacts');
+    assert.ok(row, 'the artifact was transported');
+    assert.equal(row.content_digest, 'a'.repeat(64), 'as a digest');
+    assert.deepEqual(Object.keys(row).filter((key) => RAW_TEXT.test(key)), [], 'and in no text-shaped column');
+    assert.equal(a.persisted().identity.sync.queue.length, 0);
   });
 });
 

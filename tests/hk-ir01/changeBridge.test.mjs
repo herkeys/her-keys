@@ -220,6 +220,19 @@ describe('HA-001 — the initial seed: pre-binding content cannot silently stay 
     assert.equal(seeded.queue.length, 0);
   });
 
+  test('a row whose CREATE already ended as evidence is not owed again: it waits for a decision, it is not re-sent on every trigger', () => {
+    const c = ctx();
+    let s = withTask(createEmptyState(TZ), c, 'Refused');
+    s = withTask(s, c, 'Fine');
+    const evidence = { id: 'e1', evidence: 'validation-failure', kind: 'task', localId: 'task-1', cloudId: null, attemptedOp: 'create', baseRevision: null, serverRevision: null, detail: 'refused', recordedAt: AT, resolved: false };
+    const owed = unsyncedRows(s, ns({ mappings: mappedStarters(s), evidence: [evidence] }), 100);
+    assert.deepEqual(owed.map((row) => row.localId), ['task-2'], 'only the row nobody has ruled on');
+    assert.deepEqual(unsyncedRows(s, ns({ mappings: mappedStarters(s) }), 100).map((row) => row.localId).sort(), ['task-1', 'task-2'], 'and without the evidence both are owed');
+    // Evidence about an UPDATE of some other row does not hide this one.
+    const other = { ...evidence, attemptedOp: 'update', localId: 'task-2' };
+    assert.deepEqual(unsyncedRows(s, ns({ mappings: mappedStarters(s), evidence: [other] }), 100).map((row) => row.localId).sort(), ['task-1', 'task-2']);
+  });
+
   test('the server-created onboarding row is ADOPTED, and her real onboarding is queued over it (a pull would otherwise overwrite it)', () => {
     const base = createEmptyState(TZ);
     const s = { ...base, onboarding: { ...base.onboarding, goalIds: ['calmer-household'], lastStep: 'strengths' } };

@@ -59,16 +59,23 @@ export function changedRows(previous: AppState, next: AppState, namespace: SyncN
   return out;
 }
 
-/** Rows that exist locally and that neither the mapping nor the queue accounts for — the cloud has never been told about them. */
+/**
+ * Rows that exist locally and that neither the mapping nor the queue accounts for — the cloud has never been told about them.
+ *
+ * A row whose CREATE already ended as evidence (the server refused its content, RLS said no, a dependency can never resolve) is
+ * not owed: it left the queue on purpose and is waiting for a decision, and deriving it as "owed" again would send the same
+ * refused row on every trigger, forever, with a new piece of evidence each time.
+ */
 export function unsyncedRows(state: AppState, namespace: SyncNamespace, limit: number): RowIntent[] {
   const queued = new Set(namespace.queue.map((item) => mappingKey(item.kind, item.localId)));
+  const decided = new Set(namespace.evidence.filter((e) => e.attemptedOp === 'create').map((e) => mappingKey(e.kind, e.localId)));
   const out: RowIntent[] = [];
   for (const kind of PUSHABLE_KINDS) {
     // Onboarding is created by the server for every account; it is adopted (mapped), never created.
     if (kind === 'onboarding') continue;
     for (const entry of rowsOf(state, kind, namespace)) {
       const key = mappingKey(kind, entry.id);
-      if (namespace.mappings[key] === undefined && !queued.has(key)) {
+      if (namespace.mappings[key] === undefined && !queued.has(key) && !decided.has(key)) {
         out.push({ kind, localId: entry.id, op: 'upsert' });
         if (out.length >= limit) return out;
       }
