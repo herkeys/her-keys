@@ -32,6 +32,8 @@ const BASELINE = join(REPO, 'supabase', 'migrations', '20260919230054_build4_bas
 const BUILD4 = join(REPO, 'supabase', 'migrations', '20260919231500_build4_cloud_schema.sql');
 // HK-INTEGRATION-READINESS-01: additive, follows the shipping migration and never edits it.
 const IR01 = join(REPO, 'supabase', 'migrations', '20260921120000_ir01_duration_source_and_claim_v3.sql');
+// HK-FEATURE-05 closeout repair (OC-01): additive, follows IR01 and never edits it.
+const F05 = join(REPO, 'supabase', 'migrations', '20260921190000_f05_add_child_after_binding.sql');
 const AUTH_STUB = join(HERE, 'helpers', '00-auth-stub.sql');
 const TEST_HELPERS = join(HERE, 'helpers', '01-test-helpers.sql');
 const TEST_DEFAULTS = join(HERE, 'helpers', '05-test-defaults.sql');
@@ -65,6 +67,7 @@ const psqlFile = (db, file, opts) => psql(db, readFileSync(file, 'utf8'), opts);
 // the Supabase CLI does not wrap migration files. Nothing here adds one.
 const applyBuild4 = (db, opts = {}) => psqlFile(db, BUILD4, opts);
 const applyIr01 = (db, opts = {}) => psqlFile(db, IR01, opts);
+const applyF05 = (db, opts = {}) => psqlFile(db, F05, opts);
 
 function admin(sql) {
   return execFileSync(
@@ -103,9 +106,20 @@ function envA() {
   psqlFile('b4_env_a', BASELINE, { label: 'ENV A baseline' });
   applyBuild4('b4_env_a', { label: 'ENV A build4' });
   applyIr01('b4_env_a', { label: 'ENV A ir01' });
+  applyF05('b4_env_a', { label: 'ENV A f05' });
 
   check('ENV A: Build 4 migration applies on an empty surface', true);
   check('ENV A: the additive IR01 migration applies on top of it (fresh install)', true);
+  check('ENV A: the additive F05 migration (a child after binding) applies on top of both (fresh install)', true);
+  check('ENV A: private.push_household_child is SECURITY DEFINER, pinned to an empty search_path, and NOT executable by anon or PUBLIC',
+        scalar('b4_env_a', "select p.prosecdef::text || '/' || coalesce(array_to_string(p.proconfig, ','), 'none') || '/' || has_function_privilege('anon', p.oid, 'EXECUTE')::text || '/' || has_function_privilege('authenticated', p.oid, 'EXECUTE')::text from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='private' and p.proname='push_household_child';") === 'true/search_path=""/false/true');
+  check('ENV A: public.sync_push is STILL SECURITY INVOKER after the F05 replacement (every other table is still written as the caller)',
+        scalar('b4_env_a', "select (not prosecdef)::text from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname='sync_push';") === 'true');
+  check('ENV A: household_members gained NO client write grant (a child is written only through the function)',
+        scalar('b4_env_a', "select count(*) from information_schema.role_table_grants where table_schema='public' and table_name='household_members' and grantee='authenticated' and privilege_type <> 'SELECT';") === '0'
+        && scalar('b4_env_a', "select count(*) from information_schema.column_privileges where table_schema='public' and table_name='household_members' and grantee='authenticated' and privilege_type in ('INSERT','UPDATE');") === '0');
+  check('ENV A: household_members gained NO write policy (still exactly one policy, the SELECT one)',
+        scalar('b4_env_a', "select count(*) || '/' || string_agg(cmd, ',') from pg_policies where schemaname='public' and tablename='household_members';") === '1/SELECT');
   check('ENV A: tasks.duration_source is nullable text with no default (an unstated source is unknown)',
         scalar('b4_env_a', "select data_type || '/' || is_nullable || '/' || coalesce(column_default, 'none') from information_schema.columns where table_schema='public' and table_name='tasks' and column_name='duration_source';") === 'text/YES/none');
   check('ENV A: 34 application tables', scalar('b4_env_a', "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r';") === '34');
@@ -203,6 +217,7 @@ function envC(only) {
   psqlFile('b4_env_c', BASELINE, { label: 'ENV C baseline' });
   applyBuild4('b4_env_c', { label: 'ENV C build4 (while empty)' });
   applyIr01('b4_env_c', { label: 'ENV C ir01 (while empty)' });
+  applyF05('b4_env_c', { label: 'ENV C f05 (while empty)' });
   check('ENV C: migrated while empty, before any fixture exists', true);
   // Test-environment convenience ONLY: see the header of helpers/05-test-defaults.sql.
   psqlFile('b4_env_c', TEST_DEFAULTS, { label: 'ENV C test defaults' });
@@ -337,13 +352,23 @@ function migrationQuality() {
   // Exactly one Build 4 shipping migration in the tree.
   const migs = readdirSync(join(REPO, 'supabase', 'migrations')).filter((f) => f.endsWith('.sql'));
   const after = migs.filter((f) => f.split('_')[0] > '20260919230054');
-  check('quality: exactly ONE Build 4 shipping migration plus the ONE additive IR01 repair migration after the baseline',
-        after.length === 2 && after[0] === '20260919231500_build4_cloud_schema.sql' && after[1] === '20260921120000_ir01_duration_source_and_claim_v3.sql', after.join(', '));
-  check('quality: their timestamps sort strictly after the baseline, in order', after.every((f) => f.split('_')[0] > '20260919230054') && after[0] < after[1], after.join(' < '));
+  check('quality: exactly ONE Build 4 shipping migration plus the ONE additive IR01 repair and the ONE additive F05 (child after binding) migration after the baseline',
+        after.length === 3 && after[0] === '20260919231500_build4_cloud_schema.sql' && after[1] === '20260921120000_ir01_duration_source_and_claim_v3.sql'
+        && after[2] === '20260921190000_f05_add_child_after_binding.sql', after.join(', '));
+  check('quality: their timestamps sort strictly after the baseline, in order', after.every((f) => f.split('_')[0] > '20260919230054') && after[0] < after[1] && after[1] < after[2], after.join(' < '));
   const ir01Sql = readFileSync(IR01, 'utf8');
   check('quality: the IR01 migration is additive - it drops no table, column or data and rewrites no row',
         !/(^|\n)\s*(DROP TABLE|DROP COLUMN|TRUNCATE|DELETE FROM|UPDATE public\.)/i.test(ir01Sql.replace(/\$fn\$[\s\S]*?\$fn\$/g, '').replace(/--.*$/gm, '')));
   check('quality: the IR01 migration is pinned to LF, so its function digest is the same on every checkout', !ir01Sql.includes(String.fromCharCode(13)));
+  const f05Sql = readFileSync(F05, 'utf8');
+  const f05Code = f05Sql.replace(/\$fn\$[\s\S]*?\$fn\$/g, '').replace(/--.*$/gm, '');
+  check('quality: the F05 migration is additive - it drops nothing, rewrites no row and changes no table, column, constraint, index, policy or table grant',
+        !/(^|\n)\s*(DROP |TRUNCATE|DELETE FROM|UPDATE public\.|INSERT INTO|ALTER TABLE|CREATE TABLE|CREATE INDEX|CREATE UNIQUE INDEX|CREATE POLICY|CREATE TRIGGER|GRANT [^;]*\bON\s+(TABLE\s+)?public\.)/i.test(f05Code));
+  check('quality: the F05 migration touches exactly two functions (the new definer function and the replaced sync_push)',
+        (f05Sql.match(/^CREATE (OR REPLACE )?FUNCTION [\w.]+/gm) ?? []).map((s) => s.replace(/^CREATE (OR REPLACE )?FUNCTION /, '')).join(',') === 'private.push_household_child,public.sync_push');
+  check('quality: the F05 migration is pinned to LF, so its function digest is the same on every checkout', !f05Sql.includes(String.fromCharCode(13)));
+  check('quality: the F05 migration opens and closes its own transaction and ends with the fail-closed assertion',
+        /^\s*BEGIN;\s*$/m.test(f05Sql) && f05Sql.trim().endsWith('SELECT private.assert_app_schema_secured();\n\nCOMMIT;'));
 }
 
 // ------------------------------------------ CLIENT PAYLOAD INTEGRATION ----
@@ -521,6 +546,40 @@ function envD() {
   check('ENV D: the fail-closed assertion passes on the upgraded database', psql(db, 'SELECT private.assert_app_schema_secured();').ok);
   check('ENV D: no client role gained a privilege it should not have (anon has nothing on the new column)',
         scalar(db, "select count(*) from information_schema.column_privileges where table_schema='public' and table_name='tasks' and column_name='duration_source' and grantee in ('anon','PUBLIC');") === '0');
+
+  // ---- The SECOND additive upgrade, on the same populated database: F05 (a child after binding). It adds one function and
+  // replaces one; it must lose nothing, rewrite nothing, and leave every existing household exactly as it was.
+  const memberDigest = () => scalar(db, "SELECT md5(string_agg(to_jsonb(m)::text, '|' ORDER BY m.id)) FROM public.household_members m;");
+  const preF05 = { census: census(), members: memberDigest(), tasks: digest() };
+  applyF05(db, { label: 'ENV D f05 upgrade' });
+  check('ENV D: the additive F05 migration applies to the populated, already-upgraded database (no interlock, no abort)', true);
+  check('ENV D: F05 lost nothing - every table keeps its row count', census() === preF05.census, `${preF05.census} -> ${census()}`);
+  check('ENV D: F05 rewrote no existing row (every household member and every task is byte-identical)',
+        memberDigest() === preF05.members && digest() === preF05.tasks);
+  check('ENV D: the version 2 claim still replays to the same completed answer after F05, and made no additional household (still two)',
+        claim(uid, claimKey, v2) === 'complete' && scalar(db, 'select count(*) from public.households;') === '2');
+  const uidHouse = scalar(db, `select household_id from public.household_members where profile_id = '${uid}' and role = 'owner';`);
+  const addChild = (sub, house, localId) => scalar(db, `
+    BEGIN;
+    SET LOCAL ROLE authenticated;
+    SET LOCAL request.jwt.claims = '{"sub":"${sub}"}';
+    SELECT public.sync_push('household_members', 'd3000000-0000-4000-8000-0000000000d1'::uuid,
+      jsonb_build_object('household_id','${house}','local_id','${localId}','member_type','child','display_name','Ivy','birth_date','2020-05-01','scope','child')) ->> 'status';
+    COMMIT;`).split('\n').map((line) => line.trim()).find((line) => ['created', 'already_exists', 'local_id_collision'].includes(line));
+  check('ENV D: after F05 the OWNER of the populated household can add a child through sync_push', addChild(uid, uidHouse, 'child-late') === 'created');
+  check('ENV D: ...a retry from the same install answers already_exists and adds no second row',
+        addChild(uid, uidHouse, 'child-late') === 'already_exists'
+        && scalar(db, `select count(*) from public.household_members where household_id = '${uidHouse}' and local_id = 'child-late';`) === '1');
+  check('ENV D: ...and an unrelated account is refused for that household, and nothing was written',
+        psql(db, `
+          BEGIN;
+          SET LOCAL ROLE authenticated;
+          SET LOCAL request.jwt.claims = '{"sub":"${other}"}';
+          SELECT public.sync_push('household_members', 'd3000000-0000-4000-8000-0000000000d2'::uuid,
+            jsonb_build_object('household_id','${uidHouse}','local_id','child-evil','member_type','child','display_name','Eve','birth_date','2020-05-01','scope','child'));
+          COMMIT;`, { expectFailure: true, label: 'ENV D stranger add child' }).out.includes('not a member of household')
+        && scalar(db, "select count(*) from public.household_members where local_id = 'child-evil';") === '0');
+  check('ENV D: the fail-closed assertion still passes after F05', psql(db, 'SELECT private.assert_app_schema_secured();').ok);
 }
 
 // ------------------------------------------- LOCAL STACK SCHEMA CURRENCY ----
@@ -538,6 +597,15 @@ function ensureLocalStackCurrent() {
     applyIr01('postgres', { label: 'local stack IR01' });
   }
   check('local stack: the database the sync journeys run against carries the additive IR01 migration', scalar('postgres', probe) === '1');
+
+  // F05 (a child after binding) is one new function and one replaced function: nothing in it can lose or rewrite a row, and it
+  // is applied only to THIS local database, never to a remote project.
+  const f05Probe = "select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'private' and p.proname = 'push_household_child';";
+  if (scalar('postgres', f05Probe) !== '1') {
+    console.log('  local stack database predates the F05 migration: applying the additive migration to it');
+    applyF05('postgres', { label: 'local stack F05' });
+  }
+  check('local stack: the database the sync journeys run against carries the additive F05 migration', scalar('postgres', f05Probe) === '1');
 }
 
 // ------------------------------------------------------------------ main ----
