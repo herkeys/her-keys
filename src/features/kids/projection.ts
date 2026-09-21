@@ -46,6 +46,9 @@ export interface KidsClock {
   nowMs: number;
 }
 
+/** Sorts after every real string: undated things go last. Built from a code point so the source holds no invisible character. */
+const LAST = String.fromCharCode(0xffff);
+
 const URGENCY_RANK = { now: 0, today: 1, soon: 2 } as const;
 
 interface Ctx {
@@ -61,7 +64,8 @@ interface Ctx {
   stepsByParent: Map<string, StepFact[]>;
   requiresCount: Map<string, number>;
   rules: Map<string, RecurrenceFact>;
-  attention: AttentionItem[];
+  /** Computed on first use: building one item does not need the whole household's attention. */
+  attention: AttentionItem[] | null;
   intentAbout: Map<string, TypedRef | null>;
 }
 
@@ -100,7 +104,7 @@ function createCtx(state: AppState, clock: KidsClock): Ctx {
     stepsByParent,
     requiresCount,
     rules,
-    attention: attentionFor(state, clock.nowMs),
+    attention: null,
     intentAbout: new Map(state.intents.map((intent) => [intent.id, intent.about])),
   };
 }
@@ -254,10 +258,10 @@ const compareUpcoming = (a: ItemFact, b: ItemFact): number => startMs(a) - start
 /** Due date, then when it was captured, then id. Undated last. No hidden score. */
 function compareWork(c: Ctx) {
   return (a: ItemFact, b: ItemFact): number => {
-    const dueA = a.due?.date ?? '￿';
-    const dueB = b.due?.date ?? '￿';
-    const createdA = c.tasksById.get(a.ref.id)?.createdAt ?? '￿';
-    const createdB = c.tasksById.get(b.ref.id)?.createdAt ?? '￿';
+    const dueA = a.due?.date ?? LAST;
+    const dueB = b.due?.date ?? LAST;
+    const createdA = c.tasksById.get(a.ref.id)?.createdAt ?? LAST;
+    const createdB = c.tasksById.get(b.ref.id)?.createdAt ?? LAST;
     return compareText(dueA, dueB) || compareText(createdA, createdB) || compareText(a.ref.id, b.ref.id);
   };
 }
@@ -267,7 +271,7 @@ const entryRank = (entry: AttentionEntry): number => (entry.source === 'shared' 
 function compareEntries(a: AttentionEntry, b: AttentionEntry): number {
   return (
     entryRank(a) - entryRank(b) ||
-    compareText(a.date ?? '￿', b.date ?? '￿') ||
+    compareText(a.date ?? LAST, b.date ?? LAST) ||
     compareText(a.ref.kind, b.ref.kind) ||
     compareText(a.ref.id, b.ref.id) ||
     compareText(a.code, b.code)
@@ -311,6 +315,7 @@ const SHARED_CODES = new Set(['deadline', 'risk', 'unacknowledged_delegation', '
 function sharedEntries(c: Ctx, childId: string): AttentionEntry[] {
   const out: AttentionEntry[] = [];
   const seen = new Set<string>();
+  c.attention ??= attentionFor(c.state, c.nowMs);
   for (const item of c.attention) {
     // Whole-day judgments (conflict, capacity) and captured Needs Me items name no child: not shown here.
     if (item.about === null || !SHARED_CODES.has(item.reason)) continue;
@@ -421,7 +426,9 @@ function detailFor(c: Ctx, label: ChildLabel, bucket: Bucket | undefined): Child
   for (const list of Object.values(openWork)) list.sort(byWork);
 
   const everyItem = [...events, ...tasks];
-  const shared = sharedEntries(c, childId);
+  // A reason is only ever shown next to an item the projection also returns (an event that already ended has no row to open).
+  const known = new Set(everyItem.map((item) => refKey(item.ref)));
+  const shared = sharedEntries(c, childId).filter((entry) => known.has(refKey(entry.ref)));
   const facts = factEntries(c, everyItem);
   const needsAttention = [...shared, ...facts].sort(compareEntries);
 
@@ -435,7 +442,7 @@ function detailFor(c: Ctx, label: ChildLabel, bucket: Bucket | undefined): Child
     .map((system) => ({ id: system.id, name: system.name }))
     .sort((a, b) => compareText(a.name, b.name) || compareText(a.id, b.id));
 
-  return { childId, label, upcoming, needsAttention, openWork, routines, plans };
+  return { childId, today: c.today, label, upcoming, needsAttention, openWork, routines, plans };
 }
 
 function cardOf(detail: ChildDetail, hasAnyRecords: boolean): ChildCard {
@@ -485,4 +492,16 @@ export function buildChildDetail(state: AppState, householdId: string, childId: 
   if (!label) return null;
   const { buckets } = bucketByChild(c);
   return detailFor(c, label, buckets.get(childId));
+}
+
+/** One child-linked item's facts, or null when it is gone, finished, not a child's, or the household differs. */
+export function buildItemFact(state: AppState, householdId: string, ref: KidsRef, clock: KidsClock): ItemFact | null {
+  if (state.household.id !== householdId) return null;
+  const c = createCtx(state, clock);
+  if (ref.kind === 'task') {
+    const task = c.tasksById.get(ref.id);
+    return task && task.status === 'open' && task.subjectMemberId !== null && c.childIds.has(task.subjectMemberId) ? taskItem(c, task, task.subjectMemberId) : null;
+  }
+  const event = c.eventsById.get(ref.id);
+  return event && event.status === 'active' && event.subjectMemberId !== null && c.childIds.has(event.subjectMemberId) ? eventItem(c, event, event.subjectMemberId) : null;
 }

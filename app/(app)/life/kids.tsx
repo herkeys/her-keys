@@ -1,10 +1,10 @@
 import { Screen } from '../../../src/design/components';
-import { KidsOverview } from '../../../src/features/kids/KidsOverview';
+import { KidsHub } from '../../../src/features/kids/containers';
 
 export default function KidsScreen() {
   return (
     <Screen>
-      <KidsOverview />
+      <KidsHub />
     </Screen>
   );
 }

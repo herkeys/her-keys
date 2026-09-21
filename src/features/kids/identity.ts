@@ -15,11 +15,32 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 /** Plain code-unit comparison: the same answer on every device and runtime, unlike a locale-dependent collation. */
 export const compareText = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
 
-/** Look-alike letters that a reader takes for a Latin one. Not exhaustive; a display aid, never identity. */
-const LOOK_ALIKES: Record<string, string> = {
-  'а': 'a', 'е': 'e', 'о': 'o', 'р': 'p', 'с': 'c', 'х': 'x', 'у': 'y', 'і': 'i', 'ј': 'j',
-  'ο': 'o', 'α': 'a', 'ρ': 'p', 'ι': 'i', 'ν': 'v',
+/**
+ * Cyrillic and Greek letters a reader takes for a Latin one, by code point. Not exhaustive; a display aid, never identity.
+ * (Code points, not literals, so no invisible or look-alike character ever sits in the source.)
+ */
+const LOOK_ALIKES: Record<number, string> = {
+  0x0430: 'a', 0x0435: 'e', 0x043e: 'o', 0x0440: 'p', 0x0441: 'c', 0x0445: 'x', 0x0443: 'y', 0x0456: 'i', 0x0458: 'j',
+  0x03bf: 'o', 0x03b1: 'a', 0x03c1: 'p', 0x03b9: 'i', 0x03bd: 'v',
 };
+
+/** Spaces, ASCII punctuation, curly quotes and dashes: nothing a reader counts as part of a name. */
+function isSeparator(code: number): boolean {
+  return (
+    code <= 0x2f ||
+    (code >= 0x3a && code <= 0x40) ||
+    (code >= 0x5b && code <= 0x60) ||
+    (code >= 0x7b && code <= 0x7e) ||
+    code === 0xa0 ||
+    (code >= 0x2000 && code <= 0x200a) ||
+    (code >= 0x2010 && code <= 0x2015) ||
+    code === 0x2018 ||
+    code === 0x2019 ||
+    code === 0x201c ||
+    code === 0x201d ||
+    code === 0x3000
+  );
+}
 
 /**
  * What two names must share for a reader to take them for the same name: case, accents, spacing, punctuation and common look-alike
@@ -32,11 +53,14 @@ export function collisionKey(name: string): string {
   } catch {
     // An engine without normalisation keeps the raw text; the exact-match case still collides.
   }
-  return text
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
-    .replace(/[\s!-/:-@[-`{-~‘’“”‐-―]/g, '')
-    .replace(/[Ͱ-ϿЀ-ӿ]/g, (ch) => LOOK_ALIKES[ch] ?? ch);
+  let key = '';
+  for (const ch of text.toLowerCase()) {
+    const code = ch.codePointAt(0) ?? 0;
+    if (code >= 0x300 && code <= 0x36f) continue; // a combining accent
+    if (isSeparator(code)) continue;
+    key += LOOK_ALIKES[code] ?? ch;
+  }
+  return key;
 }
 
 /** Display order: oldest first, then by name, then by id. Never array position, which can differ between devices. */
@@ -64,6 +88,8 @@ export interface ChildLabel {
   ordinal: { position: number; of: number } | null;
   /** "Sam, 8" — enough when the name is unique. */
   short: string;
+  /** What tells this child from a look-alike ("born Mar 3, 2018", plus "1 of 2" for twins); null when the name is unique. */
+  context: string | null;
   /** What a chooser or a heading shows: the short form plus whatever is needed to tell this child from a look-alike. */
   full: string;
 }
@@ -88,9 +114,11 @@ export function labelChildren(children: readonly Child[], today: LocalDate): Chi
     const sameBirth = group.filter((other) => other.birthDate === child.birthDate);
     const ordinal = nameCollides && sameBirth.length > 1 ? { position: sameBirth.findIndex((other) => other.id === child.id) + 1, of: sameBirth.length } : null;
 
-    let full = short;
-    if (nameCollides) full += ` · born ${bornText(child.birthDate)}`;
-    if (ordinal) full += ` · ${ordinal.position} of ${ordinal.of}`;
-    return { childId: child.id, displayName: child.displayName, age, ageText, nameCollides, ordinal, short, full };
+    const extra: string[] = [];
+    if (nameCollides) extra.push(`born ${bornText(child.birthDate)}`);
+    if (ordinal) extra.push(`${ordinal.position} of ${ordinal.of}`);
+    const context = extra.length > 0 ? extra.join(' · ') : null;
+    const full = context === null ? short : `${short} · ${context}`;
+    return { childId: child.id, displayName: child.displayName, age, ageText, nameCollides, ordinal, short, context, full };
   });
 }

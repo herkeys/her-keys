@@ -208,6 +208,8 @@ export interface PlanRow {
 
 export interface ChildDetail {
   childId: string;
+  /** The household's logical day the detail was built for. */
+  today: LocalDate;
   label: ChildLabel;
   /** Events and timed tasks that have not finished yet, soonest first. `upcoming[0]` is the next one. */
   upcoming: ItemFact[];
