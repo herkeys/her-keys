@@ -15,6 +15,7 @@
  */
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
+import { UNDECIDED_READING_TITLE, titleForCloud } from '../src/domain/foundation/interpretation.ts';
 import { OPEN_CODE_PATTERN } from '../src/domain/schemaPrimitives.ts';
 import { validateAppState } from '../src/domain/state.ts';
 import { MAX_CLARIFICATION_STEPS, formatClarificationCode, parseClarificationCode } from '../src/features/talk-it-out/capture/clarificationCodes.ts';
@@ -128,7 +129,9 @@ async function secondDevice({ cloud, accountCloud }) {
  * A reading described by what it MEANS, with every reference followed to what it points at, so two devices can be compared even
  * if their local ids differ. Nothing here reads an id as a value.
  */
-function meaningOf(state, reading) {
+function meaningOf(state, reading, asCloud = false) {
+  // OD-A: the title an undecided reading shows the cloud is a neutral label, so device B never holds the title device A derived from her words.
+  const titleOf = (r) => (asCloud ? titleForCloud(r) : r.title);
   const artifact = state.sourceArtifacts.find((s) => s.id === reading.artifactId);
   const before = reading.supersedesId === null ? null : state.interpretations.find((r) => r.id === reading.supersedesId);
   const target = reading.acceptedRef === null ? null : (state[reading.acceptedRef.kind === 'needsMe' ? 'needsMe' : `${reading.acceptedRef.kind}s`] ?? []).find((row) => row.id === reading.acceptedRef.id);
@@ -137,7 +140,7 @@ function meaningOf(state, reading) {
     version: reading.interpretationVersion,
     state: reading.state,
     kind: reading.proposedKind,
-    title: reading.title,
+    title: titleOf(reading),
     dueDate: reading.dueDate,
     startsAt: reading.startsAt,
     endsAt: reading.endsAt,
@@ -146,14 +149,14 @@ function meaningOf(state, reading) {
     categoryHint: reading.categoryHint,
     subject: reading.subjectMemberId === null ? null : (state.children.find((c) => c.id === reading.subjectMemberId)?.displayName ?? `UNRESOLVED:${reading.subjectMemberId}`),
     clarification: reading.clarification,
-    supersedes: reading.supersedesId === null ? null : before === undefined ? `UNRESOLVED:${reading.supersedesId}` : `${before.title}@v${before.interpretationVersion}:${before.state}`,
+    supersedes: reading.supersedesId === null ? null : before === undefined ? `UNRESOLVED:${reading.supersedesId}` : `${titleOf(before)}@v${before.interpretationVersion}:${before.state}`,
     became: reading.acceptedRef === null ? null : target === undefined ? `UNRESOLVED:${reading.acceptedRef.id}` : `${reading.acceptedRef.kind}:${target.title}`,
     decided: reading.decidedAt !== null,
     producer: reading.provenance.producer,
     confidence: reading.provenance.confidence,
   };
 }
-const meanings = (state) => state.interpretations.map((r) => meaningOf(state, r)).sort((x, y) => `${x.source}#${String(x.version).padStart(3, '0')}`.localeCompare(`${y.source}#${String(y.version).padStart(3, '0')}`));
+const meanings = (state, asCloud = false) => state.interpretations.map((r) => meaningOf(state, r, asCloud)).sort((x, y) => `${x.source}#${String(x.version).padStart(3, '0')}`.localeCompare(`${y.source}#${String(y.version).padStart(3, '0')}`));
 
 for (const [timing, settleEach] of [['device syncs as she goes: create, then update', true], ['device was offline: the finished chain arrives in one go', false]]) describe(`D — every state Feature 02 can leave a reading in survives the account boundary (${timing})`, () => {
   test('device A ends up holding every state (the scenario is what it claims to be)', async () => {
@@ -219,7 +222,10 @@ for (const [timing, settleEach] of [['device syncs as she goes: create, then upd
     const stateB = b.state();
 
     assert.equal(validateAppState(stateB).ok, true, 'the pulled household is a valid household');
-    assert.deepEqual(meanings(stateB), meanings(stateA), 'every reading arrived as the thing it was, with its source, its chain, its subject and what it became');
+    assert.deepEqual(meanings(stateB), meanings(stateA, true), 'every reading arrived as the thing it was, with its source, its chain, its subject and what it became - and, until she accepted it, under the neutral label instead of a title derived from her words');
+    for (const reading of stateB.interpretations.filter((r) => r.state !== 'accepted')) {
+      assert.equal(reading.title, UNDECIDED_READING_TITLE[reading.proposedKind], `${reading.state} reading ${reading.id} must not carry a title on device B`);
+    }
     for (const m of meanings(stateB)) {
       for (const [field, value] of Object.entries(m)) assert.equal(String(value).startsWith('UNRESOLVED:'), false, `${m.source} ${field} did not resolve on the second device`);
     }
@@ -246,10 +252,10 @@ for (const [timing, settleEach] of [['device syncs as she goes: create, then upd
     const waterLeaf = leafReadings(state, state.sourceArtifacts.find((s) => s.contentRef === `capture:${keyOf(1)}`).id)[0];
     const chain = chainOf(waterLeaf);
     assert.deepEqual(chain.map((r) => [r.interpretationVersion, r.state, r.title]), [
-      [1, 'superseded', 'Pay the water bill'],
-      [2, 'superseded', 'Pay the water and sewer bill'],
-      [3, 'pending', 'Pay the water and sewer bill'],
-    ]);
+      [1, 'superseded', UNDECIDED_READING_TITLE.task],
+      [2, 'superseded', UNDECIDED_READING_TITLE.task],
+      [3, 'pending', UNDECIDED_READING_TITLE.task],
+    ], 'a chain on device B: no link carries the title device A derived, or the one she typed, until she accepts');
     assert.equal(chain[0].supersedesId, null, 'the root names nothing');
     assert.equal(new Set(chain.map((r) => r.artifactId)).size, 1, 'one source for the whole chain');
     assert.equal(chain[0].dueDate, '2026-09-25', 'the reading she was shown is history exactly as it was');
@@ -294,26 +300,37 @@ for (const [timing, settleEach] of [['device syncs as she goes: create, then upd
     assert.deepEqual(world.violations, [], 'the cloud\'s freeze rule was not tripped by either device');
   });
 
-  test('a decision made on device B (accepting a pulled reading) converges on device A: one task, the reading accepted, nothing duplicated', async () => {
+  test('a decision made on device B converges on device A: she NAMES the pulled reading first, then accepts it; one task, the reading accepted, nothing duplicated', async () => {
     const world = await populatedWorld({ settleEach });
     const b = await secondDevice(world);
     const water = b.state().sourceArtifacts.find((s) => s.contentRef === `capture:${keyOf(1)}`);
     const leaf = leafReadings(b.state(), water.id)[0];
 
-    assert.equal((await b.coordinator.accept(leaf.id)).kind, 'accepted', 'accepted on B from the durable reading alone (the money area comes from the reading\'s own hint)');
+    // The reading arrived under the neutral label: device B was never told what she said. It cannot be saved as it stands.
+    assert.equal(leaf.title, UNDECIDED_READING_TITLE.task);
+    assert.deepEqual(await b.coordinator.accept(leaf.id), { kind: 'needs-title' }, 'nothing is saved under the label');
+    assert.equal(b.state().tasks.length, 1, 'no row called "To-do to review" exists');
+    const card = buildCaptureVM({ state: b.state(), captureId: water.id, nowMs: NOW, text: null, session: null }).proposals[0];
+    assert.deepEqual([card.titleNeeded, card.actions.canAccept], [true, false], 'the card says so and offers no save');
+    assert.ok(card.notes.includes(copy.review.titleNeeded), 'in words');
+
+    // She gives it a name (the ordinary correction), and THEN it can be saved.
+    const named = await b.coordinator.correct(leaf.id, { kind: 'patch', patch: { title: 'Pay the water and sewer bill' } });
+    assert.equal(named.kind, 'revised');
+    assert.equal((await b.coordinator.accept(named.readingId)).kind, 'accepted', 'accepted on B once named (the money area comes from the reading\'s own hint)');
     await b.settle();
     await world.a.syncRuntime.request('foreground');
     await world.a.settle();
 
     for (const device of [world.a, b]) {
       const s = device.state();
-      assert.equal(s.tasks.length, 2, 'the library card, and the water bill she accepted on B');
-      const reading = s.interpretations.find((x) => x.title === 'Pay the water and sewer bill' && x.interpretationVersion === 3);
-      assert.equal(reading.state, 'accepted');
+      assert.equal(s.tasks.length, 2, 'the library card, and the water bill she named and accepted on B');
+      const reading = s.interpretations.find((x) => x.state === 'accepted' && x.proposedKind === 'task' && x.interpretationVersion === 4);
       assert.equal(s.tasks.find((t) => t.id === reading.acceptedRef.id).title, 'Pay the water and sewer bill');
+      assert.equal(reading.title, 'Pay the water and sewer bill', 'the accepted reading carries the canonical title she gave it');
       assert.deepEqual(s.tasks.map((t) => t.durationSource).sort(), ['default', 'inferred'], 'the reading with a duration is inferred, the one without is the planning default (never user-provided)');
     }
-    assert.deepEqual(meanings(world.a.state()), meanings(b.state()), 'the two devices agree on every reading');
+    assert.deepEqual(meanings(world.a.state(), true), meanings(b.state()), 'the two devices agree on every reading, as the cloud presents them');
     assert.equal(world.cloud.table('tasks').length, 2);
     assert.deepEqual(world.violations, []);
     assert.equal(world.a.queue().length + b.queue().length, 0);

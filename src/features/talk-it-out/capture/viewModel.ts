@@ -1,4 +1,4 @@
-import type { Interpretation } from '../../../domain/foundation/interpretation';
+import { isUndecidedReadingTitle, type Interpretation } from '../../../domain/foundation/interpretation';
 import type { ConfidenceLevel, ProvenanceSource } from '../../../domain/foundation/provenance';
 import { epochMsOf, logicalDateAt, type LocalDate } from '../../../domain/logicalDay';
 import type { HydrationStatus } from '../../../domain/routeAccess';
@@ -56,6 +56,8 @@ export interface ProposalVM {
   /** Evidence lines for "Why this". Only facts: what she wrote (while the session holds it) or where it was read from. */
   evidence: string[];
   outcomeLine: string | null;
+  /** The reading arrived under the neutral label (another device kept her words): it cannot be saved until she names it. */
+  titleNeeded: boolean;
   actions: { canAccept: boolean; canReject: boolean; canFix: boolean };
 }
 
@@ -185,6 +187,7 @@ export function buildProposalVM(reading: Interpretation, inputs: ReviewInputs): 
     if (reading.interpretationVersion > 1) notes.push(copy.review.revised);
     // Once the session's own record is gone (after a restart) what was assumed is no longer known: say so plainly.
     if (!details) notes.push(copy.review.checkDetails);
+    if (isUndecidedReadingTitle(reading.title)) notes.push(copy.review.titleNeeded);
   }
 
   const needsArea = reading.state === 'pending' && reading.proposedKind !== 'needsMe';
@@ -217,8 +220,9 @@ export function buildProposalVM(reading: Interpretation, inputs: ReviewInputs): 
     area,
     evidence: isOpen && reading.state === 'pending' ? evidenceOf(reading, inputs) : [],
     outcomeLine: reading.state === 'accepted' ? copy.review.savedAs(reading.proposedKind) : reading.state === 'rejected' ? copy.review.rejected : null,
+    titleNeeded: reading.state === 'pending' && isUndecidedReadingTitle(reading.title),
     actions: {
-      canAccept: reading.state === 'pending' && (reading.proposedKind === 'needsMe' || !(area?.needed ?? false)),
+      canAccept: reading.state === 'pending' && !isUndecidedReadingTitle(reading.title) && (reading.proposedKind === 'needsMe' || !(area?.needed ?? false)),
       canReject: isOpen,
       canFix: isOpen,
     },

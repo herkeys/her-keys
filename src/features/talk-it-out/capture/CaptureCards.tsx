@@ -128,7 +128,7 @@ function ProposalCard({
       )}
       <ProvenanceLabel source={vm.provenance} />
       <View style={styles.actions}>
-        <Button label={copy.review.accept} onPress={onAccept} disabled={!vm.actions.canAccept || busy} accessibilityHint={vm.actions.canAccept ? undefined : copy.review.areaNeeded} />
+        <Button label={copy.review.accept} onPress={onAccept} disabled={!vm.actions.canAccept || busy} accessibilityHint={vm.actions.canAccept ? undefined : vm.titleNeeded ? copy.review.titleNeeded : copy.review.areaNeeded} />
         <Button label={copy.review.reject} variant="secondary" onPress={onReject} disabled={!vm.actions.canReject || busy} />
         <Button label={copy.review.fix} variant="ghost" onPress={onFix} disabled={!vm.actions.canFix || busy} />
       </View>
@@ -342,6 +342,7 @@ export function CaptureGroup({ captureId, onLater, showSource = true }: { captur
       const outcome = await coordinator.accept(readingId, { categoryId: areaChoice[readingId] });
       if (outcome.kind === 'not-saved') return copy.capture.notSaved;
       if (outcome.kind === 'needs-area') return copy.review.areaNeeded;
+      if (outcome.kind === 'needs-title') return copy.review.titleNeeded;
       return null;
     });
 

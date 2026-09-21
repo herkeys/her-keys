@@ -16,6 +16,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { describe, test } from 'node:test';
 import { describeLocalHousehold } from '../src/domain/account/claim.ts';
+import { UNDECIDED_READING_TITLE } from '../src/domain/foundation/interpretation.ts';
 import { FOUNDATION_SPECS, columnsOfSpec } from '../src/domain/sync/foundationSpecs.ts';
 import { applyDiscoveryConversation } from '../src/domain/discovery.ts';
 import { validateAppState } from '../src/domain/state.ts';
@@ -206,8 +207,10 @@ describe('B — a capture session on a bound account reaches the cloud as metada
     const [interp] = cloud.table('interpretations');
     assert.deepEqual(
       { state: interp.state, proposed_kind: interp.proposed_kind, title: interp.title, due_date: interp.due_date, duration_minutes: interp.duration_minutes, producer: interp.producer, confidence: interp.confidence, accepted_type: interp.accepted_type ?? null },
-      { state: 'pending', proposed_kind: 'task', title: TITLE, due_date: '2026-09-25', duration_minutes: 45, producer: 'ai-inference', confidence: 'possible', accepted_type: null },
+      // OD-A: the reading travels as structured state, but its title is copied from her words, so until she accepts it the cloud has a neutral label.
+      { state: 'pending', proposed_kind: 'task', title: UNDECIDED_READING_TITLE.task, due_date: '2026-09-25', duration_minutes: 45, producer: 'ai-inference', confidence: 'possible', accepted_type: null },
     );
+    assert.notEqual(interp.title, device.persisted().state.interpretations[0].title, 'the device that heard her keeps the derived title; the cloud does not have it');
     assert.equal(interp.artifact_id, row.id, 'the reading names the source row the cloud holds');
     assert.equal(interp.source_artifact_id, row.id, 'and so does its provenance');
   });
@@ -243,7 +246,8 @@ describe('B — a capture session on a bound account reaches the cloud as metada
     await device.coordinator.submit({ text: 'Dentist Friday at 3pm.', submissionKey: keyOf(2) });
     await device.settle();
 
-    const byTitle = (title) => world.cloud.table('interpretations').find((r) => r.title === title);
+    const localReading = (title) => device.state().interpretations.find((r) => r.title === title);
+    const byTitle = (title) => world.cloud.table('interpretations').find((r) => r.local_id === localReading(title).id); // the cloud's titles are neutral (OD-A)
     assert.deepEqual([byTitle('Practice').state, byTitle('Practice').clarification], ['clarifying', 'which_child'], 'a durable open code, not a guess');
     assert.equal(byTitle('Pay the water bill').state, 'pending');
     for (const table of ['tasks', 'events', 'needs_me_items']) assert.equal(cloudCount(world, table), 0, `${table} while three readings wait on her`);
@@ -365,7 +369,8 @@ describe('C — her raw wording never becomes a cloud payload, an envelope, a qu
     const planted = { ...surfaces, 'a planted payload': JSON.stringify({ notes: UTTERANCE }) };
     assert.ok(leaksOf(planted, UTTERANCE, { tokens: [CANARY] }).length >= 2, 'the whole utterance and the token are both reported');
     assert.ok(leaksOf({ 'a payload': `x ${UTTERANCE.slice(10, 60)} y` }, UTTERANCE).length === 1, 'a fifty-character run is reported');
-    assert.ok(surfaces['cloud rows'].includes(TITLE) && surfaces['transport requests'].includes(TITLE), 'the derived title travelled - the scan reads real payloads');
+    assert.equal(surfaces['cloud rows'].includes(TITLE), false, 'OD-A: before she accepts, the derived title did not travel');
+    assert.ok(surfaces['cloud rows'].includes(UNDECIDED_READING_TITLE.task) && surfaces['transport requests'].includes(UNDECIDED_READING_TITLE.task), 'positive control: the neutral label did - the scan reads real payloads');
     assert.ok(TITLE.length < 30, 'a short structured title is below the run window, so it is not mistaken for a leak');
     assert.ok(Object.keys(surfaces).length >= 10, `${Object.keys(surfaces).length} surfaces are scanned`);
   });
@@ -483,8 +488,10 @@ describe('C — her raw wording never becomes a cloud payload, an envelope, a qu
     assert.deepEqual(leaksOf(surfaces, SAID, { tokens: ['CANARY-DISC-5520'] }), []);
   });
 
-  // This is not a leak and not a guarantee of silence: it is where the line is, pinned so that moving it is a decision.
-  test('DOCUMENTED BOUNDARY: a note keeps her own clause as its title, capped at 90 characters, and that excerpt - and only that - travels', async () => {
+  // Owner decision OD-A (resolved): an undecided reading syncs as structured state, but nothing copied from or derived from her words
+  // does until she accepts it. This replaces the boundary that used to be pinned here (a note's own clause, capped at 90 characters,
+  // travelled while the reading was still pending).
+  test('OD-A: a note keeps her own clause as its LOCAL title; nothing of it travels until she accepts, and then only the canonical, capped title', async () => {
     const world = await boundWorld();
     const { device } = world;
     const HEAD = 'CANARY-NOTE-91';
@@ -494,34 +501,22 @@ describe('C — her raw wording never becomes a cloud payload, an envelope, a qu
     assert.equal(out.readingIds.length, 1);
     await device.settle();
 
+    const local = device.state().interpretations[0];
+    assert.ok(local.title.includes(HEAD) && local.title.length <= 90, 'the device that heard her keeps her own clause as the reading\'s title, capped at 90 characters');
     const [row] = world.cloud.table('interpretations');
-    assert.equal(row.proposed_kind, 'needsMe');
-    assert.ok(row.title.length <= 90, `the title is capped (${row.title.length})`);
-    assert.ok(row.title.endsWith('…'), 'and says it was cut');
-    const surfaces = surfacesOf(world);
-    assert.ok(surfaces['cloud rows'].includes(HEAD), 'the excerpt is her own words and it travels, as the structured title of a reading');
-    assert.equal(surfaces['cloud rows'].includes(TAIL), false, 'what lies beyond the cap does not');
-    assert.deepEqual(leaksOf(surfaces, SAID, { window: 120, tokens: [TAIL] }), [], 'no run of more than a title\'s length, and never the whole');
-    assert.equal(row.state, 'pending', 'and it left the device BEFORE she approved anything (owner decision recorded in HK_IR01_F02_COMPATIBILITY.md)');
-  });
+    assert.deepEqual([row.proposed_kind, row.state, row.title], ['needsMe', 'pending', UNDECIDED_READING_TITLE.needsMe], 'the cloud has the structured reading under a neutral label');
+    const surfaces = syncSurfacesOf(world);
+    for (const [where, haystack] of Object.entries(surfaces)) assert.equal(haystack.includes(HEAD) || haystack.includes(TAIL), false, `${where} holds a piece of her clause`);
+    assert.deepEqual(leaksOf(surfaces, SAID, { window: 12, tokens: [HEAD, TAIL] }), []);
 
-  // The two tests above pass on the app's own reader. These show they are not passing by accident: replace only the READER (a test
-  // double, through the coordinator's own port) and the same scans fail, on the real pipeline, in the places a real leak would land.
-  test('the canary scan can fail on the real pipeline: a reader that put her whole wording in a title IS caught, everywhere it lands', async () => {
-    const cloud = createFakeCloud();
-    const tap = tapCloud(cloud);
-    const accountCloud = accountCloudFor(cloud, ACCOUNT_A);
-    const leaky = { ...localInterpreter, interpret: (input) => { const read = localInterpreter.interpret(input); return { ...read, proposals: read.proposals.map((p) => ({ ...p, title: input.text.slice(0, 200) })) }; } };
-    const device = await makeCaptureDevice({ cloud, tap, accountCloud, interpreter: leaky });
-    await device.signIn();
-    await device.coordinator.submit({ text: UTTERANCE, submissionKey: keyOf(0) });
+    // Her explicit acceptance makes the clause excerpt the canonical title of the row it became, and THEN it may travel: capped, and only that.
+    assert.equal((await device.coordinator.accept(local.id)).kind, 'accepted');
     await device.settle();
-
-    const findings = leaksOf(payloadSurfaces({ cloud, tap, accountCloud, devices: [device] }), UTTERANCE, { tokens: [CANARY, CHATTER] });
-    for (const where of ['cloud rows', 'transport requests', 'device 0 storage (every key)', 'device 0 storage (every envelope ever written)']) {
-      assert.ok(findings.some((f) => f.startsWith(`${where}:`)), `the leak was found in ${where}`);
-    }
-    assert.equal(findings.some((f) => f.startsWith('device 0 durable outbound queue')), false, 'and NOT in the queue, which by construction holds no payload (kind, id, operation, revision, order)');
+    const [accepted] = world.cloud.table('interpretations');
+    assert.deepEqual([accepted.state, accepted.title], ['accepted', local.title]);
+    assert.ok(accepted.title.length <= 90 && accepted.title.endsWith('…'), 'the canonical title is capped and says it was cut');
+    assert.equal(syncSurfacesOf(world)['cloud rows'].includes(TAIL), false, 'what lies beyond the cap never travels');
+    assert.deepEqual(leaksOf(syncSurfacesOf(world), SAID, { window: 120, tokens: [TAIL] }), [], 'never a run longer than a title, and never the whole');
   });
 
   test('the high-stakes assertions are sensitive to the guard: without it the same words WOULD become a durable source', async () => {
@@ -536,3 +531,198 @@ describe('C — her raw wording never becomes a cloud payload, an envelope, a qu
     assert.deepEqual(await guarded.coordinator.submit({ text: 'I am afraid of him and I need to pick up the dry cleaning Friday.', submissionKey: keyOf(0) }), { kind: 'high-stakes' }, 'the app\'s own reader refuses it');
   });
 });
+
+// ----------------------------------------------------- OD-A: nothing derived from her words before she accepts ---
+
+/**
+ * The surfaces that are SYNC: what the cloud holds, every request the transport made, the change log, claim payloads, the durable
+ * outbound queue and identity block, and the runtime diagnostics. The device's own storage is NOT among them: the device that heard
+ * her keeps her reading (and its derived title) locally, and that is not what the owner decision is about.
+ */
+const SYNC_SURFACE = /^(cloud |transport requests|claim payloads|device \d+ (durable outbound queue|durable identity|runtime diagnostics))/;
+const syncSurfacesOf = (world, devices = [world.device]) => Object.fromEntries(Object.entries(surfacesOf(world, devices)).filter(([name]) => SYNC_SURFACE.test(name)));
+
+/** Every string VALUE in a payload surface (never a key: `duration_minutes` is not her word "minutes"). */
+const stringValues = (surface) => {
+  const out = [];
+  const walk = (node) => {
+    if (typeof node === 'string') out.push(node);
+    else if (Array.isArray(node)) node.forEach(walk);
+    else if (node !== null && typeof node === 'object') Object.values(node).forEach(walk);
+  };
+  for (const chunk of surface.split('\n')) {
+    try {
+      walk(JSON.parse(chunk));
+    } catch {
+      out.push(chunk);
+    }
+  }
+  return out;
+};
+
+/** Where a reading's derived title (whole, a 12-character run of it, or any of its words of five letters or more) appears as a VALUE. */
+const titleLeaksOf = (surfaces, title) => {
+  const found = [];
+  const words = (title.match(/[A-Za-z’']{5,}/g) ?? []).map((w) => w.toLowerCase());
+  const runs = Array.from({ length: Math.max(0, title.length - 11) }, (_, i) => title.slice(i, i + 12).toLowerCase());
+  for (const [where, surface] of Object.entries(surfaces)) {
+    const values = stringValues(surface).map((v) => v.toLowerCase());
+    if (values.some((v) => v.includes(title.toLowerCase()))) found.push(`${where}: the whole title`);
+    for (const run of runs) if (values.some((v) => v.includes(run))) { found.push(`${where}: a 12-character run of the title ("${run}")`); break; }
+    for (const word of words) if (values.some((v) => v.includes(word))) found.push(`${where}: the word "${word}"`);
+  }
+  return found;
+};
+
+describe('OD-A — before she accepts, account sync carries no raw and no quasi-verbatim title derived from what she said', () => {
+  const SAID = [
+    { key: 0, text: UTTERANCE },
+    { key: 1, text: 'Dentist Friday at 3pm.' },
+    { key: 2, text: 'The school portal announced the spring picnic volunteer form and the band concert program is due every Tuesday and it has a long ramble that keeps going well past the ninety character title clip.' },
+    { key: 3, text: 'Practice at 5 tomorrow. CANARY-PRACTICE-5521 is the coach I dislike.' },
+    { key: 4, text: 'Pay the water bill $84 by Friday. CANARY-BILL-3312 is the account number.' },
+  ];
+  const TOKENS = [CANARY, CHATTER, 'CANARY-PRACTICE-5521', 'CANARY-BILL-3312', 'the coach I dislike', 'account number'];
+  const NEUTRAL = new Set(Object.values(UNDECIDED_READING_TITLE));
+
+  async function captured() {
+    const world = await boundWorld();
+    const { device } = world;
+    for (const { key, text } of SAID) assert.equal((await device.coordinator.submit({ text, submissionKey: keyOf(key) })).kind, 'captured');
+    await device.settle();
+    return world;
+  }
+
+  test('undecided readings DO sync, as structured state: every reading is in the cloud with its kind, dates, amount, hint and open question', async () => {
+    const world = await captured();
+    const { device, cloud } = world;
+    const readings = device.state().interpretations;
+    assert.ok(readings.length >= 5, `${readings.length} readings`);
+    assert.equal(cloud.table('interpretations').length, readings.length, 'not held out of sync, as a whole or in part');
+    for (const reading of readings) {
+      const row = cloud.table('interpretations').find((r) => r.local_id === reading.id);
+      assert.deepEqual(
+        [row.state, row.proposed_kind, row.due_date, row.duration_minutes, row.category_hint, row.clarification, row.value_amount_minor ?? null],
+        [reading.state, reading.proposedKind, reading.dueDate, reading.durationMinutes, reading.categoryHint, reading.clarification, reading.value?.amountMinor ?? null],
+        `the structured part of ${reading.title} travelled`
+      );
+    }
+    assert.ok(readings.some((r) => r.state === 'clarifying') && readings.some((r) => r.value !== null) && readings.some((r) => r.proposedKind === 'event') && readings.some((r) => r.proposedKind === 'needsMe'), 'the battery covers a question, an amount, an event and a note');
+  });
+
+  test('every undecided reading is presented to the cloud under a neutral label: no whole utterance, no 12-character run of it, no title, no run of a title, no word of a title', async () => {
+    const world = await captured();
+    const { device, cloud } = world;
+    const surfaces = syncSurfacesOf(world);
+    assert.ok(Object.keys(surfaces).length >= 6, `${Object.keys(surfaces).join(', ')}`);
+
+    for (const row of cloud.table('interpretations')) assert.ok(NEUTRAL.has(row.title), `a cloud reading is titled "${row.title}"`);
+    for (const { text } of SAID) assert.deepEqual(leaksOf(surfaces, text, { window: 12, tokens: TOKENS }), [], `something she said reached sync: ${text.slice(0, 30)}...`);
+    for (const reading of device.state().interpretations) assert.deepEqual(titleLeaksOf(surfaces, reading.title), [], `the title derived for "${reading.title}" reached sync`);
+    assert.equal(cloudCount(world, 'tasks') + cloudCount(world, 'events') + cloudCount(world, 'needs_me_items'), 0, 'and no canonical row was made of anything');
+  });
+
+  test('a free-text answer and a free-text correction change nothing about that: the successor is still undecided, still neutral, and nothing she typed travels', async () => {
+    const world = await boundWorld();
+    const { device } = world;
+    const first = await device.coordinator.submit({ text: 'Practice at 5 tomorrow. CANARY-PRACTICE-5521 is the coach I dislike.', submissionKey: keyOf(0) });
+    const ANSWER = "Ayden, it's just a to-do CANARY-ANSWER-1183";
+    const CORRECTION = 'no, I meant Friday CANARY-CORRECTION-9902';
+    const answered = await device.coordinator.answerClarification(first.readingIds[0], { kind: 'text', text: ANSWER });
+    assert.equal(answered.kind, 'revised');
+    const corrected = await device.coordinator.correct(answered.readingId, { kind: 'text', text: CORRECTION });
+    assert.equal(corrected.kind, 'revised');
+    const typed = await device.coordinator.correct(corrected.readingId, { kind: 'patch', patch: { title: 'Ayden football practice with Coach Ferreira' } });
+    assert.equal(typed.kind, 'revised', 'she even typed a title of her own');
+    await device.settle();
+
+    const surfaces = syncSurfacesOf(world);
+    const rows = world.cloud.table('interpretations');
+    assert.ok(rows.length >= 4, 'the whole chain travelled');
+    assert.deepEqual(rows.map((r) => r.state).filter((s) => s !== 'superseded'), ['pending']);
+    for (const row of rows) assert.ok(NEUTRAL.has(row.title), `"${row.title}" is not a neutral label`);
+    for (const said of [ANSWER, CORRECTION, 'Ayden football practice with Coach Ferreira']) assert.deepEqual(leaksOf(surfaces, said, { window: 12, tokens: ['CANARY-ANSWER-1183', 'CANARY-CORRECTION-9902', 'Ferreira', 'CANARY-PRACTICE-5521'] }), [], said);
+  });
+
+  test('after explicit acceptance the canonical title travels - and only that one: what she left undecided stays neutral', async () => {
+    const world = await captured();
+    const { device, cloud } = world;
+    const card = device.state().interpretations.find((r) => r.title === TITLE);
+    assert.equal((await device.coordinator.accept(card.id, { categoryId: areaId(device, 'home') })).kind, 'accepted');
+    await device.settle();
+
+    const row = cloud.table('interpretations').find((r) => r.local_id === card.id);
+    assert.deepEqual([row.state, row.title], ['accepted', TITLE], 'the accepted, canonical title may sync');
+    assert.deepEqual(cloud.table('tasks').map((t) => t.title), [TITLE]);
+    const others = device.state().interpretations.filter((r) => r.id !== card.id);
+    for (const other of others) {
+      assert.ok(NEUTRAL.has(cloud.table('interpretations').find((r) => r.local_id === other.id).title), `${other.title} is still neutral`);
+      // the other readings' words are absent (the accepted title's own words are allowed, so skip a title that shares none of them)
+      assert.deepEqual(titleLeaksOf(syncSurfacesOf(world), other.title).filter((f) => !/library|card|renew/i.test(f)), [], `${other.title}`);
+    }
+    for (const { text } of SAID.slice(1)) assert.deepEqual(leaksOf(syncSurfacesOf(world), text, { window: 12, tokens: TOKENS.slice(2) }), [], text.slice(0, 30));
+  });
+
+  test('a reading she rejects, or a capture she dismisses, was never approved: it stays neutral for good', async () => {
+    const world = await captured();
+    const { device, cloud } = world;
+    const [rejectedOne] = device.state().interpretations.filter((r) => r.state === 'pending');
+    assert.equal((await device.coordinator.reject(rejectedOne.id)).kind, 'rejected');
+    const dismissedSource = device.state().sourceArtifacts.at(-1);
+    await device.coordinator.dismissCapture(dismissedSource.id);
+    await device.settle();
+
+    assert.ok(cloud.table('interpretations').filter((r) => r.state === 'rejected').length >= 2);
+    for (const row of cloud.table('interpretations')) assert.ok(NEUTRAL.has(row.title), `a ${row.state} reading is titled "${row.title}"`);
+    for (const reading of device.state().interpretations) assert.deepEqual(titleLeaksOf(syncSurfacesOf(world), reading.title), [], reading.title);
+  });
+
+  test('a restart changes nothing: the words are gone, the readings are still neutral in the cloud, and a fresh scan finds nothing', async () => {
+    const world = await captured();
+    const relaunched = await world.device.restart();
+    await relaunched.settle();
+    const surfaces = syncSurfacesOf(world, [world.device, relaunched]);
+    for (const { text } of SAID) assert.deepEqual(leaksOf(surfaces, text, { window: 12, tokens: TOKENS }), []);
+    for (const reading of relaunched.state().interpretations) assert.deepEqual(titleLeaksOf(surfaces, reading.title), []);
+    for (const row of world.cloud.table('interpretations')) assert.ok(NEUTRAL.has(row.title));
+  });
+
+  test('the boundary protects even against a READER that puts her whole wording in a title: nothing reaches sync before acceptance, and the scan still catches it once she accepts', async () => {
+    const cloud = createFakeCloud();
+    const tap = tapCloud(cloud);
+    const accountCloud = accountCloudFor(cloud, ACCOUNT_A);
+    const leaky = { ...localInterpreter, interpret: (input) => { const read = localInterpreter.interpret(input); return { ...read, proposals: read.proposals.map((p) => ({ ...p, title: input.text.slice(0, 200) })) }; } };
+    const device = await makeCaptureDevice({ cloud, tap, accountCloud, interpreter: leaky });
+    await device.signIn();
+    const world = { cloud, tap, accountCloud, device };
+    await device.coordinator.submit({ text: UTTERANCE, submissionKey: keyOf(0) });
+    await device.settle();
+
+    assert.deepEqual(leaksOf(syncSurfacesOf(world), UTTERANCE, { window: 12, tokens: [CANARY, CHATTER] }), [], 'the whole wording was the reading\'s title, and none of it left the device');
+    assert.ok(leaksOf(payloadSurfaces({ cloud, tap, accountCloud, devices: [device] }), UTTERANCE, { window: 12, tokens: [CANARY] }).some((f) => f.startsWith('device 0 storage')), 'it is still on the device that heard it (the device keeps her reading)');
+    assert.deepEqual(cloud.table('interpretations').map((r) => r.title), [UNDECIDED_READING_TITLE.task]);
+
+    // Accepting it is HER explicit act: from then on its title is the canonical title of the row it became, and the scan sees it.
+    assert.equal((await device.coordinator.accept(device.state().interpretations[0].id, { categoryId: areaId(device, 'home') })).kind, 'accepted');
+    await device.settle();
+    assert.ok(leaksOf(syncSurfacesOf(world), UTTERANCE, { window: 12, tokens: [CANARY] }).some((f) => f.startsWith('cloud rows')), 'the scan CAN fail: an accepted title made of her whole wording is found in the cloud');
+  });
+
+  test('the scan can see: a planted derived title is found by every one of its three tests, and a neutral label is not a finding', () => {
+    const title = 'Renew the library card';
+    const planted = { 'a payload': JSON.stringify({ title, duration_minutes: 45 }) };
+    const found = titleLeaksOf(planted, title);
+    assert.ok(found.some((f) => f.includes('the whole title')) && found.some((f) => f.includes('12-character run')) && found.some((f) => f.includes('the word "library"')), found.join('; '));
+    assert.deepEqual(titleLeaksOf({ 'a payload': JSON.stringify({ title: UNDECIDED_READING_TITLE.task, duration_minutes: 45 }) }, title), [], 'and a key such as duration_minutes is never mistaken for her word');
+    assert.deepEqual(stringValues('{"a":{"b":["x","y"]},"c":1}\n{"d":"z"}'), ['x', 'y', 'z']);
+  });
+
+  test('the card and the coordinator both refuse to save a reading that arrived unnamed, and the UI has words for it', () => {
+    const cards = readFileSync(join(ROOT, 'src', 'features', 'talk-it-out', 'capture', 'CaptureCards.tsx'), 'utf8');
+    assert.match(cards, /outcome\.kind === 'needs-title'\) return copy\.review\.titleNeeded/, 'the card says why');
+    assert.match(cards, /vm\.titleNeeded \? copy\.review\.titleNeeded/, 'and hints it on the disabled button');
+    const coordinator = readFileSync(join(ROOT, 'src', 'features', 'talk-it-out', 'capture', 'coordinator.ts'), 'utf8');
+    assert.match(coordinator, /isUndecidedReadingTitle\(reading\.title\)\) return \{ kind: 'needs-title' \}/);
+  });
+});
+

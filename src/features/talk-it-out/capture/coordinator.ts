@@ -1,5 +1,5 @@
 import type { TransitionContext } from '../../../domain/context';
-import type { Interpretation } from '../../../domain/foundation/interpretation';
+import { isUndecidedReadingTitle, type Interpretation } from '../../../domain/foundation/interpretation';
 import type { SourceArtifact } from '../../../domain/foundation/sourceArtifact';
 import type { ContentRefKind } from '../../../domain/foundation/typedRef';
 import {
@@ -92,6 +92,8 @@ export type AcceptOutcome =
   | { kind: 'accepted'; readingId: string; ref: { kind: ContentRefKind; id: string } }
   | { kind: 'already-accepted'; readingId: string; ref: { kind: ContentRefKind; id: string } }
   | { kind: 'needs-clarification' }
+  /** The reading arrived from another device that kept her words: nobody chose its title (owner decision OD-A). She names it first. */
+  | { kind: 'needs-title' }
   | { kind: 'needs-area' }
   | { kind: 'not-open' }
   | { kind: 'not-saved' };
@@ -344,6 +346,9 @@ export function createCaptureCoordinator(deps: CaptureCoordinatorDeps): CaptureC
       if (reading.state === 'accepted' && reading.acceptedRef) return { kind: 'already-accepted', readingId, ref: reading.acceptedRef };
       if (reading.state === 'clarifying') return { kind: 'needs-clarification' };
       if (reading.state !== 'pending') return { kind: 'not-open' };
+      // A reading that arrived under the neutral label was never told its title: the words stayed on the device that heard them.
+      // It would become a row called "To-do to review", so nothing is saved until she has named it.
+      if (isUndecidedReadingTitle(reading.title)) return { kind: 'needs-title' };
 
       let categoryId: string | undefined;
       if (reading.proposedKind !== 'needsMe') {

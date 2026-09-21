@@ -102,6 +102,7 @@ export const copy = {
     childOpen: 'This is about one of your children, so it can’t be saved until I know which.',
     areaPrompt: 'Which area is this?',
     areaNeeded: 'Choose an area so it can be saved.',
+    titleNeeded: 'This came from another device, which kept your words, so it has no name yet. Choose “Fix it” and give it one.',
     whyEvidence: (excerpt: string, what: string): string => `You wrote “${excerpt}”, which I read as the ${what}.`,
     whyArea: (area: string): string => `The words point to your ${area} area.`,
     whyDirection: 'You included words that say which way the money goes.',
