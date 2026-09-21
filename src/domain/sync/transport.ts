@@ -56,6 +56,11 @@ export interface ChangeRow {
   rowRevision: number | null;
 }
 
+/**
+ * `rows` is COMPLETE for the range `[cursor, nextCursor)`: the server has no limit and no page. It cannot be given one that
+ * works, because the cursor is a transaction id and a claim writes a whole household in ONE transaction, so no row-count cut can
+ * land between two of its rows. A caller that keeps only the first N of `rows` and stays at `cursor` reads the same N forever.
+ */
 export type PullResult =
   | { kind: 'pulled'; rows: ChangeRow[]; nextCursor: string }
   | TransportFailure;
@@ -79,7 +84,7 @@ export interface SyncTransport {
    * The household is NAMED, never guessed: the server refuses one the caller does not belong to and
    * refuses an unnamed request when the caller belongs to several (private.resolve_household_context).
    */
-  pull(cursor: string, limit: number, householdId: string): Promise<PullResult>;
+  pull(cursor: string, householdId: string): Promise<PullResult>;
   fetchRows(table: string, cloudIds: readonly string[], idColumn: string): Promise<FetchResult>;
 }
 

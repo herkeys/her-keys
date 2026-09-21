@@ -143,7 +143,6 @@ function makeDevice(m, { accountId, deviceId, householdId, state, namespace, tra
       // A minted local id must itself be a legal local id: the app's Id pattern
       // allows letters, digits and `._:-` only.
       mintLocalId: (kind, wanted) => `${wanted}-x${deviceId.slice(0, 4)}`,
-      batchSize: 200,
     },
   });
 

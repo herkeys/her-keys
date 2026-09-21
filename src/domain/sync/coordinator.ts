@@ -165,7 +165,9 @@ export function createSyncCoordinator(options: CoordinatorOptions): SyncCoordina
     // --- against what the cloud actually holds, not what it held last time.
     publish('pulling');
 
-    for (let batch = 0; batch < 50; batch += 1) {
+    // ONE pull. It is complete for its range (see PullResult), so there is no "next batch" to loop for: anything that settles while
+    // this cycle runs is the next cycle's, and the cursor already sits at the barrier this one read to.
+    {
       if (!accountMatches()) {
         publish('idle', 'the signed-in account changed');
         options.report?.({ type: 'sync.account_mismatch' });
@@ -222,8 +224,6 @@ export function createSyncCoordinator(options: CoordinatorOptions): SyncCoordina
         publish('error', 'the household could not be saved');
         return snapshot();
       }
-      if (outcome.kind === 'upToDate') break;
-      if (!outcome.more) break;
     }
 
     // --- PUSH what is left and not conflicted.

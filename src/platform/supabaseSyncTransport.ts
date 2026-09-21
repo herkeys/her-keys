@@ -74,7 +74,7 @@ export function createSupabaseSyncTransport(client: SupabaseClient): SyncTranspo
       }
     },
 
-    async pull(cursor, limit, householdId) {
+    async pull(cursor, householdId) {
       try {
         const { data, error } = await client.rpc('sync_pull', { p_cursor: cursor, p_household_id: householdId });
         if (error) return failureFrom(error);
@@ -83,9 +83,8 @@ export function createSupabaseSyncTransport(client: SupabaseClient): SyncTranspo
         const raw = Array.isArray(body.rows) ? (body.rows as Array<Record<string, unknown>>) : [];
         return {
           kind: 'pulled',
-          // One extra row is requested implicitly by slicing above the limit in
-          // the engine, which is how "there is more" is known without a count.
-          rows: raw.slice(0, limit + 1).map((row) => ({
+          // Everything the server settled since the cursor. Not truncated: see PullResult.
+          rows: raw.map((row) => ({
             entityTable: String(row.entity_table ?? ''),
             entityId: String(row.entity_id ?? ''),
             op: row.op === 'tombstone' ? ('tombstone' as const) : ('upsert' as const),

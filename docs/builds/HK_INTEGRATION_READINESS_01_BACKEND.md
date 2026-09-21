@@ -49,9 +49,16 @@ second claim and no duplicate rows; offline at bind loses nothing (the seed is i
   for every other unmapped row: bounded (ceiling `MAX_QUEUE_ITEMS − 100`, headroom for her next edit), dependency-ordered, **never dropped** —
   the seed is stateless (derived from state + mappings + queue), so a crash loses nothing and a large backlog drains in rounds.
 * **Hydration gate.** A device that has not heard from the cloud (`unhydrated`) is hydrated by its first pull; the runtime does not seed or
-  top up until it is `ready` (seeding a fresh device would create rows the cloud already holds). The pull engine now advances
-  `unhydrated → hydrating → ready`; previously nothing did.
+  top up until it is `ready` (seeding a fresh device would create rows the cloud already holds). One durable pull batch completes
+  hydration (`unhydrated → ready`); previously nothing advanced it. A crash mid-pull leaves the device `unhydrated` and the next launch reads
+  again — never a half-hydrated household.
 * **Children on second devices.** Pull hydrates `household_members` rows with `member_type = 'child'` (read-only; adults are accounts).
+* **A pull is complete for its range** (IR-D11). `sync_pull` has no limit and its cursor is a transaction id; a claim writes a whole
+  household in ONE transaction, so there is no cursor value between two of its rows and a response cannot be paged by count. The engine
+  therefore consumes the whole response, adopts the server's barrier as the cursor, and bounds only the *row requests* (`PULL_FETCH_CHUNK`
+  = 100 ids ≈ 4 KB of `id=in.(...)`, under the 8 KB request line most gateways refuse past). A failure part-way through discards what was
+  read (nothing applied, cursor unmoved) and the next cycle reads it again. The old engine kept the first 200 rows and stayed at the old
+  cursor, which re-read the same 200 rows forever: a second device never hydrated a household with more than ~200 changed rows.
 
 ## 3. Sync-capable canonical kinds (28) and mapping-only kinds (2)
 
@@ -128,6 +135,9 @@ The observer runs on every change and walks only collections whose reference cha
 per observed change; one edit inside it **~1.2 ms** (measured in `syncComposition.test.mjs`). The queue is bounded (500) with seed headroom;
 the seed is stateless and drains in bounded rounds (700 tasks proven). No polling was introduced: triggers are foreground, local mutation,
 and bounded backoff only while work is queued and offline. No repeated full serialization was added (intent rides the existing envelope write).
+Pull cost is proportional to the household, not to its history: entities are de-duplicated before any row body is requested, requests are
+chunked at 100 ids, and the whole batch is applied and written once (a 450-task household: 5 task requests; the entire two-device in-model
+journey, sending 450 rows and pulling them back, runs in about one second).
 
 ## 7. Defects found during repair (new; P0–P3 repaired, others recorded)
 
@@ -139,6 +149,8 @@ and bounded backoff only while work is queued and offline. No repeated full seri
 | IR-D4 | P2 | SYNC | `pullEngine` | `household_members` never pulled → a second device cannot resolve a child; a child-subject row would stall the cursor forever | **REPAIRED** (child hydration) |
 | IR-D5 | P2 | LIFECYCLE | `SyncNamespace.hydration` | `unhydrated → ready` was never advanced; seeding a fresh device would duplicate the cloud's rows | **REPAIRED** (advance + gate) |
 | IR-D6 | P3 | UI-DEFAULT | `TaskForm.tsx:34` | Prefilled `'15'` indistinguishable from typed 15 (audit missed) | **REPAIRED** (touched vs default) |
+| IR-D10 | P3 | SYNC | `syncRuntime.request` (my own new loop) | A household above the queue ceiling (400) was sent only in part: the loop stopped when the first cycle drained the queue, leaving the held-back rows until some later trigger. Found by the 450-task test | **REPAIRED** (look again after each cycle; 450 tasks now leave in ONE sign-in — in-model and against PostgreSQL) |
+| IR-D11 | P2 | SYNC | `pullEngine.fetchPullBatch`, `supabaseSyncTransport.pull` (pre-existing since B4) | A pull response of more than one batch (200 rows) kept the first 200 and left the cursor unmoved → the same 200 re-read forever; a second device never hydrated a household with more than ~200 changed rows, and a fake that ignored the limit hid it | **REPAIRED** (a pull is complete for its range; only row requests are chunked; `PULL_BATCH_SIZE` → `PULL_FETCH_CHUNK`, transport `limit` argument removed). 450 tasks hydrate through the real `sync_pull` |
 | IR-D7 | P4 | SEMANTICS | `needsMe.ts:56` | `resolved` also means "promoted to a task" | recorded |
 | IR-D8 | P4 | PARITY | Task/Event integrity | local rule admits the adult user id as subject; the cloud FK does not | recorded |
 | IR-D9 | P4 | PARITY | Meal, Category | cloud has `subject_member_id`, local has none | recorded |
@@ -149,4 +161,9 @@ D1 R7/R10 adoption of an existing cloud household on a new device (contract reco
 D2 `discovery_answers` has no transport; D3 a mutation arriving while 500 items are queued sets `backlog` (durable, surfaced) but the
 un-queued *update* is not auto-recovered (creates are, via the stateless seed); D4 no row-level pull quarantine (HA-014); D5 no network-restored
 event (no NetInfo dependency) — backoff covers it; D6 post-bind child creation has no server path (and no app path exists); D7 HA-013 destructive
-shipping migration stays zero-data-only.
+shipping migration stays zero-data-only; D8 `sync_pull` has no server-side bound: a device far behind (or a new one) receives one metadata
+row (`table, id, op, revision`, ~100 bytes) per change-log row since its cursor, and the engine de-duplicates by entity before it requests any
+row body. Bounding that on the server needs a composite `(xid, seq)` cursor — an owner-gated server change, not a client one, and not needed
+at household scale (the real-database journey pulls a 450-task household in five row requests); D9 a device's own pushes return through its
+next pull and are fetched again although the revision it already holds is current (in the in-model journey device A re-read 400 rows it
+had just written). Skipping a row whose mapped revision is already ≥ the change row's revision is a safe optimisation, deliberately not made here.

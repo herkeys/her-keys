@@ -225,8 +225,12 @@ export const MAX_QUEUE_ITEMS = 500;
  */
 export const MAX_UNRESOLVED_EVIDENCE = 200;
 
-/** Change-log rows per pull round trip. A multi-year household is many batches. */
-export const PULL_BATCH_SIZE = 200;
+/**
+ * Row ids per row-fetch request (one HTTP GET with `id=in.(...)`). A UUID is 37 characters in that list, so 100 keeps the request
+ * line near 4 KB, comfortably under the 8 KB most gateways refuse past. This bounds one REQUEST. It does not page the change
+ * list: a pull is complete for its range and is applied and made durable as one batch (see PullResult).
+ */
+export const PULL_FETCH_CHUNK = 100;
 
 // ------------------------------------------------------------- mappings ----
 const Uuid = z.string().regex(

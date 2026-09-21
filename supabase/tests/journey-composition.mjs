@@ -9,6 +9,10 @@ const NOW = Date.UTC(2026, 8, 21, 15, 0, 0);
 const TODAY = '2026-09-21';
 const CANARY = 'CANARY-LOCAL-ONLY-6f1c0b';
 const USER = { producer: 'user-action', artifactId: null, confidence: null };
+/** Today's One Move already decided as "withheld", so a household's tasks do not cause one to be decided from them. */
+const WITHHELD_MOVE = { id: `onemove-${TODAY}`, forDate: TODAY, targetId: null, targetType: 'task', status: 'withheld', decidedAt: '2026-09-21T14:00:00.000Z', completedAt: null, provenance: USER, scope: 'personal' };
+/** Bigger than the queue's seed ceiling (400) and than two pull-fetch chunks, so both limits are actually crossed. */
+const BULK = 450;
 
 /**
  * HK-INTEGRATION-READINESS-01 — the production composition against REAL PostgreSQL, PostgREST, RLS and the real claim RPC.
@@ -93,13 +97,8 @@ export async function productionCompositionJourneys(check, psql) {
     sql(`SELECT (SELECT status FROM public.events WHERE household_id='${household}') || ':' || (SELECT status FROM public.dependencies WHERE household_id='${household}');`) === 'removed:active');
 
   // ---- Device B: a second install of the same account hydrates the household ----------------------------------
-  const b = await device(m, { account: P, sent, fresh: true });
-  b.store.setIdentity({
-    binding: { accountId: P, householdId: household, boundAt: new Date(NOW).toISOString(), kind: 'claim', idMap: {} },
-    receipt: null, quarantine: null,
-    sync: m.claimSeam.namespaceForNewDevice({ accountId: P, householdId: household, deviceId: crypto.randomUUID() }),
-  });
-  await b.store.saveIdentity();
+  const b = await device(m, { account: P, sent });
+  await bindAsNewDevice(m, b, P, household);
   const resumed = await b.signIn();
   check('composition: the second device resumes the bound account and hydrates', resumed.kind === 'accountBound' && b.persisted().identity.sync.hydration === 'ready',
     `${resumed.kind}/${b.persisted().identity.sync.hydration}`);
@@ -149,6 +148,35 @@ export async function productionCompositionJourneys(check, psql) {
   check('composition: a DEMO household is refused as a whole; nothing runs, nothing is created for the account',
     demoState.kind === 'authenticatedUnbound' && demo.app.syncRuntime.running() === null && sql(`SELECT count(*) FROM public.household_members WHERE profile_id='${R}';`) === '0');
 
+  // ---- a household bigger than one batch, through the REAL sync_pull (which has no limit and one-transaction claims) --------
+  const S = crypto.randomUUID();
+  psql('postgres', `INSERT INTO auth.users (id, email, aud, role) VALUES ('${S}','comp-${S}@local.test','authenticated','authenticated') ON CONFLICT (id) DO NOTHING;`, { label: 'composition big-household user' });
+  const big = await device(m, { account: S, sent });
+  await mutate(big, (s) => ({ ...s, oneMoves: [WITHHELD_MOVE] }));
+  await mutate(big, (s, ctx) => {
+    let next = s;
+    for (let i = 0; i < BULK; i += 1) next = m.tasks.addTask(next, ctx, { title: `Bulk ${i}`, categoryId: s.categories[0].id, scope: 'household', durationMinutes: 20, durationSource: 'user' });
+    return next;
+  });
+  await big.store.flush();
+  const bigBound = await big.signIn();
+  const bigCount = () => sql(`SELECT count(*) FROM public.tasks WHERE household_id='${bigBound.householdId}';`);
+  check(`composition: a ${BULK}-task household is sent in full by ONE sign-in, past the queue ceiling (IR-D10)`,
+    bigBound.kind === 'accountBound' && bigCount() === String(BULK) && big.persisted().identity.sync.queue.length === 0, `${bigBound.kind} ${bigCount()} queue=${big.persisted().identity.sync.queue.length}`);
+
+  const fetched = [];
+  const bigB = await device(m, { account: S, sent, fetched });
+  await bindAsNewDevice(m, bigB, S, bigBound.householdId);
+  await bigB.signIn();
+  const bigStored = bigB.persisted().identity.sync;
+  const taskRequests = fetched.filter((request) => request.table === 'tasks').map((request) => request.count);
+  check(`composition: a second device pulls all ${BULK} through the real sync_pull, and the cursor moves past them (IR-D11)`,
+    bigB.store.getSnapshot().state.tasks.length === BULK && bigStored.hydration === 'ready' && bigStored.cursor !== '0',
+    `${bigB.store.getSnapshot().state.tasks.length} tasks, ${bigStored.hydration}, cursor ${bigStored.cursor}`);
+  check('composition: ...in row requests no larger than the chunk, each task requested once, and the reading device uploaded nothing',
+    taskRequests.length > 1 && taskRequests.every((count) => count <= 100) && taskRequests.reduce((sum, count) => sum + count, 0) === BULK && bigB.persisted().identity.sync.queue.length === 0 && bigCount() === String(BULK),
+    `requests ${taskRequests.join('+')}`);
+
   // ---- local-only kinds never travel ----------------------------------------------------------------------------
   const leaked = sent.filter((row) => JSON.stringify(row).includes(CANARY)).length;
   check('composition: a local-only record (migration evidence) never appears in ANY row the client sent', leaked === 0, `${leaked} rows`);
@@ -179,8 +207,22 @@ async function loadModules() {
   return { compose, appStore, observer, repo, storage, provider, secure, cloud, transport, claimSeam, events, tasks, struct, initial, envelope };
 }
 
+/**
+ * A fresh install of an account whose household already exists in the cloud, bound the way adoption of an existing household will
+ * leave it. That adoption step is a recorded contract that is not implemented in this build; this is its stand-in, so the pull path
+ * it will feed can be attacked against the real database now.
+ */
+async function bindAsNewDevice(m, d, account, householdId) {
+  d.store.setIdentity({
+    binding: { accountId: account, householdId, boundAt: new Date(NOW).toISOString(), kind: 'claim', idMap: {} },
+    receipt: null, quarantine: null,
+    sync: m.claimSeam.namespaceForNewDevice({ accountId: account, householdId, deviceId: crypto.randomUUID() }),
+  });
+  await d.store.saveIdentity();
+}
+
 /** One installation, built exactly as the app's root builds it, against the real local stack. */
-async function device(m, { account, sent, storage = m.storage.createMemoryStorage({}), secure = m.secure.createMemorySecureStorage({}), mode = 'empty' }) {
+async function device(m, { account, sent, fetched = [], storage = m.storage.createMemoryStorage({}), secure = m.secure.createMemorySecureStorage({}), mode = 'empty' }) {
   const client = clientFor(account);
   const observer = m.observer.createChangeObserver({ now: () => NOW });
   const repository = m.repo.createAppStateRepository({ storage, appVersion: 'test', now: () => NOW, quarantineCorruptState: false });
@@ -194,6 +236,7 @@ async function device(m, { account, sent, storage = m.storage.createMemoryStorag
     ...real,
     async create(table, deviceId, row) { sent.push({ table, row }); return real.create(table, deviceId, row); },
     async update(table, cloudId, base, patch, column) { sent.push({ table, patch }); return real.update(table, cloudId, base, patch, column); },
+    async fetchRows(table, ids, column) { fetched.push({ table, count: ids.length }); return real.fetchRows(table, ids, column); },
   };
 
   const timers = [];
@@ -232,10 +275,9 @@ async function device(m, { account, sent, storage = m.storage.createMemoryStorag
 const mutate = (d, fn) => d.store.commit((state, ctx) => fn(state, ctx));
 
 async function householdWithContent(m, d) {
-  const withheld = { id: `onemove-${TODAY}`, forDate: TODAY, targetId: null, targetType: 'task', status: 'withheld', decidedAt: '2026-09-21T14:00:00.000Z', completedAt: null, provenance: USER, scope: 'personal' };
   await mutate(d, (s) => ({
     ...s,
-    oneMoves: [withheld],
+    oneMoves: [WITHHELD_MOVE],
     children: [{ id: 'child-1', displayName: 'Mia', birthDate: '2016-04-02', scope: 'child' }],
     onboarding: { ...s.onboarding, goalIds: ['calmer-household'], strengthIds: ['cooking'], lastStep: 'struggles' },
     // A record that exists only on the device: it must never travel.

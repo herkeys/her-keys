@@ -84,6 +84,7 @@ export function createFakeCloud() {
 
     async fetchRows(table, ids, column) {
       calls.push({ op: 'fetchRows', table, count: ids.length });
+      await hooks.duringFetch?.(table, ids);
       if (state.offline) return down();
       const wanted = new Set(ids.map(String));
       return { kind: 'rows', rows: [...rows.values()].filter((r) => r._table === table && wanted.has(String(r[column ?? idColumn(table)]))).map((r) => ({ ...r })) };

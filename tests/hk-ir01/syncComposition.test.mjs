@@ -18,6 +18,7 @@ import { starterCategories } from '../../src/domain/categories.ts';
 import { addTask, updateTask } from '../../src/domain/tasks.ts';
 import { createChangeObserver } from '../../src/domain/sync/changeObserver.ts';
 import { namespaceForNewDevice } from '../../src/domain/sync/claimSeam.ts';
+import { PULL_FETCH_CHUNK } from '../../src/domain/sync/syncTypes.ts';
 import { decodeStoredState } from '../../src/persistence/envelope.ts';
 import { STORAGE_KEYS, createAppStateRepository } from '../../src/persistence/appStateRepository.ts';
 import { createMemoryStorage } from '../../src/persistence/storageAdapter.ts';
@@ -157,6 +158,21 @@ async function householdWithContent(device) {
 
 const ACCOUNT_A = '11111111-1111-4111-8111-111111111111';
 const ACCOUNT_B = '22222222-2222-4222-8222-222222222222';
+
+/**
+ * A fresh install of an account that already has a household in the cloud, bound exactly as adoption of an existing household will
+ * leave it. That adoption step is a recorded contract that is not implemented in this build (see the BACKEND doc); this is its
+ * stand-in, so the pull path it will feed can be attacked now.
+ */
+async function bindAsNewDevice(device, accountCloud) {
+  device.store.setIdentity({
+    binding: { accountId: device.accountId, householdId: accountCloud.ids.householdId, boundAt: '2026-09-21T15:00:00.000Z', kind: 'claim', idMap: {} },
+    receipt: null,
+    quarantine: null,
+    sync: namespaceForNewDevice({ accountId: device.accountId, householdId: accountCloud.ids.householdId, deviceId: uuid() }),
+  });
+  await device.store.saveIdentity();
+}
 
 describe('HA-001 — the production composition operates sync after binding', () => {
   test('binding an account makes the sync runtime OPERATIONAL, and the content the claim did not carry reaches the cloud', async () => {
@@ -585,17 +601,8 @@ describe('HA-001 — a second device hydrates the household, children included (
     await householdWithContent(a);
     await a.signIn();
 
-    // Device B: a fresh install of the same account, bound to A's household exactly as adoption of an existing household
-    // will leave it (that adoption step is a recorded contract that is not implemented in this build; see the BACKEND doc).
-    const bCloud = accountCloud;
-    const b = await makeDevice({ cloud, accountId: ACCOUNT_A, accountCloud: bCloud });
-    b.store.setIdentity({
-      binding: { accountId: ACCOUNT_A, householdId: accountCloud.ids.householdId, boundAt: '2026-09-21T15:00:00.000Z', kind: 'claim', idMap: {} },
-      receipt: null,
-      quarantine: null,
-      sync: namespaceForNewDevice({ accountId: ACCOUNT_A, householdId: accountCloud.ids.householdId, deviceId: uuid() }),
-    });
-    await b.store.saveIdentity();
+    const b = await makeDevice({ cloud, accountId: ACCOUNT_A, accountCloud });
+    await bindAsNewDevice(b, accountCloud);
     // the real path: same account, already bound on this device -> resume -> the sync runtime starts and hydrates
     const resumed = await b.signIn();
     assert.equal(resumed.kind, 'accountBound');
@@ -612,6 +619,128 @@ describe('HA-001 — a second device hydrates the household, children included (
     assert.equal(dentist.subjectMemberId, stateB.children[0].id);
     assert.equal(dentist.durationSource, 'user', 'and duration knowledge survived the trip');
     assert.equal(b.persisted().identity.sync.queue.length, 0, 'pulled state produced no outbound work');
+  });
+
+  // Found while writing the initial-sync matrix (row K). The server's sync_pull has no limit and a claim is ONE transaction, so a
+  // change cannot be paged by count: the engine used to keep the cursor where it was whenever a response held more than one batch,
+  // and so re-read the same first batch forever.
+  test('a household bigger than one fetch batch hydrates COMPLETELY on a second device, and the cursor moves past it', async () => {
+    const cloud = createFakeCloud();
+    const accountCloud = accountCloudFor(cloud, ACCOUNT_A);
+    const a = await makeDevice({ cloud, accountId: ACCOUNT_A, accountCloud });
+    await mutate(a, (s) => ({ ...s, oneMoves: [withheldMove] }));
+    await mutate(a, (state, ctx) => {
+      let next = state;
+      for (let i = 0; i < 450; i += 1) next = addTask(next, ctx, { title: `Task ${i}`, categoryId: state.categories[0].id, scope: 'household', durationMinutes: 20, durationSource: 'user' });
+      return next;
+    });
+    await a.store.flush();
+    await a.signIn();
+    // A household bigger than the queue ceiling is sent in full by ONE sign-in, not left half-sent until some later trigger.
+    assert.equal(cloud.table('tasks').length, 450, 'device A delivered its whole household');
+    assert.equal(a.persisted().identity.sync.queue.length, 0);
+
+    const b = await makeDevice({ cloud, accountId: ACCOUNT_A, accountCloud });
+    await bindAsNewDevice(b, accountCloud);
+    const callsBeforeB = cloud.calls.length;
+    await b.signIn();
+
+    const stored = b.persisted();
+    assert.equal(b.store.getSnapshot().state.tasks.length, 450, 'every task arrived, not just the first batch');
+    assert.equal(stored.identity.sync.hydration, 'ready', 'hydration completed');
+    assert.notEqual(stored.identity.sync.cursor, '0', 'and the cursor moved past what it read');
+    assert.equal(stored.identity.sync.queue.length, 0, 'pulled state produced no outbound work');
+    const fetched = cloud.calls.slice(callsBeforeB).filter((c) => c.op === 'fetchRows' && c.table === 'tasks').map((c) => c.count);
+    assert.ok(fetched.every((count) => count <= PULL_FETCH_CHUNK), `each row request stays bounded (largest ${Math.max(...fetched)})`);
+    assert.equal(fetched.reduce((sum, count) => sum + count, 0), 450, 'and every task was requested exactly once');
+  });
+});
+
+describe('HA-001 — initial sync attack matrix (the rows the journeys above do not already name)', () => {
+  test('A. a brand-new user with no content: bound, ONE pull, nothing uploaded, no starter duplicated', async () => {
+    const cloud = createFakeCloud();
+    const accountCloud = accountCloudFor(cloud, ACCOUNT_A);
+    const a = await makeDevice({ cloud, accountId: ACCOUNT_A, accountCloud });
+    const starters = a.store.getSnapshot().state.categories.length;
+
+    const bound = await a.signIn();
+    assert.equal(bound.kind, 'accountBound');
+    assert.equal(cloud.calls.filter((c) => c.op === 'create').length, 0, 'nothing of hers to upload, so nothing is');
+    assert.equal(cloud.table('household_categories').length, starters, 'the cloud holds exactly the starters it made itself');
+    assert.equal(a.store.getSnapshot().state.categories.length, starters, 'and the device holds the same: the pull did not double them');
+    const sync = a.persisted().identity.sync;
+    assert.deepEqual([sync.queue.length, sync.hydration], [0, 'ready']);
+    assert.equal(cloud.calls.filter((c) => c.op === 'pull').length, 1, 'one pull, not a loop');
+  });
+
+  test('C. an existing cloud account on a device with no content: the household arrives, nothing is uploaded, nothing is duplicated', async () => {
+    const cloud = createFakeCloud();
+    const accountCloud = accountCloudFor(cloud, ACCOUNT_A);
+    const a = await makeDevice({ cloud, accountId: ACCOUNT_A, accountCloud });
+    await householdWithContent(a);
+    await a.signIn();
+    const createsByA = cloud.calls.filter((c) => c.op === 'create').length;
+    const rowsBefore = cloud.rows.size;
+
+    const b = await makeDevice({ cloud, accountId: ACCOUNT_A, accountCloud });
+    await bindAsNewDevice(b, accountCloud);
+    await b.signIn();
+
+    assert.equal(cloud.calls.filter((c) => c.op === 'create').length, createsByA, 'the new device uploaded nothing');
+    assert.equal(cloud.rows.size, rowsBefore, 'and the cloud holds exactly what it held');
+    const names = (device) => device.store.getSnapshot().state.categories.map((c) => c.name).sort();
+    assert.deepEqual(names(b), names(a), 'no starter category twice on the new device');
+    assert.equal(b.store.getSnapshot().state.tasks.length, 2);
+    assert.equal(b.persisted().identity.sync.queue.length, 0);
+  });
+
+  test('K. an initial pull interrupted part-way leaves NOTHING half-applied, and a relaunch completes it exactly once', async () => {
+    const cloud = createFakeCloud();
+    const accountCloud = accountCloudFor(cloud, ACCOUNT_A);
+    const a = await makeDevice({ cloud, accountId: ACCOUNT_A, accountCloud });
+    await mutate(a, (s) => ({ ...s, oneMoves: [withheldMove] }));
+    await mutate(a, (state, ctx) => {
+      let next = state;
+      for (let i = 0; i < 250; i += 1) next = addTask(next, ctx, { title: `Task ${i}`, categoryId: state.categories[0].id, scope: 'household', durationMinutes: 20, durationSource: 'user' });
+      return next;
+    });
+    await a.store.flush();
+    await a.signIn();
+    const createsByA = cloud.calls.filter((c) => c.op === 'create').length;
+    const rowsBefore = cloud.rows.size;
+
+    const storage = createMemoryStorage({});
+    const b = await makeDevice({ cloud, accountId: ACCOUNT_A, accountCloud, storage });
+    await bindAsNewDevice(b, accountCloud);
+    // The network goes away during the third row request: two were answered, the rest never will be this launch.
+    let requests = 0;
+    cloud.hooks.duringFetch = async () => {
+      requests += 1;
+      if (requests === 3) cloud.state.offline = true;
+    };
+    await b.signIn();
+
+    const interrupted = b.persisted();
+    assert.equal(b.syncRuntime.snapshot().phase, 'offline');
+    assert.deepEqual([interrupted.identity.sync.hydration, interrupted.identity.sync.cursor], ['unhydrated', '0'], 'the cursor did not move past what it never applied');
+    assert.equal(interrupted.state.tasks.length, 0, 'no half-applied household: a pull is all or nothing');
+    assert.equal(interrupted.identity.sync.queue.length, 0, 'and nothing is owed for a household she has not yet seen');
+    assert.equal(cloud.calls.filter((c) => c.op === 'create').length, createsByA, 'so nothing was uploaded either');
+
+    // A relaunch with the network back reads it again and lands the whole thing, once.
+    cloud.hooks.duringFetch = undefined;
+    cloud.state.offline = false;
+    const relaunched = await makeDevice({ cloud, accountId: ACCOUNT_A, accountCloud, storage, secure: b.secure });
+    const restored = await relaunched.accountRuntime.restore();
+    await relaunched.syncRuntime.idle();
+    assert.equal(restored.kind, 'accountBound');
+
+    const done = relaunched.persisted();
+    const tasks = done.state.tasks;
+    assert.equal(tasks.length, 250, 'the whole household arrived');
+    assert.equal(new Set(tasks.map((t) => t.id)).size, 250, 'with no duplicate row');
+    assert.deepEqual([done.identity.sync.hydration, done.identity.sync.queue.length], ['ready', 0]);
+    assert.equal(cloud.rows.size, rowsBefore, 'and the cloud was not written to by a device that only reads');
   });
 });
 

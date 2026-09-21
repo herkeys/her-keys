@@ -1,5 +1,5 @@
 import { validateAppState, type AppState } from '../state';
-import { CLOUD_TABLE, DEPENDENCY_RANK, IDENTITY_COLUMN, PULL_BATCH_SIZE, mappingKey, type Mapping, type SyncEntityKind, type SyncNamespace } from './syncTypes';
+import { CLOUD_TABLE, DEPENDENCY_RANK, IDENTITY_COLUMN, PULL_FETCH_CHUNK, mappingKey, type Mapping, type SyncEntityKind, type SyncNamespace } from './syncTypes';
 import { rememberMapping } from './pushEngine';
 import { recordEvidence } from './queue';
 import { isFailure, type ChangeRow, type SyncTransport } from './transport';
@@ -70,14 +70,15 @@ export interface PullContext {
   dropLocal?: (state: AppState, kind: SyncEntityKind, localId: string) => AppState;
   /** Mint a local id that is free in this namespace (SD4-006 pull side). */
   mintLocalId: (kind: SyncEntityKind, wanted: string) => string;
-  batchSize?: number;
+  /** Ids per row-fetch request. Defaults to PULL_FETCH_CHUNK. It bounds a request, never the batch. */
+  fetchChunk?: number;
 }
 
 export type PullOutcome =
   /** Nothing new. The cursor may still have advanced past an empty range. */
   | { kind: 'upToDate'; state: AppState; namespace: SyncNamespace }
   /** A batch was applied and is ready to be made durable, cursor and all. */
-  | { kind: 'applied'; state: AppState; namespace: SyncNamespace; changed: number; more: boolean }
+  | { kind: 'applied'; state: AppState; namespace: SyncNamespace; changed: number }
   /** The session failed. Nothing was applied and the cursor did not move. */
   | { kind: 'paused'; detail: string }
   | { kind: 'failed'; detail: string; retriable: boolean }
@@ -107,9 +108,8 @@ export interface FetchedTable {
 }
 
 export interface FetchedBatch {
-  /** The cursor to adopt once this batch is durable. Equals the current cursor when there is more to fetch. */
+  /** The cursor to adopt once this batch is durable: the server's barrier. The batch is everything settled before it. */
   nextCursor: string;
-  more: boolean;
   tables: FetchedTable[];
 }
 
@@ -122,55 +122,57 @@ export type FetchOutcome =
 const MEMBER_TABLE = 'household_members';
 
 export async function fetchPullBatch(namespace: SyncNamespace, ctx: PullContext): Promise<FetchOutcome> {
-  const limit = ctx.batchSize ?? PULL_BATCH_SIZE;
-  const result = await ctx.transport.pull(namespace.cursor, limit, namespace.householdId);
+  const chunk = Math.max(1, ctx.fetchChunk ?? PULL_FETCH_CHUNK);
+  const result = await ctx.transport.pull(namespace.cursor, namespace.householdId);
 
   if (isFailure(result)) {
     if (result.failure === 'unauthorized') return { kind: 'paused', detail: result.detail };
     return { kind: 'failed', detail: result.detail, retriable: result.failure !== 'forbidden' };
   }
 
-  // Everything before the barrier is settled; the barrier itself is the next
-  // safe cursor. `rows` may be empty and the cursor may still move, which is
-  // how a quiet period is absorbed without re-reading it forever.
-  const rows = result.rows.slice(0, limit);
-  const more = result.rows.length > limit;
-  const nextCursor = more ? namespace.cursor : result.nextCursor;
-
+  // Everything before the barrier is settled and ALL of it is here; the barrier itself is the next safe cursor. `rows` may be
+  // empty and the cursor may still move, which is how a quiet period is absorbed without re-reading it forever.
+  //
+  // The response is never cut short and the cursor never held back. The cursor is a transaction id and a claim writes a household
+  // in ONE transaction, so there is no cursor value between two of its rows to stop at: a device that kept the first N rows and
+  // stayed put would re-read those N forever and never hydrate a household larger than N. What is bounded is each REQUEST for
+  // row bodies, below. A failure part-way through discards everything read so far (nothing was applied and the cursor did not
+  // move), and the next cycle simply reads it again.
   const tables: FetchedTable[] = [];
-  for (const [table, ids] of groupByTable(rows)) {
+  for (const [table, ids] of groupByTable(result.rows)) {
     const kind: FetchedTable['kind'] = table === MEMBER_TABLE ? 'member' : (TABLE_TO_KIND[table] ?? null);
     // A table this client does not sync is not an error. change_log carries
     // everything; the matrix decides what this device is interested in.
     if (kind === null) continue;
 
-    const fetched = await ctx.transport.fetchRows(table, [...ids], kind === 'member' ? 'id' : IDENTITY_COLUMN[kind]);
-    if (isFailure(fetched)) {
-      if (fetched.failure === 'unauthorized') return { kind: 'paused', detail: fetched.detail };
-      return { kind: 'failed', detail: fetched.detail, retriable: fetched.failure !== 'forbidden' };
+    const wanted = [...ids];
+    const rows: Array<Record<string, unknown>> = [];
+    for (let at = 0; at < wanted.length; at += chunk) {
+      const fetched = await ctx.transport.fetchRows(table, wanted.slice(at, at + chunk), kind === 'member' ? 'id' : IDENTITY_COLUMN[kind]);
+      if (isFailure(fetched)) {
+        if (fetched.failure === 'unauthorized') return { kind: 'paused', detail: fetched.detail };
+        return { kind: 'failed', detail: fetched.detail, retriable: fetched.failure !== 'forbidden' };
+      }
+      rows.push(...fetched.rows);
     }
-    tables.push({ table, kind, ids: [...ids], rows: fetched.rows });
+    tables.push({ table, kind, ids: wanted, rows });
   }
 
-  return { kind: 'fetched', batch: { nextCursor, more, tables } };
+  return { kind: 'fetched', batch: { nextCursor: result.nextCursor, tables } };
 }
 
 export type ApplyOutcome = Exclude<PullOutcome, { kind: 'paused' } | { kind: 'failed' }>;
 
 /**
- * Where hydration stands once this batch is durable. A device that has never heard from the cloud is `unhydrated`; it is
- * `hydrating` while there is more to fetch and `ready` when the last batch lands. Until then it must neither render an empty
- * household as hers nor send anything (it would create rows the cloud already holds). A namespace that starts from a claim is
- * already `ready`.
+ * A durable batch completes hydration. A device that has never heard from the cloud is `unhydrated` until its first batch lands,
+ * and until then it must neither render an empty household as hers nor send anything (it would create rows the cloud already
+ * holds). A batch is everything the server has settled, so there is no half-hydrated state to persist; a crash mid-fetch leaves
+ * the device `unhydrated` and the next launch reads it again. (`hydrating` stays a legal stored value for a server that some day
+ * pages; nothing writes it today.)
  */
-function hydrationAfter(namespace: SyncNamespace, more: boolean): SyncNamespace['hydration'] {
-  if (namespace.hydration === 'ready') return 'ready';
-  return more ? 'hydrating' : 'ready';
-}
-
 export function applyPullBatch(state: AppState, namespace: SyncNamespace, batch: FetchedBatch, ctx: PullContext): ApplyOutcome {
   if (batch.tables.length === 0) {
-    return { kind: 'upToDate', state, namespace: { ...namespace, cursor: batch.nextCursor, hydration: hydrationAfter(namespace, batch.more) } };
+    return { kind: 'upToDate', state, namespace: { ...namespace, cursor: batch.nextCursor, hydration: 'ready' } };
   }
 
   let nextState = state;
@@ -231,11 +233,10 @@ export function applyPullBatch(state: AppState, namespace: SyncNamespace, batch:
     namespace: {
       ...nextNamespace,
       cursor: batch.nextCursor,
-      hydration: hydrationAfter(nextNamespace, batch.more),
+      hydration: 'ready',
       lastSyncedAt: new Date(ctx.now()).toISOString(),
     },
     changed,
-    more: batch.more,
   };
 }
 

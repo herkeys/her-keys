@@ -160,7 +160,6 @@ export function createSyncRuntime(deps: SyncRuntimeDeps): SyncRuntime {
         dropLocal: (state, kind, localId) => dropLocal(state, kind, localId),
         // A minted local id must itself be a legal local id: letters, digits and `._:-` only.
         mintLocalId: (_kind, wanted) => `${wanted}-x${a.deviceId.replace(/-/g, '').slice(0, 6)}`,
-        batchSize: 200,
       },
       report: (event) => deps.report?.(event),
       onChange: (snapshot) => deps.onChange?.(snapshot),
@@ -301,14 +300,14 @@ export function createSyncRuntime(deps: SyncRuntimeDeps): SyncRuntime {
       let snapshot: SyncSnapshot | null = null;
       for (let round = 0; round < MAX_ROUNDS; round += 1) {
         if (active !== a) return snapshot;
-        const wasReady = deps.store.getSnapshot().identity.sync?.hydration === 'ready';
-        const added = await topUp(a);
+        await topUp(a);
         if (active !== a) return snapshot;
         snapshot = await a.coordinator.request(round === 0 ? trigger : 'localMutation');
-        const justHydrated = !wasReady && deps.store.getSnapshot().identity.sync?.hydration === 'ready';
-        // Keep going only while the queue keeps being refilled (or hydration just finished, so local rows can now be queued) and
-        // each cycle finishes clean.
-        if ((added === 0 && !justHydrated) || snapshot.phase !== 'idle') break;
+        if (snapshot.phase !== 'idle' || active !== a) break;
+        // The cycle drained the queue, which makes room for rows the queue ceiling held back, and a first pull that has just
+        // finished makes local rows queueable at all. Look again AFTER the cycle: stopping here would leave a household bigger
+        // than the ceiling half-sent until some later trigger happened to come along.
+        if ((await topUp(a)) === 0) break;
       }
       scheduleRetry(a, snapshot);
       return snapshot;

@@ -16,7 +16,7 @@ import { describe, test } from 'node:test';
 import {
   MAX_QUEUE_ITEMS,
   MAX_UNRESOLVED_EVIDENCE,
-  PULL_BATCH_SIZE,
+  PULL_FETCH_CHUNK,
   emptyNamespace,
   needsSyncAttention,
   needsSyncAttentionCount,
@@ -610,9 +610,9 @@ describe('the coordinator', () => {
     assert.equal(h.coordinator.snapshot().phase, 'idle', 'a quiet cycle ends idle, not in an error');
   });
 
-  test('M. the pull batch size is a named constant, not a literal', () => {
-    assert.equal(typeof PULL_BATCH_SIZE, 'number');
-    assert.ok(PULL_BATCH_SIZE > 0 && PULL_BATCH_SIZE <= 1000, `PULL_BATCH_SIZE=${PULL_BATCH_SIZE}`);
+  test('M. the row-fetch chunk is a named constant, not a literal (renamed from PULL_BATCH_SIZE: it bounds a request, not a batch)', () => {
+    assert.equal(typeof PULL_FETCH_CHUNK, 'number');
+    assert.ok(PULL_FETCH_CHUNK > 0 && PULL_FETCH_CHUNK <= 200, `PULL_FETCH_CHUNK=${PULL_FETCH_CHUNK} keeps the id list under an 8 KB request line`);
   });
 });
 
