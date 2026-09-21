@@ -198,7 +198,7 @@ async function device(m, { account, sent, storage = m.storage.createMemoryStorag
 
   const timers = [];
   const schedule = (work) => { const timer = { work, live: true }; timers.push(timer); return () => { timer.live = false; }; };
-  const session = { accountId: account, accessToken: 'unused-local-jwt', refreshToken: 'unused', expiresAt: NOW + 3_600_000, provider: { provider: 'apple', subject: `apple-${account}`, suggestedDisplayName: null } };
+  const session = { accountId: account, accessToken: 'unused', refreshToken: 'unused', expiresAt: NOW + 3_600_000, provider: { provider: 'apple', subject: `apple-${account}`, suggestedDisplayName: null } };
 
   const app = m.compose.composeAccountApp({
     store,
