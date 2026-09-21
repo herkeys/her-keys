@@ -1,0 +1,31 @@
+{
+  "afterAccepted": {
+    "ackDueAt": null,
+    "holder": {
+      "id": "child-1",
+      "kind": "child",
+      "name": "Josie"
+    },
+    "id": "resp-1",
+    "live": true,
+    "requestedAt": "2026-09-16T14:00:00.000Z",
+    "state": "accepted",
+    "stillNeedsMe": false,
+    "unanswered": false
+  },
+  "afterDeclined": {
+    "ackDueAt": null,
+    "holder": {
+      "id": "child-1",
+      "kind": "child",
+      "name": "Josie"
+    },
+    "id": "resp-5",
+    "live": false,
+    "requestedAt": "2026-09-16T14:00:00.000Z",
+    "state": "declined",
+    "stillNeedsMe": true,
+    "unanswered": false
+  },
+  "scenario": "J"
+}

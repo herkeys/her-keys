@@ -1,0 +1,290 @@
+{
+  "canonical": {
+    "responsibilities": [],
+    "rules": [],
+    "steps": [
+      {
+        "createdAt": "2026-09-16T14:00:00.000Z",
+        "effortMinutes": null,
+        "id": "sys-d.e0",
+        "position": 0,
+        "provenance": {
+          "artifactId": null,
+          "confidence": null,
+          "producer": "user-action"
+        },
+        "scope": "personal",
+        "systemId": "sys-d",
+        "title": "Pack uniform",
+        "updatedAt": "2026-09-16T14:00:00.000Z"
+      },
+      {
+        "createdAt": "2026-09-16T14:00:00.000Z",
+        "effortMinutes": 5,
+        "id": "sys-d.e1",
+        "position": 10,
+        "provenance": {
+          "artifactId": null,
+          "confidence": null,
+          "producer": "user-action"
+        },
+        "scope": "personal",
+        "systemId": "sys-d",
+        "title": "Fill and check water bottle",
+        "updatedAt": "2026-09-16T14:01:00.000Z"
+      },
+      {
+        "createdAt": "2026-09-16T14:00:00.000Z",
+        "effortMinutes": null,
+        "id": "sys-d.e2",
+        "position": 20,
+        "provenance": {
+          "artifactId": null,
+          "confidence": null,
+          "producer": "user-action"
+        },
+        "scope": "personal",
+        "systemId": "sys-d",
+        "title": "Put bag by door",
+        "updatedAt": "2026-09-16T14:00:00.000Z"
+      },
+      {
+        "createdAt": "2026-09-16T14:01:00.000Z",
+        "effortMinutes": 3,
+        "id": "sys-d.n1",
+        "position": 30,
+        "provenance": {
+          "artifactId": null,
+          "confidence": null,
+          "producer": "user-action"
+        },
+        "scope": "personal",
+        "systemId": "sys-d",
+        "title": "Lay out shoes",
+        "updatedAt": "2026-09-16T14:01:00.000Z"
+      }
+    ],
+    "system": {
+      "automationMode": "manual",
+      "categoryId": "cat-home",
+      "description": "Everything ready before bed.",
+      "effortMinutes": null,
+      "energyDemand": null,
+      "id": "sys-d",
+      "name": "School-night reset",
+      "provenance": {
+        "artifactId": null,
+        "confidence": null,
+        "producer": "user-action"
+      },
+      "scope": "household"
+    }
+  },
+  "scenario": "D",
+  "view": {
+    "actions": [
+      {
+        "action": "edit",
+        "available": true,
+        "reason": "available"
+      },
+      {
+        "action": "add_step",
+        "available": true,
+        "reason": "available"
+      },
+      {
+        "action": "edit_step",
+        "available": true,
+        "reason": "available"
+      },
+      {
+        "action": "remove_step",
+        "available": false,
+        "reason": "no_retire_semantics"
+      },
+      {
+        "action": "reorder_steps",
+        "available": true,
+        "reason": "available"
+      },
+      {
+        "action": "set_schedule",
+        "available": true,
+        "reason": "available"
+      },
+      {
+        "action": "stop_schedule",
+        "available": false,
+        "reason": "no_live_schedule"
+      },
+      {
+        "action": "pause_schedule",
+        "available": false,
+        "reason": "no_live_schedule"
+      },
+      {
+        "action": "resume_schedule",
+        "available": false,
+        "reason": "not_paused"
+      },
+      {
+        "action": "skip_next",
+        "available": false,
+        "reason": "no_live_schedule"
+      },
+      {
+        "action": "assign_responsibility",
+        "available": false,
+        "reason": "no_holder_available"
+      },
+      {
+        "action": "reassign_responsibility",
+        "available": false,
+        "reason": "no_live_handoff"
+      },
+      {
+        "action": "take_back_responsibility",
+        "available": false,
+        "reason": "no_live_handoff"
+      },
+      {
+        "action": "record_answer",
+        "available": false,
+        "reason": "nothing_awaiting_an_answer"
+      },
+      {
+        "action": "archive",
+        "available": false,
+        "reason": "no_status_semantics"
+      },
+      {
+        "action": "delete",
+        "available": false,
+        "reason": "no_delete_semantics"
+      },
+      {
+        "action": "duplicate",
+        "available": false,
+        "reason": "no_copy_semantics"
+      },
+      {
+        "action": "start_run",
+        "available": false,
+        "reason": "no_run_semantics"
+      },
+      {
+        "action": "complete_step",
+        "available": false,
+        "reason": "no_step_completion_semantics"
+      }
+    ],
+    "run": {
+      "currentRef": null,
+      "progress": null,
+      "supported": false
+    },
+    "steps": [
+      {
+        "dependencyRefs": [],
+        "duration": {
+          "known": false
+        },
+        "order": 1,
+        "ref": {
+          "id": "sys-d.e0",
+          "kind": "systemStep"
+        },
+        "responsibility": null,
+        "title": "Pack uniform"
+      },
+      {
+        "dependencyRefs": [],
+        "duration": {
+          "known": true,
+          "minutes": 5
+        },
+        "order": 2,
+        "ref": {
+          "id": "sys-d.e1",
+          "kind": "systemStep"
+        },
+        "responsibility": null,
+        "title": "Fill and check water bottle"
+      },
+      {
+        "dependencyRefs": [],
+        "duration": {
+          "known": false
+        },
+        "order": 3,
+        "ref": {
+          "id": "sys-d.e2",
+          "kind": "systemStep"
+        },
+        "responsibility": null,
+        "title": "Put bag by door"
+      },
+      {
+        "dependencyRefs": [],
+        "duration": {
+          "known": true,
+          "minutes": 3
+        },
+        "order": 4,
+        "ref": {
+          "id": "sys-d.n1",
+          "kind": "systemStep"
+        },
+        "responsibility": null,
+        "title": "Lay out shoes"
+      }
+    ],
+    "system": {
+      "actionEvidence": [],
+      "area": {
+        "id": "cat-home",
+        "name": "Home"
+      },
+      "duration": {
+        "atLeastMinutes": 8,
+        "estimatedSteps": 2,
+        "kind": "partial",
+        "totalSteps": 4
+      },
+      "name": "School-night reset",
+      "neededBy": [],
+      "needs": [],
+      "nextExpected": null,
+      "provenance": {
+        "confidence": null,
+        "producer": "user-action"
+      },
+      "recurrence": null,
+      "ref": {
+        "id": "sys-d",
+        "kind": "system"
+      },
+      "responsibility": null,
+      "scope": "household",
+      "skipped": [],
+      "state": {
+        "lifecycle": "not_represented",
+        "schedule": "none"
+      },
+      "subject": {
+        "kind": "none"
+      }
+    },
+    "unknownStates": [
+      {
+        "field": "consequence",
+        "reason": "not_represented_for_systems"
+      },
+      {
+        "field": "duration",
+        "reason": "some_steps_have_no_estimate"
+      }
+    ]
+  }
+}

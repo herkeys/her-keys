@@ -47,6 +47,37 @@ function spread(free: readonly number[], count: number): number[] {
   return Array.from({ length: count }, (_, i) => free[Math.floor(((i + 1) * free.length) / (count + 1))] ?? free[i]);
 }
 
+/**
+ * Appending after `lo` (or from the top when there is nothing before): each row one stride past the
+ * last, stepping over any position that is already held. Null when the ceiling would be passed.
+ */
+function placeAfter(lo: number, count: number, upper: number, occupied: ReadonlySet<number>): number[] | null {
+  const out: number[] = [];
+  let previous = lo < 0 ? -POSITION_STRIDE : lo;
+  for (let i = 0; i < count; i += 1) {
+    let p = previous + POSITION_STRIDE;
+    while (p <= upper && occupied.has(p)) p += 1;
+    if (p > upper) return null;
+    out.push(p);
+    previous = p;
+  }
+  return out;
+}
+
+/** The mirror image: prepending before `hi`, each row one stride before the next. Null when the floor would be passed. */
+function placeBefore(hi: number, count: number, lower: number, occupied: ReadonlySet<number>): number[] | null {
+  const out: number[] = [];
+  let next = hi;
+  for (let i = 0; i < count; i += 1) {
+    let p = next - POSITION_STRIDE;
+    while (p >= lower && occupied.has(p)) p -= 1;
+    if (p < lower) return null;
+    out.unshift(p);
+    next = p;
+  }
+  return out;
+}
+
 export function layoutPositions(slots: readonly OrderedSlot[]): LayoutResult {
   const n = slots.length;
   if (n > MAX_STEPS_PER_SYSTEM) throw new RangeError(`a system holds at most ${MAX_STEPS_PER_SYSTEM} steps`);
@@ -109,16 +140,10 @@ export function layoutPositions(slots: readonly OrderedSlot[]): LayoutResult {
     const free: number[] = [];
     for (let p = lower; p <= upper; p += 1) if (!occupied.has(p)) free.push(p);
 
-    let chosen: number[] | undefined;
-    if (hi === MAX_POSITION + 1) {
-      // Appending: stay close to the end, one stride apart.
-      const wanted = Array.from({ length: count }, (_, i) => (lo < 0 ? 0 : lo) + POSITION_STRIDE * (i + (lo < 0 ? 0 : 1)));
-      if (wanted.every((p) => p >= lower && p <= upper && !occupied.has(p))) chosen = wanted;
-    } else if (lo < 0) {
-      // Prepending: stay close to the first kept row.
-      const wanted = Array.from({ length: count }, (_, i) => hi - POSITION_STRIDE * (count - i));
-      if (wanted.every((p) => p >= lower && p <= upper && !occupied.has(p))) chosen = wanted;
-    }
+    let chosen: number[] | null = null;
+    if (hi === MAX_POSITION + 1) chosen = placeAfter(lo, count, upper, occupied);
+    else if (lo < 0) chosen = placeBefore(hi, count, lower, occupied);
+    // An interior gap (or an end with no room at stride distance) is spread across what is free.
     chosen ??= spread(free, count);
 
     chosen.forEach((position, offset) => {

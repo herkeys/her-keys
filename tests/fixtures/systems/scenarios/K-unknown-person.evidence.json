@@ -1,0 +1,28 @@
+{
+  "choices": [
+    {
+      "id": "person-1",
+      "kind": "person",
+      "name": "Grandma June"
+    },
+    {
+      "id": "child-1",
+      "kind": "child",
+      "name": "Josie"
+    },
+    {
+      "id": "child-2",
+      "kind": "child",
+      "name": "Theo"
+    }
+  ],
+  "noHolders": [
+    {
+      "action": "assign_responsibility",
+      "available": false,
+      "reason": "no_holder_available"
+    }
+  ],
+  "scenario": "K",
+  "unknownHolder": "refused; no person created"
+}

@@ -1,0 +1,12 @@
+{
+  "created": {
+    "scope": "household"
+  },
+  "evidence": [
+    "HouseholdSystem has no subjectMemberId",
+    "cloud household_systems_child_scope_subject_check requires a subject when scope = 'child'",
+    "toCloudRow(system) emits no subject_member_id"
+  ],
+  "scenario": "H",
+  "status": "SAFE-UNAVAILABLE"
+}
