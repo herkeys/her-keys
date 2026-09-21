@@ -565,10 +565,17 @@ try {
     await authorizationParity(check, psql);
   }
   if (!only) await clientPayloadIntegration();
+  if (only === 'composition') {
+    ensureLocalStackCurrent();
+    const { productionCompositionJourneys } = await import(`file://${join(HERE, 'journey-composition.mjs')}`);
+    await productionCompositionJourneys(check, psql);
+  }
   if (!only) {
     ensureLocalStackCurrent();
     const { syncIntegration } = await import(`file://${join(HERE, 'sync-integration.mjs')}`);
     await syncIntegration(check, psql);
+    const { productionCompositionJourneys } = await import(`file://${join(HERE, 'journey-composition.mjs')}`);
+    await productionCompositionJourneys(check, psql);
   }
 } catch (err) {
   console.error(`\nHARNESS ERROR: ${err.message}`);
