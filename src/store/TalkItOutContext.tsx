@@ -199,6 +199,7 @@ function TalkItOutSession({ children }: { children: ReactNode }) {
           hasWords: /[A-Za-z0-9]/.test(trimmed),
           readerAvailable: preview !== null,
           recognized: preview !== null && preview.failure?.code !== 'nothing-recognized',
+          highStakes: preview?.failure?.code === 'high-stakes',
           conversationUnderstood: fallbackTurn.messages[0]?.stage !== 'unmatched',
         });
         if (route === 'capture') return await capture(trimmed);

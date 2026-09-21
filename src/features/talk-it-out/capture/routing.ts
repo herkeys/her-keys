@@ -24,14 +24,17 @@ export interface RoutingInput {
   readerAvailable: boolean;
   /** The reader found something to propose, or something that must be kept and handled carefully (over-window, high-stakes). */
   recognized: boolean;
+  /** High-stakes text must reach the capture guard even when it also resembles a scripted answer. */
+  highStakes?: boolean;
   /** The discovery conversation took the message as a topic or an answer (its turn is not "unmatched"). */
   conversationUnderstood: boolean;
 }
 
 export type MessageRoute = 'capture' | 'discovery';
 
-export function routeMessage({ stage, hasWords, readerAvailable, recognized, conversationUnderstood }: RoutingInput): MessageRoute {
+export function routeMessage({ stage, hasWords, readerAvailable, recognized, highStakes = false, conversationUnderstood }: RoutingInput): MessageRoute {
   if (!readerAvailable || !hasWords) return 'discovery';
+  if (highStakes) return 'capture';
   switch (stage) {
     case 'listening':
       return recognized || !conversationUnderstood ? 'capture' : 'discovery';

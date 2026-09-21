@@ -14,6 +14,7 @@ function route(state, text) {
     hasWords: /[A-Za-z0-9]/.test(text),
     readerAvailable: true,
     recognized: preview.failure?.code !== 'nothing-recognized',
+    highStakes: preview.failure?.code === 'high-stakes',
     conversationUnderstood: turn.messages[0]?.stage !== 'unmatched',
   });
 }
@@ -71,6 +72,14 @@ describe('routing rule: a free-typed message is a capture or part of the existin
     assert.equal(route(opened(), 'Dentist Friday at 3pm'), 'capture');
     assert.equal(route(refining(), 'everything at once'), 'discovery');
     assert.equal(route(refining(), 'Call the school tomorrow'), 'capture');
+  });
+
+  test('high-stakes text cannot be consumed as a scripted answer mid-conversation', () => {
+    assert.equal(
+      route(refining(), 'everything at once and I am unsafe at home'),
+      'capture',
+      'the capture guard must stop the text before discovery can store a structured answer',
+    );
   });
 
   test('after a conclusion: something to save is captured instead of answered with a scripted reply', () => {
