@@ -19,7 +19,7 @@ export function useHousehold() {
     return {
       today,
       firstName: state.user.displayName?.trim().split(/\s+/)[0] || null,
-      children: state.children.map((child) => ({ id: child.id, displayName: child.displayName, age: ageOn(child.birthDate, today) })),
+      children: state.children.map((child) => ({ id: child.id, displayName: child.displayName, birthDate: child.birthDate, age: ageOn(child.birthDate, today) })),
       categories: categoriesInOrder(state),
       systems: state.systems,
       upcomingMeals: state.meals

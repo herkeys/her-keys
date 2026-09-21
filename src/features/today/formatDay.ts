@@ -19,3 +19,9 @@ export function weekdayName(date: LocalDate): string {
 export function dayLabel(date: LocalDate, today: LocalDate): string {
   return date === today ? 'Today' : weekdayName(date);
 }
+
+/** An unambiguous calendar date including the year, such as "Mar 4, 2019". */
+export function shortDate(date: LocalDate): string {
+  const { year, month, day } = parseLocalDate(date);
+  return `${MONTHS[month - 1]} ${day}, ${year}`;
+}

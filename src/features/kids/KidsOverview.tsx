@@ -4,26 +4,24 @@ import { colors, spacing } from '../../design/tokens';
 import { CategoryTaskList } from '../life/CategoryTaskList';
 import { useSchedule } from '../../store/ScheduleContext';
 import { useHousehold } from '../../store/useHousehold';
+import { childDayRows } from './childDay';
 
 export function KidsOverview() {
-  const { events } = useSchedule();
+  const { events, tasks } = useSchedule();
   const { children, categoryIdForRole } = useHousehold();
   const kidsCategoryId = categoryIdForRole('kids');
+  const rows = childDayRows(children, events, tasks);
 
   return (
     <View>
       <Overline style={styles.label}>Today</Overline>
-      <StatusList
-        items={children.map((child) => ({
-          key: child.id,
-          label: `${child.displayName}, ${child.age}`,
-          value:
-            events
-              .filter((e) => e.subjectMemberId === child.id)
-              .map((e) => e.title)
-              .join(', ') || 'On the family schedule',
-        }))}
-      />
+      {rows.length > 0 ? (
+        <StatusList items={rows} />
+      ) : (
+        <AppText variant="body" color={colors.textSecondary}>
+          No children saved yet.
+        </AppText>
+      )}
 
       <Overline style={styles.labelSpaced}>On your list</Overline>
       <CategoryTaskList categoryId={kidsCategoryId} emptyLabel="Nothing kids-related on your list." />
