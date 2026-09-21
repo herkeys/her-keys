@@ -17,7 +17,7 @@ describe('Empty, loading, recovery and isolation: never a reassuring silence', (
     const w = world();
     const hub = presentHub(view(w), ctx);
     assert.deepEqual(hub.empty, {
-      title: 'Nothing recorded here yet',
+      title: 'Nothing coming up is recorded here',
       body: "Add a handoff, something to prepare, or a follow-up. This only shows what you've recorded in Her Keys.",
     });
     const all = hubTextManifest(hub).join('\n');

@@ -101,9 +101,22 @@ describe('Copy-truth audit — every claim word has canonical evidence, and unsu
   });
 
   test('every claim of a THIRD PARTY\'S answer is worded as what she recorded (or negated)', () => {
-    const claims = catalogue(COPY).filter((e) => ANSWER_CLAIM.test(e.text));
+    // The short "Covered" TAG is exempt as a bare label only because it is produced solely when coverage === 'covered' and is always
+    // beside the "Covered: you recorded …" sentence (asserted for every row with the tag, next test).
+    const claims = catalogue(COPY).filter((e) => ANSWER_CLAIM.test(e.text) && e.path !== 'COPY.tags.covered');
     assert.ok(claims.length >= 8);
     for (const claim of claims) assert.match(claim.text, RECORDED_OR_NEGATED, claim.path);
+  });
+
+  test('the "Covered" tag is never shown without the sentence that says WHO recorded it', () => {
+    const { w } = showcaseWorld();
+    const v = buildCoParentLogisticsView(w.state, w.state.household.id, { nowMs: NOW });
+    const hub = presentHub(v, ctx, { showAllUpcoming: true });
+    const rows = [hub.next, ...hub.needsYou, ...hub.waiting, ...hub.needsReview, ...hub.upcoming].filter(Boolean);
+    const tagged = rows.filter((row) => row.tags.some((tag) => tag.label === COPY.tags.covered));
+    assert.ok(tagged.length >= 1, 'the showcase has a covered handoff');
+    for (const row of tagged) assert.ok(row.lines.some((line) => /^Covered: you recorded that .+ accepted this and it no longer needs you\.$/.test(line)), row.title);
+    for (const row of rows.filter((r) => !tagged.includes(r))) assert.ok(!row.lines.some((line) => line.startsWith('Covered:')), row.title);
   });
 
   test('copy that names relationship, money, sharing or completion is exactly the neutral wording the contract lists', () => {

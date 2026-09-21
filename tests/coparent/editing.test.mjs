@@ -143,13 +143,19 @@ describe('Handoff create / edit / remove: canonical, atomic, stale-safe', () => 
     assert.equal(removeHandoff(w.state, w.at(), id).outcome, 'removed');
   });
 
-  test('the editor seed reads the row back exactly (so an edit starts from the truth), and refuses a row with no child', () => {
+  test('the editor seed reads the row back exactly (so an edit starts from the truth); a row with no child opens with the child UNCHOSEN and cannot be saved until one is', () => {
     const w = world();
     const id = handoff(w, { location: 'Front desk', notes: 'n', needsMe: false, commitment: 'flexible', repeat: 'every_2_weeks' });
     const seed = handoffEditorSeed(w.state, id);
     assert.deepEqual(seed.fields, { childId: JOSIE, title: 'Pickup Josie', date: '2026-09-18', startTime: '17:00', endTime: '17:30', location: 'Front desk', notes: 'n', commitment: 'flexible', needsMe: false, repeat: 'every_2_weeks' });
     w.state = { ...w.state, events: w.state.events.map((e) => ({ ...e, subjectMemberId: null })) };
-    assert.equal(handoffEditorSeed(w.state, id), null);
+    const orphan = handoffEditorSeed(w.state, id);
+    assert.equal(orphan.fields.childId, '', 'opens unchosen — nothing is guessed');
+    const refused = editHandoff(w.state, w.at(NOW + 1000), { eventId: id, baseUpdatedAt: orphan.baseUpdatedAt, fields: orphan.fields });
+    assert.equal(refused.outcome, 'invalid_child', 'and is refused until a real child is chosen');
+    w.run((s, c) => editHandoff(s, c, { eventId: id, baseUpdatedAt: orphan.baseUpdatedAt, fields: { ...orphan.fields, childId: JOSIE } }), { ms: NOW + 2000 });
+    assert.equal(w.state.events[0].subjectMemberId, JOSIE, 'choosing the child repairs the record');
+    assert.equal(handoffEditorSeed(w.state, 'evt-none'), null);
   });
 
   test('AR: a double-tap on Save runs ONE save (the guard), and a failed save releases it so she can retry', async () => {

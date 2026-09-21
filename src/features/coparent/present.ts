@@ -224,9 +224,9 @@ function tagsFor(view: TransitionView): Tag[] {
   const tags: Tag[] = [];
   if (view.section === 'needs_review') tags.push({ label: COPY.sections.needsReview, tone: 'attention' });
   else if (view.section === 'needs_me') tags.push({ label: COPY.sections.needsYou, tone: 'attention' });
-  else if (view.section === 'waiting') tags.push({ label: 'Waiting', tone: 'accent' });
-  if (view.responsibility.coverage === 'covered') tags.push({ label: 'Covered', tone: 'success' });
-  if (view.repeat !== null) tags.push({ label: 'Repeats', tone: 'neutral' });
+  else if (view.section === 'waiting') tags.push({ label: COPY.tags.waiting, tone: 'accent' });
+  if (view.responsibility.coverage === 'covered') tags.push({ label: COPY.tags.covered, tone: 'success' });
+  if (view.repeat !== null) tags.push({ label: COPY.tags.repeats, tone: 'neutral' });
   return tags;
 }
 
@@ -440,7 +440,8 @@ export function presentHub(view: CoParentLogisticsView, ctx: PresentationContext
   const handoffLabelOf = (item: PrepItemView): string | null => {
     if (item.linkedTransitionId === null) return null;
     const linked = byId.get(item.linkedTransitionId);
-    return linked ? `${linked.title} · ${dayLabelFor(linked.localDate, ctx.today)}` : null;
+    // Title, day AND time: two handoffs with the same title on the same day must not read identically on the hub.
+    return linked ? `${linked.title} · ${dayLabelFor(linked.localDate, ctx.today)} ${clockLabel(linked.minutesOfDay)}` : null;
   };
 
   return {

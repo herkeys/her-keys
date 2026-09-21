@@ -39,7 +39,8 @@ export const COPY = {
     unrecoveredBody: "What you recorded before isn't shown, so this screen won't tell you there's nothing to do.",
     otherAccountTitle: 'This device holds another account',
     otherAccountBody: "Nothing from that account is shown here.",
-    emptyTitle: 'Nothing recorded here yet',
+    // "Coming up", not "recorded": a household with only PAST handoffs has things recorded, so "nothing recorded" would be untrue.
+    emptyTitle: 'Nothing coming up is recorded here',
     emptyBody: "Add a handoff, something to prepare, or a follow-up. This only shows what you've recorded in Her Keys.",
     notFoundTitle: "That isn't in Her Keys any more",
     notFoundBody: 'It may have been removed, or it belongs to a different household.',
@@ -53,6 +54,13 @@ export const COPY = {
     no_child: { title: 'A child comes first', body: "No child is recorded in this household yet, so a handoff can't be linked to one. Her Keys won't guess a child." },
     no_category: { title: "Co-parenting isn't set up here", body: "This household has no co-parenting category, so new records can't be filed. Nothing else is affected." },
     category_archived: { title: 'The co-parenting category is archived', body: "New records can't be filed until it is restored. What you already recorded is unchanged." },
+  },
+
+  /** The short status tags on a row. The state is always ALSO said in words on the row; a tag is never the only carrier. */
+  tags: {
+    waiting: 'Waiting',
+    covered: 'Covered',
+    repeats: 'Repeats',
   },
 
   time: {

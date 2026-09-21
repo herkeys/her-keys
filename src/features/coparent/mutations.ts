@@ -388,10 +388,14 @@ export function removeHandoff(state: AppState, ctx: TransitionContext, eventId: 
   return done(removeEvent(state, ctx, eventId), 'saved', eventId);
 }
 
-/** The values the editor opens with, read back from the row — so an edit starts from the truth, not from a default. */
+/**
+ * The values the editor opens with, read back from the row — so an edit starts from the truth, not from a default.
+ * A handoff with NO child recorded opens with the child unchosen (`''`): choosing one is exactly how she repairs it, so the editor
+ * must open, and `editHandoff` refuses to save until a real child is chosen (`invalid_child`). Nothing is guessed.
+ */
 export function handoffEditorSeed(state: AppState, eventId: string): { fields: HandoffFields; baseUpdatedAt: string | null } | null {
   const event = state.events.find((candidate) => candidate.id === eventId);
-  if (!event || event.subjectMemberId === null) return null;
+  if (!event) return null;
   const zone = state.user.timezone;
   const start = localParts(epochMsOf(event.startsAt), zone);
   const end = localParts(epochMsOf(event.endsAt), zone);
@@ -399,7 +403,7 @@ export function handoffEditorSeed(state: AppState, eventId: string): { fields: H
   return {
     baseUpdatedAt: handoffRevision(state, event),
     fields: {
-      childId: event.subjectMemberId,
+      childId: event.subjectMemberId ?? '',
       title: event.title,
       date: start.localDate,
       startTime: timeInputOf(start.minutesOfDay),
