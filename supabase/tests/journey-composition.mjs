@@ -269,7 +269,7 @@ async function bindAsNewDevice(m, d, account, householdId) {
 }
 
 /** One installation, built exactly as the app's root builds it, against the real local stack. */
-async function device(m, { account, sent, fetched = [], storage = m.storage.createMemoryStorage({}), secure = m.secure.createMemorySecureStorage({}), mode = 'empty' }) {
+async function device(m, { account, sent, fetched = [], storage = m.storage.createMemoryStorage({}), secure = m.secure.createMemorySecureStorage({}), mode = 'empty', gate = { offline: false, refuse: null } }) {
   const client = clientFor(account);
   const observer = m.observer.createChangeObserver({ now: () => NOW });
   const repository = m.repo.createAppStateRepository({ storage, appVersion: 'test', now: () => NOW, quarantineCorruptState: false });
@@ -277,13 +277,22 @@ async function device(m, { account, sent, fetched = [], storage = m.storage.crea
   await store.hydrate();
   await store.flush();
 
-  // The real transport, wrapped only to RECORD what the client sends (never to change it).
+  // The real transport, wrapped only to RECORD what the client sends (never to change it). `gate` is a test switch a journey may flip:
+  // `offline` makes every call fail as "unreachable" (nothing leaves the device); `refuse(table, row)` makes the server "refuse" a create.
+  // A device built without a gate behaves exactly as before.
   const real = m.transport.createSupabaseSyncTransport(client);
+  const unreachable = { kind: 'failure', failure: 'unreachable', detail: 'offline', code: null };
   const transport = {
     ...real,
-    async create(table, deviceId, row) { sent.push({ table, row }); return real.create(table, deviceId, row); },
-    async update(table, cloudId, base, patch, column) { sent.push({ table, patch }); return real.update(table, cloudId, base, patch, column); },
-    async fetchRows(table, ids, column) { fetched.push({ table, count: ids.length }); return real.fetchRows(table, ids, column); },
+    async create(table, deviceId, row) {
+      if (gate.offline) return unreachable;
+      if (gate.refuse?.(table, row)) return { kind: 'failure', failure: 'validation', detail: 'refused by the server', code: '23514' };
+      sent.push({ table, row });
+      return real.create(table, deviceId, row);
+    },
+    async update(table, cloudId, base, patch, column) { if (gate.offline) return unreachable; sent.push({ table, patch }); return real.update(table, cloudId, base, patch, column); },
+    async pull(cursor, householdId) { if (gate.offline) return unreachable; return real.pull(cursor, householdId); },
+    async fetchRows(table, ids, column) { if (gate.offline) return unreachable; fetched.push({ table, count: ids.length }); return real.fetchRows(table, ids, column); },
   };
 
   const timers = [];
@@ -348,3 +357,6 @@ async function householdWithContent(m, d) {
   }));
   await d.store.flush();
 }
+
+// Shared with journey-kids.mjs (HK-FEATURE-05): the same device and helpers, so a second journey composes the production path the same way.
+export { NOW, TODAY, TZ, WITHHELD_MOVE, bindAsNewDevice, device, loadModules, mutate };

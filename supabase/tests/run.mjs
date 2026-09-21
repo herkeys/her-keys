@@ -559,7 +559,8 @@ try {
     envB3();
     envD();
   }
-  envC(only);
+  // The Kids journey runs against the local stack's default database, exactly as the composition journey does; it needs no ENV C.
+  if (only !== 'kids') envC(only);
   if (!only || only === 'parity') {
     const { authorizationParity } = await import(`file://${join(HERE, 'authorization-parity.mjs')}`);
     await authorizationParity(check, psql);
@@ -570,12 +571,19 @@ try {
     const { productionCompositionJourneys } = await import(`file://${join(HERE, 'journey-composition.mjs')}`);
     await productionCompositionJourneys(check, psql);
   }
+  if (only === 'kids') {
+    ensureLocalStackCurrent();
+    const { kidsJourneys } = await import(`file://${join(HERE, 'journey-kids.mjs')}`);
+    await kidsJourneys(check, psql);
+  }
   if (!only) {
     ensureLocalStackCurrent();
     const { syncIntegration } = await import(`file://${join(HERE, 'sync-integration.mjs')}`);
     await syncIntegration(check, psql);
     const { productionCompositionJourneys } = await import(`file://${join(HERE, 'journey-composition.mjs')}`);
     await productionCompositionJourneys(check, psql);
+    const { kidsJourneys } = await import(`file://${join(HERE, 'journey-kids.mjs')}`);
+    await kidsJourneys(check, psql);
   }
 } catch (err) {
   console.error(`\nHARNESS ERROR: ${err.message}`);

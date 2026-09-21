@@ -75,6 +75,17 @@ export function archive(state, ctx, personId) {
   return archivePerson(state, ctx, personId);
 }
 
+/** Source with its comments removed, so an audit reads code and never prose (an apostrophe in a comment must not break a scan). */
+export function withoutComments(source) {
+  return source.replace(/\/\*[\s\S]*?\*\//g, '').split('\n').filter((line) => !/^\s*\/\//.test(line)).join('\n');
+}
+
+/** Every quoted or template string literal in a source file, comments excluded and import paths skipped. */
+export function stringLiterals(source) {
+  const code = withoutComments(source);
+  return [...code.matchAll(/(['"`])((?:\\.|(?!\1)[\s\S])*?)\1/g)].map((m) => m[2]).filter((text) => !/^\.{1,2}\//.test(text) && text.length > 2);
+}
+
 export function assertValid(state) {
   const verdict = validateAppState(state);
   assert.equal(verdict.ok, true, verdict.ok ? '' : `invalid state: ${verdict.issues.join('; ')}`);
