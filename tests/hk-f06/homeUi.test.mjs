@@ -77,6 +77,15 @@ describe('B / A / C / P — the screen states are distinct', () => {
     assert.equal(labelled(r.root, 'Add a task').length, 1);
   });
 
+  test('C. RECOVERED and she has since added a task: the recovery notice is STILL on screen beside the content (it never quietly disappears)', async () => {
+    const readiness = { settled: true, recovery: { reason: 'invalid_state', quarantined: true }, memoryOnly: false };
+    const r = await render(<HomeScreenView {...props(tasks(2), { readiness })} />);
+    const text = allText(r.root);
+    assert.match(text, /Home can’t show what was saved/);
+    assert.match(text, /Task 00/);
+    assert.doesNotMatch(text, /Nothing is saved|Nothing open/);
+  });
+
   test('a memory-only session says so', async () => {
     const r = await render(<HomeScreenView {...props(household(), { readiness: { settled: true, recovery: null, memoryOnly: true } })} />);
     assert.match(allText(r.root), /may not be saved on this device/);
@@ -226,6 +235,16 @@ describe('detail — one item, in full, with what is NOT known', () => {
     await press(labelled(r.root, 'No, it doesn’t need me any more')[0]);
     await press(labelled(r.root, 'Record it')[0]);
     assert.deepEqual(calls, [['record_accepted', { stillNeedsMe: false }]]);
+  });
+
+  test('"They said yes": if she does not choose, the answer is the CONSERVATIVE one — it still needs her', async () => {
+    const ctx = fresh();
+    let s = homeTask(household(), ctx, 'Have the gutters cleaned');
+    s = delegate(s, ctx, { about: { kind: 'task', id: lastTask(s).id }, to: { kind: 'person', id: SAM(s) } });
+    const calls = [];
+    const r = await detail(s, (i) => i.canonicalKind === 'task', { onAction: (action, payload) => calls.push([action, payload]) });
+    await press(labelled(r.root, 'Record it')[0]);
+    assert.deepEqual(calls, [['record_accepted', { stillNeedsMe: true }]], 'never "no longer needs me" unless she said so');
   });
 
   test('a covered task is worded as what she said — not as done, and not as handled', async () => {

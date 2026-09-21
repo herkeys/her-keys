@@ -17,6 +17,8 @@ const MUT = [`${T}homeMutations.test.mjs`];
 const COPY = [`${T}homeCopy.test.mjs`];
 const READY = [`${T}homeReadiness.test.mjs`];
 const PERF = [`${T}homePerformance.test.mjs`];
+const FORMS = [`${T}homeForms.test.mjs`];
+const UI = [`${T}homeUi.test.mjs`];
 
 const HOME = 'src/features/home/';
 const M = `${HOME}model/`;
@@ -123,6 +125,24 @@ const MUTANTS = [
     file: `${M}buildHomeView.ts`, from: "item.timing.some((fact) => fact.kind === 'visit' && fact.when === 'past'));", to: "item.resolutionState === 'past_visit');", tests: VIEW },
   { id: 'H39', required: 'shared attention', what: 'Home drops the shared "no answer" attention reason',
     file: `${M}buildHomeView.ts`, from: 'push(byItem, key, { reason: item.reason, urgency: item.urgency });', to: "if (item.reason !== 'unacknowledged_delegation') push(byItem, key, { reason: item.reason, urgency: item.urgency });", tests: VIEW },
+
+  // ---- forms and screens (added with HM4/HM5) -------------------------------------------------------------------------------------
+  { id: 'H40', required: 'form: duration truth', what: 'the task form sends a prefilled duration she never touched (an edit upgrades a default to hers)',
+    file: `${M}forms.ts`, from: "if (values.durationTouched && typed !== '') {", to: "if (typed !== '') {", tests: FORMS },
+  { id: 'H41', required: 'form: locked repeat', what: 'the task form overwrites a repeat Home cannot express',
+    file: `${M}forms.ts`, from: "repeat: values.repeatLocked || !values.repeatTouched ? 'unchanged' : repeat };", to: "repeat: !values.repeatTouched ? 'unchanged' : repeat };", tests: FORMS },
+  { id: 'H42', required: 'completion truth', what: 'a task she marked done is offered "Mark done" again instead of only "It\'s due again"',
+    file: `${M}buildHomeView.ts`, from: "if (task.status === 'completed') return ['due_again', 'edit'];", to: "if (task.status === 'completed') return ['mark_done', 'due_again', 'edit'];", tests: [...VIEW, ...UI] },
+  { id: 'H43', required: 'accessibility', what: 'the spoken label keeps the visual dash ("Asked Sam , no answer yet")',
+    file: `${HOME}copy.ts`, from: "    .replace(/\\s[—–]\\s/g, ', ');", to: ';', tests: COPY },
+  { id: 'H44', required: 'progressive disclosure', what: 'a section can never be expanded past its first 5 rows (tasks become unreachable)',
+    file: `${HOME}ui/HomeSectionBlock.tsx`, from: 'const shown = expanded ? rows : rows.slice(0, SECTION_LIMIT);', to: 'const shown = rows.slice(0, SECTION_LIMIT);', tests: UI },
+  { id: 'H45', required: 'archived context', what: 'creation controls are shown while the Home area is archived',
+    file: `${HOME}ui/HomeScreenView.tsx`, from: '{view.canCreate && (', to: '{(view.canCreate || true) && (', tests: UI },
+  { id: 'H46', required: 'unrecovered vs empty', what: 'the screen shows the recovery notice only when there is no content (a recovered household with a task hides it)',
+    file: `${HOME}ui/HomeScreenView.tsx`, from: '{unrecovered !== null && <InlineNotice', to: "{unrecovered !== null && screen.kind !== 'content' && <InlineNotice", tests: [...UI, ...READY] },
+  { id: 'H47', required: 'responsibility', what: 'the detail screen records "They said yes" without asking whether it still needs her (defaults to no longer needs)',
+    file: `${HOME}ui/HomeItemDetailView.tsx`, from: 'const [needsMe, setNeedsMe] = useState(true);', to: 'const [needsMe, setNeedsMe] = useState(false);', tests: UI },
 ];
 
 function runTests(files) {
