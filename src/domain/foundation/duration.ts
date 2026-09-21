@@ -39,6 +39,17 @@ export function durationKnowledgeOf(task: { durationSource?: DurationSource | nu
   }
 }
 
+/**
+ * The source a duration carries when it is saved from a form that PREFILLS the planning default.
+ *
+ * The prefilled number is what she was shown, not what she said: only touching the field makes it hers. Untouched on a NEW task it
+ * is the default she was shown; untouched on an EDIT it is whatever it already was (including unknown, which stays unknown).
+ */
+export function durationSourceForSave(input: { touched: boolean; existing: { durationSource?: DurationSource | null } | null }): DurationSource | null {
+  if (input.touched) return 'user';
+  return input.existing === null ? 'default' : (input.existing.durationSource ?? null);
+}
+
 /** True only when she gave the number. Anything else is an estimate or an unknown and must be worded as one. */
 export const isUserProvidedDuration = (task: { durationSource?: DurationSource | null }): boolean =>
   durationKnowledgeOf(task) === 'user-provided';

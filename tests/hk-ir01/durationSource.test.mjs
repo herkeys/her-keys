@@ -5,9 +5,10 @@
  * them apart is a recorded source, and a row with no recorded source is UNKNOWN, never promoted to hers.
  */
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { describe, test } from 'node:test';
 import { addEvent } from '../../src/domain/events.ts';
-import { DEFAULT_TASK_DURATION_MINUTES, durationKnowledgeOf, isUserProvidedDuration } from '../../src/domain/foundation/duration.ts';
+import { DEFAULT_TASK_DURATION_MINUTES, durationKnowledgeOf, durationSourceForSave, isUserProvidedDuration } from '../../src/domain/foundation/duration.ts';
 import { acceptInterpretation, proposeInterpretation, recordArtifact } from '../../src/domain/interpretations.ts';
 import { toInstant, zonedTimeToEpochMs } from '../../src/domain/logicalDay.ts';
 import { approveShortenTask } from '../../src/domain/recommendationActions.ts';
@@ -133,6 +134,37 @@ describe('HA-010 — a corrected number keeps only the knowledge it really has',
     assert.notEqual(shortened, s, 'the scenario must actually shorten');
     assert.ok(shortened.tasks[0].durationMinutes < 200);
     assert.equal(sourceOf(shortened, id), 'inferred');
+  });
+});
+
+describe('HA-010 — the task form records what she was SHOWN, not what she said (IR-D6)', () => {
+  const FORM = readFileSync(new URL('../../src/features/tasks/TaskForm.tsx', import.meta.url), 'utf8');
+
+  test('untouched on a NEW task: the default she was shown - never hers', () => {
+    assert.equal(durationSourceForSave({ touched: false, existing: null }), 'default');
+  });
+
+  test('touched: hers, on a new task and on an edit, whatever it was before', () => {
+    assert.equal(durationSourceForSave({ touched: true, existing: null }), 'user');
+    for (const before of ['user', 'default', 'inferred', null]) {
+      assert.equal(durationSourceForSave({ touched: true, existing: { durationSource: before } }), 'user');
+    }
+  });
+
+  test('untouched on an EDIT: whatever it already was - unknown stays unknown, a default is not promoted', () => {
+    for (const before of ['user', 'default', 'inferred', null]) {
+      assert.equal(durationSourceForSave({ touched: false, existing: { durationSource: before } }), before);
+    }
+    assert.equal(durationSourceForSave({ touched: false, existing: {} }), null, 'a row with no key at all is unknown');
+  });
+
+  test('the form asks that rule, tells it whether the field was touched, and only the duration field can touch it', () => {
+    assert.match(FORM, /durationSourceForSave\(\{ touched: durationTouched, existing \}\)/, 'the decision is the domain rule, not a local guess');
+    assert.match(FORM, /\{ \.\.\.edits, durationSource \}/, 'an edit carries the source');
+    assert.match(FORM, /const input = \{ \.\.\.edits, durationSource,/, 'a new task carries the source');
+    const handler = /label="Estimated minutes"[\s\S]*?onChangeText=\{\(text\) => \{\s*setDurationTouched\(true\);\s*setDurationMinutes\(text\);/;
+    assert.match(FORM, handler, 'typing in the duration field is what makes the number hers');
+    assert.equal((FORM.match(/setDurationTouched\(true\)/g) ?? []).length, 1, 'nothing else marks it touched');
   });
 });
 
