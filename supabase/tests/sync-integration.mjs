@@ -5,6 +5,8 @@ import { apiReachable, clientFor, createDeviceStore, offlineTransport, withLostA
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = join(HERE, '..', '..');
+/** The database the API serves. The shared default one unless the run started a private stack (private-stack.mjs). */
+const STACK_DB = process.env.HERKEYS_LOCAL_STACK_DB ?? 'postgres';
 
 /**
  * The sync journeys, against the REAL local Supabase: real HTTP, real
@@ -36,7 +38,7 @@ export async function syncIntegration(check, psql) {
   const F = crypto.randomUUID();
   const G = crypto.randomUUID();
   psql(
-    'postgres',
+    STACK_DB,
     `INSERT INTO auth.users (id, email, aud, role) VALUES
        ('${A}','sync-${A}@local.test','authenticated','authenticated'),
        ('${B}','sync-${B}@local.test','authenticated','authenticated'),
@@ -830,7 +832,7 @@ async function journeyFoundation(check, m, accountId, strangerId, psql) {
 
   // ---- the server writes what only the server can: an execution and an outcome -----------------------------
   const intentLocal = rich.intents[0].id;
-  psql('postgres', `
+  psql(STACK_DB, `
     INSERT INTO public.action_executions
       (household_id, local_id, profile_id, intent_id, decision_id, attempt, attempted_at, result, error_class, reversibility, producer, scope, origin_created_at)
     SELECT i.household_id, 'srv-exec-1', i.profile_id, i.id, d.id, 1, now(), 'succeeded', 'none', 'reversible', 'automation', 'personal', now()

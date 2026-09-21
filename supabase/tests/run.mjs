@@ -615,13 +615,36 @@ function envE() {
  * other worktrees share, so the additive IR01 migration is applied directly when it is missing. It only ADDS a nullable column
  * and replaces one function body; it removes and rewrites nothing.
  */
-function ensureLocalStackCurrent() {
-  const probe = "select count(*) from information_schema.columns where table_schema='public' and table_name='tasks' and column_name='duration_source';";
-  if (scalar('postgres', probe) !== '1') {
+function ensureLocalStackCurrent(db = 'postgres') {
+  const has = (table, column) => scalar(db, `select count(*) from information_schema.columns where table_schema='public' and table_name='${table}' and column_name='${column}';`) === '1';
+  // Only the shared default database is ever "brought current", and only by the older IR01 step. Feature 08 NEVER migrates it:
+  // other sessions verify that database against the IR01 fingerprint. The journeys of this branch run on a private stack instead.
+  if (db === 'postgres' && !has('tasks', 'duration_source')) {
     console.log('  local stack database predates the IR01 migration: applying the additive migration to it');
     applyIr01('postgres', { label: 'local stack IR01' });
   }
-  check('local stack: the database the sync journeys run against carries the additive IR01 migration', scalar('postgres', probe) === '1');
+  check(`local stack (${db}): the database the sync journeys run against carries the additive IR01 migration`, has('tasks', 'duration_source'));
+  check(`local stack (${db}): ...and the F08 meal columns (this harness never migrates the shared default database; the journeys use the private stack unless HERKEYS_SHARED_STACK=1)`,
+        has('meal_plan_entries', 'meal_slot') && has('meal_plan_entries', 'status'));
+}
+
+/**
+ * The API the journeys talk to. By default a PRIVATE stack (scratch database f08_stack and its own PostgREST, private-stack.mjs), so a
+ * migrated schema is proven over real HTTP without touching the shared database. HERKEYS_SHARED_STACK=1 uses the shared one instead.
+ */
+let privateStack = null;
+async function startJourneyStack() {
+  if (process.env.HERKEYS_SHARED_STACK === '1') {
+    ensureLocalStackCurrent(process.env.HERKEYS_LOCAL_STACK_DB ?? 'postgres');
+    return;
+  }
+  const { startPrivateStack } = await import(`file://${join(HERE, 'private-stack.mjs')}`);
+  console.log('\n  starting the private API stack (scratch database f08_stack + its own PostgREST); the shared database is not touched');
+  privateStack = await startPrivateStack();
+  // Read by the journeys when they load, which is after this line.
+  process.env.HERKEYS_LOCAL_API_URL = privateStack.apiUrl;
+  process.env.HERKEYS_LOCAL_STACK_DB = privateStack.database;
+  ensureLocalStackCurrent(privateStack.database);
 }
 
 // ------------------------------------------------------------------ main ----
@@ -659,19 +682,21 @@ try {
   }
   if (!only) await clientPayloadIntegration();
   if (only === 'composition') {
-    ensureLocalStackCurrent();
+    await startJourneyStack();
     const { productionCompositionJourneys } = await import(`file://${join(HERE, 'journey-composition.mjs')}`);
     await productionCompositionJourneys(check, psql);
   }
-  if (!only) {
-    ensureLocalStackCurrent();
+  if (only === 'journeys' || !only) {
+    await startJourneyStack();
     const { syncIntegration } = await import(`file://${join(HERE, 'sync-integration.mjs')}`);
     await syncIntegration(check, psql);
     const { productionCompositionJourneys } = await import(`file://${join(HERE, 'journey-composition.mjs')}`);
     await productionCompositionJourneys(check, psql);
   }
+  if (privateStack) await privateStack.stop();
 } catch (err) {
   console.error(`\nHARNESS ERROR: ${err.message}`);
+  if (privateStack) await privateStack.stop().catch(() => {});
   process.exit(1);
 }
 
