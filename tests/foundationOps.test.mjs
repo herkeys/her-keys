@@ -546,7 +546,7 @@ describe('B4-FE01-017/-018/-021/-022/-016 — dependencies, recurrence, goals, s
       ({ state: s } = addDependency(s, at(), { relation: 'part_of', from: { kind: 'task', id: lastTask(s).id }, to: goal, provenance: { producer: 'ai-inference', artifactId: null, confidence: 'possible' } }));
     }
     assert.equal(stepsOf(s, goal).length, 3);
-    assert.deepEqual(goalProgress(s, goal.id), { total: 3, done: 0, fraction: 0 });
+    assert.deepEqual(goalProgress(s, goal.id), { total: 3, done: 0, unavailable: 0, fraction: 0 });
     s = completeTask(s, at(), stepsOf(s, goal)[0].id);
     assert.deepEqual([goalProgress(s, goal.id).done, goalProgress(s, goal.id).fraction], [1, 1 / 3]);
     assert.equal(s.dependencies[0].provenance.producer, 'ai-inference', 'a generated relationship says so');

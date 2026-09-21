@@ -66,26 +66,93 @@ export function removeDependency(state: AppState, ctx: TransitionContext, id: st
   return { ...state, dependencies: state.dependencies.map((d) => (d.id === id && d.status === 'active' ? { ...d, status: 'removed', updatedAt: at } : d)) };
 }
 
-/** Whether a referenced thing is finished, in the way its kind finishes. */
-export function isDone(state: AppState, ref: TypedRef): boolean {
+/**
+ * WHERE A REFERENCED THING STANDS — one vocabulary, derived from lifecycles that already exist.
+ *
+ *   satisfied    finished in the way its kind finishes (task completed, Needs Me resolved, goal achieved)
+ *   pending      still live and unfinished
+ *   unavailable  cannot be met as recorded, because the thing was set aside or is not there:
+ *                  retired  task archived, event removed, goal abandoned — set aside, NOT finished
+ *                  missing  no such row (state validation refuses a dangling edge; this is the defensive read)
+ *
+ * REMOVED != COMPLETED and MISSING != SATISFIED. An event has no way to be "done" — removal is the only terminal
+ * state it has — so a removed event is `unavailable`, exactly as an archived task is. Nothing here changes a
+ * dependency row: history is never rewritten to make a prerequisite look met (HA-009).
+ */
+export type Standing =
+  | { standing: 'satisfied' }
+  | { standing: 'pending' }
+  | { standing: 'unavailable'; cause: 'retired' | 'missing' };
+
+const SATISFIED: Standing = { standing: 'satisfied' };
+const PENDING: Standing = { standing: 'pending' };
+const RETIRED: Standing = { standing: 'unavailable', cause: 'retired' };
+const MISSING: Standing = { standing: 'unavailable', cause: 'missing' };
+
+export function standingOf(state: AppState, ref: TypedRef): Standing {
   switch (ref.kind) {
-    case 'task': return state.tasks.find((t) => t.id === ref.id)?.status === 'completed';
-    case 'needsMe': return state.needsMe.find((n) => n.id === ref.id)?.status === 'resolved';
-    case 'event': return state.events.find((e) => e.id === ref.id)?.status === 'removed';
-    case 'goal': return state.goals.find((g) => g.id === ref.id)?.status === 'achieved';
-    default: return false;
+    case 'task': {
+      const status = state.tasks.find((t) => t.id === ref.id)?.status;
+      return status === undefined ? MISSING : status === 'completed' ? SATISFIED : status === 'archived' ? RETIRED : PENDING;
+    }
+    case 'needsMe': {
+      const status = state.needsMe.find((n) => n.id === ref.id)?.status;
+      return status === undefined ? MISSING : status === 'resolved' ? SATISFIED : PENDING;
+    }
+    case 'event': {
+      const status = state.events.find((e) => e.id === ref.id)?.status;
+      // An event never "completes": the calendar does not know whether it was attended. Removal is retirement.
+      return status === undefined ? MISSING : status === 'removed' ? RETIRED : PENDING;
+    }
+    case 'goal': {
+      const status = state.goals.find((g) => g.id === ref.id)?.status;
+      return status === undefined ? MISSING : status === 'achieved' ? SATISFIED : status === 'abandoned' ? RETIRED : PENDING;
+    }
+    default:
+      // A System or a Meal has no lifecycle, so it is never satisfied by anything but being there.
+      return refExists(state, ref) ? PENDING : MISSING;
   }
 }
 
-/** What `ref` is still waiting on: the things it `requires` that are not done. */
-export function blockersOf(state: AppState, ref: TypedRef): TypedRef[] {
-  return state.dependencies
-    .filter((d) => d.status === 'active' && d.relation === 'requires' && refKey(d.from) === refKey(ref))
-    .map((d) => d.to)
-    .filter((to) => !isDone(state, to));
+/** Whether a referenced thing is finished, in the way its kind finishes. Removal and absence are not finishing. */
+export function isDone(state: AppState, ref: TypedRef): boolean {
+  return standingOf(state, ref).standing === 'satisfied';
 }
 
-export const isBlocked = (state: AppState, ref: TypedRef): boolean => blockersOf(state, ref).length > 0;
+const requiredBy = (state: AppState, ref: TypedRef): TypedRef[] =>
+  state.dependencies
+    .filter((d) => d.status === 'active' && d.relation === 'requires' && refKey(d.from) === refKey(ref))
+    .map((d) => d.to);
+
+/** What `ref` is still waiting on: the live prerequisites it `requires` that are not yet done. Never a retired or missing one. */
+export function blockersOf(state: AppState, ref: TypedRef): TypedRef[] {
+  return requiredBy(state, ref).filter((to) => standingOf(state, to).standing === 'pending');
+}
+
+/**
+ * The prerequisites `ref` `requires` that can no longer be met as recorded: retired or missing. They are neither
+ * satisfied nor something she can still wait for, so the honest answer is "review", and the correction is to retire the
+ * edge (`removeDependency`) or replace what it needs.
+ */
+export function unavailablePrerequisitesOf(state: AppState, ref: TypedRef): Array<{ ref: TypedRef; cause: 'retired' | 'missing' }> {
+  const out: Array<{ ref: TypedRef; cause: 'retired' | 'missing' }> = [];
+  for (const to of requiredBy(state, ref)) {
+    const standing = standingOf(state, to);
+    if (standing.standing === 'unavailable') out.push({ ref: to, cause: standing.cause });
+  }
+  return out;
+}
+
+/** `ready`: every prerequisite is satisfied. `blocked`: something live is still pending. `needsReview`: nothing pending, but a prerequisite is gone. */
+export type Readiness = 'ready' | 'blocked' | 'needsReview';
+
+export function readinessOf(state: AppState, ref: TypedRef): Readiness {
+  if (blockersOf(state, ref).length > 0) return 'blocked';
+  return unavailablePrerequisitesOf(state, ref).length > 0 ? 'needsReview' : 'ready';
+}
+
+/** Conservative: only a fully satisfied set of prerequisites is ready. A retired prerequisite does not unlock anything. */
+export const isBlocked = (state: AppState, ref: TypedRef): boolean => readinessOf(state, ref) !== 'ready';
 
 /** The steps of something, in the order they were added. */
 export function stepsOf(state: AppState, parent: TypedRef): TypedRef[] {
@@ -130,10 +197,12 @@ export function setGoalStatus(state: AppState, ctx: TransitionContext, id: strin
 }
 
 /** Progress is DERIVED from the steps: never stored on the goal, so it cannot disagree with them. */
-export function goalProgress(state: AppState, goalId: string): { total: number; done: number; fraction: number | null } {
+export function goalProgress(state: AppState, goalId: string): { total: number; done: number; unavailable: number; fraction: number | null } {
   const steps = stepsOf(state, { kind: 'goal', id: goalId });
   const done = steps.filter((step) => isDone(state, step)).length;
-  return { total: steps.length, done, fraction: steps.length === 0 ? null : done / steps.length };
+  // A step that was set aside is not a step that was finished: it never counts as done, and it is said out loud.
+  const unavailable = steps.filter((step) => standingOf(state, step).standing === 'unavailable').length;
+  return { total: steps.length, done, unavailable, fraction: steps.length === 0 ? null : done / steps.length };
 }
 
 // ---------------------------------------------------------------- recurrence ---

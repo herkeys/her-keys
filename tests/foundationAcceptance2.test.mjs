@@ -38,7 +38,7 @@ describe('FE-10 — AI decomposition: a goal becomes steps, each saying who prop
 
     assert.equal(stepsOf(s, goal).length, 3);
     assert.deepEqual(alternativesTo(s, ref('task', s.tasks[2].id)).map((r) => r.id), [lastTask(s).id], 'a lower-effort alternative to one step');
-    assert.deepEqual(goalProgress(s, goal.id), { total: 3, done: 0, fraction: 0 });
+    assert.deepEqual(goalProgress(s, goal.id), { total: 3, done: 0, unavailable: 0, fraction: 0 });
     s = completeTask(s, at(), stepsOf(s, goal)[0].id);
     assert.equal(goalProgress(s, goal.id).done, 1);
     assert.ok(s.dependencies.every((d) => d.provenance.producer === 'ai-inference'), 'every generated relationship says it was generated');
