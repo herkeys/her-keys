@@ -1,8 +1,8 @@
 import { StyleSheet, View } from 'react-native';
 import { AppText, Card, InlineNotice, Tag } from '../../../design/components';
 import { colors, spacing } from '../../../design/tokens';
-import { COPY, conflictCopy, headlineFor, missingLines, tierLabel, type CopyContext, type Headline } from '../copy';
-import type { CalendarDayViewModel, Conflict, MissingEvidence } from '../model/types';
+import { COPY, categoryLabel, conflictCopy, headlineFor, missingLines, narrowCopy, type CopyContext, type Headline } from '../copy';
+import type { CalendarDayViewModel, Conflict, MissingEvidence, NarrowTransition } from '../model/types';
 import { WhyDisclosure } from './Disclosure';
 
 /**
@@ -17,8 +17,8 @@ export function DaySummary({ view, ctx }: { view: CalendarDayViewModel; ctx: Cop
   return (
     <Card tone="surface" style={styles.summary}>
       {showTier ? (
-        <View style={styles.tierRow} accessibilityLabel={`Capacity: ${tierLabel(state.tier)}`}>
-          <Tag label={tierLabel(state.tier)} tone={state.tier === 'overloaded' ? 'attention' : 'neutral'} />
+        <View style={styles.tierRow} accessibilityLabel={`Capacity: ${categoryLabel(state.category)}`}>
+          <Tag label={categoryLabel(state.category)} tone={state.category === 'more_than_fits' ? 'attention' : 'neutral'} />
         </View>
       ) : null}
       <AppText variant="bodyStrong" color={toneOf(headline)} accessibilityRole="header">
@@ -58,6 +58,27 @@ export function ConflictList({ conflicts, ctx }: { conflicts: Conflict[]; ctx: C
       {shown.map((conflict) => (
         <ConflictCard key={conflict.id} conflict={conflict} ctx={ctx} />
       ))}
+    </View>
+  );
+}
+
+/** Transitions that fit but leave little room: told as fits, with the arithmetic one press away. */
+export function NarrowTransitionList({ narrow, ctx }: { narrow: NarrowTransition[]; ctx: CopyContext }) {
+  if (narrow.length === 0) return null;
+  return (
+    <View style={styles.list}>
+      {narrow.map((entry) => {
+        const copy = narrowCopy(entry, ctx);
+        return (
+          <Card key={`${entry.before.ref.id}:${entry.after.ref.id}`} tone="surface" style={styles.conflict}>
+            <Tag label={copy.label} tone="neutral" />
+            <AppText variant="body" style={styles.conflictText}>
+              {copy.sentence}
+            </AppText>
+            <WhyDisclosure reasons={copy.why} subject={copy.sentence} />
+          </Card>
+        );
+      })}
     </View>
   );
 }

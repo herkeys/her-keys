@@ -5,7 +5,7 @@ import { COPY, copyContextFor } from '../copy';
 import type { CalendarDayViewModel, ItemRef } from '../model/types';
 import { AgendaList } from './AgendaList';
 import { CalendarEmptyDay } from './CalendarStates';
-import { ConflictList, DaySummary, UnknownNotice } from './DayInsights';
+import { ConflictList, DaySummary, NarrowTransitionList, UnknownNotice } from './DayInsights';
 import { NotScheduledSection } from './NotScheduled';
 
 /**
@@ -28,6 +28,7 @@ export function CalendarDayView({ view, onOpenItem }: { view: CalendarDayViewMod
     <View>
       <DaySummary view={view} ctx={ctx} />
       <ConflictList conflicts={view.conflicts} ctx={ctx} />
+      <NarrowTransitionList narrow={view.narrowTransitions} ctx={ctx} />
       {timed.length > 0 ? (
         <View>
           <Overline style={{ marginBottom: spacing.xs }}>{COPY.agendaHeading}</Overline>

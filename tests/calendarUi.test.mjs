@@ -158,6 +158,21 @@ describe('first-glance content per scenario', () => {
     const c = joined(await render(<CalendarDayView view={view('C')} onOpenItem={noop} />));
     assert.match(c, /fits, with 15 min to spare/);
     assert.doesNotMatch(c, /impossible|won’t fit|not enough time/i, 'C must not be called impossible');
+    assert.match(c, /FITS NARROWLY/, 'C says it fits');
+    assert.doesNotMatch(c, /MORE THAN FITS/, 'C: the capacity word must not contradict the sentence that it fits');
+    assert.match(c, /TIGHT/);
+    const d = joined(await render(<CalendarDayView view={view('D')} onOpenItem={noop} />));
+    assert.match(d, /MORE THAN FITS/);
+    assert.doesNotMatch(d, /FITS NARROWLY/);
+  });
+
+  test('C: the “fits narrowly” evidence names the foundation’s own buffer as the reference and shows the arithmetic', async () => {
+    const r = await render(<CalendarDayView view={view('C')} onOpenItem={noop} />);
+    const toggle = r.root.findAll((n) => n.type === 'Pressable' && n.props.accessibilityState?.expanded === false && /fits, with 15 min/.test(n.props.accessibilityLabel))[0];
+    await press(toggle);
+    const text = joined(r);
+    assert.match(text, /You entered 15 min for getting there\./);
+    assert.match(text, /That leaves 15 min\. Her Keys looks for 45 min between commitments\./);
   });
 
   test('F: “Needs a place” is stated with the item it is about, and nothing claims it is scheduled', async () => {

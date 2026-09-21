@@ -1,17 +1,20 @@
 import { formatClock, formatClockRange, formatDayTitle, formatMinutes, formatWeekdayShort, formatDayNumber } from './format';
+import { REQUIRED_TRANSITION_BUFFER_MINUTES } from '../daily-load/computeDailyLoad';
 import type {
   CalendarDayViewModel,
+  CapacityCategory,
   Conflict,
+  ConflictType,
   Coverage,
   DayItem,
   MissingEvidence,
+  NarrowTransition,
   Opening,
   RecurrenceNote,
   ResponsibilityMark,
   UnplacedItem,
   WeekDaySummary,
 } from './model/types';
-import type { LoadTier } from '../../domain/loadThresholds';
 
 /**
  * ALL significant Calendar and capacity wording lives here (contract section 55).
@@ -61,12 +64,16 @@ const FLEXIBLE = 'Flexible';
 
 export const flexibilityLabel = (flexibility: 'fixed' | 'flexible'): string => (flexibility === 'fixed' ? FIXED : FLEXIBLE);
 
-/** A category label for a whole day, in the foundation’s three tiers plus “not known”. Never a score. */
-export function tierLabel(tier: LoadTier | null): string {
-  switch (tier) {
-    case 'open': return 'Room';
+/**
+ * A word for a whole day: the foundation’s tiers, worded by the physical facts (see `CapacityCategory`), plus “not
+ * known”. Never a score, never a percentage.
+ */
+export function categoryLabel(category: CapacityCategory | null): string {
+  switch (category) {
+    case 'room': return 'Room';
     case 'tight': return 'Tight';
-    case 'overloaded': return 'More than fits';
+    case 'more_than_fits': return 'More than fits';
+    case 'not_known':
     case null: return 'Not enough known';
   }
 }
@@ -244,6 +251,26 @@ export function conflictCopy(conflict: Conflict, ctx: CopyContext): ConflictCopy
   }
 }
 
+// ------------------------------------------------------------- narrow fits ---
+
+/**
+ * A transition that FITS but leaves little room. Worded as a fit — the foundation’s own buffer is named as the
+ * reference, and the difference between “fits narrowly” and “does not fit” is stated, never blurred.
+ */
+export function narrowCopy(narrow: NarrowTransition, ctx: CopyContext): ConflictCopy {
+  const a = ctx.titleOf(narrow.before.ref);
+  const b = ctx.titleOf(narrow.after.ref);
+  const why = [`${a} ends at ${ctx.clock(narrow.before.endMinute)}; ${b} starts at ${ctx.clock(narrow.after.startMinute)}. That is ${formatMinutes(narrow.gapMinutes)}.`];
+  if (narrow.storedTransitionMinutes > 0) why.push(`You entered ${formatMinutes(narrow.storedTransitionMinutes)} for getting there.`);
+  if (narrow.scheduledMinutes > 0) why.push(`${formatMinutes(narrow.scheduledMinutes)} of tasks are already scheduled in that time.`);
+  why.push(`That leaves ${formatMinutes(narrow.slackMinutes)}. Her Keys looks for ${formatMinutes(REQUIRED_TRANSITION_BUFFER_MINUTES)} between commitments.`);
+  return {
+    label: 'Fits narrowly',
+    sentence: `${a} to ${b} fits, with ${formatMinutes(narrow.slackMinutes)} to spare.`,
+    why,
+  };
+}
+
 // ------------------------------------------------------------------ unplaced ---
 
 export interface UnplacedCopy {
@@ -334,11 +361,37 @@ export function headlineFor(view: CalendarDayViewModel, ctx: CopyContext): Headl
 export function weekDayLabel(summary: WeekDaySummary): string {
   const name = `${formatWeekdayShort(summary.date)} ${formatDayNumber(summary.date)}`;
   if (summary.dayMode === 'past') return `${name}: earlier, ${summary.itemCount} ${summary.itemCount === 1 ? 'item' : 'items'}`;
-  const parts = [tierLabel(summary.tier)];
+  const parts = [categoryLabel(summary.category)];
   if (summary.conflictCount > 0) parts.push(`${summary.conflictCount} ${summary.conflictCount === 1 ? 'conflict' : 'conflicts'}`);
   if (summary.unplacedCount > 0) parts.push(`${summary.unplacedCount} not on the schedule yet`);
   if (summary.evidenceStatus === 'insufficient' && summary.tier !== null) parts.push('some facts missing');
   return `${name}: ${parts.join(', ')}`;
+}
+
+const CONFLICT_LABELS: Record<ConflictType, string> = {
+  FIXED_OVERLAP: 'Overlap',
+  TRANSITION_CONFLICT: 'Not enough time',
+  DEPENDENCY_CONFLICT: 'Out of order',
+  PLACEMENT_FAILURE: 'Needs a place',
+  RESPONSIBILITY_RISK: 'Not confirmed',
+  PROTECTED_TIME_CONFLICT: 'Protected time',
+};
+
+/**
+ * The words under one day of the week. Categorical and equal in weight: a capacity word, the kinds of
+ * conflict present, how much flexible work has no time yet, and whether facts were missing. Days are never
+ * ordered, scored or compared by quality.
+ */
+export function weekDayLines(summary: WeekDaySummary): { word: string; lines: string[] } {
+  if (summary.dayMode === 'past') {
+    return { word: 'Earlier', lines: [`${summary.itemCount} ${summary.itemCount === 1 ? 'item' : 'items'}`] };
+  }
+  const lines: string[] = [];
+  if (summary.conflictTypes.length > 0) lines.push(summary.conflictTypes.map((type) => CONFLICT_LABELS[type]).join(' · '));
+  if (summary.unplacedCount > 0) lines.push(`${summary.unplacedCount} not on the schedule yet`);
+  if (summary.evidenceStatus === 'insufficient' && summary.tier !== null) lines.push('Some facts missing');
+  if (lines.length === 0 && summary.itemCount === 0) lines.push('Nothing scheduled');
+  return { word: categoryLabel(summary.category), lines };
 }
 
 export const dayTitle = formatDayTitle;

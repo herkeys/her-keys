@@ -2,7 +2,7 @@ import { assessDailyLoadIssues, type DailyLoadIssue, type DailyLoadIssues } from
 import { computeDailyLoad } from '../../daily-load/computeDailyLoad';
 import type { CalendarEventItem, TaskItem } from '../../../types';
 import { daysBetween } from './timeFrame';
-import type { CapacityState, DayItem, EvidenceRef, MissingEvidence } from './types';
+import type { CapacityCategory, CapacityState, Conflict, DayItem, EvidenceRef, MissingEvidence } from './types';
 
 /**
  * CAPACITY IS THE FOUNDATION'S CLASSIFICATION, NOT CALENDAR'S.
@@ -91,16 +91,31 @@ export function dedupeMissing(entries: MissingEvidence[]): MissingEvidence[] {
 }
 
 /**
+ * `overloaded` says more than fits only when a stored fact is violated (an overlap, a transition longer than its gap, a
+ * dependency out of order) or the day holds less time than it needs. An `overloaded` tier reached only through a thin but
+ * physically sufficient buffer is worded as tight — it fits.
+ */
+export function categoryOf(tier: CapacityState['tier'], verdict: CapacityState['verdict'], conflicts: Conflict[]): CapacityCategory {
+  if (tier === null) return 'not_known';
+  if (tier === 'open') return 'room';
+  if (tier === 'tight') return 'tight';
+  const exceeds = verdict === 'capacity_pressure' || conflicts.some((c) => c.type === 'FIXED_OVERLAP' || c.type === 'TRANSITION_CONFLICT' || c.type === 'DEPENDENCY_CONFLICT');
+  return exceeds ? 'more_than_fits' : 'tight';
+}
+
+/**
  * The day's capacity outcome in the foundation's vocabulary.
  *
  * UNKNOWN CAN ONLY SHRINK CAPACITY, so `tight` and `overloaded` stand whatever is missing, while
  * `open` is a claim of room and is withheld — `null`, the foundation's "not known" — unless the
  * evidence behind it is complete. There is no unknown tier and none is invented.
  */
-export function capacityStateOf(issues: DailyLoadIssues, missing: MissingEvidence[]): CapacityState {
+export function capacityStateOf(issues: DailyLoadIssues, missing: MissingEvidence[], conflicts: Conflict[]): CapacityState {
   const incomplete = missing.length > 0;
+  const tier = issues.tier === 'open' && incomplete ? null : issues.tier;
   return {
-    tier: issues.tier === 'open' && incomplete ? null : issues.tier,
+    tier,
+    category: categoryOf(tier, issues.primary?.kind ?? null, conflicts),
     foundationTier: issues.tier,
     verdict: issues.primary?.kind ?? null,
     pressure:

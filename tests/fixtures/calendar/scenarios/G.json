@@ -74,6 +74,7 @@
     }
   ],
   "capacityState": {
+    "category": "not_known",
     "evidence": {
       "missing": [
         {

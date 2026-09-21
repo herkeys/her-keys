@@ -69,8 +69,8 @@ do not create work to manage the tool. Each decision below is inside already-app
 | D-05 | Overlap where one/both sides are flexible. | Reported as `FIXED_OVERLAP` with each side's flexibility and the foundation's `movableEventId` in the evidence; no unlisted conflict type is invented. | 7 |
 | D-06 | Placement "fits" vs the 45/23-minute buffer. | Feasibility is *physical fit only*; the foundation tier of the resulting buffer is attached as a consequence, never used as a Calendar threshold. | 1 + "do not invent thresholds" |
 | D-07 | Future-day overdue backlog. | A future day lists only what is dated/planned/timed for it. Overdue is a today-relative state and appears on today only (mirrors `tomorrowPreview`). | 2: no backlog wall |
-| D-09 | Which week? | Sunday-first (the same `0 = Sunday` convention `byWeekday` uses); no week-start setting exists in state. Paging moves a week at a time. | 7 coherence |
 | D-08 | Past days. | Read-only history of active events; no capacity or Needs-a-Place claims (the foundation has no as-of view: completed rows vanish). | 1 |
+| D-09 | Which week? | Sunday-first (the same `0 = Sunday` convention `byWeekday` uses); no week-start setting exists in state. Paging moves a week at a time. | 7 coherence |
 
 ---
 
@@ -257,7 +257,7 @@ Planned minimal surface. Filled in with commits as they land.
 
 | Path | Reason | Commit | Likely sibling collision | Integration reconciliation |
 |---|---|---|---|---|
-| `app/(app)/calendar.tsx` | Calendar's own tab route; content becomes the projection-driven screen (REFINE) | C3 | none expected (Today = `today.tsx`; Life, Systems, AI have their own files) | none |
+| `app/(app)/calendar.tsx` | Calendar's own tab route; now a one-line re-export of the feature-owned `CalendarScreen` (REFINE) | C3 `0aecd5d` | none expected (Today = `today.tsx`; Life, Systems, AI have their own files) | none |
 | `app/gallery.tsx` *(only if used for visual evidence)* | one import + one section rendering feature-owned scenes | C8 | **likely** — every sibling may add a section | trivial merge; each section is feature-owned |
 
 New feature-owned paths (no sibling collision): `src/features/calendar/**` (new files; `EventForm.tsx` unchanged),
@@ -311,6 +311,77 @@ actions (PLACE, COMPLETE) are recorded for the owner and do not block the build.
 
 ---
 
-*Sections 14–20 (UI-system consumption, shared-copy candidate, scenarios, structural evidence, performance, defects,
-integration candidates, considered/deferred, minimum-shippable checkpoint, completion status) are added as each
-checkpoint lands.*
+## 14. UI-system consumption (HK-FE-UI-01, actual exports)
+
+Calendar consumes the permanent system and adds no second one. Everything below is imported from `src/design`.
+
+| Need | Consumed | Notes |
+|---|---|---|
+| Page | `Screen` (scroll, safe area) | unchanged |
+| Type | `AppText` variants `display`, `screenTitle`, `bodyStrong`, `body`, `supporting`, `metadata`; `Overline` | new rungs, not the legacy aliases the old Calendar used |
+| Surfaces | `Card tone="surface"` only | other tones have no vetted text pairings, so conflict emphasis is a **text label**, not a card color |
+| Status marks | `Tag` (`attention` / `neutral`) | text is always uppercase words: OVERLAP, NOT ENOUGH TIME, FITS NARROWLY, NEEDS A PLACE, NOT CONFIRMED |
+| Selection | `ChipToggle` (Day/Week) | role button + selected state |
+| Actions | `Button` (`primary`/`secondary`/`ghost`, `sm`) | text labels carry the meaning |
+| System states | `LoadingState`, `EmptyState`, `InlineNotice tone="waiting"` | three distinct states: loading, recovery, known-empty |
+| Evidence | `WhyThis` behind a Calendar-local toggle | MGP-09: `WhyThis` is always visible, so disclosure is composed locally |
+| Tokens | `colors.*` flat aliases, `spacing`, `interaction.pressedOpacity`, `sizing.minTouchTarget` | every pressable has `minHeight >= 44` (tested) |
+
+**Contrast:** the only pairings used — `text.primary/secondary/muted` and `status.waiting` on `background`/`surface.primary`,
+`status.attention` on `surface.primary`, `action.primary` on `background` — are all already in the contrast matrix `INTENT`
+map, so `tests/design-system/contrast.test.mjs` and `contrast-matrix.md` are untouched.
+
+**Deliberately not used:** the intelligence blocks other than `WhyThis` (`RecommendationBlock` arrives with C6). `ConfidenceBadge`
+and `InsightBlock` are for inferences; every Calendar conclusion is a deterministic fact from typed state, and the design system's own
+rule is "no domain counterpart = do not invent one in the UI". `LoadMeter`/`SegmentBar` are not used: capacity is a word with evidence,
+not a meter.
+
+## 15. Shared copy candidate (contract 55A): CAPACITY / CONFLICT / UNKNOWN-STATE LANGUAGE
+
+Feature 01 Today and Feature 03 Calendar will describe the **same** underlying states. Calendar's wording lives in
+`src/features/calendar/copy.ts`; it is not imported from Today and not exported for Today, and no shared copy module is created here.
+
+| Foundation semantic | Calendar wording | Today likely renders it? | Reconciliation needed |
+|---|---|---|---|
+| `tier: open`, evidence complete | "Everything scheduled fits." · category **Room** | yes ("Nothing needs moving.") | one voice for "fits" |
+| `tier: tight` / narrow transition | "A to B fits, with 15 min to spare." · **Tight** / **Fits narrowly** | yes ("one window is too tight") | Today says "too tight" for a state that physically fits |
+| `tier: overloaded` via overlap | "A and B overlap by 30 min." · **More than fits** | yes ("Two of today's commitments overlap.") | near-identical; pick one |
+| `tier: overloaded` via capacity pressure | "More is planned than the day has room for: X planned, Y available." | yes ("more on it than it can hold") | Today's phrase edges toward the day having a character |
+| transition longer than its gap | "…is shorter than what you entered for getting there." | partly | Today calls it "travel-aware" |
+| `tier: null` (not known) | "Not enough is entered to say whether this day fits." | **no** — Today has no unknown state | Today should adopt one, or it will contradict Calendar |
+| unknown travel / duration | "Travel time after X isn't entered." · "X: no duration is recorded." | no | new to Today |
+| delegated, not accepted | "Waiting for Marcus to accept" | possibly (attention: unacknowledged delegation) | one responsibility vocabulary |
+| PLACEMENT_FAILURE | "Needs a place" | possibly | one term |
+
+**Known cross-feature contradiction to reconcile:** on the two DST days Calendar and Today can disagree (F03-FG-03); on every other
+day they are equal (equivalence-tested against `loadTierForDay`).
+
+## 16. Minimum-shippable calendar core — checkpoint recorded at C4
+
+**MINIMUM SHIPPABLE CALENDAR CORE = YES**
+
+This is the clean, high-value, resumable point before week view and hardening. It is **not** a full Feature 03 PASS.
+
+| Gate | Result |
+|---|---|
+| C2 projection / view model | done (`src/features/calendar/model`, 10 modules + availability + presentation) |
+| C3 operational day / agenda | done (day view; route `calendar.tsx` refined) |
+| C4 conflict + capacity + Needs-a-Place presentation | done (summary category word, conflict cards with evidence, "fits narrowly" cards, not-on-the-schedule-yet section, named unknowns) |
+| Tier 1 projection scenarios through that scope | A, B, D, F, G, I, L, P, AF have explicit assertions **and** committed structural evidence; W's model + press-to-editor path also proven |
+| TypeScript | green (`tsc --noEmit`) |
+| App tests | 913 pass / 0 fail (808 entry + 105 new); **no entry test missing** (mechanical check against the entry inventory) |
+| Backend baseline | 684 / 684 checks passed (re-run at this checkpoint) |
+| Foundation drift | none: `git diff 5007b0f -- src/domain src/persistence src/design src/store src/state src/platform src/config src/data supabase src/features/daily-load src/features/today src/features/tasks src/types package.json package-lock.json app.json` is empty |
+| Shell drift | none: `app/_layout.tsx`, `app/(app)/_layout.tsx`, `app/gallery.tsx`, `event-editor.tsx`, `task-editor.tsx` unchanged |
+| Shared files touched | exactly one: `app/(app)/calendar.tsx` (Calendar's own tab route) |
+
+**Design correction made at C4 (found by re-reading the UI against the scenarios):** the foundation tiers a transition that fits with
+15 minutes to spare as `overloaded`, the same as one that cannot fit. A tier tag reading "More than fits" over a sentence saying it fits
+would be false (scenario C vs D). The foundation tier is left untouched as audit data; a deterministic word-level `category`
+(`room` / `tight` / `more_than_fits` / `not_known`) is derived from the tier and the physical facts (a stored fact violated, or less time
+than needed) — no threshold is introduced. Tests pin both the category and the rendered wording.
+
+---
+
+*Sections 17–20 (scenarios, structural evidence, performance, defects, integration candidates, considered/deferred, completion
+status) are added as each checkpoint lands.*

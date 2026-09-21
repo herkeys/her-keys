@@ -278,8 +278,16 @@ export interface OpenWindow {
  * so `tight` and `overloaded` stand regardless of what is missing, while `open` is withheld
  * (`null`) unless the evidence behind it is complete.
  */
+/**
+ * The WORD for a capacity state, chosen from the foundation tier plus the physical facts (no thresholds). It exists because
+ * the foundation tiers a transition that fits with 15 minutes to spare as `overloaded`, the same as one that cannot fit; showing
+ * "more than fits" over a sentence that says it fits would be false (scenario C vs D).
+ */
+export type CapacityCategory = 'room' | 'tight' | 'more_than_fits' | 'not_known';
+
 export interface CapacityState {
   tier: LoadTier | null;
+  category: CapacityCategory;
   /** Exactly what the foundation classifier returned, before completeness was considered. */
   foundationTier: LoadTier;
   verdict: 'overlap' | 'transition_conflict' | 'capacity_pressure' | 'tight_window' | 'overdue' | null;
@@ -347,6 +355,7 @@ export interface WeekDaySummary {
   itemCount: number;
   /** null: not known (past day, or `open` withheld for missing evidence). */
   tier: LoadTier | null;
+  category: CapacityCategory | null;
   evidenceStatus: 'complete' | 'insufficient' | 'not_applicable';
   conflictTypes: ConflictType[];
   conflictCount: number;

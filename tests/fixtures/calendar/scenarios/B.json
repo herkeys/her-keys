@@ -62,6 +62,7 @@
     }
   ],
   "capacityState": {
+    "category": "more_than_fits",
     "evidence": {
       "missing": [],
       "status": "complete"

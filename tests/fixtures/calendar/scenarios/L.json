@@ -74,6 +74,7 @@
     }
   ],
   "capacityState": {
+    "category": "room",
     "evidence": {
       "missing": [],
       "status": "complete"

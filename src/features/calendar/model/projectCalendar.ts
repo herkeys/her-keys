@@ -118,7 +118,7 @@ export function projectCalendarDay({ state, date, today, nowMs, includeActions =
     narrowTransitions,
     unplacedItems,
     openWindows,
-    capacityState: capacityStateOf(issues, capacityMissing),
+    capacityState: capacityStateOf(issues, capacityMissing, conflicts),
     unknownStates,
     availableActions,
   };
@@ -133,6 +133,7 @@ export function summarizeDay(view: CalendarDayViewModel, isSelected: boolean): W
     isSelected,
     itemCount: view.dayItems.length,
     tier: view.capacityState === null ? null : view.capacityState.tier,
+    category: view.capacityState === null ? null : view.capacityState.category,
     evidenceStatus: view.capacityState === null ? 'not_applicable' : view.capacityState.evidence.status,
     conflictTypes,
     conflictCount: view.conflicts.length,

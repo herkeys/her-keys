@@ -77,6 +77,7 @@
     }
   ],
   "capacityState": {
+    "category": "tight",
     "evidence": {
       "missing": [],
       "status": "complete"

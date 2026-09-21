@@ -150,6 +150,37 @@ describe('C / D — tight but feasible vs impossible transition', () => {
   });
 });
 
+describe('capacity category — the word follows the physical facts, the tier stays the foundation’s', () => {
+  const category = (id) => project(id).capacityState.category;
+
+  test('C: the foundation tiers a 15-minute-slack transition as overloaded, but it fits, so it is worded as tight', () => {
+    const state = project('C').capacityState;
+    assert.equal(state.tier, 'overloaded', 'the foundation classification is untouched');
+    assert.equal(state.foundationTier, 'overloaded');
+    assert.equal(state.category, 'tight');
+  });
+
+  test('a stored fact violated, or less time than needed, is more than fits', () => {
+    assert.equal(category('B'), 'more_than_fits', 'overlap');
+    assert.equal(category('D'), 'more_than_fits', 'transition longer than its gap');
+    assert.equal(category('O'), 'more_than_fits', 'capacity pressure');
+  });
+
+  test('room, tight and not-known map from open / tight / withheld', () => {
+    assert.equal(category('A'), 'room');
+    assert.equal(category('M'), 'tight');
+    assert.equal(category('G'), 'not_known');
+    assert.equal(category('AF'), 'not_known');
+  });
+
+  test('the category adds no number: it is one of four words', () => {
+    for (const s of SCENARIOS) {
+      const state = projectCalendarDay(inputsFor(s)).capacityState;
+      assert.ok(['room', 'tight', 'more_than_fits', 'not_known'].includes(state.category), s.id);
+    }
+  });
+});
+
 describe('E / F — flexible item fits vs cannot fit', () => {
   test('E: known duration and a feasible opening shows a placement opportunity and schedules nothing', () => {
     const view = project('E');
