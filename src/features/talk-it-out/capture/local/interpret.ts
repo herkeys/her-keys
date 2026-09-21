@@ -382,7 +382,27 @@ function answerToPatch(input: ClarificationInput): ProposalPatch | null {
   return textAnswerToPatch(proposal, answer.text, context);
 }
 
+const KIND_WORDS = /\b(?:it(?:'|’)?s|make\s+it|change\s+it\s+to|should\s+be|treat\s+it\s+as)\s+(?:just\s+)?(?:an?\s+)?(task|to-?do|reminder|note|event|appointment)\b/i;
+
+/** "it's just a to-do", "make it a note": she is saying what KIND of thing this is. */
+export function kindFromText(text: string): ProposalKind | null {
+  const found = KIND_WORDS.exec(text);
+  if (!found) return null;
+  const word = found[1].toLowerCase();
+  return word === 'note' ? 'needsMe' : word === 'event' || word === 'appointment' ? 'event' : 'task';
+}
+
+/**
+ * A free-text answer may answer the question, change what kind of thing this is, or both ("Ayden — and it's just a
+ * to-do"). A change of kind does not close the question that was open: she said what it is, not who it is for.
+ */
 function textAnswerToPatch(draft: ProposalDraft, text: string, ctx: InterpretationContext): ProposalPatch | null {
+  const kind = kindFromText(text);
+  const forStep = stepAnswerPatch(draft, text, ctx);
+  return kind === null ? forStep : { ...(forStep ?? {}), kind };
+}
+
+function stepAnswerPatch(draft: ProposalDraft, text: string, ctx: InterpretationContext): ProposalPatch | null {
   const steps = draft.clarificationCode === null ? null : parseClarificationCode(draft.clarificationCode);
   if (!steps) return null;
   const step = steps[0];
@@ -470,11 +490,8 @@ export function readCorrection(input: CorrectionTextInput): CorrectionReading {
   if (named.length === 1) patch.subject = { kind: 'child', memberId: named[0].id };
   else if (named.length === 0 && /\b(?:not\s+(?:for\s+)?(?:a\s+)?(?:kid|child)|no\s*one|nobody)\b/i.test(text)) patch.subject = { kind: 'none' };
 
-  const kindWord = /\b(?:it(?:'|’)?s|make\s+it|change\s+it\s+to|should\s+be)\s+(?:just\s+)?an?\s+(task|to-?do|reminder|note|event|appointment)\b/i.exec(text);
-  if (kindWord) {
-    const w = kindWord[1].toLowerCase();
-    patch.kind = w === 'note' ? 'needsMe' : w === 'event' || w === 'appointment' ? 'event' : 'task';
-  }
+  const kind = kindFromText(text);
+  if (kind !== null) patch.kind = kind;
 
   return Object.keys(patch).length === 0 ? { kind: 'not-understood' } : { kind: 'patch', patch };
 }

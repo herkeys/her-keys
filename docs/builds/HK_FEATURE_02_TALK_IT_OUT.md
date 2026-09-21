@@ -94,7 +94,7 @@ Where the doctrine resolves an ambiguity the decision is recorded inline as **DE
 | LISTEN→HYPOTHESIZE→CLARIFY→REFINE→RECOMMEND discovery engine | `features/talk-it-out/engine.ts` | **PRESERVE** (byte-unchanged) | Still the right model for "something feels off" talk. Capture is added in front of it, not in place of it. |
 | Discovery persistence + replay + conversation boundary | `domain/discovery.ts`, `domain/reasoning/conversationBoundary.ts` | **PRESERVE** | Structure-only storage of talk stays true. |
 | Scripted topic catalog | `data/seed/talkItOutScript.ts` | **PRESERVE** | |
-| Talk It Out context (session state, quick replies, restart) | `store/TalkItOutContext.tsx` | **REFINE** | `submit()` gains a routing step for free-typed text at the `listening` stage. Discovery path unchanged when the capture reader recognises nothing. |
+| Talk It Out context (session state, quick replies, restart) | `store/TalkItOutContext.tsx` | **REFINE** | `submit()` gains one routing step for free-typed text (`capture/routing.ts`, a pure, tested rule). Quick replies are never routed. Every scripted starter and option, typed as free text, still routes to the existing conversation (asserted). The conversation's own answers stay answers; only text it would have met with "I didn't catch that" (or, after a conclusion, a scripted reply) and the reader recognises as something to save is captured. Symbol-only input keeps the existing "no words to go on" behaviour. |
 | Talk It Out view: bubbles, stage labels, confidence badge, WhyThis, quick replies | `features/talk-it-out/TalkItOutView.tsx` | **REFINE** | Bubbles/quick replies/composer kept. Capture cards render inline after the woman's message. |
 | Voice pill + "arrives in a later build" note | `TalkItOutView.tsx` | **REPLACE** (hidden) — see 3.3 | No working path exists; the contract forbids a mysterious disabled mic and "coming soon" clutter. |
 | Composer disclaimer "Prototype conversation — responses are scripted" | `TalkItOutView.tsx` | **REFINE** | Now states what is true of capture: nothing is saved until she approves it. |
@@ -264,6 +264,335 @@ policy; the policy needs separate product review. See §16.
 
 ---------------------------------------------------------------------------------------------------
 
-*(Sections 9–16 and 18–21 — capability envelope, scenario satisfiability, correction/person/child rules,
-LLM seam, missing-primitive register, privacy verification, considered/deferred, defects, scenarios,
-exit gates, verdicts — are appended by the L1 and later commits.)*
+## 9. Local interpreter capability envelope
+
+The local reader (`capture/local/*`) is **deterministic rules, not a language model and not a stand-in for
+one**. The envelope is *executable*: `capture/local/envelope.ts` lists every rule with ≥3 distinct phrasings,
+and `tests/talkItOutCapture.reader.test.mjs` feeds each phrasing through the real reader and fails if it does
+not fire the rule it is listed under. The weekday rule is additionally property-tested for every weekday on
+every day of a fortnight, and a further 2,000 seeded random sentences check invariants (no field outside the
+typed shape, no confidence above `possible`, no guessed child, no guessed money direction, no throw).
+
+| Rule | Reads | Notes |
+|---|---|---|
+| `date.weekday` | Friday / this Friday / next Friday / on Thu / on Tues | Doubt is asked, not guessed: a bare weekday **that is today**, and "next <weekday>" **when that weekday is still ahead this week**. |
+| `date.relative` | today, tonight, tomorrow, day after tomorrow, in N days/weeks | |
+| `date.calendar` | Sept 25, September 30th, 25 Oct, 9/28 | Next occurrence; flagged when it rolls into next year. Impossible dates (Feb 30) are treated as no date. |
+| `date.day-of-month` | the 1st, the 15th | |
+| `time.clock` | 3pm, 3:30 p.m., 15:00, at 5, noon, 5 o'clock | A missing am/pm is **assumed** (surrounding words, else 1–6 → pm, 7–11 → am) and always flagged. |
+| `time.range` | from 3 to 4, 4-5pm, 6pm to 7:30pm | |
+| `time.duration` | for an hour, for 45 minutes, half an hour, a 30-minute … | Event with none stated: 30 minutes (the calendar form's own default), flagged. |
+| `money.amount` | $85, $12.50, 85 dollars, 20 bucks | USD only, exact minor units through the foundation's `parseMoney`. |
+| `money.direction` | I owe / pay / send / bring (outflow); owes me / pay me back / reimburse me (inflow) | With an amount + a named other party and no cue: **asked**. With neither: no typed amount; the amount stays in her words. |
+| `child.named` / `child.object-pronoun` / `child.noun` / `child.activity` | Ayden · pick **him** up · my son · piano lesson | One child resolves; several are asked; the group ("Alexa and Ayden") is not a single subject. |
+| `area.keyword` | dentist → Wellbeing, electric bill → Money … | Only an area the household actually has. |
+| `kind.*` | obligation → to-do; time + day → appointment; date only → dated note; unrepresentable → note | |
+
+**Limits (all enforced and tested):** processing window 4,000 characters — over it **nothing is read and nothing
+is claimed**; 12 clauses — the remainder is reported `clause-limit`; 3 clarification steps per reading
+(which child / which day / which direction) — a bound by construction; 3 failed free-text answers before it
+stops asking and offers manual correction; titles are capped at 90 characters (flagged), so a long clause never
+leaves a large excerpt of her words in the durable record.
+
+**Confidence:** the reader never claims more than `possible` (nothing corroborates a reading of one message).
+Only her acceptance reaches `established` (`promoteProvenance`, unchanged). No confidence×consequence formula was
+invented (gap G5 recorded).
+
+**What it does not do** (`NOT_SUPPORTED` in `envelope.ts`, each with its safe behaviour): general language
+understanding; recurrence ("every Tuesday" → note + unsupported); changes to existing items ("practice moved to
+6" → note + unsupported); who is responsible; goals/patterns/context (fall through to the existing discovery
+conversation); other currencies; sensitive content (not read at all); voice.
+
+### 9.1 Generalization disclosure
+
+**LOCAL INTERPRETER CAPABILITY: GENERALIZES WITHIN DOCUMENTED ENVELOPE.** It reads by rule, so phrasings it was
+never shown are read when they use the same rules (tested on phrasings that appear nowhere in the envelope),
+and it is honest at the edge (nothing recognised → kept unresolved; unsupported → explicit). It is **not**
+general natural-language understanding and no green test implies it is. It is bounded pattern matching over a
+small, listed vocabulary; its multi-clause splitting in particular is a heuristic and is the first place a
+real interpreter would be better.
+
+---------------------------------------------------------------------------------------------------
+
+## 10. Scenario satisfiability (mapped before the scenario tests were written)
+
+`SL` supported locally · `SP` supported partially · `DL` deferred-on-LLM · `FB` foundation-blocked.
+
+| # | Scenario | Class | Notes / safe behaviour where partial |
+|---|---|---|---|
+| A | simple explicit capture | SL | envelope forms |
+| B | ambiguous date | SL | weekday rule |
+| C | multi-item | SP | bounded clause splitting; unusual conjunctions are kept as one clause and, with several dates/times/amounts, become a note |
+| D | partial acceptance | SL | each reading is its own durable row |
+| E | user correction | SL | supersede + one patch operation |
+| F | low confidence | SL | hedge → assumption note; badge stays `possible` |
+| G | nothing safe to materialise | SL | source kept unread, nothing fabricated |
+| H | unsupported domain | SP | a listed set of reasons; arbitrary new domains are **DL** and fall back to *nothing recognised* |
+| I | idempotent accept | SL | structural (accept only while `pending`) |
+| J | person / responsibility | SP + **FB** | mention read; recording a responsible party is **FB** (`Interpretation` has no such field) → stays words in the title, review says nothing was recorded |
+| K | money direction | SP | cue-based; no cue → asked or untyped |
+| L | non-actionable context | SL | recognised as nothing → never a forced task. If a discovery topic matches ("I feel like I'm always behind") the existing conversation takes it; otherwise it is kept as an unread source with an honest message and a way to dismiss it |
+| M | resolution exits inbox | SL | |
+| N | empty inbox | SL | |
+| O | interpretation failure | SL | |
+| P | demo isolation | SL | foundation's `refuseDemo` + demo provenance |
+| Q | draft vs submitted | SL | |
+| R | restore mid-review/clarification | SL, with OD-1 caveat | question regenerates from the durable reading; wording is not retained |
+| S | clarification preserves source | SL | |
+| T | loading vs empty | SL | |
+| U1–U3 | child subject | SL | |
+| V1–V3 | clarification pivot | SL | V1 kind-change words are honoured in an answer |
+| W | partial success + unsupported | SL | |
+| X | interpretation crash recovery | SL, with OD-1 caveat | in-session retry works; after a restart the source is listed as unreadable |
+| Y | unknown person | SL | |
+| Z | type shift after clarification | SL | |
+| AA | time-sensitive unresolved | SL | feature-local projection (no shared source: G4) |
+| AB | source retry / supersession | SL | no foundation source-supersession exists → new capture; original untouched |
+
+**Deferred-on-LLM examples, and what happens instead (all tested for safety):** implicit or contextual dates
+("after the game next week"), pronouns across sentences, references to other events, multilingual text, tone.
+Each returns *nothing recognised* or a note: source kept, no fabricated record, an honest path forward.
+
+---------------------------------------------------------------------------------------------------
+
+## 11. Correction pattern
+
+One semantic operation — **USER CORRECTED THIS PROPOSAL** — and one code path that changes what a proposal says:
+
+```
+clarification answer ─┐
+structured "Fix it"  ─┼─▶ ProposalPatch ─▶ revise() ─▶ supersedeInterpretation ─▶ new reading (v+1), old one frozen
+natural-language fix ─┘        (capture/revise.ts)                (foundation)
+```
+
+* The raw source is never touched. The correction is user evidence, applied to the *proposal*.
+* `correctInterpretation` (in-place patch) is deliberately **not used**: it would make the final reading look as
+  though it had always said that. Supersede keeps v1 with its original claim and confidence.
+* A correction does not raise confidence (only `promoteProvenance` may, on acceptance).
+* Presentation: the "Fix it" sheet carries a single-value chip/field edit **and** a natural-language field
+  ("No, I meant next Friday at 4"). In this build the inline and structured presentations are one sheet, not two.
+  All routes converge (asserted: a typed edit and the equivalent spoken correction yield the same reading).
+* "No, I meant next Friday": she is correcting a date she was shown, so the reader cannot take it to mean the same date.
+* Foundation gap **G3**: nothing durable says a revision was user-driven. Every supersession in this build is
+  user-driven, so this is safe *today*; a future model re-read would be indistinguishable → follow-up.
+
+---------------------------------------------------------------------------------------------------
+
+## 12. Child and person rules
+
+* **Child subject (mandatory invariant).** A child-scoped proposal never becomes a row without a real child.
+  Two children and "him" → a question (`which_child`); one child → resolved without asking; a named child →
+  resolved; the group → not a single subject. While a question is open the reading is `clarifying` and the
+  foundation's own `canAccept` refuses it; after the answer the row is child-scoped with a real child and the
+  foundation validator (`validateAppState`) agrees (asserted). She can answer "not about a child" — an
+  explicit answer, not an absence.
+* **Unknown person.** A mentioned name that is not in her household is words in the title. No household person,
+  role, account, co-parent status or responsibility is created (asserted on real state: `people` and
+  `responsibilities` stay empty after accepting "Jordan will pick up Ayden at 5").
+* **Mentioned ≠ responsible ≠ accepted.** The reader recognises the *shape* of a handoff and reports it
+  (`responsibility-handoff`, with whether the name is already in her household); it records nothing (gap **G2**).
+* **Money.** Direction lives beside the amount (`outflow` = leaves the household). "I owe Jordan $85" and
+  "Jordan owes me $85" are stored as different facts (asserted).
+
+---------------------------------------------------------------------------------------------------
+
+## 13. Life Inbox behaviour
+
+* **Membership (derived, never stored):** a source is active when it has a reading that is `pending` or
+  `clarifying`, or when it has no reading at all; a withdrawn source, and any source whose every reading has a
+  final disposition (accepted / rejected / superseded-chain-ended), is not. Accepted canonical rows are never
+  listed (the Inbox is not a second task list); history is not listed (not an activity feed).
+* **Empty** is a calm fact with no action, no celebration, no prompt to add anything. **Loading**, **recovery**
+  (stored state could not be read) and **empty** are three different states; the Life row never says "Nothing
+  waiting" for the first two.
+* **Ordering, by meaning, no numeric score:** referenced-time urgency (`now` = within 3 h or passed, `today`,
+  `soon` = within 2 days, `none`), earliest referenced time first (so the longest-overdue leads), a question
+  that is *blocking* a time-bound matter before a plain review, unread sources last, recency only as a tie-break.
+* **Time-sensitive unresolved captures (AA):** never disappear. As "Friday at 3" approaches, its urgency rises
+  (`none` → `soon` → `today` → `now`) and after the time it stays `now` with `passed: true`. It never becomes a
+  confirmed appointment (no canonical row exists) and no Today/Feature 01 code is touched.
+* **Aging:** no reminder machinery. A non-time-bound item gains **no** urgency from age (asserted for 0–365 days).
+* **INTEGRATION REQUIREMENT:** the shared attention layer has no unresolved-capture source (gap G4). Feature 02's
+  `UnresolvedCaptureAttentionProjection` (`capture/attention.ts`) should later feed shared attention / Today
+  through canonical projection integration.
+* **Mount:** see §8. Inside the existing Life stack; reached from one row in "Where things stand" and from Talk
+  It Out's "Decide later → Open Life Inbox".
+
+---------------------------------------------------------------------------------------------------
+
+## 14. Shared files touched (parallel-wave integration record)
+
+| Path | Why it must be touched | Commit | Sibling collision likelihood |
+|---|---|---|---|
+| `app/(app)/life/_layout.tsx` | register one Stack screen (`inbox`) inside the *existing* Life stack | `ecf63f1` | low — no sibling feature owns Life |
+| `app/(app)/life/index.tsx` | one "Life Inbox" row in the existing "Where things stand" list | `ecf63f1` | low–moderate — Feature 01 may add Life-related rows; merge is an additive list entry |
+| `src/store/TalkItOutContext.tsx` | route a first free-typed message to capture; nest `CaptureProvider`; async send | `ecf63f1` | low — Talk It Out is this feature's surface (Feature 01's Today entry only calls `router.push`) |
+| `src/features/talk-it-out/TalkItOutView.tsx` | render captures inline; remove the non-functional Voice pill; new composer copy | `ecf63f1` | low |
+| `tests/support/rn-stub.tsx` | add an `AppState` stub so the real store provider can mount under `node --test` | `ecf63f1` | **moderate** — any sibling adding component render tests may also extend this stub; trivial additive merge |
+
+**Not touched:** `app/_layout.tsx`, `app/(app)/_layout.tsx` (the tab shell), `src/design/**`, `src/domain/**`,
+`src/persistence/**`, `src/state/**`, `supabase/**`, `package.json`, `package-lock.json`, `app.json`,
+`docs/design-system/**` (screenshots for this feature live in `docs/feature-02-evidence/`). Everything else is new
+and owned by Feature 02: `src/features/talk-it-out/capture/**`, `tests/talkItOutCapture.*`,
+`tests/support/capture*.mjs`, this ledger.
+
+**Shell / navigation confirmation:** no new tab, no change to the five-area shell, no navigation-label change, no
+root-layout change. The Life Inbox is a screen inside the existing Life stack.
+
+---------------------------------------------------------------------------------------------------
+
+## 15. UI-system consumption and MISSING GLOBAL PRIMITIVE register
+
+Consumed **as-is, unmodified**: `Card`, `Button`, `ChipToggle`, `Sheet`, `TextField`, `Tag`, `AppText`, `Overline`,
+`InlineNotice`, `LoadingState`, `EmptyState`, `StatusList`, `Screen`, `ConfidenceBadge`, `ProvenanceLabel`, `WhyThis`,
+and the token module. No new colour, typography, card, button, sheet, confidence or provenance vocabulary; a test
+asserts the feature hard-codes no colour or font.
+
+| # | MISSING GLOBAL PRIMITIVE | Encountered | Semantic need | Feature-local composition | Likely sibling relevance |
+|---|---|---|---|---|---|
+| MGP-1 | **Choice-among-candidates clarification** | clarifying which child / which day / which direction | "Which one do you mean?" with a small typed option set plus a say-it-yourself field, bounded question count | `Card` + `Overline` + `Button` (secondary, sm) + `TextField` | Feature 03 (conflict/capacity choices), Feature 04 |
+| MGP-2 | **Source echo** | review must show what she said beside what Her Keys understood | quoted user words, collapse/expand, never truncated in what is kept | `Card` (subtle) + `AppText` + ghost `Button` | Feature 01 (evidence for a recommendation) |
+| MGP-3 | **Review with uncertainty notes and inline area choice** | `InterpretationReview` is a closed layout (fields + three buttons) | confidence, assumption notes, "why", and a required-field chooser *inside* the card | composed from `Card` + `ConfidenceBadge` + `WhyThis` + `ChipToggle` + `Button` using the same labels | Feature 04 |
+| MGP-4 | **`Sheet` backdrop accessibility role** | a11y test | the backdrop "Dismiss" `Pressable` has a label but no `accessibilityRole` | none (design-system component, not modified) | all |
+
+---------------------------------------------------------------------------------------------------
+
+## 16. LLM seam and reconciliation note
+
+| | |
+|---|---|
+| Path | `src/features/talk-it-out/capture/port.ts` (interface in `capture/types.ts`) |
+| API | `interpret(TalkItOutInput)`, `clarify(ClarificationInput)`, `readCorrection(CorrectionTextInput)` |
+| Input | raw text + **minimum** context: logical time, child and person candidates, the areas that exist — never the household |
+| Output | typed `Proposal[]`, typed `UnsupportedItem[]`, a typed failure. No `any`, no `unknown` domain contract, no bag |
+| Status | **feature-local** to Feature 02. `SHARED-ABSTRACTION CANDIDATE` |
+
+Target shape: `SOURCE → minimum context → port → typed proposals → review → canonical mutation`. Never the entire
+app state to a model; never free-form JSON into a write. No Gemini, prompt, SDK, Edge Function or secret exists.
+
+`revise()` (applying a typed patch) is deliberately **outside** the port: it is domain logic, not language
+understanding, so a future model-backed port reuses it unchanged.
+
+**INTEGRATION RECONCILIATION NOTE:** Feature 01 may create its own narrative-generation port. The two do different
+jobs (that one writes words about the day; this one reads words into typed proposals). An integration pass should give
+all AI-facing ports one repository home. This branch imports nothing from, and creates nothing shared for, any sibling.
+
+---------------------------------------------------------------------------------------------------
+
+## 18. Privacy verification
+
+Search over the whole Feature 02 surface (`src/features/talk-it-out/capture/**`, `src/store/TalkItOutContext.tsx`,
+`src/features/talk-it-out/TalkItOutView.tsx`, `app/(app)/life/inbox.tsx`):
+
+| Pattern | Matches | Verdict |
+|---|---|---|
+| `console.` / `.log(` / `debugger` | **0** | clean |
+| `JSON.stringify` / `JSON.parse` | **0** | clean |
+| network (`fetch`, `XMLHttpRequest`, `WebSocket`) | **0** | clean |
+| analytics / telemetry / Sentry / PostHog | **0** | clean |
+| `AsyncStorage` / `SecureStore` / `localStorage` | **0** | clean — the feature persists nothing of its own |
+| `report(` (store diagnostics) | **0** | clean |
+| `throw` / `new Error(` | **4** — `useCapture` / `useTalkItOut` misuse guards and two code-format guards in `clarificationCodes.ts` | every message is a static literal; none can contain her words |
+
+Enforced mechanically (not just by this review): `tests/talkItOutCapture.ui.test.mjs` fails the build if any of
+these patterns appears, or if an `Error` message is not a plain literal. Behaviourally: words that did not become a
+title are asserted absent from **every** storage key after a full flow; a long clause leaves at most a 90-character,
+flagged title; her words exist only in the session's memory and are forgotten when no source refers to them
+(`pruneOrphans`); the store's own diagnostics carry no text; high-stakes text is neither saved nor held.
+**No raw-source logging path exists.**
+
+## 19. Voice, source retention, safety-sensitive capture
+
+* **Voice — DEFERRED, affordance hidden.** No transcription path exists and none was added (no speech package, no
+  cloud speech). The pill that only revealed "arrives in a later build" was removed; a future working voice must
+  feed a `voice-utterance` source through the same `submit` path.
+* **Source retention — RETAIN, no automatic deletion**, as far as the foundation retains anything: the source
+  *record* is kept and only ever withdrawn (`retractedAt`), never deleted; **her words are not retained beyond the
+  session** (OD-1). This is a discrepancy between the contract's assumption and the foundation, surfaced rather than
+  papered over. Mandatory considered+deferred item: **SOURCE ARTIFACT LIFECYCLE** (retain-until-deleted vs age-out
+  after resolution) — open, owner.
+* **Safety-sensitive capture — no safety system invented.** A conservative stopgap guard reads such text as
+  *nothing*: no proposals, no task, no Needs Me note, no source record, nothing held after the session, nothing
+  sent, no external report. Deviating from "intentional submit creates a source" is deliberate: a hollow "she said
+  something sensitive" entry in an inbox on a shared phone could itself cause harm. Mandatory considered+deferred
+  item: **HIGH-STAKES / SAFETY-SENSITIVE CAPTURE POLICY** — needs separate owner/product review (OD-2).
+
+## 20. Considered + deferred
+
+| Item | State |
+|---|---|
+| Source artifact lifecycle / retention policy (retain-until-deleted vs age-out) | **PENDING-OWNER** |
+| Durable, on-device store for her words (OD-1 options A / C, incl. encryption) | **PENDING-OWNER** |
+| High-stakes / safety-sensitive capture policy (OD-2) | **PENDING-OWNER** |
+| Future shared interpreter abstraction (promote `TalkItOutInterpreterPort`) | **PENDING-INTEGRATION** |
+| Shared unresolved-capture attention → Today | **PENDING-INTEGRATION** |
+| Voice transcription | **PENDING-OWNER** (needs a provider and a privacy decision) |
+| Unsupported-domain expansion: recurrence (→ Feature 04), changes to existing items (→ Feature 03), recording who is responsible (foundation G2) | **PENDING-INTEGRATION** |
+| Future Gemini / model wiring | **PENDING-OWNER** (credentials, deployment: external constraint) |
+| Foundation gaps: G1 content store, G2 responsible-party on `Interpretation`, G3 user-corrected marker, G4 attention source, G5 consequence on interpretations | **PENDING-INTEGRATION** |
+| Clarification answers as first-class durable evidence (G3) | **PENDING-INTEGRATION** |
+| Inbox aging / reminder policy | **PENDING-OWNER** |
+| Consequence-dependent review strength (foundation defines none; none invented) | **PENDING-OWNER** |
+| Multi-device sync semantics for capture state (rejected/reviewed already sync via `interpretations`; answers do not) | **PENDING-INTEGRATION** |
+| Inline single-value edit *on the card* as distinct from the Fix sheet | **PENDING-OWNER** (UX preference) |
+
+Deferred is not rejected, failed, blocked or forgotten.
+
+## 21. Defects found and repaired during the build
+
+| # | Defect | Found by | Repair | Regression |
+|---|---|---|---|---|
+| D1 | Several named children: the group's extent was built in household order, not text order (`start > end`) | seeded random corpus | `people.ts` uses min start / max end | invariants test (evidence spans inside the text) |
+| D2 | A capitalised weekday ("and Saturday at 3") was read as the start of a new clause, splitting "Friday and Saturday" | scenario H | `CAPITALISED_NOT_A_NAME` in `clauses.ts` | reader H |
+| D3 | "Ask Sam to…" handoff missed (verb matched case-sensitively) | scenario J/Y | case-tolerant verb group | reader J/Y |
+| D4 | Assumption notes shown for values a pending question was hiding | rendering the view-model tree | no notes while clarifying | golden trees |
+| D5 | Assumptions ("assumed 30 minutes", "assumed today") lost across a clarification, exactly when she needs them at the final review | rendering the view-model tree | `carriedAssumptions`, dropped only when *she* supplies the thing (even if equal to the assumption) | views + coordinator tests |
+| D6 | The UI provider used the wall clock while the store used another: "today" meant two things | render test | injectable `now` on `CaptureProvider` | UI suite |
+| D7 | Render tests hung the runner: the store provider's 60 s interval keeps Node alive | first UI run | every renderer unmounted in `after` | full `npm test` exits by itself |
+| D8 | Clause merging re-scanned the growing accumulated text for every fragment, and the abbreviation check re-read all preceding text at every full stop (quadratic; 597 ms on a desktop for 360 fragments) | adversarial stress run | anchors are tracked as fragments join instead of re-scanned; the abbreviation check looks at the last 12 characters. Worst adversarial input: **35 ms**. | 15 hostile-input timing tests + a scaling test (4× the input must cost < 10×) |
+| D9 | After a discovery conclusion, or when the conversation cannot take a mid-discovery reply, a real errand ("Dentist Friday at 3pm") got a scripted reply instead of being captured | design review of the routing | `capture/routing.ts`: only text the conversation would not have understood *and* the reader recognises is captured; scripted inputs still route to the conversation | routing suite (truth table; every scripted starter/option typed in free text) |
+| D10 | An answer could not change the kind ("actually it's just a to-do"), so scenario V1 was only claimed | scenario review | `kindFromText`, shared by answers and corrections; the question that was open stays open | coordinator V1 |
+
+Findings that are not Feature 02's to fix (recorded for the audit): the permanent `Sheet` backdrop has a label but no
+`accessibilityRole` (MGP-4); the `interpretation` observation vocabulary has no "corrected" outcome (G3).
+
+## 22. Scenarios A–AB
+
+Test locations: **R** = `talkItOutCapture.reader.test.mjs`, **C** = `…coordinator…`, **V** = `…views…`, **U** = `…ui…`.
+All rows below are mechanically asserted. "Render evidence" = golden view-model text tree (V) and the runtime
+screenshots in `docs/feature-02-evidence/` (§23.2).
+
+| # | Class | Fixture (envelope phrasing; other phrasings also tested) | Key assertions (where) | Result |
+|---|---|---|---|---|
+| A | SL | "Dentist Friday at 3pm" | source only after submit; one supported proposal; no needless question; review → accept → one event; provenance lineage (R, C, V, U) | PASS |
+| B | SL | "Dentist next Friday at 3" / "Dentist Friday at 3" said on a Friday | asked, not guessed; candidates a week apart; property-tested for every weekday × a fortnight; anchored to when she said it (R, C) | PASS |
+| C | SP | "Picture day is Thursday, I need to send $20, and I think practice moved to 6." | one source, three independent proposals (R, C) | PASS |
+| D | SL | same | accept one, reject one, leave one; only accepted materialises; unresolved stays active; survives restart (C, V) | PASS |
+| E | SL | "No, I meant next Friday at 4pm" | supersede, v1 keeps original claim, wrong reading can never materialise; typed edit ≡ spoken correction (C, U) | PASS |
+| F | SL | "I think practice moved to 6" | hedge carried as an assumption; badge stays POSSIBLE; never shown as her certainty (R, V) | PASS |
+| G | SL | "asdf qwerty", "I want mornings…" | no fabricated record; source kept unread (R, C) | PASS |
+| H | SP | "Soccer every Tuesday at 4", "Practice moved to 6", "I owe €40", multi-date/amount | explicit unsupported reason; never an `other` bag; typed shape enforced over 2,000 random sentences (R, C) | PASS |
+| I | SL | double / concurrent / post-restart accept | one row, one observation (C, U) | PASS |
+| J | SP+FB | "Jordan will pick up Ayden at 5" | mention ≠ account ≠ accepted; nothing created; review says nothing was recorded (R, C) | PASS (responsibility recording FOUNDATION-BLOCKED, safe) |
+| K | SP | "I owe Jordan $85" / "Jordan owes me $85" | distinct outflow / inflow persisted; no cue → asked or untyped (R, C) | PASS |
+| L | SL | "I want mornings to feel less chaotic" | no forced task, nothing materialised; conversation-topic feelings stay the existing conversation; the rest is kept unread (R, C, routing suite) | PASS |
+| M | SL | resolve everything | source leaves the active inbox; history stays (V) | PASS |
+| N | SL | fresh household | calm empty state; no action, no celebration (V, U) | PASS |
+| O | SL | unreadable / over-window text | no fabricated understanding; nothing read past the window (R, C) | PASS |
+| P | SL | demo household | demo provenance; `refuseDemo`; no real household contamination (C) | PASS |
+| Q | SL | typing / preview vs send | preview writes nothing; send makes one source (C) | PASS |
+| R | SL (OD-1) | kill mid-clarification / mid-review | question regenerates from the durable reading alone; accepted work does not duplicate; unresolved does not vanish; an answer is durable exactly when the reinterpretation is (C) | PASS |
+| S | SL | any flow | the source record is never edited; original wording exactly as sent (C) | PASS |
+| T | SL | hydrating / unreadable store | loading ≠ empty; recovery ≠ nothing waiting (V, U) | PASS |
+| U1–U3 | SL | "Pick him up from practice at 5pm" | two children → question, no row; one child → resolved; accepted row is child-scoped with a real child and validates (R, C, U) | PASS |
+| V1–V3 | SL | answers that pivot / abandon / do not answer | kind-change words honoured; abandoned stays resumable; unresolved after 3 tries, nothing materialises (C) | PASS |
+| W | SL | "Dentist…, send $20, practice moved to 6" | supported items resolve; unsupported one stays explicit and open (R, C) | PASS |
+| X | SL (OD-1) | source saved, readings not | one source, retry in session adds no duplicate; after restart honestly unreadable, dismissible (C) | PASS |
+| Y | SL | unknown person | no person / role / account created (R, C) | PASS |
+| Z | SL | correction changes kind | prior reading never materialises; no orphaned accepted state (C) | PASS |
+| AA | SL | "Dentist Friday at 3pm", left unresolved | urgency rises none→soon→today→now, then stays *passed*; never a confirmed event; typed projection; no Feature 01 coupling (V) | PASS |
+| AB | SL | source was wrong | original untouched; new capture is its own source (C) | PASS |
+
+No scenario is classified DEFERRED-ON-LLM as a whole; the deferred-on-LLM *phrasings* listed in §10 each behave safely.
+
+*(Sections 23–25 — exit gates, git, and verdicts — are appended by the closing commits.)*

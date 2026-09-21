@@ -64,10 +64,10 @@ function residualWords(text: string): number {
  * when it and what precedes it each hold their own date, time or amount and the fragment says
  * something more than a bare time ("Dentist Friday at 3 and practice at 5", but not "at 3 and 4:30").
  */
-function standsAsClause(left: string, right: string): boolean {
-  if (!hasAnchor(left) || !hasAnchor(right)) return false;
+function standsAsClause(leftAnchored: boolean, leftStrong: boolean, right: string, rightAnchored: boolean, rightStrong: boolean): boolean {
+  if (!leftAnchored || !rightAnchored) return false;
   if (startsClause(right)) return true;
-  return strongSpans(right).length > 0 && strongSpans(left).length > 0 && residualWords(right) > 0;
+  return rightStrong && leftStrong && residualWords(right) > 0;
 }
 
 /** A full stop that is part of "p.m.", "Dr.", "Sept." or a decimal is not the end of a sentence. */
@@ -83,7 +83,9 @@ function hardSegments(text: string): Span[] {
     else if (ch === '.' || ch === '!' || ch === '?') {
       const next = text[i + 1];
       const atBoundary = next === undefined || /\s/.test(next);
-      if (atBoundary && !(ch === '.' && PROTECTED_BEFORE_PERIOD.test(text.slice(0, i)))) cut = true;
+      // Only the last few characters decide whether this is an abbreviation; looking at all of the text before it made a
+      // run of full stops quadratic.
+      if (atBoundary && !(ch === '.' && PROTECTED_BEFORE_PERIOD.test(text.slice(Math.max(0, i - 12), i)))) cut = true;
     }
     if (cut) {
       spans.push({ start, end: i });
@@ -118,18 +120,29 @@ function softSegments(text: string, hard: Span): Span[] {
   }
   fragments.push({ start: hard.start + from, end: hard.end });
 
-  // A separator that begins with a word ("and …") belongs to the RIGHT fragment as its lead; it is trimmed off later.
+  // What the accumulated left side holds is tracked as fragments join it and never re-scanned: re-scanning the
+  // growing text for every fragment made this quadratic on a wall of "and"s.
   const merged: Span[] = [];
-  for (let k = 0; k < fragments.length; k += 1) {
-    const frag = fragments[k];
+  let leftAnchored = false;
+  let leftStrong = false;
+  for (const frag of fragments) {
     const fragText = text.slice(frag.start, frag.end);
+    const anchored = hasAnchor(fragText);
+    const strong = strongSpans(fragText).length > 0;
     if (merged.length === 0) {
       merged.push(frag);
-      continue;
+      leftAnchored = anchored;
+      leftStrong = strong;
+    } else if (standsAsClause(leftAnchored, leftStrong, fragText, anchored, strong)) {
+      merged.push(frag);
+      leftAnchored = anchored;
+      leftStrong = strong;
+    } else {
+      const left = merged[merged.length - 1];
+      merged[merged.length - 1] = { start: left.start, end: frag.end };
+      leftAnchored = leftAnchored || anchored;
+      leftStrong = leftStrong || strong;
     }
-    const left = merged[merged.length - 1];
-    if (standsAsClause(text.slice(left.start, left.end), fragText)) merged.push(frag);
-    else merged[merged.length - 1] = { start: left.start, end: frag.end };
   }
   return merged;
 }

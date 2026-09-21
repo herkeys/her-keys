@@ -467,6 +467,62 @@ describe('reader-level scenarios', () => {
   });
 });
 
+// ------------------------------------------------------------ cost on hostile input ---
+
+describe('cost: a phone must never freeze on a pasted wall of text', () => {
+  // Inputs built to provoke catastrophic backtracking or quadratic re-scanning, at the full 4,000-character window.
+  const HOSTILE = {
+    'one long word': 'a'.repeat(4000),
+    'digits': '9'.repeat(4000),
+    'dollar signs': '$'.repeat(4000),
+    'colons': '3:'.repeat(2000),
+    'dashes': '3-'.repeat(2000),
+    'slashes': '1/2/'.repeat(1000),
+    'many "at"': 'at '.repeat(1300),
+    'many "from 3 to"': 'from 3 to '.repeat(400),
+    'many handoffs': 'Jordan will '.repeat(330),
+    'many leads': 'I need to '.repeat(400),
+    'many commas, each a date and time': 'tomorrow at 3pm, '.repeat(230),
+    'many "and", each a date': 'Friday and '.repeat(360),
+    'many amounts': '$5 or '.repeat(600),
+    'many abbreviations': 'a.m. '.repeat(800),
+    'spaces then a letter': `${' '.repeat(3999)}x`,
+  };
+  // Generous, so a slow CI machine does not make this flaky; the point is to catch a blow-up, not to benchmark.
+  const BUDGET_MS = 400;
+
+  for (const [name, text] of Object.entries(HOSTILE)) {
+    test(`${name} (${text.length} characters) is read, or refused, quickly`, () => {
+      assert.ok(text.length <= PROCESSING_LIMIT_CHARS);
+      const started = performance.now();
+      read(text);
+      const took = performance.now() - started;
+      assert.ok(took < BUDGET_MS, `${name} took ${took.toFixed(0)} ms`);
+    });
+  }
+
+  test('a realistic message at the window is read in well under a tenth of a second', () => {
+    const text = ('Dentist Friday at 3pm. I need to send $20 by Thursday, and I think practice moved to 6. Pick him up from practice at 5. ').repeat(35).slice(0, 3990);
+    const started = performance.now();
+    const result = read(text);
+    assert.ok(performance.now() - started < 100);
+    assert.ok(result.proposals.length > 0);
+  });
+
+  test('cost grows about linearly with the number of clauses, not with its square', () => {
+    const timeFor = (n) => {
+      const text = 'Friday and '.repeat(n);
+      const started = performance.now();
+      for (let i = 0; i < 3; i += 1) read(text);
+      return (performance.now() - started) / 3;
+    };
+    timeFor(40); // warm up
+    const small = Math.max(timeFor(90), 0.05);
+    const large = timeFor(360); // 4x the fragments
+    assert.ok(large / small < 10, `4x the input cost ${(large / small).toFixed(1)}x (a quadratic algorithm costs ~16x)`);
+  });
+});
+
 test('fixed clock sanity: the standard "today" is a Wednesday', () => {
   assert.equal(weekdayOf(context().today), 3);
   assert.equal(context().today, '2026-09-23');

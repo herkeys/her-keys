@@ -306,6 +306,28 @@ describe('U — a child-scoped reading needs the right child before it can be an
     assert.equal(c.state().interpretations[1].state, 'pending', 'she said it is not about a child, so the question is answered');
   });
 
+  test('V1 — an answer can change what kind of thing this is; the question that was open stays open', async () => {
+    const world = await startWorld();
+    await submit(world, 'Pick him up from practice at 5pm'); // an appointment, asking which child
+    const q = world.state().interpretations[0];
+    assert.equal(q.proposedKind, 'event');
+    const out = await world.coordinator.answerClarification(q.id, { kind: 'text', text: "actually it's just a to-do" });
+    assert.equal(out.kind, 'revised');
+    const v2 = world.state().interpretations.find((r) => r.id === out.readingId);
+    assert.equal(v2.proposedKind, 'task');
+    assert.equal(v2.startsAt, null, 'a to-do has no start');
+    assert.equal(v2.state, 'clarifying', 'she changed the kind, she did not say which child');
+    assert.equal(v2.clarification, 'which_child');
+    assert.deepEqual(rows(world.state()), ZERO);
+
+    const answered = await world.coordinator.answerClarification(v2.id, { kind: 'text', text: 'Ayden' });
+    assert.equal(answered.kind, 'revised');
+    assert.equal((await world.coordinator.accept(answered.readingId)).kind, 'accepted');
+    assert.deepEqual(rows(world.state()), { tasks: 1, events: 0, needsMe: 0 }, 'a to-do, not the appointment');
+    assert.equal(world.state().tasks[0].subjectMemberId, AYDEN.id);
+    assert.equal(world.state().interpretations.find((r) => r.id === q.id).state, 'superseded');
+  });
+
   test('V3 — answers she gives that do not answer it leave the reading unresolved, bounded, and never guess', async () => {
     const world = await startWorld();
     await submit(world, 'Pick him up from practice at 5pm');

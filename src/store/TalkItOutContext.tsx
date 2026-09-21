@@ -3,6 +3,7 @@ import { applyDiscoveryConversation, clearDiscovery, freshDiscovery, replayDisco
 import type { DiscoveryRecord } from '../domain/state';
 import { CaptureProvider, useCapture } from '../features/talk-it-out/capture/CaptureContext';
 import { copy } from '../features/talk-it-out/capture/copy';
+import { routeMessage } from '../features/talk-it-out/capture/routing';
 import { advance } from '../features/talk-it-out/engine';
 import type { ClarificationOption, ConversationState, TalkItOutMessage } from '../types';
 import { useAppStore, useHouseholdState } from './AppStateProvider';
@@ -104,14 +105,6 @@ function TalkItOutSession({ children }: { children: ReactNode }) {
     return { id: `msg-${counterRef.current}`, speaker: 'herkeys', stage: 'listen', text };
   }
 
-  /** A first message is a capture when the reader recognises something in it; talk about feelings and patterns stays a conversation. */
-  function isCapture(text: string): boolean {
-    const preview = coordinator.preview(text);
-    if (preview === null) return false; // not loaded: behave exactly as before
-    if (preview.failure?.code !== 'nothing-recognized') return true; // proposals, or something that must be kept and handled carefully
-    // Nothing recognised: the discovery conversation gets first refusal. Only if it has nothing either is the source kept unread.
-    return advance(sessionRef.current.conversation, text).state.topicId === null;
-  }
 
   async function capture(text: string): Promise<SendResult> {
     const outcome = await coordinator.submit({ text, submissionKey: keyRef.current });
@@ -134,7 +127,8 @@ function TalkItOutSession({ children }: { children: ReactNode }) {
     const reply = say(outcome.readingIds.length > 0 ? copy.capture.understood : copy.capture.understoodNothingSafe);
     update({
       ...current,
-      quickReplies: [],
+      // The opening starters give way to the capture; a discovery question that is still open keeps its answers.
+      quickReplies: current.conversation.stage === 'listening' ? [] : current.quickReplies,
       messages: [...current.messages, userMessage, reply],
       captures: [...current.captures, { afterMessageId: reply.id, captureId: outcome.captureId }],
     });
@@ -146,9 +140,22 @@ function TalkItOutSession({ children }: { children: ReactNode }) {
     if (!trimmed) return 'ignored';
 
     const current = sessionRef.current;
-    if (!optionId && current.conversation.stage === 'listening' && isCapture(trimmed)) return capture(trimmed);
-
     const turn = advance(current.conversation, trimmed, optionId);
+
+    // A quick reply is an answer by construction. Free text is routed: capture when the reader recognises something to
+    // save and the conversation would not have taken it as her answer; otherwise it stays the existing conversation.
+    if (!optionId) {
+      const preview = coordinator.preview(trimmed);
+      const route = routeMessage({
+        stage: current.conversation.stage,
+        hasWords: /[A-Za-z0-9]/.test(trimmed),
+        readerAvailable: preview !== null,
+        recognized: preview !== null && preview.failure?.code !== 'nothing-recognized',
+        conversationUnderstood: turn.messages[0]?.stage !== 'unmatched',
+      });
+      if (route === 'capture') return capture(trimmed);
+    }
+
     store.dispatch((state, ctx) => applyDiscoveryConversation(state, ctx, turn.state));
 
     counterRef.current += 1;

@@ -367,6 +367,16 @@ describe('accessibility and hygiene, mechanically', () => {
     for (const old of ['Voice arrives', 'Prototype conversation', 'Voice input', 'Prototype only']) assert.equal(view.includes(old), false, `“${old}” is still in TalkItOutView`);
   });
 
+  test('§71 — the UI creates no household record: it imports no domain mutation and only ever calls the coordinator', () => {
+    const MUTATIONS = /\b(addTask|addEvent|captureNeedsMeItem|acceptInterpretation|rejectInterpretation|proposeInterpretation|supersedeInterpretation|recordArtifact|retractSourceArtifact|correctInterpretation|appendObservation|store\.(dispatch|commit))\b/;
+    for (const file of [...FEATURE_UI, 'app/(app)/life/inbox.tsx']) {
+      assert.doesNotMatch(read(file), MUTATIONS, `${file} reaches past the coordinator into a domain mutation`);
+      assert.doesNotMatch(read(file), /from ['"][^'"]*\/domain\/(tasks|events|needsMe|interpretations|observations)['"]/, `${file} imports a domain mutation module`);
+    }
+    // The one place that writes on the UI's behalf is the coordinator, and it goes through the store's commit.
+    assert.match(read('src/features/talk-it-out/capture/coordinator.ts'), /store\.commit\(/);
+  });
+
   test('the feature uses design tokens only: no hard-coded colour and no second UI vocabulary', () => {
     for (const file of FEATURE_UI) {
       const source = read(file);
