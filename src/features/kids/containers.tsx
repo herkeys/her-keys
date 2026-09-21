@@ -348,7 +348,7 @@ export function AddChildScreen() {
   return (
     <AddChildView
       onSubmit={async (displayName, birthDate) => {
-        // The household may have been bound to an account while this form was open: check again at the moment of saving.
+        // Another account may have signed in while this form was open: check again at the moment of saving.
         if (!canAddChild(store.getSnapshot().identity)) return { ok: false, message: HUB.addChildUnavailable };
         const { committed, result } = await commitKids(store, (s, ctx) => addChildToHousehold(s, ctx, { displayName, birthDate }));
         if (!committed || !result) return { ok: false, message: NOTICE.saveFailed };

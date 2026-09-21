@@ -1,4 +1,4 @@
-import { isUnbound, type IdentityRecord } from '../../domain/account/binding';
+import type { IdentityRecord } from '../../domain/account/binding';
 import { categoriesInOrder, categoryWithRole } from '../../domain/categories';
 import { addChild, checkNewChild, type AddChildRefusal, type NewChildInput } from '../../domain/children';
 import type { TransitionContext } from '../../domain/context';
@@ -73,8 +73,19 @@ export async function commitKids<R extends { state: AppState }>(
 
 // ------------------------------------------------------------------- child ---
 
-/** Adding a child is offered only while the household is not bound to an account (owner checkpoint OC-01). */
-export const canAddChild = (identity: IdentityRecord): boolean => isUnbound(identity);
+/**
+ * Whether a child may be added to this household from here (owner checkpoint OC-01, RESOLVED by the owner: a household bound to an
+ * account MUST be able to add a child).
+ *
+ * A child is added the same way whether the household is bound or not: it is one canonical `Child`, identified by its id. Before
+ * binding it reaches the cloud through the claim; after binding the household's owner creates it through the ordinary sync path.
+ * Kids knows nothing of either. The only household that cannot take a child is one that belongs to a DIFFERENT account than the one
+ * signed in: it is kept, and never rendered, uploaded or merged (B4-P0-035), so nothing is added to it.
+ *
+ * WHO may create a child is the server's decision (only the household's owner), not this screen's: a refusal is kept as sync evidence
+ * and surfaced through the existing "needs attention" signal, never hidden and never retried forever.
+ */
+export const canAddChild = (identity: IdentityRecord): boolean => identity.quarantine === null;
 
 export function addChildToHousehold(state: AppState, ctx: TransitionContext, input: NewChildInput): { state: AppState; outcome: 'added' | AddChildRefusal; childId: string | null } {
   const refusal = checkNewChild(state, input, ctx.today);

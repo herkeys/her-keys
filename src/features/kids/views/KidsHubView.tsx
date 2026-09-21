@@ -10,7 +10,7 @@ import type { ChildCard, KidsView } from '../types';
  */
 export interface KidsHubViewProps {
   view: KidsView;
-  /** Adding a child is offered only while the household is not bound to an account (owner checkpoint OC-01). */
+  /** Whether a child may be added here: true for a household that is bound to an account and for one that is not (owner checkpoint OC-01). */
   canAddChild: boolean;
   onOpenChild: (childId: string) => void;
   onAddChild: () => void;

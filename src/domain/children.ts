@@ -13,9 +13,10 @@ import type { AppState, Child } from './state';
  *   - It does not rename, correct or remove a child. The cloud's `household_members` row is read-only to the client (a local edit would
  *     diverge from it) and removal semantics are deferred (B4-P0-066).
  *   - It does not know about sync. A child added BEFORE the household is bound to an account reaches the cloud through the claim, which
- *     carries every child (claim payload v3). A child added AFTER binding has no cloud identity and no server path
- *     (HK_FEATURE_05_OWNER_CHECKPOINT_01); the caller must not offer this once the household is bound. A pure state transition cannot
- *     see the account, so that gate lives with the screen, using `isUnbound(identity)`.
+ *     carries every child (claim payload v3). A child added AFTER binding reaches it through the ordinary sync path: the change observer
+ *     sees the new `Child`, queues a `member` create, and `sync_push` creates the row for the household's owner
+ *     (HK_FEATURE_05_OWNER_CHECKPOINT_01, RESOLVED). Either way the child is this one canonical record, identified by its id: there is no
+ *     second child model, identity table or queue for it.
  *
  * The child is identified by the id this mints, never by name: two children may share one, and that is allowed.
  */

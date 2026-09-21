@@ -49,9 +49,10 @@ describe('hub', () => {
     for (const banned of [/get organized/i, /stay on top/i, /falling behind/i, /you should/i, /forgot/i]) assert.doesNotMatch(text, banned);
     assert.ok(byLabel(allowed, 'Add a child'));
 
-    const bound = await render(<KidsHubView view={empty} canAddChild={false} onOpenChild={noop} onAddChild={noop} />);
-    assert.equal(byLabel(bound, 'Add a child'), undefined, 'no button that cannot work');
-    assert.match(allText(bound), /isn't available yet/);
+    const otherAccounts = await render(<KidsHubView view={empty} canAddChild={false} onOpenChild={noop} onAddChild={noop} />);
+    assert.equal(byLabel(otherAccounts, 'Add a child'), undefined, 'no button that cannot work');
+    assert.match(allText(otherAccounts), /belongs to another account/);
+    assert.doesNotMatch(allText(otherAccounts), /before you sign in|isn't available yet/, 'a signed-in household is no longer told it cannot add a child');
   });
 
   test('cards: identity, what is next, and only the facts that need her; each is one accessible button', async () => {

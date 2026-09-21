@@ -88,13 +88,26 @@ describe('addChildToHousehold (the step a screen runs)', () => {
   });
 });
 
-describe('the gate: a child is added only while the household is not bound to an account (OC-01)', () => {
-  test('an unbound household may add; a bound one may not', () => {
+describe('who can add a child (OC-01, RESOLVED: a household bound to an account MUST be able to add one)', () => {
+  const binding = { accountId: '11111111-1111-4111-8111-111111111111', householdId: '22222222-2222-4222-8222-222222222222', boundAt: '2026-09-21T15:00:00.000Z', kind: 'claim', idMap: {} };
+
+  test('an unbound household may add, and so may one bound to an account (and one signed out of it)', () => {
     assert.equal(canAddChild(UNBOUND_IDENTITY), true);
-    const bound = {
-      ...UNBOUND_IDENTITY,
-      binding: { accountId: '11111111-1111-4111-8111-111111111111', householdId: '22222222-2222-4222-8222-222222222222', boundAt: '2026-09-21T15:00:00.000Z', kind: 'claim', idMap: {} },
-    };
-    assert.equal(canAddChild(bound), false);
+    assert.equal(canAddChild({ ...UNBOUND_IDENTITY, binding }), true, 'a household bound to an account can add a child');
+    assert.equal(canAddChild({ ...UNBOUND_IDENTITY, binding, receipt: null, sync: null }), true, 'and is not held back by having no sync state yet');
+  });
+
+  test('only a household that belongs to ANOTHER account cannot (it is preserved and never rendered, uploaded or merged)', () => {
+    const quarantined = { ...UNBOUND_IDENTITY, binding, quarantine: { accountId: '33333333-3333-4333-8333-333333333333', detectedAt: '2026-09-21T15:00:00.000Z' } };
+    assert.equal(canAddChild(quarantined), false);
+  });
+
+  test('the same transition adds the same canonical child in every case: no second child model, no identity of its own', () => {
+    const c = makeCtx();
+    const asUnbound = addChildToHousehold(emptyHousehold(), c, { displayName: 'Sam', birthDate: '2018-03-03' });
+    const asBound = addChildToHousehold(emptyHousehold(), makeCtx(), { displayName: 'Sam', birthDate: '2018-03-03' });
+    assert.deepEqual(asUnbound.state.children, asBound.state.children);
+    assert.deepEqual(Object.keys(asBound.state.children[0]).sort(), ['birthDate', 'displayName', 'id', 'scope']);
+    assert.notEqual(asBound.state.children[0].id, asBound.state.user.id, 'a child is never the account user');
   });
 });

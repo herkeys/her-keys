@@ -222,8 +222,8 @@ export const HUB = {
   emptyTitle: 'Your children will show up here',
   emptyBody: 'Add a child and Her Keys can hold their practices, forms and pickups in one place.',
   addChild: 'Add a child',
-  addChildUnavailable:
-    "Children can be added before you sign in. Adding one to a signed-in household isn't available yet.",
+  // Shown only for a household that belongs to a different account than the one signed in (it is kept, never shown or changed).
+  addChildUnavailable: 'This household belongs to another account, so nothing can be added to it here.',
   noRecords: 'Nothing recorded yet.',
   nothingComing: 'Nothing coming up is recorded.',
   unattributed: (n: number) =>
