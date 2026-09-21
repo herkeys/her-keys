@@ -5,6 +5,11 @@ Local only. Nothing is pushed, merged, rebased, squashed or amended. No remote e
 
 Sections marked **(K#)** were written in that phase. Every section is filled; the verdict is in §37 and every gate is recomputed in §36.
 
+> **CLOSEOUT REPAIR (appended, §38).** After §37 the owner RESOLVED owner checkpoint OC-01 ("Her Keys MUST support adding a child after a household
+> has already been bound to an account"). §38 records that repair (new commits, one additive local migration, changed counts, backend and fingerprint
+> evidence, defects, final gates and the final verdict). Nothing above was rewritten; where §18, §19, §22, §29, §30, §34, §35, §36 or §37 say a child
+> cannot be added after binding, or that there is no schema change, **§38 governs** (each of those sections carries a one-line pointer).
+
 ## 1. Source / fork (K0)
 
 See `HK_WAVE2_SOURCE_01.md` for the verified baseline. In one line: the owner replaced the original "certified integrated Wave 1 fork" gate
@@ -217,12 +222,14 @@ How the UI avoids being mistaken for an official authorization record: (1) the s
 
 ## 18. Backend / sync behavior (K6)
 
+*(K6 text. Superseded in part by §38: the closeout repair added one additive LOCAL migration and made `member` a create-only sync kind, so a child added after binding now syncs. The Kids journey grew from 33 to 56 checks.)*
+
 **No new or extended backend representation**: no migration, table, column, RLS policy, sync kind or RPC. Kids writes canonical rows through `store.commit`; the change observer queues them in the same envelope write; the central runtime sends them. Proven against **real local PostgreSQL + PostgREST + the real claim RPC** by `supabase/tests/journey-kids.mjs` (`node supabase/tests/run.mjs kids`: **33 Kids checks**; the standalone run prints 34 because the runner adds its own stack-currency check), every device built by `composeAccountApp`: child identity round trip for two children named Sam (each task/event attributed to the right one by id); default 15 vs user 15 as different cloud rows; an accepted-off-list handoff held by a *person* (not a member); `requires` + `part_of` edges; an edit that confirms 15 turns default into user (revision 2); a second device whose Kids projection is **identical for every child**; archived person → PLAN IN PLACE becomes NEEDS A PLAN on both devices; a 450-task child-linked household (90 each to five children) sent by one sign-in and pulled in bounded requests, projection identical on the second device. Full harness at final HEAD: §36.
 
 ## 19. RLS / security (K6)
 
 Over real PostgREST with valid foreign identifiers, five personas: **unauthenticated** (no read, update, delete or insert on `tasks`, `events`, `responsibilities`, `household_people`, `dependencies`, `household_members`); **unrelated account** holding a valid guessed child id and household id (reads nothing; update/delete match nothing; cannot insert into the family's household; **foreign-key substitution** — a task in its *own* household naming the other family's child — refused with SQLSTATE 23503); **owner** (reads every table; may change her own task); **same-household second member** (reads the household's child tasks, events and children; may edit a household child task; **cannot** read, change or delete the owner-private people, responsibilities and dependencies — a known limit, MP-K-13); and the OC-01 evidence below. The generic RLS suites (`10`, `20`, `30`, `57`) are part of the 800 baseline checks and unchanged.
-**OC-01, measured:** a child added to a bound household directly through the store gets no cloud identity; its task becomes `unresolvable-dependency` evidence and never leaves the device (never mis-attributed to another child); nothing else is blocked (a later task for another child syncs). This is why the UI never offers it.
+**OC-01, measured (K6; RESOLVED at closeout, see §38):** a child added to a bound household directly through the store gets no cloud identity; its task becomes `unresolvable-dependency` evidence and never leaves the device (never mis-attributed to another child); nothing else is blocked (a later task for another child syncs). This is why the UI never offered it. That measurement is what showed the repair needed a server path.
 
 ## 20. Offline / restart (K6)
 
@@ -255,7 +262,7 @@ Tier 3 — conditional (not manufactured): BC pickup-authority — **SAFE-UNAVAI
 
 ## 22. Mutation / test-the-test evidence (K7)
 
-`scripts-dev/f05-mutation-check.cjs` (committed, re-runnable): 23 single-line mutants, the file restored byte for byte after each. Six are the plan's required ones, all **CAUGHT**: child identity (K-M1 first child instead of the chosen one; **S-M1/S-M2 drop a child's identity going to and coming from the cloud, judged by the real-database journey**), duration provenance (K-M2 default 15 → user 15; K-M3 an untouched edit upgrades to hers), dependency truth (K-M13 removed prerequisite read as satisfied), responsibility (K-M8 an unanswered request read as covered; K-M9 accepted-still-yours as covered; K-M5 accept with no explicit answer), fallback readiness (K-M11 nothing recorded as PLAN IN PLACE; K-M14 a step turns the plan green), removed fallback person (K-M10 an archived person still counts, so PLAN IN PLACE survives). Also caught: unknown child accepted (K-M6), the "not linked" list dropping adult-subject tasks (K-M18), colliding names ignored (K-M19), copy claims (K-M21/K-M22), holder filed as someone else's (K-M17), invented urgency (K-M15), household-boundary guard (K-M16), child added while bound (K-M7), stale guard (K-M4), DST gap (K-M20). Result at final HEAD: §36.
+`scripts-dev/f05-mutation-check.cjs` (committed, re-runnable): 23 single-line mutants, the file restored byte for byte after each. Six are the plan's required ones, all **CAUGHT**: child identity (K-M1 first child instead of the chosen one; **S-M1/S-M2 drop a child's identity going to and coming from the cloud, judged by the real-database journey**), duration provenance (K-M2 default 15 → user 15; K-M3 an untouched edit upgrades to hers), dependency truth (K-M13 removed prerequisite read as satisfied), responsibility (K-M8 an unanswered request read as covered; K-M9 accepted-still-yours as covered; K-M5 accept with no explicit answer), fallback readiness (K-M11 nothing recorded as PLAN IN PLACE; K-M14 a step turns the plan green), removed fallback person (K-M10 an archived person still counts, so PLAN IN PLACE survives). Also caught: unknown child accepted (K-M6), the "not linked" list dropping adult-subject tasks (K-M18), colliding names ignored (K-M19), copy claims (K-M21/K-M22), holder filed as someone else's (K-M17), invented urgency (K-M15), household-boundary guard (K-M16), child added while bound (K-M7), stale guard (K-M4), DST gap (K-M20). Result at final HEAD: §36. *(At closeout K-M7 was retargeted, K-M23 and 14 new mutants were added — 38 in all, every one caught: §38.9.)*
 
 ## 23. Defects found / repaired
 
@@ -309,6 +316,8 @@ Kids stores **no new field**; every row it writes is an existing canonical row. 
 
 ## 29. Test accounting
 
+*(Figures at the original close. The closeout repair's recomputed figures — suite 1203, Kids 204, harness 927 — are in §38.7.)*
+
 | | Before (baseline `14bd58e`) | After (final HEAD) |
 |---|---|---|
 | Application suite | 975 tests / 207 suites | **1176 tests / 252 suites**, 0 fail, 0 skipped |
@@ -318,6 +327,8 @@ Kids stores **no new field**; every row it writes is an existing canonical row. 
 
 **Inherited tests affected — every one classified:** `build3Audit.capture.test.mjs` "every Life screen with a task list is wired to its role…" — **REWRITTEN** (one assertion, rationale in the test comment and §3: its intent — every open kids-category task stays reachable from the Kids screen — is preserved and now proven by `tests/kids/reachability.test.mjs`; the file it pinned, `KidsOverview.tsx`, was REPLACED). Every other inherited test — `routeAccess`, `categories`, `designIndependence`, `tokenBoundary`, `productionWiring`, `foundationAcceptance2`, `claimPayload`, `persistence`, `appStore`, `hostileAudit`, `ingestionReasoning`, `migrationV3ToV4`, the design-system tests and the whole 975 — **PRESERVED**, unmodified, and green. None was deleted, weakened or skipped.
 ## 30. Schema / fingerprint (K1)
+
+*(K1 text. Superseded by §38.5: the closeout repair applied one additive LOCAL migration; fingerprint `43e7c8a4…`/3617 → `8bf3c7c6…`/3621, exactly three dimensions.)*
 
 **No schema change.** Fingerprint stays `43e7c8a4402a3387cb2e1add4170921e` / 3617 (the certified value at this baseline). No owner-approved schema change occurred.
 
@@ -345,11 +356,11 @@ Shared common foundation is read-only by default. Every change outside `src/feat
 **Expected: ZERO. Result: ZERO** (`tests/kids/boundaries.test.mjs`, run in the suite, and re-checked at the end by grep, §36): no import of `feature/06`, `feature/07`, `feature/08`, `features/home|meals|coparent|people|life-admin`, `talk-it-out`, `today`, `calendar`, `systems`, `daily-load` or `one-move`; the only feature Kids imports from is `life` (`openTaskLabel`, the machinery the inherited screen already used); no sync mechanism, provider, network or model SDK; no `KidTask` / `KidEvent` / `KidCalendarEntry` / `KidResponsibility` / `KidDependency` / `KidDuration` or second Child model is declared.
 ## 34. Owner checkpoints encountered (K1)
 
-**OC-01** — creating a child after account binding: proposal written, **nothing built**, rest of Feature 05 continues (`HK_FEATURE_05_OWNER_CHECKPOINT_01.md`).
+**OC-01** — creating a child after account binding: proposal written, **nothing built**, rest of Feature 05 continues (`HK_FEATURE_05_OWNER_CHECKPOINT_01.md`). **RESOLVED by the owner and built in the closeout repair (§38); no owner checkpoint remains for Feature 05.**
 
 ## 35. Considered / deferred
 
-* **Adding a child to an already-signed-in household** — OC-01 (owner). Not offered; measured evidence in §19.
+* **Adding a child to an already-signed-in household** — OC-01 (owner). *At K8: not offered; measured evidence in §19. RESOLVED and built at closeout (§38).*
 * **A distinct backup person** (someone other than the normal holder) — MP-K-02; needs a "fallback for" relation. **Interpretation stated for the owner:** the three readiness labels describe whether the *recorded arrangement* holds (PLAN IN PLACE = a live holder who is an active person accepted it and marked it off her list). If the owner meant a second, independent person, that is a new durable semantic and was not faked.
 * **Child rename / correct / archive** (MP-K-04, MP-K-05): the cloud member row is read-only to the client.
 * **A People screen** (list, edit, archive, contact): People OS. Kids has one inline "someone new" (name + relationship).
@@ -359,6 +370,8 @@ Shared common foundation is read-only by default. Every change outside `src/feat
 * **Foundation observations, not changed (shared files):** MP-K-09 (`attentionFor` risk counts `acknowledged` as handled), MP-K-16 (`needsMePersonally` ignores an archived holder).
 
 ## 36. Exit gates (recomputed at the final code state, one process at a time)
+
+*(The gates of the ORIGINAL close, at `e2603c6`. The closeout repair recomputed every gate at its own final code state: §38.11.)*
 
 Final HEAD = the commit carrying this ledger (`git log -1 --format=%H`); `git diff --stat 99c757f HEAD -- src app supabase tests scripts-dev` is empty, so every gate below ran against the code at the final HEAD. Branch `feature/05-kids-os`; `git status` clean.
 | Gate | Result |
@@ -386,6 +399,8 @@ Final HEAD = the commit carrying this ledger (`git log -1 --format=%H`); `git di
 | Device / visual validation | **NOT EXECUTED — ENVIRONMENTAL LIMITATION** (§31) |
 
 ## 37. Final verdict
+
+> *This is the verdict as it stood at the end of the original build (HEAD `e2603c6`). It is SUPERSEDED by the closeout repair's verdict in §38.14: OC-01 is resolved and no owner checkpoint remains.*
 
 **HK-FEATURE-05-KIDS = PASS WITH DOCUMENTED DEBT**
 **READY FOR INDEPENDENT FEATURE 05 AUDIT = YES**
@@ -417,3 +432,195 @@ The debt: device evidence not executed (§31); one owner checkpoint open (OC-01,
 18. **Sibling imports?** None.
 
 *Replacement-floor note.* This ledger concludes only that the **approved Feature 05 build contract was implemented**. Whether that is sufficient market coverage against family-organizer products is an owner product judgment.
+
+---
+
+## 38. Closeout repair — adding a child after account binding (OC-01 RESOLVED)
+
+*Appended after §37. Nothing above was rewritten; where an earlier section says a child cannot be added after binding, or that there is no schema change, this section governs. Everything is local: nothing was pushed, merged, rebased, squashed or amended, no PR was opened, no remote Supabase, Staging or Production was touched, and no sibling Wave 2 branch was disturbed.*
+
+### 38.1 The decision and the rules it came with
+The owner resolved OC-01: **a household bound to an account MUST be able to add a child**, on the EXISTING household-member / child identity model — no second child model, Kids-specific identity table, feature-specific Supabase persistence path, separate sync queue, duplicate household-member abstraction or new account/user identity system. Authority: the account-bound household **owner** only; existing RLS and security preserved. Preferred path: *feature action → canonical store mutation → existing change observer → existing sync → existing household/member backend semantics* — Kids must not know how account sync is implemented. A migration, if genuinely required, is **local only** with old and new fingerprints recorded. The repair was to be the smallest correct one, without redesigning Kids, cleaning unrelated debt or merging siblings.
+
+### 38.2 Commits (local only; the branch was never pushed)
+| Commit | What |
+|---|---|
+| `e2603c6` | **starting HEAD** — the original close (code last changed at `99c757f`) |
+| `c22ecdf` | the additive local migration, the SQL security suite (`77`), the harness pins, the new fingerprint baseline |
+| `3cabe87` | shared sync support (a child is a create-only `member` kind; the pull adopts its own row) and the one-character name-cleaner repair (D-K9), with their tests |
+| `bd1fe91` | Kids offers add-a-child to a household bound to an account |
+| `403d19e` | the real-database journey (post-bind child, refusal, RLS attack matrix) and the new mutants |
+| `f77d084` | pins that a household bound to an account is offered "Add a child" through the same hub view (the last code/test commit) |
+| this documentation commit (`git log -1`) | this ledger, the owner-checkpoint resolution, the register and the backend-doc notes |
+Source diff since `e2603c6`: **10 files, +90 / −34 in `src` and `app`; 24 files, +1728 / −69 in total, tests, harness and docs included** (`git diff --stat e2603c6 HEAD -- src app`).
+
+### 38.3 What inspection found before anything was built
+* `household_members` is **SELECT-only** to `authenticated` (no INSERT/UPDATE/DELETE grant, exactly one policy). Its rows were created by `bootstrap_account` and `claim_local_household`, both `SECURITY DEFINER`.
+* `sync_push` is `SECURITY INVOKER` **on purpose** (B4-P0-025; `74-sync-push.sql` asserts it), so it can only write what the caller may write, and its allow-list did not name `household_members`.
+* A claim runs **once per account** (`superseded_by_cloud` afterwards), so it cannot carry a later child.
+* Client side, `member` was a *mapping-only* kind: nothing observed `AppState.children`, so a child added after binding got no intent, no queue item and no mapping, and a task naming it became `unresolvable-dependency` evidence (measured at K6).
+* **Existing schema and sync kinds therefore did NOT suffice:** a server path was genuinely required, and it is the only server change made.
+* One hazard the trace found before it could ship: `applyMembers` (the pull) treated a child whose local id it already held as "taken" and minted a **second** local child. Once a device creates children, a lost acknowledgement plus the coordinator pulling *before* it pushes would have duplicated the child. Repaired (D-K10).
+
+### 38.4 What was built (the minimum)
+Full description, the authority table and the differences from the proposal: `HK_FEATURE_05_OWNER_CHECKPOINT_01.md`. In short:
+* **Backend** — `supabase/migrations/20260921190000_f05_add_child_after_binding.sql` (one function, one replaced function; LF-pinned; local only).
+* **Shared sync** — `syncTypes.ts` (`member` is a create-only pushed kind, rank 0, table `household_members`, no updatable columns), `syncKinds.ts` (`member` ↔ `children`), `projection.ts` (exactly what a person states about a child), `pullEngine.ts` (matched by cloud id; own-row adoption; the `MEMBER_TABLE` special case is now the ordinary table→kind map). The change observer, bridge, queue, coordinator, transport and claim seam are **unchanged**.
+* **Kids** — `canAddChild` lifted (`identity.quarantine === null`), one unavailable-notice string reworded, comments. No screen, tab, control, route or design was added.
+* **Shared repair (D-K9)** — `src/domain/account/claim.ts`, one character.
+* **Not touched:** `state.ts`, the store, `composeAccountApp`, RLS, grants, the schema of any table, `app.json`, the design system, the tab shell, `attentionFor` (MP-K-09) and `needsMePersonally` (MP-K-16).
+
+Shared-file changes since the original §32 (each with why): `src/domain/sync/{syncTypes,syncKinds,projection,pullEngine}.ts` (the minimum shared sync support above); `src/domain/account/claim.ts` (D-K9); `src/domain/children.ts` (comment only); `supabase/migrations/20260921190000_…sql` (NEW); `supabase/tests/run.mjs` (the migration list, ENV A/C/D, stack currency, quality checks), `supabase/tests/77-f05-child-after-binding.sql` (NEW), `supabase/tests/journey-composition.mjs` (`gate.loseAck`, additive), `.gitattributes` (LF pin), `supabase/tools/{README.md,baselines/f05-local-fingerprint.json}`; tests `foundationSpecs`, `hk-ir01/changeBridge`, `hk-ir01/syncComposition` (extended, none weakened); docs `HK_INTEGRATION_READINESS_01_BACKEND.md` (two supersession notes).
+
+### 38.5 Backend and schema evidence
+**Fingerprint (the shared LOCAL database, read-only measurement, `supabase/tools/schema-fingerprint.mjs`):**
+| | Gating digest | Facts |
+|---|---|---|
+| **Old** — IR01 baseline, measured on the shared database immediately before the migration reached it | `43e7c8a4402a3387cb2e1add4170921e` | 3617 |
+| **New** — measured on the same database after it | `8bf3c7c6367c06b79128eb83147fd17e` | 3621 |
+
+Exactly **three** dimensions differ and every one is intended: `functions` 27 → 28 (the new `private.push_household_child`, and the body digest of `public.sync_push`), `privileges.effective` 309 → 310 (`authenticated` EXECUTE on the new function), `privileges.functions` 53 → 55 (its two EXECUTE entries: `authenticated` and the owner). **No unexplained drift:** an item-level diff on two disposable databases (IR01 schema vs IR01 + F05) lists exactly those lines and nothing else (3610 → 3614 facts there; the shared stack carries seven more facts of its own, unchanged). Columns, constraints, indexes, policies, triggers, relations and every other privilege dimension are byte-identical. The new baseline is `supabase/tools/baselines/f05-local-fingerprint.json`; the shared database verifies against it (`MATCH`).
+
+**Migration hashes (SHA-256):** baseline `81909daa…` (CRLF working tree) / `8bc38d66…` (LF blob) — unchanged; shipping `1e9169de…` (working tree) — unchanged; IR01 `73db6639…` — unchanged; **F05 `21cdfe20…` (LF)**. `git diff e2603c6 HEAD -- supabase/migrations` contains only the new file.
+
+**Applied to:** the shared LOCAL database only (`supabase_db_Her_Keys`, by the harness's stack-currency step) and to disposable `b4_env_*` databases. Not to Staging, Production or any remote project.
+
+**Harness (real local PostgreSQL, run alone):** ENV A/C apply all three migrations; **ENV D upgrades a POPULATED database in place** (2 households, 5 members, 4 tasks, …): nothing lost, nothing rewritten (member and task digests equal before and after), the v2 claim still replays to the same answer, the owner can then add a child, an unrelated account is refused, the fail-closed assertion still passes; the static quality checks pin the migration as additive (no table/column/constraint/index/policy/table-grant change), exactly two functions, LF, and ending in the fail-closed assertion; the harness now expects exactly three migrations.
+
+### 38.6 The 20 required scenarios
+"Journey" = `supabase/tests/journey-kids.mjs` against real PostgreSQL/PostgREST; "Composition" = `tests/hk-ir01/syncComposition.test.mjs` (the production composition against a model cloud); "SQL" = `77-f05-child-after-binding.sql`; "Bridge" = `tests/hk-ir01/changeBridge.test.mjs`.
+| # | Scenario | Result | Proven by |
+|---|---|---|---|
+| 1 | add a child before binding | PASS | Journey §1 (Sam, Sam, Josie built through the Kids mutations); Composition "1-3" |
+| 2 | bind the account | PASS | Journey "signing in claims the household that Kids built"; Composition "1-3" |
+| 3 | the same child survives the claim | PASS | Journey "both children called Sam…", "Josie keeps her EXACT name…"; Composition "1-3" (no ordinary create is sent for a claimed child) |
+| 4 | add a different child after binding | PASS | Journey "a child added AFTER binding is one ordinary child row…"; Composition "4, 10, 12"; SQL 1, 1b |
+| 5 | restart | PASS | Journey "after a restart the old and the new children all remain…"; Composition "5, 6" |
+| 6 | both remain | PASS | the same checks (ids compared before and after; one row each; nothing created twice) |
+| 7 | a second device hydrates both | PASS | Journey "a SECOND device hydrates the new child…" and "the Kids projection is identical on both devices for every child"; Composition "7, 11"; SQL 2, 2b |
+| 8 | duplicate names stay separate | PASS | Journey "a THIRD child called Sam…"; Composition "8"; SQL 3d, 3e |
+| 9 | rename preserves identity | PASS — *a server-side rename* | Journey "a rename made on the server is the SAME child on both devices"; Composition "9"; pull-engine unit tests. **No client rename exists (MP-K-05), so the invariant is proved for the only rename that can happen: one made where the child is held.** |
+| 10 | create a child task after post-bind creation | PASS | Journey (task attributed by identity in PostgreSQL); Composition "4, 10, 12"; SQL 8 |
+| 11 | the second device maps the task to the right child | PASS | Journey (task and event name `late` on device B); Composition "7, 11" |
+| 12 | create a child event after post-bind creation | PASS | Journey; Composition "4, 10, 12" |
+| 13 | offline post-bind creation | PASS | Journey "a child added OFFLINE…" and "…survives a restart while offline"; Composition "13, 14" |
+| 14 | reconnect syncs exactly once | PASS | Journey "on reconnect the child is created EXACTLY once (one row, one send)" and "a LOST acknowledgement settles on the SAME child"; Composition "13, 14" and "14" |
+| 15 | a server-refused child write | PASS | Journey "the SERVER refuses a child from a household member who is not its owner (real 42501)…"; Composition "15, 16"; SQL 4 |
+| 16 | the refused row is not resent forever | PASS | Journey "…sent ONCE and never again, and the refused child is not silently deleted"; Composition "15, 16"; Bridge "a child whose CREATE ended as evidence is not owed again" |
+| 17 | an account switch does not leak the child | PASS | Journey "account switching…"; Composition "17" |
+| 18 | an unrelated-account RLS attack fails | PASS | Journey RLS matrix (anon, unrelated account, non-owner member, the owner's direct writes, the private schema); SQL 2c, 2d, 4b–4f, 7 |
+| 19 | a foreign household / member id attack fails | PASS | Journey "stating another household's child id (and a forged revision)…"; SQL 4d, 5f, 5g |
+| 20 | demo / local-only stays local | PASS | Journey "a DEMO household and a household that was never signed in…"; Composition "20"; Bridge (observer) |
+
+Identity invariants, each pinned: identity is the id and never the name (pull-engine "hydration never matches by NAME", mutant S-N3); identical names are allowed (#8); a rename never creates a child (#9); restart, reconnect and second-device hydration never duplicate (#5–#7, #14, mutant S-N6); tasks and events keep pointing at the right child (#10–#11); a refusal stays truthful and inspectable and is not retried (#15–#16); no relationship is inferred from a matching name; the child never becomes an account user (SQL 5, 5c; `children.test`).
+
+### 38.7 Test accounting (recomputed at the final code state)
+| | Before this repair (`e2603c6`) | After |
+|---|---|---|
+| Application suite | 1176 tests / 252 suites | **1203 tests / 255 suites, 0 fail, 0 skipped** |
+| Kids suite (`tests/kids`) | 201 | **204** (the one gate test became three, and the hub test AW2 is new; the AW hub test was reworded) |
+| Shared sync / repair tests run together (`hk-ir01`, `foundationSpecs`, `foundationRoundtrip`, `syncEngine`, `claimPayload`, `accountRuntime`) | — | **340 / 340** |
+| Backend harness (`run.mjs`, real PostgreSQL, alone) | 833 | **927 / 927** (+94: SQL 77 = 53 checks; Kids journey 33 → **56**; ENV A +5; ENV D +8; static migration quality +4; stack currency +1) |
+| Kids mutation check | 23 | **38 caught, 0 survived, 0 broken** (23 original, K-M23, and 14 new) |
+| Inherited tests changed | | `changeBridge` (kind inventory 28 → 29 kinds / 26 → 27 pushed; extended), `foundationSpecs` (the reference-graph test now includes links to `member`; strictly stronger), `children.test` and `views.test` (the old "a bound household may NOT add" pins were replaced on purpose by the owner's decision; K-M7 was retargeted and K-M23 added so both edges stay guarded). **None deleted, skipped or weakened.** |
+
+### 38.8 Security: who can do what (proved against real PostgreSQL / PostgREST)
+The owner adds a child; a second member, an unrelated account, an unauthenticated caller, a foreign household id and a foreign member id all fail or are harmless; the owner has **no direct write** to `household_members` (insert, rename and erase are refused); the `private` function is unreachable over PostgREST (`PGRST106`) and, called directly in SQL, refuses a non-owner and an unrelated account; a child cannot be handed an account, a role, another scope or an adult type; a valid foreign member id stated in the caller's own household makes a NEW row and leaves the foreign child untouched; the 20-child bound holds per household; `sync_push` is still `SECURITY INVOKER`; `household_members` still has exactly one policy (SELECT). No service-role credential is in client code (the only occurrence in `src` is a comment in `src/config/supabase.ts` saying it must never reach the client; the journey's clients hold the public anon key plus a user JWT). Secret scan of every line added since the fork: **0 hits in 9,703 lines**.
+
+### 38.9 Mutation results (`scripts-dev/f05-mutation-check.cjs`, one process at a time, clean tree, files restored byte for byte)
+**38 caught, 0 survived, 0 inconclusive, 38 mutants**, each file restored byte for byte, the tree clean before and after. The 23 original mutants (including the six the plan required and S-M1/S-M2, judged by the real-database journey) are all still present and all still CAUGHT; K-M7 was **retargeted** (its old meaning, "a child may be added to a bound household", is now the owner's decision) and K-M23 added so both edges of the gate stay guarded. **The five new mutants the closeout required are S-N1, S-N2, S-N3, S-N4 and S-N5.** TypeScript mutants are judged by the sync composition and bridge tests; the SQL ones (a line of the migration) by the SQL security suite in a disposable database.
+
+| Mutant | Guards | What is broken | Verdict |
+|---|---|---|---|
+| K-M1 | child identity | a created task is attached to the FIRST child instead of the one chosen | CAUGHT (2 failing) |
+| K-M6 | child identity | a child that is not in this household is accepted as a subject | CAUGHT (3 failing) |
+| S-M1 | child identity (sync out) | the sync projection drops a task's child on the way to the cloud | CAUGHT (17 failing) |
+| S-M2 | child identity (sync in) | the pull drops a task's child on the way back from the cloud | CAUGHT (3 failing) |
+| K-M18 | reachability / AB | the "not linked to a child" list drops tasks that name the adult | CAUGHT (2 failing) |
+| K-M19 | colliding names | two children with the same name are no longer treated as colliding | CAUGHT (5 failing) |
+| K-M2 | duration provenance | a DEFAULT 15 is recorded as USER 15 at creation | CAUGHT (2 failing) |
+| K-M3 | duration provenance | an edit that never touched the length upgrades it to hers | CAUGHT (1 failing) |
+| K-M22 | duration provenance (copy) | a default length is worded as if she gave it | CAUGHT (3 failing) |
+| K-M13 | dependency truth | a REMOVED prerequisite is read as satisfied (ready) | CAUGHT (3 failing) |
+| K-M8 | responsibility | a request nobody has answered is read as COVERED | CAUGHT (3 failing) |
+| K-M9 | responsibility | accepted-but-still-needs-me is read as COVERED | CAUGHT (2 failing) |
+| K-M5 | responsibility | accepting with no explicit answer to "still needs you?" is allowed (the foundation defaults it to covered) | CAUGHT (1 failing) |
+| K-M17 | responsibility | a handoff to an archived person is filed under "someone else has it" | CAUGHT (1 failing) |
+| K-M21 | responsibility (copy) | accepted-but-still-yours is worded as off her list | CAUGHT (2 failing) |
+| K-M11 | fallback readiness | nothing recorded is read as PLAN IN PLACE | CAUGHT (4 failing) |
+| K-M10 | removed fallback person | a person who has been ARCHIVED still counts as available, so PLAN IN PLACE survives | CAUGHT (2 failing) |
+| K-M14 | fallback readiness | creating a step to sort a gap out turns the plan green | CAUGHT (2 failing) |
+| K-M15 | shared attention | Kids invents its own urgency for a shared attention item | CAUGHT (2 failing) |
+| K-M16 | household boundary | a request for another household is answered with this one's children | CAUGHT (3 failing) |
+| K-M7 | account gate (OC-01) | a child may be added to a household that belongs to ANOTHER account (quarantined) | CAUGHT (1 failing) |
+| **K-M23** | account gate (OC-01) | the old gate comes back: a child cannot be added to a household bound to an account | CAUGHT (1 failing) |
+| K-M4 | stale editor | a stale editor overwrites a newer version | CAUGHT (3 failing) |
+| K-M20 | time / DST | a time inside the spring-forward gap is no longer reported | CAUGHT (3 failing) |
+| **S-N1** | post-bind child write | a child added after binding is never queued: its create is not an allowed operation | CAUGHT (17 failing) |
+| **S-N1b** | post-bind child write | the change bridge cannot see the household's children, so a new one is never observed | CAUGHT (14 failing) |
+| **S-N2** | child id round trip (out) | the child's local id changes on its way to the cloud | CAUGHT (7 failing) |
+| **S-N2b** | child id round trip (in) | the pull gives a child it already knows a NEW local id | CAUGHT (8 failing) |
+| **S-N3** | hydration identity | hydration matches an incoming child to a local one by NAME instead of by id | CAUGHT (4 failing) |
+| **S-N4** | authority (SQL) | the function no longer checks that the caller OWNS the household: a member, or an unrelated account calling it, can add a child | CAUGHT (5 failing) |
+| **S-N4b** | authority (SQL) | sync_push no longer checks household membership before the child is written | CAUGHT (2 failing) |
+| **S-N5** | second device hydration | a second device applies children only while it holds none, so a newly created child never arrives | CAUGHT (7 failing) |
+| **S-N6** | lost acknowledgement | the pull does not adopt a child this device created, so a lost acknowledgement makes a duplicate child | CAUGHT (2 failing) |
+| **S-N7** | dependency order | a child ranks AFTER the work that names it, so a task is sent before its child has a cloud id | CAUGHT (10 failing) |
+| **S-N8** | no child mapped to the account holder (SQL) | the collision probe also matches the account holder's own member row, so a child can be reported as "already created" and mapped to the adult | CAUGHT (1 failing) |
+| **S-N9** | child bound (SQL) | the 20-child bound is gone (200) | CAUGHT (2 failing) |
+| **S-N11** | child name across the boundary | the name cleaner loses its backslash again: `/s+/` turns every letter s into a space ("Josie" -> "Jo ie") | CAUGHT (3 failing) |
+| **S-N10** | server-owned columns (SQL) | the function accepts columns a client must not state (an account, a role) instead of refusing them | CAUGHT (3 failing) |
+
+### 38.10 Defects found and repaired
+| ID | Sev | Found how | What | Repair |
+|---|---|---|---|---|
+| **D-K9** | **P1** | the real-database journey, on the first post-bind child named "Ack lost" (the cloud stored "Ack lo t") | `cloudDisplayName` in `src/domain/account/claim.ts` (shared, from IR01) had `.replace(/s+/g, ' ')` — **no backslash — so every letter `s` in a child's name became a space**: "Josie" → "Jo ie" in the claim payload and, because the pull updates a known child from the cloud row, it would then have **overwritten the name on the device**. The function had no test at all and no earlier journey used a name with a lowercase s. Introduced with the function itself, in commit `66c5440` (IR3, which rewrote `claim.ts`), and live from then until `3cabe87` | one character (`/\s+/g`); unit tests of the cleaner and of the member projection, a composition test, a journey check on "Josie", mutant S-N11 |
+| **D-K10** | P2 | tracing `applyMembers` before building | a child this device created whose acknowledgement was lost would be pulled back and minted as a **second** local child | the pull ADOPTS a row this device created (own device id, local child held, mapping free) and settles its pending create; mutant S-N6; Composition "14"; pull-engine unit tests; Journey "a LOST acknowledgement…" |
+| D-K11 | P4 | while extending the graph test | the reference-graph test excluded links to `member` ("claim-only, never pushed"), which would have let a wrong rank for a child pass | now included; mutant S-N7 |
+| — | test tooling | first journey run | my "settled" helper demanded *no* unresolved evidence, but device A legitimately keeps the refused task from §5 as evidence | measured against that known baseline; not a product defect |
+| — | environment | while running the journey | after the Docker Desktop hang, Windows could not reach the Her Keys stack's published port (54321) although the containers were healthy | restarted **only** `supabase_kong_Her_Keys` (this project's gateway, stateless, no database or session touched, no other harness running); nothing else was stopped |
+Not fixed on purpose (out of scope): MP-K-09 (`attentionFor` treats `acknowledged` as handled) and MP-K-16 (`needsMePersonally` around an archived holder). Neither is regressed by this repair (the Kids projection tests that pin them pass unchanged).
+
+### 38.11 Gates at the final HEAD (recomputed; one process at a time; nothing reused from the original close)
+Final code commit = `f77d084`. Every later commit is documentation only (`git diff --stat f77d084 HEAD -- src app supabase tests scripts-dev` is empty), so each gate below ran against the code at the final HEAD. Branch `feature/05-kids-os`.
+| # | Gate | Result |
+|---|---|---|
+| 1 | TypeScript (`tsc --noEmit`, `--max-old-space-size=1600`) | **exit 0**, no diagnostics |
+| 2 | Full application suite (serial) | **1203 tests / 255 suites, 1203 pass, 0 fail, 0 skipped** (was 1176 / 252) |
+| 3 | Feature 05 suite (`tests/kids`) | **204 tests, all pass** (was 201) |
+| 4 | Shared / inherited tests on this path (`hk-ir01`, `foundationSpecs`, `foundationRoundtrip`, `syncEngine`, `claimPayload`, `accountRuntime`) | **340 / 340 pass** — inside the 1203 above, and run separately |
+| 5 | Full backend harness (`node supabase/tests/run.mjs`, real local PostgreSQL + PostgREST, run alone, no other session's harness live, `pg_stat_activity` idle) | **927 / 927 checks** (exit 0) (was 833) |
+| 6 | Kids real-DB journey including the POST-BIND child (`journey-kids.mjs`, inside 5; `node supabase/tests/run.mjs kids` alone: 58 = 56 + the two stack-currency checks) | **56 / 56** |
+| 7 | RLS / security, positive and negative | SQL suite `77`: **53 / 53** in a disposable database; the journey's RLS matrix: **15 / 15** `kids: RLS` checks over real PostgREST |
+| 8 | Kids mutation suite | **38 caught, 0 survived, 0 broken** (§38.9) |
+| 9 | Inherited IR01 mutation suite (`ir01-mutation-check.cjs`) | **35 caught, 0 survived, 0 broken** |
+| 10 | Secret / privacy scan (every line added since the fork `14bd58e`, at `f77d084`) | **0 hits in 9,703 added lines**; no `service_role` in client code beyond an existing comment |
+| 11 | Sibling-import scan | **ZERO** (the only cross-feature import is the inherited `life/openTaskLabel`, in the K6-rewritten audit test) |
+| 12 | Schema fingerprint of the shared LOCAL database against the new baseline | **`8bf3c7c6367c06b79128eb83147fd17e` / 3621 — MATCH** (measured on the shared database after the final harness run; it also matches the fresh-database result and differs from the IR01 baseline in exactly the three intended dimensions) |
+| 13 | Migration SHA-256 | baseline `81909daa…`/`8bc38d66…`, shipping `1e9169de…`, IR01 `73db6639…` unchanged; F05 `21cdfe20…`; `git diff 14bd58e HEAD -- supabase/migrations` is the one new file |
+| 14 | Expo Doctor | **21 / 21, no issues** |
+| 15 | Android export, isolated (own output directory; this worktree's own real `node_modules`, so the bundle is this worktree's, not another checkout's) | **exit 0 — and verified by content, not by exit code:** one 6.4 MB Hermes bundle (`entry-cc985d40…hbc`, 6,448,941 bytes), 1646 modules. Present (ASCII, in the bundle): "Your children will show up here", "Add a child and Her Keys can hold their practices…", the route `life/child-add`, "Add a child", `PLAN_IN_PLACE`, and **the closeout's own new string** "This household belongs to another account, so nothing can be added to it here." Absent: the legacy Kids screen's "On the family schedule", "Kids feeds the same picture", "Nothing kids-related on your list", **and the K8 gate's "Children can be added before you sign in" / "Adding one to a signed-in household"** — so the bundle holds the closeout code, not the earlier build. Controls "Her Keys" and "expo-router" found first |
+| 16 | Clean tree | `git status` clean after the documentation commit; `app.json` (the owner's) never staged |
+| — | Device / visual validation | **NOT EXECUTED — ENVIRONMENTAL LIMITATION** (§38.12) |
+
+### 38.12 Device evidence
+**NOT EXECUTED.** The only Android emulator (`emulator-5554`, headless) is another session's runtime and the host had about 0.6 GB of free physical memory during this work; it was not touched, Metro was not started, and no screenshot is claimed. The rendered props-contract tests, the real-database journey and the Android export proof stand in for it. **Retained as integration-stage debt** (§31 still lists what a device pass must cover; add: adding a child while signed in, and seeing it on a second device).
+
+### 38.13 Remaining debt, and remote actions
+* Still open, unchanged: no client rename or removal of a child (MP-K-05, MP-K-04); no distinct backup person (MP-K-02); MP-K-09 and MP-K-16 (foundation observations); device evidence not executed.
+* The F05 migration must be **applied to Staging and Production by the owner** when the time comes, with the fingerprint check in `supabase/tools/README.md`. It was not, and no remote environment was contacted.
+* **Remote actions taken: NONE.** No push, merge, rebase, squash, amend, PR, deploy, staging/production migration or remote Supabase change.
+
+### 38.14 Final verdict
+**HK-FEATURE-05-KIDS = PASS WITH DOCUMENTED DEBT**
+**CLOSED FOR FEATURE DEVELOPMENT = YES**
+**READY FOR WAVE 2 INTEGRATION = YES** · **READY FOR HOSTILE AUDIT = YES**
+**NO OWNER CHECKPOINT REMAINING FOR FEATURE 05 = TRUE** (OC-01 is resolved and built)
+
+Every condition the closeout set for this verdict holds: the account-bound add-child path is **real** (a child added to a household bound to an account is one ordinary `household_members` child row in real PostgreSQL), **durable** (the intent is written in the same envelope write as the child, survives a restart and a restart while offline, and is created exactly once on reconnect), **synchronized** (through the ordinary change observer, queue, coordinator and `sync_push`, to a second device under the same identity, with the child's tasks and events attributed to it), **secure** (owner only; a second member, an unrelated account, anon, a foreign household id and a foreign member id all fail or are harmless; `household_members` gained no grant and no policy; the private function is unreachable through PostgREST; all proved against real PostgreSQL/PostgREST, not a model), and **independently pinned by tests** (a real-database journey, an SQL suite, composition and bridge tests, and 38 mutants that all fail the tests, including the five the closeout named).
+
+The debt that remains (unchanged in kind): device evidence not executed (§38.12); no client rename or removal of a child (MP-K-05, MP-K-04); no distinct backup person (MP-K-02); two foundation observations recorded and deliberately not changed (MP-K-09, MP-K-16). **The migration is local only; applying it to Staging or Production is an owner-gated step that was not taken.**
+
+*For the integration and the auditor.* (1) This repair touched shared files — `src/domain/sync/{syncTypes,syncKinds,projection,pullEngine}.ts` (the minimum), `src/domain/account/claim.ts` (one character, D-K9) — and `supabase/tests/run.mjs`, which now pins **three** migrations after the baseline; a sibling Wave 2 feature that also adds a migration or a sync kind will conflict there and must reconcile the pin and the fingerprint baseline chain (`ir01` → `f05`) deliberately, not mechanically. (2) D-K9 was live in the inherited claim path: any child whose name contains a lowercase "s" would have been renamed in the cloud by a claim on the earlier code, so an audit of already-claimed local households is worth one query. (3) Attack surface to test hardest: `private.push_household_child` and the three marked hunks of `sync_push` (`20260921190000_…sql`), and the adoption rule in `applyMembers`. (4) Not proven anywhere: a real-device run, and behaviour against Staging/Production.
+
+*Replacement-floor note (unchanged).* This closeout concludes only that the **approved Feature 05 contract, as amended by the owner's OC-01 decision, was implemented**. Whether that is sufficient market coverage against family-organizer products is an owner product judgment.

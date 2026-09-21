@@ -1,8 +1,81 @@
 # HK-FEATURE-05 — OWNER CHECKPOINT 01: creating a child after the household is bound to an account
 
-**Status: PROPOSAL, NOT BUILT.** Nothing below is implemented: no migration, no schema change, no RLS, no sync kind, and no UI that
-depends on it. Feature 05 continues on every other path (see §17). This checkpoint exists because the plan makes any new durable
-semantic an owner decision, and "additive" does not bypass it.
+**Status: RESOLVED BY THE OWNER — IMPLEMENTED in the Feature 05 closeout repair (local only; nothing pushed, no remote environment touched).**
+The proposal that this file was written as is kept, unchanged, below the resolution. Where the two differ, the resolution governs (§2, §7, §16
+and §17 of the proposal describe a world in which nothing was built).
+
+## RESOLUTION (2026-09-21)
+
+**Owner decision.** "Her Keys MUST support adding a child after a household has already been bound to an account." Approved product behavior,
+on the EXISTING household-member / child identity model. Not a second child model, not a Kids-specific identity table, not a feature-specific
+Supabase persistence path, not a separate sync queue, not a duplicate household-member abstraction, not a new account/user identity system.
+Authority: the account-bound household **owner**; nothing broader; every existing RLS rule and grant preserved. Any migration is local only.
+
+**Was a backend change required?** Yes, and that was measured before anything was built (ledger §19, §38): `household_members` has no client write
+path, `member` was a mapping-only sync kind, `sync_push` is `SECURITY INVOKER` and did not list the table, and a claim runs once per account.
+So the smallest correct change is **one additive local migration**, and nothing else on the server: no table, column, constraint, index, policy,
+trigger or table grant changed (proved item by item, ledger §38.5).
+
+**What was built** — the path the owner named: *feature action → canonical store mutation → existing change observer → existing sync → existing
+household/member backend semantics.*
+
+| Layer | Change |
+|---|---|
+| Kids | The same screens and the same `addChildToHousehold` transition. `canAddChild` no longer requires an unbound household; only a household that belongs to *another* account (quarantined) cannot take a child. No new tab, screen, control or design. |
+| Canonical state | Unchanged: the existing `Child` (`id`, `displayName`, `birthDate`, `scope`), added by the existing `addChild`. It is never the account user. |
+| Sync (shared, the minimum) | `member` becomes a **create-only** pushed kind over `AppState.children` (dependency rank 0, so a child is sent before anything that names it). The change observer, bridge, queue, coordinator and `sync_push` carry it like every other kind. `applyMembers` (pull) matches a child by its cloud id, never by name, and **adopts** a row this device created whose acknowledgement was lost instead of minting a second child. |
+| Backend | `supabase/migrations/20260921190000_f05_add_child_after_binding.sql`: `private.push_household_child` (`SECURITY DEFINER`, empty `search_path`, not exposed through PostgREST) and `public.sync_push` replaced with three marked differences (allow-list; the collision probe sees child rows only; the insert is delegated). `sync_push` stays `SECURITY INVOKER`. |
+
+**How this differs from the proposal below.**
+* The proposal's option A was a *public* `add_household_child` RPC that the sync layer would have to call by name. The owner required that Kids not
+  know how account sync works and that no feature-specific persistence path exist, so the same authority is a **`private` function reachable only
+  through the existing `sync_push`**: one entry point for every synchronized row, the SD4-006 collision semantics and the `already_exists` answer
+  reused verbatim, and no new client-callable surface (PostgREST cannot reach the `private` schema; proved over real PostgREST).
+* The server bound is **20 children per household**, the local state's own bound (`AppStateSchema.children.max(20)`). The server had none, so a
+  client could otherwise create a household another device cannot hydrate. (A claim payload is still capped at 50; unchanged.)
+* **No update path.** There is no rename or edit of a child by a client, so nothing new is granted for one (a rename made on the server is pulled
+  and applied to the same child in place; that is the only rename that exists). MP-K-05 stays open.
+* Option B (a client grant on `household_members`) was not built either: `household_members` still has exactly one policy (SELECT) and no client
+  write grant.
+
+**Authority, as enforced by the server.**
+
+| Caller | Result |
+|---|---|
+| Owner of the household | creates the child (`created`); a retry from the same install is `already_exists` |
+| A second member of the household (not the owner) | refused, 42501 "only the owner" — the device keeps it as `forbidden` evidence |
+| An unrelated authenticated account | refused, 42501 (not a member); a foreign household id is refused the same way; a foreign *member id* is server-owned and stripped, so a NEW row is made in the caller's own household and the foreign child is untouched |
+| Anonymous | no `EXECUTE` on `sync_push` at all |
+| Anyone, stating an account, a role, another scope, an adult type, `id`, `revision` or an unknown column | refused (42501) or stripped (`id`, `revision`, timestamps); never honoured |
+| Anyone, writing `household_members` directly (INSERT / UPDATE / DELETE), even the owner | refused: no grant, no policy |
+| Anyone calling the function directly | it enforces its own authority, so a non-owner, an unrelated account or anon is refused there too |
+
+**Behavior.**
+* *Before binding:* unchanged — the child is added locally and reaches the cloud through claim v3, with its mapping. If a household was bound by a
+  build that predated claim v3, a child the claim never carried is now created by the ordinary top-up instead of staying on the device forever.
+* *After binding:* the child is visible at once; the intent is durable in the same write as the child; it is sent through the ordinary queue and
+  mapped to the same local id; tasks and events for it follow it (a child is sent before the work that names it).
+* *Offline / restart / reconnect:* owed durably, survives a restart, created **exactly once** on reconnect. A lost acknowledgement settles on the
+  same child (the coordinator pulls before it pushes, so this is the pull's adoption rule, not the retry).
+* *Second device:* hydrates every child under the same local id; work for a child names that child; two children with the same name (even the same
+  birth date) are two children; a cloud rename is the same child updated in place.
+* *Refusal:* kept as inspectable evidence, sent once, never retried, the child never silently deleted; work naming it is kept as
+  `unresolvable-dependency` evidence rather than sent with an invented reference.
+* *Account switching / demo / never signed in:* another account's pending child is never uploaded under a different account; a demo household and
+  a household that never signed in send nothing.
+
+**Evidence** — the numbers, the scenario map (all 20 required scenarios), the mutants and the fingerprint are in `HK_FEATURE_05_KIDS.md` §38.
+
+**Not built (unchanged debt).** Renaming or correcting a child (MP-K-05) and removing or archiving one (MP-K-04, B4-P0-066) remain out of scope; the
+migration has been applied to the shared LOCAL database only, and applying it to Staging or Production is an owner-gated step that was not taken.
+
+---
+
+## Original proposal (kept as written)
+
+> **Status when written: PROPOSAL, NOT BUILT.** Nothing below was implemented at the time: no migration, no schema change, no RLS, no sync kind, and
+> no UI that depended on it. This checkpoint existed because the plan makes any new durable semantic an owner decision, and "additive" does not
+> bypass it.
 
 ## 1. User problem
 A woman opens Kids on a real household and has no children in it. Before she signs in she can be given a way to add one (Feature 05
