@@ -9,7 +9,8 @@ import { StyleSheet } from 'react-native';
 import { sizing } from '../../src/design/tokens.ts';
 import { NOT_AUTHORIZATION, PLAN_STEP_ACTION } from '../../src/features/kids/copy.ts';
 import { buildChildDetail, buildKidsView } from '../../src/features/kids/projection.ts';
-import { recordAccepted, recordDeclined } from '../../src/features/kids/mutations.ts';
+import { UNBOUND_IDENTITY } from '../../src/domain/account/binding.ts';
+import { canAddChild, recordAccepted, recordDeclined } from '../../src/features/kids/mutations.ts';
 import { AddChildView } from '../../src/features/kids/views/AddChildView.tsx';
 import { ChildDetailView } from '../../src/features/kids/views/ChildDetailView.tsx';
 import { ItemEditorView } from '../../src/features/kids/views/ItemEditorView.tsx';
@@ -53,6 +54,22 @@ describe('hub', () => {
     assert.equal(byLabel(otherAccounts, 'Add a child'), undefined, 'no button that cannot work');
     assert.match(allText(otherAccounts), /belongs to another account/);
     assert.doesNotMatch(allText(otherAccounts), /before you sign in|isn't available yet/, 'a signed-in household is no longer told it cannot add a child');
+  });
+
+  test('AW2. a household bound to an account is offered "Add a child" through the very same hub view (OC-01 resolved), and the button works', async () => {
+    // The prop is derived exactly as the container derives it: from the household's identity record.
+    const bound = { ...UNBOUND_IDENTITY, binding: { accountId: '11111111-1111-4111-8111-111111111111', householdId: '22222222-2222-4222-8222-222222222222', boundAt: '2026-09-21T15:00:00.000Z', kind: 'claim', idMap: {} } };
+    let opened = 0;
+    const r = await render(<KidsHubView view={view(emptyHousehold())} canAddChild={canAddChild(bound)} onOpenChild={noop} onAddChild={() => { opened += 1; }} />);
+    const button = byLabel(r, 'Add a child');
+    assert.ok(button, 'the same control an unbound household gets');
+    button.props.onPress();
+    assert.equal(opened, 1);
+    assert.doesNotMatch(allText(r), /before you sign in|isn't available yet|belongs to another account/);
+
+    const { s } = household();
+    const withChildren = await render(<KidsHubView view={view(s)} canAddChild={canAddChild(bound)} onOpenChild={noop} onAddChild={noop} />);
+    assert.ok(byLabel(withChildren, 'Add a child'), 'and so is a household that already has children (a second one, after binding)');
   });
 
   test('cards: identity, what is next, and only the facts that need her; each is one accessible button', async () => {
