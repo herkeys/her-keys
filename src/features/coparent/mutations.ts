@@ -92,6 +92,37 @@ export const HANDOFF_OK: readonly HandoffOutcome[] = ['saved'];
 
 const trimmed = (value: string) => value.trim();
 
+/** A short, stable, non-cryptographic digest (FNV-1a, 32-bit) — enough to tell "the content changed", never a security boundary. */
+function digest(text: string): string {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < text.length; i += 1) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return hash.toString(16).padStart(8, '0');
+}
+
+/**
+ * The REVISION of a handoff as an editor saw it: `updatedAt` plus a digest of every field the editor owns and of the recorded
+ * schedule. A stale check that trusted `updatedAt` alone would miss two edits inside one clock tick (or across a skewed clock) and
+ * let an old editor overwrite newer content; the digest decides by WHAT changed. Opaque: compare it, never parse it.
+ */
+export function handoffRevision(state: Pick<AppState, 'recurrences'>, event: CalendarEvent): string {
+  const rule = state.recurrences.find((candidate) => candidate.about.kind === 'event' && candidate.about.id === event.id && candidate.status !== 'ended');
+  const content = JSON.stringify([
+    event.title, event.categoryId, event.subjectMemberId, event.startsAt, event.endsAt, event.location, event.notes, event.commitment,
+    event.needsMePersonally, event.status,
+    rule ? [rule.id, rule.status, rule.frequency, rule.interval, rule.byWeekday, rule.byMonthDay, rule.anchorDate, rule.timeOfDayMinutes] : null,
+  ]);
+  return `${event.updatedAt ?? ''}#${digest(content)}`;
+}
+
+/** The same for a follow-up task: `updatedAt` plus its editable fields and its amount. */
+export function followUpRevision(task: Task): string {
+  const content = JSON.stringify([task.title, task.categoryId, task.subjectMemberId, task.dueDate, task.notes, task.status, task.value]);
+  return `${task.updatedAt ?? ''}#${digest(content)}`;
+}
+
 function requireCategory(state: AppState): { ok: true; categoryId: string } | { ok: false; outcome: 'no_category' | 'category_archived' } {
   const category = coparentCategory(state);
   if (category === null) return { ok: false, outcome: 'no_category' };
@@ -301,7 +332,10 @@ export function createHandoff(state: AppState, ctx: TransitionContext, fields: H
 
 export interface EditHandoffInput {
   eventId: string;
-  /** The `updatedAt` of the row when the editor was opened. If the row has moved since, the edit is refused as stale. */
+  /**
+   * The row's REVISION token when the editor was opened (`handoffEditorSeed(...).baseUpdatedAt`; `updatedAt` + a content digest).
+   * If the row has moved since, the edit is refused as stale. Opaque: pass it back exactly as the seed gave it.
+   */
   baseUpdatedAt: string | null;
   fields: HandoffFields;
 }
@@ -316,7 +350,7 @@ export function editHandoff(state: AppState, ctx: TransitionContext, input: Edit
   if (!event) return refuse(state, 'missing');
   if (!isHandoff(state, event)) return refuse(state, 'not_a_handoff');
   if (event.status === 'removed') return refuse(state, 'removed');
-  if (event.updatedAt !== input.baseUpdatedAt) return refuse(state, 'stale');
+  if (handoffRevision(state, event) !== input.baseUpdatedAt) return refuse(state, 'stale');
 
   const parsed = parseHandoff(state, input.fields);
   if (!parsed.ok) return refuse(state, parsed.outcome);
@@ -363,7 +397,7 @@ export function handoffEditorSeed(state: AppState, eventId: string): { fields: H
   const end = localParts(epochMsOf(event.endsAt), zone);
   const rule = state.recurrences.find((candidate) => refKey(candidate.about) === refKey({ kind: 'event', id: eventId }) && candidate.status !== 'ended');
   return {
-    baseUpdatedAt: event.updatedAt,
+    baseUpdatedAt: handoffRevision(state, event),
     fields: {
       childId: event.subjectMemberId,
       title: event.title,
@@ -664,6 +698,7 @@ export function createMoneyFollowUp(state: AppState, ctx: TransitionContext, fie
 
 export interface EditFollowUpInput {
   taskId: string;
+  /** The follow-up's REVISION token when the editor was opened (`followUpEditorSeed(...).baseUpdatedAt`). Opaque. */
   baseUpdatedAt: string | null;
   fields: FollowUpFields;
 }
@@ -675,7 +710,7 @@ export function editMoneyFollowUp(state: AppState, ctx: TransitionContext, input
   if (!task) return refuse(state, 'missing');
   if (category === null || task.categoryId !== category.id || task.value === null) return refuse(state, 'not_a_follow_up');
   if (task.status !== 'open') return refuse(state, 'not_open');
-  if (task.updatedAt !== input.baseUpdatedAt) return refuse(state, 'stale');
+  if (followUpRevision(task) !== input.baseUpdatedAt) return refuse(state, 'stale');
 
   const parsed = parseFollowUp(state, input.fields);
   if (!parsed.ok) return refuse(state, parsed.outcome);
@@ -719,7 +754,7 @@ export function followUpEditorSeed(state: AppState, taskId: string): { fields: F
   const task = state.tasks.find((candidate) => candidate.id === taskId);
   if (!task || task.value === null) return null;
   return {
-    baseUpdatedAt: task.updatedAt,
+    baseUpdatedAt: followUpRevision(task),
     fields: {
       title: task.title,
       childId: task.subjectMemberId,
