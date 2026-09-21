@@ -35,6 +35,9 @@ export const MEAL_COPY = {
   sectionPlanAgain: 'Plan again',
   noMealTasks: 'No meal tasks yet.',
   addTask: 'Add a meal task',
+  openHint: 'Opens this meal so you can change it.',
+  planAgainHint: 'Starts a new plan with this meal.',
+  removeHint: 'Takes this meal out of your plan.',
 
   // when the household cannot be read as a plan
   loading: 'Getting your meals ready…',
@@ -67,6 +70,7 @@ export const MEAL_COPY = {
   errTooLong: 'Keep the name to 120 characters or fewer.',
   errDate: 'Use a date like 2026-09-22.',
   errStale: 'This meal changed somewhere else. The latest version is shown.',
+  errGone: 'That meal was already removed.',
   errFull: 'Her Keys can’t hold any more meals. Remove one to add another.',
   errUnavailable: 'Meals isn’t set up on this household yet.',
   errSave: 'Her Keys couldn’t save that yet. Try again.',
