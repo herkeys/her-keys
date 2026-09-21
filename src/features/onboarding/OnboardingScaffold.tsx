@@ -29,16 +29,16 @@ export function OnboardingScaffold({
       <View style={styles.progress}>
         <View style={styles.progressHeader}>
           <Overline>Life systems audit</Overline>
-          <AppText variant="micro" color={colors.textTertiary}>
+          <AppText variant="statusLabel" color={colors.textTertiary}>
             {step} of {total}
           </AppText>
         </View>
         <SegmentBar filled={step} total={total} tone="accent" />
       </View>
 
-      <AppText variant="hero">{title}</AppText>
+      <AppText variant="display">{title}</AppText>
       {description && (
-        <AppText variant="title" color={colors.textSecondary} style={styles.description}>
+        <AppText variant="supporting" color={colors.textSecondary} style={styles.description}>
           {description}
         </AppText>
       )}
