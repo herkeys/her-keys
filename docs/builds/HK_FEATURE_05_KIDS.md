@@ -147,12 +147,42 @@ step is **her record of what somebody told her** (the model is "what a delivery 
 `asked, no reply by <date>`; `declined`; `handed back`; `holder no longer available` (archived person — never covered); `held by a child`
 (no coverage claim); `nobody recorded`. The words *handled*, *covered*, *taken care of* appear only for the first state.
 
-## 10. Projection contract (K2) — PENDING
-## 11. Create / edit behavior (K2/K4) — PENDING
-## 12. Duration provenance (K2) — PENDING
-## 13. Dependency behavior (K2) — PENDING
-## 14. Kids hub (K3) — PENDING
-## 15. Child detail (K4) — PENDING
+## 10. Projection contract (K2)
+
+`src/features/kids/projection.ts` — three pure functions, no clock, no network, no mutation:
+
+* `buildKidsView(state, householdId, {nowMs})` → `KidsView` (one `ChildCard` per child, `unattributed` count).
+* `buildChildDetail(state, householdId, childId, {nowMs})` → `ChildDetail` (`upcoming`, `needsAttention`, `openWork{needsYou, withSomeoneElse, waiting, nobodyRecorded}`, `routines`, `plans`).
+* `buildItemFact(state, householdId, ref, {nowMs})` → one `ItemFact` (used by the editor's responsibility panel).
+
+**Guarantees (each is a test):** deterministic (same state and clock → identical output; also identical however the arrays are ordered, AT); read-only (deep-frozen state projects); a request for a different household returns nothing of the state (AJ); a row naming a child that is not in the household is *counted* (`unattributed`), never assigned to another child (AL); household-level and adult-subject rows are never shown under a child (AB); the same canonical item appears with identical facts in every section it is in (AF).
+**Ordering (no hidden score):** children oldest-first then name then id; upcoming by start time then id; open work by due date (undated last), then capture time, then id; attention by the shared primitive's own urgency rank, then date, then id. **Sources:** `attentionFor` (§8), `standingOf`/`readinessOf`/`blockersOf`/`unavailablePrerequisitesOf`, `durationKnowledgeOf`, `needsMePersonally`, `logicalDateAt`. Semantic types are in `types.ts`; there is no score, percentage, rank or Kids-owned urgency anywhere.
+
+## 11. Create / edit behavior (K2/K4)
+
+All writes are feature-owned `Transition`-shaped steps in `mutations.ts` that compose existing domain functions; each returns an **outcome** because the store resolves `true` for an unchanged state (a stale editor, a refused handoff and a no-op must never look like a save). `commitKids` hands the outcome back.
+* **Create a task** (`createChildTask`): the child as `subjectMemberId`, `scope: 'child'`, the household's kids-role category (never chosen by name), provenance `user-action`; atomic with an optional `part_of` edge and an optional handoff (either fails → nothing is written).
+* **Create an event** (`createChildEvent`): instants computed in the household zone; a time inside the spring-forward gap or a repeated fall-back hour is *reported to her*, live as she types and at save, never silently absorbed (AH, AI); overnight events are not supported (end must be after start on the same day) and say so.
+* **Edit** (`editChildTask` / `editChildEvent`): compares a content fingerprint of what the editor opened with the current row (a change that stamps no timestamp, like a Daily Load move, is still caught) → `stale` changes nothing and offers "show the newer version" (AM); only the fields she changed are written; an untouched time keeps its exact stored instant; the child can move to a sibling but can never be cleared; `unchanged` writes nothing.
+* **Remove ≠ complete:** removing archives a task (no completion time) or marks an event `removed`; completing records completion (REMOVED ≠ COMPLETED).
+* **Add a child** (`addChild`, new `src/domain/children.ts`): validated against the stored shape; offered only while the household is not bound to an account (§24, OC-01), checked again at the moment of saving.
+* **Double-tap:** `createSingleFlight` sets its guard synchronously, so a second tap in the same frame is refused (AN, unit + rendered).
+
+## 12. Duration provenance (K2)
+
+Every Kids task producer states the source. Create: an untouched prefill is `default` (the planning default she was shown), a touched field is `user` **even when she confirms the same 15** (default 15 ≠ user 15, proven in the cloud, §18). Edit: an untouched length is never upgraded — a legacy row (`null`) stays unknown across a second save; a touched length is hers. The source is never inferred from the number. Copy: only `user-provided` is worded plainly; `default-estimate` → "(an estimate)", `inferred-estimate` → "(Her Keys estimated)", `unrecorded` → "(not confirmed)"; the form says "This is an estimate until you change it. It isn't something you told Her Keys." Events show a recorded start and end and never say "you said" (MP-K-11). Mutants K-M2, K-M3, K-M22 are caught.
+
+## 13. Dependency behavior (K2)
+
+Kids **reads** prerequisites only through the shared `standingOf` / `readinessOf` / `blockersOf` / `unavailablePrerequisitesOf`: a completed prerequisite is satisfied (T); a removed or archived one is *unavailable/retired*, worded "Something this needed is no longer available. Worth a look." and raised as a fact-entry (U); a missing one is unavailable/missing (V); a live one blocks and is named. Kids never rewrites or removes a dependency row. Its only dependency write is one `part_of` edge (a plan step toward a commitment), through `addDependency`; it offers no chooser for `requires` (MP-K-14). Mutant K-M13 (removed treated as satisfied) is caught.
+
+## 14. Kids hub (K3)
+
+`life/kids` (the existing route) renders `KidsHub`. One quiet card per child: `Sam, 8` (plus "born Mar 3, 2018" only when another name could be mistaken for it), what is next, and only the facts that need her ("2 need you", "1 waiting on someone", "1 need a plan"). No score, rank or percentage. Empty: "Your children will show up here — Add a child and Her Keys can hold their practices, forms and pickups in one place", with the add control only while adding is possible (otherwise one honest sentence). Below the cards, kids-category tasks that name no child stay listed as "Not linked to a child" (the Life guarantee that no open task is out of reach; §3, `unlinkedKidsTasks`). Each card is one accessible button whose label carries identity, next item and the tags.
+
+## 15. Child detail (K4)
+
+`life/child/[childId]`. Sections appear only when they have something real to say: **Next** (raised card, expanded logistics: when, where, who has it and whether that is covered, preparation/travel if recorded, notes as she wrote them, and what is *not recorded*); **Needs attention** (shared-primitive entries with the primitive's own urgency, plus facts with none); **Coming up** (first four inline, the rest behind a labelled, announced toggle); **Open work** grouped *Needs you / With someone else / Waiting on something / Nobody recorded*; **If the plan changes** (§16); **Routines** (child-subject Systems, read-only, no run behavior); add-task / add-event. Item editor: `life/child-item` (create, edit, plan step; responsibility panel; mark done; remove); `life/child-add`.
 
 ## 16. Fallback / emergency planning — capability map (K1); build PENDING (K5)
 
@@ -179,31 +209,140 @@ label **not at all** (AC). The word "backup" is used only for the *action*; the 
 persistent, restrained line: "Her Keys helps you plan. It does not check what a school, a court or a doctor recognises." If the owner meant a
 **second, distinct** person, that needs MP-K-02 (an owner checkpoint); this build does not fake it.
 
-## 17. Legal-authorization boundary — PENDING (K5)
-## 18. Backend / sync behavior — PENDING (K6)
-## 19. RLS / security — PENDING (K6)
-## 20. Offline / restart — PENDING (K6)
-## 21. Scenarios — PENDING
-## 22. Mutation / test-the-test evidence — PENDING (K7)
-## 23. Defects found / repaired — PENDING
+**Built (K5).** `FallbackPlanSection` on the child detail, titled "If the plan changes", for each upcoming commitment (and each task somebody was asked to hold). Each row: title (opens the item), when, the label as **text plus tint** ("Plan in place" / "Needs a plan" / "Not enough known"), and one sentence of *why* from the coverage state. Where a gap exists there is a real next step: **"Add a step to sort this out"** opens the ordinary task editor prefilled as a *step of* that commitment (a child-linked task + one `part_of` edge, atomically); once an open step exists the row shows "Open step: …" instead of offering a second one. The label does **not** change when a step is created or even finished (AC; mutant K-M14). Rows with nothing recorded show inline for the soonest three and fold behind an announced toggle beyond that. A person archived after acceptance drops PLAN IN PLACE to NEEDS A PLAN (holder unavailable) **on both devices** after a pull (Z; real database, mutant K-M10). No allowed label is "Ready".
+
+## 17. Legal-authorization boundary (K5)
+
+How the UI avoids being mistaken for an official authorization record: (1) the section carries a persistent, quiet note — *"Her Keys helps you plan. It doesn't check what a school, a court or a doctor recognizes."* — in a subtle card, not a warning screen; (2) the labels speak about the *arrangement* ("a person said yes and it is off your list"), not about a person's standing; the plan sentence adds "Her Keys doesn't know whether Alex is free that day"; (3) no string anywhere says authorized, approved, verified, official, legal, custody, emergency contact or pickup list (`copyTruth.test.mjs` scans every string literal in the copy); (4) a person is "someone on your list of people", never a guardian or contact; (5) Kids stores **no** authorization, contact, document or emergency field — it adds no durable field at all (`boundaries.test.mjs` privacy audit); (6) an unrelated known person, an assigned person or an accepted responsibility never becomes AUTHORIZED, AVAILABLE or CONFIRMED (KNOWN ≠ AUTHORIZED).
+
+## 18. Backend / sync behavior (K6)
+
+**No new or extended backend representation**: no migration, table, column, RLS policy, sync kind or RPC. Kids writes canonical rows through `store.commit`; the change observer queues them in the same envelope write; the central runtime sends them. Proven against **real local PostgreSQL + PostgREST + the real claim RPC** by `supabase/tests/journey-kids.mjs` (`node supabase/tests/run.mjs kids`: **33 Kids checks**; the standalone run prints 34 because the runner adds its own stack-currency check), every device built by `composeAccountApp`: child identity round trip for two children named Sam (each task/event attributed to the right one by id); default 15 vs user 15 as different cloud rows; an accepted-off-list handoff held by a *person* (not a member); `requires` + `part_of` edges; an edit that confirms 15 turns default into user (revision 2); a second device whose Kids projection is **identical for every child**; archived person → PLAN IN PLACE becomes NEEDS A PLAN on both devices; a 450-task child-linked household (90 each to five children) sent by one sign-in and pulled in bounded requests, projection identical on the second device. Full harness at final HEAD: §36.
+
+## 19. RLS / security (K6)
+
+Over real PostgREST with valid foreign identifiers, five personas: **unauthenticated** (no read, update, delete or insert on `tasks`, `events`, `responsibilities`, `household_people`, `dependencies`, `household_members`); **unrelated account** holding a valid guessed child id and household id (reads nothing; update/delete match nothing; cannot insert into the family's household; **foreign-key substitution** — a task in its *own* household naming the other family's child — refused with SQLSTATE 23503); **owner** (reads every table; may change her own task); **same-household second member** (reads the household's child tasks, events and children; may edit a household child task; **cannot** read, change or delete the owner-private people, responsibilities and dependencies — a known limit, MP-K-13); and the OC-01 evidence below. The generic RLS suites (`10`, `20`, `30`, `57`) are part of the 800 baseline checks and unchanged.
+**OC-01, measured:** a child added to a bound household directly through the store gets no cloud identity; its task becomes `unresolvable-dependency` evidence and never leaves the device (never mis-attributed to another child); nothing else is blocked (a later task for another child syncs). This is why the UI never offers it.
+
+## 20. Offline / restart (K6)
+
+Real store: child, tasks, event, handoff, dependency and duration provenance all survive a relaunch (`mutations.test.mjs`, L). Real database: a task created offline waits in the durable queue with nothing sent; after a process death **while still offline** it is still there, still about the same child, its length still hers, still queued; on reconnect it is sent **exactly once**, to the right child, with its provenance. A server refusal of one row is recorded once as evidence, never re-sent, and blocks nothing (IR-D12 holds for Kids). Two saves at once both land; a stale edit through the store is reported stale and changes nothing.
+
+## 21. Scenarios (status: PASS unless stated)
+
+Tier 1 — core. Evidence = test (`P`rojection, `M`utations, `V`iews, `J`ourney against PostgreSQL, `S`cenario fixture).
+| ID | Status | Evidence | ID | Status | Evidence |
+|---|---|---|---|---|---|
+| A one child, no records | PASS | P, S | O assigned, unaccepted | PASS | P, S(O,O2) |
+| B multiple children | PASS | P, V, S | P accepted ≠ covered | PASS | P, S |
+| C colliding names | PASS | P, V, J, identity tests | Q covered | PASS | P, S |
+| D one upcoming | PASS | P, S | R requires the user | PASS | P, S |
+| E several upcoming | PASS | P, S | S assigned to other, still unresolved | PASS | P, S |
+| F unresolved task | PASS | P, S | T completed prerequisite | PASS | P, S |
+| G unknown duration | PASS | P, S | U removed prerequisite | PASS | P, S(U,U2), mutant K-M13 |
+| H default duration | PASS | P, M, S | V missing prerequisite | PASS | P, S |
+| I explicit duration | PASS | P, M, S | W plan in place | PASS | P, S, J |
+| J create | PASS | M, V | X gap → NEEDS A PLAN | PASS | P, S |
+| K edit | PASS | M | Y → NOT ENOUGH KNOWN | PASS | P, S, mutant K-M11 |
+| L restart | PASS | M (real store), J | Z person archived | PASS | P, S, J (both devices), mutant K-M10 |
+| M offline → reconnect | PASS | J | AA unrelated person | PASS | P, S |
+| N second device identity | PASS | J | AB household-level stays household-level | PASS | P, S, reachability |
+| AC task ≠ plan | PASS | P, V, S, mutant K-M14 | AD not mistaken for authorization | PASS | V, copyTruth (§17) |
+
+Tier 2 — hardening. AE dense **PASS** (dense) · AF one item many sections **PASS** (P, dense) · AG midnight/logical day **PASS** (P, time) · AH spring-forward **PASS** (time, M, V) · AI fall-back **PASS** (time, M) · AJ account A→B **PASS** (boundaries: `boundOther` closes the `(app)` group and every Kids route resolves to it; a screen kept from the other account gets nothing; composition journey) · AK demo/account isolation **PASS** (boundaries: everything Kids writes in a demo household is `demo-seed`, not syncable) · AL malformed child reference **PASS** (P) · AM stale editor **PASS** (M, mutant K-M4) · AN double-save **PASS** (dense unit, V) · AO sync retry **PASS** (J offline) · AP server refusal **PASS** (J) · AQ large household **PASS** (dense 450, J 450) · AR local-only state excluded **PASS** (J: the refused row stays device-only; Kids adds no local-only kind) · AS raw Talk It Out source excluded **PASS** (boundaries: Kids never reads interpretations or sources) · AT stable ordering **PASS** (dense shuffle) · AU/AV screen-reader responsibility and unknown/default state **PASS** (V) · AW empty state **PASS** (V) · AX/AY/AZ/BA RLS **PASS** (J, §19) · BB shared attention coherence **PASS** (P, mutant K-M15).
+
+Tier 3 — conditional (not manufactured): BC pickup-authority — **SAFE-UNAVAILABLE** (none certified; MP-K-03) · BD fallback caregiver — **SAFE-UNAVAILABLE** (no distinct backup semantic; arrangement readiness is built over responsibility; MP-K-02) · BE child-subject System — **PASS** (read-only listing) · BF school-form representation — **NOT-APPLICABLE** (a form is an ordinary task and is shown as one) · BG operational instruction — **PASS** for a user's own free-text notes shown as written (no medical inference); no dedicated instruction field exists · BH child archive — **SAFE-UNAVAILABLE** (MP-K-04) · BI recurring commitment — **PASS as a fact** ("Repeats weekly"); occurrences are not expanded (no expansion primitive at the baseline) · BJ intelligence proposal abstraction — **NOT-APPLICABLE** (none exists; none added). No required scenario is DEFERRED-IN-RUN.
+
+## 22. Mutation / test-the-test evidence (K7)
+
+`scripts-dev/f05-mutation-check.cjs` (committed, re-runnable): 23 single-line mutants, the file restored byte for byte after each. Six are the plan's required ones, all **CAUGHT**: child identity (K-M1 first child instead of the chosen one; **S-M1/S-M2 drop a child's identity going to and coming from the cloud, judged by the real-database journey**), duration provenance (K-M2 default 15 → user 15; K-M3 an untouched edit upgrades to hers), dependency truth (K-M13 removed prerequisite read as satisfied), responsibility (K-M8 an unanswered request read as covered; K-M9 accepted-still-yours as covered; K-M5 accept with no explicit answer), fallback readiness (K-M11 nothing recorded as PLAN IN PLACE; K-M14 a step turns the plan green), removed fallback person (K-M10 an archived person still counts, so PLAN IN PLACE survives). Also caught: unknown child accepted (K-M6), the "not linked" list dropping adult-subject tasks (K-M18), colliding names ignored (K-M19), copy claims (K-M21/K-M22), holder filed as someone else's (K-M17), invented urgency (K-M15), household-boundary guard (K-M16), child added while bound (K-M7), stale guard (K-M4), DST gap (K-M20). Result at final HEAD: §36.
+
+## 23. Defects found / repaired
+
+| ID | Sev | Found how | What | Repair |
+|---|---|---|---|---|
+| D-K1 | P2 | design review of the inherited test | Replacing the Kids screen would have taken kids-category tasks that name no child **out of reach** (they are in no other list) | `unlinkedKidsTasks` + reachability test; inherited capture test rewritten for the intent |
+| D-K2 | P3 | AC rendered test | The action to sort out a gap (the main path: nothing recorded) was folded behind a disclosure | Soonest three shown inline; fold only the rest; title opens the item |
+| D-K3 | P3 | design review | An accepted-off-list handoff to somebody since **archived** still read "does not need her" (foundation `needsMePersonally` never looks at the person's status) | Kids files it under "needs you"; foundation answer reported as it is (MP-K-16) |
+| D-K4 | P4 | design review | A shared attention entry could name an event no longer in the child's list (no row to open) | Shared entries restricted to returned items |
+| D-K5 | P2 | reading `accept()` | The foundation's `stillNeedsMe` argument **defaults to false (covered)**; a caller that forgot to ask would silently make it covered | `recordAccepted` refuses anything but an explicit boolean; UI has no default (K-M5) |
+| D-K6 | P3 | own review | The editor container labelled children with the UTC date, not the household day | uses `logicalDateAt` |
+| D-K7 | P4 | scan | Invisible/literal look-alike and U+FFFF characters in two source files (tooling decoded `\u` escapes) | code points and a named constant |
+| D-K8 | P2 | export gate | **The first Android export bundled the MAIN checkout's `app/`, not this worktree's** (the `node_modules` junction makes Expo Router resolve `app/` from the shared copy); it looked green | not counted; worktree given a real `node_modules` with a real `expo-router` copy; the second export contains this worktree's strings and not the old screen's (§36). *Suspicion, unverified:* the IR01 validation exports may have the same blind spot |
+| F-K0-01 | — | source gate | No path creates a child | `addChild` (new file, unbound only) + OC-01 |
+| MP-K-09 | P4 | reading | `attentionFor` `risk` counts `acknowledged` as handled | not changed (shared file); recorded |
 
 ## 24. Missing primitives (K1)
 
 See `HK_FEATURE_05_MISSING_PRIMITIVES.md` (MP-K-01 … MP-K-15). The load-bearing ones: **MP-K-01** no child create path (owner checkpoint for the
 post-binding half), **MP-K-02** no distinct backup party, **MP-K-08** no Life registration mechanism.
 
-## 25. Integration candidates — PENDING (K8)
-## 26. Accessibility — PENDING
-## 27. Performance methodology / results — PENDING (K7)
-## 28. Privacy — PENDING
-## 29. Test accounting — PENDING (dispositions for inherited tests are recorded as they change)
+## 25. Integration candidates
+
+None is implemented; each is a *contract* the later feature consumes. Kids never chooses the user's One Move.
+* **HK-INT-LIFE-REG-01** — Life registration. Kids sits behind the existing `life/kids` route; when the shared Life registration mechanism exists it registers `KidsHub` (one entry) and the `child/[childId]`, `child-item`, `child-add` routes move under it. Nothing in the Life hub, layout or tab shell was changed.
+* **HK-INT-KIDS-TODAY-01** — Kids attention → Today's briefing. Kids consumes `attentionFor` unchanged; Today can read the same primitive for the same items and cannot disagree. Candidates Today may take: shared attention entries about child-linked items, a fact-entry `not_accepted` / `handed_back` / `holder_unavailable`, and a plan gap (NEEDS A PLAN). Today's Life summary row for Kids (`describeTasks`) still counts category tasks; making it child-aware belongs here.
+* **HK-INT-KIDS-CALENDAR-01** — child context → Calendar. Events are the same `CalendarEvent` rows with `subjectMemberId`; Calendar gains "for Sam" by reading the subject; Kids' event editor and Calendar's must converge on one form (Kids owns the child chooser and the DST hints).
+* **HK-INT-KIDS-SYSTEMS-01** — repeated child logistics → a System proposal. Child-subject Systems are listed read-only; a repeated preparation sequence could later be proposed, never silently created.
+* **HK-INT-TIO-KIDS-01** — Talk It Out → a reviewed child-linked proposal → acceptance → `createChildTask` / `createChildEvent`. Kids imports nothing from Talk It Out and stores no source text; the OD-A neutral-label rule applies to anything that arrives from an undecided reading.
+* **HK-INT-KIDS-PEOPLE-01** — child responsibility → People OS. The inline "someone new" (name + relationship) is a placeholder for People OS's network; `archivePerson` has no UI. People and responsibilities are owner-private (MP-K-13).
+* **HK-INT-KIDS-COPARENT-01** — child logistics Co-Parent needs: who holds a commitment, whether it is accepted, whether it is covered, and the plan-gap step, all as canonical rows. Kids builds no custody, negotiation, messaging or reimbursement.
+* **HK-INT-KIDS-LIFEADMIN-01** — child paperwork: a form is a task and shows as one; Life Admin/Documents will own generalized paperwork.
+* **HK-INT-KIDS-CHILD-01** — child creation after binding (OC-01) and child removal/archive (MP-K-04) need the foundation owner's decision.
+
+## 26. Accessibility
+
+Rendered under the RN stub, so this proves the props contract, not pixels or a real screen reader. **Identity:** each hub card and item row is one button whose label carries the child (with birth-date context where names look alike), the item, when, where, who holds it, the coverage sentence, the plan label, and what is not recorded — in a sensible linear order. **State is text first:** every responsibility and plan state has a text label and sentence; tint is a second signal only (`Tag` carries its own text). **Unknown / default / estimated** are said aloud ("Nobody is recorded as handling this", "About 15 minutes (an estimate)", "Not recorded: where"). **Controls:** every pressable target is at least 44 pt (asserted on cards and rows; the design system's buttons are 44–48); disclosure toggles announce `expanded`; errors and stale notices use the alert role; a disabled control (accept "Save" until a choice is made) exposes `disabled`. **No essential drag or swipe.** Dynamic text: rows use `minHeight`, never fixed heights. No animation was added (so reduced motion has nothing to respect). Header titles are set on the native header. *Not done:* a real TalkBack/VoiceOver pass and contrast measurement of the new tinted rows (they reuse approved token pairs).
+
+## 27. Performance methodology / results
+
+`scripts-dev/f05-perf.mjs`, run at K7 on the development machine (win32 x64, 13th Gen Intel i7-1360P ×16, 15.6 GB RAM, **0.44 GB free — a shared, memory-starved host**), **Node v24.14.0 (V8 13.6), types stripped by Node, test mode — NOT Hermes / React Native, NOT a production bundle, NOT device rendering**. One process; 10 warm-up calls, then 60 timed samples per figure; `performance.now()`.
+| Fixture | Cold hub | Hub warm median / p95 | Cold detail | Detail warm median / p95 |
+|---|---|---|---|---|
+| Dense: 6 children, 96 tasks + 60 events (156 child-linked), 54 responsibilities, 30 dependencies | 20.8 ms | **8.06 ms** / 11.84 ms | 3.5 ms | **1.84 ms** / 3.16 ms |
+| Large: dense + 450 more open child-linked tasks (606 child-linked) | 26.3 ms | 16.71 ms / 39.36 ms | 5.2 ms | 3.20 ms / 6.04 ms |
+Soft targets (hub < 100 ms, detail < 50 ms median): **met** in this environment, with no caching and no architectural distortion (`attentionFor` is computed once per call, and only when a detail needs it). These are algorithmic numbers: rendering cost on a phone was not measured.
+
+## 28. Privacy
+
+Kids stores **no new field**; every row it writes is an existing canonical row. It logs nothing (no `console`, analytics, share or clipboard in the feature — mechanically scanned), sends nothing itself (the store observes and central sync sends), reads no interpretation or source artifact (so no raw Talk It Out utterance or derived title can enter it), and shows notes and instructions only as she wrote them, with no medical inference. It asks for the two facts the stored child requires: a **name and a birth date** (SD4-028 — child-data minimization — remains a deferred privacy review; adding a create path adds collection of data the schema already holds). Account switching cannot expose another household (the `(app)` group is closed while a different account's household is on the device; a projection asked for a different household returns nothing). A demo household is isolated (everything Kids writes there is `demo-seed` and never syncable). People and responsibilities are owner-private in the cloud; a second household member does not see who is handling a child's item (MP-K-13).
+
+## 29. Test accounting
+
+| | Before (baseline `14bd58e`) | After (final HEAD) |
+|---|---|---|
+| Application suite | 975 tests / 207 suites | **1176 tests / 252 suites**, 0 fail, 0 skipped |
+| New Kids tests (`tests/kids`) | — | **201** across 11 files (children, identity, time, projection, mutations, views, reachability, boundaries, copyTruth, dense, scenarios) + 26 scenario fixtures |
+| Backend harness | 800 / 800 | see §36 (Kids journey adds 33 checks) |
+| Mutation check | IR01 35 / 35 | Feature 05 23 / 23 (§22); IR01's 35 re-verified at K0 |
+
+**Inherited tests affected — every one classified:** `build3Audit.capture.test.mjs` "every Life screen with a task list is wired to its role…" — **REWRITTEN** (one assertion, rationale in the test comment and §3: its intent — every open kids-category task stays reachable from the Kids screen — is preserved and now proven by `tests/kids/reachability.test.mjs`; the file it pinned, `KidsOverview.tsx`, was REPLACED). Every other inherited test — `routeAccess`, `categories`, `designIndependence`, `tokenBoundary`, `productionWiring`, `foundationAcceptance2`, `claimPayload`, `persistence`, `appStore`, `hostileAudit`, `ingestionReasoning`, `migrationV3ToV4`, the design-system tests and the whole 975 — **PRESERVED**, unmodified, and green. None was deleted, weakened or skipped.
 ## 30. Schema / fingerprint (K1)
 
 **No schema change.** Fingerprint stays `43e7c8a4402a3387cb2e1add4170921e` / 3617 (the certified value at this baseline). No owner-approved schema change occurred.
 
-## 31. Device evidence — PENDING
-## 32. Shared-file changes — PENDING
-## 33. Sibling-import result — PENDING (K8)
+## 31. Device evidence
+
+**NOT EXECUTED — ENVIRONMENTAL LIMITATION.** The only Android emulator (`emulator-5554`, headless) is another session's runtime and is not to be hijacked, and the host had ~0.6 GB of free commit memory. No screenshot exists and none is claimed. What *does* exist: rendered props-contract tests of every Kids screen (hub, empty, colliding names, detail, plan states, editors, responsibility panel), and a **genuine Metro/Hermes Android bundle of this worktree** (6.4 MB, 1646 modules, every Kids string present, the old Kids screen's strings absent — §36). A real-device pass of: hub, child detail, two children with colliding names, create, edit, responsibility states, fallback planning, empty state and a dense state is still owed. *Trap for whoever does it:* a worktree whose `node_modules` is a junction into another checkout bundles **that checkout's `app/`** (D-K8), and `preview_start` runs in the original directory (see the memory note), so start Metro from this worktree and check its first log line.
+
+## 32. Shared-file changes
+
+Shared common foundation is read-only by default. Every change outside `src/features/kids` and `tests/kids`, and why:
+| File | Change | Why unavoidable / why safe |
+|---|---|---|
+| `src/domain/children.ts` | **NEW** (`addChild`, `checkNewChild`) | No path created a child (F-K0-01). Same `Child` shape, no schema change; a canonical concept, so not hidden in `features/kids`. Covered by `children.test.mjs` |
+| `app/(app)/life/kids.tsx` | route now renders `KidsHub` | The existing/direct route (owner rule); same URL |
+| `app/(app)/life/child/[childId].tsx`, `child-item.tsx`, `child-add.tsx` | **NEW** routes | Feature-owned routes under Life; no `life/_layout.tsx` edit (titles set from inside the screens) |
+| `src/features/kids/KidsOverview.tsx` | **DELETED** (REPLACE) | §3 |
+| `tests/build3Audit.capture.test.mjs` | one assertion rewritten | §29 |
+| `supabase/tests/journey-composition.mjs` | additive: exports its helpers; `device()` takes an optional `gate` (offline / refuse), default off | lets the Kids journey compose the production path without copying it; a device built without a gate is unchanged |
+| `supabase/tests/support/syncDevice.mjs` | additive `anonClient()` | an unauthenticated persona without duplicating the public local key |
+| `supabase/tests/run.mjs` | registers `kids`; `kids` skips ENV C; the full run ends with the Kids journey | |
+**Not changed:** the schema, migrations, RLS, sync kinds, `state.ts`, the store, `composeAccountApp`, the design system, `routeAccess`, the tab shell, the Life layout and hub, `TaskForm`, `EventForm`.
+
+## 33. Sibling-import result
+
+**Expected: ZERO. Result: ZERO** (`tests/kids/boundaries.test.mjs`, run in the suite, and re-checked at the end by grep, §36): no import of `feature/06`, `feature/07`, `feature/08`, `features/home|meals|coparent|people|life-admin`, `talk-it-out`, `today`, `calendar`, `systems`, `daily-load` or `one-move`; the only feature Kids imports from is `life` (`openTaskLabel`, the machinery the inherited screen already used); no sync mechanism, provider, network or model SDK; no `KidTask` / `KidEvent` / `KidCalendarEntry` / `KidResponsibility` / `KidDependency` / `KidDuration` or second Child model is declared.
 ## 34. Owner checkpoints encountered (K1)
 
 **OC-01** — creating a child after account binding: proposal written, **nothing built**, rest of Feature 05 continues (`HK_FEATURE_05_OWNER_CHECKPOINT_01.md`).
