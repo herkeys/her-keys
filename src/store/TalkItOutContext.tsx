@@ -1,17 +1,30 @@
 import { createContext, useContext, useRef, useState, type ReactNode } from 'react';
 import { applyDiscoveryConversation, clearDiscovery, freshDiscovery, replayDiscovery, type DiscoveryReplay } from '../domain/discovery';
 import type { DiscoveryRecord } from '../domain/state';
+import { CaptureProvider, useCapture } from '../features/talk-it-out/capture/CaptureContext';
+import { copy } from '../features/talk-it-out/capture/copy';
 import { advance } from '../features/talk-it-out/engine';
 import type { ClarificationOption, ConversationState, TalkItOutMessage } from '../types';
 import { useAppStore, useHouseholdState } from './AppStateProvider';
+
+/** A capture started in this conversation, shown after the Her Keys message that introduces it. */
+export interface CaptureRef {
+  afterMessageId: string;
+  captureId: string;
+}
+
+export type SendResult = 'sent' | 'not-saved' | 'ignored';
 
 interface TalkItOutContextValue {
   messages: TalkItOutMessage[];
   /** Suggested answers to the question currently on the table. */
   quickReplies: ClarificationOption[];
+  /** Captures made in this conversation, each rendered after the message it belongs to. */
+  captures: CaptureRef[];
   /** True once the conversation has moved past its opening line. */
   canRestart: boolean;
-  sendMessage: (text: string) => void;
+  /** Resolves 'not-saved' when nothing could be saved, so the composer can give her words back. */
+  sendMessage: (text: string) => Promise<SendResult>;
   selectQuickReply: (option: ClarificationOption) => void;
   restart: () => void;
 }
@@ -22,6 +35,7 @@ interface Session {
   conversation: ConversationState;
   quickReplies: ClarificationOption[];
   messages: TalkItOutMessage[];
+  captures: CaptureRef[];
 }
 
 const TalkItOutContext = createContext<TalkItOutContextValue | null>(null);
@@ -35,11 +49,27 @@ const TalkItOutContext = createContext<TalkItOutContextValue | null>(null);
  * Messages, including what she types, live only in memory. What's saved is
  * the structured record (topic and chosen answers); after a relaunch the
  * conversation is rebuilt from it by replaying the script.
+ *
+ * Feature 02 adds a second thing a first message can be: a CAPTURE — something she wants turned into
+ * a record. The capture provider is nested here so the root layout does not change.
  */
 export function TalkItOutProvider({ children }: { children: ReactNode }) {
+  return (
+    <CaptureProvider>
+      <TalkItOutSession>{children}</TalkItOutSession>
+    </CaptureProvider>
+  );
+}
+
+function TalkItOutSession({ children }: { children: ReactNode }) {
   const store = useAppStore();
+  const { coordinator } = useCapture();
   const record = useHouseholdState().state.discovery;
   const counterRef = useRef(0);
+  // One key per composed message: a re-tapped Send is the same submission, not a second capture.
+  const submissionRef = useRef(0);
+  const submissionKey = () => `s${Date.now().toString(36)}-${submissionRef.current}`;
+  const keyRef = useRef(submissionKey());
 
   const withIds = (drafts: DiscoveryReplay['messages']): TalkItOutMessage[] =>
     drafts.map((draft) => {
@@ -49,7 +79,7 @@ export function TalkItOutProvider({ children }: { children: ReactNode }) {
 
   const startFrom = (stored: DiscoveryRecord | null): Session => {
     const replay = replayDiscovery(stored) ?? freshDiscovery();
-    return { recordId: stored?.id ?? null, conversation: replay.conversation, quickReplies: replay.quickReplies, messages: withIds(replay.messages) };
+    return { recordId: stored?.id ?? null, conversation: replay.conversation, quickReplies: replay.quickReplies, messages: withIds(replay.messages), captures: [] };
   };
 
   const [session, setSession] = useState<Session>(() => startFrom(record));
@@ -69,22 +99,68 @@ export function TalkItOutProvider({ children }: { children: ReactNode }) {
     setSession(next);
   }
 
-  function submit(text: string, optionId?: string) {
+  function say(text: string): TalkItOutMessage {
+    counterRef.current += 1;
+    return { id: `msg-${counterRef.current}`, speaker: 'herkeys', stage: 'listen', text };
+  }
+
+  /** A first message is a capture when the reader recognises something in it; talk about feelings and patterns stays a conversation. */
+  function isCapture(text: string): boolean {
+    const preview = coordinator.preview(text);
+    if (preview === null) return false; // not loaded: behave exactly as before
+    if (preview.failure?.code !== 'nothing-recognized') return true; // proposals, or something that must be kept and handled carefully
+    // Nothing recognised: the discovery conversation gets first refusal. Only if it has nothing either is the source kept unread.
+    return advance(sessionRef.current.conversation, text).state.topicId === null;
+  }
+
+  async function capture(text: string): Promise<SendResult> {
+    const outcome = await coordinator.submit({ text, submissionKey: keyRef.current });
+    if (outcome.kind === 'refused') return 'ignored';
+    if (outcome.kind === 'not-saved') return 'not-saved'; // same key kept, so a retry is the same submission
+
+    submissionRef.current += 1;
+    keyRef.current = submissionKey();
+
+    counterRef.current += 1;
+    const userMessage: TalkItOutMessage = { id: `msg-${counterRef.current}`, speaker: 'user', text };
+    const current = sessionRef.current;
+
+    if (outcome.kind === 'high-stakes') {
+      update({ ...current, messages: [...current.messages, userMessage, say(copy.capture.failure('high-stakes'))] });
+      return 'sent';
+    }
+    if (outcome.kind !== 'captured') return 'ignored';
+
+    const reply = say(outcome.readingIds.length > 0 ? copy.capture.understood : copy.capture.understoodNothingSafe);
+    update({
+      ...current,
+      quickReplies: [],
+      messages: [...current.messages, userMessage, reply],
+      captures: [...current.captures, { afterMessageId: reply.id, captureId: outcome.captureId }],
+    });
+    return 'sent';
+  }
+
+  async function submit(text: string, optionId?: string): Promise<SendResult> {
     const trimmed = text.trim();
-    if (!trimmed) return;
+    if (!trimmed) return 'ignored';
 
     const current = sessionRef.current;
+    if (!optionId && current.conversation.stage === 'listening' && isCapture(trimmed)) return capture(trimmed);
+
     const turn = advance(current.conversation, trimmed, optionId);
     store.dispatch((state, ctx) => applyDiscoveryConversation(state, ctx, turn.state));
 
     counterRef.current += 1;
     const userMessage: TalkItOutMessage = { id: `msg-${counterRef.current}`, speaker: 'user', text: trimmed };
     update({
+      ...current,
       recordId: store.getSnapshot().state?.discovery?.id ?? null,
       conversation: turn.state,
       quickReplies: turn.quickReplies,
       messages: [...current.messages, userMessage, ...withIds(turn.messages)],
     });
+    return 'sent';
   }
 
   function restart() {
@@ -95,9 +171,10 @@ export function TalkItOutProvider({ children }: { children: ReactNode }) {
   const value: TalkItOutContextValue = {
     messages: session.messages,
     quickReplies: session.quickReplies,
+    captures: session.captures,
     canRestart: session.messages.length > 1,
     sendMessage: (text) => submit(text),
-    selectQuickReply: (option) => submit(option.label, option.id),
+    selectQuickReply: (option) => void submit(option.label, option.id),
     restart,
   };
 

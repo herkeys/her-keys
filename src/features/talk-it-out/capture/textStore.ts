@@ -22,7 +22,9 @@ export interface CaptureTextStore {
   get(contentRef: string): string | null;
   has(contentRef: string): boolean;
   delete(contentRef: string): void;
-  /** Forget everything held. Called when the session's household is reset. */
+  /** The references currently held, so words no source refers to any more can be forgotten. */
+  refs(): string[];
+  /** Forget everything held. */
   clear(): void;
 }
 
@@ -33,6 +35,15 @@ export function createMemoryCaptureTextStore(): CaptureTextStore {
     get: (ref) => held.get(ref) ?? null,
     has: (ref) => held.has(ref),
     delete: (ref) => void held.delete(ref),
+    refs: () => [...held.keys()],
     clear: () => held.clear(),
   };
+}
+
+/**
+ * Forget any held words whose source no longer exists (a household reset, a withdrawn source). The words are
+ * only ever reachable through a source, so an orphan is unreachable memory holding something she said.
+ */
+export function pruneOrphans(text: CaptureTextStore, liveRefs: ReadonlySet<string>): void {
+  for (const ref of text.refs()) if (!liveRefs.has(ref)) text.delete(ref);
 }

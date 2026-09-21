@@ -59,11 +59,18 @@ export const copy = {
     understoodNothingSafe: 'I kept what you wrote, but I haven’t turned any of it into something to save.',
     keptForLater: 'Decide later',
     keptForLaterHint: 'Leaves this in your Life Inbox',
+    parked: 'Left in your Life Inbox.',
+    reopen: 'Review now',
+    openInbox: 'Open Life Inbox',
     notSaved: 'That couldn’t be saved, so nothing was changed. You can try sending it again.',
     failure: (code: InterpretationFailureCode): string => FAILURE[code],
   },
 
   review: {
+    eyebrow: 'What I understood',
+    whyToggle: 'Why this?',
+    whyHide: 'Hide',
+    decidedTitle: (kindLabel: string, title: string): string => `${kindLabel}: ${title}`,
     sourceLabel: 'What you said',
     sourceExpand: 'Show all',
     sourceCollapse: 'Show less',
@@ -100,6 +107,8 @@ export const copy = {
   },
 
   clarify: {
+    eyebrow: 'One question',
+    send: 'Send',
     which_child: 'Which child do you mean?',
     which_day: (weekdayName: string | null): string => (weekdayName === null ? 'Do you mean today or tomorrow?' : `Which ${weekdayName} do you mean?`),
     which_money_direction: 'Is this something you pay, or something you are owed?',
@@ -143,11 +152,16 @@ export const copy = {
 
   inbox: {
     title: 'Life Inbox',
+    dismissed: 'Dismissed.',
+    retried: 'Read again.',
+    collapse: 'Close',
     subtitle: 'Things you’ve told Her Keys that still need a decision.',
     rowLabel: 'Life Inbox',
     rowEmpty: 'Nothing waiting',
     rowCount: (count: number): string => `${count} waiting`,
     empty: 'Nothing is waiting on a decision.',
+    emptyBody: 'Things you tell Her Keys that need a decision are listed here.',
+    urgency: { now: 'Very soon', today: 'Today', soon: 'In the next couple of days', none: '' } as const,
     loading: 'Checking what’s waiting…',
     recovery: 'Your saved household couldn’t be read on this device, so items waiting on you may not be shown here.',
     phaseClarify: 'Needs one answer',

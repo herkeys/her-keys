@@ -35,6 +35,7 @@ export default function LifeLayout() {
       <Stack.Screen name="work" options={{ title: titleFor('work', 'Work') }} />
       <Stack.Screen name="needs-me" options={{ title: 'Needs Me' }} />
       <Stack.Screen name="other-tasks" options={{ title: 'Other open tasks' }} />
+      <Stack.Screen name="inbox" options={{ title: 'Life Inbox' }} />
     </Stack>
   );
 }
