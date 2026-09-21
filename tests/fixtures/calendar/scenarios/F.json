@@ -1,0 +1,351 @@
+{
+  "availableActions": [
+    {
+      "action": "EDIT",
+      "available": true,
+      "itemRef": {
+        "id": "evt-a",
+        "kind": "event"
+      },
+      "reason": "legitimate_edit_path"
+    },
+    {
+      "action": "EDIT",
+      "available": true,
+      "itemRef": {
+        "id": "evt-b",
+        "kind": "event"
+      },
+      "reason": "legitimate_edit_path"
+    },
+    {
+      "action": "EDIT",
+      "available": true,
+      "itemRef": {
+        "id": "evt-c",
+        "kind": "event"
+      },
+      "reason": "legitimate_edit_path"
+    },
+    {
+      "action": "EDIT",
+      "available": true,
+      "itemRef": {
+        "id": "tsk-report",
+        "kind": "task"
+      },
+      "reason": "legitimate_edit_path"
+    },
+    {
+      "action": "MOVE",
+      "available": false,
+      "itemRef": null,
+      "reason": "not_offered_by_verdict"
+    },
+    {
+      "action": "KEEP",
+      "available": true,
+      "itemRef": null,
+      "reason": "offered_by_verdict"
+    },
+    {
+      "action": "DROP",
+      "available": false,
+      "itemRef": null,
+      "reason": "not_offered_by_verdict"
+    },
+    {
+      "action": "SHORTEN",
+      "available": false,
+      "itemRef": null,
+      "reason": "not_offered_by_verdict"
+    },
+    {
+      "action": "KEEP_CAPACITY",
+      "available": false,
+      "itemRef": null,
+      "reason": "no_recommendation_shown"
+    },
+    {
+      "action": "PROTECT",
+      "available": true,
+      "itemRef": {
+        "id": "tsk-report",
+        "kind": "task"
+      },
+      "reason": "flexible_item"
+    },
+    {
+      "action": "UNDO",
+      "available": false,
+      "itemRef": null,
+      "reason": "nothing_to_undo"
+    }
+  ],
+  "capacityState": {
+    "evidence": {
+      "missing": [],
+      "status": "complete"
+    },
+    "evidenceRefs": [
+      {
+        "id": "evt-b",
+        "kind": "event"
+      },
+      {
+        "id": "evt-c",
+        "kind": "event"
+      }
+    ],
+    "foundationTier": "overloaded",
+    "tier": "overloaded",
+    "verdict": "transition_conflict"
+  },
+  "conflicts": [
+    {
+      "evidence": {
+        "durationMinutes": 90,
+        "gaps": [
+          {
+            "endMinute": 870,
+            "lengthMinutes": 30,
+            "startMinute": 840,
+            "uncertain": false
+          },
+          {
+            "endMinute": 975,
+            "lengthMinutes": 15,
+            "startMinute": 960,
+            "uncertain": false
+          }
+        ],
+        "item": {
+          "id": "tsk-report",
+          "kind": "task"
+        },
+        "kind": "placement",
+        "occupied": [
+          {
+            "endMinute": 840,
+            "ref": {
+              "id": "evt-a",
+              "kind": "event"
+            },
+            "startMinute": 750
+          },
+          {
+            "endMinute": 960,
+            "ref": {
+              "id": "evt-b",
+              "kind": "event"
+            },
+            "startMinute": 870
+          },
+          {
+            "endMinute": 1050,
+            "ref": {
+              "id": "evt-c",
+              "kind": "event"
+            },
+            "startMinute": 975
+          }
+        ],
+        "windowEndMinute": 1020,
+        "windowStartMinute": 780
+      },
+      "evidenceRefs": [
+        {
+          "id": "tsk-report",
+          "kind": "task"
+        },
+        {
+          "id": "evt-a",
+          "kind": "event"
+        },
+        {
+          "id": "evt-b",
+          "kind": "event"
+        },
+        {
+          "id": "evt-c",
+          "kind": "event"
+        }
+      ],
+      "itemRefs": [
+        {
+          "id": "tsk-report",
+          "kind": "task"
+        }
+      ],
+      "type": "PLACEMENT_FAILURE"
+    }
+  ],
+  "dayItems": [
+    {
+      "blockedBy": [],
+      "flexibility": "fixed",
+      "progress": "in_progress",
+      "ref": {
+        "id": "evt-a",
+        "kind": "event"
+      },
+      "repeats": null,
+      "responsibility": null,
+      "subject": {
+        "kind": "unstated"
+      },
+      "timing": {
+        "continuesFromPreviousDay": false,
+        "continuesIntoNextDay": false,
+        "endKnown": true,
+        "endMinute": 840,
+        "kind": "timed",
+        "startMinute": 750
+      },
+      "title": "Vendor call"
+    },
+    {
+      "blockedBy": [],
+      "flexibility": "fixed",
+      "progress": "upcoming",
+      "ref": {
+        "id": "evt-b",
+        "kind": "event"
+      },
+      "repeats": null,
+      "responsibility": null,
+      "subject": {
+        "kind": "unstated"
+      },
+      "timing": {
+        "continuesFromPreviousDay": false,
+        "continuesIntoNextDay": false,
+        "endKnown": true,
+        "endMinute": 960,
+        "kind": "timed",
+        "startMinute": 870
+      },
+      "title": "Budget review"
+    },
+    {
+      "blockedBy": [],
+      "flexibility": "fixed",
+      "progress": "upcoming",
+      "ref": {
+        "id": "evt-c",
+        "kind": "event"
+      },
+      "repeats": null,
+      "responsibility": null,
+      "subject": {
+        "kind": "unstated"
+      },
+      "timing": {
+        "continuesFromPreviousDay": false,
+        "continuesIntoNextDay": false,
+        "endKnown": true,
+        "endMinute": 1050,
+        "kind": "timed",
+        "startMinute": 975
+      },
+      "title": "Site visit"
+    },
+    {
+      "blockedBy": [],
+      "flexibility": "flexible",
+      "progress": "untimed",
+      "ref": {
+        "id": "tsk-report",
+        "kind": "task"
+      },
+      "repeats": null,
+      "responsibility": null,
+      "subject": {
+        "kind": "unstated"
+      },
+      "timing": {
+        "basis": "due",
+        "daysOverdue": 0,
+        "dueDate": "2026-09-16",
+        "kind": "date_only"
+      },
+      "title": "Write the quarterly report"
+    }
+  ],
+  "dayMode": "today",
+  "householdOrigin": "real",
+  "narrowTransitions": [
+    {
+      "after": {
+        "endMinute": 960,
+        "ref": {
+          "id": "evt-b",
+          "kind": "event"
+        },
+        "startMinute": 870
+      },
+      "before": {
+        "endMinute": 840,
+        "ref": {
+          "id": "evt-a",
+          "kind": "event"
+        },
+        "startMinute": 750
+      },
+      "gapMinutes": 30,
+      "scheduledMinutes": 0,
+      "slackMinutes": 30,
+      "storedTransitionMinutes": 0,
+      "tier": "tight"
+    },
+    {
+      "after": {
+        "endMinute": 1050,
+        "ref": {
+          "id": "evt-c",
+          "kind": "event"
+        },
+        "startMinute": 975
+      },
+      "before": {
+        "endMinute": 960,
+        "ref": {
+          "id": "evt-b",
+          "kind": "event"
+        },
+        "startMinute": 870
+      },
+      "gapMinutes": 15,
+      "scheduledMinutes": 0,
+      "slackMinutes": 15,
+      "storedTransitionMinutes": 0,
+      "tier": "overloaded"
+    }
+  ],
+  "openWindows": [
+    {
+      "endMinute": 1320,
+      "lengthMinutes": 270,
+      "startMinute": 1050
+    }
+  ],
+  "preview": {
+    "active": false
+  },
+  "selectedDate": "2026-09-16",
+  "timeZone": "America/New_York",
+  "unknownStates": [],
+  "unplacedItems": [
+    {
+      "durationKnown": true,
+      "itemRef": {
+        "id": "tsk-report",
+        "kind": "task"
+      },
+      "missing": [],
+      "openings": [],
+      "reason": "no_feasible_window",
+      "state": "needs_a_place"
+    }
+  ]
+}

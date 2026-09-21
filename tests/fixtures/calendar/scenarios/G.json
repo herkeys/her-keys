@@ -1,0 +1,225 @@
+{
+  "availableActions": [
+    {
+      "action": "EDIT",
+      "available": true,
+      "itemRef": {
+        "id": "evt-a",
+        "kind": "event"
+      },
+      "reason": "legitimate_edit_path"
+    },
+    {
+      "action": "EDIT",
+      "available": true,
+      "itemRef": {
+        "id": "evt-b",
+        "kind": "event"
+      },
+      "reason": "legitimate_edit_path"
+    },
+    {
+      "action": "EDIT",
+      "available": true,
+      "itemRef": {
+        "id": "tsk-registration",
+        "kind": "task"
+      },
+      "reason": "legitimate_edit_path"
+    },
+    {
+      "action": "MOVE",
+      "available": false,
+      "itemRef": null,
+      "reason": "not_offered_by_verdict"
+    },
+    {
+      "action": "KEEP",
+      "available": false,
+      "itemRef": null,
+      "reason": "no_recommendation_shown"
+    },
+    {
+      "action": "DROP",
+      "available": false,
+      "itemRef": null,
+      "reason": "not_offered_by_verdict"
+    },
+    {
+      "action": "SHORTEN",
+      "available": false,
+      "itemRef": null,
+      "reason": "not_offered_by_verdict"
+    },
+    {
+      "action": "KEEP_CAPACITY",
+      "available": false,
+      "itemRef": null,
+      "reason": "no_recommendation_shown"
+    },
+    {
+      "action": "PROTECT",
+      "available": true,
+      "itemRef": {
+        "id": "tsk-registration",
+        "kind": "task"
+      },
+      "reason": "flexible_item"
+    },
+    {
+      "action": "UNDO",
+      "available": false,
+      "itemRef": null,
+      "reason": "nothing_to_undo"
+    }
+  ],
+  "capacityState": {
+    "evidence": {
+      "missing": [
+        {
+          "betweenWith": null,
+          "field": "durationMinutes",
+          "itemRef": {
+            "id": "tsk-registration",
+            "kind": "task"
+          },
+          "reason": "no_usable_duration"
+        }
+      ],
+      "status": "insufficient"
+    },
+    "evidenceRefs": [],
+    "foundationTier": "open",
+    "tier": null,
+    "verdict": null
+  },
+  "conflicts": [],
+  "dayItems": [
+    {
+      "blockedBy": [],
+      "flexibility": "fixed",
+      "progress": "upcoming",
+      "ref": {
+        "id": "evt-a",
+        "kind": "event"
+      },
+      "repeats": null,
+      "responsibility": null,
+      "subject": {
+        "kind": "unstated"
+      },
+      "timing": {
+        "continuesFromPreviousDay": false,
+        "continuesIntoNextDay": false,
+        "endKnown": true,
+        "endMinute": 660,
+        "kind": "timed",
+        "startMinute": 600
+      },
+      "title": "Morning appointment"
+    },
+    {
+      "blockedBy": [],
+      "flexibility": "fixed",
+      "progress": "upcoming",
+      "ref": {
+        "id": "evt-b",
+        "kind": "event"
+      },
+      "repeats": null,
+      "responsibility": null,
+      "subject": {
+        "kind": "unstated"
+      },
+      "timing": {
+        "continuesFromPreviousDay": false,
+        "continuesIntoNextDay": false,
+        "endKnown": true,
+        "endMinute": 900,
+        "kind": "timed",
+        "startMinute": 840
+      },
+      "title": "Afternoon appointment"
+    },
+    {
+      "blockedBy": [],
+      "flexibility": "flexible",
+      "progress": "untimed",
+      "ref": {
+        "id": "tsk-registration",
+        "kind": "task"
+      },
+      "repeats": null,
+      "responsibility": null,
+      "subject": {
+        "kind": "unstated"
+      },
+      "timing": {
+        "basis": "due",
+        "daysOverdue": 0,
+        "dueDate": "2026-09-16",
+        "kind": "date_only"
+      },
+      "title": "Renew car registration"
+    }
+  ],
+  "dayMode": "today",
+  "householdOrigin": "real",
+  "narrowTransitions": [],
+  "openWindows": [
+    {
+      "endMinute": 600,
+      "lengthMinutes": 180,
+      "startMinute": 420
+    },
+    {
+      "endMinute": 840,
+      "lengthMinutes": 180,
+      "startMinute": 660
+    },
+    {
+      "endMinute": 1320,
+      "lengthMinutes": 420,
+      "startMinute": 900
+    }
+  ],
+  "preview": {
+    "active": false
+  },
+  "selectedDate": "2026-09-16",
+  "timeZone": "America/New_York",
+  "unknownStates": [
+    {
+      "betweenWith": null,
+      "field": "durationMinutes",
+      "itemRef": {
+        "id": "tsk-registration",
+        "kind": "task"
+      },
+      "reason": "no_usable_duration"
+    }
+  ],
+  "unplacedItems": [
+    {
+      "durationKnown": false,
+      "itemRef": {
+        "id": "tsk-registration",
+        "kind": "task"
+      },
+      "missing": [
+        {
+          "betweenWith": null,
+          "field": "durationMinutes",
+          "itemRef": {
+            "id": "tsk-registration",
+            "kind": "task"
+          },
+          "reason": "no_usable_duration"
+        }
+      ],
+      "openings": [],
+      "reason": "no_usable_duration",
+      "state": "insufficient_information"
+    }
+  ]
+}

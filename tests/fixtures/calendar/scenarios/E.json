@@ -1,0 +1,235 @@
+{
+  "availableActions": [
+    {
+      "action": "EDIT",
+      "available": true,
+      "itemRef": {
+        "id": "evt-lunch",
+        "kind": "event"
+      },
+      "reason": "legitimate_edit_path"
+    },
+    {
+      "action": "EDIT",
+      "available": true,
+      "itemRef": {
+        "id": "evt-standup",
+        "kind": "event"
+      },
+      "reason": "legitimate_edit_path"
+    },
+    {
+      "action": "EDIT",
+      "available": true,
+      "itemRef": {
+        "id": "tsk-call",
+        "kind": "task"
+      },
+      "reason": "legitimate_edit_path"
+    },
+    {
+      "action": "MOVE",
+      "available": false,
+      "itemRef": null,
+      "reason": "not_offered_by_verdict"
+    },
+    {
+      "action": "KEEP",
+      "available": false,
+      "itemRef": null,
+      "reason": "no_recommendation_shown"
+    },
+    {
+      "action": "DROP",
+      "available": false,
+      "itemRef": null,
+      "reason": "not_offered_by_verdict"
+    },
+    {
+      "action": "SHORTEN",
+      "available": false,
+      "itemRef": null,
+      "reason": "not_offered_by_verdict"
+    },
+    {
+      "action": "KEEP_CAPACITY",
+      "available": false,
+      "itemRef": null,
+      "reason": "no_recommendation_shown"
+    },
+    {
+      "action": "PROTECT",
+      "available": true,
+      "itemRef": {
+        "id": "tsk-call",
+        "kind": "task"
+      },
+      "reason": "flexible_item"
+    },
+    {
+      "action": "UNDO",
+      "available": false,
+      "itemRef": null,
+      "reason": "nothing_to_undo"
+    }
+  ],
+  "capacityState": {
+    "evidence": {
+      "missing": [],
+      "status": "complete"
+    },
+    "evidenceRefs": [],
+    "foundationTier": "open",
+    "tier": "open",
+    "verdict": null
+  },
+  "conflicts": [],
+  "dayItems": [
+    {
+      "blockedBy": [],
+      "flexibility": "fixed",
+      "progress": "upcoming",
+      "ref": {
+        "id": "evt-standup",
+        "kind": "event"
+      },
+      "repeats": null,
+      "responsibility": null,
+      "subject": {
+        "kind": "unstated"
+      },
+      "timing": {
+        "continuesFromPreviousDay": false,
+        "continuesIntoNextDay": false,
+        "endKnown": true,
+        "endMinute": 570,
+        "kind": "timed",
+        "startMinute": 540
+      },
+      "title": "Standup"
+    },
+    {
+      "blockedBy": [],
+      "flexibility": "fixed",
+      "progress": "upcoming",
+      "ref": {
+        "id": "evt-lunch",
+        "kind": "event"
+      },
+      "repeats": null,
+      "responsibility": null,
+      "subject": {
+        "kind": "unstated"
+      },
+      "timing": {
+        "continuesFromPreviousDay": false,
+        "continuesIntoNextDay": false,
+        "endKnown": true,
+        "endMinute": 780,
+        "kind": "timed",
+        "startMinute": 720
+      },
+      "title": "Lunch"
+    },
+    {
+      "blockedBy": [],
+      "flexibility": "flexible",
+      "progress": "untimed",
+      "ref": {
+        "id": "tsk-call",
+        "kind": "task"
+      },
+      "repeats": null,
+      "responsibility": null,
+      "subject": {
+        "kind": "unstated"
+      },
+      "timing": {
+        "basis": "due",
+        "daysOverdue": 0,
+        "dueDate": "2026-09-16",
+        "kind": "date_only"
+      },
+      "title": "Call the pharmacy"
+    }
+  ],
+  "dayMode": "today",
+  "householdOrigin": "real",
+  "narrowTransitions": [],
+  "openWindows": [
+    {
+      "endMinute": 540,
+      "lengthMinutes": 120,
+      "startMinute": 420
+    },
+    {
+      "endMinute": 720,
+      "lengthMinutes": 150,
+      "startMinute": 570
+    },
+    {
+      "endMinute": 1320,
+      "lengthMinutes": 540,
+      "startMinute": 780
+    }
+  ],
+  "preview": {
+    "active": false
+  },
+  "selectedDate": "2026-09-16",
+  "timeZone": "America/New_York",
+  "unknownStates": [],
+  "unplacedItems": [
+    {
+      "durationKnown": true,
+      "itemRef": {
+        "id": "tsk-call",
+        "kind": "task"
+      },
+      "missing": [],
+      "openings": [
+        {
+          "after": {
+            "id": "evt-standup",
+            "kind": "event"
+          },
+          "before": null,
+          "endMinute": 540,
+          "leavesMinutes": 75,
+          "leavesTier": null,
+          "lengthMinutes": 120,
+          "startMinute": 420
+        },
+        {
+          "after": {
+            "id": "evt-lunch",
+            "kind": "event"
+          },
+          "before": {
+            "id": "evt-standup",
+            "kind": "event"
+          },
+          "endMinute": 720,
+          "leavesMinutes": 105,
+          "leavesTier": "open",
+          "lengthMinutes": 150,
+          "startMinute": 570
+        },
+        {
+          "after": null,
+          "before": {
+            "id": "evt-lunch",
+            "kind": "event"
+          },
+          "endMinute": 1320,
+          "leavesMinutes": 495,
+          "leavesTier": null,
+          "lengthMinutes": 540,
+          "startMinute": 780
+        }
+      ],
+      "reason": "certain_opening_exists",
+      "state": "has_opening"
+    }
+  ]
+}

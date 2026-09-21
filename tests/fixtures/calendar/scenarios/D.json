@@ -1,0 +1,195 @@
+{
+  "availableActions": [
+    {
+      "action": "EDIT",
+      "available": true,
+      "itemRef": {
+        "id": "evt-clinic",
+        "kind": "event"
+      },
+      "reason": "legitimate_edit_path"
+    },
+    {
+      "action": "EDIT",
+      "available": true,
+      "itemRef": {
+        "id": "evt-school",
+        "kind": "event"
+      },
+      "reason": "legitimate_edit_path"
+    },
+    {
+      "action": "MOVE",
+      "available": false,
+      "itemRef": null,
+      "reason": "not_offered_by_verdict"
+    },
+    {
+      "action": "KEEP",
+      "available": true,
+      "itemRef": null,
+      "reason": "offered_by_verdict"
+    },
+    {
+      "action": "DROP",
+      "available": false,
+      "itemRef": null,
+      "reason": "not_offered_by_verdict"
+    },
+    {
+      "action": "SHORTEN",
+      "available": false,
+      "itemRef": null,
+      "reason": "not_offered_by_verdict"
+    },
+    {
+      "action": "KEEP_CAPACITY",
+      "available": false,
+      "itemRef": null,
+      "reason": "no_recommendation_shown"
+    },
+    {
+      "action": "PROTECT",
+      "available": false,
+      "itemRef": null,
+      "reason": "fixed_commitment"
+    },
+    {
+      "action": "UNDO",
+      "available": false,
+      "itemRef": null,
+      "reason": "nothing_to_undo"
+    }
+  ],
+  "capacityState": {
+    "evidence": {
+      "missing": [],
+      "status": "complete"
+    },
+    "evidenceRefs": [
+      {
+        "id": "evt-school",
+        "kind": "event"
+      },
+      {
+        "id": "evt-clinic",
+        "kind": "event"
+      }
+    ],
+    "foundationTier": "overloaded",
+    "tier": "overloaded",
+    "verdict": "transition_conflict"
+  },
+  "conflicts": [
+    {
+      "evidence": {
+        "after": {
+          "endMinute": 720,
+          "ref": {
+            "id": "evt-clinic",
+            "kind": "event"
+          },
+          "startMinute": 680
+        },
+        "before": {
+          "endMinute": 660,
+          "ref": {
+            "id": "evt-school",
+            "kind": "event"
+          },
+          "startMinute": 600
+        },
+        "entered": {
+          "preparation": null,
+          "travelAfter": 30,
+          "travelBefore": 20
+        },
+        "gapMinutes": 20,
+        "kind": "transition",
+        "scheduledMinutes": 0,
+        "slackMinutes": -30,
+        "storedTransitionMinutes": 50
+      },
+      "evidenceRefs": [
+        {
+          "id": "evt-school",
+          "kind": "event"
+        },
+        {
+          "id": "evt-clinic",
+          "kind": "event"
+        }
+      ],
+      "itemRefs": [
+        {
+          "id": "evt-school",
+          "kind": "event"
+        },
+        {
+          "id": "evt-clinic",
+          "kind": "event"
+        }
+      ],
+      "type": "TRANSITION_CONFLICT"
+    }
+  ],
+  "dayItems": [
+    {
+      "blockedBy": [],
+      "flexibility": "fixed",
+      "progress": "upcoming",
+      "ref": {
+        "id": "evt-school",
+        "kind": "event"
+      },
+      "repeats": null,
+      "responsibility": null,
+      "subject": {
+        "kind": "unstated"
+      },
+      "timing": {
+        "continuesFromPreviousDay": false,
+        "continuesIntoNextDay": false,
+        "endKnown": true,
+        "endMinute": 660,
+        "kind": "timed",
+        "startMinute": 600
+      },
+      "title": "School pickup"
+    },
+    {
+      "blockedBy": [],
+      "flexibility": "fixed",
+      "progress": "upcoming",
+      "ref": {
+        "id": "evt-clinic",
+        "kind": "event"
+      },
+      "repeats": null,
+      "responsibility": null,
+      "subject": {
+        "kind": "unstated"
+      },
+      "timing": {
+        "continuesFromPreviousDay": false,
+        "continuesIntoNextDay": false,
+        "endKnown": true,
+        "endMinute": 720,
+        "kind": "timed",
+        "startMinute": 680
+      },
+      "title": "Clinic visit"
+    }
+  ],
+  "dayMode": "today",
+  "householdOrigin": "real",
+  "narrowTransitions": [],
+  "openWindows": [],
+  "preview": {
+    "active": false
+  },
+  "selectedDate": "2026-09-16",
+  "timeZone": "America/New_York",
+  "unknownStates": [],
+  "unplacedItems": []
+}

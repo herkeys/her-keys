@@ -1,0 +1,231 @@
+{
+  "availableActions": [
+    {
+      "action": "EDIT",
+      "available": true,
+      "itemRef": {
+        "id": "evt-later",
+        "kind": "event"
+      },
+      "reason": "legitimate_edit_path"
+    },
+    {
+      "action": "EDIT",
+      "available": true,
+      "itemRef": {
+        "id": "evt-notary",
+        "kind": "event"
+      },
+      "reason": "legitimate_edit_path"
+    },
+    {
+      "action": "EDIT",
+      "available": true,
+      "itemRef": {
+        "id": "tsk-permit",
+        "kind": "task"
+      },
+      "reason": "legitimate_edit_path"
+    },
+    {
+      "action": "MOVE",
+      "available": false,
+      "itemRef": null,
+      "reason": "not_offered_by_verdict"
+    },
+    {
+      "action": "KEEP",
+      "available": false,
+      "itemRef": null,
+      "reason": "no_recommendation_shown"
+    },
+    {
+      "action": "DROP",
+      "available": false,
+      "itemRef": null,
+      "reason": "not_offered_by_verdict"
+    },
+    {
+      "action": "SHORTEN",
+      "available": false,
+      "itemRef": null,
+      "reason": "not_offered_by_verdict"
+    },
+    {
+      "action": "KEEP_CAPACITY",
+      "available": false,
+      "itemRef": null,
+      "reason": "no_recommendation_shown"
+    },
+    {
+      "action": "PROTECT",
+      "available": true,
+      "itemRef": {
+        "id": "tsk-permit",
+        "kind": "task"
+      },
+      "reason": "flexible_item"
+    },
+    {
+      "action": "UNDO",
+      "available": false,
+      "itemRef": null,
+      "reason": "nothing_to_undo"
+    }
+  ],
+  "capacityState": {
+    "evidence": {
+      "missing": [],
+      "status": "complete"
+    },
+    "evidenceRefs": [],
+    "foundationTier": "open",
+    "tier": "open",
+    "verdict": null
+  },
+  "conflicts": [],
+  "dayItems": [
+    {
+      "blockedBy": [],
+      "flexibility": "fixed",
+      "progress": "upcoming",
+      "ref": {
+        "id": "evt-notary",
+        "kind": "event"
+      },
+      "repeats": null,
+      "responsibility": null,
+      "subject": {
+        "kind": "unstated"
+      },
+      "timing": {
+        "continuesFromPreviousDay": false,
+        "continuesIntoNextDay": false,
+        "endKnown": true,
+        "endMinute": 720,
+        "kind": "timed",
+        "startMinute": 660
+      },
+      "title": "Notary appointment"
+    },
+    {
+      "blockedBy": [],
+      "flexibility": "fixed",
+      "progress": "upcoming",
+      "ref": {
+        "id": "evt-later",
+        "kind": "event"
+      },
+      "repeats": null,
+      "responsibility": null,
+      "subject": {
+        "kind": "unstated"
+      },
+      "timing": {
+        "continuesFromPreviousDay": false,
+        "continuesIntoNextDay": false,
+        "endKnown": true,
+        "endMinute": 810,
+        "kind": "timed",
+        "startMinute": 780
+      },
+      "title": "Team sync"
+    },
+    {
+      "blockedBy": [
+        {
+          "finishMinute": 720,
+          "ref": {
+            "id": "evt-notary",
+            "kind": "event"
+          }
+        }
+      ],
+      "flexibility": "flexible",
+      "progress": "untimed",
+      "ref": {
+        "id": "tsk-permit",
+        "kind": "task"
+      },
+      "repeats": null,
+      "responsibility": null,
+      "subject": {
+        "kind": "unstated"
+      },
+      "timing": {
+        "basis": "due",
+        "daysOverdue": 0,
+        "dueDate": "2026-09-16",
+        "kind": "date_only"
+      },
+      "title": "Submit the permit form"
+    }
+  ],
+  "dayMode": "today",
+  "householdOrigin": "real",
+  "narrowTransitions": [],
+  "openWindows": [
+    {
+      "endMinute": 660,
+      "lengthMinutes": 240,
+      "startMinute": 420
+    },
+    {
+      "endMinute": 780,
+      "lengthMinutes": 60,
+      "startMinute": 720
+    },
+    {
+      "endMinute": 1320,
+      "lengthMinutes": 510,
+      "startMinute": 810
+    }
+  ],
+  "preview": {
+    "active": false
+  },
+  "selectedDate": "2026-09-16",
+  "timeZone": "America/New_York",
+  "unknownStates": [],
+  "unplacedItems": [
+    {
+      "durationKnown": true,
+      "itemRef": {
+        "id": "tsk-permit",
+        "kind": "task"
+      },
+      "missing": [],
+      "openings": [
+        {
+          "after": {
+            "id": "evt-later",
+            "kind": "event"
+          },
+          "before": {
+            "id": "evt-notary",
+            "kind": "event"
+          },
+          "endMinute": 780,
+          "leavesMinutes": 40,
+          "leavesTier": "tight",
+          "lengthMinutes": 60,
+          "startMinute": 720
+        },
+        {
+          "after": null,
+          "before": {
+            "id": "evt-later",
+            "kind": "event"
+          },
+          "endMinute": 1320,
+          "leavesMinutes": 490,
+          "leavesTier": null,
+          "lengthMinutes": 510,
+          "startMinute": 810
+        }
+      ],
+      "reason": "certain_opening_exists",
+      "state": "has_opening"
+    }
+  ]
+}

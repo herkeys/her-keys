@@ -64,11 +64,12 @@ do not create work to manage the tool. Each decision below is inside already-app
 |---|---|---|---|
 | D-01 | Unknown duration is not representable on a task (creation stamps 15). | A recorded duration is an **estimate** and is worded as one. A recorded `0` is *no usable duration*: no fit is claimed either way and it is never counted as zero time. The defaulted-15 residual is recorded as **OWNER-DECISION OD-01**, not fixed locally. | 1 truth; must not invent a durable "duration known" field |
 | D-02 | Unknown travel: flag every gap, or only some? | Flag only when the data **implies movement**: at least one side has a location, no transition value is entered, and the two locations are not the same known place. Gaps between un-located commitments are not flagged. | 2 + 8: flagging everything would make her maintain the tool |
-| D-03 | Unknown can only shrink capacity. | A *problem* verdict stands regardless of unknowns; a *room/fits* verdict needs complete evidence, otherwise it is withheld and the missing facts are named. | 1 truth |
+| D-03 | Unknown can only shrink capacity. | `tight` and `overloaded` (constraint-present verdicts) stand regardless of unknowns; `open` (a claim of room) and "fits" need complete evidence, otherwise `tier` is `null` (the foundation's "not known") and the missing canonical fields are named. | 1 truth |
 | D-04 | Calendar vs Today on the two DST days. | Calendar computes geometry from instants (elapsed time) and feeds the foundation classifier elapsed-minute coordinates. On every non-DST day this equals Today exactly (equivalence-tested). Divergence on a DST day is the truthful one; recorded as an integration candidate. | 1 truth; 7 coherence |
 | D-05 | Overlap where one/both sides are flexible. | Reported as `FIXED_OVERLAP` with each side's flexibility and the foundation's `movableEventId` in the evidence; no unlisted conflict type is invented. | 7 |
 | D-06 | Placement "fits" vs the 45/23-minute buffer. | Feasibility is *physical fit only*; the foundation tier of the resulting buffer is attached as a consequence, never used as a Calendar threshold. | 1 + "do not invent thresholds" |
 | D-07 | Future-day overdue backlog. | A future day lists only what is dated/planned/timed for it. Overdue is a today-relative state and appears on today only (mirrors `tomorrowPreview`). | 2: no backlog wall |
+| D-09 | Which week? | Sunday-first (the same `0 = Sunday` convention `byWeekday` uses); no week-start setting exists in state. Paging moves a week at a time. | 7 coherence |
 | D-08 | Past days. | Read-only history of active events; no capacity or Needs-a-Place claims (the foundation has no as-of view: completed rows vanish). | 1 |
 
 ---
