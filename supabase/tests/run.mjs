@@ -32,6 +32,8 @@ const BASELINE = join(REPO, 'supabase', 'migrations', '20260919230054_build4_bas
 const BUILD4 = join(REPO, 'supabase', 'migrations', '20260919231500_build4_cloud_schema.sql');
 // HK-INTEGRATION-READINESS-01: additive, follows the shipping migration and never edits it.
 const IR01 = join(REPO, 'supabase', 'migrations', '20260921120000_ir01_duration_source_and_claim_v3.sql');
+// HK-FEATURE-08-MEALS: additive, follows IR01 and never edits it. meal_plan_entries gains meal_slot and status.
+const F08 = join(REPO, 'supabase', 'migrations', '20260921160000_f08_meal_slot_and_status.sql');
 const AUTH_STUB = join(HERE, 'helpers', '00-auth-stub.sql');
 const TEST_HELPERS = join(HERE, 'helpers', '01-test-helpers.sql');
 const TEST_DEFAULTS = join(HERE, 'helpers', '05-test-defaults.sql');
@@ -65,6 +67,7 @@ const psqlFile = (db, file, opts) => psql(db, readFileSync(file, 'utf8'), opts);
 // the Supabase CLI does not wrap migration files. Nothing here adds one.
 const applyBuild4 = (db, opts = {}) => psqlFile(db, BUILD4, opts);
 const applyIr01 = (db, opts = {}) => psqlFile(db, IR01, opts);
+const applyF08 = (db, opts = {}) => psqlFile(db, F08, opts);
 
 function admin(sql) {
   return execFileSync(
@@ -103,8 +106,12 @@ function envA() {
   psqlFile('b4_env_a', BASELINE, { label: 'ENV A baseline' });
   applyBuild4('b4_env_a', { label: 'ENV A build4' });
   applyIr01('b4_env_a', { label: 'ENV A ir01' });
+  applyF08('b4_env_a', { label: 'ENV A f08' });
 
   check('ENV A: Build 4 migration applies on an empty surface', true);
+  check('ENV A: the additive F08 migration applies on top of IR01 (fresh install)', true);
+  check('ENV A: meal_plan_entries.meal_slot and .status are text NOT NULL defaulting to unspecified and active (a legacy row is a live plan with no stated slot)',
+        scalar('b4_env_a', "select string_agg(column_name || '=' || data_type || '/' || is_nullable || '/' || column_default, ';' order by column_name) from information_schema.columns where table_schema='public' and table_name='meal_plan_entries' and column_name in ('meal_slot','status');") === "meal_slot=text/NO/'unspecified'::text;status=text/NO/'active'::text");
   check('ENV A: the additive IR01 migration applies on top of it (fresh install)', true);
   check('ENV A: tasks.duration_source is nullable text with no default (an unstated source is unknown)',
         scalar('b4_env_a', "select data_type || '/' || is_nullable || '/' || coalesce(column_default, 'none') from information_schema.columns where table_schema='public' and table_name='tasks' and column_name='duration_source';") === 'text/YES/none');
@@ -203,6 +210,7 @@ function envC(only) {
   psqlFile('b4_env_c', BASELINE, { label: 'ENV C baseline' });
   applyBuild4('b4_env_c', { label: 'ENV C build4 (while empty)' });
   applyIr01('b4_env_c', { label: 'ENV C ir01 (while empty)' });
+  applyF08('b4_env_c', { label: 'ENV C f08 (while empty)' });
   check('ENV C: migrated while empty, before any fixture exists', true);
   // Test-environment convenience ONLY: see the header of helpers/05-test-defaults.sql.
   psqlFile('b4_env_c', TEST_DEFAULTS, { label: 'ENV C test defaults' });
@@ -337,13 +345,21 @@ function migrationQuality() {
   // Exactly one Build 4 shipping migration in the tree.
   const migs = readdirSync(join(REPO, 'supabase', 'migrations')).filter((f) => f.endsWith('.sql'));
   const after = migs.filter((f) => f.split('_')[0] > '20260919230054');
-  check('quality: exactly ONE Build 4 shipping migration plus the ONE additive IR01 repair migration after the baseline',
-        after.length === 2 && after[0] === '20260919231500_build4_cloud_schema.sql' && after[1] === '20260921120000_ir01_duration_source_and_claim_v3.sql', after.join(', '));
-  check('quality: their timestamps sort strictly after the baseline, in order', after.every((f) => f.split('_')[0] > '20260919230054') && after[0] < after[1], after.join(' < '));
+  check('quality: exactly ONE Build 4 shipping migration plus the ONE additive IR01 repair migration plus the ONE additive F08 meals migration after the baseline',
+        after.length === 3 && after[0] === '20260919231500_build4_cloud_schema.sql' && after[1] === '20260921120000_ir01_duration_source_and_claim_v3.sql'
+          && after[2] === '20260921160000_f08_meal_slot_and_status.sql', after.join(', '));
+  check('quality: their timestamps sort strictly after the baseline, in order', after.every((f) => f.split('_')[0] > '20260919230054') && after[0] < after[1] && after[1] < after[2], after.join(' < '));
   const ir01Sql = readFileSync(IR01, 'utf8');
   check('quality: the IR01 migration is additive - it drops no table, column or data and rewrites no row',
         !/(^|\n)\s*(DROP TABLE|DROP COLUMN|TRUNCATE|DELETE FROM|UPDATE public\.)/i.test(ir01Sql.replace(/\$fn\$[\s\S]*?\$fn\$/g, '').replace(/--.*$/gm, '')));
   check('quality: the IR01 migration is pinned to LF, so its function digest is the same on every checkout', !ir01Sql.includes(String.fromCharCode(13)));
+  const f08Sql = readFileSync(F08, 'utf8');
+  const f08Code = f08Sql.replace(/--.*$/gm, ''); // the code only: its own comments say "no DELETE grant"
+  check('quality: the F08 migration is additive - it drops no table, column or data, rewrites no row and replaces no function',
+        !/(^|\n)\s*(DROP TABLE|DROP COLUMN|TRUNCATE|DELETE FROM|UPDATE public\.|CREATE OR REPLACE FUNCTION|CREATE FUNCTION)/i.test(f08Code));
+  check('quality: the F08 migration grants no DELETE and touches no policy (removal is an archive, never a delete)',
+        !/\bGRANT\b[^;]*\bDELETE\b/i.test(f08Code) && !/\b(CREATE|ALTER|DROP)\s+POLICY\b/i.test(f08Code));
+  check('quality: the F08 migration is pinned to LF, so its hash is the same on every checkout', !f08Sql.includes(String.fromCharCode(13)));
 }
 
 // ------------------------------------------ CLIENT PAYLOAD INTEGRATION ----
@@ -523,6 +539,74 @@ function envD() {
         scalar(db, "select count(*) from information_schema.column_privileges where table_schema='public' and table_name='tasks' and column_name='duration_source' and grantee in ('anon','PUBLIC');") === '0');
 }
 
+// ---------------------------------------------------------------- ENV E -----
+/**
+ * HK-FEATURE-08-MEALS — the upgrade of a POPULATED pre-F08 database.
+ *
+ * A household that already holds meal plans is upgraded in place by the additive migration. Nothing may be lost or rewritten,
+ * and every existing plan must read as what it was: a live plan with no stated slot, never a guessed one.
+ */
+function envE() {
+  console.log('\nENV E — additive upgrade of a POPULATED pre-F08 database (meal plans)');
+  const db = 'b4_env_e';
+  recreate(db);
+  psqlFile(db, AUTH_STUB, { label: 'ENV E auth stub' });
+  psqlFile(db, TEST_HELPERS, { label: 'helpers' });
+  psqlFile(db, BASELINE, { label: 'ENV E baseline' });
+  applyBuild4(db, { label: 'ENV E build4 (while empty)' });
+  applyIr01(db, { label: 'ENV E ir01 (while empty)' });
+
+  const uid = 'e1000000-0000-4000-8000-00000000000e';
+  psql(db, `INSERT INTO auth.users (id, email) VALUES ('${uid}','e1@local.test') ON CONFLICT (id) DO NOTHING;`, { label: 'ENV E user' });
+  psql(db, `BEGIN;
+    SET LOCAL ROLE authenticated;
+    SET LOCAL request.jwt.claims = '{"sub":"${uid}"}';
+    SELECT public.bootstrap_account('eeeeeeee-0000-4000-8000-00000000000e'::uuid, 'America/Chicago', NULL);
+    COMMIT;`, { label: 'ENV E bootstrap' });
+
+  // What a pre-F08 household could hold: household plans and one owner-only plan, none with a slot or a status.
+  psql(db, `INSERT INTO public.meal_plan_entries (household_id, local_id, owner_profile_id, meal_date, title, category_id, scope, producer)
+    SELECT hm.household_id, v.local_id, CASE WHEN v.scope = 'personal' THEN '${uid}'::uuid END, v.d::date, v.title, c.id, v.scope, 'user-action'
+    FROM public.household_members hm
+    JOIN public.household_categories c ON c.household_id = hm.household_id AND c.local_id = 'cat-meals'
+    CROSS JOIN (VALUES ('meal-1','Tacos','2026-09-22','household'), ('meal-2','Soup','2026-09-23','household'), ('meal-3','Private plan','2026-09-24','personal')) AS v(local_id, title, d, scope)
+    WHERE hm.profile_id = '${uid}' AND hm.role = 'owner';`, { label: 'ENV E meals' });
+
+  const census = () => scalar(db, `SELECT (SELECT count(*) FROM public.households) || '/' || (SELECT count(*) FROM public.household_members) || '/' || (SELECT count(*) FROM public.meal_plan_entries) || '/' || (SELECT count(*) FROM public.household_categories);`);
+  const rowDigest = () => scalar(db, "SELECT md5(string_agg(to_jsonb(m)::text, '|' ORDER BY m.id)) FROM public.meal_plan_entries m;");
+  const before = { census: census(), meals: rowDigest() };
+  check('ENV E: the database is genuinely populated before the upgrade (1 household, 3 meal plans)', /^1\/1\/3\/8$/.test(before.census), before.census);
+
+  // Rollback assumption, proven: dropping the columns is possible and loses only the columns.
+  const probe = scalar(db, "BEGIN; ALTER TABLE public.meal_plan_entries ADD COLUMN meal_slot text; ALTER TABLE public.meal_plan_entries DROP COLUMN meal_slot; SELECT count(*) FROM public.meal_plan_entries; ROLLBACK;").split('\n').map((l) => l.trim()).find((l) => /^\d+$/.test(l));
+  check('ENV E: rollback assumption - adding then dropping a column keeps every meal plan (and is undone by the ROLLBACK here)', probe === '3', probe);
+
+  applyF08(db, { label: 'ENV E f08 upgrade' });
+  check('ENV E: the additive migration applies to a populated database (no interlock, no abort)', true);
+
+  check('ENV E: nothing was lost - every table keeps its row count', census() === before.census, `${before.census} -> ${census()}`);
+  check('ENV E: no existing meal plan was rewritten (each row is byte-identical apart from the two new columns)',
+        scalar(db, "SELECT md5(string_agg((to_jsonb(m) - 'meal_slot' - 'status')::text, '|' ORDER BY m.id)) FROM public.meal_plan_entries m;") === before.meals);
+  check('ENV E: EVERY pre-existing plan reads as a live plan with no stated slot - unspecified and active, never a guessed dinner',
+        scalar(db, "SELECT count(*) FILTER (WHERE meal_slot = 'unspecified' AND status = 'active') || '/' || count(*) FROM public.meal_plan_entries;") === '3/3');
+  check('ENV E: no existing plan gained a revision bump or a new updated_at from the upgrade (the upgrade fired no update)',
+        scalar(db, "SELECT count(*) FILTER (WHERE revision = 1) || '/' || count(*) FROM public.meal_plan_entries;") === '3/3');
+
+  // The upgraded database works: the owner archives a pre-existing plan and the server counts it.
+  const archived = psql(db, `BEGIN;
+    SET LOCAL ROLE authenticated;
+    SET LOCAL request.jwt.claims = '{"sub":"${uid}"}';
+    UPDATE public.meal_plan_entries SET status = 'archived', meal_slot = 'dinner' WHERE local_id = 'meal-1';
+    SELECT status || '/' || meal_slot || '/' || revision FROM public.meal_plan_entries WHERE local_id = 'meal-1';
+    COMMIT;`, { label: 'ENV E archive' }).out;
+  check('ENV E: the owner can archive and re-slot a pre-existing plan, and the server bumps its revision',
+        archived.split('\n').some((line) => line.trim() === 'archived/dinner/2'), archived.split('\n').map((l) => l.trim()).filter(Boolean).slice(-2).join(' | '));
+  check('ENV E: RLS is enabled on every public table after the upgrade', scalar(db, "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r' and not c.relrowsecurity;") === '0');
+  check('ENV E: the fail-closed assertion passes on the upgraded database', psql(db, 'SELECT private.assert_app_schema_secured();').ok);
+  check('ENV E: no client role gained a privilege it should not have (anon and PUBLIC have nothing on the new columns)',
+        scalar(db, "select count(*) from information_schema.column_privileges where table_schema='public' and table_name='meal_plan_entries' and column_name in ('meal_slot','status') and grantee in ('anon','PUBLIC');") === '0');
+}
+
 // ------------------------------------------- LOCAL STACK SCHEMA CURRENCY ----
 /**
  * The sync journeys talk to the REAL local Supabase stack (real HTTP, real PostgREST), which serves the container's default
@@ -552,14 +636,23 @@ for (const stray of ['b4_probe', 'b4_fp_pre', 'b4_fp_post', 'b4_env_b3']) {
 }
 
 try {
+  if (only === 'f08') {
+    // Feature 08 (meals) evidence on its own: the migration gate, a fresh install, an upgrade of a populated database, and the
+    // real-role RLS attacks (suite 77). It never touches the shared default database, so it needs no coordination with other sessions.
+    migrationQuality();
+    envA();
+    envE();
+    envC('77');
+  }
   if (!only) {
     migrationQuality();
     envA();
     envB();
     envB3();
     envD();
+    envE();
   }
-  envC(only);
+  if (only !== 'f08') envC(only);
   if (!only || only === 'parity') {
     const { authorizationParity } = await import(`file://${join(HERE, 'authorization-parity.mjs')}`);
     await authorizationParity(check, psql);
