@@ -279,9 +279,84 @@ No test is removed or rewritten at T0.
 
 ---
 
-## 5. Foundation trace, correction map, prefix index — *T1*
+## 5. Foundation consumption trace, correction map, authority-prefix index — *T1*
 
-(Filled in the T1 commit.)
+### 5.1 Foundation consumption trace (Addendum §F)
+
+Every primitive the prompt says Today will consume, traced to actual code. Governance IDs are from
+`docs/builds/BUILD4_FOUNDATION_BUILDOUT.md` §"FE01 rows". Paths are relative to `src/domain/`. A row's
+classification is `CONSUME-AS-IS`, `CONSUME-PARTIAL` (with exactly what is missing), or `NOT-FOUND`. **Nothing is
+`NOT-FOUND`**, so no requirement is STOPPED for a missing primitive; the three `PARTIAL`s each have a bridge that
+introduces no new truth (bridges are stated).
+
+| ID | Capability | Implementation | API / accessor Today uses | Test evidence | Today usage | Class |
+|---|---|---|---|---|---|---|
+| B4-FE01-001 | Stored provenance | `foundation/provenance.ts` (`ProvenanceSchema`, `isUserStated`, `carriesConfidence`); `reasoning/provenance.ts` (`provenanceOf`) | `row.provenance.producer`, `isUserStated`, `carriesConfidence` | `foundationTruth.test.mjs`, `foundationAcceptance.test.mjs` (`isUserStated`) | Every row Today names carries its stored producer into the view model; labels come from the design system's `PROVENANCE_LABEL`; `legacy-unknown` is never rendered as user-stated | AS-IS |
+| B4-FE01-005 | Durable confidence | `reasoning/confidence.ts` (`promoteConfidence`, `promoteProvenance`); stored in `Provenance.confidence` (`possible` / `likely` / `established`, non-null exactly for `ai-inference` and `import-sync`) | read `row.provenance.confidence` only | `foundationTruth.test.mjs` | Read-side only → `ConfidenceBadge`. Today **never promotes** (the two callers of `promoteProvenance` are `acceptInterpretation` and `confirmPattern`) | AS-IS |
+| B4-FE01-006 | Behavior observations (append-only) | `foundation/observation.ts`, `observations.ts` (`appendObservation`) | read `state.observations` (`logicalDate`, `about`, `outcome`) | `foundationAcceptance*.test.mjs`, `foundationOps.test.mjs` | Source of the small "changed today" cue on a responsibility (acknowledged / accepted / declined / returned today). Writes happen only inside existing transitions | AS-IS |
+| B4-FE01-008 | Action category / consequence / reversibility | `foundation/authorization.ts` (`ACTION_CATEGORIES`, `CONSEQUENCE_LEVELS`, `REVERSIBILITY`, `consequenceRank`) | `consequenceRank`, `intent.consequence`, `intent.reversibility` | `foundationAcceptance.test.mjs`, `foundationOps.test.mjs` | Risk and can-wait use `consequenceRank(...) >= high`; an approval names the intent's own consequence and reversibility | AS-IS |
+| B4-FE01-009..012 | Intent → decision → execution → outcome | `foundation/authorization.ts` (schemas); `authorization.ts` (`intentLifecycle`, `pendingApprovals`, `decideIntent`) | `intentLifecycle(state, id)`, `pendingApprovals(state, nowMs)`, `decideIntent`; `state.executions` / `state.outcomes` | `foundationAcceptance.test.mjs`, `foundationAcceptance2.test.mjs`, `foundationOps.test.mjs`; server rows fixture `tests/support/richHousehold.mjs` (`withServerRows`) | Approvals needing her; "handled" only for a succeeded execution **with** a success outcome; "waiting" for an approved-not-run / unconfirmed one | AS-IS |
+| B4-FE01-014 | Responsibility (lifecycle) | `foundation/responsibility.ts` (`isActiveResponsibility`, `isUnacknowledged`); `responsibility.ts` (`unacknowledgedResponsibilities`, `liveResponsibilityFor`, `needsMePersonally`, `returnToSelf`) | as listed | `foundationAcceptance.test.mjs`, `foundationOps.test.mjs`, `foundationAcceptance2/3` | Responsibility rows: requested / acknowledged / accepted / declined / returned, "delegated ≠ covered", the unacknowledged escalation, "Take it back" | AS-IS |
+| B4-FE01-015 | Commitment facets | `foundation/commitment.ts` (`commitmentFacetsOf`, `ANSWERABLE_FACETS`) | `commitmentFacetsOf({kind,row})` | `foundationAcceptance.test.mjs`, `foundationAcceptance3.test.mjs`, `foundationOps.test.mjs` | Consequence, deadline-with-time, scheduling window, flexibility, effort read through the one contract; `null` stays "not known" | AS-IS |
+| B4-FE01-016 | Capacity metadata / profile | `foundation/structure.ts` (`CapacityProfileSchema`); `structure.ts` (`capacityWindowFor`, `DEFAULT_CAPACITY`) | facets via `commitmentFacetsOf`; profile via `state.capacity` | `foundationAcceptance.test.mjs`, `foundationOps.test.mjs` | **PARTIAL.** Facets: consumed. **Profile: Daily Load does not read it** — `detectCapacityPressure` uses the `CAPACITY_DAY_START/END_MINUTES` constants, `computeDailyLoad` the `REQUIRED_TRANSITION_BUFFER_MINUTES` constant, `loadThresholds` its own. `capacityWindowFor` has zero app callers. **Bridge:** none is possible without changing foundation. Today reports the verdict Daily Load actually computed, states the window it used, and when `state.capacity` holds an override that differs from the default it says so instead of implying the verdict reflects her setting. Recorded as TODAY-FD-001 | PARTIAL |
+| B4-FE01-017 | Dependencies | `foundation/structure.ts` (`DependencySchema`); `structure.ts` (`blockersOf`, `isBlocked`, `isDone`) | `blockersOf(state, ref)`, `state.dependencies` | `foundationAcceptance.test.mjs`, `foundationAcceptance3.test.mjs`, `foundationOps.test.mjs` | Upcoming constraint (unmet `requires`); can-wait exclusion (something live requires this) | AS-IS |
+| B4-FE01-019 | Attention intent (derived) | `reasoning/attention.ts` (`attentionFor`, `ATTENTION_REASONS`) | `attentionFor(state, nowMs)` | `foundationAcceptance.test.mjs`, `foundationAcceptance2.test.mjs`, `foundationAcceptance3.test.mjs` | The one source of deadline / risk / needs-me / unacknowledged delegation / approval / external-source-changed rows and their urgency. Conflict and capacity attention are shown through the Daily Load decision block, not twice | AS-IS |
+| B4-FE01-024 | Reasoning evidence | `foundation/pattern.ts` (`EvidenceLinkSchema`, `KNOWN_EVIDENCE_CODES`); `patterns.ts` (`explain`, `addEvidence`) | `explain(state, {kind:'oneMove', id})` | `foundationAcceptance3.test.mjs`, `foundationOps.test.mjs` | "Why this One Move": the stored evidence links, code → fact. Unknown codes are stored and never rendered | AS-IS |
+| B4-FE01-025 | Briefing projection (derived) | `reasoning/briefing.ts` (`briefingFor(state, nowMs, sinceMs)`) | `atRisk`, `needsHer`, `delegated`, `unacknowledged`, `needsApproval` | `foundationAcceptance.test.mjs`, `foundationAcceptance3.test.mjs` | **PARTIAL.** Used for the five fields above so their definitions cannot drift. **Gaps:** (a) `handled` = succeeded executions **not gated on an outcome** — bridge: Today narrows it to those that also have a success outcome (stricter, never broader); (b) `changed` needs a `sinceMs` "last looked" marker, which may not be persisted — bridge: not used; the changed cue comes from observations dated *today* (a logical-day boundary, not a stored marker); `sinceMs` passed to `briefingFor` is the start of today's logical day, derived; (c) `matters` is counts only — bridge: Today composes its matters block from `projectStateDay` + attention | PARTIAL |
+| B4-FE01-027 / -028 | Typed reference convention / One Move target registry | `foundation/typedRef.ts` (`TYPED_REF_KINDS`, `refExists`); `oneMove.ts` (`TARGET_ADAPTERS`, private; `oneMoveForDay`); `state.ts` (`ONE_MOVE_TARGET_TYPES`) | `oneMoveForDay(state, today)`; the stored record's `targetType` / `targetId`; `ONE_MOVE_TARGET_TYPES` | `oneMove.test.mjs`, `build3Audit.oneMove.test.mjs`, `foundationTruth.test.mjs` | The registry is consumed *through* `oneMoveForDay`; Today ranks nothing. The per-kind open/complete affordance is a `Record<OneMoveTargetType, …>` so a new registered kind fails to compile until Today decides its affordance (§5.2 table N) | AS-IS |
+| B4-FE01-031 | Cross-domain projection | `reasoning/related.ts` (`relatedTo`) | `relatedTo(state, ref)` | `foundationAcceptance.test.mjs`, `foundationAcceptance2.test.mjs`, `foundationAcceptance3.test.mjs` | The One Move target's own dependencies / responsibilities as second-level context (not as the recorded reason) | AS-IS |
+
+Also consumed, not on the prompt's list: B4-FE01-013 household people (`state.people`, for the name of who holds a
+delegated thing), and the store snapshot's `status` / `recovery` / `persistence` (B4-FE01-029 local persistence v4)
+for the lifecycle rules (§2.6).
+
+**One Move target kinds — what actually exists for each** (Addendum §N: "do not manufacture a completion affordance"):
+
+| Kind | Chosen by the selection engine? | "I did it" (`completeOneMove`) does | Open / adjust route | Copy the adapter supplies |
+|---|---|---|---|---|
+| `task` | yes | completes the task **and** records the move done | `/task-editor` `{taskId}` | "Already on your list." |
+| `needsMe` | yes | resolves the Needs Me item **and** records the move done | `/life/needs-me` | "Captured earlier and still open." |
+| `catalog` (demo only) | yes, demo households only | records the move done; there is no row behind it | none | the catalog item's own observation |
+| `event` | no (stored shape only) | **records the move done only**; an event has no completion state | `/event-editor` `{eventId}` | "On your calendar." |
+| `system` | no | records only; running a system is Feature 04's | none (Systems tab owns it) | "One of your routines." |
+| `responsibility` | no | records only ("Check that this is covered") | none — no UI for responsibility exists | "You asked someone to take this." |
+
+### 5.2 Correction-affordance map (Addendum §H)
+
+Rule applied throughout: **if the mutation does not exist, no affordance implying it is rendered**; the gap is
+recorded (MP-xx). No Today-local mutation is invented. Every mutation goes through `store.commit` /
+`store.dispatch`, which persists before or with showing.
+
+| Thing displayed | Source domain type | Correctable? | Existing mutation / API | Destination | Explicit confirmation | Reject an inference? | Provenance / confidence effect |
+|---|---|---|---|---|---|---|---|
+| Task (matters, One Move target, attention row, can-wait item, upcoming constraint) | `Task` | yes | `updateTask` (title, category, subject, duration, commitment, dueDate, plan, notes), `completeTask`, `archiveTask` | `/task-editor` `{taskId}` (`TaskForm`) | Save button; "Remove task" archives immediately | only as "Remove task" (`archiveTask` → `cancelled`); **no dedicated reject** | **none** — `updateTask` cannot touch `provenance` (`EDITABLE_TASK_FIELDS`); an edited inferred task stays `ai-inference` at its stored confidence |
+| Event (matters, decision block, upcoming) | `CalendarEvent` | yes | `updateEvent`, `removeEvent` | `/event-editor` `{eventId}` (`EventForm`) | Save; "Remove event" immediate | as above | none |
+| Needs Me item | `NeedsMeItem` | yes | `resolveNeedsMeItem`, `promoteNeedsMeItem`; `updateNeedsMeItem` exists but has no screen | `/life/needs-me` (list: "Promote to task" → `/task-editor` `{needsMeId}`, "Resolved") | none (immediate) | n/a | none |
+| **Row Her Keys inferred, confidence `possible` / `likely`** | task / event with `provenance.producer` `ai-inference` or `import-sync` | edit only | as the task / event rows above | as above | as above | **MP-01: no mutation confirms or rejects an existing canonical row.** The only writers of `confirmed` confidence are `acceptInterpretation` (a *pending candidate*, outside canonical state) and `confirmPattern`. Today shows the badge and the label and **offers edit only** — no "That's right" / "That's not it" | none |
+| One Move recommendation | `OneMoveRecord` | its source item, yes | completion only (`completeOneMove`) | source item's editor per the kind table | none | **MP-02: no "not today" / "show another" for a One Move** — the day's decision is stored once and only completes. `RecommendationBlock` hides those buttons when the handlers are absent, so none are passed | none |
+| Daily Load decision (timing / capacity) | `ActionRecord` | yes, while the day's one decision is unmade | `approveDailyLoadMove`, `approveMoveEvent`, `approveDropTask`, `approveShortenTask`, `approveProtectItem`, `keepDailyLoadPlan`, `keepCapacityPlan`; `undoRecommendedMove` | in place | the button *is* the approval; Undo offered only for today's move while the item is where it was put | n/a | none |
+| Responsibility state | `Responsibility` | **hers** to take back; the holder's answers are not hers to fabricate | `returnToSelf` ("Take it back"), `completeResponsibility`, `reassign` exist | in place for "Take it back" only | explicit label; records `returned` | n/a | none. **MP-03: nothing in the app can receive a holder's acknowledge / accept / decline** — that is delivery integration; Today shows the true state and never offers to record it on their behalf |
+| Pending approval (Her Keys proposed) | `ActionIntent` | yes | `decideIntent(approved \| declined)` | `ConfirmationSheet` naming the intent's own consequence and reversibility | **yes — always explicit** (agency) | n/a | writes a decision row; never claims it will run (D-05) |
+| Handled / waiting rows | `ActionExecution` + `ActionOutcome` | **no** — server-written, pulled only | none | the underlying item's editor via `about` | — | — | — (no affordance is shown) |
+| Capacity reading | derived | via its inputs | edit the events / tasks (travel, preparation, commitment, duration) | editors above | — | — | — **MP-04: `setCapacity` has no screen**, so a household cannot correct the day window; Today does not pretend to offer it |
+| "What can wait" item | `Task` | yes | as the task row | `/task-editor` | Save | — | none |
+
+### 5.3 Authority-prefix index (Addendum §G)
+
+So a later feature does not invent meaning for an identifier it meets in the code or the docs:
+
+| Prefix | Meaning | Where defined |
+|---|---|---|
+| `SD4-` | Cloud-schema **design decisions** from the Build 4 SD4 design (e.g. SD4-020 the ledger is immutable, SD4-021 local eviction never emits a cloud delete). The register is **closed**; new structures derive authority from `B4-FE01-` | `docs/builds/BUILD4_SD4_CLOUD_SCHEMA.md`, `BUILD4_SD4_DELTA_MATRIX.md` |
+| `B4-P0-` | Build 4 **Phase 0 decision register** (e.g. B4-P0-010 demo households never sync; B4-P0-019 ordinary sync never removes memberships) | `docs/builds/BUILD4_PHASE0_CHECKPOINT.md`, `BUILD4.md` |
+| `B4-BE02-` / `B4-BE03-` | Build 4 **backend** work items; `-OR-` suffix = *open recommendation* found at that step (e.g. `B4-BE02-OR-001/002` claim dependency closure) | `BUILD4_BE02_CLAIM_CORRECTION.md`, `BUILD4_BE03_SYNC_ENGINE.md` |
+| `B4-FE01-` | The **27 foundation primitives** built in B4-FOUNDATION-BUILDOUT-01 (provenance, confidence, observation, authorization, responsibility, facets, dependency, attention, briefing, evidence, typed refs, …) — the table in §5.1 | `docs/builds/BUILD4_FOUNDATION_BUILDOUT.md` |
+| `HR-nn` / `NHR-nn` | **Hostile-review findings** against the Build 4 cloud schema: `HR` from the first pass, `NHR` from the "new hostile review — this pass" (§11.3 of the SD4 document). Cited by number; e.g. NHR-01 the child-subject composite FK | `docs/builds/BUILD4_SD4_CLOUD_SCHEMA.md` |
+| `HK-FE-UI-01` | The permanent **front-end system** build (tokens, shell, primitives, intelligence presentation). `K0`–`K9` are its commits | `docs/design-system/` |
+| `HK-FEATURE-nn` | The **feature builds** forked from `5007b0f` (01 Today, 02 Talk It Out / Life Inbox, 03 Calendar / Capacity, 04 Systems / Routines) | this ledger and its siblings |
+| `B3-AUD-nnn` / `HK-AUDIT-nnn` | Build 3 audit findings; cited in comments on the Daily Load code Today reads | `docs/audits/`, code comments |
+| `OBS-` / `OOS-` | Observations / out-of-scope items recorded in a build ledger | the ledger that names them |
+| **Feature-local (this feature)** | `TODAY-PD-xxx` product defects · `TODAY-TCD-xxx` test / coverage defects · `TODAY-FD-xxx` foundation findings (deferred) · `MP-xx` missing correction path · `MGP-xx` missing global primitive · `D-xx` WHY-doctrine decision. **No new global namespace is created.** | this ledger |
 
 ---
 
@@ -300,9 +375,35 @@ No test is removed or rewritten at T0.
 Deferred foundation / design findings are kept separately in §8 so an auditor can tell a feature defect from a
 foundation gap.
 
-## 8. Considered and deferred — *filled as found*
+## 8. Considered and deferred
 
-(Initial entries recorded in the T1 commit.)
+The auditor should be able to tell **deliberately deferred** from **missed**. Each entry names the prompt section
+that raised it, why it is not Feature 01, the likely owner, and whether it leaves a limitation today.
+
+### 8.1 Foundation / design findings (not repaired here — Addendum §32: the default answer to "modify the foundation?" is no)
+
+| ID | Finding | Raised by | Why not Feature 01 | Likely owner | Current limitation |
+|---|---|---|---|---|---|
+| TODAY-FD-001 | Daily Load ignores the household capacity profile. `capacityWindowFor` has no callers; `detectCapacityPressure`, `computeDailyLoad`, `loadThresholds` use constants (B4-FE01-016 is only half-wired) | §14, Addendum §F | Changing `dailyLoadIssues.ts` / `computeDailyLoad.ts` is shared foundation, and three sibling branches read them | Feature 03 (Calendar / Capacity) | Today states the window it used and says so when an override exists. A household that set its own day end still gets the default-window verdict |
+| TODAY-FD-002 | Daily Load is whole-day and time-blind: it has no notion of "now", so a window that already ended still yields a verdict | §25, Scenario P | New reasoning semantics in shared foundation | Feature 03 | D-02: a *timing decision* whose window has ended is not offered as an action. Capacity pressure (a whole-day fact) is not re-derived from the clock |
+| TODAY-FD-003 | `briefingFor().handled` is succeeded executions **without** requiring an outcome | §19, §6 | Changing `reasoning/briefing.ts` is foundation | foundation owner | Today narrows it (execution **and** a success outcome) before saying "handled". Any other consumer of `handled` inherits the looser meaning |
+| TODAY-FD-004 | The One Move target registry (`TARGET_ADAPTERS`) is module-private, so a consumer cannot enumerate kinds or ask a kind for its affordances | §15 | Exporting it changes a shared module | foundation owner | Today keeps a total `Record<OneMoveTargetType, …>` keyed by the exported `ONE_MOVE_TARGET_TYPES`, so a new kind breaks compilation rather than silently getting no affordance |
+
+### 8.2 Considered and deferred
+
+| Item | Why it arose | Prompt § | Why not Feature 01 | Likely owner | Limitation today |
+|---|---|---|---|---|---|
+| Shared-device privacy mode, PIN lock, screenshot blocking | Today is a glance surface; children, co-parent and (later) money data live in state | Addendum §R | Explicitly a future cross-cutting concern | cross-cutting | None introduced: first-glance detail is minimized (FR-21) |
+| "What changed since your last visit" | The briefing foundation can derive change from a `sinceMs` | §21, Addendum §P | Needs a last-looked marker; **no** presentation-state store exists and none may be added to `AppState` / envelope / sync / schema | whoever adds a local presentation store | A small "changed today" cue only, from dated observations (B4-FE01-006) |
+| Confirm / reject an inferred canonical row (MP-01) | Scenario E needs a correction treatment for `possible` rows | §22 | No domain mutation exists; inventing one is a new durable semantic | foundation / Feature 02 | Badge, provenance label and *edit* only |
+| "Not today" / "show another" for One Move (MP-02) | `RecommendationBlock` supports both | §16, §22 | The day's decision is stored once and only completes; a reject path is new semantics | foundation owner | Not offered |
+| Recording a holder's acknowledge / accept / decline (MP-03) | Responsibility rows can be `requested` indefinitely | §18 | Requires delivery integration (Feature 02/04 era) | integration wave | State is shown truthfully; only "Take it back" is offered |
+| Capacity settings screen (MP-04) | TODAY-FD-001 | §14 | `setCapacity` has no UI | Feature 03 | Household cannot correct its day window |
+| Gemini / any LLM synthesis | Every feature will eventually want it | §27 | Forbidden in this build (no SDK, prompts, functions, secrets) | later wave | A typed seam exists (FR-19); the local provider is deterministic |
+| Reschedule / drag / week view, external calendar | Calendar-shaped requests | §29 | Feature 03 | Feature 03 | Today offers only the existing Daily Load decisions |
+| Running a system / routine | One Move can hold a `system` target | §30 | Feature 04 | Feature 04 | "I did it" records only; no run |
+| New Talk It Out / Life Inbox flows | Entry point sits on Today | §28 | Feature 02 | Feature 02 | `TalkItOutEntry` preserved as-is |
+| Money amounts on Today | `value` facets exist | Addendum §R | Not needed to act; sensitive | Money surface | Never shown at first glance |
 
 ## 9. WHY-doctrine decision log and owner-decision requests
 
