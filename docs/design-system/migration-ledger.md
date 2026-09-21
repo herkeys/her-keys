@@ -47,6 +47,7 @@ No REPLACE is used where REFINE suffices.
 | `Divider` | PRESERVE | PRESERVED |
 | `LoadingState` / `EmptyState` / `ErrorState` / `OfflineState` / `InlineNotice` | (new, §11 SYSTEM STATES) | **MIGRATED** (K2): text-first states; InlineNotice derives treatment from a fixed tone union |
 | `Sheet` / `ConfirmationSheet` | (new, §11 OVERLAYS) | **MIGRATED** (K2): scrim dismiss + close control, both confirmation paths explicitly labeled |
+| `InsightBlock` / `RecommendationBlock` / `WhyThis` / `ClarificationPrompt` / `InterpretationReview` / `ConfidenceBadge` / `ProvenanceLabel` / `ActionStateBlock` | (new, §15 INTELLIGENCE) | **MIGRATED** (K3): one application-wide intelligence language; every treatment traces to frozen domain semantics ([ai-traceability](ai-traceability.md)); `Card` gains the `risk` tone the failed-action state requires |
 
 ## C. Shell / navigation
 

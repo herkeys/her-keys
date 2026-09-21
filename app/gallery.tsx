@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { AppText, Button, Card, ChipToggle, ConfirmationSheet, Divider, EmptyState, ErrorState, InlineNotice, LoadingState, OfflineState, Overline, Screen, SegmentBar, Sheet, StatusList, Tag, TextField } from '../src/design/components';
+import { ActionStateBlock, AppText, Button, Card, ChipToggle, ClarificationPrompt, ConfidenceBadge, ConfirmationSheet, Divider, EmptyState, ErrorState, InlineNotice, InsightBlock, InterpretationReview, LoadingState, OfflineState, Overline, ProvenanceLabel, RecommendationBlock, Screen, SegmentBar, Sheet, StatusList, Tag, TextField, WhyThis } from '../src/design/components';
 import { color, radius, spacing, type as typeScale } from '../src/design/tokens';
 
 /**
@@ -119,6 +119,71 @@ export default function DesignGallery() {
       <GallerySection title="Notices">
         <InlineNotice tone="attention" title="One window is short on room." body="The rest of the day has space." />
         <InlineNotice tone="waiting" title="Waiting on the school calendar" body="Pickups update when the school publishes changes." style={styles.stack} />
+      </GallerySection>
+
+      <GallerySection title="Her Keys intelligence">
+        <InsightBlock onDismiss={() => {}}>
+          You haven’t had a quiet evening in nine days. Saturday looks different.
+        </InsightBlock>
+        <RecommendationBlock
+          style={styles.stack}
+          body="Move the library run to Saturday morning — Friday’s only gap is 20 minutes short of the walk there and back."
+          approvalRequired={false}
+          onApprove={() => {}}
+          onShowAlternative={() => {}}
+          onNotToday={() => {}}
+        />
+        <RecommendationBlock
+          style={styles.stack}
+          body="Shift the dentist call to Thursday’s open hour so pickup stays unhurried."
+          approvalRequired
+          onApprove={() => {}}
+          onShowAlternative={() => {}}
+          onNotToday={() => {}}
+        />
+        <WhyThis
+          style={styles.stack}
+          reasons={[
+            'Thursday has a 65-minute window after the school drop-off.',
+            'Today’s only gap is 35 minutes — 10 short of what Her Keys allows for that trip.',
+          ]}
+        />
+        <View style={[styles.row, styles.stack]}>
+          <ConfidenceBadge level="possible" />
+          <ConfidenceBadge level="likely" />
+          <ConfidenceBadge level="established" />
+          <ProvenanceLabel source="ai-inference" />
+          <ProvenanceLabel source="legacy-unknown" />
+        </View>
+        <ClarificationPrompt
+          style={styles.stack}
+          question="Which day did you mean — this Friday or next?"
+          proposed="The field trip payment is due this Friday."
+          onConfirm={() => {}}
+          onCorrect={() => {}}
+        />
+        <InterpretationReview
+          style={styles.stack}
+          fields={[
+            { label: 'Kind', value: 'Task' },
+            { label: 'Title', value: 'Call insurance about the claim' },
+            { label: 'When', value: 'Before Thursday' },
+          ]}
+          onAccept={() => {}}
+          onReject={() => {}}
+          onCorrect={() => {}}
+        />
+        <ActionStateBlock
+          style={styles.stack}
+          stage="proposed"
+          summary="Move the dentist call to Thursday, 10:30–11:00."
+          approvalQuestion="May Her Keys move it? The rest of Thursday stays as planned."
+          onApprove={() => {}}
+          onDecline={() => {}}
+        />
+        <ActionStateBlock style={styles.stack} stage="approved" summary="Move the dentist call to Thursday, 10:30–11:00." />
+        <ActionStateBlock style={styles.stack} stage="succeeded" outcome="verified" summary="The dentist call moved to Thursday, 10:30." />
+        <ActionStateBlock style={styles.stack} stage="failed" summary="The clinic’s portal refused the new time." />
       </GallerySection>
 
       <GallerySection title="System states">

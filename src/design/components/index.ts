@@ -10,3 +10,4 @@ export * from './StatusList';
 export * from './TextField';
 export * from './systemStates';
 export * from './Sheet';
+export * from './intelligence';

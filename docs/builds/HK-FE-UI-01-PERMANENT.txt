@@ -1,0 +1,1560 @@
+HER KEYS — PERMANENT FRONT-END SYSTEM
+HK-FE-UI-01
+
+MODE
+
+AUTONOMOUS APPLICATION-WIDE FRONT-END SYSTEM BUILD
+WITH ONE OWNER VISUAL CHECKPOINT
+
+This build establishes the permanent Her Keys front-end architecture,
+design system, interaction language, and UI foundation.
+
+It is NOT:
+- a temporary prototype
+- a UI only for Wave 1
+- a throwaway placeholder front end
+- a feature build
+- a backend build
+- a Supabase wiring task
+- an LLM/Gemini wiring task
+- a product-architecture redesign
+- a hostile integration audit
+
+The result must become the common front-end base for ALL current and future
+Her Keys features.
+
+The first consumers will be:
+
+- Today / Chief-of-Staff
+- Talk It Out / Life Inbox
+- Calendar / Capacity
+- Systems / Routines
+
+They are only the first consumers.
+
+The same permanent front-end system must later support:
+
+- Kids OS
+- Money OS
+- Home OS
+- Meals OS
+- Work / Career OS
+- Co-parent Logistics
+- Delegation / Responsibility
+- Capacity Intelligence
+- Adaptive Scheduling
+- Pattern Intelligence
+- Operating Profile
+- Rebuilding Guidance
+- Community
+- Shared Household Participation
+- external integrations
+- AI-assisted and agentic capabilities
+- future modules not yet named
+
+Do not optimize the system specifically around the first four features.
+
+============================================================
+0. SOURCE OF TRUTH + ENTRY GATE
+============================================================
+
+SOURCE BRANCH
+
+build/04-cloud-identity-sync
+
+EXPECTED FOUNDATION HEAD
+
+0510e46554dd0f3af9598b5ec75d257c708cd2f0
+
+Expected completed foundation state:
+
+- App tests: 705 / 705
+- Backend harness: 684 / 684
+- Local schema version: 4
+- claimPayloadVersion: 2
+- Application tables: 34
+- Sync kinds: 28
+
+Expected shipping migration SHA-256:
+
+1e9169de4cf21c46e2167089328de94ce07cb1fcf005c0461dece1b28ec8a7cb
+
+Expected local fingerprint:
+
+199ed4d4c1b37cd654b5853e91cbde27
+3613 facts
+
+Baseline migration SHA-256 remains:
+
+8bc38d66fcffbb9fa83502329bd4738a53a8446dd5ce89327013751872f8f16f
+
+BEFORE MAKING ANY DESIGN CHANGE:
+
+1. Verify current branch.
+2. Verify HEAD exactly.
+3. Record git status.
+4. Run TypeScript.
+5. Run the full app test suite.
+6. Run the backend harness.
+7. Verify the shipping migration SHA-256.
+8. Recompute/verify the local fingerprint using the established valid local
+   measurement path.
+9. Record Expo Doctor status but do not fix unrelated package drift.
+
+KNOWN OWNER WORK
+
+The worktree may contain intentional owner infrastructure changes in app.json,
+including:
+
+- ios.bundleIdentifier = com.herkeys.app
+- android.package = com.herkeys.app
+- EAS owner/project identity
+- EAS projectId
+- existing app scheme/plugins
+
+These changes are intentional.
+
+Do NOT revert them.
+
+If the only uncommitted change is the known intentional app.json owner work:
+
+- verify it matches the expected Her Keys infrastructure
+- create the new design branch
+- checkpoint ONLY those verified owner configuration changes as K0 so the
+  permanent front-end base and future feature branches inherit them
+
+Do not silently bundle them into a design-system commit.
+
+If ANY unexplained worktree change exists:
+
+STOP.
+
+Do not reset, clean, checkout over, or discard it.
+
+CREATE BRANCH
+
+design/01-front-end-system
+
+Do not touch K Scan.
+
+Do not push.
+Do not open a PR.
+Do not merge.
+Do not create feature branches.
+
+============================================================
+1. BASELINE UI EVIDENCE
+============================================================
+
+Before refactoring anything, capture the current front end.
+
+Record:
+
+- actual route/navigation structure
+- existing shared component count
+- existing token/design-system files
+- existing UI utility files
+- current screens
+- existing AI/Talk It Out UI
+- existing accessibility helpers
+- existing loading/error/offline treatments
+- existing animations
+
+Capture representative BEFORE screenshots where tooling allows, including at
+minimum:
+
+- Today
+- Talk It Out
+- one onboarding surface
+- Life
+
+The inventory must describe what ACTUALLY exists.
+
+Do not silently force the current application to match assumptions in this
+prompt.
+
+If actual navigation differs from the expected product areas:
+
+- record the discrepancy
+- do not silently reconcile it
+- do not redesign navigation without owner authority
+
+============================================================
+2. EXISTING FRONT-END INHERITANCE LEDGER
+============================================================
+
+Create and commit a front-end migration ledger.
+
+Every existing relevant:
+
+- route
+- screen
+- shared component
+- token group
+- common interaction primitive
+
+must be classified as:
+
+PRESERVE
+REFINE
+REPLACE
+
+PRESERVE means:
+- already structurally and visually appropriate
+- no meaningful change needed
+
+REFINE means:
+- correct concept/architecture
+- can be brought into the permanent system without replacement
+
+REPLACE means:
+- prototype-only
+- inconsistent with approved direction
+- duplicated
+- demonstrably structurally weak
+- or impossible to normalize through refinement
+
+EVERY REFINE OR REPLACE MUST CITE:
+
+- exact file/screen/component
+- classification
+- concrete evidence
+- specific issue
+
+EVERY REPLACE MUST ALSO STATE:
+
+- which allowed replacement reason applies
+- what specifically is wrong
+- whether REFINE could achieve the same outcome
+
+If REFINE could achieve the same outcome and replacement is merely preferred:
+
+DO NOT REPLACE IT.
+
+The ledger must track:
+
+NOT-STARTED
+PENDING
+MIGRATED
+PRESERVED
+DROPPED-WITH-REASON
+
+The ledger is a resumable artifact.
+
+A STOP midway through this build must leave an honest record of exactly what
+has and has not migrated.
+
+Acceptance principle:
+
+THE FINAL APPLICATION MUST LOOK LIKE ONE PRODUCT THAT EVOLVED,
+NOT A NEW UI BOLTED ONTO AN OLD PROTOTYPE.
+
+============================================================
+3. APPROVED VISUAL DIRECTION
+============================================================
+
+This build constitutes the design-direction approval referenced by the earlier
+front-end design freeze.
+
+The approved direction is:
+
+PAPER AND INK / NEXT CHAPTER
+
+Core palette:
+
+- warm ivory / paper-like off-white foundation
+- strong dark ink / near-black / deep neutral typography
+- deep plum or similarly grounded neutral only where useful
+- one restrained clay / terracotta / coral-family accent
+- semantic colors only where meaning requires them
+
+Softness should come primarily from:
+
+- typography
+- whitespace
+- proportion
+- restrained shape
+- editorial rhythm
+- calm hierarchy
+
+NOT from filling the application with pastel surfaces.
+
+Pastels such as blush/lilac/mauve may appear only as restrained secondary
+accents when justified.
+
+They are NOT the primary surface system.
+
+Avoid:
+
+- spa/wellness visual language
+- sage-dominant botanical identity
+- watercolor people
+- flowers/leaves as primary decoration
+- motivational decoration
+- affirmational emoji styling
+- pastel wellness tiles
+- decorative gradients
+- low-contrast pastel-on-pastel
+- glassmorphism
+- cartoon illustration
+- “girl boss” styling
+- sparkle decoration
+- rounded-everything
+- dense enterprise dashboards
+
+Emotional register:
+
+“I have this under control.”
+
+Not:
+
+“I am at a wellness retreat.”
+
+============================================================
+4. WHAT “FEMININE” MEANS HERE
+============================================================
+
+Do not interpret “feminine” through generic visual stereotypes.
+
+For Her Keys, feminine means:
+
+- editorial warmth
+- confident typography
+- generous but disciplined whitespace
+- refined proportions
+- soft but controlled curves
+- restrained warmth in accent color
+- calm hierarchy
+- sophisticated detail
+- language that trusts the user
+- elegance without fragility
+
+Where appropriate, a serif or editorial display treatment may be evaluated
+for large display/title use, provided it is practical in Expo and does not
+create unnecessary loading/licensing complexity.
+
+Explicitly NOT:
+
+- childish
+- bubbly
+- cartoonish
+- emoji-led
+- overly decorative
+- “girl boss”
+- pink-everywhere
+- sparkle-heavy
+- cutesy
+- rounded-everything
+
+============================================================
+5. PRODUCT IDENTITY
+============================================================
+
+Her Keys is an AI-powered Life OS / household chief of staff for women
+rebuilding life after separation or divorce.
+
+It is NOT:
+
+- a generic task manager
+- a wellness app
+- a therapy app
+- a generic chatbot
+- a family calendar with AI attached
+- a budgeting app
+- a co-parenting utility
+- a collection of dashboards
+- a cute planner
+
+Those may be ingredients.
+
+The product is the intelligence connecting and coordinating them.
+
+Core product truth:
+
+HER KEYS HELPS HER STOP HOLDING HER ENTIRE LIFE IN HER HEAD.
+
+Design doctrine:
+
+SOFT ENVIRONMENT.
+PRECISE INFORMATION.
+
+SOFT IN APPEARANCE.
+PRECISE IN BEHAVIOR.
+
+The woman should feel:
+
+- calm
+- capable
+- oriented
+- supported
+- respected
+- less mentally loaded
+
+She should NOT feel:
+
+- managed
+- judged
+- infantilized
+- overwhelmed
+- trapped in configuration
+- like she is using enterprise software
+
+============================================================
+6. APPLICATION-WIDE DESIGN PRINCIPLES
+============================================================
+
+ONE THING AT A TIME
+
+Every screen should clearly answer:
+
+- What matters here?
+- What should I look at first?
+- What can I do next?
+
+HIERARCHY BEFORE DECORATION
+
+Important information wins.
+
+CALM DOES NOT MEAN VAGUE
+
+Deadlines, risk, conflicts, consequences and approvals must remain explicit.
+
+REDUCE DECISIONS
+
+Use safe defaults where product semantics permit.
+
+Do not force configuration for ordinary actions.
+
+EXPLAIN INTELLIGENCE
+
+Her Keys should be able to show:
+
+- what it noticed
+- what it understood
+- what it inferred
+- what it recommends
+- why
+- what needs confirmation
+- what requires approval
+- what happened
+
+without exposing chain-of-thought.
+
+HUMAN CONTROL
+
+Correction, rejection, approval and adjustment remain obvious.
+
+GRACEFUL COMPLEXITY
+
+Simple situations look simple.
+
+Complexity appears only when the situation genuinely requires it.
+
+============================================================
+7. DESIGN TOKENS
+============================================================
+
+Create/refine ONE canonical token system.
+
+Include:
+
+- backgrounds
+- surfaces
+- borders
+- text
+- muted text
+- accent
+- semantic status colors
+- AI semantic treatments
+- focus/interaction states
+- typography
+- spacing
+- radii
+- elevation/shadow
+- icon sizing
+- control sizing
+- motion timing
+- opacity states
+
+Use semantic names.
+
+Example shape:
+
+surface.primary
+surface.secondary
+surface.elevated
+
+text.primary
+text.secondary
+text.muted
+
+action.primary
+
+status.attention
+status.risk
+status.success
+status.waiting
+
+ai.insight
+ai.inference
+ai.confirmation
+ai.action
+
+Do not create a giant speculative token framework.
+
+Do not scatter raw values through screens when a shared semantic token exists.
+
+CRITICAL PERSISTENCE RULE
+
+TOKENS ARE PRESENTATION-ONLY.
+
+No:
+
+- color token
+- radius token
+- spacing token
+- theme identifier
+- UI status color
+- typography token
+
+may appear in persisted AppState, the v4 envelope, sync payload semantics, or
+cloud schema.
+
+Persistent state carries product meaning.
+
+The presentation layer decides how that meaning looks.
+
+============================================================
+8. ACCESSIBILITY / CONTRAST FLOOR
+============================================================
+
+WCAG AA is the minimum requirement.
+
+At minimum:
+
+- normal/body text: 4.5:1
+- large text: 3:1
+- UI components and meaningful graphical boundaries: 3:1 where applicable
+
+Do not describe contrast as “looks readable.”
+
+Measure it.
+
+Create a contrast matrix covering every canonical text token against every
+surface on which that token is intended to appear.
+
+Report:
+
+PASS / FAIL
+ratio
+pairing
+
+Attack first:
+
+- muted text on ivory
+- secondary text on secondary surfaces
+- clay accent text
+- any pastel accent
+- disabled states
+- AI semantic treatments
+
+Meaning must never depend on color alone.
+
+Also ensure:
+
+- practical touch targets
+- accessible labels
+- roles/states
+- dynamic text resilience
+- logical reading order
+- keyboard avoidance
+- long-content behavior
+- focus visibility where applicable
+
+============================================================
+9. TYPOGRAPHY
+============================================================
+
+Create one permanent hierarchy:
+
+- display / hero
+- screen title
+- section title
+- card title
+- body
+- supporting body
+- metadata
+- label
+- action label
+- status label
+
+Typography should feel:
+
+- refined
+- warm
+- modern
+- editorial where appropriate
+- highly readable
+
+Do not introduce font complexity without a concrete reason.
+
+============================================================
+10. APPLICATION SHELL
+============================================================
+
+Inventory actual navigation first.
+
+Expected primary product areas include:
+
+- Today
+- Calendar
+- Life
+- Systems
+- Her Keys AI
+
+These are product-direction expectations, not permission to rewrite actual
+routing.
+
+If the inventory differs, report it.
+
+Do not silently reconcile it.
+
+Refine shared:
+
+- safe areas
+- app background
+- margins
+- tab treatment
+- headers
+- title treatment
+- scroll conventions
+- modal layering
+- sheet conventions
+- keyboard handling
+- responsive phone behavior
+
+Do not redesign routing for aesthetics.
+
+============================================================
+11. CORE SHARED COMPONENT SYSTEM
+============================================================
+
+Create/refine shared primitives only where genuine reuse exists.
+
+Candidate families:
+
+LAYOUT
+- AppScreen
+- ScrollScreen
+- Section
+- Stack
+- Inline / Row
+- Surface
+- Card
+
+ACTIONS
+- PrimaryButton
+- SecondaryButton
+- TertiaryButton
+- TextButton
+- IconButton
+
+INPUTS
+- TextField
+- MultilineField
+- SearchField when justified
+- SelectableChip
+- FilterChip
+- toggle/checkbox treatment where needed
+- generic date/time treatment only if already justified
+
+INFORMATION
+- ListRow
+- DetailRow
+- MetadataRow
+- Divider
+- StatusBadge
+- Tag
+- ValueDisplay
+- PersonIndicator if genuinely reusable
+
+SYSTEM STATES
+- LoadingState
+- Skeleton
+- EmptyState
+- ErrorState
+- OfflineState
+- InlineNotice
+- ConfirmationState
+
+OVERLAYS
+- Modal
+- Sheet
+- ConfirmationSheet
+- ActionSheet pattern
+
+LOAD / PROGRESS
+- progress treatment
+- capacity treatment
+- tier/status treatment
+
+A component belongs in the shared system only if at least two plausible product
+surfaces can consume it.
+
+Do not globalize screen-specific widgets.
+
+============================================================
+12. SHARED COMPONENT TEST FLOOR
+============================================================
+
+“Appropriate tests” does not mean zero.
+
+Every canonical shared primitive must have at minimum a render/props contract
+test appropriate to its role.
+
+Interactive primitives must additionally test meaningful states such as:
+
+- disabled
+- selected
+- pressed/action callback where applicable
+- accessibility role/state where applicable
+
+Semantic AI/status components must test that their visible treatment derives
+from allowed semantic input rather than arbitrary UI-only state.
+
+Do not delete existing tests to make a refactor pass.
+
+Record:
+
+- tests before
+- tests after
+- tests added
+- tests removed
+
+Every removed test requires a named reason.
+
+============================================================
+13. AI SEMANTICS ARE RENDERED, NOT INVENTED
+============================================================
+
+The front end is NOT a second semantics authority.
+
+Before building any AI/intelligence presentation component, map it to the
+existing frozen Build 4 semantics.
+
+Relevant stored provenance producer vocabulary includes:
+
+- onboarding
+- user-action
+- talk-it-out
+- system-derived
+- import-sync
+- ai-inference
+- demo-seed
+- automation
+- legacy-unknown
+
+Relevant confidence vocabulary is:
+
+- possible
+- likely
+- established
+
+Do NOT introduce presentation-layer confidence tiers.
+
+Do NOT invent percentages.
+
+User-stated facts do not acquire fake confidence simply because a UI would
+like to display one.
+
+The presentation system must render the durable semantics faithfully.
+
+REQUIRED TRACEABILITY TABLE
+
+For every intelligence presentation pattern, record:
+
+- UI state/pattern
+- exact durable/domain source
+- producer/confidence/action type it reads
+- display treatment
+- correction/approval affordance
+- whether it is FACT, INFERENCE, RECOMMENDATION, DECISION, EXECUTION or OUTCOME
+
+Rule:
+
+NO DURABLE/DOMAIN SEMANTIC COUNTERPART = DO NOT INVENT ONE IN THE UI.
+
+============================================================
+14. FOUNDATION ACCESS CHECK BEFORE AI COMPONENTS
+============================================================
+
+Before building semantic AI presentation components, verify the app layer can
+actually obtain typed data for the state being presented.
+
+Verify typed access to at least:
+
+- provenance on durable rows
+- confidence on inference-bearing rows
+- reasoning evidence
+- action intent
+- intent decision
+- authorization state
+- execution record
+- outcome record
+- responsibility state where relevant
+
+If the durable type exists but the UI currently has no legitimate way to read
+it:
+
+- record the gap
+- do NOT fabricate sample product semantics
+- do NOT create a parallel UI-only state model
+- do NOT redesign the foundation in this pass
+
+A generic visual primitive may exist only if it has no semantic claim.
+
+A semantic component must be backed by a real frozen contract.
+
+============================================================
+15. ONE APPLICATION-WIDE INTELLIGENCE LANGUAGE
+============================================================
+
+Subject to Sections 13–14, create the permanent visual language for:
+
+HER KEYS INSIGHT
+“Her Keys noticed…”
+
+HER KEYS RECOMMENDATION
+“What I recommend…”
+
+WHY THIS?
+Structured reasoning evidence.
+
+CLARIFICATION
+“I think this means X. Is that right?”
+
+INTERPRETATION REVIEW
+“What I understood…”
+
+CONFIDENCE / UNCERTAINTY
+Only from the approved confidence model.
+
+SOURCE / PROVENANCE
+Rendered from the approved producer vocabulary.
+
+SUGGESTED ACTION
+
+APPROVAL REQUIRED
+
+ACTION PREPARED
+
+ACTION EXECUTED
+
+ACTION OUTCOME
+
+ACTION FAILED / NEEDS ATTENTION
+
+CORRECTION / REJECTION
+
+The system must visually distinguish:
+
+FACT
+vs
+INFERENCE
+
+RECOMMENDATION
+vs
+EXECUTED ACTION
+
+SUGGESTION
+vs
+APPROVAL REQUIRED
+
+PREPARED ACTION
+vs
+SUCCESSFUL OUTCOME
+
+No chain-of-thought.
+
+============================================================
+16. LLM-READY, NOT LLM-CONNECTED
+============================================================
+
+Every major feature will eventually interact with an LLM/intelligence layer.
+
+The front end must be ready for that without depending on a specific model.
+
+Presentation components should consume typed product/domain contracts.
+
+They should not care whether the eventual reasoning source is:
+
+- deterministic Her Keys logic
+- Gemini
+- another model
+- another provider
+- future server-side agent execution
+
+DO NOT add:
+
+- Gemini SDK
+- model API calls
+- prompts
+- Edge Functions
+- secret handling
+- model selection
+- transcript storage
+- Supabase AI wiring
+
+============================================================
+17. EXACT SCREEN MIGRATION SCOPE
+============================================================
+
+Do NOT migrate the entire application in this build.
+
+This build migrates EXACTLY four representative existing surfaces.
+
+1. TODAY
+Purpose:
+- card hierarchy
+- statuses
+- information priority
+- One Move presentation
+
+2. TALK IT OUT
+Purpose:
+- conversational/AI presentation
+- clarification
+- structured interpretation surfaces
+
+3. ONE EXISTING ONBOARDING INTERACTION SURFACE
+Purpose:
+- inputs
+- selectable controls
+- action hierarchy
+- keyboard/accessibility behavior
+
+Use the existing onboarding route that most comprehensively exercises these
+patterns.
+
+Record the exact route/file chosen in the ledger before editing it.
+
+4. LIFE
+Purpose:
+- list/navigation structure
+- section hierarchy
+- domain-oriented content shell
+
+If an expected logical surface has been renamed, map the actual existing
+surface and record the mapping.
+
+DO NOT migrate additional screens “to prove the system works.”
+
+NOT MIGRATED IN THIS BUILD:
+
+- Calendar feature surfaces
+- Systems feature surfaces
+- Kids
+- Money
+- Meals
+- Home
+- Work
+- Co-parent feature surfaces
+- future modules
+- any other screen not explicitly listed above
+
+Those surfaces will consume the permanent system during their feature builds.
+
+The shared APPLICATION SHELL itself may of course be refined because all
+screens inherit it.
+
+============================================================
+18. SCREEN MIGRATION ATOMICITY
+============================================================
+
+Migration order:
+
+TOKENS
+→ TYPOGRAPHY
+→ SHELL
+→ CORE PRIMITIVES
+→ OWNER VISUAL CHECKPOINT
+→ AI SEMANTIC PRESENTATION
+→ EXACT FOUR SCREEN MIGRATIONS
+→ GALLERY
+→ AUDIT
+
+AT EVERY COMMIT BOUNDARY:
+
+A migrated screen must be either:
+
+FULLY MIGRATED
+
+or:
+
+UNTOUCHED
+
+Do not leave a screen half converted between old and new component systems at
+a committed boundary.
+
+The migration ledger must reflect the exact state.
+
+============================================================
+19. OWNER VISUAL CHECKPOINT
+============================================================
+
+This build has ONE required owner checkpoint.
+
+Complete and commit:
+
+- token system
+- typography
+- shell
+- core shared primitives
+- contrast matrix
+- representative design gallery section for those primitives
+
+Capture screenshots.
+
+Then STOP EXECUTION and report:
+
+HK-FE-UI-01 = VISUAL CHECKPOINT
+
+Report only:
+
+- K-series commits so far
+- token summary
+- typography summary
+- shell changes
+- shared primitives
+- contrast results
+- screenshots
+- preserve/refine/replace ledger status
+- any unresolved visual questions
+
+WAIT FOR OWNER APPROVAL.
+
+Do NOT begin:
+
+- AI semantic presentation components
+- screen migrations
+
+until owner approval to continue HK-FE-UI-01.
+
+After approval, resume the SAME branch and SAME K-series.
+
+This is an interim state, not a final PASS/STOPPED result.
+
+============================================================
+20. DEVELOPMENT DESIGN GALLERY
+============================================================
+
+Create:
+
+/gallery
+
+Development-only.
+
+Gate it inside the route using the project's normal development check
+(`__DEV__` where compatible with the current Expo setup).
+
+In non-development behavior:
+
+- gallery content must not render
+- the route must not expose the component gallery as usable product UI
+- it must not appear in tabs/navigation
+
+If Expo Router's exact production handling requires a different minimal
+mechanism, use the smallest existing-framework-native solution and document it.
+
+Do not add a new dependency just to hide the gallery.
+
+Gallery contents after the full build should demonstrate:
+
+- palette
+- typography
+- spacing
+- surfaces
+- buttons
+- inputs
+- chips
+- statuses
+- notices
+- loading
+- empty
+- error
+- sheet/modal treatment
+- capacity/progress
+- intelligence patterns
+- provenance
+- clarification
+- reasoning evidence
+- approval
+- execution/outcome
+
+Use realistic Her Keys copy.
+
+No lorem ipsum.
+
+Do not build a fake application walkthrough.
+
+============================================================
+21. MOTION
+============================================================
+
+Establish restrained motion guidance.
+
+Motion should explain state changes, such as:
+
+- sheet appearance
+- expanding “Why?”
+- selection
+- completion
+- accepting an interpretation
+- loading-to-content transition
+
+Avoid:
+
+- decorative bouncing
+- gratuitous spring animation
+- excessive entrance animation
+- movement that makes the product feel unserious
+
+Do not add a UI/animation library without a concrete need.
+
+============================================================
+22. DESIGN FREEZE INTERACTION
+============================================================
+
+This build constitutes the formal design-direction approval referenced by the
+earlier Build 2 design freeze.
+
+The freeze is lifted ONLY for:
+
+- the shared application shell
+- shared design-system infrastructure
+- the exact four migrated surfaces in Section 17
+
+All other existing feature surfaces remain unchanged until their feature build
+migrates them onto this system.
+
+============================================================
+23. FOUNDATION / DOMAIN BOUNDARY
+============================================================
+
+Consume the completed Build 4 foundation.
+
+Do not redesign it.
+
+Do not casually alter:
+
+- AppState
+- local schema
+- cloud schema
+- migrations
+- RLS
+- sync
+- claim
+- account identity
+- provenance
+- confidence promotion
+- authorization
+- ActionRecord
+- responsibility semantics
+- external reference semantics
+- commitment facets
+- behavioral history
+
+If the UI reveals an actual foundation defect:
+
+1. document it
+2. prove it
+3. identify the affected invariant/governance ID
+4. determine whether it blocks this UI build
+
+If it does not block:
+
+DEFER IT TO A FOUNDATION-REPAIR BRANCH.
+
+Do not weaken an invariant to simplify UI work.
+
+============================================================
+24. FOUNDATION IMMUTABILITY GATE
+============================================================
+
+This is mandatory.
+
+At EXIT, the following must remain identical:
+
+Shipping migration SHA-256:
+
+1e9169de4cf21c46e2167089328de94ce07cb1fcf005c0461dece1b28ec8a7cb
+
+Local fingerprint:
+
+199ed4d4c1b37cd654b5853e91cbde27
+3613 facts
+
+Baseline migration SHA-256:
+
+8bc38d66fcffbb9fa83502329bd4738a53a8446dd5ce89327013751872f8f16f
+
+Backend harness:
+
+684 / 684 minimum existing checks green
+
+Any unexplained foundation delta means:
+
+HK-FE-UI-01 = STOPPED
+
+not PASS-with-notes.
+
+============================================================
+25. NO BACKEND / REMOTE WORK
+============================================================
+
+Do not:
+
+- change Supabase schema
+- apply migrations
+- change Staging
+- change Production
+- create users
+- perform Apple sign-in
+- perform Google sign-in
+- alter OAuth
+- change EAS credentials
+- deploy Edge Functions
+- wire Gemini
+- change Gemini secrets
+- introduce service-role credentials
+- mutate any remote
+
+============================================================
+26. DEPENDENCY DISCIPLINE
+============================================================
+
+Do not opportunistically:
+
+- upgrade Expo
+- upgrade Expo Router
+- upgrade React Native
+- repair unrelated npm audit findings
+- fix the existing Expo Doctor patch drift
+- replace icon systems
+- add animation libraries
+- add design-system frameworks
+
+A new dependency is allowed only when:
+
+- a direct implementation need exists
+- the existing stack cannot reasonably satisfy it
+- the dependency is justified in the ledger
+- it does not create avoidable runtime or maintenance complexity
+
+Never run:
+
+npm audit fix --force
+
+The existing Expo Doctor 20/21 condition is not this build's scope unless the
+front-end work itself causes additional failures.
+
+============================================================
+27. COMMIT DISCIPLINE
+============================================================
+
+Use a K-series.
+
+Suggested shape:
+
+K0 — verified owner app.json infrastructure checkpoint, if needed
+K1 — inventory + migration ledger + tokens + typography
+K2 — shell + core shared primitives + contrast/a11y foundation
+      → OWNER VISUAL CHECKPOINT
+
+After owner approval:
+
+K3 — AI semantic mappings + intelligence presentation system
+K4 — Today migration
+K5 — Talk It Out migration
+K6 — onboarding-surface migration
+K7 — Life migration
+K8 — completed gallery + responsive/a11y hardening
+K9 — focused audit repairs + closure
+
+Exact numbering may expand if a logically independent repair requires it.
+
+Rules:
+
+- stacking commits only
+- no amend of earlier K commits
+- no rebase
+- no squash
+- no force operations
+- no push
+- no PR
+- no merge
+- no unrelated file sweeps
+- stage explicit paths, not `git add -A`
+
+============================================================
+28. FOCUSED FRONT-END AUDIT
+============================================================
+
+After screen migration and before PASS, attack:
+
+VISUAL CONSISTENCY
+
+- raw colors
+- raw spacing
+- rogue radii
+- duplicate primitives
+- one-off text styles
+- screen-specific button systems
+- inconsistent surfaces
+
+PRODUCT FIT
+
+- spa/wellness drift
+- childish styling
+- generic productivity styling
+- dashboard density
+- decorative-card overload
+- weak hierarchy
+
+AI SEMANTICS
+
+- inference shown as fact
+- legacy-unknown shown as user-stated
+- fake confidence
+- confidence tiers outside possible/likely/established
+- recommendation shown as execution
+- approval-required action appearing automatic
+- prepared action shown as completed
+- outcome shown without an execution
+- missing correction affordance
+- chain-of-thought-like explanation
+
+ACCESSIBILITY
+
+- every canonical contrast pairing
+- touch targets
+- labels
+- state-by-color
+- dynamic text
+- long copy
+- keyboard behavior
+- screen reader semantics
+
+ARCHITECTURE
+
+- presentation components mutating domain state
+- persisted visual tokens
+- hidden API/network dependency
+- feature logic inside shared primitives
+- duplicated systems
+- route regressions
+- gallery exposed to production users
+- new dependency without justification
+
+INHERITANCE
+
+For every REPLACE:
+- was replacement actually necessary?
+
+For every PRESERVE:
+- does it now visually coexist with the permanent system?
+
+For every migrated screen:
+- is it fully migrated?
+
+Repair in-scope defects autonomously.
+
+============================================================
+29. TEST / EXIT GATE
+============================================================
+
+At final completion run:
+
+- TypeScript
+- full app tests
+- full backend harness
+- component/system tests
+- Expo Doctor
+- Expo export
+- design-system audit tests
+- contrast matrix
+- shipping migration hash
+- baseline migration hash
+- local fingerprint
+
+Report test accounting:
+
+APP TESTS
+- before
+- after
+- added
+- removed
+- failed
+
+COMPONENT TESTS
+- added
+- failed
+
+BACKEND
+- expected 684 existing checks
+- actual
+
+No removed test without a named reason.
+
+============================================================
+30. SELF-ASSESSMENT MUST BE EVIDENCE-BASED
+============================================================
+
+Do not merely state:
+
+“all features can use this.”
+
+Support the assessment with:
+
+1. Shared component inventory and public APIs.
+2. Semantic token inventory.
+3. AI/intelligence presentation mapping table.
+4. Exact four migrated screens.
+5. What a new feature can build without inventing:
+   - new typography hierarchy
+   - new button system
+   - new surface/card system
+   - new AI semantic language
+   - new status language
+   - new spacing system
+6. Known things future features WILL still need to add.
+
+The final item MUST NOT be empty merely to make the design system sound
+complete.
+
+A permanent design system is extensible.
+
+It is not omniscient.
+
+============================================================
+31. COMPLETION REPORT
+============================================================
+
+Keep the final report concise but evidence-based.
+
+Return:
+
+A. ENTRY / EXIT GATES
+- branch
+- entry HEAD
+- owner work checkpoint
+- app tests before/after
+- backend before/after
+- TypeScript
+- migration SHA before/after
+- fingerprint before/after
+
+B. INHERITANCE
+- PRESERVED
+- REFINED
+- REPLACED
+- justification for every REPLACE
+- migration-ledger completion
+
+C. PERMANENT UI SYSTEM
+- tokens + typography
+- shell
+- shared component inventory
+- accessibility + contrast
+- intelligence/AI presentation mapping
+
+D. MIGRATED SURFACES
+- Today
+- Talk It Out
+- exact onboarding route
+- Life
+- BEFORE/AFTER screenshot references where available
+
+E. AUDIT
+- findings
+- repairs
+- foundation/domain findings deferred
+
+F. DEVELOPMENT GALLERY
+- route
+- production gating proof
+
+G. COMMITS / WORKTREE
+- K-series
+- final git status
+- unrelated work preserved
+
+H. FUTURE FEATURE READINESS
+Answer:
+
+CAN CURRENT AND FUTURE HER KEYS FEATURE BRANCHES USE THIS AS THEIR COMMON
+FRONT-END BASE WITHOUT CREATING A SECOND DESIGN SYSTEM?
+
+PASS / FAIL
+
+Support the answer with:
+- what is covered
+- what future features can extend
+- known gaps
+
+I. REMOTE CONFIRMATION
+Explicitly confirm:
+
+- no Supabase remote mutation
+- no Gemini wiring
+- no OAuth mutation
+- no auth testing
+- no EAS credential mutation
+- no push / PR / merge
+
+============================================================
+32. FINAL STATUS
+============================================================
+
+INTERIM STATUS:
+
+HK-FE-UI-01 = VISUAL CHECKPOINT
+
+This occurs after K2 and requires owner approval to proceed.
+
+FINAL STATUS MUST BE ONE OF:
+
+HK-FE-UI-01 = PASS
+
+or
+
+HK-FE-UI-01 = STOPPED
+
+PASS requires:
+
+- inheritance ledger complete
+- no unjustified replacement
+- exact four surfaces fully migrated
+- WCAG AA token pairings pass
+- AI presentation semantics trace to frozen domain semantics
+- no foundation drift
+- no persisted visual tokens
+- app tests green
+- backend 684 existing checks green
+- TypeScript green
+- export succeeds
+- no hidden remote mutation
+- final audit repaired in-scope findings
+- permanent UI system is usable as the common base for future feature branches
+
+On PASS state:
+
+PERMANENT HER KEYS FRONT-END SYSTEM = ESTABLISHED
+
+READY TO FORK PARALLEL FEATURE BUILDS = YES
+
+Do not create those branches.
+Do not merge.
+Do not push.
+
+BEGIN.

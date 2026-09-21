@@ -37,7 +37,12 @@ export const Platform = { OS: 'ios', select: (map: AnyProps) => map.ios ?? map.d
 export const StyleSheet = {
   create: (styles: AnyProps) => styles,
   hairlineWidth: 1,
-  flatten: (style: AnyProps) => (Array.isArray(style) ? Object.assign({}, ...style.filter(Boolean)) : style),
+  // Recursive, like RN's real flatten: style arrays nest (Card composes a
+  // caller style array into its own), and tests read resolved properties.
+  flatten: (style: AnyProps): AnyProps => {
+    if (Array.isArray(style)) return Object.assign({}, ...style.filter(Boolean).map((s) => StyleSheet.flatten(s)));
+    return style;
+  },
 };
 
 const rn = {
