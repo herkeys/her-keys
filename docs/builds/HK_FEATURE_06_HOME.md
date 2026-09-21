@@ -6,8 +6,8 @@ This ledger is written phase by phase (HM0 … HM8). The status table says which
 
 | Ledger status | |
 |---|---|
-| Sections 1-5 | HM0 (this commit) |
-| Sections 6-10 | HM1 |
+| Sections 1-5 | HM0 (committed `10b9adb`) |
+| Sections 6-10 and Appendix A (foundation maps) | HM1 (this commit) |
 | Sections 11-25 | HM2-HM6 |
 | Sections 26-45 | HM7-HM8 |
 
@@ -56,7 +56,7 @@ Recomputed in this worktree at `14bd58e`, before any product change.
 | Full app suite, serial (`--test-concurrency=1`) | **975 tests / 207 suites, 975 pass, 0 fail, 0 skipped, 0 cancelled** (≈90 s). Matches the repair ledger (812 → 975; +163 in `tests/hk-ir01`). |
 | Migration hashes | baseline `20260919230054_build4_baseline.sql`: git blob **`8bc38d66…`** (working tree `81909daa…` is the `core.autocrlf` CRLF form — not drift); shipping `20260919231500_build4_cloud_schema.sql` working tree **`1e9169de…`**; additive `20260921120000_ir01_duration_source_and_claim_v3.sql` **`73db6639…`** (identical in blob and working tree; LF-pinned). |
 | Local schema fingerprint (read-only measurement of the shared `postgres` DB, no reset) | `schema-fingerprint.mjs verify … --against baselines/ir01-local-fingerprint.json` → **MATCH**, gating digest **`43e7c8a4402a3387cb2e1add4170921e`**, **3617** facts. |
-| Backend harness (`node supabase/tests/run.mjs`) | see §2.2 |
+| Backend harness (`node supabase/tests/run.mjs`) | **800/800** on the retry (first attempt aborted environmentally) — see §2.2 |
 | IR01 mutation check (`scripts-dev/ir01-mutation-check.cjs`, 35 mutants) | Not re-run at HM0: it is the repair build's own check, and it is a long run on a memory-starved host. Recomputed at the final gate (HM8) if the host allows; otherwise recorded as NOT RE-RUN with the reason. |
 | Expo Doctor / Android export | Recomputed at HM8. |
 
@@ -87,7 +87,7 @@ Recomputed in this worktree at `14bd58e`, before any product change.
 
 **INCOMPLETE — environmental abort, NOT counted as a pass and NOT a code failure.** `node supabase/tests/run.mjs` printed 14 consecutive `ok` lines of the `composition:` journeys (sync runtime operating; unclaimed content reached PostgreSQL; explicit 15 vs default 15 are different cloud rows; child-scoped System kept its child; post-bind mutation reached PostgreSQL through the queue; removal reached the cloud as a status and the dependency edge was not rewritten; second device hydrated with duration knowledge intact; HA-009 across devices; RLS: stranger cannot read/plant/update; quarantine on account switch; demo household refused) and then aborted with `HARNESS ERROR: composition query failed: spawnSync docker UNKNOWN`. That is the host memory-starvation signature recorded for this machine (`parallel-worktree-gotchas`): free commit memory was 0.44 GB (`Win32_OperatingSystem.FreeVirtualMemory`). No other session held a `b4_%` database (checked with `pg_stat_activity` beforehand), so it is not the shared-database collision either.
 
-The full harness (repair ledger claims 800/800) is therefore **not yet re-verified in this worktree**. It is re-run at HM6 (backend validation) and at the final gate; if the host still cannot complete it, that is reported as NOT COMPLETED with this reason rather than as a pass.
+**RETRY (same worktree, after free commit memory recovered to 13.5 GB, again with no `b4_%` sessions and no other harness process): `800/800 checks passed`, exit 0.** This verifies the repair ledger's 800/800 claim mechanically. The first attempt is kept in this record because it happened; it is superseded, not erased. The harness is re-run at HM6 and at the final gate.
 
 ---
 
@@ -164,3 +164,127 @@ Foundation facts that shape the design (and are re-derived as tests in HM1):
 * "Last done" has real evidence on this baseline (append-only `completed` observations and the row's own paired `completedAt`) — `updatedAt` is not evidence.
 * The Life hub excludes open tasks of an active Home category from "Other open tasks" (`TASK_LIST_ROLES`).
 * `attentionFor`'s risk rule treats an `acknowledged` responsibility as "handled elsewhere" (`attention.ts:60-62`). That conflicts with ACKNOWLEDGED ≠ COVERED. It is a common-foundation concern, not changed here; recorded for integration (§32/§33) and worked around by not presenting the `risk` reason as a Home judgment.
+
+---
+
+## 6. Home-context contract (HM1)
+
+**The Home context is the household category that carries system role `home`** (`src/domain/categories.ts:16`, resolved by `categoryWithRole`, `:50`). Implemented once in `src/features/home/model/homeContext.ts` (`homeContextOf`, `isHomeRecord`, `homeCategoryIdOf`, `homeLabelOf`). A record is a Home record **iff its own single `categoryId` equals that category's id**. There is no other test.
+
+| Contract point | Result | Proof (`tests/hk-f06/homeContext.test.mjs`) |
+|---|---|---|
+| 1. Name independence | **HOLDS** | §7 |
+| 2. Context lifecycle | **DEFINED and proven** | §8 |
+| 3. Single-context limitation | **DOCUMENTED and pinned** | §9 |
+| 4. Coverage honesty | **RULE stated** (§10); enforced in HM2/HM3 by the projection and the copy audit | §10 |
+| 5. Round trip | **HOLDS**: create → local persistence → restart → account sync → cloud → second device | HOME CONTEXT 4 (5 tests) |
+
+**HM1 result: no new durable semantic and no schema change is needed for Home V1.** Every capability the replacement floor needs (context, tasks, events, recurrence rules, dependencies, responsibility, completion evidence, sync) exists as canonical state on `14bd58e`. Anything Home would like but the model does not have is in `HK_FEATURE_06_MISSING_PRIMITIVES.md`, each with "owner checkpoint? no" or the reason. **No owner checkpoint is triggered by this build so far.**
+
+## 7. Name independence
+
+Renaming "Home" to "House stuff" — or to "Money" — changes the display label only; the context id, the role and every record's association are unchanged. A role-less category the household names "Home" is not the Home context and its records are not Home records ("naming something 'Money Stuff' doesn't make it the money category" — `categories.ts`). The Life stack header already uses the household's own name for the Home screen (`app/(app)/life/_layout.tsx`, `titleFor('home', …)`), so the rename reads the same everywhere.
+
+Tests: *renaming "Home" to "House stuff" …*, *renaming the Home area to another area's name …*, *a role-less category that is literally named "Home" is NOT the Home context …*, *STRUCTURAL: nothing under src/features/home decides by a name, a title or a keyword* (a scan of every Home source file for seven ways of deciding from words) and *the scan can see …* (nine offending snippets are caught, four legitimate ones are not). The rename also survives restart and the cloud round trip (HOME CONTEXT 4).
+
+## 8. Context lifecycle
+
+| State | How it arises | Home OS behaviour |
+|---|---|---|
+| `active` | starter category, or restored | Full Home OS. |
+| `archived` | `archiveCategory` (only the internal dev-tools call it today), or an `archived` category row pulled from the cloud | Home still opens (the route exists; the Life hub simply stops listing an archived category, because `categoriesInOrder` lists active ones). It **resolves the archived category by role over ALL categories**, lists every record still pointing at it, and **says the area is archived**. Creating new Home items is withheld with an explanation and one explicit action, "Restore Home area" (`restoreCategory`). Records are never disassociated by archiving. |
+| `missing` | no category carries `home` (damaged or partial state; the app has no way to delete one) | Home reports **that it cannot identify the Home area** — never an empty Home. No items, no create. |
+| renamed | `renameCategory` (presentation only) | No change in behaviour; the label follows the name. |
+| deleted | **impossible**: `categories.ts` exports no removal, and applying a pulled category row only upserts | Not applicable. Proven, not assumed. |
+
+Tests: *ARCHIVED …*, *the Life hub's own category list drops an archived Home area — which is exactly why Home resolves by role over ALL categories*, *RESTORED …*, *MISSING …*, *NO DELETION …*, *NO DELETION ACROSS SYNC …*, *a category the pulled row does not name as home cannot displace the real Home area*.
+
+## 9. Single-context limitation (V1, documented)
+
+A task, an event and a System each carry exactly one `categoryId` (`state.ts:159,125,195`) and there is no multi-context field. Consequences, stated plainly:
+
+* Something she filed under her own "Yard", "Errands" or "Pets" category has **no Home association** and does not appear in Home, however its title reads.
+* Home does **not** parse titles, match keywords, show every household task, or silently reclassify her records to make them appear.
+* Every record Home creates uses the Home category, so it stays visible in Home.
+* A record belonging to several contexts is a **new durable semantic** and needs owner approval. Register entry `MP-06-06`, "owner checkpoint: yes, only if the owner wants it".
+
+Tests: *the certified model gives a task, an event and a System exactly ONE category …*, *a task filed under her own "Yard" category has NO Home association, however its title reads*, *a Home-created record uses the Home context …*.
+
+## 10. Coverage-honesty rule
+
+> Home OS sees only canonical state associated with the Home context. "Home shows no items" **never** means "nothing around the physical house needs attention."
+
+Enforced rules (each becomes a test in HM2/HM3, and a mutation in HM7):
+
+1. Empty, loading and unrecovered are three different screens. Loading is never rendered as empty (`isSettled`/`status`), and a `recovery` snapshot (which swaps in a FRESH household) is never rendered as empty.
+2. The empty state says what Her Keys knows (nothing is saved under the Home area) and what it does not (the state of the house).
+3. Copy never says or implies: all clear, all set, nothing needs attention, everything is handled, nothing to worry about, safe, fixed, repaired, verified.
+4. A missing Home context and an archived one are stated as such, never as empty.
+5. The header states its own scope ("what's saved under <the household's name for it>").
+
+---
+
+## Appendix A — HM1 foundation maps
+
+### A1. Completion / observation map (source of "Last done")
+
+| Evidence | Where | Used for Last Done? | Note |
+|---|---|---|---|
+| `completed` observation about the SAME `task` ref | `state.observations` (`observation.ts`), appended by `completeTask` in the same transition that sets `completedAt` | **YES** — evidence type `completion_observation` | Append-only; carries `occurredAt` and `logicalDate` in the household timezone. |
+| `Task.completedAt` while `status === 'completed'` | `state.ts:169,177` (paired by schema) | **YES, only when no completion observation exists for that task** — evidence type `task_completed_at` | For tasks completed before observations, or arriving without them. If both exist, the later instant wins. |
+| `completed` observation about the SAME `system` ref | `VALID_OUTCOMES.system` | **YES** — `system_completion_observation` | No producer on this baseline; Home reads it if an integrated System run records one. |
+| `Task.updatedAt`, `CalendarEvent.updatedAt`, `createdAt`, `dueDate`, `plan`, `startsAt` | rows | **NEVER** | Edit / creation / scheduled time is not completion. Mutation M8 flips this on purpose. |
+| `reopened` / `deferred` / `skipped` / `missed` / `cancelled` observations | `VALID_OUTCOMES.task` | No | `skipped` is used only by the shared `nextOccurrence` as a rule exception. |
+| Responsibility `completed` (`completeResponsibility`) | `state.responsibilities` | No — shown only as "<name> reported it finished on …" | It is the other person's handoff state, not proof the task or the physical condition is done. |
+| An event | — | **NEVER** | The calendar does not know whether an event was attended (`standingOf` says so). SERVICE SCHEDULED ≠ SERVICE COMPLETED. |
+| `executions` / `outcomes` / `actions` | foundation | No | Records of what Her Keys itself proposed or did; not of what she did around the house. |
+
+**Wording follows the evidence:** the value reads "Marked done Jun 12", not "Filter changed Jun 12" (TASK COMPLETED ≠ CONDITION VERIFIED). With no evidence it reads "No completion recorded" — never "Never". A later `reopened` observation does not retract the earlier completion: it is history that she marked it done then. There is no shared way to retract a mistaken completion (`MP-06-01`).
+
+### A2. Responsibility action map (transitions Home may invoke)
+
+| Transition (`src/domain/responsibility.ts`) | Home may invoke? | How Home uses it |
+|---|---|---|
+| `delegate` | **Yes** | "Ask <person or child>". Offered only for an existing active person or a child; only when the item has no live responsibility. |
+| `acknowledge` | **Yes** (recording) | "They've seen it" — she records what she was told. |
+| `accept` | **Yes** (recording) | "They said yes". **Home always passes `stillNeedsMe` explicitly** (default `true`, i.e. still needs her) — the domain default is `false`, which would read as "no longer needs her" without her saying so. Accepting is not covering. |
+| `decline` | **Yes** (recording) | "They said no" — it is hers again. |
+| `returnToSelf` | **Yes** | "Take it back". |
+| `reassign` | No | Two intents in one call; "Take it back" then "Ask" is explicit. |
+| `completeResponsibility` | **No** | The task's completion is hers to record (`completeTask`); a handoff completing is not the work verified. Home only DISPLAYS a completed handoff. |
+| `addPerson` / `archivePerson` | **No** | People OS owns people. No production surface creates a person on this baseline (`MP-06-05`). |
+
+**Coverage (derived, never stored):** `covered` iff a live responsibility is held by someone other than her, is `accepted`, is not unacknowledged, **and** `needsMePersonally(state, ref, now) === false` — i.e. she said it no longer needs her. Everything else is `not delegated`, `requested`, `seen`, `accepted — still needs you`, `declined`, `no answer yet`. Even `covered` is worded as what she said ("accepted, and you've marked it as not needing you"), never as completion or safety.
+
+### A3. Recurrence capability map
+
+| Capability | On this baseline | Home V1 |
+|---|---|---|
+| Rule about a task | `addRecurrence` (`structure.ts:213`), one active rule per subject; `recurrence` sync kind | **Create** together with the task in ONE transition, or add to an existing Home task. Trigger `schedule` only; frequency weekly/monthly/yearly (+daily) with interval; anchor = due date, else today. |
+| Rule about a System | rule schema allows `system`; **no System can be created** (`MP-06-04`) | **Display** an existing Home System's rule; never create one; never convert a task to a System. |
+| Next expected | `nextOccurrence` (`:330`), derived, only for `schedule` + `active` | Shown as **Next expected**, separate from **Last done**. |
+| `after_completion` / `manual` | no derivation (`MP-06-02`) | Described in words ("repeats after each time it's done"), **no date is invented**. |
+| Which cycle is done | no occurrence/run engine (`MP-06-03`) | Not tracked. Completing the task records a completion; **"It's due again"** reopens it (status `open`, `completedAt` cleared, a `reopened` observation) with **no due date carried over**, so a stale date can't read as overdue. |
+| Pause / end | `setRecurrenceStatus` | "Stop repeating" (`ended`). History is kept. |
+| A rule is not a completion | — | A rule never produces a completion, a "done" or a "due" by itself; Home shows "expected", not "overdue". |
+
+### A4. Shared attention map
+
+Home reuses `attentionFor(state, nowMs)` (`reasoning/attention.ts:44`) and keeps only items about a Home record.
+
+| `AttentionReason` | About | Home wording (factual) |
+|---|---|---|
+| `deadline` / `now` | Home task | "Overdue — was due <date>" |
+| `deadline` / `today` | Home task | "Due today" |
+| `deadline` / `soon` | Home task | "Due <weekday date>" |
+| `unacknowledged_delegation` | a responsibility whose `about` is a Home record | "No answer yet from <name>" |
+| `risk` | Home task | "Marked high-consequence and due" (what she set; not a Home-made risk judgment) |
+| `external_source_changed` | linked Home task/event | "The source changed since this was last updated" |
+| `approval_required` | an intent about a Home record | not shown as Home attention (belongs to the approval surface) |
+| `conflict`, `capacity_overload`, `needs_me` | not about a Home record | not Home |
+
+Everything else Home says about timing is a **fact**, not a judgment: due today/tomorrow/<date>, planned <date>, scheduled <weekday time>, unresolved, waiting on someone, prerequisite unavailable, repeats, no completion recorded. There is **no Home priority, urgency, risk or attention score**.
+
+### A5. Round-trip map (Home association)
+
+`addTask({ categoryId: <home category id> })` → `store.commit` (validates, durable) → repository envelope → **restart** (hydrate) → `changeObserver` queue intent in the same envelope → `composeAccountApp` sync runtime → `tasks.category_id` = cloud id of the `household_categories` row whose `system_role = 'home'` → pull on a **second device** → `applyCloudRow('task')` resolves `category_id` to the local category id → `homeContextOf` finds the role-bound category (`applyCloudRow('category')` carries `name`, `system_role`, `status`). Proven in HOME CONTEXT 4 (in-memory cloud) and re-proven against real PostgreSQL in HM6.
