@@ -238,19 +238,19 @@ No test is removed or rewritten at T0.
 
 | ID | Requirement (prompt §) | State | Evidence |
 |---|---|---|---|
-| FR-01 | Orientation: logical-day label + concise framing (§9A, J) | NOT STARTED | |
-| FR-02 | "What matters today" prioritized, not every item (§11) | NOT STARTED | |
-| FR-03 | One Move — full presentation lifecycle, all registered target kinds (§15, N) | NOT STARTED | |
-| FR-04 | "Why this One Move" from structured evidence, progressive (§16) | NOT STARTED | |
-| FR-05 | Needs Me — things that exist vs things that need her (§12) | NOT STARTED | |
-| FR-06 | Risk / attention — specific, evidence-based (§13) | NOT STARTED | |
-| FR-07 | Capacity — "does the day fit", no scores (§14) | NOT STARTED | |
-| FR-08 | What can wait — bounded, only when provably safe (§17, T) | NOT STARTED | |
-| FR-09 | Responsibility / waiting; delegated ≠ covered (§18) | NOT STARTED | |
-| FR-10 | "Handled by Her Keys" only with execution **and** outcome (§19, O) | NOT STARTED | |
-| FR-11 | Upcoming constraint — one, only if material (§20) | NOT STARTED | |
-| FR-12 | What changed — no presentation markers in state (§21, P) | NOT STARTED | |
-| FR-13 | Correction / adjustment through existing paths only (§22, H) | NOT STARTED | |
+| FR-01 | Orientation: logical-day label + concise framing (§9A, J) | IN PROGRESS | model: `tests/today/scenarios.test.mjs` A, `scenarios2` J |
+| FR-02 | "What matters today" prioritized, not every item (§11) | IN PROGRESS | model: scenario A, I |
+| FR-03 | One Move — full presentation lifecycle, all registered target kinds (§15, N) | IN PROGRESS | model: scenarios D, F |
+| FR-04 | "Why this One Move" from structured evidence, progressive (§16) | IN PROGRESS | model: scenario F |
+| FR-05 | Needs Me — things that exist vs things that need her (§12) | IN PROGRESS | model: scenario B, C |
+| FR-06 | Risk / attention — specific, evidence-based (§13) | IN PROGRESS | model: scenario B, C, E |
+| FR-07 | Capacity — "does the day fit", no scores (§14) | IN PROGRESS | model: scenario B; UI pending |
+| FR-08 | What can wait — bounded, only when provably safe (§17, T) | IN PROGRESS | model: scenario H |
+| FR-09 | Responsibility / waiting; delegated ≠ covered (§18) | IN PROGRESS | model: scenario C |
+| FR-10 | "Handled by Her Keys" only with execution **and** outcome (§19, O) | IN PROGRESS | model: scenario G |
+| FR-11 | Upcoming constraint — one, only if material (§20) | IN PROGRESS | model only; test pending |
+| FR-12 | What changed — no presentation markers in state (§21, P) | IN PROGRESS | model: scenario J; rollover / time-of-day pending |
+| FR-13 | Correction / adjustment through existing paths only (§22, H) | IN PROGRESS | seam in `model/narrative.ts`; test pending |
 | FR-14 | Progressive disclosure, accessible (§23) | NOT STARTED | |
 | FR-15 | Adaptive density; ≤3 primary blocks on an ordinary day (§24, S) | NOT STARTED | |
 | FR-16 | Time: household timezone, logical day, DST, time-of-day, rollover (§25, P, W) | NOT STARTED | |
@@ -267,7 +267,27 @@ No test is removed or rewritten at T0.
 
 ## 4. Files owned, shared files touched, primitives — *filled as the build proceeds*
 
-**Files owned by this feature** (`src/features/today/…`, `tests/today/…`, this ledger and its evidence folder): TBD.
+**Files owned by this feature** (`src/features/today/…`, `tests/today/…`, this ledger and its evidence folder):
+
+| Path | Role | Commit |
+|---|---|---|
+| `src/features/today/model/types.ts` | The view-model types — the vocabulary of the projection | T2 |
+| `src/features/today/model/todayView.ts` | `buildTodayView`: the pure projection and the first-level composition | T2 |
+| `src/features/today/model/refs.ts` | Typed-reference → title / route / provenance; household-timezone time labels | T2 |
+| `src/features/today/model/narrative.ts` | The typed future-LLM seam and the deterministic provider (headline only) | T2 |
+| `src/features/today/model/oneMoveView.ts` | One Move presentation: lifecycle, per-kind affordance table, evidence → reasons | T2 |
+| `src/features/today/model/attentionView.ts` | What needs her: attention rows, the delegation lifecycle, waiting-on-others, "on your mind" | T2 |
+| `src/features/today/model/executionView.ts` | Handled (execution **and** outcome), waiting, failed | T2 |
+| `src/features/today/model/mattersView.ts` | What matters today (bounded, ordered, de-duplicated) | T2 |
+| `src/features/today/model/canWait.ts` | What can safely wait (only ever removes from Daily Load's own movable set) | T2 |
+| `src/features/today/model/upcoming.ts` | The one upcoming constraint, if it earns a line | T2 |
+| `src/features/today/model/decisionView.ts` | Whether the day has a Daily Load decision to show, and its state | T2 |
+| `src/features/today/model/phrases.ts` | Total maps for the closed vocabularies Today speaks about | T2 |
+| `src/features/today/model/index.ts` | Public surface of the model | T2 |
+| `tests/today/fixtures.mjs` | Scenario builders (domain operations; server-written rows as literals, validated) | T2 |
+| `tests/today/scenarios.test.mjs`, `scenarios2.test.mjs` | Scenarios A–J, mechanical | T2 |
+
+**Existing Today files modified** are listed with their classification in §2.8 and their commits in the commit series (§10).
 
 **SHARED FILES TOUCHED** (path · reason · commit · likely sibling collision · reconciliation need): none yet.
 
@@ -302,7 +322,7 @@ introduces no new truth (bridges are stated).
 | B4-FE01-017 | Dependencies | `foundation/structure.ts` (`DependencySchema`); `structure.ts` (`blockersOf`, `isBlocked`, `isDone`) | `blockersOf(state, ref)`, `state.dependencies` | `foundationAcceptance.test.mjs`, `foundationAcceptance3.test.mjs`, `foundationOps.test.mjs` | Upcoming constraint (unmet `requires`); can-wait exclusion (something live requires this) | AS-IS |
 | B4-FE01-019 | Attention intent (derived) | `reasoning/attention.ts` (`attentionFor`, `ATTENTION_REASONS`) | `attentionFor(state, nowMs)` | `foundationAcceptance.test.mjs`, `foundationAcceptance2.test.mjs`, `foundationAcceptance3.test.mjs` | The one source of deadline / risk / needs-me / unacknowledged delegation / approval / external-source-changed rows and their urgency. Conflict and capacity attention are shown through the Daily Load decision block, not twice | AS-IS |
 | B4-FE01-024 | Reasoning evidence | `foundation/pattern.ts` (`EvidenceLinkSchema`, `KNOWN_EVIDENCE_CODES`); `patterns.ts` (`explain`, `addEvidence`) | `explain(state, {kind:'oneMove', id})` | `foundationAcceptance3.test.mjs`, `foundationOps.test.mjs` | "Why this One Move": the stored evidence links, code → fact. Unknown codes are stored and never rendered | AS-IS |
-| B4-FE01-025 | Briefing projection (derived) | `reasoning/briefing.ts` (`briefingFor(state, nowMs, sinceMs)`) | `atRisk`, `needsHer`, `delegated`, `unacknowledged`, `needsApproval` | `foundationAcceptance.test.mjs`, `foundationAcceptance3.test.mjs` | **PARTIAL.** Used for the five fields above so their definitions cannot drift. **Gaps:** (a) `handled` = succeeded executions **not gated on an outcome** — bridge: Today narrows it to those that also have a success outcome (stricter, never broader); (b) `changed` needs a `sinceMs` "last looked" marker, which may not be persisted — bridge: not used; the changed cue comes from observations dated *today* (a logical-day boundary, not a stored marker); `sinceMs` passed to `briefingFor` is the start of today's logical day, derived; (c) `matters` is counts only — bridge: Today composes its matters block from `projectStateDay` + attention | PARTIAL |
+| B4-FE01-025 | Briefing projection (derived) | `reasoning/briefing.ts` (`briefingFor(state, nowMs, sinceMs)`) | `delegated`, `unacknowledged`, `handled` (narrowed); the ranked list itself comes from `attentionFor` | `foundationAcceptance.test.mjs`, `foundationAcceptance3.test.mjs` | **PARTIAL.** `briefingFor` is called once per projection and supplies `delegated` (who holds what), `unacknowledged` (which requests went unanswered) and `handled` (the candidate set, then narrowed). The ranked attention list is read from `attentionFor` directly, because two of the reasons Today must show — a pending approval and a changed external source — are not in the briefing's `atRisk` / `needsHer` lists; `atRisk` and `needsHer` are filters of that same list, so nothing is derived twice. **Gaps:** (a) `handled` = succeeded executions **not gated on an outcome** — bridge: Today narrows it to those that also have a success outcome (stricter, never broader); (b) `changed` needs a `sinceMs` "last looked" marker, which may not be persisted — bridge: not used; the changed cue comes from observations dated *today* (a logical-day boundary, not a stored marker); `sinceMs` passed to `briefingFor` is the start of today's logical day, derived; (c) `matters` is counts only — bridge: Today composes its matters block from `projectStateDay` + attention | PARTIAL |
 | B4-FE01-027 / -028 | Typed reference convention / One Move target registry | `foundation/typedRef.ts` (`TYPED_REF_KINDS`, `refExists`); `oneMove.ts` (`TARGET_ADAPTERS`, private; `oneMoveForDay`); `state.ts` (`ONE_MOVE_TARGET_TYPES`) | `oneMoveForDay(state, today)`; the stored record's `targetType` / `targetId`; `ONE_MOVE_TARGET_TYPES` | `oneMove.test.mjs`, `build3Audit.oneMove.test.mjs`, `foundationTruth.test.mjs` | The registry is consumed *through* `oneMoveForDay`; Today ranks nothing. The per-kind open/complete affordance is a `Record<OneMoveTargetType, …>` so a new registered kind fails to compile until Today decides its affordance (§5.2 table N) | AS-IS |
 | B4-FE01-031 | Cross-domain projection | `reasoning/related.ts` (`relatedTo`) | `relatedTo(state, ref)` | `foundationAcceptance.test.mjs`, `foundationAcceptance2.test.mjs`, `foundationAcceptance3.test.mjs` | The One Move target's own dependencies / responsibilities as second-level context (not as the recorded reason) | AS-IS |
 
