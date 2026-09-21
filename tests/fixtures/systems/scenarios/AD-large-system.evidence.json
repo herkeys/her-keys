@@ -1,0 +1,12 @@
+{
+  "duration": {
+    "atLeastMinutes": 120,
+    "estimatedSteps": 60,
+    "kind": "partial",
+    "totalSteps": 90
+  },
+  "first": "Step 1",
+  "last": "Step 90",
+  "scenario": "AD",
+  "steps": 90
+}

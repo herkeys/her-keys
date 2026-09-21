@@ -1,0 +1,222 @@
+{
+  "scenario": "AH",
+  "view": {
+    "availability": {
+      "kind": "ready",
+      "notice": null
+    },
+    "canCreate": true,
+    "isEmpty": false,
+    "items": [
+      {
+        "area": "Home",
+        "duration": {
+          "kind": "unknown"
+        },
+        "name": "Zebra pickup handoff",
+        "needsAttention": true,
+        "ref": {
+          "id": "sys-attn",
+          "kind": "system"
+        },
+        "responsibility": {
+          "holderKind": "child",
+          "holderName": "Josie",
+          "state": "requested",
+          "unanswered": true
+        },
+        "schedule": {
+          "byMonthDay": null,
+          "byWeekday": null,
+          "frequency": null,
+          "interval": null,
+          "nextExpected": null,
+          "noNextReason": "no_schedule",
+          "state": "none",
+          "timeOfDayMinutes": null,
+          "trigger": null
+        },
+        "stepCount": 0
+      },
+      {
+        "area": "Home",
+        "duration": {
+          "kind": "unknown"
+        },
+        "name": "Morning launch",
+        "needsAttention": false,
+        "ref": {
+          "id": "sys-daily",
+          "kind": "system"
+        },
+        "responsibility": null,
+        "schedule": {
+          "byMonthDay": null,
+          "byWeekday": null,
+          "frequency": "daily",
+          "interval": 1,
+          "nextExpected": "2026-09-16",
+          "noNextReason": null,
+          "state": "active",
+          "timeOfDayMinutes": null,
+          "trigger": "schedule"
+        },
+        "stepCount": 0
+      },
+      {
+        "area": "Home",
+        "duration": {
+          "kind": "unknown"
+        },
+        "name": "Sunday meal prep",
+        "needsAttention": false,
+        "ref": {
+          "id": "sys-tie-a",
+          "kind": "system"
+        },
+        "responsibility": null,
+        "schedule": {
+          "byMonthDay": null,
+          "byWeekday": [
+            0
+          ],
+          "frequency": "weekly",
+          "interval": 1,
+          "nextExpected": "2026-09-20",
+          "noNextReason": null,
+          "state": "active",
+          "timeOfDayMinutes": null,
+          "trigger": "schedule"
+        },
+        "stepCount": 0
+      },
+      {
+        "area": "Home",
+        "duration": {
+          "kind": "unknown"
+        },
+        "name": "Sunday reset",
+        "needsAttention": false,
+        "ref": {
+          "id": "sys-tie-b",
+          "kind": "system"
+        },
+        "responsibility": null,
+        "schedule": {
+          "byMonthDay": null,
+          "byWeekday": [
+            0
+          ],
+          "frequency": "weekly",
+          "interval": 1,
+          "nextExpected": "2026-09-20",
+          "noNextReason": null,
+          "state": "active",
+          "timeOfDayMinutes": null,
+          "trigger": "schedule"
+        },
+        "stepCount": 0
+      },
+      {
+        "area": "Home",
+        "duration": {
+          "kind": "unknown"
+        },
+        "name": "Monthly bill review",
+        "needsAttention": false,
+        "ref": {
+          "id": "sys-monthly",
+          "kind": "system"
+        },
+        "responsibility": null,
+        "schedule": {
+          "byMonthDay": 28,
+          "byWeekday": null,
+          "frequency": "monthly",
+          "interval": 1,
+          "nextExpected": "2026-09-28",
+          "noNextReason": null,
+          "state": "active",
+          "timeOfDayMinutes": null,
+          "trigger": "schedule"
+        },
+        "stepCount": 0
+      },
+      {
+        "area": "Home",
+        "duration": {
+          "kind": "unknown"
+        },
+        "name": "alpha closet",
+        "needsAttention": false,
+        "ref": {
+          "id": "sys-none-a",
+          "kind": "system"
+        },
+        "responsibility": null,
+        "schedule": {
+          "byMonthDay": null,
+          "byWeekday": null,
+          "frequency": null,
+          "interval": null,
+          "nextExpected": null,
+          "noNextReason": "no_schedule",
+          "state": "none",
+          "timeOfDayMinutes": null,
+          "trigger": null
+        },
+        "stepCount": 0
+      },
+      {
+        "area": "Home",
+        "duration": {
+          "kind": "unknown"
+        },
+        "name": "Beta closet",
+        "needsAttention": false,
+        "ref": {
+          "id": "sys-none-b",
+          "kind": "system"
+        },
+        "responsibility": null,
+        "schedule": {
+          "byMonthDay": null,
+          "byWeekday": null,
+          "frequency": null,
+          "interval": null,
+          "nextExpected": null,
+          "noNextReason": "no_schedule",
+          "state": "none",
+          "timeOfDayMinutes": null,
+          "trigger": null
+        },
+        "stepCount": 0
+      },
+      {
+        "area": "Home",
+        "duration": {
+          "kind": "unknown"
+        },
+        "name": "Summer swim bag",
+        "needsAttention": false,
+        "ref": {
+          "id": "sys-paused",
+          "kind": "system"
+        },
+        "responsibility": null,
+        "schedule": {
+          "byMonthDay": null,
+          "byWeekday": null,
+          "frequency": "weekly",
+          "interval": 1,
+          "nextExpected": null,
+          "noNextReason": "paused",
+          "state": "paused",
+          "timeOfDayMinutes": null,
+          "trigger": "schedule"
+        },
+        "stepCount": 0
+      }
+    ]
+  }
+}

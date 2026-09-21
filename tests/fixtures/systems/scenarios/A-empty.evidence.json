@@ -1,0 +1,12 @@
+{
+  "scenario": "A",
+  "view": {
+    "availability": {
+      "kind": "ready",
+      "notice": null
+    },
+    "canCreate": true,
+    "isEmpty": true,
+    "items": []
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "scenario": "AB",
+  "view": {
+    "availability": {
+      "kind": "loading"
+    },
+    "canCreate": false,
+    "isEmpty": false,
+    "items": []
+  }
+}

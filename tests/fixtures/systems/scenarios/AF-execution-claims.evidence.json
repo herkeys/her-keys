@@ -1,0 +1,56 @@
+{
+  "failedAttempt": [
+    {
+      "attempts": [
+        {
+          "attempt": 1,
+          "attemptedAt": "2026-09-16T14:00:00.000Z",
+          "result": "failed"
+        }
+      ],
+      "category": "financial_action",
+      "decision": "approved",
+      "decisionBasis": "explicit",
+      "intentId": "i-1",
+      "outcomes": []
+    },
+    {
+      "attempts": [],
+      "category": "financial_action",
+      "decision": null,
+      "decisionBasis": null,
+      "intentId": "i-2",
+      "outcomes": []
+    }
+  ],
+  "scenario": "AF.2",
+  "succeededAndVerified": [
+    {
+      "attempts": [
+        {
+          "attempt": 1,
+          "attemptedAt": "2026-09-16T14:00:00.000Z",
+          "result": "succeeded"
+        }
+      ],
+      "category": "financial_action",
+      "decision": "approved",
+      "decisionBasis": "explicit",
+      "intentId": "i-1",
+      "outcomes": [
+        {
+          "kind": "verified",
+          "observedAt": "2026-09-16T14:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "attempts": [],
+      "category": "financial_action",
+      "decision": null,
+      "decisionBasis": null,
+      "intentId": "i-2",
+      "outcomes": []
+    }
+  ]
+}
