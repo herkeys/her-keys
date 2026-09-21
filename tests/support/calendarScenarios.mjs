@@ -65,14 +65,21 @@ export function household({ tz = TZ, children = [] } = {}) {
       return builder;
     },
 
-    /** minutes: 0 records "no usable duration". due: LocalDate. at: schedules the task at a time (a timed plan). */
-    task(id, { title = id, minutes = 15, commitment = 'flexible', due = null, plan = null, at = null, date = DAY, dueAt = null, earliest = null, latest = null, splittable = null, ...rest }) {
+    /**
+     * minutes: 0 records "no usable duration". due: LocalDate. at: schedules the task at a time (a timed plan).
+     *
+     * DURATION PROVENANCE (HA-010, hk-ir01). A scenario that says `minutes: 30` narrates a duration SHE entered, so the
+     * source is stated as 'user' unless the scenario says otherwise (`durationSource: 'default' | 'inferred' | null`).
+     * `minutes: 0` is "no usable duration" and states no source. Leaving `minutes` out asks for what the app itself does
+     * when nobody supplied a duration: the planning default, recorded as a default. Nothing infers a source from a number.
+     */
+    task(id, { title = id, minutes, durationSource, commitment = 'flexible', due = null, plan = null, at = null, date = DAY, dueAt = null, earliest = null, latest = null, splittable = null, ...rest }) {
       named('tasks', id, (s) =>
         addTask(s, ctx(), {
           title,
           categoryId: 'cat-home',
           scope: rest.subjectMemberId ? 'child' : 'household',
-          durationMinutes: minutes,
+          ...(minutes === undefined ? {} : { durationMinutes: minutes, durationSource: durationSource !== undefined ? durationSource : minutes > 0 ? 'user' : null }),
           commitment,
           dueDate: due,
           plan: at !== null ? { kind: 'timed', startsAt: instantAt(at, date, tz) } : (plan ?? { kind: 'unplanned' }),
