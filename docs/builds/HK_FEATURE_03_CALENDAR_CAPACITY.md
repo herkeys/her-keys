@@ -5,7 +5,7 @@ Contract: HK-FEATURE-03 CONSOLIDATED PRE-SOURCE BUILD CONTRACT v2 + COMMON SOURC
 
 > Calendar answers **"can my life actually fit?"** — not merely "when?".
 
-STATUS: **IN PROGRESS** (see §20). Builder validation only; this is not the independent audit.
+STATUS: **COMPLETE — HK-FEATURE-03-CALENDAR-CAPACITY = PASS** (see §25–§28). This is builder validation, **not** the independent audit; two limits are stated plainly in §27 (no pixel/on-device verification; owner decision OD-01).
 
 ---
 
@@ -545,4 +545,91 @@ review → legitimate mutation — is built and tested (`PreviewableIntent`, `co
 
 ---
 
-*Section 25 (exit gates, completion status, verdicts) is appended when the gates finish.*
+## 25. Exit gates — recomputed at exit, not repeated from the addendum
+
+| Gate | Entry (recomputed) | Exit (recomputed) | Result |
+|---|---|---|---|
+| TypeScript | PASS | `tsc --noEmit` exit 0 | **PASS** |
+| App tests | 808 / 808, 169 suites | **1057 pass / 0 fail**, 234 suites (TAP, parsed mechanically) | **PASS** |
+| Test floor | — | **0 of the 808 entry tests missing**; 249 added; nothing removed, rewritten or replaced | **PASS** |
+| Feature 03 tests | — | 249 new across 11 files (`tests/calendar*.test.mjs`) | **PASS** |
+| Backend harness | 684 / 684 | **684 / 684 checks passed**, 0 failed (see gate incidents below) | **PASS** |
+| Expo Doctor | 21 / 21 | 21 / 21 checks passed | **PASS** |
+| Expo Android export | PASS, 6.2 MB | PASS, 6.3 MB Hermes bundle (`--max-workers 1`, heap capped) — the first two attempts died with V8 "Zone Allocation failed" because the *host* had < 700 MB free (other sessions, WSL, an emulator); environmental, not a code failure, and the same code exported cleanly once memory allowed | **PASS** |
+| Shipping migration SHA-256 | `1e9169de…a7cb` | `1e9169de4cf21c46e2167089328de94ce07cb1fcf005c0461dece1b28ec8a7cb` | **match** |
+| Baseline migration SHA-256 | `8bc38d66…f16f` | `8bc38d66fcffbb9fa83502329bd4738a53a8446dd5ce89327013751872f8f16f` (committed blob; see E-001) | **match** |
+| `git diff 5007b0f -- supabase` | empty | empty | **PASS** |
+| Local fingerprint / facts | `199ed4d4…` / 3613 | `#GATING\|3613\|199ed4d4c1b37cd654b5853e91cbde27` | **match** |
+| Foundation / shell / design drift | none | `git diff 5007b0f -- src/domain src/persistence src/design src/store src/state src/platform src/config src/data supabase app/_layout.tsx "app/(app)/_layout.tsx" app/gallery.tsx app/event-editor.tsx app/task-editor.tsx package.json package-lock.json app.json tsconfig.json .claude src/features/daily-load src/features/today src/features/tasks src/features/calendar/EventForm.tsx src/types` is **empty** | **PASS** |
+| Shared files touched | — | exactly one: `app/(app)/calendar.tsx` (Calendar's own tab route) | **PASS** |
+| Sibling-feature independence | — | `grep -rEn "features/(today\|talk-it-out\|life\|systems\|one-move\|tasks\|home\|kids\|meals\|money\|work\|onboarding)" src/features/calendar "app/(app)/calendar.tsx"` → **0 matches** (exit 1); also enforced by `calendarValidation` (every relative import resolves to Calendar or shared foundation) | **PASS** |
+| Copy verification | — | no forbidden phrase, no blame language, no exclamation mark; **every** user-facing string incl. screen-reader hints is in `copy.ts`; intentional exceptions: none | **PASS** |
+| Performance | targets < 50 / < 150 ms | 11.3 ms dense day, 5.3 ms dense week, growth ×3.3 for 4× input (§19) | **PASS** |
+| Git | — | working tree clean; 13 commits on `feature/03-calendar-capacity`, all stacked, none amended, no rebase, squash, push, PR or merge; explicit path staging, never `git add -A` | **PASS** |
+
+
+### Gate incidents at exit (environmental, not code)
+
+The backend harness took **three attempts** to run, and the first two did **not** fail on a check:
+
+1. **Attempt 1** — another session started the same harness on the shared `supabase_db_Her_Keys` container, whose startup step drops the fixed-name
+   `b4_env_*` databases. Mine died with `database "b4_env_b3" does not exist … just been dropped or renamed` (reported as a FAIL at "ENV B3"). This is the
+   collision recorded at entry as E-004, realised.
+2. **Attempt 2** — the host ran out of virtual memory mid-run (`The paging file is too small`, bash `fork: retry`, a Go runtime crash inside `docker.exe`).
+3. **Attempt 3** — run only after confirming no other harness process existed, through a wrapper that retries solely on those environmental signatures and treats
+   a genuine failed check as final: **684 / 684 checks passed, 0 FAIL, exit 0**, first try.
+
+Nothing under `supabase/` changed at any point (`git diff 5007b0f -- supabase` empty; both migration hashes and the fingerprint recomputed identical), and the
+same suite had passed 684 / 684 at entry and at the C4 checkpoint. The Android export had the same kind of incident (two V8 "Zone Allocation failed" aborts
+while the host had < 700 MB free) and passed once run with `--max-workers 1` and a capped heap. **Recommendation for the integration wave:** these harness
+runs must be serialised across parallel sessions (or each session given its own database names) — the fixed `b4_env_*` names make concurrent runs corrupt each other.
+
+## 26. Component discipline (contract §71)
+
+28 named functions live in `ui/` and `CalendarScreen.tsx` (target ≤ 18; more allowed when justified). **14 are substantive presentation
+components** — `AgendaList`, `AgendaRow`, `CalendarDayView`, `ConflictCard`, `DayNavigator`, `DaySummary`, `NotScheduledSection`,
+`UnplacedRow`, `PreviewPanel`, `RecommendationSection`, `WeekOverview`, `WeekDayRow`, `UndoNotice`, `WhyDisclosure` — inside the target.
+The other 14 are thin wrappers: four one-line state components (`CalendarLoading`, `CalendarRecovery`, `CalendarEmptyDay`,
+`CalendarDegradedNotice`), `PreviewGone`, the container and gate (`CalendarScreen`, `ReadyCalendar`, `CalendarGate`), and list/disclosure
+helpers (`ConflictList`, `NarrowTransitionList`, `UnknownNotice`, `ViewSwitch`, `ToggleLink`, `DetailLines`). **None duplicates a
+design-system primitive** (checked by name against `src/design/components`).
+
+## 27. Definition of done (contract §87)
+
+| Requirement | Evidence |
+|---|---|
+| Common-fork assumptions explicit; existing Calendar dispositioned; stubs vs absence distinguished | §1, §4, §5 |
+| No new primary nav; no sibling dependency; shared foundation read-only | §25 drift + independence rows; `calendarValidation` |
+| Calendar projects canonical truth; no duplicate source of truth; capacity stays derived | `types.ts` header; "nothing derived is written back" test |
+| No arbitrary score or threshold; not an optimizer | validation scans; §9; perf growth guard |
+| Fixed/flexible intact; unknown never zero; busy is not conflict | scenarios B, G, H, AF; "busy, not conflicted" test |
+| Known transition conflicts; dependencies affect feasibility; Needs a Place fabricates nothing | C/D, K, F |
+| Responsibility and child subject preserved | I/J, M |
+| Recommendations use existing machinery; recommendation is not execution; read-only accepted where no mutation exists | action map, N/O, preview never applies |
+| Preview ephemeral; recomputes/invalidates after change; disappears after restart | AA, AG, AH |
+| Only legitimate actions render; edit path proven | action UI tests; W |
+| Timezone / logical day / DST / date-only / multi-day | S, T, U, V, L, AD |
+| Recurrence from common fork only; local-first; loading ≠ empty; recovery respected; demo isolated | AC; no network anywhere; Y, Z, X |
+| No external provider, no Gemini; planning contract documented without fake infrastructure | validation scans; `HK_FEATURE_03_PLANNING_CONTRACT.md` |
+| Shared-copy candidate and missing-primitive register complete | §15, §12, §24 |
+| Structural evidence committed; performance measured; accessibility passes; scenarios resolved truthfully | §17–§19; `calendarA11y` |
+| TypeScript, app tests, backend, export green; addendum hashes/fingerprint unchanged | §25 |
+
+**Two limits, stated plainly.** (1) No pixel-level or on-device verification: layout, color and native focus are covered only by component-tree
+assertions and design-system reuse (§18). (2) OD-01 is an owner decision this build cannot make: a defaulted 15-minute duration is
+indistinguishable from an entered one, so Calendar words durations as estimates and cannot detect the default.
+
+## 28. Feature verdicts (contract §88 Z)
+
+1. **Does Her Keys Calendar help the user understand whether her actual life fits, rather than merely displaying events? — PASS.** It states, per day and per
+   week, whether the plan is realistic, names the constraint that breaks it, says what has no place, and refuses to claim room where facts are missing.
+2. **Does capacity reasoning remain grounded in real typed facts, without inventing scores, durations, travel or thresholds? — PASS.** Every tier is the foundation's;
+   the added *category* is a word chosen from physical facts; no duration or travel is ever defaulted (validation scans + G/H/AF). Residual: OD-01.
+3. **Did the deterministic Calendar remain a bounded projection rather than a schedule optimizer? — PASS.** One sort and one sweep per concern; no search, no backtracking,
+   no alternative-schedule generation; a regression that made it super-quadratic was found by measurement and removed (DEF-02).
+4. **Can future Today, Talk It Out, Systems, calendar providers and LLM planning integrate through canonical/projection contracts without feature-to-feature imports? — PASS.**
+   Calendar reads canonical state only, imports no sibling feature (mechanically checked), and the planning seam is a documented typed contract whose downstream half is built.
+
+## HK-FEATURE-03-CALENDAR-CAPACITY = PASS
+
+READY FOR INDEPENDENT FEATURE 03 AUDIT = YES
