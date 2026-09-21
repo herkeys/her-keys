@@ -351,6 +351,49 @@ describe('HA-001 — lifecycle: exactly once, and never for the wrong account', 
     assert.ok(b.persisted().identity.quarantine);
   });
 
+  test('malformed local storage after binding: nothing crashes, nothing is uploaded, nothing starts (matrix T)', async () => {
+    const cloud = createFakeCloud();
+    const accountCloud = accountCloudFor(cloud, ACCOUNT_A);
+    const storage = createMemoryStorage({});
+    const a = await makeDevice({ cloud, accountId: ACCOUNT_A, accountCloud, storage });
+    await householdWithContent(a);
+    await a.signIn();
+    a.syncRuntime.stop();
+    const callsBefore = cloud.calls.length;
+
+    // the household's bytes are damaged; the keychain still holds the session
+    await storage.write(STORAGE_KEYS.primary, '{ this is not a household');
+    accountCloud.ids.rejectNext = 'superseded_by_cloud';
+    const b = await makeDevice({ cloud, accountId: ACCOUNT_A, accountCloud, storage, secure: a.secure });
+    const state = await b.accountRuntime.restore();
+    await b.syncRuntime.idle();
+    assert.notEqual(state.kind, 'accountBound', 'a damaged local household is not silently re-bound as if it were hers');
+    assert.equal(b.syncRuntime.running(), null);
+    assert.equal(cloud.calls.length, callsBefore, 'and not one request was made');
+    assert.equal(b.store.getSnapshot().state.tasks.length, 0, 'the app opens on a fresh household rather than a crash');
+  });
+
+  test('a real household that meets a DEMO build is never adopted by it and never uploaded (matrix R)', async () => {
+    const cloud = createFakeCloud();
+    const accountCloud = accountCloudFor(cloud, ACCOUNT_A);
+    const storage = createMemoryStorage({});
+    const a = await makeDevice({ cloud, accountId: ACCOUNT_A, accountCloud, storage });
+    await householdWithContent(a);
+    await a.signIn();
+    a.syncRuntime.stop();
+    const before = storage.contents()[STORAGE_KEYS.primary];
+    const callsBefore = cloud.calls.length;
+
+    const demo = await makeDevice({ cloud, accountId: ACCOUNT_A, accountCloud, storage, secure: a.secure, mode: 'demo' });
+    assert.equal(demo.store.getSnapshot().status, 'recovery', 'the demo build shows a fresh demo, it does not adopt the real household');
+    assert.equal(demo.store.getSnapshot().persistence, 'disabled', 'and it must not write over the real household');
+    await demo.accountRuntime.restore();
+    await demo.syncRuntime.idle();
+    assert.equal(demo.syncRuntime.running(), null);
+    assert.equal(cloud.calls.length, callsBefore);
+    assert.equal(storage.contents()[STORAGE_KEYS.primary], before, 'the real household\'s bytes are untouched');
+  });
+
   test('a session that degrades stops the coordinator; recovery of the SAME account starts exactly one', async () => {
     const cloud = createFakeCloud();
     const accountCloud = accountCloudFor(cloud, ACCOUNT_A);
