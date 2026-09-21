@@ -241,7 +241,7 @@ FROM pg_constraint WHERE conname = 'one_move_records_target_type_check';
 -- An unsupported payload version is refused rather than misread.
 SELECT CASE WHEN herkeys_test.test_denied($q$
   SELECT public.claim_local_household('7c000000-0000-4000-8000-0000000000d6'::uuid,'Europe/London',
-    '{"claimPayloadVersion":3,"origin":"empty","oneMoves":[]}'::jsonb, NULL)
+    '{"claimPayloadVersion":4,"origin":"empty","oneMoves":[]}'::jsonb, NULL)
 $q$) THEN 'PASS' ELSE 'FAIL' END || ' | C. an unknown claimPayloadVersion is refused, not guessed at';
 
 SELECT CASE WHEN herkeys_test.test_denied($q$

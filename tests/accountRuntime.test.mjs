@@ -220,7 +220,7 @@ describe('bootstrap and claim', () => {
     const next = await h.runtime.signIn('apple');
     assert.equal(next.kind, 'accountBound');
     assert.equal(h.calls[0].fn, 'claim');
-    assert.equal(h.calls[0].payload.claimPayloadVersion, 2);
+    assert.equal(h.calls[0].payload.claimPayloadVersion, 3);
     assert.deepEqual(h.calls[0].payload.tasks.map((t) => t.localId), ['task-1']);
   });
 

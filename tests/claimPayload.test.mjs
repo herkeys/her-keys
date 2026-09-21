@@ -111,7 +111,7 @@ describe('B4-BE02-OR-001 — claim payload closure', () => {
   test('the payload carries its explicit version and the true origin', () => {
     const payload = buildClaimPayload(crowdedHousehold());
     assert.equal(payload.claimPayloadVersion, CLAIM_PAYLOAD_VERSION);
-    assert.equal(payload.claimPayloadVersion, 2, 'version 2 states provenance, facets and the artifact closure; version 1 is refused by the server');
+    assert.equal(payload.claimPayloadVersion, 3, 'version 3 claims every child and states the source of each duration; version 2 keeps closure-only children; version 1 is refused');
     assert.equal(payload.origin, 'empty');
   });
 
@@ -138,11 +138,11 @@ describe('B4-BE02-OR-001 — claim payload closure', () => {
     assert.ok(!payload.categories.some((c) => c.localId === 'cat-kids'), 'an unrequired starter category leaked');
   });
 
-  test('only the child a carried target names is sent — not both children', () => {
+  test('EVERY child is sent (version 3): a child outside the closure can only ever get its cloud identity here', () => {
     const state = crowdedHousehold();
     assert.equal(state.children.length, 2);
     const payload = buildClaimPayload(state);
-    assert.deepEqual(payload.childMembers.map((c) => c.localId), ['child-1']);
+    assert.deepEqual(payload.childMembers.map((c) => c.localId).sort(), ['child-1', 'child-2']);
   });
 
   test('a withheld One Move carries no target and pulls nothing into the closure', () => {
@@ -153,7 +153,7 @@ describe('B4-BE02-OR-001 — claim payload closure', () => {
     assert.equal(payload.oneMoves[0].targetLocalId, null);
     assert.deepEqual(payload.tasks, []);
     assert.deepEqual(payload.categories, []);
-    assert.deepEqual(payload.childMembers, []);
+    assert.deepEqual(payload.childMembers, [], 'this household has no children to claim');
   });
 
   test('a Needs Me item with no category pulls no category in', () => {

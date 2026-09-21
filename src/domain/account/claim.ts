@@ -8,6 +8,7 @@ import type {
   VisibilityScope,
 } from '../state';
 import { resolveOnboardingOptionId, type OnboardingGroup } from '../../data/catalog/onboardingOptions';
+import type { DurationSource } from '../foundation/duration';
 import type { Provenance } from '../foundation/provenance';
 import type { SourceArtifact } from '../foundation/sourceArtifact';
 import type { AccountId } from './identity';
@@ -209,6 +210,13 @@ export function normalizeOnboardingIds(state: AppState): NormalizedOnboarding {
  * the extras. Everything else she owns — events, systems, meals, Discovery — is
  * B4-BACKEND-03's job. Claim is not sync.
  *
+ * VERSION 3 (HK-INTEGRATION-READINESS-01) changes two things and nothing else:
+ *
+ *   a. EVERY child the household holds is claimed, not only those the closure names. A child's cloud identity can be
+ *      created by claim and by nothing else (membership has no client write grant), so a child left out here could never
+ *      be referenced by anything ordinary sync sends later. Everything except children remains closure-only.
+ *   b. a claimed task states where its duration came from (`durationSource`), so a default is never carried as a fact.
+ *
  * VERSION 2 differs from 1 in exactly three ways, and version 1 is REFUSED by the
  * server (it names none of them, so it cannot be completed without inventing where
  * each row came from):
@@ -219,7 +227,7 @@ export function normalizeOnboardingIds(state: AppState): NormalizedOnboarding {
  *   3. the SOURCE ARTIFACTS the carried rows were derived from travel with them, as
  *      part of the closure rather than as a general upload.
  */
-export const CLAIM_PAYLOAD_VERSION = 2;
+export const CLAIM_PAYLOAD_VERSION = 3;
 
 /** A row's provenance, as the claim states it. The artifact is named by local id, like every other reference. */
 export interface ClaimProvenance {
@@ -281,6 +289,8 @@ export interface ClaimTask extends ClaimProvenance, ClaimTaskFacets {
   categoryLocalId: string;
   subjectMemberLocalId: string | null;
   durationMinutes: number;
+  /** How far `durationMinutes` may be trusted. null = never recorded; it is carried as null, never as 'user'. */
+  durationSource: DurationSource | null;
   commitment: Task['commitment'];
   dueDate: string | null;
   planKind: Task['plan']['kind'];
@@ -329,6 +339,21 @@ export interface ClaimPayload {
   needsMeItems: ClaimNeedsMeItem[];
   oneMoves: ClaimOneMove[];
   sourceArtifacts: ClaimSourceArtifact[];
+}
+
+/**
+ * A name as the cloud will accept it: NFC, no control characters, single spaces, trimmed. The database refuses anything else
+ * (`household_members_display_name_check`), and a refused child would fail the whole claim. Blank stays blank so the server
+ * refuses it visibly rather than the client inventing a name.
+ */
+export function cloudDisplayName(name: string): string {
+  const cleaned = name
+    .normalize('NFC')
+    // eslint-disable-next-line no-control-regex
+    .replace(/[ --]/g, ' ')
+    .replace(/s+/g, ' ')
+    .trim();
+  return cleaned === '' ? name : cleaned;
 }
 
 /** Local state contradicts something the app already guarantees about itself. */
@@ -422,6 +447,7 @@ export function buildClaimPayload(state: AppState): ClaimPayload {
       categoryLocalId: task.categoryId,
       subjectMemberLocalId: task.subjectMemberId,
       durationMinutes: task.durationMinutes,
+      durationSource: task.durationSource ?? null,
       commitment: task.commitment,
       dueDate: task.dueDate,
       planKind: task.plan.kind,
@@ -486,12 +512,15 @@ export function buildClaimPayload(state: AppState): ClaimPayload {
     needArtifact(category.provenance);
   }
 
-  const childMembers: ClaimChildMember[] = [];
+  // Every child, closure or not (version 3): the mapping only claim can create. A child a carried task names must exist.
   for (const localId of neededChildren) {
-    const child = childById.get(localId);
-    if (!child) throw new ClaimInvariantError(`Required child member ${localId} is not in local state.`);
-    childMembers.push({ localId: child.id, displayName: child.displayName, birthDate: child.birthDate });
+    if (!childById.has(localId)) throw new ClaimInvariantError(`Required child member ${localId} is not in local state.`);
   }
+  const childMembers: ClaimChildMember[] = state.children.map((child) => ({
+    localId: child.id,
+    displayName: cloudDisplayName(child.displayName),
+    birthDate: child.birthDate,
+  }));
 
   const sourceArtifacts: ClaimSourceArtifact[] = [];
   for (const localId of neededArtifacts) {

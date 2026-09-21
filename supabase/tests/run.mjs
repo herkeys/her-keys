@@ -30,6 +30,8 @@ const CONTAINER = process.env.HERKEYS_LOCAL_DB_CONTAINER ?? 'supabase_db_Her_Key
 
 const BASELINE = join(REPO, 'supabase', 'migrations', '20260919230054_build4_baseline.sql');
 const BUILD4 = join(REPO, 'supabase', 'migrations', '20260919231500_build4_cloud_schema.sql');
+// HK-INTEGRATION-READINESS-01: additive, follows the shipping migration and never edits it.
+const IR01 = join(REPO, 'supabase', 'migrations', '20260921120000_ir01_duration_source_and_claim_v3.sql');
 const AUTH_STUB = join(HERE, 'helpers', '00-auth-stub.sql');
 const TEST_HELPERS = join(HERE, 'helpers', '01-test-helpers.sql');
 const TEST_DEFAULTS = join(HERE, 'helpers', '05-test-defaults.sql');
@@ -62,6 +64,7 @@ const psqlFile = (db, file, opts) => psql(db, readFileSync(file, 'utf8'), opts);
 // The migration opens its OWN transaction (BEGIN first, COMMIT last), because
 // the Supabase CLI does not wrap migration files. Nothing here adds one.
 const applyBuild4 = (db, opts = {}) => psqlFile(db, BUILD4, opts);
+const applyIr01 = (db, opts = {}) => psqlFile(db, IR01, opts);
 
 function admin(sql) {
   return execFileSync(
@@ -99,8 +102,12 @@ function envA() {
   psqlFile('b4_env_a', TEST_HELPERS, { label: 'helpers' });
   psqlFile('b4_env_a', BASELINE, { label: 'ENV A baseline' });
   applyBuild4('b4_env_a', { label: 'ENV A build4' });
+  applyIr01('b4_env_a', { label: 'ENV A ir01' });
 
   check('ENV A: Build 4 migration applies on an empty surface', true);
+  check('ENV A: the additive IR01 migration applies on top of it (fresh install)', true);
+  check('ENV A: tasks.duration_source is nullable text with no default (an unstated source is unknown)',
+        scalar('b4_env_a', "select data_type || '/' || is_nullable || '/' || coalesce(column_default, 'none') from information_schema.columns where table_schema='public' and table_name='tasks' and column_name='duration_source';") === 'text/YES/none');
   check('ENV A: 34 application tables', scalar('b4_env_a', "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r';") === '34');
   // The test-only producer default (helpers/05) must never be in the shipped schema: a writer that does not say where a row came from is refused.
   check('ENV A: the shipped schema gives `producer` NO default on any of the nine synced content tables',
@@ -195,6 +202,7 @@ function envC(only) {
   psqlFile('b4_env_c', TEST_HELPERS, { label: 'helpers' });
   psqlFile('b4_env_c', BASELINE, { label: 'ENV C baseline' });
   applyBuild4('b4_env_c', { label: 'ENV C build4 (while empty)' });
+  applyIr01('b4_env_c', { label: 'ENV C ir01 (while empty)' });
   check('ENV C: migrated while empty, before any fixture exists', true);
   // Test-environment convenience ONLY: see the header of helpers/05-test-defaults.sql.
   psqlFile('b4_env_c', TEST_DEFAULTS, { label: 'ENV C test defaults' });
@@ -329,8 +337,13 @@ function migrationQuality() {
   // Exactly one Build 4 shipping migration in the tree.
   const migs = readdirSync(join(REPO, 'supabase', 'migrations')).filter((f) => f.endsWith('.sql'));
   const after = migs.filter((f) => f.split('_')[0] > '20260919230054');
-  check('quality: exactly ONE Build 4 shipping migration after the baseline', after.length === 1, after.join(', '));
-  check('quality: its timestamp sorts strictly after the baseline', after[0]?.split('_')[0] > '20260919230054', after[0]);
+  check('quality: exactly ONE Build 4 shipping migration plus the ONE additive IR01 repair migration after the baseline',
+        after.length === 2 && after[0] === '20260919231500_build4_cloud_schema.sql' && after[1] === '20260921120000_ir01_duration_source_and_claim_v3.sql', after.join(', '));
+  check('quality: their timestamps sort strictly after the baseline, in order', after.every((f) => f.split('_')[0] > '20260919230054') && after[0] < after[1], after.join(' < '));
+  const ir01Sql = readFileSync(IR01, 'utf8');
+  check('quality: the IR01 migration is additive - it drops no table, column or data and rewrites no row',
+        !/(^|\n)\s*(DROP TABLE|DROP COLUMN|TRUNCATE|DELETE FROM|UPDATE public\.)/i.test(ir01Sql.replace(/\$fn\$[\s\S]*?\$fn\$/g, '').replace(/--.*$/gm, '')));
+  check('quality: the IR01 migration is pinned to LF, so its function digest is the same on every checkout', !ir01Sql.includes(String.fromCharCode(13)));
 }
 
 // ------------------------------------------ CLIENT PAYLOAD INTEGRATION ----
@@ -357,10 +370,14 @@ async function clientPayloadIntegration() {
   const base = createEmptyState('America/Chicago');
   const state = {
     ...base,
-    children: [{ id: 'child-1', displayName: 'Mia', birthDate: '2016-04-02', scope: 'child' }],
+    // child-2 is named by nothing: version 3 must still claim it, or its cloud identity could never exist.
+    children: [
+      { id: 'child-1', displayName: 'Mia', birthDate: '2016-04-02', scope: 'child' },
+      { id: 'child-2', displayName: 'Theo', birthDate: '2019-01-15', scope: 'child' },
+    ],
     tasks: [{
       id: 'task-1', title: 'Return the library books', categoryId: 'cat-home', subjectMemberId: 'child-1',
-      durationMinutes: 15, commitment: 'flexible', dueDate: '2026-09-18', plan: { kind: 'day', date: '2026-09-18' },
+      durationMinutes: 15, durationSource: 'default', commitment: 'flexible', dueDate: '2026-09-18', plan: { kind: 'day', date: '2026-09-18' },
       notes: null, status: 'completed', completedAt: '2026-09-18T18:00:00.000Z',
       createdAt: '2026-09-17T09:00:00.000Z', updatedAt: '2026-09-18T18:00:00.000Z', ...emptyTaskFacets(), provenance: userProvenance, scope: 'child',
     }],
@@ -372,9 +389,9 @@ async function clientPayloadIntegration() {
   };
 
   const payload = buildClaimPayload(state);
-  check('client: buildClaimPayload emits claimPayloadVersion 2', payload.claimPayloadVersion === 2);
-  check('client: the closure carries exactly its two targets and the one required category',
-    payload.tasks.length === 1 && payload.needsMeItems.length === 1 && payload.categories.length === 1 && payload.childMembers.length === 1,
+  check('client: buildClaimPayload emits claimPayloadVersion 3', payload.claimPayloadVersion === 3);
+  check('client: the closure carries exactly its two targets and the one required category, and EVERY child',
+    payload.tasks.length === 1 && payload.needsMeItems.length === 1 && payload.categories.length === 1 && payload.childMembers.length === 2,
     `tasks=${payload.tasks.length} needsMe=${payload.needsMeItems.length} categories=${payload.categories.length} children=${payload.childMembers.length}`);
 
   const uid = '5c000000-0000-4000-8000-00000000000c';
@@ -402,6 +419,125 @@ async function clientPayloadIntegration() {
     SELECT t.status || '|' || t.subject_member_type || '|' || (t.completed_at = '2026-09-18T18:00:00Z'::timestamptz)::text
     FROM public.tasks t JOIN public.household_members m ON m.household_id=t.household_id AND m.profile_id='${uid}' AND m.role='owner';`);
   check('client: the completed child-scoped target arrives completed, typed by the server', preserved === 'completed|child|true', preserved);
+
+  const kids = scalar('b4_env_c', `
+    SELECT count(*) || '/' || count(*) FILTER (WHERE m.local_id = 'child-2')
+    FROM public.household_members m JOIN public.household_members o ON o.household_id = m.household_id AND o.profile_id = '${uid}' AND o.role = 'owner'
+    WHERE m.member_type = 'child';`);
+  check('client: the child NO closure names was claimed too (version 3)', kids === '2/1', kids);
+
+  const source = scalar('b4_env_c', `
+    SELECT t.duration_source || '|' || t.duration_minutes FROM public.tasks t JOIN public.household_members m ON m.household_id=t.household_id AND m.profile_id='${uid}' AND m.role='owner';`);
+  check('client: a default duration arrives as a DEFAULT, not as something she said', source === 'default|15', source);
+}
+
+// ---------------------------------------------------------------- ENV D -----
+/**
+ * The upgrade of a POPULATED database.
+ *
+ * ENV A and C only prove a fresh install. This is the case the audit said the harness never covered: a database that
+ * already holds a household, its claim and its tasks, upgraded in place by the additive migration. Nothing may be lost,
+ * nothing rewritten, and no existing duration may be promoted to something it never was.
+ */
+function envD() {
+  console.log('\nENV D — additive upgrade of a POPULATED pre-IR01 database');
+  const db = 'b4_env_d';
+  recreate(db);
+  psqlFile(db, AUTH_STUB, { label: 'ENV D auth stub' });
+  psqlFile(db, TEST_HELPERS, { label: 'helpers' });
+  psqlFile(db, BASELINE, { label: 'ENV D baseline' });
+  applyBuild4(db, { label: 'ENV D build4 (while empty)' });
+
+  const uid = 'd1000000-0000-4000-8000-00000000000d';
+  const other = 'd2000000-0000-4000-8000-00000000000e';
+  psql(db, `INSERT INTO auth.users (id, email) VALUES ('${uid}','d1@local.test'), ('${other}','d2@local.test') ON CONFLICT (id) DO NOTHING;`, { label: 'ENV D users' });
+
+  // A real version 2 claim: the shape a pre-IR01 app sent.
+  const v2 = {
+    claimPayloadVersion: 2, origin: 'empty',
+    childMembers: [{ localId: 'child-1', displayName: 'Mia', birthDate: '2016-04-02' }],
+    categories: [{ localId: 'cat-home', producer: 'system-derived', sourceArtifactLocalId: null, confidence: null, name: 'Home', systemRole: 'home', status: 'active', sortOrder: 1, scope: 'household' }],
+    tasks: [{
+      localId: 'task-1', producer: 'user-action', sourceArtifactLocalId: null, confidence: null, title: 'Return the books', categoryLocalId: 'cat-home',
+      subjectMemberLocalId: 'child-1', durationMinutes: 15, commitment: 'flexible', dueDate: null, planKind: 'unplanned', plannedDate: null, plannedStartsAt: null,
+      notes: null, status: 'open', completedAt: null, originCreatedAt: '2026-09-17T09:00:00Z', originUpdatedAt: '2026-09-17T09:00:00Z', scope: 'child',
+      dueAt: null, earliestStartAt: null, latestFinishAt: null, splittable: null, minChunkMinutes: null, preferredTimeOfDay: null, energyDemand: null, consequence: null,
+      needsMePersonally: null, travelMinutesBefore: null, travelMinutesAfter: null, preparationMinutes: null, value: null,
+    }],
+    needsMeItems: [],
+    oneMoves: [{ localId: 'onemove-2026-09-18', producer: 'user-action', sourceArtifactLocalId: null, confidence: null, logicalDay: '2026-09-18', targetType: 'task', targetLocalId: 'task-1', status: 'selected', decidedAt: '2026-09-18T12:00:00Z', completedAt: null }],
+    sourceArtifacts: [],
+  };
+  const claimKey = 'd1000000-0000-4000-8000-0000000000c1';
+  const claim = (sub, key, payload) => scalar(db, `
+    BEGIN;
+    SET LOCAL ROLE authenticated;
+    SET LOCAL request.jwt.claims = '{"sub":"${sub}"}';
+    SELECT public.claim_local_household('${key}'::uuid,'America/Chicago','${JSON.stringify(payload).replace(/'/g, "''")}'::jsonb, NULL) ->> 'status';
+    COMMIT;`).split('\n').map((line) => line.trim()).find((line) => line === 'complete' || line === 'rejected');
+  check('ENV D: a version 2 claim populates the pre-upgrade database', claim(uid, claimKey, v2) === 'complete');
+
+  // More real data the app would have written through ordinary sync: durations of 15 and 30 with NO recorded source.
+  psql(db, `
+    INSERT INTO public.tasks (household_id, local_id, title, category_id, duration_minutes, commitment, plan_kind, status, scope, producer)
+    SELECT hm.household_id, v.local_id, v.title, c.id, v.minutes, 'flexible', 'unplanned', 'open', 'household', 'user-action'
+    FROM public.household_members hm
+    JOIN public.household_categories c ON c.household_id = hm.household_id AND c.local_id = 'cat-home'
+    CROSS JOIN (VALUES ('task-15','A fifteen',15), ('task-30','A thirty',30)) AS v(local_id, title, minutes)
+    WHERE hm.profile_id = '${uid}' AND hm.role = 'owner';`, { label: 'ENV D more tasks' });
+
+  const census = () => scalar(db, `SELECT (SELECT count(*) FROM public.households) || '/' || (SELECT count(*) FROM public.household_members) || '/' || (SELECT count(*) FROM public.tasks) || '/' || (SELECT count(*) FROM public.one_move_records) || '/' || (SELECT count(*) FROM public.account_claims) || '/' || (SELECT count(*) FROM public.household_categories);`);
+  const digest = () => scalar(db, "SELECT md5(string_agg(to_jsonb(t)::text, '|' ORDER BY t.id)) FROM public.tasks t;");
+  const before = { census: census(), tasks: digest() };
+  check('ENV D: the database is genuinely populated before the upgrade', /^1\/2\/3\/1\/1\/8$/.test(before.census), before.census);
+
+  // Rollback assumption, proven: dropping the column is possible and loses only the column.
+  const probe = scalar(db, "BEGIN; ALTER TABLE public.tasks ADD COLUMN duration_source text; ALTER TABLE public.tasks DROP COLUMN duration_source; SELECT count(*) FROM public.tasks; ROLLBACK;").split('\n').map((l) => l.trim()).find((l) => /^\d+$/.test(l));
+  check('ENV D: rollback assumption - adding then dropping the column keeps every row (and is undone by the ROLLBACK here)', probe === '3', probe);
+
+  applyIr01(db, { label: 'ENV D ir01 upgrade' });
+  check('ENV D: the additive migration applies to a populated database (no interlock, no abort)', true);
+
+  const after = { census: census() };
+  check('ENV D: nothing was lost - every table keeps its row count', after.census === before.census, `${before.census} -> ${after.census}`);
+  check('ENV D: no existing row was rewritten (each task is byte-identical apart from the new column)',
+        scalar(db, "SELECT md5(string_agg((to_jsonb(t) - 'duration_source')::text, '|' ORDER BY t.id)) FROM public.tasks t;") === before.tasks);
+  check('ENV D: EVERY pre-existing task keeps its uncertainty - duration_source is NULL, so the stored 15s are neither "user" nor "default"',
+        scalar(db, "SELECT count(*) FILTER (WHERE duration_source IS NULL) || '/' || count(*) FROM public.tasks;") === '3/3');
+  check('ENV D: the stored durations themselves are untouched',
+        scalar(db, "SELECT string_agg(duration_minutes::text, ',' ORDER BY local_id) FROM public.tasks;") === '15,15,30');
+  check('ENV D: the pre-upgrade version 2 claim replays to the same completed answer after the upgrade (idempotent)', claim(uid, claimKey, v2) === 'complete');
+  check('ENV D: ...and did not create a second household', scalar(db, 'select count(*) from public.households;') === '1');
+
+  const v3 = JSON.parse(JSON.stringify(v2));
+  v3.claimPayloadVersion = 3;
+  v3.childMembers.push({ localId: 'child-2', displayName: 'Theo', birthDate: '2019-01-15' });
+  v3.tasks[0].durationSource = 'user';
+  check('ENV D: a NEW account claims with version 3 on the upgraded database', claim(other, 'd2000000-0000-4000-8000-0000000000c2', v3) === 'complete');
+  check('ENV D: ...its unrelated child and its stated duration source landed',
+        scalar(db, `SELECT (SELECT count(*) FROM public.household_members m JOIN public.household_members o ON o.household_id=m.household_id AND o.profile_id='${other}' AND o.role='owner' WHERE m.member_type='child')
+                       || '/' || (SELECT t.duration_source FROM public.tasks t JOIN public.household_members o ON o.household_id=t.household_id AND o.profile_id='${other}' AND o.role='owner' WHERE t.local_id='task-1');`) === '2/user');
+  check('ENV D: RLS is enabled on every public table after the upgrade', scalar(db, "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r' and not c.relrowsecurity;") === '0');
+  check('ENV D: the fail-closed assertion passes on the upgraded database', psql(db, 'SELECT private.assert_app_schema_secured();').ok);
+  check('ENV D: no client role gained a privilege it should not have (anon has nothing on the new column)',
+        scalar(db, "select count(*) from information_schema.column_privileges where table_schema='public' and table_name='tasks' and column_name='duration_source' and grantee in ('anon','PUBLIC');") === '0');
+}
+
+// ------------------------------------------- LOCAL STACK SCHEMA CURRENCY ----
+/**
+ * The sync journeys talk to the REAL local Supabase stack (real HTTP, real PostgREST), which serves the container's default
+ * database, not one of the disposable b4_* ones. That database must carry every migration in supabase/migrations, or the
+ * journeys would silently test a stale schema. `supabase db reset` would replay them all, but it is destructive to a database
+ * other worktrees share, so the additive IR01 migration is applied directly when it is missing. It only ADDS a nullable column
+ * and replaces one function body; it removes and rewrites nothing.
+ */
+function ensureLocalStackCurrent() {
+  const probe = "select count(*) from information_schema.columns where table_schema='public' and table_name='tasks' and column_name='duration_source';";
+  if (scalar('postgres', probe) !== '1') {
+    console.log('  local stack database predates the IR01 migration: applying the additive migration to it');
+    applyIr01('postgres', { label: 'local stack IR01' });
+  }
+  check('local stack: the database the sync journeys run against carries the additive IR01 migration', scalar('postgres', probe) === '1');
 }
 
 // ------------------------------------------------------------------ main ----
@@ -421,6 +557,7 @@ try {
     envA();
     envB();
     envB3();
+    envD();
   }
   envC(only);
   if (!only || only === 'parity') {
@@ -429,6 +566,7 @@ try {
   }
   if (!only) await clientPayloadIntegration();
   if (!only) {
+    ensureLocalStackCurrent();
     const { syncIntegration } = await import(`file://${join(HERE, 'sync-integration.mjs')}`);
     await syncIntegration(check, psql);
   }

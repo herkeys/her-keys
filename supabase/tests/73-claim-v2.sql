@@ -165,7 +165,7 @@ SELECT pg_temp.say('26. a Needs Me item and the One Move that chose it each keep
 
 -- ================= 8. THE NEW VERSION IS THE ONLY ONE ================================================================
 SELECT pg_temp.say('27. an unknown FUTURE version is still refused, not guessed at',
-  pg_temp.refusal(:'t7', '73900000-0000-4000-8000-0000000000c1', pg_temp.payload(jsonb_build_object('claimPayloadVersion', 3))) LIKE '22023%unsupported claimPayloadVersion 3%');
+  pg_temp.refusal(:'t7', '73900000-0000-4000-8000-0000000000c1', pg_temp.payload(jsonb_build_object('claimPayloadVersion', 4))) LIKE '22023%unsupported claimPayloadVersion 4%');
 SELECT pg_temp.say('28. a demo origin is still refused as a whole, whatever else it states',
   (pg_temp.claim_as(:'t8', '73800000-0000-4000-8000-0000000000c1', pg_temp.payload(jsonb_build_object('origin', 'demo'))) ->> 'rejected_reason') = 'refused_demo');
 
