@@ -84,7 +84,10 @@ HR-05 — and membership is claim-only).
 
 **Demo exclusions.** A demo household is refused by the claim on both sides, the observer never queues for `origin: 'demo'`, and the runtime
 refuses to start on one. **Raw-source exclusions.** `AppState` never holds Talk It Out's exact words (session-only in F02); source artifacts
-carry metadata/digest/reference only. F02's branch adds a test that no outbound payload contains the raw utterance.
+carry metadata/digest/reference only. F02's validation branch proves that no outbound payload, envelope or queue item contains the raw utterance.
+**What does travel:** a reading's derived title (at most 90 characters of her words; for a note-only clause, her clause verbatim), and it travels
+while the reading is still `pending`/`clarifying` — before she has decided anything. That is the existing design made operative by this repair,
+and whether it is acceptable is the owner's decision (**OD-A**, main ledger §6.6.2); nothing was changed to hide or to exclude it.
 
 ## 4. Account switch, restart, second device
 
@@ -111,7 +114,7 @@ carry metadata/digest/reference only. F02's branch adds a test that no outbound 
 **Evidence** (`supabase/tests`): suite 75 claim v3 (34 checks), suite 76 (40 checks: `duration_source` and `household_systems.subject_member_id`
 attacked as owner / stranger / anon — WITH CHECK, FK substitution, `household_id` reassignment, server-owned column), **ENV D** (15 checks: a
 *populated* pre-migration database upgraded in place — no row lost or rewritten, every existing 15 keeps `NULL`, a v2 claim replays idempotently,
-a v3 claim works, RLS and privileges hold, rollback assumption), ENV A/C fresh install, and the 24-check real-database journey. Two
+a v3 claim works, RLS and privileges hold, rollback assumption), ENV A/C fresh install, and the 28-check real-database journey. Two
 same-statement snapshot traps in my own new SQL suites were found and fixed so no `NULL` expectation can pass vacuously.
 
 **Rollback assumptions:** `ALTER TABLE tasks DROP COLUMN duration_source` plus restoring the shipped v2 function body undo the schema; the
@@ -132,8 +135,9 @@ The shared local stack database had the additive migration applied (the sync jou
 ## 6. Performance
 
 The observer runs on every change and walks only collections whose reference changed: an untouched 5,000-row collection costs **~0.01 ms**
-per observed change; one edit inside it **~1.2 ms** (measured in `syncComposition.test.mjs`). The queue is bounded (500) with seed headroom;
-the seed is stateless and drains in bounded rounds (700 tasks proven). No polling was introduced: triggers are foreground, local mutation,
+per observed change; one edit inside it **~1–3 ms** (measured in `syncComposition.test.mjs`; 1.05 ms quiet, more under load). The queue is bounded
+(500) with seed headroom; the seed is stateless and drains in bounded rounds (700 tasks proven in the pure seed, 450 through the runtime on
+PostgreSQL, 2,000 through the runtime in-model in about 3.5 s for both devices together, i.e. linear). No polling was introduced: triggers are foreground, local mutation,
 and bounded backoff only while work is queued and offline. No repeated full serialization was added (intent rides the existing envelope write).
 Pull cost is proportional to the household, not to its history: entities are de-duplicated before any row body is requested, requests are
 chunked at 100 ids, and the whole batch is applied and written once (a 450-task household: 5 task requests; the entire two-device in-model
