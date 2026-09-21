@@ -1,6 +1,6 @@
 # HK-INTEGRATION-READINESS-01 — final canonical contracts
 
-Three shared truths every feature (and the future AI layer) may rely on. Each is a *derived or typed fact in the one canonical
+Four shared truths (three from the repair, one from the owner's resolution of OD-A) every feature (and the future AI layer) may rely on. Each is a *derived or typed fact in the one canonical
 state*, never a feature-local convention. Each record below states: definition, invariants, storage, serialization, sync
 representation, consumer expectations, legacy behaviour, unknown behaviour, prohibited interpretations.
 
@@ -129,3 +129,51 @@ subject; a phantom household person; sending `scope: 'child'` without a subject.
 
 **Known limitation (debt).** Meal and Category carry the same latent cloud-only subject; the local Task/Event rule still admits the
 adult user id as a subject although the cloud will not. Out of scope, recorded.
+
+---
+
+## 4. WHAT AN UNDECIDED READING SAYS TO THE CLOUD (owner decision OD-A)
+
+**Definition.** An `Interpretation` that has not been accepted (`pending`, `clarifying`, `rejected`, `superseded`) MAY sync as structured
+interpretation state. Its `title` is the one field that is copied from, or materially derived from, what she said, so the cloud is given a
+neutral label for it instead — `To-do to review`, `Event to review` or `Note to review`, by kind (`UNDECIDED_READING_TITLE`). Only an
+`accepted` reading carries its own title across: it is then the canonical title of the row it became. `titleForCloud(reading)` is the one place
+that says so, and `foundationProjection` applies it when a row is SENT.
+
+**Invariants.**
+* Nothing about an undecided reading is held out of sync. Its kind, dates, times, duration, amount, child, category hint, state, open question
+  code, supersession chain and provenance travel exactly as before; only the title differs.
+* No raw utterance and no title copied from or materially derived from it syncs before explicit acceptance. A reading she corrects is still
+  undecided until she accepts it (the foundation has no "user-corrected" marker, and neutral until acceptance is the strictly safer reading), so a
+  title she typed herself is held back too.
+* A reading that was rejected or superseded was never approved and stays neutral for good. A whole chain sent at once (a device that was offline)
+  sends only its decided end with a title.
+* The decision is made from the row as it is when it is SENT, not when it was queued: a reading queued pending and accepted before the push carries
+  its accepted title; a lost acknowledgement is recognised because the comparison uses the same projection.
+* A reading that ARRIVES with a neutral label (the device that heard her keeps her words) cannot be accepted as it stands: `canAccept` says
+  `needs_title`, so no real row is ever called "To-do to review". She names it through the ordinary correction, and the accepted title then syncs.
+  A title that equals a neutral label is never a title anyone chose.
+
+**Storage.** Nothing new: no schema change, no migration. The label is a value of the existing `interpretations.title` column (1–200 characters,
+satisfied). The device that heard her keeps the reading — and its derived title — in its own household state exactly as before; this contract is
+about what crosses the account boundary.
+
+**Serialization / sync.** `title` is an updatable column, so the accepted title replaces the neutral one in the SAME update that records the
+decision (`state`, `accepted` ref, `decided_at`); the server's `freeze_decided_interpretation` trigger allows it (proved on PostgreSQL) because the
+row is still undecided when the update starts.
+
+**Consumer expectations.** Features present a reading with its own local title on the device that heard it, and a neutral label wherever a
+reading arrived from the cloud; the review says so and offers no save until she names it. Nothing may parse the label for meaning.
+
+**Legacy.** Nothing synced before this repair (no coordinator existed), so no cloud row carries a derived title. A row already in a developer's
+local database is left as it is.
+
+**Unknown.** A reading with an unrecognised state is treated as undecided: neutral.
+
+**Prohibited interpretations.** sending a derived title "because it is short"; sending it because she corrected it; releasing it on
+`rejected` or `superseded`; a label that contains any part of the title or her words; holding the whole undecided reading out of sync to satisfy
+the rule; letting a reading that arrived neutral become a real row under its label.
+
+**What this does NOT do (stated, so it is a decision if it changes).** It concerns what crosses the account boundary. The household state on the
+device that heard her still holds the reading's derived title (local, never synced before acceptance). If the owner meant the local durable record
+too, that is a further, feature-level change.

@@ -85,9 +85,12 @@ HR-05 — and membership is claim-only).
 **Demo exclusions.** A demo household is refused by the claim on both sides, the observer never queues for `origin: 'demo'`, and the runtime
 refuses to start on one. **Raw-source exclusions.** `AppState` never holds Talk It Out's exact words (session-only in F02); source artifacts
 carry metadata/digest/reference only. F02's validation branch proves that no outbound payload, envelope or queue item contains the raw utterance.
-**What does travel:** a reading's derived title (at most 90 characters of her words; for a note-only clause, her clause verbatim), and it travels
-while the reading is still `pending`/`clarifying` — before she has decided anything. That is the existing design made operative by this repair,
-and whether it is acceptable is the owner's decision (**OD-A**, main ledger §6.6.2); nothing was changed to hide or to exclude it.
+**Undecided readings (owner decision OD-A — RESOLVED, repaired, closed).** A reading that she has not accepted syncs as structured state (kind,
+dates, amount, child, hint, state, open question, chain) but its `title`, which is copied or derived from her words, is sent as a neutral label
+(`To-do to review` / `Event to review` / `Note to review`); only an accepted reading carries its own title, in the same update that records the
+decision. A rejected or superseded reading stays neutral. A reading that arrives neutral cannot be accepted until she names it. Proven in-model,
+through Feature 02's own reader and pipeline, and against PostgreSQL (SEMANTICS §4; main ledger §6.6.2). The device that heard her keeps the reading
+locally as before.
 
 ## 4. Account switch, restart, second device
 
