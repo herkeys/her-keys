@@ -227,6 +227,23 @@ export const SCENARIOS = [
 
   scenario('P', 1, 'Sparse day', () => household().event('evt-dentist', { title: 'Dentist', start: '14:00', end: '15:00' })),
 
+  // Twelve back-to-back short commitments with real gaps, a child's, a located one with travel entered, and flexible ones.
+  scenario('Q', 2, 'Dense day', () => {
+    const b = household({ children: [JOSIE] });
+    for (let hour = 7; hour < 19; hour++) {
+      const hh = String(hour).padStart(2, '0');
+      b.event(`evt-${hh}`, {
+        title: `Meeting ${hour}`,
+        start: `${hh}:00`,
+        end: `${hh}:20`,
+        commitment: hour % 3 === 0 ? 'flexible' : 'fixed',
+        ...(hour === 10 ? { location: 'Office', travelMinutesBefore: 10, travelMinutesAfter: 10 } : {}),
+        ...(hour === 15 ? { subjectMemberId: 'child-1' } : {}),
+      });
+    }
+    return b.task('tsk-email', { title: 'Reply to the landlord', minutes: 15, due: DAY });
+  }, { now: '06:00' }),
+
   // Week of Sun 13 - Sat 19 September, today = Sunday. Looked at on Wednesday the 16th (the insufficient-information day).
   scenario('R', 2, 'Week overview — room, tight, conflict and insufficient-information days', () =>
     household()

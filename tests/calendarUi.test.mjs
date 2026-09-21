@@ -268,6 +268,37 @@ describe('the first-glance text does not repeat itself, and reads in the order o
   });
 });
 
+describe('a dense day is never a wall of cards (section 19)', () => {
+  test('Q: eleven tight-but-fitting windows are ONE grouped card, chronological, with every window one press away', async () => {
+    const v = view('Q');
+    assert.equal(v.narrowTransitions.length, 11);
+    const r = await render(<CalendarDayView view={v} onOpenItem={() => {}} />);
+    const text = joined(r);
+    assert.equal((text.match(/FITS NARROWLY/g) ?? []).length, 1, 'one card, not eleven');
+    assert.match(text, /11 windows between commitments are tight\. Each one fits\./);
+    const toggle = r.root.findAll((n) => n.type === 'Pressable' && n.props.accessibilityState?.expanded === false && /11 windows/.test(n.props.accessibilityLabel))[0];
+    await press(toggle);
+    const opened = joined(r);
+    const positions = [7, 8, 9, 10, 11, 12].map((h) => opened.indexOf(`Meeting ${h} to Meeting ${h + 1}:`));
+    assert.ok(positions.every((p) => p >= 0), 'every window is listed');
+    assert.deepEqual([...positions].sort((a, b) => a - b), positions, 'in the order of the day');
+  });
+
+  test('the agenda is not pushed down: at most three summary blocks precede the schedule, however dense the day', async () => {
+    const r = await render(<CalendarDayView view={view('Q')} onOpenItem={() => {}} />);
+    const text = joined(r);
+    const beforeSchedule = text.slice(0, text.indexOf('SCHEDULE'));
+    assert.ok(beforeSchedule.split(' | ').length <= 8, beforeSchedule);
+  });
+
+  test('one or two tight windows still get their own cards; the tight headline never repeats a card', async () => {
+    const r = await render(<CalendarDayView view={view('C')} onOpenItem={() => {}} />);
+    assert.equal((joined(r).match(/FITS NARROWLY/g) ?? []).length, 1);
+    assert.match(joined(r), /One window between commitments is tight\./);
+    assert.match(joined(r), /School drop-off to Clinic visit fits, with 15 min to spare\./, 'the card names the commitments');
+  });
+});
+
 describe('dense days and long text stay readable', () => {
   test('a dense day keeps one summary, chronological rows, and no per-row chips', async () => {
     const dense = household();

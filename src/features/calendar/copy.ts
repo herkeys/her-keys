@@ -299,6 +299,27 @@ export function narrowCopy(narrow: NarrowTransition, ctx: CopyContext): Conflict
   };
 }
 
+/**
+ * READABILITY, not capacity: up to this many tight windows get a card each; beyond it they become ONE grouped card, so a
+ * dense day is never a wall of equal-priority cards ahead of the schedule. (Not a threshold on the day’s load.)
+ */
+export const MAX_INDIVIDUAL_NARROW_CARDS = 2;
+
+/** Many windows that each fit, told once: how many, that each fits, and every window one press away, in day order. */
+export function narrowGroupCopy(narrow: NarrowTransition[], ctx: CopyContext): ConflictCopy {
+  const why = narrow.map((entry) => {
+    const a = ctx.titleOf(entry.before.ref);
+    const b = ctx.titleOf(entry.after.ref);
+    return `${a} to ${b}: ${formatMinutes(entry.gapMinutes)} between them, ${formatMinutes(entry.slackMinutes)} to spare.`;
+  });
+  why.push(`Her Keys looks for ${formatMinutes(REQUIRED_TRANSITION_BUFFER_MINUTES)} between commitments.`);
+  return {
+    label: 'Fits narrowly',
+    sentence: `${narrow.length} windows between commitments are tight. Each one fits.`,
+    why,
+  };
+}
+
 // ------------------------------------------------------------------ unplaced ---
 
 export interface UnplacedCopy {
@@ -391,8 +412,9 @@ export function headlineFor(view: CalendarDayViewModel, ctx: CopyContext): Headl
     return { kind: 'problem', text: `More is planned than the day has room for: ${formatMinutes(state.pressure.neededMinutes)} planned, ${formatMinutes(state.pressure.availableMinutes)} available.`, more: 0 };
   }
   if (view.narrowTransitions.length > 0) {
-    const narrow = view.narrowTransitions[0];
-    return { kind: 'tight', text: `${ctx.titleOf(narrow.before.ref)} to ${ctx.titleOf(narrow.after.ref)} fits, with ${formatMinutes(narrow.slackMinutes)} to spare.`, more: view.narrowTransitions.length - 1 };
+    // Names the kind of thing, never a card’s own sentence.
+    const count = view.narrowTransitions.length;
+    return { kind: 'tight', text: count === 1 ? 'One window between commitments is tight.' : `${count} windows between commitments are tight.`, more: 0 };
   }
   if (state !== null && state.tier === null) {
     return { kind: 'unknown', text: 'Not enough is entered to say whether this day fits.', more: 0 };

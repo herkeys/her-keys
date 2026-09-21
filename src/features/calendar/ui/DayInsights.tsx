@@ -1,7 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 import { AppText, Card, InlineNotice, Tag } from '../../../design/components';
 import { colors, spacing } from '../../../design/tokens';
-import { COPY, categoryLabel, conflictCopy, headlineFor, missingLines, narrowCopy, type CopyContext, type Headline } from '../copy';
+import { COPY, MAX_INDIVIDUAL_NARROW_CARDS, categoryLabel, conflictCopy, headlineFor, missingLines, narrowCopy, narrowGroupCopy, type CopyContext, type Headline } from '../copy';
 import type { CalendarDayViewModel, Conflict, MissingEvidence, NarrowTransition } from '../model/types';
 import { WhyDisclosure } from './Disclosure';
 
@@ -65,20 +65,22 @@ export function ConflictList({ conflicts, ctx }: { conflicts: Conflict[]; ctx: C
 /** Transitions that fit but leave little room: told as fits, with the arithmetic one press away. */
 export function NarrowTransitionList({ narrow, ctx }: { narrow: NarrowTransition[]; ctx: CopyContext }) {
   if (narrow.length === 0) return null;
+  // A dense day has many tight windows that all fit. They are told once, as a group, not as a wall of cards.
+  const cards =
+    narrow.length > MAX_INDIVIDUAL_NARROW_CARDS
+      ? [{ key: 'group', copy: narrowGroupCopy(narrow, ctx) }]
+      : narrow.map((entry) => ({ key: `${entry.before.ref.id}:${entry.after.ref.id}`, copy: narrowCopy(entry, ctx) }));
   return (
     <View style={styles.list}>
-      {narrow.map((entry) => {
-        const copy = narrowCopy(entry, ctx);
-        return (
-          <Card key={`${entry.before.ref.id}:${entry.after.ref.id}`} tone="surface" style={styles.conflict}>
-            <Tag label={copy.label} tone="neutral" />
-            <AppText variant="body" style={styles.conflictText}>
-              {copy.sentence}
-            </AppText>
-            <WhyDisclosure reasons={copy.why} subject={copy.sentence} />
-          </Card>
-        );
-      })}
+      {cards.map(({ key, copy }) => (
+        <Card key={key} tone="surface" style={styles.conflict}>
+          <Tag label={copy.label} tone="neutral" />
+          <AppText variant="body" style={styles.conflictText}>
+            {copy.sentence}
+          </AppText>
+          <WhyDisclosure reasons={copy.why} subject={copy.sentence} />
+        </Card>
+      ))}
     </View>
   );
 }
