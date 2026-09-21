@@ -179,6 +179,12 @@ describe('where no correction path exists, no affordance implies one', () => {
     assert.equal(takeBack(accepted).includes('take_back'), false, 'accepted: it is with them, and not hers to take back from here');
     assert.equal(takeBack(decline(s, mkCtx(nyMs(9)), rid)).includes('take_back'), false, 'declined: it is already hers');
     assert.equal(takeBack(returnToSelf(s, mkCtx(nyMs(9)), rid)).includes('take_back'), false, 'returned: it is already hers');
+
+    // Accepted, and she has said it still needs her: it stays visible as hers to watch — but the holder said yes, so it is not hers to take back from here.
+    const stillMine = accept(acknowledge(s, mkCtx(nyMs(9)), rid), mkCtx(nyMs(9, 30)), rid, true);
+    const row = view(valid(stillMine), nyMs(10)).attention.rows.find((r) => r.responsibility);
+    assert.equal(row.reason, 'delegated_needs_you');
+    assert.deepEqual(row.actions.map((a) => a.kind), ['open']);
   });
 
   test('an unconfirmed claim can be opened and edited, and nothing more (no confirm, no reject)', () => {
