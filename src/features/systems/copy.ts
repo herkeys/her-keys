@@ -12,7 +12,7 @@ import type { ActionEvidenceView, DurationView, HolderView, HubUnavailableReason
  * Voice: practical, calm, adult, and about STATE. It describes what is true; it does not judge what
  * she did or did not do. There is no coaching, no score, no streak, no cheer, and no sentence that
  * claims a reminder was sent, a step was done, or Her Keys did something it has no record of doing.
- * A test scans this module's output for that language (`tests/systems/copy.test.mjs`).
+ * A test scans this module's output for that language (`tests/systems/audits.test.mjs`).
  *
  * Wording is deliberately kept out of the model (which carries facts and machine codes) and out of
  * JSX (which arranges).
@@ -20,7 +20,8 @@ import type { ActionEvidenceView, DurationView, HolderView, HubUnavailableReason
 
 // ------------------------------------------------------------------ schedule ---
 
-type ScheduleWords = Pick<ScheduleView, 'trigger' | 'frequency' | 'interval' | 'byWeekday' | 'byMonthDay' | 'anchorDate' | 'timeOfDayMinutes'>;
+type ScheduleWords = Pick<ScheduleView, 'trigger' | 'frequency' | 'interval' | 'byWeekday' | 'byMonthDay' | 'anchorDate' | 'timeOfDayMinutes'> &
+  Partial<Pick<ScheduleView, 'endsOn' | 'occurrenceCount'>>;
 
 /** "Every week on Sunday at 7:30 AM" — what the rule MEANS, from the rule alone. Null when there is no calendar rule to describe. */
 export function scheduleSentence(schedule: ScheduleWords): string | null {
@@ -49,7 +50,11 @@ export function scheduleSentence(schedule: ScheduleWords): string | null {
       text = schedule.anchorDate === null ? every('year', 'years') : `${every('year', 'years')} on ${monthDayName(schedule.anchorDate)}`;
       break;
   }
-  return schedule.timeOfDayMinutes === null ? text : `${text} at ${formatClock(schedule.timeOfDayMinutes)}`;
+  const at = schedule.timeOfDayMinutes === null ? text : `${text} at ${formatClock(schedule.timeOfDayMinutes)}`;
+  // An end condition the rule already carries is stated neutrally; Systems never authors one.
+  if (schedule.endsOn != null) return `${at}, until ${formatDay(schedule.endsOn)}`;
+  if (schedule.occurrenceCount != null) return `${at}, ${schedule.occurrenceCount} ${schedule.occurrenceCount === 1 ? 'time' : 'times'}`;
+  return at;
 }
 
 /** The one short line on a hub card. Describes the schedule's state; never scolds. */
