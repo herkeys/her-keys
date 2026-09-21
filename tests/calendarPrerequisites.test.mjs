@@ -19,7 +19,7 @@ import { describe, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import React from 'react';
 import { removeEvent } from '../src/domain/events.ts';
-import { blockersOf, readinessOf, removeDependency, unavailablePrerequisitesOf } from '../src/domain/structure.ts';
+import { addGoal, blockersOf, readinessOf, removeDependency, setGoalStatus, unavailablePrerequisitesOf } from '../src/domain/structure.ts';
 import { archiveTask, completeTask } from '../src/domain/tasks.ts';
 import {
   COPY,
@@ -260,6 +260,38 @@ describe('HA-009 — a COMPLETED target still satisfies', () => {
   });
 });
 
+describe('HA-009 — a GOAL prerequisite follows the same standing: achieved satisfies, abandoned is retirement, not achievement', () => {
+  /** The filing requires a goal. Returns the builder and the goal's id. */
+  const goalWorld = () => {
+    const b = household().event('evt-a', { title: 'Morning appointment', start: '10:00', end: '11:00' }).task('tsk-file', { title: 'File the reimbursement', minutes: 20, due: DAY });
+    b.with((s) => addGoal(s, b.ctx(), { title: 'Get organised' }));
+    const goalId = b.state.goals[0].id;
+    b.requires(tsk('tsk-file'), { kind: 'goal', id: goalId });
+    return { b, goalId };
+  };
+
+  test('active: a live prerequisite (a generic blocker); achieved: satisfied; abandoned: unavailable, flagged for review', () => {
+    const { b, goalId } = goalWorld();
+    const activeState = b.state;
+    const active = project(activeState);
+    assert.equal(itemOf(active, 'tsk-file').blockedBy.length, 1, 'a live goal is something it is still waiting for');
+    assert.deepEqual(itemOf(active, 'tsk-file').unavailablePrerequisites, []);
+    assertAgreesWithFoundation(activeState, active, 'active goal');
+
+    const achievedState = setGoalStatus(activeState, b.ctx(), goalId, 'achieved');
+    const done = project(achievedState);
+    assert.deepEqual([itemOf(done, 'tsk-file').blockedBy, itemOf(done, 'tsk-file').unavailablePrerequisites], [[], []]);
+    assertAgreesWithFoundation(achievedState, done, 'achieved goal');
+
+    const abandonedState = setGoalStatus(activeState, b.ctx(), goalId, 'abandoned');
+    const gone = project(abandonedState);
+    assert.deepEqual(itemOf(gone, 'tsk-file').blockedBy, [], 'abandoning a goal is not achieving it, and it is not something to wait for');
+    assert.deepEqual(itemOf(gone, 'tsk-file').unavailablePrerequisites.map((p) => [p.ref.kind, p.cause]), [['goal', 'retired']]);
+    assert.equal(itemLine(itemOf(gone, 'tsk-file'), copyContextFor(gone)).endsWith('Review needed'), true);
+    assertAgreesWithFoundation(abandonedState, gone, 'abandoned goal');
+  });
+});
+
 describe('HA-009 — several prerequisites', () => {
   const two = () =>
     household()
@@ -434,7 +466,7 @@ describe('HA-009 — Calendar’s wording for a dependent that lost a prerequisi
 });
 
 describe('HA-009 — Calendar no longer holds its own answer', () => {
-  test('the foundation and Calendar agree across every kind and lifecycle', () => {
+  test('the foundation and Calendar agree for events and tasks in every lifecycle (goals: see the goal test above)', () => {
     const cases = [];
     const push = (label, state) => cases.push([label, state]);
     push('live event', notaryWorld().state);
