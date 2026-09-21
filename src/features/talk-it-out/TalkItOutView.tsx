@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
-import { AppText, Button, Overline, Tag } from '../../design/components';
-import { colors, radius, spacing } from '../../design/tokens';
+import { AppText, Button, ConfidenceBadge, Overline, WhyThis } from '../../design/components';
+import { colors, interaction, radius, sizing, spacing, type as typeScale } from '../../design/tokens';
 import { useTalkItOut } from '../../store/TalkItOutContext';
 import type { TalkItOutMessage, TalkItOutStage } from '../../types';
 
@@ -43,7 +43,7 @@ export function TalkItOutView({ showHeader = false }: { showHeader?: boolean }) 
         >
           {showHeader && (
             <View style={styles.header}>
-              <AppText variant="hero">Talk it out</AppText>
+              <AppText variant="display">Talk it out</AppText>
             </View>
           )}
 
@@ -91,14 +91,14 @@ export function TalkItOutView({ showHeader = false }: { showHeader?: boolean }) 
               onChangeText={setDraft}
               placeholder={quickReplies.length > 0 ? 'Or answer in your own words…' : "What's going on?"}
               placeholderTextColor={colors.textTertiary}
-              style={styles.input}
+              style={[typeScale.body, styles.input]}
               multiline
               accessibilityLabel="Message to Her Keys"
             />
             <Button label="Send" size="sm" onPress={handleSend} disabled={!draft.trim()} />
           </View>
 
-          <AppText variant="micro" color={colors.textTertiary} style={styles.disclaimer}>
+          <AppText variant="statusLabel" color={colors.textTertiary} style={styles.disclaimer}>
             {voiceNoteVisible
               ? 'Voice arrives in a later build — nothing is being recorded. Typing works for now.'
               : 'Prototype conversation — responses are scripted for this build.'}
@@ -137,6 +137,9 @@ function Bubble({ message, previous }: { message: TalkItOutMessage; previous?: T
   }
 
   const label = message.stage ? stageLabels[message.stage] : undefined;
+  // clarify / next-step are the decisive interaction moments of the
+  // conversation, so they carry the clay accent; a theory or a finding stays
+  // quiet ink — the label text, not a color, says it is still an inference.
   const emphasized = message.stage === 'clarify' || message.stage === 'next-step';
   const labelColor = emphasized ? colors.accent : colors.textTertiary;
 
@@ -149,26 +152,17 @@ function Bubble({ message, previous }: { message: TalkItOutMessage; previous?: T
           </Overline>
         )}
 
-        <AppText variant={emphasized ? 'title' : 'body'} color={colors.textPrimary}>
+        <AppText variant={emphasized ? 'sectionTitle' : 'body'} color={colors.textPrimary}>
           {message.text}
         </AppText>
 
-        {message.confidenceLabel && (
+        {message.confidence && (
           <View style={styles.confidence}>
-            <Tag label={message.confidenceLabel} tone="accent" />
+            <ConfidenceBadge level={message.confidence} />
           </View>
         )}
 
-        {message.evidence && message.evidence.length > 0 && (
-          <View style={styles.evidence}>
-            <Overline style={styles.evidenceLabel}>Based on</Overline>
-            {message.evidence.map((item) => (
-              <AppText key={item} variant="bodySm" color={colors.textSecondary} style={styles.evidenceItem}>
-                {item}
-              </AppText>
-            ))}
-          </View>
-        )}
+        {message.evidence && message.evidence.length > 0 && <WhyThis reasons={message.evidence} style={styles.evidence} />}
       </View>
     </View>
   );
@@ -199,8 +193,6 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.borderSubtle,
   },
-  evidenceLabel: { marginBottom: spacing.xs },
-  evidenceItem: { marginTop: spacing.xxs },
   quickReplies: { flexDirection: 'row', flexWrap: 'wrap', marginTop: spacing.lg, gap: spacing.sm },
   quickReply: { paddingHorizontal: spacing.lg },
   composerWrap: {
@@ -214,16 +206,16 @@ const styles = StyleSheet.create({
   restartRow: { alignItems: 'flex-end', marginBottom: spacing.xs },
   composer: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm },
   voiceButton: {
-    minHeight: 44,
+    minHeight: sizing.minTouchTarget,
     paddingHorizontal: spacing.lg,
     justifyContent: 'center',
     borderRadius: radius.pill,
     backgroundColor: colors.accentSoft,
   },
-  pressed: { opacity: 0.7 },
+  pressed: { opacity: interaction.pressedOpacity },
   input: {
     flex: 1,
-    minHeight: 44,
+    minHeight: sizing.minTouchTarget,
     maxHeight: 110,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
@@ -232,7 +224,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     color: colors.textPrimary,
-    fontSize: 15,
   },
   disclaimer: { marginTop: spacing.sm },
 });

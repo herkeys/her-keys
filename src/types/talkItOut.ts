@@ -23,6 +23,13 @@ export interface TalkItOutMessage {
   stage?: TalkItOutStage;
   /** Shown as a confidence chip on a result, e.g. "Likely pattern". */
   confidenceLabel?: string;
+  /**
+   * The typed confidence behind a result, from the working hypothesis the
+   * engine already tracks. The UI renders this — never the display string —
+   * so the only confidence vocabulary that can appear is the frozen
+   * possible/likely/established model.
+   */
+  confidence?: ConfidenceLevel;
   /** What this conclusion was built from, shown under the result. */
   evidence?: string[];
   /**

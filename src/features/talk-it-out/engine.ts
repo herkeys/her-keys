@@ -156,6 +156,7 @@ function concludeDiscovery(state: ConversationState, userText: string, optionId?
         stage: 'result',
         text: result.summary,
         confidenceLabel: result.confidenceLabel,
+        confidence: 'possible',
         evidence: evidence.map((item) => item.label),
       },
       { speaker: 'herkeys', stage: 'next-step', text: result.nextStep },
