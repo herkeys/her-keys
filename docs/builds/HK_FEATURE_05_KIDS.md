@@ -3,7 +3,7 @@
 Branch `feature/05-kids-os` · worktree `C:\Users\jsmit\Her-Keys-F05` · forked from `repair/hk-integration-readiness-01` @ `14bd58e`.
 Local only. Nothing is pushed, merged, rebased, squashed or amended. No remote environment is touched.
 
-Sections marked **(K#)** are filled by that phase; a section that still says PENDING has not been reached.
+Sections marked **(K#)** were written in that phase. Every section is filled; the verdict is in §37 and every gate is recomputed in §36.
 
 ## 1. Source / fork (K0)
 
@@ -184,7 +184,7 @@ Kids **reads** prerequisites only through the shared `standingOf` / `readinessOf
 
 `life/child/[childId]`. Sections appear only when they have something real to say: **Next** (raised card, expanded logistics: when, where, who has it and whether that is covered, preparation/travel if recorded, notes as she wrote them, and what is *not recorded*); **Needs attention** (shared-primitive entries with the primitive's own urgency, plus facts with none); **Coming up** (first four inline, the rest behind a labelled, announced toggle); **Open work** grouped *Needs you / With someone else / Waiting on something / Nobody recorded*; **If the plan changes** (§16); **Routines** (child-subject Systems, read-only, no run behavior); add-task / add-event. Item editor: `life/child-item` (create, edit, plan step; responsibility panel; mark done; remove); `life/child-add`.
 
-## 16. Fallback / emergency planning — capability map (K1); build PENDING (K5)
+## 16. Fallback / emergency planning — capability map (K1) and build (K5)
 
 **What the foundation can and cannot evidence** (inventory before any code):
 
@@ -347,6 +347,73 @@ Shared common foundation is read-only by default. Every change outside `src/feat
 
 **OC-01** — creating a child after account binding: proposal written, **nothing built**, rest of Feature 05 continues (`HK_FEATURE_05_OWNER_CHECKPOINT_01.md`).
 
-## 35. Considered / deferred — PENDING
-## 36. Exit gates — PENDING (K8). Baseline gates are in §2.
-## 37. Final verdict — PENDING
+## 35. Considered / deferred
+
+* **Adding a child to an already-signed-in household** — OC-01 (owner). Not offered; measured evidence in §19.
+* **A distinct backup person** (someone other than the normal holder) — MP-K-02; needs a "fallback for" relation. **Interpretation stated for the owner:** the three readiness labels describe whether the *recorded arrangement* holds (PLAN IN PLACE = a live holder who is an active person accepted it and marked it off her list). If the owner meant a second, independent person, that is a new durable semantic and was not faked.
+* **Child rename / correct / archive** (MP-K-04, MP-K-05): the cloud member row is read-only to the client.
+* **A People screen** (list, edit, archive, contact): People OS. Kids has one inline "someone new" (name + relationship).
+* **Recording a `requires` prerequisite in the UI** (MP-K-14), **recurrence occurrence expansion**, **overnight events**, **REASSIGN / complete-responsibility** controls: supported by the foundation, deliberately not exposed.
+* **A response deadline** ("expect a reply by …") when asking somebody: `ackDueAt` exists; Kids sets none (so "no reply" arises only from records made elsewhere).
+* **Confirming a length** on legacy tasks in bulk, **a real-device pass**, **TalkBack/VoiceOver**, **contrast measurement** of the new tinted rows.
+* **Foundation observations, not changed (shared files):** MP-K-09 (`attentionFor` risk counts `acknowledged` as handled), MP-K-16 (`needsMePersonally` ignores an archived holder).
+
+## 36. Exit gates (recomputed at the final code state, one process at a time)
+
+Final HEAD = the commit carrying this ledger (`git log -1 --format=%H`); `git diff --stat 99c757f HEAD -- src app supabase tests scripts-dev` is empty, so every gate below ran against the code at the final HEAD. Branch `feature/05-kids-os`; `git status` clean.
+| Gate | Result |
+|---|---|
+| TypeScript (`tsc --noEmit`, `--max-old-space-size=1600`) | **exit 0**, no diagnostics |
+| Full application suite (serial) | **1176 tests / 252 suites, 1176 pass, 0 fail, 0 skipped** (baseline 975) |
+| Feature 05 suite (`tests/kids`) | **201 tests, all pass**, plus 26 committed scenario fixtures compared |
+| Tier 1 / Tier 2 scenarios | **PASS** (§21); Tier 3: 2 PASS, 4 SAFE-UNAVAILABLE / NOT-APPLICABLE, none DEFERRED-IN-RUN |
+| Test-the-test | **23 caught, 0 survived, 0 broken**, file restored; includes the six required (§22); the IR01 35/35 was re-verified at K0 |
+| Backend harness (`node supabase/tests/run.mjs`, real local PostgreSQL + PostgREST, run alone) | **833 / 833 checks** (baseline 800 + 33 Kids). *An earlier full run died in the pre-existing `sync-integration` while another session's harness was running against the same container (an environmental collision, documented in the memory notes); it was re-run alone once that finished. Also once earlier: `spawnSync docker UNKNOWN` under memory starvation.* |
+| Actual app-composition sync test / real PostgreSQL representative journey / second-device round trip / offline-restart / retry-refusal | **PASS** — `journey-kids.mjs`, all devices built by `composeAccountApp` (§18, §20) |
+| Account switch · demo isolation | **PASS** (§21 AJ, AK; composition journey) |
+| Child identity round trip · colliding-name UX · dependency truth · duration provenance · responsibility truth · fallback truth · fallback-person invalidation | **PASS** (§21, mutants §22) |
+| Non-authorization presentation | **PASS** (§17; `copyTruth`) |
+| RLS attack matrix | **PASS** — five personas over PostgREST (§19); no new representation to attack |
+| Raw-source exclusion | **PASS** (boundaries privacy audit; Kids reads no interpretation or source) |
+| Secret scan (every line added since the fork) | **0 hits in 7,940 added lines** (JWT, Supabase/Stripe/AWS/Google keys, private keys, secret assignments, service-role, credentialed URLs) |
+| Expo Doctor | **21 / 21 checks, no issues** |
+| Android export | **exit 0, one 6.4 MB Hermes bundle, 1646 modules, every Kids string present and the old Kids screen's absent.** *The FIRST export (1635 modules) bundled the main checkout's `app/` because of the `node_modules` junction and is NOT counted (D-K8); it was redone after giving the worktree a real `node_modules`.* |
+| Migration SHA-256 | baseline `81909daa…` (CRLF) / `8bc38d66…` (LF), shipping `1e9169de…`, additive `73db6639…` — **all unchanged**; `git diff 14bd58e HEAD -- supabase/migrations` empty |
+| Schema fingerprint | **`43e7c8a4402a3387cb2e1add4170921e` / 3617 — MATCH.** No schema change; no owner-approved change occurred |
+| Performance | §27 (dense hub 8.06 ms median; detail 1.84 ms; Node, not device) |
+| Accessibility · copy · affordance audits | props-level **PASS** (§26); `copyTruth` and the affordance audit run in the suite |
+| Shared-file report · feature-boundary grep · sibling-import grep | §32; changed-outside-feature list equals §32; sibling imports **ZERO** (§33) |
+| Device / visual validation | **NOT EXECUTED — ENVIRONMENTAL LIMITATION** (§31) |
+
+## 37. Final verdict
+
+**HK-FEATURE-05-KIDS = PASS WITH DOCUMENTED DEBT**
+**READY FOR INDEPENDENT FEATURE 05 AUDIT = YES**
+**READY FOR WAVE 2 INTEGRATION = YES** — meaning only that Feature 05 introduces no known blocker to later integration. It does not authorize a merge. Expect textual conflicts in `supabase/tests/run.mjs`, `journey-composition.mjs` and `support/syncDevice.mjs` with other Wave 2 features that also extend the shared harness (all my edits there are additive).
+
+The debt: device evidence not executed (§31); one owner checkpoint open (OC-01, adding a child after sign-in); no distinct backup person (MP-K-02); two foundation observations recorded and not changed (MP-K-09, MP-K-16).
+
+### Completion report
+
+**After Feature 05, a woman can** open Kids from Life, add each of her children before she signs in, and for each child see what is next and what genuinely needs her; tell what she must do from what somebody else was *asked* to hold, and tell "asked", "seen", "said yes" and "said yes and it's off my list" apart; see which upcoming commitments have no arrangement — or one that stopped holding because the person is no longer on her list — and turn that into a real task with one tap; create and edit real tasks and events for one specific child (two children with the same name kept apart), with the length's origin kept as she gave it; and see the same picture on a second device through her account, after a restart, and after being offline.
+
+1. **Understand each child's situation without reconstructing it?** Yes for what is recorded: next item, needs-attention facts, open work by who holds it, fallback state; anything unrecorded is named as unrecorded, not guessed.
+2. **What genuinely requires her vs what another person merely appears to own?** Yes: "Needs you" is the foundation's own `needsMePersonally`; "With someone else" excludes anything still marked as needing her; nobody-recorded is its own group and never "needs you".
+3. **Accepted vs actual coverage?** Yes: only *accepted by an active person AND marked off her list* reads covered; accepted-but-still-yours does not (mutants K-M8/K-M9/K-M5).
+4. **Where a child plan may fall through?** Yes: NEEDS A PLAN (declined, handed back, no reply, holder unavailable) and NOT ENOUGH KNOWN, per upcoming commitment.
+5. **A real next step when a plan is missing?** Yes: "Add a step to sort this out" creates a child-linked task attached by one `part_of` edge; an open step is opened, not duplicated.
+6. **Avoids implying legal authorization?** Yes (§17): a persistent planning-only note, arrangement-only labels, and a mechanical scan that no string claims authorization, approval, verification or an official record.
+7. **Create / edit real canonical child-linked state?** Yes: canonical tasks and events with `subjectMemberId` and `scope: 'child'`; stale-safe; only changed fields written.
+8. **Child identity survives restart and sync?** Yes, including two children with the same name, proven in PostgreSQL and on a second device; mutants S-M1/S-M2 prove the test can fail.
+9. **Duration provenance survives?** Yes: default 15 and user 15 are different cloud rows; confirming the same number makes it hers; untouched edits never upgrade it.
+10. **Dependency truth survives?** Yes: completed = satisfied; removed/archived/missing = unavailable, "review", never done; history never rewritten.
+11. **Can a stale or removed responsible person keep the plan green?** No: readiness is re-derived on every read; an archived holder gives NEEDS A PLAN on both devices (K-M10).
+12. **Reuses shared attention semantics?** Yes: `attentionFor` consumed unchanged, its urgency shown as given; where it is silent Kids states the fact with none; a test proves nothing it flags is missing and nothing extra has urgency.
+13. **Reuses canonical household truth rather than a second universe?** Yes: no `Kid*` model, no new stored field, no new collection; the mechanical scan enforces it.
+14. **Can future intelligence reason from this without false certainty?** Yes: every fact carries its provenance-bearing state (duration knowledge, coverage, standing); unknown stays null/named; no AI code or types were added.
+15. **New durable semantics proposed?** One: creating a child after account binding (a server path). Proposal written; nothing built.
+16. **Owner checkpoints triggered?** One (OC-01). Also two interpretive decisions stated for the owner (§16, §35).
+17. **Schema change?** None. Fingerprint `43e7c8a4…`/3617 unchanged.
+18. **Sibling imports?** None.
+
+*Replacement-floor note.* This ledger concludes only that the **approved Feature 05 build contract was implemented**. Whether that is sufficient market coverage against family-organizer products is an owner product judgment.
