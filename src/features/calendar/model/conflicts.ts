@@ -126,7 +126,8 @@ export function buildConflicts({ items, timed, issues, transitions, placements, 
     const mark = item.responsibility;
     if (mark === null || mark.covered || item.progress === 'elapsed') continue;
     const notAccepted = mark.coverage === 'awaiting_response' || mark.coverage === 'acknowledged_not_accepted';
-    const risky = mark.coverage === 'declined' || mark.unacknowledged || (mode === 'today' && notAccepted);
+    const acceptedButStillHers = mark.coverage === 'accepted' && mark.stillNeedsMe === true;
+    const risky = mark.coverage === 'declined' || mark.unacknowledged || (mode === 'today' && (notAccepted || acceptedButStillHers));
     if (!risky) continue;
     const id = `RESPONSIBILITY_RISK:${item.ref.id}`;
     startOf.set(id, item.timing.kind === 'timed' ? item.timing.startMinute : Number.MAX_SAFE_INTEGER);

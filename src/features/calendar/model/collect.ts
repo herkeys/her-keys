@@ -108,7 +108,9 @@ function responsibilityMark(
     responsibilityId: chosen.id,
     state: chosen.state,
     coverage,
-    covered: coverage === 'accepted' || coverage === 'completed',
+    // Acceptance records what the other person said. It is only covered when the
+    // responsibility also says the load no longer needs her.
+    covered: coverage === 'completed' || (coverage === 'accepted' && chosen.stillNeedsMe === false),
     holder,
     unacknowledged: isUnacknowledged(chosen, nowMs),
     stillNeedsMe: needsMePersonally(state, ref, nowMs),

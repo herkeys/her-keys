@@ -270,10 +270,14 @@ export function conflictCopy(conflict: Conflict, ctx: CopyContext): ConflictCopy
       const item = ctx.titleOf(e.item);
       const mark = ctx.item(e.item)?.responsibility ?? null;
       const line = mark === null ? null : responsibilityLine(mark);
+      const acceptedButStillHers = e.coverage === 'accepted' && mark?.stillNeedsMe === true;
       return {
-        label: e.coverage === 'declined' ? 'Handed back' : 'Not confirmed',
+        label: e.coverage === 'declined' ? 'Handed back' : acceptedButStillHers ? 'Still needs you' : 'Not confirmed',
         sentence: `${item}: ${line ?? 'the handoff is not confirmed'}.`,
-        why: [line === null ? 'The handoff has not been accepted.' : `${line}.`, 'A request is not the same as someone having it covered.'],
+        why: [
+          line === null ? 'The handoff has not been accepted.' : `${line}.`,
+          acceptedButStillHers ? 'Acceptance does not prove the load left you.' : 'A request is not the same as someone having it covered.',
+        ],
       };
     }
   }

@@ -298,6 +298,18 @@ describe('I / J — responsibility: delegated is not covered', () => {
     assert.deepEqual(conflictsOf(view, 'RESPONSIBILITY_RISK'), []);
   });
 
+  test('acceptance is not covered while the recorded responsibility still needs her', async () => {
+    const built = household().person('p', 'Marcus').event('evt-x', { start: '15:00', end: '16:00' });
+    const { delegate, accept } = await import('../src/domain/responsibility.ts');
+    let state = delegate(built.state, built.ctx(), { about: { kind: 'event', id: 'evt-x' }, to: { kind: 'person', id: 'p' } });
+    state = accept(state, built.ctx(), state.responsibilities[0].id, true);
+
+    const view = projectCalendarDay({ state, date: DAY, today: DAY, nowMs: msAt('07:00') });
+    const item = view.dayItems.find((candidate) => candidate.ref.id === 'evt-x');
+    assert.deepEqual([item.responsibility.coverage, item.responsibility.covered, item.responsibility.stillNeedsMe], ['accepted', false, true]);
+    assert.equal(conflictsOf(view, 'RESPONSIBILITY_RISK').length, 1);
+  });
+
   test('a declined handoff is hers again: not covered, and a risk on any day', () => {
     const built = household().person('p', 'Marcus').event('evt-x', { start: '15:00', end: '16:00', date: NEXT });
     let state = built.state;
