@@ -113,9 +113,7 @@ function makeClock() {
 }
 
 /** One installation: its own storage, store, observer, account runtime and sync runtime. Shares only the cloud. */
-async function makeDevice({ cloud, accountId, accountCloud }) {
-  const storage = createMemoryStorage({});
-  const secure = createMemorySecureStorage({});
+async function makeDevice({ cloud, accountId, accountCloud, storage = createMemoryStorage({}), secure = createMemorySecureStorage({}) }) {
   const clock = makeClock();
   const observer = createChangeObserver({ now: () => NOW });
   const repository = createAppStateRepository({ storage, appVersion: 'test', now: () => NOW, quarantineCorruptState: false });
@@ -138,7 +136,7 @@ async function makeDevice({ cloud, accountId, accountCloud }) {
     },
     sync: { transport: cloud.transport, newDeviceId: uuid, schedule: clock.schedule, debounceMs: 0, report: (e) => events.push(e) },
   });
-  const device = { storage, store, clock, events, ...app, accountId };
+  const device = { storage, secure, store, clock, events, ...app, accountId };
   device.persisted = () => {
     const raw = storage.contents()[STORAGE_KEYS.primary];
     return raw === undefined ? null : decodeStoredState(raw);
@@ -306,6 +304,34 @@ describe('F04 Systems and steps reach a second device through the central compos
     assert.deepEqual(projectSystemDetail(stateB, byName(stateB, 'Sunday reset').id, { nowMs: NOW, today: TODAY }).subject, { kind: 'none' });
     assert.equal(validateAppState(stateB).ok, true);
     assert.deepEqual(b.persisted().identity.sync.queue, [], 'pulled state produced no outbound work');
+  });
+
+  test('create -> persist -> RESTART -> sync: a child System read back from disk is claimed and synced with its child, and hydrates on B', async () => {
+    const cloud = enforceCloudRules(createFakeCloud());
+    const accountCloud = accountCloudFor(cloud, ACCOUNT_A);
+    const first = await makeDevice({ cloud, accountId: ACCOUNT_A, accountCloud });
+    await first.store.commit((s) => ({ ...s, oneMoves: [withheldMove], children: [mia, theo] }));
+    await createSystem(first, { systemId: 'sys-kid', name: 'Mia bedtime', subject: mia.id, steps: ['Pyjamas', 'Teeth', 'Story'], schedule: WEEKLY });
+    await first.store.flush();
+
+    // the app is killed and relaunched on the SAME storage: a new store, observer, account runtime and sync runtime
+    const a = await makeDevice({ cloud, accountId: ACCOUNT_A, accountCloud, storage: first.storage, secure: first.secure });
+    assert.notEqual(a.store, first.store);
+    const restored = readSystem(a.state(), 'Mia bedtime');
+    assert.deepEqual([restored.scope, restored.subject, restored.steps.map(([title]) => title)], ['child', 'Mia', ['Pyjamas', 'Teeth', 'Story']], 'the System came back from disk with its child and its steps');
+    assert.equal(a.state().systems[0].subjectMemberId, mia.id);
+
+    assert.equal((await a.signIn()).kind, 'accountBound');
+    const miaCloud = cloud.table('household_members').find((m) => m.local_id === mia.id);
+    assert.deepEqual([cloudSystem(cloud, 'sys-kid').scope, cloudSystem(cloud, 'sys-kid').subject_member_id], ['child', miaCloud.id]);
+    assert.equal(cloud.table(CLOUD_TABLE.systemStep).length, 3);
+    noConflicts(a);
+
+    const b = await makeDevice({ cloud, accountId: ACCOUNT_A, accountCloud });
+    await bindAsNewDevice(b, accountCloud);
+    await b.signIn();
+    assert.deepEqual(readSystem(b.state(), 'Mia bedtime'), readSystem(a.state(), 'Mia bedtime'));
+    assert.equal(readSystem(b.state(), 'Mia bedtime').subject, 'Mia');
   });
 
   test('after binding, F04 edits travel with no feature involvement: a new child System, a reorder, a correction of the child, then clearing it', async () => {
