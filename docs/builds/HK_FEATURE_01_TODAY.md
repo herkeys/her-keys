@@ -250,8 +250,8 @@ No test is removed or rewritten at T0.
 | FR-10 | "Handled by Her Keys" only with execution **and** outcome (§19, O) | IMPLEMENTED | model: scenario G (execution AND success outcome; unconfirmed / approved-not-run / failed / undone / yesterday); UI: `TodayHandled` (`attentionUi.test.mjs`) |
 | FR-11 | Upcoming constraint — one, only if material (§20) | IN PROGRESS | model only; test pending |
 | FR-12 | What changed — no presentation markers in state (§21, P) | IN PROGRESS | model: scenario J; rollover / time-of-day pending |
-| FR-13 | Correction / adjustment through existing paths only (§22, H) | IN PROGRESS | seam in `model/narrative.ts`; test pending |
-| FR-14 | Progressive disclosure, accessible (§23) | IN PROGRESS | UI: `TodayDisclosure` (`components.test.mjs`) |
+| FR-13 | Correction / adjustment through existing paths only (§22, H) | IMPLEMENTED | Scenario M (`tests/today/correction.test.mjs`): real store, persisted, re-derived; task edit, take-back, approve / decline; MP-01..04 offer nothing |
+| FR-14 | Progressive disclosure, accessible (§23) | IMPLEMENTED | UI: `TodayDisclosure` (`components.test.mjs`); "See why" -> "Evidence and source"; "More that needs you"; "N more"; "Everything today"; "Also checked"; "Changes you approved" |
 | FR-15 | Adaptive density; ≤3 primary blocks on an ordinary day (§24, S) | IN PROGRESS | model: scenarios A, D, I |
 | FR-16 | Time: household timezone, logical day, DST, time-of-day, rollover (§25, P, W) | NOT STARTED | |
 | FR-17 | Local-first; unknown ≠ light; unrecovered ≠ light; sync stays infrastructure (§26, J, K, M) | IN PROGRESS | model: `availability`; UI: `TodayStateNotice` (`components.test.mjs`); lifecycle scenarios pending |
@@ -297,6 +297,7 @@ No test is removed or rewritten at T0.
 | `src/features/today/TodayHandled.tsx` | Handled by Her Keys, in the permanent action-state language | T5 |
 | `src/features/today/useTodayActions.ts` | The two existing domain mutations the attention rows can make (`returnToSelf`, `decideIntent`), through `store.commit` | T5 |
 | `tests/today/attentionUi.test.mjs` | Attention / approval / handled render and interaction contract | T5 |
+| `tests/today/correction.test.mjs` | Scenario M: correction end to end through a real store; every route is an existing screen; no fake affordance | T6 |
 
 **Existing Today files modified** are listed with their classification in §2.8 and their commits in the commit series (§10).
 
