@@ -1,0 +1,12 @@
+# SHOWN
+ROOM
+Everything scheduled fits.
+SCHEDULE
+9:00 AM
+Weekly standup
+9:00–9:30 AM · Fixed
+Details
+
+# ANNOUNCED
+button: Weekly standup. 9:00–9:30 AM · Fixed
+button: Details: Weekly standup {"expanded":false}

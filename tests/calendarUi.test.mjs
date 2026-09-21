@@ -21,7 +21,7 @@ import { AgendaList } from '../src/features/calendar/ui/AgendaList.tsx';
 import { CalendarDayView } from '../src/features/calendar/ui/CalendarDayView.tsx';
 import { CalendarEmptyDay, CalendarLoading, CalendarRecovery } from '../src/features/calendar/ui/CalendarStates.tsx';
 import { ConflictCard } from '../src/features/calendar/ui/DayInsights.tsx';
-import { DAY, NEXT, household, inputsFor, msAt, scenarioById } from './support/calendarScenarios.mjs';
+import { DAY, NEXT, SCENARIOS, household, inputsFor, msAt, scenarioById } from './support/calendarScenarios.mjs';
 import { render } from './support/render.tsx';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -228,6 +228,43 @@ describe('first-glance content per scenario', () => {
     const v = projectCalendarDay({ ...inputsFor(scenarioById('B')), date: '2026-09-10', today: DAY });
     const text = joined(await render(<CalendarDayView view={v} onOpenItem={noop} />));
     assert.doesNotMatch(text, /fits|Room|Tight|More than fits/);
+  });
+});
+
+describe('the first-glance text does not repeat itself, and reads in the order of the day', () => {
+  test('the headline names the KIND of problem; it never repeats a card’s own sentence', async () => {
+    const { headlineFor, conflictCopy } = await import('../src/features/calendar/copy.ts');
+    for (const s of SCENARIOS) {
+      const v = projectCalendarDay(inputsFor(s));
+      const ctx = copyContextFor(v);
+      const headline = headlineFor(v, ctx).text;
+      for (const conflict of v.conflicts) assert.notEqual(headline, conflictCopy(conflict, ctx).sentence, `${s.id}: headline repeats a card`);
+    }
+    const b = headlineFor(view('B'), copyContextFor(view('B')));
+    assert.equal(b.text, 'Two commitments overlap.');
+    assert.equal(headlineFor(view('D'), copyContextFor(view('D'))).text, 'There isn’t enough time to get between two commitments.');
+  });
+
+  test('several problems are counted, not listed twice', async () => {
+    const { headlineFor } = await import('../src/features/calendar/copy.ts');
+    const b = household().event('a', { start: '10:00', end: '11:00' }).event('b', { start: '10:30', end: '11:30' }).event('c', { start: '10:45', end: '11:45' });
+    const v = projectCalendarDay({ state: b.state, date: DAY, today: DAY, nowMs: msAt('07:00') });
+    assert.ok(v.conflicts.length > 1);
+    assert.equal(headlineFor(v, copyContextFor(v)).text, `${v.conflicts.length} things need a look.`);
+  });
+
+  test('what is not known is listed in the order the day reads: by commitment, then travel to, then travel after', async () => {
+    const r = await render(<CalendarDayView view={view('AF')} onOpenItem={() => {}} />);
+    const text = joined(r);
+    const order = [
+      'Travel time to School conference',
+      'Travel time after School conference',
+      'Travel time to Clinic visit',
+      'Travel time after Clinic visit',
+      'Renew car registration: no duration is recorded.',
+    ].map((needle) => text.indexOf(needle));
+    assert.ok(order.every((i) => i >= 0), JSON.stringify(order));
+    assert.deepEqual([...order].sort((a, b) => a - b), order);
   });
 });
 

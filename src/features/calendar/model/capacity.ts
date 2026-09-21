@@ -91,16 +91,26 @@ export function dedupeMissing(entries: MissingEvidence[]): MissingEvidence[] {
 }
 
 /**
- * `overloaded` says more than fits only when a stored fact is violated (an overlap, a transition longer than its gap, a
- * dependency out of order) or the day holds less time than it needs. An `overloaded` tier reached only through a thin but
- * physically sufficient buffer is worded as tight — it fits.
+ * More than fits: a stored fact is violated (an overlap, a transition longer than its gap, a dependency out of order),
+ * the day holds less time than it needs, or a flexible obligation with a known duration and window has NO place anywhere
+ * (a day can have time in total and still not in a usable shape for something). Each is a physical fact, not a threshold.
+ */
+function exceedsWhatFits(verdict: CapacityState['verdict'], conflicts: Conflict[]): boolean {
+  return (
+    verdict === 'capacity_pressure' ||
+    conflicts.some((c) => c.type === 'FIXED_OVERLAP' || c.type === 'TRANSITION_CONFLICT' || c.type === 'DEPENDENCY_CONFLICT' || c.type === 'PLACEMENT_FAILURE')
+  );
+}
+
+/**
+ * The WORD for the day. It follows the physical facts above; otherwise the foundation's tier decides. An `overloaded` tier
+ * reached only through a thin but physically sufficient buffer is worded as tight — it fits.
  */
 export function categoryOf(tier: CapacityState['tier'], verdict: CapacityState['verdict'], conflicts: Conflict[]): CapacityCategory {
   if (tier === null) return 'not_known';
+  if (exceedsWhatFits(verdict, conflicts)) return 'more_than_fits';
   if (tier === 'open') return 'room';
-  if (tier === 'tight') return 'tight';
-  const exceeds = verdict === 'capacity_pressure' || conflicts.some((c) => c.type === 'FIXED_OVERLAP' || c.type === 'TRANSITION_CONFLICT' || c.type === 'DEPENDENCY_CONFLICT');
-  return exceeds ? 'more_than_fits' : 'tight';
+  return 'tight';
 }
 
 /**

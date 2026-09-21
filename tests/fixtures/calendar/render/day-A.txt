@@ -1,0 +1,25 @@
+# SHOWN
+ROOM
+Everything scheduled fits.
+SCHEDULE
+9:00 AM
+Team meeting
+9:00 AM–12:00 PM · Fixed
+Details
+3:30 PM
+Josie's soccer practice
+3:30–4:30 PM · Fixed
+Details
+NOT ON THE SCHEDULE YET
+Return library books
+Due this day · Flexible · About 30 min
+There’s room from 12:15–3:10 PM. Nothing is scheduled for it.
+Why
+
+# ANNOUNCED
+button: Team meeting. 9:00 AM–12:00 PM · Fixed
+button: Details: Team meeting {"expanded":false}
+button: Josie's soccer practice. 3:30–4:30 PM · Fixed
+button: Details: Josie's soccer practice {"expanded":false}
+button: Return library books. Due this day · Flexible · About 30 min. There’s room from 12:15–3:10 PM. Nothing is scheduled for it.
+button: Why: Return library books {"expanded":false}

@@ -1,0 +1,38 @@
+# SHOWN
+Sun
+13
+Room
+Today
+Mon
+14
+Tight
+Tue
+15
+More than fits
+Overlap
+Wed
+16
+Not enough known
+Viewing
+Thu
+17
+Room
+Nothing scheduled
+Fri
+18
+More than fits
+Needs a place
+1 not on the schedule yet
+Sat
+19
+Room
+Nothing scheduled
+
+# ANNOUNCED
+button: Sun 13: Room, today {"selected":false}
+button: Mon 14: Tight {"selected":false}
+button: Tue 15: More than fits, 1 conflict {"selected":false}
+button: Wed 16: Not enough known, currently open {"selected":true}
+button: Thu 17: Room {"selected":false}
+button: Fri 18: More than fits, 1 conflict, 1 not on the schedule yet {"selected":false}
+button: Sat 19: Room {"selected":false}

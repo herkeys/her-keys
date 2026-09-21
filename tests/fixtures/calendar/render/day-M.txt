@@ -1,0 +1,33 @@
+# SHOWN
+TIGHT
+Soccer practice to Piano lesson fits, with 30 min to spare.
+FITS NARROWLY
+Soccer practice to Piano lesson fits, with 30 min to spare.
+Why
+SCHEDULE
+1:00 PM
+Plumber visit
+1:00–2:00 PM · Fixed
+4:00 PM
+Soccer practice
+4:00–5:00 PM · Fixed
+Details
+5:30 PM
+Piano lesson
+5:30–6:00 PM · Fixed
+Details
+NOT ON THE SCHEDULE YET
+Field trip form
+Due this day · Flexible · About 10 min
+There’s room from 7:00 AM–1:00 PM, and 3 more windows. Nothing is scheduled for it.
+Why
+
+# ANNOUNCED
+button: Why: Soccer practice to Piano lesson fits, with 30 min to spare. {"expanded":false}
+button: Plumber visit. 1:00–2:00 PM · Fixed
+button: Soccer practice. 4:00–5:00 PM · Fixed
+button: Details: Soccer practice {"expanded":false}
+button: Piano lesson. 5:30–6:00 PM · Fixed
+button: Details: Piano lesson {"expanded":false}
+button: Field trip form. Due this day · Flexible · About 10 min. There’s room from 7:00 AM–1:00 PM, and 3 more windows. Nothing is scheduled for it.
+button: Why: Field trip form {"expanded":false}

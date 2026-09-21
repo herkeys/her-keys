@@ -345,8 +345,14 @@ export function unplacedCopy(unplaced: UnplacedItem, ctx: CopyContext): Unplaced
 
 // ----------------------------------------------------------------- unknowns ---
 
+const FIELD_RANK: Record<MissingEvidence['field'], number> = { durationMinutes: 0, travelMinutesBefore: 1, travelMinutesAfter: 2 };
+
+/** In the order the day reads: by item as it appears on the day, then the duration, then travel to, then travel after. */
 export function missingLines(missing: MissingEvidence[], ctx: CopyContext): string[] {
-  return missing.map((entry) => {
+  const position = new Map(ctx.view.dayItems.map((item, index) => [`${item.ref.kind}:${item.ref.id}`, index]));
+  const at = (entry: MissingEvidence) => position.get(`${entry.itemRef.kind}:${entry.itemRef.id}`) ?? Number.MAX_SAFE_INTEGER;
+  const ordered = [...missing].sort((a, b) => at(a) - at(b) || FIELD_RANK[a.field] - FIELD_RANK[b.field]);
+  return ordered.map((entry) => {
     const title = ctx.titleOf(entry.itemRef);
     if (entry.field === 'durationMinutes') return `${title}: no duration is recorded.`;
     return entry.field === 'travelMinutesBefore' ? `Travel time to ${title} isn’t entered.` : `Travel time after ${title} isn’t entered.`;
@@ -363,12 +369,23 @@ export interface Headline {
   more: number;
 }
 
+const HEADLINE_BY_TYPE: Record<ConflictType, string> = {
+  FIXED_OVERLAP: 'Two commitments overlap.',
+  TRANSITION_CONFLICT: 'There isn’t enough time to get between two commitments.',
+  DEPENDENCY_CONFLICT: 'Something is scheduled before what it needs.',
+  PLACEMENT_FAILURE: 'Something doesn’t have a place today.',
+  RESPONSIBILITY_RISK: 'A handoff isn’t confirmed.',
+  PROTECTED_TIME_CONFLICT: 'A protected time conflicts with something.',
+};
+
 export function headlineFor(view: CalendarDayViewModel, ctx: CopyContext): Headline {
   if (view.dayMode === 'past') return { kind: 'past', text: COPY.pastDay, more: 0 };
   const state = view.capacityState;
   const listed = view.conflicts;
 
-  if (listed.length > 0) return { kind: 'problem', text: conflictCopy(listed[0], ctx).sentence, more: listed.length - 1 };
+  // The headline says WHAT KIND of problem there is; the cards below say which commitments. It never repeats a card’s sentence.
+  if (listed.length === 1) return { kind: 'problem', text: HEADLINE_BY_TYPE[listed[0].type], more: 0 };
+  if (listed.length > 1) return { kind: 'problem', text: `${listed.length} things need a look.`, more: 0 };
 
   if (state !== null && state.verdict === 'capacity_pressure' && state.pressure !== null) {
     return { kind: 'problem', text: `More is planned than the day has room for: ${formatMinutes(state.pressure.neededMinutes)} planned, ${formatMinutes(state.pressure.availableMinutes)} available.`, more: 0 };

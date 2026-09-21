@@ -166,6 +166,24 @@ describe('capacity category — the word follows the physical facts, the tier st
     assert.equal(category('O'), 'more_than_fits', 'capacity pressure');
   });
 
+  test('F: an obligation with a known duration that has no place anywhere is more than fits, even though the foundation sees only thin buffers', () => {
+    const state = project('F').capacityState;
+    assert.equal(state.tier, 'overloaded');
+    assert.equal(state.category, 'more_than_fits');
+  });
+
+  test('a fragmented day (plenty of time in total, no usable stretch for one task) is not called room', () => {
+    const b = household()
+      .event('a', { start: '06:00', end: '08:00' })
+      .event('b', { start: '08:40', end: '11:00' })
+      .event('c', { start: '11:40', end: '14:00' })
+      .event('d', { start: '14:40', end: '22:00' })
+      .task('big', { minutes: 60, due: DAY });
+    const view = projectCalendarDay({ state: b.state, date: DAY, today: DAY, nowMs: msAt('05:00') });
+    assert.equal(unplacedOf(view, 'big').state, 'needs_a_place');
+    assert.notEqual(view.capacityState.category, 'room');
+  });
+
   test('room, tight and not-known map from open / tight / withheld', () => {
     assert.equal(category('A'), 'room');
     assert.equal(category('M'), 'tight');

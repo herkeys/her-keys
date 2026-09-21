@@ -1,0 +1,24 @@
+# SHOWN
+NOT ENOUGH KNOWN
+Not enough is entered to say whether this day fits.
+SCHEDULE
+10:00 AM
+Morning appointment
+10:00–11:00 AM · Fixed
+2:00 PM
+Afternoon appointment
+2:00–3:00 PM · Fixed
+NOT ON THE SCHEDULE YET
+Renew car registration
+Due this day · Flexible · No duration recorded
+NOT CONFIRMED
+No duration is recorded, so Her Keys can’t say whether it fits.
+Why
+Not known yet
+Renew car registration: no duration is recorded.
+
+# ANNOUNCED
+button: Morning appointment. 10:00–11:00 AM · Fixed
+button: Afternoon appointment. 2:00–3:00 PM · Fixed
+button: Renew car registration. Due this day · Flexible · No duration recorded. Not confirmed. No duration is recorded, so Her Keys can’t say whether it fits.
+button: Why: Renew car registration {"expanded":false}

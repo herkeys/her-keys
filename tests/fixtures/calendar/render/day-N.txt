@@ -1,0 +1,38 @@
+# SHOWN
+TIGHT
+Client call to Errand fits, with 10 min to spare.
+1 more below.
+FITS NARROWLY
+Client call to Errand fits, with 10 min to spare.
+Why
+FITS NARROWLY
+Errand to Board meeting fits, with 10 min to spare.
+Why
+WHAT I RECOMMEND
+NEEDS YOUR YES
+Moving Errand to tomorrow, at the same time, would open up the time around it today.
+Preview the move
+Not today
+Why
+SCHEDULE
+10:00 AM
+Client call
+10:00–11:00 AM · Fixed
+11:10 AM
+Errand
+11:10–11:50 AM · Flexible
+Details
+12:00 PM
+Board meeting
+12:00–1:00 PM · Fixed
+
+# ANNOUNCED
+button: Why: Client call to Errand fits, with 10 min to spare. {"expanded":false}
+button: Why: Errand to Board meeting fits, with 10 min to spare. {"expanded":false}
+button: Preview the move {"disabled":false}
+button: Not today {"disabled":false}
+button: Why: Moving Errand to tomorrow, at the same time, would open up the time around it today. {"expanded":false}
+button: Client call. 10:00–11:00 AM · Fixed
+button: Errand. 11:10–11:50 AM · Flexible
+button: Details: Errand {"expanded":false}
+button: Board meeting. 12:00–1:00 PM · Fixed

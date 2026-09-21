@@ -1,0 +1,39 @@
+# SHOWN
+NOT ENOUGH KNOWN
+Not enough is entered to say whether this day fits.
+SCHEDULE
+10:00 AM
+School conference
+10:00–11:00 AM · Fixed
+Details
+11:50 AM
+Clinic visit
+11:50 AM–12:30 PM · Fixed
+Details
+NOT ON THE SCHEDULE YET
+Renew car registration
+Due this day · Flexible · No duration recorded
+NOT CONFIRMED
+No duration is recorded, so Her Keys can’t say whether it fits.
+Why
+Sign the permission form
+Due this day · Flexible · About 30 min
+NOT CONFIRMED
+It might fit, but travel time isn’t entered, so that isn’t confirmed.
+Why
+Not known yet
+Travel time to School conference isn’t entered.
+Travel time after School conference isn’t entered.
+Travel time to Clinic visit isn’t entered.
+Travel time after Clinic visit isn’t entered.
+Renew car registration: no duration is recorded.
+
+# ANNOUNCED
+button: School conference. 10:00–11:00 AM · Fixed
+button: Details: School conference {"expanded":false}
+button: Clinic visit. 11:50 AM–12:30 PM · Fixed
+button: Details: Clinic visit {"expanded":false}
+button: Renew car registration. Due this day · Flexible · No duration recorded. Not confirmed. No duration is recorded, so Her Keys can’t say whether it fits.
+button: Why: Renew car registration {"expanded":false}
+button: Sign the permission form. Due this day · Flexible · About 30 min. Not confirmed. It might fit, but travel time isn’t entered, so that isn’t confirmed.
+button: Why: Sign the permission form {"expanded":false}

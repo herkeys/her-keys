@@ -1,0 +1,22 @@
+# SHOWN
+MORE THAN FITS
+There isn’t enough time to get between two commitments.
+NOT ENOUGH TIME
+The 20 min between School pickup and Clinic visit is shorter than what you entered for getting there.
+Why
+SCHEDULE
+10:00 AM
+School pickup
+10:00–11:00 AM · Fixed
+Details
+11:20 AM
+Clinic visit
+11:20 AM–12:00 PM · Fixed
+Details
+
+# ANNOUNCED
+button: Why: The 20 min between School pickup and Clinic visit is shorter than what you entered for getting there. {"expanded":false}
+button: School pickup. 10:00–11:00 AM · Fixed
+button: Details: School pickup {"expanded":false}
+button: Clinic visit. 11:20 AM–12:00 PM · Fixed
+button: Details: Clinic visit {"expanded":false}

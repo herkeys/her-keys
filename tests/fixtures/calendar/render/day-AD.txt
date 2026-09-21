@@ -1,0 +1,10 @@
+# SHOWN
+ROOM
+Everything scheduled fits.
+SCHEDULE
+12:00 AM
+Grandma visit
+12:00–12:00 AM · Fixed · Continues from the day before · Continues into the next day · Happening now
+
+# ANNOUNCED
+button: Grandma visit. 12:00–12:00 AM · Fixed · Continues from the day before · Continues into the next day · Happening now
