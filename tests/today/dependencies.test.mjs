@@ -15,7 +15,7 @@ import { demoState, onboardedState } from '../support/fixtures.mjs';
 import { oneMoveRecordId } from '../../src/domain/oneMove.ts';
 import { addDependency } from '../../src/domain/structure.ts';
 import { SYSTEM } from '../support/provenance.mjs';
-import { DAY, NEXT_DAY, at, ev, eventNamed, facet, household, mkCtx, nyInstant, nyMs, taskNamed, tk, valid, view } from './fixtures.mjs';
+import { DAY, NEXT_DAY, ev, eventNamed, household, mkCtx, nyInstant, nyMs, taskNamed, tk, valid, view, withMove } from './fixtures.mjs';
 
 await import('./support/stub-expo-router.mjs');
 const { TodayList } = await import('../../src/features/today/TodayList.tsx');
@@ -120,6 +120,23 @@ describe('One Move — what it waits on and what waits on it, as context and not
     assert.deepEqual(without.why.context, []);
     assert.deepEqual([m.why.basis, m.why.reasons], [without.why.basis, without.why.reasons], 'the reasons are exactly what the stored decision supports — the relation adds none');
     assert.deepEqual(m.why.evidence, without.why.evidence);
+  });
+
+  test('the same holds when the reasons ARE recorded evidence: context is added beside them, never into them', () => {
+    const build = (linked) => {
+      let s = tk(household(), { title: 'Sign the permission form', minutes: 10, due: DAY });
+      s = ev(s, { title: 'Field trip', from: [9], to: [12], day: 17 });
+      if (linked) s = requires(s, E(s, 'Field trip'), T(s, 'Sign the permission form'));
+      return view(withMove(valid(s)), nyMs(9)).oneMove;
+    };
+    const plain = build(false);
+    const linked = build(true);
+    assert.equal(plain.why.basis, 'recorded_evidence', 'this move is chosen on stored evidence, not on the fallback');
+    assert.equal(linked.why.basis, 'recorded_evidence');
+    assert.deepEqual(linked.why.context, ['“Field trip” needs it first.']);
+    assert.deepEqual(linked.why.reasons, plain.why.reasons, 'the reasons are exactly what the stored evidence supports');
+    assert.equal(linked.why.reasons.some((r) => /needs it first/.test(r)), false);
+    assert.deepEqual(linked.why.evidence, plain.why.evidence);
   });
 
   test('what the target is itself still waiting on is named — and stops being named once it is done', () => {
