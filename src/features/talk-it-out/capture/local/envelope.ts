@@ -1,6 +1,7 @@
-import { MAX_CLAUSES } from './clauses';
-import { DEFAULT_ASSUMED_EVENT_MINUTES, PROCESSING_LIMIT_CHARS } from './interpret';
+import { DEFAULT_ASSUMED_EVENT_MINUTES } from '../revise';
 import type { RuleId } from '../types';
+import { MAX_CLAUSES } from './clauses';
+import { PROCESSING_LIMIT_CHARS } from './interpret';
 
 /**
  * LOCAL INTERPRETER CAPABILITY ENVELOPE.

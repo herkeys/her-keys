@@ -3,7 +3,8 @@ import { describe, test } from 'node:test';
 import { addDays, weekdayOf } from '../src/domain/logicalDay.ts';
 import { formatClarificationCode, parseClarificationCode } from '../src/features/talk-it-out/capture/clarificationCodes.ts';
 import { CAPABILITY_ENVELOPE, ENVELOPE_LIMITS } from '../src/features/talk-it-out/capture/local/envelope.ts';
-import { PROCESSING_LIMIT_CHARS, requestFromDraft } from '../src/features/talk-it-out/capture/local/interpret.ts';
+import { PROCESSING_LIMIT_CHARS } from '../src/features/talk-it-out/capture/local/interpret.ts';
+import { requestFromDraft } from '../src/features/talk-it-out/capture/revise.ts';
 import { daysUntilWeekday, resolveWeekday, weekdayCandidates } from '../src/features/talk-it-out/capture/local/temporal.ts';
 import { AREAS, FRIDAY_NOW, NOW, ONE_KID, PROPOSAL_KEYS, TZ, context, read, seeded } from './support/capture.mjs';
 
