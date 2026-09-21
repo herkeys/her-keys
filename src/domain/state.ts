@@ -6,6 +6,7 @@ import {
   AutomationAuthoritySchema,
   IntentDecisionSchema,
 } from './foundation/authorization';
+import { DurationSourceSchema } from './foundation/duration';
 import { InterpretationSchema } from './foundation/interpretation';
 import { eventFacetFields, mealFacetFields, systemFacetFields, taskFacetFields } from './foundation/commitment';
 import { ExternalReferenceSchema } from './foundation/externalReference';
@@ -158,6 +159,8 @@ export const TaskSchema = z
     categoryId: Id,
     subjectMemberId: Id.nullable(),
     durationMinutes: DurationMinutes,
+    /** How much `durationMinutes` may be trusted as a fact (HA-010). Absent/null = provenance never recorded, which is unknown, not user-provided. */
+    durationSource: DurationSourceSchema.nullable().default(null),
     commitment: z.enum(['fixed', 'flexible']),
     dueDate: LocalDateSchema.nullable(),
     plan: TaskPlanSchema,
@@ -190,6 +193,12 @@ export const HouseholdSystemSchema = z.strictObject({
   name: NonBlank(120),
   description: z.string().max(500),
   categoryId: Id,
+  /**
+   * The child this routine is about, in the SAME member identity space as a Task or Event subject (HA-011). null = a
+   * household-level routine. It is an id, never a name, and never guessed. The cloud requires it for `scope: 'child'` and
+   * pairs it structurally with a child of the same household.
+   */
+  subjectMemberId: Id.nullable().default(null),
   ...systemFacetFields,
   provenance: ProvenanceSchema,
   scope: Scope,
@@ -631,7 +640,16 @@ export function findIntegrityProblems(state: AppState): string[] {
     checkCategory('task', task);
     checkSubject('task', task);
   }
-  for (const system of state.systems) checkCategory('system', system);
+  for (const system of state.systems) {
+    checkCategory('system', system);
+    // A System's subject is a CHILD, exactly as the cloud's composite foreign key requires; the adult account user is not a subject.
+    if (system.subjectMemberId !== null && !childIds.has(system.subjectMemberId)) {
+      problems.push(`system ${system.id} references missing child ${system.subjectMemberId}`);
+    }
+    if (system.scope === 'child' && system.subjectMemberId === null) {
+      problems.push(`system ${system.id} is child-scoped but does not name a child`);
+    }
+  }
   for (const meal of state.meals) checkCategory('meal', meal);
 
   for (const item of state.needsMe) {

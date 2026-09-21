@@ -179,7 +179,7 @@ export function approveShortenTask(state: AppState, ctx: TransitionContext, task
 
   return {
     ...state,
-    tasks: state.tasks.map((t) => (t.id === taskId ? { ...t, durationMinutes: shortenedMinutes, updatedAt: toInstant(ctx.nowMs) } : t)),
+    tasks: state.tasks.map((t) => (t.id === taskId ? { ...t, durationMinutes: shortenedMinutes, durationSource: 'inferred' as const, updatedAt: toInstant(ctx.nowMs) } : t)),
     actions: [...state.actions, action],
   };
 }

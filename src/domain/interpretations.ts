@@ -234,6 +234,8 @@ export function acceptInterpretation(state: AppState, ctx: TransitionContext, id
       categoryId: input.categoryId as string,
       subjectMemberId: reading.subjectMemberId,
       durationMinutes: reading.durationMinutes ?? undefined,
+      // She approved Her Keys' reading of her words; she did not enter a number. No reading duration: the default applies.
+      durationSource: reading.durationMinutes === null ? undefined : 'inferred',
       dueDate: reading.dueDate,
       commitment: input.commitment,
       scope,

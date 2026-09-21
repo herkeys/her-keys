@@ -79,6 +79,8 @@ export function applyCloudRow(
           categoryId: resolve(row.category_id as string) ?? str(row.category_id),
           subjectMemberId: resolve(row.subject_member_id as string),
           durationMinutes: num(row.duration_minutes),
+          // Arrives exactly as it left: a cloud row without a source stays unrecorded, it is not promoted to anything.
+          durationSource: (strOrNull(row.duration_source) as never) ?? null,
           commitment: str(row.commitment) as never,
           dueDate: strOrNull(row.due_date),
           plan,
@@ -127,6 +129,9 @@ export function applyCloudRow(
           name: str(row.name),
           description: str(row.description),
           categoryId: resolve(row.category_id as string) ?? str(row.category_id),
+          // A child this device cannot resolve keeps the raw uuid, so the integrity gate names it and the cursor does not advance.
+          // It is never dropped to null: that would turn a child's routine into a household one without saying so.
+          subjectMemberId: strOrNull(row.subject_member_id) === null ? null : (resolve(row.subject_member_id as string) ?? str(row.subject_member_id)),
           ...facetsFromRow('system', row),
           provenance: provenanceFromRow(row, resolve),
           scope: str(row.scope) as never,

@@ -26,8 +26,8 @@ const TASK_FACETS = [
 export const V4_ROW_ADDITIONS = {
   categories: ['provenance'],
   events: ['provenance', 'energyDemand', 'consequence', 'needsMePersonally', 'value'],
-  tasks: ['provenance', ...TASK_FACETS],
-  systems: ['provenance', 'automationMode', 'effortMinutes', 'energyDemand'],
+  tasks: ['provenance', 'durationSource', ...TASK_FACETS],
+  systems: ['provenance', 'subjectMemberId', 'automationMode', 'effortMinutes', 'energyDemand'],
   meals: ['provenance', 'prepMinutes', 'energyDemand'],
   needsMe: ['provenance'],
   oneMoves: ['provenance'],

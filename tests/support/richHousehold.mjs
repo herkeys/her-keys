@@ -69,7 +69,7 @@ export function richHousehold({ withServerRows = false, withOneMove = true } = {
   // Systems and meals have no production create path yet; they arrive as the rows a real household would hold.
   s = {
     ...s,
-    systems: [{ id: 'sys-1', name: 'Sunday reset', description: 'Reset the house for the week', categoryId: 'cat-home', automationMode: 'suggest', effortMinutes: 20, energyDemand: 'moderate', provenance: USER, scope: 'household' }],
+    systems: [{ id: 'sys-1', name: 'Sunday reset', description: 'Reset the house for the week', categoryId: 'cat-home', subjectMemberId: null, automationMode: 'suggest', effortMinutes: 20, energyDemand: 'moderate', provenance: USER, scope: 'household' }],
     meals: [{ id: 'meal-1', date: '2026-09-21', title: 'Sheet-pan chicken', categoryId: 'cat-meals', prepMinutes: 25, energyDemand: 'low', provenance: USER, scope: 'household' }],
   };
   for (const title of ['Gather', 'Sort', 'Pay']) s = addSystemStep(s, at(), 'sys-1', { title, effortMinutes: 5 });

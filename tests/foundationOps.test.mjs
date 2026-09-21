@@ -572,7 +572,7 @@ describe('B4-FE01-017/-018/-021/-022/-016 — dependencies, recurrence, goals, s
 
   test('a routine with a rule: its next occurrence skips a recorded exception, and the exception is history, not an edit', () => {
     let s = real();
-    s = { ...s, systems: [{ id: 'sys-1', name: 'Sunday reset', description: '', categoryId: 'cat-home', automationMode: 'manual', effortMinutes: 20, energyDemand: null, provenance: { producer: 'user-action', artifactId: null, confidence: null }, scope: 'household' }] };
+    s = { ...s, systems: [{ id: 'sys-1', name: 'Sunday reset', description: '', categoryId: 'cat-home', subjectMemberId: null, automationMode: 'manual', effortMinutes: 20, energyDemand: null, provenance: { producer: 'user-action', artifactId: null, confidence: null }, scope: 'household' }] };
     const about = { kind: 'system', id: 'sys-1' };
     s = addRecurrence(s, at(), about, { frequency: 'weekly', byWeekday: [0], anchorDate: '2026-09-13' });
     assert.equal(addRecurrence(s, at(), about, { frequency: 'daily', anchorDate: '2026-09-13' }), s, 'one active rule per thing');
@@ -590,7 +590,7 @@ describe('B4-FE01-017/-018/-021/-022/-016 — dependencies, recurrence, goals, s
   });
 
   test('system steps keep their order, and capacity overrides fall back to the shipped defaults', () => {
-    let s = { ...real(), systems: [{ id: 'sys-1', name: 'Bill envelope', description: '', categoryId: 'cat-money', automationMode: 'manual', effortMinutes: null, energyDemand: null, provenance: { producer: 'user-action', artifactId: null, confidence: null }, scope: 'household' }] };
+    let s = { ...real(), systems: [{ id: 'sys-1', name: 'Bill envelope', description: '', categoryId: 'cat-money', subjectMemberId: null, automationMode: 'manual', effortMinutes: null, energyDemand: null, provenance: { producer: 'user-action', artifactId: null, confidence: null }, scope: 'household' }] };
     for (const title of ['Gather', 'Sort', 'Pay']) s = addSystemStep(s, at(), 'sys-1', { title, effortMinutes: 5 });
     assert.deepEqual(stepsInOrder(s, 'sys-1').map((x) => x.title), ['Gather', 'Sort', 'Pay']);
     assert.equal(addSystemStep(s, at(), 'ghost', { title: 'x' }), s);

@@ -102,7 +102,7 @@ describe('FE-03 — a commitment answers the same questions whatever it is', () 
     s = { ...s, tasks: s.tasks.map((t) => ({ ...t, dueAt: '2026-09-23T20:00:00.000Z', splittable: true, minChunkMinutes: 5, energyDemand: 'low', consequence: 'high', preparationMinutes: 10, needsMePersonally: true, value: parseMoney('35', 'USD', 'outflow') })) };
     s = addEvent(s, at(), { title: 'Field trip', categoryId: 'cat-kids', startsAt: '2026-09-25T14:00:00.000Z', endsAt: '2026-09-25T18:00:00.000Z', commitment: 'fixed', scope: 'household' });
     s = { ...s, meals: [{ id: 'meal-1', date: '2026-09-21', title: 'Bake the trip snack', categoryId: 'cat-meals', prepMinutes: 30, energyDemand: 'moderate', provenance: USER, scope: 'household' }],
-      systems: [{ id: 'sys-1', name: 'Sunday reset', description: '', categoryId: 'cat-home', automationMode: 'manual', effortMinutes: 20, energyDemand: 'low', provenance: USER, scope: 'household' }] };
+      systems: [{ id: 'sys-1', name: 'Sunday reset', description: '', categoryId: 'cat-home', subjectMemberId: null, automationMode: 'manual', effortMinutes: 20, energyDemand: 'low', provenance: USER, scope: 'household' }] };
     const shapes = [
       commitmentFacetsOf({ kind: 'task', row: s.tasks[0] }), commitmentFacetsOf({ kind: 'event', row: s.events[0] }),
       commitmentFacetsOf({ kind: 'meal', row: s.meals[0] }), commitmentFacetsOf({ kind: 'system', row: s.systems[0] }),
@@ -214,7 +214,7 @@ describe('FE-09 — One Move can name more than a task or a Needs Me item', () =
   test('an event, a routine and a delegated responsibility are storable targets, each checked against its own collection', () => {
     let s = withTask(real(), { title: 'Pick up Ben' });
     s = addEvent(s, at(), { title: 'Dentist', categoryId: 'cat-wellbeing', startsAt: '2026-09-16T19:00:00.000Z', endsAt: '2026-09-16T20:00:00.000Z', commitment: 'fixed', scope: 'personal' });
-    s = { ...s, systems: [{ id: 'sys-1', name: 'Sunday reset', description: '', categoryId: 'cat-home', automationMode: 'manual', effortMinutes: null, energyDemand: null, provenance: USER, scope: 'household' }] };
+    s = { ...s, systems: [{ id: 'sys-1', name: 'Sunday reset', description: '', categoryId: 'cat-home', subjectMemberId: null, automationMode: 'manual', effortMinutes: null, energyDemand: null, provenance: USER, scope: 'household' }] };
     s = addPerson(s, at(), { displayName: 'Grandma June', relationship: 'grandparent' });
     s = delegate(s, at(), { about: ref('task', lastTask(s).id), to: ref('person', s.people[0].id) });
     const rec = (i, targetType, targetId, day) => ({ id: `om-${i}`, forDate: day, targetId, targetType, status: 'selected', decidedAt: '2026-09-16T14:00:00.000Z', completedAt: null, provenance: { producer: 'system-derived', artifactId: null, confidence: null }, scope: 'personal' });

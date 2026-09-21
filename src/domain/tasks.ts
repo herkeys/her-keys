@@ -1,5 +1,6 @@
 import type { TransitionContext } from './context';
 import { emptyTaskFacets } from './foundation/commitment';
+import { DEFAULT_TASK_DURATION_MINUTES, type DurationSource } from './foundation/duration';
 import type { Money } from './foundation/money';
 import { provenanceFor, userProvenance, type Provenance } from './foundation/provenance';
 import { toInstant, type LocalDate } from './logicalDay';
@@ -12,13 +13,16 @@ import type { AppState, Task, TaskPlan, VisibilityScope } from './state';
  * later, so logging "Return library books" never requires a full form.
  */
 
-const DEFAULT_TASK_DURATION_MINUTES = 15;
-
 export interface AddTaskInput {
   title: string;
   categoryId: string;
   subjectMemberId?: string | null;
   durationMinutes?: number;
+  /**
+   * Where `durationMinutes` came from. Omitted with a number: the number's origin is UNKNOWN (null), never assumed to be hers.
+   * Omitted with no number: the planning default applies and is recorded as `default`.
+   */
+  durationSource?: DurationSource | null;
   commitment?: 'fixed' | 'flexible';
   dueDate?: LocalDate | null;
   plan?: TaskPlan;
@@ -38,6 +42,8 @@ export function addTask(state: AppState, ctx: TransitionContext, input: AddTaskI
     categoryId: input.categoryId,
     subjectMemberId: input.subjectMemberId ?? null,
     durationMinutes: input.durationMinutes ?? DEFAULT_TASK_DURATION_MINUTES,
+    // DEFAULT != USER-PROVIDED: a default is recorded as one, and a bare number never claims to be hers.
+    durationSource: input.durationMinutes === undefined ? 'default' : (input.durationSource ?? null),
     commitment: input.commitment ?? 'flexible',
     dueDate: input.dueDate ?? null,
     plan: input.plan ?? { kind: 'unplanned' },
@@ -54,7 +60,7 @@ export function addTask(state: AppState, ctx: TransitionContext, input: AddTaskI
   return { ...state, tasks: [...state.tasks, task] };
 }
 
-const EDITABLE_TASK_FIELDS = ['title', 'categoryId', 'subjectMemberId', 'durationMinutes', 'commitment', 'dueDate', 'plan', 'notes'] as const;
+const EDITABLE_TASK_FIELDS = ['title', 'categoryId', 'subjectMemberId', 'durationMinutes', 'durationSource', 'commitment', 'dueDate', 'plan', 'notes'] as const;
 
 export type UpdateTaskInput = Partial<Pick<Task, (typeof EDITABLE_TASK_FIELDS)[number]>>;
 
@@ -66,6 +72,10 @@ export function updateTask(state: AppState, ctx: TransitionContext, taskId: stri
   const current = state.tasks.find((task) => task.id === taskId);
   if (!current) return state;
   const edits = pickFields(patch, EDITABLE_TASK_FIELDS);
+  // A NEW number whose origin the caller did not state has no known origin. It must not inherit the old number's source.
+  if (edits.durationMinutes !== undefined && edits.durationMinutes !== current.durationMinutes && !('durationSource' in edits)) {
+    edits.durationSource = null;
+  }
   const updated = { ...current, ...edits, updatedAt: toInstant(ctx.nowMs) };
   const next = { ...state, tasks: state.tasks.map((task) => (task.id === taskId ? updated : task)) };
 

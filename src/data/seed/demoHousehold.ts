@@ -55,9 +55,9 @@ interface TaskTemplate extends Omit<Task, 'dueDate' | 'plan' | 'status' | 'notes
 }
 
 const taskTemplates: TaskTemplate[] = [
-  { id: 'task-1', title: 'Pay orthodontist invoice', categoryId: category.money, subjectMemberId: null, durationMinutes: 10, commitment: 'fixed', dueDayOffset: 0, timed: null, scope: 'household' },
-  { id: 'task-2', title: 'Return library books', categoryId: category.home, subjectMemberId: null, durationMinutes: 30, commitment: 'flexible', dueDayOffset: null, timed: { dayOffset: 0, startMinutes: at(15, 20) }, scope: 'household' },
-  { id: 'task-3', title: "Email Josie's teacher about the field trip form", categoryId: category.kids, subjectMemberId: 'child-1', durationMinutes: 10, commitment: 'flexible', dueDayOffset: null, timed: { dayOffset: 0, startMinutes: at(15, 55) }, scope: 'child' },
+  { id: 'task-1', title: 'Pay orthodontist invoice', categoryId: category.money, subjectMemberId: null, durationMinutes: 10, durationSource: 'user', commitment: 'fixed', dueDayOffset: 0, timed: null, scope: 'household' },
+  { id: 'task-2', title: 'Return library books', categoryId: category.home, subjectMemberId: null, durationMinutes: 30, durationSource: 'user', commitment: 'flexible', dueDayOffset: null, timed: { dayOffset: 0, startMinutes: at(15, 20) }, scope: 'household' },
+  { id: 'task-3', title: "Email Josie's teacher about the field trip form", categoryId: category.kids, subjectMemberId: 'child-1', durationMinutes: 10, durationSource: 'user', commitment: 'flexible', dueDayOffset: null, timed: { dayOffset: 0, startMinutes: at(15, 55) }, scope: 'child' },
 ];
 
 const childTemplates = [
@@ -66,10 +66,10 @@ const childTemplates = [
 ];
 
 const systems: Array<Omit<HouseholdSystem, 'provenance' | keyof ReturnType<typeof emptySystemFacets>>> = [
-  { id: 'sys-1', name: 'Backpack landing zone', description: 'One basket by the door catches backpacks and shoes before they spread through the house.', categoryId: category.home, scope: 'household' },
-  { id: 'sys-2', name: 'Sunday reset', description: '20 minutes each Sunday to reset shared spaces before the week starts.', categoryId: category.home, scope: 'household' },
-  { id: 'sys-3', name: 'Bill envelope', description: 'Paper bills get sorted into a single envelope every Sunday instead of scattering across the counter.', categoryId: category.money, scope: 'household' },
-  { id: 'sys-4', name: 'Autopay for utilities', description: 'Electric, water, and internet are on autopay — one less thing to track.', categoryId: category.money, scope: 'household' },
+  { id: 'sys-1', name: 'Backpack landing zone', description: 'One basket by the door catches backpacks and shoes before they spread through the house.', categoryId: category.home, subjectMemberId: null, scope: 'household' },
+  { id: 'sys-2', name: 'Sunday reset', description: '20 minutes each Sunday to reset shared spaces before the week starts.', categoryId: category.home, subjectMemberId: null, scope: 'household' },
+  { id: 'sys-3', name: 'Bill envelope', description: 'Paper bills get sorted into a single envelope every Sunday instead of scattering across the counter.', categoryId: category.money, subjectMemberId: null, scope: 'household' },
+  { id: 'sys-4', name: 'Autopay for utilities', description: 'Electric, water, and internet are on autopay — one less thing to track.', categoryId: category.money, subjectMemberId: null, scope: 'household' },
 ];
 
 const mealTemplates = [

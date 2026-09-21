@@ -74,6 +74,8 @@ export function toCloudRow(state: AppState, ctx: ProjectionContext, kind: SyncEn
         category_id: category,
         subject_member_id: subject,
         duration_minutes: row.durationMinutes,
+        // How far the number above may be trusted as a fact. null = never recorded, sent as null, never as 'user'.
+        duration_source: row.durationSource ?? null,
         commitment: row.commitment,
         due_date: row.dueDate,
         plan_kind: row.plan.kind,
@@ -125,12 +127,17 @@ export function toCloudRow(state: AppState, ctx: ProjectionContext, kind: SyncEn
       const row = require_(state.systems.find((s) => s.id === localId), kind, localId);
       const category = cloudRef(ctx, 'category', row.categoryId);
       if (category === null) throw new UnresolvedReferenceError(kind, localId, `category ${row.categoryId}`);
+      const subject = childRef(ctx, row.subjectMemberId);
+      if (row.subjectMemberId !== null && subject === null) {
+        throw new UnresolvedReferenceError(kind, localId, `child member ${row.subjectMemberId}`);
+      }
       return {
         ...base,
         owner_profile_id: ownerFor(row.scope, ctx.profileId),
         name: row.name,
         description: row.description,
         category_id: category,
+        subject_member_id: subject,
         scope: row.scope,
         ...provenanceColumns(ctx, kind, localId, row.provenance),
         ...facetColumns('system', row),

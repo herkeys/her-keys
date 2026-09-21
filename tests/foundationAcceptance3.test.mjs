@@ -161,7 +161,7 @@ describe('FE-24 — Money OS starts from exact amounts on the things that carry 
 describe('FE-25 — a household system is an engine: steps, a schedule, an autonomy setting and an effort', () => {
   test('"Sunday reset" has ordered steps, a weekly rule that honours a skipped week, and says how much Her Keys may do', () => {
     let s = real();
-    s = { ...s, systems: [{ id: 'sys-1', name: 'Sunday reset', description: 'Reset the house', categoryId: 'cat-home', automationMode: 'prepare', effortMinutes: 45, energyDemand: 'moderate', provenance: USER, scope: 'household' }] };
+    s = { ...s, systems: [{ id: 'sys-1', name: 'Sunday reset', description: 'Reset the house', categoryId: 'cat-home', subjectMemberId: null, automationMode: 'prepare', effortMinutes: 45, energyDemand: 'moderate', provenance: USER, scope: 'household' }] };
     for (const title of ['Strip the beds', 'Start laundry', 'Wipe the kitchen']) s = addSystemStep(s, at(), 'sys-1', { title, effortMinutes: 10 });
     s = addRecurrence(s, at(), ref('system', 'sys-1'), { frequency: 'weekly', byWeekday: [0], anchorDate: '2026-09-13' });
     const rule = s.recurrences[0];

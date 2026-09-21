@@ -3,6 +3,7 @@ import { useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { AppText, Button, ChipToggle, Overline, Screen, TextField } from '../../design/components';
 import { colors, spacing } from '../../design/tokens';
+import { DEFAULT_TASK_DURATION_MINUTES } from '../../domain/foundation/duration';
 import { isLocalDate } from '../../domain/logicalDay';
 import { promoteNeedsMeItem, promotionDefaults } from '../../domain/needsMe';
 import { FIELD_LIMITS } from '../../domain/state';
@@ -31,7 +32,9 @@ export function TaskForm({
   const [categoryId, setCategoryId] = useState(existing?.categoryId ?? promotion?.categoryId ?? initialCategoryId ?? categories[0]?.id ?? '');
   const [commitment, setCommitment] = useState<'fixed' | 'flexible'>(existing?.commitment ?? 'flexible');
   const [dueDate, setDueDate] = useState(existing?.dueDate ?? promotion?.dueDate ?? '');
-  const [durationMinutes, setDurationMinutes] = useState(existing ? String(existing.durationMinutes) : '15');
+  const [durationMinutes, setDurationMinutes] = useState(existing ? String(existing.durationMinutes) : String(DEFAULT_TASK_DURATION_MINUTES));
+  // The prefilled number is the planning default, not something she said. Only touching the field makes it hers.
+  const [durationTouched, setDurationTouched] = useState(false);
   const [notes, setNotes] = useState(existing?.notes ?? '');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -67,8 +70,10 @@ export function TaskForm({
       durationMinutes: duration,
       notes: notes.trim() || null,
     };
-    if (existing) return save((current, ctx) => updateTask(current, ctx, existing.id, edits));
-    const input = { ...edits, scope: 'household' as const };
+    // Touched: hers. Untouched on a new task: the default she was shown. Untouched on an edit: whatever it already was.
+    const durationSource = durationTouched ? ('user' as const) : existing ? existing.durationSource : ('default' as const);
+    if (existing) return save((current, ctx) => updateTask(current, ctx, existing.id, { ...edits, durationSource }));
+    const input = { ...edits, durationSource, scope: 'household' as const };
     if (promotion && needsMeId) return save((current, ctx) => promoteNeedsMeItem(current, ctx, needsMeId, input));
     return save((current, ctx) => addTask(current, ctx, input));
   };
@@ -106,7 +111,16 @@ export function TaskForm({
       </View>
 
       <TextField label="Due date (optional, YYYY-MM-DD)" value={dueDate} onChangeText={setDueDate} placeholder="No due date" maxLength={10} />
-      <TextField label="Estimated minutes" value={durationMinutes} onChangeText={setDurationMinutes} keyboardType="number-pad" maxLength={4} />
+      <TextField
+        label="Estimated minutes"
+        value={durationMinutes}
+        onChangeText={(text) => {
+          setDurationTouched(true);
+          setDurationMinutes(text);
+        }}
+        keyboardType="number-pad"
+        maxLength={4}
+      />
       <TextField label="Notes (optional)" value={notes} onChangeText={setNotes} multiline maxLength={FIELD_LIMITS.notesLength} />
 
       {error && (
