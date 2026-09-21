@@ -10,6 +10,9 @@ import { spacing } from '../../design/tokens';
 import { HandledLedger } from './HandledLedger';
 import type { SectionKey, TodayReady, TodayView } from './model';
 import { NeedsMeChip } from './NeedsMeChip';
+import { TodayAttention } from './TodayAttention';
+import { TodayHandled } from './TodayHandled';
+import { useTodayActions, type TodayActions } from './useTodayActions';
 import { TimelineList } from './TimelineList';
 import { TodayDisclosure } from './TodayDisclosure';
 import { TodayHeader } from './TodayHeader';
@@ -29,6 +32,7 @@ import { PersistenceNotice } from './PersistenceNotice';
 export function TodayBriefing({ view }: { view: TodayView }) {
   // Completing today's move is an existing store action; the hook is called before any early return.
   const { complete } = useOneMove();
+  const actions = useTodayActions();
 
   if (view.availability === 'unknown') return <TodayStateNotice kind="unknown" />;
 
@@ -46,7 +50,7 @@ export function TodayBriefing({ view }: { view: TodayView }) {
       <TodayHeader view={view} />
       {view.load ? <LoadMeter load={view.load} note={view.capacityNote} /> : null}
       {view.composition.map(({ key }) => {
-        const section = renderSection(key, view, complete);
+        const section = renderSection(key, view, complete, actions);
         return section ? (
           <View key={key} style={styles.block}>
             {section}
@@ -58,7 +62,7 @@ export function TodayBriefing({ view }: { view: TodayView }) {
   );
 }
 
-function renderSection(key: SectionKey, view: TodayReady, completeOneMove: () => void) {
+function renderSection(key: SectionKey, view: TodayReady, completeOneMove: () => void, actions: TodayActions) {
   switch (key) {
     case 'sparse':
       return view.sparse ? <TodayStateNotice kind={view.sparse.kind} entry={view.sparse.entry} /> : null;
@@ -102,11 +106,18 @@ function renderSection(key: SectionKey, view: TodayReady, completeOneMove: () =>
       );
     case 'alsoChecked':
       return <LifeStatusSummary />;
-    // Attention, waiting and handled arrive with the responsibility / execution presentation (T5).
     case 'attention':
+      return view.attention ? <TodayAttention section={view.attention} onTakeBack={actions.takeBack} onDecide={actions.decide} busy={actions.busy} note={actions.note} /> : null;
     case 'waiting':
+      return view.waiting ? (
+        <TodayList
+          title="Waiting"
+          rows={view.waiting.rows.map((row) => ({ key: row.key, text: row.statement, meta: row.changedToday }))}
+          moreRows={view.waiting.moreRows.map((row) => ({ key: row.key, text: row.statement, meta: row.changedToday }))}
+        />
+      ) : null;
     case 'handled':
-      return null;
+      return view.handled ? <TodayHandled section={view.handled} /> : null;
   }
 }
 

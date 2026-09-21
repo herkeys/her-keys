@@ -242,12 +242,12 @@ No test is removed or rewritten at T0.
 | FR-02 | "What matters today" prioritized, not every item (§11) | IN PROGRESS | model: scenarios A, I; UI: `TodayMatters` (`components.test.mjs`) |
 | FR-03 | One Move — full presentation lifecycle, all registered target kinds (§15, N) | IMPLEMENTED | model: scenarios D, F, N (`tests/today/oneMove.test.mjs`: none / selected / completed / withheld / rollover, all six kinds); UI: `OneMoveCard` (`components.test.mjs`) |
 | FR-04 | "Why this One Move" from structured evidence, progressive (§16) | IMPLEMENTED | model: scenario F (reasons re-checked, stale links dropped, unknown codes never rendered); UI: "See why" → reasons → "Evidence and source" (`components.test.mjs`) |
-| FR-05 | Needs Me — things that exist vs things that need her (§12) | IN PROGRESS | model: scenario B, C |
-| FR-06 | Risk / attention — specific, evidence-based (§13) | IN PROGRESS | model: scenario B, C, E |
-| FR-07 | Capacity — "does the day fit", no scores (§14) | IN PROGRESS | model: scenario B; UI pending |
-| FR-08 | What can wait — bounded, only when provably safe (§17, T) | IN PROGRESS | model: scenario H |
-| FR-09 | Responsibility / waiting; delegated ≠ covered (§18) | IN PROGRESS | model: scenario C |
-| FR-10 | "Handled by Her Keys" only with execution **and** outcome (§19, O) | IN PROGRESS | model: scenario G |
+| FR-05 | Needs Me — things that exist vs things that need her (§12) | IMPLEMENTED | model: scenarios B, C; UI: `TodayAttention` (`attentionUi.test.mjs`) — delegated / requested / acknowledged / accepted / declined / returned are each their own state |
+| FR-06 | Risk / attention — specific, evidence-based (§13) | IMPLEMENTED | model: scenarios B, C, E; UI: `TodayAttention`; specific, evidence-based rows, no risk score |
+| FR-07 | Capacity — "does the day fit", no scores (§14) | IMPLEMENTED | model: scenario B (Daily Load classification only); UI: `LoadMeter` + `DailyLoadCard` + capacity-profile note (TODAY-FD-001) |
+| FR-08 | What can wait — bounded, only when provably safe (§17, T) | IMPLEMENTED | model: scenario H (six look-alikes stay unlisted; bounded at three); UI: `TodayList` "Can wait today" |
+| FR-09 | Responsibility / waiting; delegated ≠ covered (§18) | IMPLEMENTED | model: scenario C; UI: `TodayAttention`, `TodayList` "Waiting"; take-back through `useTodayActions` -> `returnToSelf` |
+| FR-10 | "Handled by Her Keys" only with execution **and** outcome (§19, O) | IMPLEMENTED | model: scenario G (execution AND success outcome; unconfirmed / approved-not-run / failed / undone / yesterday); UI: `TodayHandled` (`attentionUi.test.mjs`) |
 | FR-11 | Upcoming constraint — one, only if material (§20) | IN PROGRESS | model only; test pending |
 | FR-12 | What changed — no presentation markers in state (§21, P) | IN PROGRESS | model: scenario J; rollover / time-of-day pending |
 | FR-13 | Correction / adjustment through existing paths only (§22, H) | IN PROGRESS | seam in `model/narrative.ts`; test pending |
@@ -292,6 +292,11 @@ No test is removed or rewritten at T0.
 | `src/features/today/TodayDisclosure.tsx` (`TodayDisclosure`, `SectionLabel`) | MGP-01: the accessible expand/collapse and the real-heading label | T3 |
 | `src/features/today/TodaySourceLine.tsx` | Provenance / confidence in the permanent design-system language | T3 |
 | `tests/today/components.test.mjs`, `tests/today/support/*` | Render / props contract tests; a recording `expo-router` stub scoped to this feature's tests | T3 |
+| `tests/today/oneMove.test.mjs` | Scenario N: One Move lifecycle and every registered target kind | T4 |
+| `src/features/today/TodayAttention.tsx` | What needs her: specific rows, take-back, explicit approvals through `ConfirmationSheet` | T5 |
+| `src/features/today/TodayHandled.tsx` | Handled by Her Keys, in the permanent action-state language | T5 |
+| `src/features/today/useTodayActions.ts` | The two existing domain mutations the attention rows can make (`returnToSelf`, `decideIntent`), through `store.commit` | T5 |
+| `tests/today/attentionUi.test.mjs` | Attention / approval / handled render and interaction contract | T5 |
 
 **Existing Today files modified** are listed with their classification in §2.8 and their commits in the commit series (§10).
 
