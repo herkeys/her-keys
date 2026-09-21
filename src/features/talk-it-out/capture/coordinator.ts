@@ -13,14 +13,16 @@ import {
   supersedeInterpretation,
   type ProposeInterpretationInput,
 } from '../../../domain/interpretations';
-import { logicalDateAt } from '../../../domain/logicalDay';
+import { logicalDateAt, wallClockMinutesAt } from '../../../domain/logicalDay';
 import type { AppState, SystemRole } from '../../../domain/state';
 import type { AppStore } from '../../../state/appStore';
 import { ENVELOPE_LIMITS } from './local/envelope';
 import { clarificationCodeOf, revise } from './revise';
 import type { CaptureTextStore } from './textStore';
 import type {
+  AssumptionCode,
   ClarificationAnswer,
+  EvidenceRef,
   InterpretationContext,
   InterpretationFailure,
   Proposal,
@@ -54,6 +56,13 @@ export interface CaptureSession {
   /** What the reader recognised but the durable model cannot hold. Session-only: shown, never stored. */
   unsupported: readonly UnsupportedItem[];
   failure: InterpretationFailure | null;
+  /** What the reader ASSUMED and which of her words each fact came from, per reading. Session-only: never stored. */
+  details: ReadonlyMap<string, CaptureDetail>;
+}
+
+export interface CaptureDetail {
+  assumptions: readonly AssumptionCode[];
+  evidence: readonly EvidenceRef[];
 }
 
 export type SubmitOutcome =
@@ -218,12 +227,17 @@ export function createCaptureCoordinator(deps: CaptureCoordinatorDeps): CaptureC
     if (words === null) return { kind: 'text-unavailable', captureId };
 
     const result = precomputed ?? interpreter.interpret({ captureId, text: words, context: contextNow(state) });
-    sessions.set(captureId, { captureId, unsupported: result.unsupported, failure: result.failure });
+    const details = new Map<string, CaptureDetail>();
+    sessions.set(captureId, { captureId, unsupported: result.unsupported, failure: result.failure, details });
     if (result.proposals.length === 0) return { kind: 'captured', captureId, readingIds: [], duplicate, failure: result.failure, unsupported: result.unsupported };
 
     if (!(await proposeReadings(captureId, result.proposals))) return { kind: 'not-saved' };
     const after = snapshotState();
     const readings = after ? interpretationsOf(after, captureId) : [];
+    // The readings were proposed in the order of the proposals, so the first ones line up one to one.
+    readings.slice(0, result.proposals.length).forEach((reading, index) => {
+      details.set(reading.id, { assumptions: result.proposals[index].assumptions, evidence: result.proposals[index].evidence });
+    });
     return { kind: 'captured', captureId, readingIds: readings.map((r) => r.id), duplicate, failure: null, unsupported: result.unsupported };
   }
 
@@ -304,19 +318,23 @@ export function createCaptureCoordinator(deps: CaptureCoordinatorDeps): CaptureC
       const draft = draftOf(state, reading);
 
       let revised: Proposal | null = null;
+      let touched: ProposalPatch | null = null;
       if (edit.kind === 'patch') {
+        touched = edit.patch;
         revised = revise(draft, edit.patch, context);
       } else {
         const read = interpreter.readCorrection({ proposal: draft, text: edit.text, context });
-        if (read.kind === 'patch') revised = revise(draft, read.patch, context);
-        else if (read.kind === 'question') revised = revise(draft, {}, context, { extraSteps: read.request.steps });
+        if (read.kind === 'patch') {
+          touched = read.patch;
+          revised = revise(draft, read.patch, context);
+        } else if (read.kind === 'question') revised = revise(draft, {}, context, { extraSteps: read.request.steps });
       }
       if (!revised) {
         const attempts = (understoodFailures.get(readingId) ?? 0) + 1;
         understoodFailures.set(readingId, attempts);
         return { kind: 'not-understood', attempts, exhausted: attempts >= ENVELOPE_LIMITS.maxUnderstoodRetries };
       }
-      return applyRevision(readingId, revised);
+      return applyRevision(readingId, revised, touched);
     },
 
     async accept(readingId, choice) {
@@ -380,7 +398,7 @@ export function createCaptureCoordinator(deps: CaptureCoordinatorDeps): CaptureC
   };
 
   /** Superseding, never patching in place: the reading she was shown stays as history, and the new one names it. */
-  async function applyRevision(readingId: string, revised: Proposal): Promise<RevisionOutcome> {
+  async function applyRevision(readingId: string, revised: Proposal, touched: ProposalPatch | null = null): Promise<RevisionOutcome> {
     const saved = await store.commit((state, ctx: TransitionContext) => {
       const reading = state.interpretations.find((r) => r.id === readingId);
       if (!reading || (reading.state !== 'pending' && reading.state !== 'clarifying')) return state;
@@ -389,10 +407,58 @@ export function createCaptureCoordinator(deps: CaptureCoordinatorDeps): CaptureC
     if (!saved) return { kind: 'not-saved' };
     const after = snapshotState();
     const successor = after?.interpretations.find((r) => r.supersedesId === readingId);
-    if (!successor) return { kind: 'not-open' };
+    const previous = after?.interpretations.find((r) => r.id === readingId);
+    if (!after || !successor || !previous) return { kind: 'not-open' };
     understoodFailures.delete(readingId);
+
+    // What was ASSUMED about the reading she was shown still applies to whatever she did not change.
+    const session = sessions.get(successor.artifactId);
+    const carried = session?.details.get(readingId);
+    if (session && carried) {
+      (session.details as Map<string, CaptureDetail>).set(successor.id, {
+        assumptions: carriedAssumptions(carried.assumptions, previous, successor, after.user.timezone, touched),
+        evidence: [],
+      });
+    }
     return { kind: 'revised', readingId: successor.id, supersededId: readingId, stillClarifying: successor.state === 'clarifying' };
   }
+}
+
+const dayOf = (r: Interpretation, tz: string) => (r.startsAt !== null ? logicalDateAt(Date.parse(r.startsAt), tz) : r.dueDate);
+const minutesOf = (r: Interpretation, tz: string) => (r.startsAt !== null ? wallClockMinutesAt(Date.parse(r.startsAt), tz) : null);
+const lengthOf = (r: Interpretation) => (r.startsAt !== null && r.endsAt !== null ? Date.parse(r.endsAt) - Date.parse(r.startsAt) : null);
+
+/**
+ * An assumption stops being true the moment she supplies the thing that was assumed — whether or not her
+ * value happens to equal the assumed one ("5" assumed as 5 PM, then she says 5 PM: now it is stated). What
+ * she did not touch, and what did not change, carries forward.
+ */
+export function carriedAssumptions(
+  assumptions: readonly AssumptionCode[],
+  before: Interpretation,
+  after: Interpretation,
+  timeZone: string,
+  touched: ProposalPatch | null = null
+): readonly AssumptionCode[] {
+  return assumptions.filter((code) => {
+    switch (code) {
+      case 'date-assumed-today':
+      case 'date-rolled-forward':
+        return touched?.date === undefined && dayOf(before, timeZone) === dayOf(after, timeZone);
+      case 'meridiem-assumed':
+        return touched?.timeMinutes === undefined && minutesOf(before, timeZone) === minutesOf(after, timeZone);
+      case 'end-time-assumed':
+        return after.proposedKind === 'event' && touched?.durationMinutes === undefined && lengthOf(before) === lengthOf(after);
+      case 'amount-direction-unknown':
+        return after.value === null && touched?.amount === undefined && touched?.direction === undefined;
+      case 'title-shortened':
+        return touched?.title === undefined && before.title === after.title;
+      case 'multiple-children-no-single-subject':
+        return touched?.subject === undefined && before.subjectMemberId === after.subjectMemberId;
+      default:
+        return true;
+    }
+  });
 }
 
 /** For a clarifying reading: whether her free-text answers have failed enough times that the UI should stop asking and offer manual correction. */

@@ -16,8 +16,8 @@ export const ALEXA = { id: 'kid-alexa', displayName: 'Alexa', birthDate: '2018-0
 export const AYDEN = { id: 'kid-ayden', displayName: 'Ayden', birthDate: '2021-08-07', scope: 'child' };
 
 /** `mode: 'empty'` is a real household; `'demo'` is the fictional Ellis household (Josie and Theo). */
-export async function startWorld({ mode = 'empty', kids = [ALEXA, AYDEN], failWhen = null } = {}) {
-  const memory = createMemoryStorage();
+export async function startWorld({ mode = 'empty', kids = [ALEXA, AYDEN], failWhen = null, initial = {} } = {}) {
+  const memory = createMemoryStorage(initial);
   const control = { failWhen };
   const storage = {
     read: (key) => memory.read(key),
