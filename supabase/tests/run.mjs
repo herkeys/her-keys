@@ -217,6 +217,8 @@ function envC(only) {
 
   psql('b4_env_c', `BEGIN;\n${readFileSync(FIXTURES, 'utf8')}\nCOMMIT;`, { label: 'ENV C fixtures' });
   check('ENV C: identity fixtures created', scalar('b4_env_c', 'select count(*) from public.households;') === '2');
+  // Test-the-test only: scripts-dev/meals-mutation-check.cjs breaks ONE policy here and requires the suites to notice. Never set in a real run.
+  if (process.env.HERKEYS_MUTANT_SQL) psql('b4_env_c', process.env.HERKEYS_MUTANT_SQL, { label: 'ENV C mutant' });
 
   const files = readdirSync(HERE)
     .filter((f) => /^\d\d-.*\.sql$/.test(f))

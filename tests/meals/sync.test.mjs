@@ -6,6 +6,7 @@
  * PostgREST are in supabase/tests. The claim carries no meals: they reach the cloud as ordinary creates after binding.
  */
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { describe, test } from 'node:test';
 import { activeMeals, addMeal, archiveMeal, compareMealPlanEntries, updateMeal } from '../../src/domain/meals.ts';
 import { MEAL_SLOTS } from '../../src/domain/state.ts';
@@ -288,6 +289,17 @@ describe('the claim, accounts and demo', () => {
     assert.equal(cloud.calls.length, 0);
     assert.equal(a.persisted().identity.sync, null);
     assert.equal(cloud.table(MEALS).length, 0);
+  });
+});
+
+describe('[BU] the production composition is what these journeys run through', () => {
+  test('[BU1] [BU2] every device is built by composeAccountApp and is OPERATING after binding, so a disconnected composition fails the journeys above', async () => {
+    const harness = readFileSync(new URL('./support/twoDevice.mjs', import.meta.url), 'utf8');
+    assert.match(harness, /composeAccountApp\(\{/, 'the device is built by the function the production root calls');
+    assert.equal(/new (Coordinator|SyncRuntime)|createCoordinator\(|createSyncRuntime\(/.test(harness), false, 'no hand-built coordinator that production might forget to build');
+    const { a, accountCloud } = await boundDevice();
+    assert.deepEqual(a.syncRuntime.running()?.householdId, accountCloud.ids.householdId, 'bound means operating');
+    assert.equal(a.syncRuntime.constructed(), 1);
   });
 });
 

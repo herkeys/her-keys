@@ -75,6 +75,15 @@ describe('[V] [W] a grocery or prep task is a canonical task', () => {
   });
 });
 
+describe('[BW] the stable Meals context exists', () => {
+  test('[BW1] a fresh real household has exactly one Meals-role category, found by role and never by name', () => {
+    const meals = real().categories.filter((c) => c.systemRole === 'meals');
+    assert.equal(meals.length, 1);
+    assert.equal(meals[0].id, 'cat-meals');
+    assert.equal(buildMealsView(real(), TODAY).mealsCategoryId, 'cat-meals');
+  });
+});
+
 describe('[X] [Y] the Meals context', () => {
   test('[X1] [X2] only the Meals-category task is in the Meals view, and it is still in the Life hub\'s Other open tasks (no shared role change)', () => {
     let state = add(real(), { title: 'Buy tortillas' }).state;

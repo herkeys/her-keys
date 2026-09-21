@@ -2,7 +2,14 @@
   "feature": "HK-FEATURE-08-MEALS",
   "version": 1,
   "writtenAt": "ML1, before any UI or domain code",
-  "statusVocabulary": ["PASS", "SAFE-UNAVAILABLE", "NOT-APPLICABLE", "INHERITED-POSTURE", "DEFERRED-IN-RUN", "FAIL"],
+  "statusVocabulary": [
+    "PASS",
+    "SAFE-UNAVAILABLE",
+    "NOT-APPLICABLE",
+    "INHERITED-POSTURE",
+    "DEFERRED-IN-RUN",
+    "FAIL"
+  ],
   "convention": "A test title starts with the scenario id in brackets, e.g. [K]. The integrity test fails if a scenario has no test or a recorded result disagrees with the run. status PLANNED is replaced by the run result at ML8.",
   "testFiles": {
     "ENTRY": "tests/meals/mealPlanEntry.test.mjs",
@@ -17,360 +24,1986 @@
     "LIFE": "tests/meals/lifeIntegration.test.mjs",
     "SCREEN": "tests/meals/screen.test.mjs",
     "SQL77": "supabase/tests/77-meals-slot-status.sql",
-    "JRN": "supabase/tests/journey-meals.mjs"
+    "JRN": "supabase/tests/journey-composition.mjs"
   },
   "scenarios": [
-    { "id": "A", "tier": 1, "title": "No meal entries", "expected": "PASS",
+    {
+      "id": "A",
+      "tier": 1,
+      "title": "No meal entries",
+      "expected": "PASS",
       "setup": "real ready household, zero meals, zero tasks",
-      "assertions": ["A1 view.isEmpty is true", "A2 upNext holds today and tomorrow groups with no entries", "A3 no attention, score, gap or failure key exists anywhere in the view", "A4 the empty copy is exactly 'No meals planned yet.' and a primary 'Add a meal' action exists"],
-      "evidence": ["logicalDate", "availableActions", "unknownFacts"], "tests": ["VIEW", "COPY"], "mutants": ["M3"] },
-    { "id": "B", "tier": 1, "title": "Loading / hydrating state", "expected": "PASS",
+      "assertions": [
+        "A1 view.isEmpty is true",
+        "A2 upNext holds today and tomorrow groups with no entries",
+        "A3 no attention, score, gap or failure key exists anywhere in the view",
+        "A4 the empty copy is exactly 'No meals planned yet.' and a primary 'Add a meal' action exists"
+      ],
+      "evidence": [
+        "logicalDate",
+        "availableActions",
+        "unknownFacts"
+      ],
+      "tests": [
+        "VIEW",
+        "COPY"
+      ],
+      "mutants": [
+        "M3"
+      ]
+    },
+    {
+      "id": "B",
+      "tier": 1,
+      "title": "Loading / hydrating state",
+      "expected": "PASS",
       "setup": "store status hydrating; bound device with sync hydration unhydrated and hydrating; ready",
-      "assertions": ["B1 mealsScreenState is loading while the store is not ready", "B2 mealsScreenState is loading while an account-bound device hydration is not ready", "B3 the empty copy is never produced in loading", "B4 an unbound local household in ready state is ready"],
-      "evidence": ["screenState"], "tests": ["VIEW", "SCREEN"], "mutants": ["M13"] },
-    { "id": "C", "tier": 1, "title": "One entry", "expected": "PASS",
+      "assertions": [
+        "B1 mealsScreenState is loading while the store is not ready",
+        "B2 mealsScreenState is loading while an account-bound device hydration is not ready",
+        "B3 the empty copy is never produced in loading",
+        "B4 an unbound local household in ready state is ready"
+      ],
+      "evidence": [
+        "screenState"
+      ],
+      "tests": [
+        "VIEW",
+        "SCREEN"
+      ],
+      "mutants": [
+        "M13"
+      ]
+    },
+    {
+      "id": "C",
+      "tier": 1,
+      "title": "One entry",
+      "expected": "PASS",
       "setup": "one active dinner entry for today",
-      "assertions": ["C1 the entry view carries id, logicalDate, mealSlot, title, scope, provenance, lifecycle", "C2 semantic is planning-record, plannedState planned, executionState not-tracked", "C3 it appears in the today group of upNext", "C4 unknownFacts lists ingredients, allergens, nutrition, pantry"],
-      "evidence": ["mealPlanEntryId", "logicalDate", "mealSlot", "title", "scope", "provenance", "lifecycle", "plannedState", "executionState", "unknownFacts"], "tests": ["VIEW"], "mutants": [] },
-    { "id": "D", "tier": 1, "title": "Several dates", "expected": "PASS",
+      "assertions": [
+        "C1 the entry view carries id, logicalDate, mealSlot, title, scope, provenance, lifecycle",
+        "C2 semantic is planning-record, plannedState planned, executionState not-tracked",
+        "C3 it appears in the today group of upNext",
+        "C4 unknownFacts lists ingredients, allergens, nutrition, pantry"
+      ],
+      "evidence": [
+        "mealPlanEntryId",
+        "logicalDate",
+        "mealSlot",
+        "title",
+        "scope",
+        "provenance",
+        "lifecycle",
+        "plannedState",
+        "executionState",
+        "unknownFacts"
+      ],
+      "tests": [
+        "VIEW"
+      ],
+      "mutants": []
+    },
+    {
+      "id": "D",
+      "tier": 1,
+      "title": "Several dates",
+      "expected": "PASS",
       "setup": "entries on today, tomorrow, +5, +14, +15, +40",
-      "assertions": ["D1 today and tomorrow are in upNext", "D2 +5 and +14 are in nextDays, +15 and +40 are in later", "D3 days without entries are not present in nextDays", "D4 groups ascend by date"],
-      "evidence": ["logicalDate"], "tests": ["VIEW"], "mutants": [] },
-    { "id": "E", "tier": 1, "title": "Several entries on one date", "expected": "PASS",
+      "assertions": [
+        "D1 today and tomorrow are in upNext",
+        "D2 +5 and +14 are in nextDays, +15 and +40 are in later",
+        "D3 days without entries are not present in nextDays",
+        "D4 groups ascend by date"
+      ],
+      "evidence": [
+        "logicalDate"
+      ],
+      "tests": [
+        "VIEW"
+      ],
+      "mutants": []
+    },
+    {
+      "id": "E",
+      "tier": 1,
+      "title": "Several entries on one date",
+      "expected": "PASS",
       "setup": "breakfast, dinner, snack and unspecified entries on one date",
-      "assertions": ["E1 all four are present", "E2 order is breakfast, dinner, snack, unspecified", "E3 the order is identical after shuffling state.meals"],
-      "evidence": ["logicalDate", "mealSlot"], "tests": ["VIEW"], "mutants": ["M20"] },
-    { "id": "F", "tier": 1, "title": "Several entries on one date and slot", "expected": "PASS",
+      "assertions": [
+        "E1 all four are present",
+        "E2 order is breakfast, dinner, snack, unspecified",
+        "E3 the order is identical after shuffling state.meals"
+      ],
+      "evidence": [
+        "logicalDate",
+        "mealSlot"
+      ],
+      "tests": [
+        "VIEW"
+      ],
+      "mutants": [
+        "M20"
+      ]
+    },
+    {
+      "id": "F",
+      "tier": 1,
+      "title": "Several entries on one date and slot",
+      "expected": "PASS",
       "setup": "three dinner entries on one date",
-      "assertions": ["F1 all three survive with distinct ids", "F2 order is by id compared by code unit, not locale", "F3 order is stable across shuffles of state.meals"],
-      "evidence": ["mealPlanEntryId"], "tests": ["VIEW", "ACT"], "mutants": ["M9", "M20"] },
-    { "id": "G", "tier": 1, "title": "UNSPECIFIED slot", "expected": "PASS",
+      "assertions": [
+        "F1 all three survive with distinct ids",
+        "F2 order is by id compared by code unit, not locale",
+        "F3 order is stable across shuffles of state.meals"
+      ],
+      "evidence": [
+        "mealPlanEntryId"
+      ],
+      "tests": [
+        "VIEW",
+        "ACT"
+      ],
+      "mutants": [
+        "M9",
+        "M20"
+      ]
+    },
+    {
+      "id": "G",
+      "tier": 1,
+      "title": "UNSPECIFIED slot",
+      "expected": "PASS",
       "setup": "addMeal with no slot",
-      "assertions": ["G1 slot is unspecified, never dinner", "G2 the sheet default shows meal type 'Not set' with no chip selected", "G3 an unspecified entry shows no slot label and sorts last within its day"],
-      "evidence": ["mealSlot"], "tests": ["ACT", "VIEW", "SCREEN"], "mutants": [] },
-    { "id": "H", "tier": 1, "title": "Other closed-enum slots", "expected": "PASS",
+      "assertions": [
+        "G1 slot is unspecified, never dinner",
+        "G2 the sheet default shows meal type 'Not set' with no chip selected",
+        "G3 an unspecified entry shows no slot label and sorts last within its day"
+      ],
+      "evidence": [
+        "mealSlot"
+      ],
+      "tests": [
+        "ACT",
+        "VIEW",
+        "SCREEN"
+      ],
+      "mutants": []
+    },
+    {
+      "id": "H",
+      "tier": 1,
+      "title": "Other closed-enum slots",
+      "expected": "PASS",
       "setup": "one entry per slot value, then an invalid value",
-      "assertions": ["H1 each of the six values survives persistence, projection push and apply", "H2 an invalid slot is rejected by the schema and refused by apply, never coerced", "H3 slot ranks are breakfast 0, lunch 1, dinner 2, snack 3, other 4, unspecified 5"],
-      "evidence": ["mealSlot"], "tests": ["ENTRY", "SYNC", "VIEW"], "mutants": [] },
-    { "id": "I", "tier": 1, "title": "Create", "expected": "PASS",
+      "assertions": [
+        "H1 each of the six values survives persistence, projection push and apply",
+        "H2 an invalid slot is rejected by the schema and refused by apply, never coerced",
+        "H3 slot ranks are breakfast 0, lunch 1, dinner 2, snack 3, other 4, unspecified 5"
+      ],
+      "evidence": [
+        "mealSlot"
+      ],
+      "tests": [
+        "ENTRY",
+        "SYNC",
+        "VIEW"
+      ],
+      "mutants": []
+    },
+    {
+      "id": "I",
+      "tier": 1,
+      "title": "Create",
+      "expected": "PASS",
       "setup": "addMeal on a real ready household and a demo household",
-      "assertions": ["I1 a new stable id, status active, scope household, the Meals category", "I2 provenance is user-action, or demo-seed in a demo household", "I3 the title is normalized: trimmed, line breaks collapsed, at most 120", "I4 refusals invalid-title, invalid-date, plan-full and no-meals-context return the SAME state reference", "I5 the change observer queues a create intent in the same envelope"],
-      "evidence": ["mealPlanEntryId", "scope", "provenance", "lifecycle"], "tests": ["ACT", "ENTRY", "SYNC"], "mutants": [] },
-    { "id": "J", "tier": 1, "title": "Edit title", "expected": "PASS",
+      "assertions": [
+        "I1 a new stable id, status active, scope household, the Meals category",
+        "I2 provenance is user-action, or demo-seed in a demo household",
+        "I3 the title is normalized: trimmed, line breaks collapsed, at most 120",
+        "I4 refusals invalid-title, invalid-date, plan-full and no-meals-context return the SAME state reference",
+        "I5 the change observer queues a create intent in the same envelope"
+      ],
+      "evidence": [
+        "mealPlanEntryId",
+        "scope",
+        "provenance",
+        "lifecycle"
+      ],
+      "tests": [
+        "ACT",
+        "ENTRY",
+        "SYNC"
+      ],
+      "mutants": []
+    },
+    {
+      "id": "J",
+      "tier": 1,
+      "title": "Edit title",
+      "expected": "PASS",
       "setup": "updateMeal with a new title",
-      "assertions": ["J1 same id, only title changed", "J2 provenance is not restamped", "J3 an unchanged title is a same-reference no-op", "J4 an update intent is queued"],
-      "evidence": ["mealPlanEntryId", "title", "provenance"], "tests": ["ACT"], "mutants": [] },
-    { "id": "K", "tier": 1, "title": "Move date", "expected": "PASS",
+      "assertions": [
+        "J1 same id, only title changed",
+        "J2 provenance is not restamped",
+        "J3 an unchanged title is a same-reference no-op",
+        "J4 an update intent is queued"
+      ],
+      "evidence": [
+        "mealPlanEntryId",
+        "title",
+        "provenance"
+      ],
+      "tests": [
+        "ACT"
+      ],
+      "mutants": []
+    },
+    {
+      "id": "K",
+      "tier": 1,
+      "title": "Move date",
+      "expected": "PASS",
       "setup": "updateMeal with a new date",
-      "assertions": ["K1 the same stable id moves, entry count is unchanged", "K2 no duplicate is created", "K3 an invalid date is refused", "K4 the date string is stored exactly as given"],
-      "evidence": ["mealPlanEntryId", "logicalDate"], "tests": ["ACT", "DATE"], "mutants": ["M8"] },
-    { "id": "L", "tier": 1, "title": "Change slot", "expected": "PASS",
+      "assertions": [
+        "K1 the same stable id moves, entry count is unchanged",
+        "K2 no duplicate is created",
+        "K3 an invalid date is refused",
+        "K4 the date string is stored exactly as given"
+      ],
+      "evidence": [
+        "mealPlanEntryId",
+        "logicalDate"
+      ],
+      "tests": [
+        "ACT",
+        "DATE"
+      ],
+      "mutants": [
+        "M8"
+      ]
+    },
+    {
+      "id": "L",
+      "tier": 1,
+      "title": "Change slot",
+      "expected": "PASS",
       "setup": "updateMeal with a new slot",
-      "assertions": ["L1 same id, slot changed, every other field intact", "L2 changing back to unspecified is allowed"],
-      "evidence": ["mealSlot"], "tests": ["ACT"], "mutants": [] },
-    { "id": "M", "tier": 1, "title": "Move into an occupied date and slot", "expected": "PASS",
+      "assertions": [
+        "L1 same id, slot changed, every other field intact",
+        "L2 changing back to unspecified is allowed"
+      ],
+      "evidence": [
+        "mealSlot"
+      ],
+      "tests": [
+        "ACT"
+      ],
+      "mutants": []
+    },
+    {
+      "id": "M",
+      "tier": 1,
+      "title": "Move into an occupied date and slot",
+      "expected": "PASS",
       "setup": "entry X dinner Tue, entry Y moved to dinner Tue",
-      "assertions": ["M1 both entries exist with their own ids", "M2 neither was overwritten or merged", "M3 the move is not refused"],
-      "evidence": ["mealPlanEntryId", "logicalDate", "mealSlot"], "tests": ["ACT"], "mutants": ["M9"] },
-    { "id": "N", "tier": 1, "title": "Archive / remove", "expected": "PASS",
+      "assertions": [
+        "M1 both entries exist with their own ids",
+        "M2 neither was overwritten or merged",
+        "M3 the move is not refused"
+      ],
+      "evidence": [
+        "mealPlanEntryId",
+        "logicalDate",
+        "mealSlot"
+      ],
+      "tests": [
+        "ACT"
+      ],
+      "mutants": [
+        "M9"
+      ]
+    },
+    {
+      "id": "N",
+      "tier": 1,
+      "title": "Archive / remove",
+      "expected": "PASS",
       "setup": "archiveMeal on an active entry",
-      "assertions": ["N1 status becomes archived and the row is retained with its id", "N2 it is excluded from the view, from upcomingMeals and from the Life status", "N3 archiving an archived entry is refused as a same-reference no-op", "N4 an archived entry cannot be edited or moved"],
-      "evidence": ["lifecycle"], "tests": ["ACT", "VIEW", "LIFE"], "mutants": ["M18"] },
-    { "id": "O", "tier": 1, "title": "Archive propagates to a second device", "expected": "PASS",
+      "assertions": [
+        "N1 status becomes archived and the row is retained with its id",
+        "N2 it is excluded from the view, from upcomingMeals and from the Life status",
+        "N3 archiving an archived entry is refused as a same-reference no-op",
+        "N4 an archived entry cannot be edited or moved"
+      ],
+      "evidence": [
+        "lifecycle"
+      ],
+      "tests": [
+        "ACT",
+        "VIEW",
+        "LIFE"
+      ],
+      "mutants": [
+        "M18"
+      ]
+    },
+    {
+      "id": "O",
+      "tier": 1,
+      "title": "Archive propagates to a second device",
+      "expected": "PASS",
       "setup": "two composeAccountApp devices over the fake cloud, and the real-database journey",
-      "assertions": ["O1 device A archives, syncs, device B pulls", "O2 B's active view no longer shows the entry", "O3 B holds the row with status archived", "O4 the real PostgreSQL journey shows the same"],
-      "evidence": ["lifecycle"], "tests": ["SYNC", "JRN"], "mutants": ["M14"] },
-    { "id": "P", "tier": 1, "title": "Removed does not become skipped or eaten", "expected": "PASS",
+      "assertions": [
+        "O1 device A archives, syncs, device B pulls",
+        "O2 B's active view no longer shows the entry",
+        "O3 B holds the row with status archived",
+        "O4 the real PostgreSQL journey shows the same"
+      ],
+      "evidence": [
+        "lifecycle"
+      ],
+      "tests": [
+        "SYNC",
+        "JRN"
+      ],
+      "mutants": [
+        "M14"
+      ]
+    },
+    {
+      "id": "P",
+      "tier": 1,
+      "title": "Removed does not become skipped or eaten",
+      "expected": "PASS",
       "setup": "archive an entry and inspect observations and copy",
-      "assertions": ["P1 state.observations is unchanged by archive", "P2 no skipped, completed or eaten value exists on the entry or view", "P3 no copy the screen can produce says skipped or eaten"],
-      "evidence": ["lifecycle", "executionState"], "tests": ["ACT", "COPY"], "mutants": ["M18"] },
-    { "id": "Q", "tier": 1, "title": "A past planned entry does not become eaten", "expected": "PASS",
+      "assertions": [
+        "P1 state.observations is unchanged by archive",
+        "P2 no skipped, completed or eaten value exists on the entry or view",
+        "P3 no copy the screen can produce says skipped or eaten"
+      ],
+      "evidence": [
+        "lifecycle",
+        "executionState"
+      ],
+      "tests": [
+        "ACT",
+        "COPY"
+      ],
+      "mutants": [
+        "M18"
+      ]
+    },
+    {
+      "id": "Q",
+      "tier": 1,
+      "title": "A past planned entry does not become eaten",
+      "expected": "PASS",
       "setup": "an active entry dated three days before today",
-      "assertions": ["Q1 it stays a planning record with executionState not-tracked", "Q2 it is not in upNext or nextDays", "Q3 it can appear in planAgain and nowhere as eaten, cooked or completed", "Q4 the row is unchanged by the passage of time"],
-      "evidence": ["plannedState", "executionState"], "tests": ["VIEW"], "mutants": ["M2"] },
-    { "id": "R", "tier": 1, "title": "A blank date stays neutral", "expected": "PASS",
+      "assertions": [
+        "Q1 it stays a planning record with executionState not-tracked",
+        "Q2 it is not in upNext or nextDays",
+        "Q3 it can appear in planAgain and nowhere as eaten, cooked or completed",
+        "Q4 the row is unchanged by the passage of time"
+      ],
+      "evidence": [
+        "plannedState",
+        "executionState"
+      ],
+      "tests": [
+        "VIEW"
+      ],
+      "mutants": [
+        "M2"
+      ]
+    },
+    {
+      "id": "R",
+      "tier": 1,
+      "title": "A blank date stays neutral",
+      "expected": "PASS",
       "setup": "a fortnight with one entry",
-      "assertions": ["R1 blank days are not rendered in nextDays", "R2 no gap, missing, unplanned or attention key exists", "R3 a blank today or tomorrow reads 'No meals planned.' in muted tone"],
-      "evidence": ["logicalDate"], "tests": ["VIEW", "COPY"], "mutants": ["M3"] },
-    { "id": "S", "tier": 1, "title": "No planning score or streak", "expected": "PASS",
+      "assertions": [
+        "R1 blank days are not rendered in nextDays",
+        "R2 no gap, missing, unplanned or attention key exists",
+        "R3 a blank today or tomorrow reads 'No meals planned.' in muted tone"
+      ],
+      "evidence": [
+        "logicalDate"
+      ],
+      "tests": [
+        "VIEW",
+        "COPY"
+      ],
+      "mutants": [
+        "M3"
+      ]
+    },
+    {
+      "id": "S",
+      "tier": 1,
+      "title": "No planning score or streak",
+      "expected": "PASS",
       "setup": "structural key scan of the view and every copy string",
-      "assertions": ["S1 no score, streak, percent, complete, completion or weekly key", "S2 no digits-with-percent or 'x of y planned' string can be produced"],
-      "evidence": ["unknownFacts"], "tests": ["VIEW", "COPY"], "mutants": [] },
-    { "id": "T", "tier": 1, "title": "Plan This Again creates a new stable entry", "expected": "PASS",
+      "assertions": [
+        "S1 no score, streak, percent, complete, completion or weekly key",
+        "S2 no digits-with-percent or 'x of y planned' string can be produced"
+      ],
+      "evidence": [
+        "unknownFacts"
+      ],
+      "tests": [
+        "VIEW",
+        "COPY"
+      ],
+      "mutants": []
+    },
+    {
+      "id": "T",
+      "tier": 1,
+      "title": "Plan This Again creates a new stable entry",
+      "expected": "PASS",
       "setup": "mealDraftFrom an existing entry, then addMeal",
-      "assertions": ["T1 the draft carries title and slot and defaults the date to logical today as a visible value", "T2 saving creates a NEW entry with a new id", "T3 provenance is user-action and stores no lineage", "T4 no recurrence rule, favorite or library entity is created"],
-      "evidence": ["mealPlanEntryId", "provenance"], "tests": ["ACT"], "mutants": ["M19"] },
-    { "id": "U", "tier": 1, "title": "The original is unchanged after Plan This Again", "expected": "PASS",
+      "assertions": [
+        "T1 the draft carries title and slot and defaults the date to logical today as a visible value",
+        "T2 saving creates a NEW entry with a new id",
+        "T3 provenance is user-action and stores no lineage",
+        "T4 no recurrence rule, favorite or library entity is created"
+      ],
+      "evidence": [
+        "mealPlanEntryId",
+        "provenance"
+      ],
+      "tests": [
+        "ACT"
+      ],
+      "mutants": [
+        "M19"
+      ]
+    },
+    {
+      "id": "U",
+      "tier": 1,
+      "title": "The original is unchanged after Plan This Again",
+      "expected": "PASS",
       "setup": "snapshot the source entry, plan again, compare",
-      "assertions": ["U1 the source row keeps its object reference", "U2 the source row deep-equals its snapshot", "U3 state.recurrenceRules is unchanged"],
-      "evidence": ["mealPlanEntryId"], "tests": ["ACT"], "mutants": ["M19"] },
-    { "id": "V", "tier": 1, "title": "Grocery task creation", "expected": "PASS",
+      "assertions": [
+        "U1 the source row keeps its object reference",
+        "U2 the source row deep-equals its snapshot",
+        "U3 state.recurrenceRules is unchanged"
+      ],
+      "evidence": [
+        "mealPlanEntryId"
+      ],
+      "tests": [
+        "ACT"
+      ],
+      "mutants": [
+        "M19"
+      ]
+    },
+    {
+      "id": "V",
+      "tier": 1,
+      "title": "Grocery task creation",
+      "expected": "PASS",
       "setup": "addMealTask 'Buy tortillas'",
-      "assertions": ["V1 a canonical Task in the Meals category, scope household, plan unplanned, provenance user-action", "V2 it is listed by openTasksInCategory and by view.mealTasks", "V3 no new task field or table is created", "V4 the confirmation copy is 'Added to your meal tasks.' and never names a meal"],
-      "evidence": ["mealTaskIds", "dueDateSource", "durationSource"], "tests": ["TASK", "COPY"], "mutants": [] },
-    { "id": "W", "tier": 1, "title": "Prep task creation", "expected": "PASS",
+      "assertions": [
+        "V1 a canonical Task in the Meals category, scope household, plan unplanned, provenance user-action",
+        "V2 it is listed by openTasksInCategory and by view.mealTasks",
+        "V3 no new task field or table is created",
+        "V4 the confirmation copy is 'Added to your meal tasks.' and never names a meal"
+      ],
+      "evidence": [
+        "mealTaskIds",
+        "dueDateSource",
+        "durationSource"
+      ],
+      "tests": [
+        "TASK",
+        "COPY"
+      ],
+      "mutants": []
+    },
+    {
+      "id": "W",
+      "tier": 1,
+      "title": "Prep task creation",
+      "expected": "PASS",
       "setup": "addMealTask 'Defrost chicken'",
-      "assertions": ["W1 the persisted shape is identical to a grocery task (no grocery or prep discriminator)", "W2 no groceryTaskIds or prepTaskIds evidence field exists because no classification is stored"],
-      "evidence": ["mealTaskIds"], "tests": ["TASK"], "mutants": [] },
-    { "id": "X", "tier": 1, "title": "Meals context present: task discoverable", "expected": "PASS",
+      "assertions": [
+        "W1 the persisted shape is identical to a grocery task (no grocery or prep discriminator)",
+        "W2 no groceryTaskIds or prepTaskIds evidence field exists because no classification is stored"
+      ],
+      "evidence": [
+        "mealTaskIds"
+      ],
+      "tests": [
+        "TASK"
+      ],
+      "mutants": []
+    },
+    {
+      "id": "X",
+      "tier": 1,
+      "title": "Meals context present: task discoverable",
+      "expected": "PASS",
       "setup": "a Meals-category task and a task in another category",
-      "assertions": ["X1 only the Meals-category task is in view.mealTasks", "X2 the Meals task is still returned by openTasksWithoutList (option B, no shared role change)", "X3 association is by systemRole, unchanged by renaming the category"],
-      "evidence": ["mealsTaskContext"], "tests": ["TASK"], "mutants": [] },
-    { "id": "Y", "tier": 1, "title": "Meals context absent: truthful degradation", "expected": "PASS",
+      "assertions": [
+        "X1 only the Meals-category task is in view.mealTasks",
+        "X2 the Meals task is still returned by openTasksWithoutList (option B, no shared role change)",
+        "X3 association is by systemRole, unchanged by renaming the category"
+      ],
+      "evidence": [
+        "mealsTaskContext"
+      ],
+      "tests": [
+        "TASK"
+      ],
+      "mutants": []
+    },
+    {
+      "id": "Y",
+      "tier": 1,
+      "title": "Meals context absent: truthful degradation",
+      "expected": "PASS",
       "setup": "state whose Meals category is missing, then archived",
-      "assertions": ["Y1 missing: context is no-meals-context, mealTasks is empty (never all tasks), creation refuses honestly, nothing throws", "Y2 archived: still resolves and works", "Y3 the screen shows an unavailable notice, not an empty-plan message"],
-      "evidence": ["mealsTaskContext"], "tests": ["TASK", "VIEW", "SCREEN"], "mutants": [] },
-    { "id": "Z", "tier": 1, "title": "Unknown task duration", "expected": "PASS",
+      "assertions": [
+        "Y1 missing: context is no-meals-context, mealTasks is empty (never all tasks), creation refuses honestly, nothing throws",
+        "Y2 archived: still resolves and works",
+        "Y3 the screen shows an unavailable notice, not an empty-plan message"
+      ],
+      "evidence": [
+        "mealsTaskContext"
+      ],
+      "tests": [
+        "TASK",
+        "VIEW",
+        "SCREEN"
+      ],
+      "mutants": []
+    },
+    {
+      "id": "Z",
+      "tier": 1,
+      "title": "Unknown task duration",
+      "expected": "PASS",
       "setup": "a Meals task with durationSource null",
-      "assertions": ["Z1 the view reports durationSource null", "Z2 no duration is shown and none is treated as 15 minutes"],
-      "evidence": ["durationSource"], "tests": ["TASK", "VIEW"], "mutants": [] },
-    { "id": "AA", "tier": 1, "title": "Default duration remains default", "expected": "PASS",
+      "assertions": [
+        "Z1 the view reports durationSource null",
+        "Z2 no duration is shown and none is treated as 15 minutes"
+      ],
+      "evidence": [
+        "durationSource"
+      ],
+      "tests": [
+        "TASK",
+        "VIEW"
+      ],
+      "mutants": []
+    },
+    {
+      "id": "AA",
+      "tier": 1,
+      "title": "Default duration remains default",
+      "expected": "PASS",
       "setup": "addMealTask with and without minutes",
-      "assertions": ["AA1 untouched duration records durationSource default", "AA2 typed minutes record durationSource user", "AA3 a default is never reported as stated"],
-      "evidence": ["durationSource"], "tests": ["TASK"], "mutants": ["M17"] },
-    { "id": "AB", "tier": 1, "title": "A due-date default is not laundered into a user fact", "expected": "PASS",
+      "assertions": [
+        "AA1 untouched duration records durationSource default",
+        "AA2 typed minutes record durationSource user",
+        "AA3 a default is never reported as stated"
+      ],
+      "evidence": [
+        "durationSource"
+      ],
+      "tests": [
+        "TASK"
+      ],
+      "mutants": [
+        "M17"
+      ]
+    },
+    {
+      "id": "AB",
+      "tier": 1,
+      "title": "A due-date default is not laundered into a user fact",
+      "expected": "PASS",
       "setup": "addMealTask with due unconfirmed, then confirmed, then absent",
-      "assertions": ["AB1 unconfirmed: dueDate null", "AB2 confirmed: dueDate is the chosen date and plan stays unplanned", "AB3 the projection reports dueDateSource not-recorded for any dated task"],
-      "evidence": ["dueDateSource"], "tests": ["TASK"], "mutants": ["M15"] },
-    { "id": "AC", "tier": 1, "title": "An assigned task is not automatically covered", "expected": "PASS",
+      "assertions": [
+        "AB1 unconfirmed: dueDate null",
+        "AB2 confirmed: dueDate is the chosen date and plan stays unplanned",
+        "AB3 the projection reports dueDateSource not-recorded for any dated task"
+      ],
+      "evidence": [
+        "dueDateSource"
+      ],
+      "tests": [
+        "TASK"
+      ],
+      "mutants": [
+        "M15"
+      ]
+    },
+    {
+      "id": "AC",
+      "tier": 1,
+      "title": "An assigned task is not automatically covered",
+      "expected": "PASS",
       "setup": "responsibility fixtures in requested, acknowledged, accepted, accepted-still-needs-me, unacknowledged",
-      "assertions": ["AC1 the wording follows the responsibility table exactly", "AC2 coverage is not-established in every state", "AC3 the words covered, handled, taken care of and done never appear"],
-      "evidence": ["responsibilityState", "coverageState"], "tests": ["TASK", "COPY"], "mutants": ["M7"] },
-    { "id": "AD", "tier": 1, "title": "Grocery completion is not pantry inventory", "expected": "PASS",
+      "assertions": [
+        "AC1 the wording follows the responsibility table exactly",
+        "AC2 coverage is not-established in every state",
+        "AC3 the words covered, handled, taken care of and done never appear"
+      ],
+      "evidence": [
+        "responsibilityState",
+        "coverageState"
+      ],
+      "tests": [
+        "TASK",
+        "COPY"
+      ],
+      "mutants": [
+        "M7"
+      ]
+    },
+    {
+      "id": "AD",
+      "tier": 1,
+      "title": "Grocery completion is not pantry inventory",
+      "expected": "PASS",
       "setup": "complete the task 'Buy milk'",
-      "assertions": ["AD1 the task leaves the open list", "AD2 no inventory, pantry, stock or available field or string exists", "AD3 no other entry gains any state"],
-      "evidence": ["mealTaskIds"], "tests": ["TASK", "COPY"], "mutants": ["M4"] },
-    { "id": "AE", "tier": 1, "title": "Prep completion is not a meal served", "expected": "PASS",
+      "assertions": [
+        "AD1 the task leaves the open list",
+        "AD2 no inventory, pantry, stock or available field or string exists",
+        "AD3 no other entry gains any state"
+      ],
+      "evidence": [
+        "mealTaskIds"
+      ],
+      "tests": [
+        "TASK",
+        "COPY"
+      ],
+      "mutants": [
+        "M4"
+      ]
+    },
+    {
+      "id": "AE",
+      "tier": 1,
+      "title": "Prep completion is not a meal served",
+      "expected": "PASS",
       "setup": "complete 'Defrost chicken' beside a same-day dinner entry",
-      "assertions": ["AE1 the entry view is byte-identical before and after", "AE2 executionState stays not-tracked"],
-      "evidence": ["executionState"], "tests": ["TASK", "VIEW"], "mutants": ["M5"] },
-    { "id": "AF", "tier": 1, "title": "Restart preserves the MealPlanEntry", "expected": "PASS",
+      "assertions": [
+        "AE1 the entry view is byte-identical before and after",
+        "AE2 executionState stays not-tracked"
+      ],
+      "evidence": [
+        "executionState"
+      ],
+      "tests": [
+        "TASK",
+        "VIEW"
+      ],
+      "mutants": [
+        "M5"
+      ]
+    },
+    {
+      "id": "AF",
+      "tier": 1,
+      "title": "Restart preserves the MealPlanEntry",
+      "expected": "PASS",
       "setup": "encode, decode and relaunch the store from memory storage",
-      "assertions": ["AF1 id, date, slot, title, status, scope, provenance survive", "AF2 ordering is identical", "AF3 an old row without slot or status decodes as unspecified and active"],
-      "evidence": ["mealPlanEntryId", "logicalDate", "mealSlot", "lifecycle"], "tests": ["ENTRY", "SYNC"], "mutants": [] },
-    { "id": "AG", "tier": 1, "title": "Offline create then reconnect", "expected": "PASS",
+      "assertions": [
+        "AF1 id, date, slot, title, status, scope, provenance survive",
+        "AF2 ordering is identical",
+        "AF3 an old row without slot or status decodes as unspecified and active"
+      ],
+      "evidence": [
+        "mealPlanEntryId",
+        "logicalDate",
+        "mealSlot",
+        "lifecycle"
+      ],
+      "tests": [
+        "ENTRY",
+        "SYNC"
+      ],
+      "mutants": []
+    },
+    {
+      "id": "AG",
+      "tier": 1,
+      "title": "Offline create then reconnect",
+      "expected": "PASS",
       "setup": "fake cloud offline, create, edit, move, archive, restart, reconnect",
-      "assertions": ["AG1 no duplicate and no loss", "AG2 the queue drains", "AG3 the cloud row carries the final slot, date and status"],
-      "evidence": ["mealPlanEntryId", "lifecycle"], "tests": ["SYNC"], "mutants": ["M11"] },
-    { "id": "AH", "tier": 1, "title": "A second client receives the logical date", "expected": "PASS",
+      "assertions": [
+        "AG1 no duplicate and no loss",
+        "AG2 the queue drains",
+        "AG3 the cloud row carries the final slot, date and status"
+      ],
+      "evidence": [
+        "mealPlanEntryId",
+        "lifecycle"
+      ],
+      "tests": [
+        "SYNC"
+      ],
+      "mutants": [
+        "M11"
+      ]
+    },
+    {
+      "id": "AH",
+      "tier": 1,
+      "title": "A second client receives the logical date",
+      "expected": "PASS",
       "setup": "device A creates a Tuesday entry, device B pulls",
-      "assertions": ["AH1 B holds the exact same YYYY-MM-DD string", "AH2 the real-database journey agrees"],
-      "evidence": ["logicalDate"], "tests": ["SYNC", "JRN"], "mutants": ["M1"] },
-    { "id": "AI", "tier": 1, "title": "A device timezone change does not move the logical date", "expected": "PASS",
+      "assertions": [
+        "AH1 B holds the exact same YYYY-MM-DD string",
+        "AH2 the real-database journey agrees"
+      ],
+      "evidence": [
+        "logicalDate"
+      ],
+      "tests": [
+        "SYNC",
+        "JRN"
+      ],
+      "mutants": [
+        "M1"
+      ]
+    },
+    {
+      "id": "AI",
+      "tier": 1,
+      "title": "A device timezone change does not move the logical date",
+      "expected": "PASS",
       "setup": "stub deviceTimeZone across Auckland and Los Angeles",
-      "assertions": ["AI1 state.user.timezone is unchanged", "AI2 today and every entry date are identical", "AI3 Tuesday stays Tuesday"],
-      "evidence": ["logicalDate"], "tests": ["DATE"], "mutants": ["M1"] },
-    { "id": "AJ", "tier": 1, "title": "Household timezone follows the logical-date contract", "expected": "PASS",
+      "assertions": [
+        "AI1 state.user.timezone is unchanged",
+        "AI2 today and every entry date are identical",
+        "AI3 Tuesday stays Tuesday"
+      ],
+      "evidence": [
+        "logicalDate"
+      ],
+      "tests": [
+        "DATE"
+      ],
+      "mutants": [
+        "M1"
+      ]
+    },
+    {
+      "id": "AJ",
+      "tier": 1,
+      "title": "Household timezone follows the logical-date contract",
+      "expected": "PASS",
       "setup": "instants around midnight in the household timezone",
-      "assertions": ["AJ1 today is derived from the household timezone", "AJ2 23:30 in New York is still that New York day", "AJ3 entries store calendar dates and are never re-derived from instants"],
-      "evidence": ["logicalDate"], "tests": ["DATE"], "mutants": ["M1"] },
-    { "id": "AK", "tier": 1, "title": "Account switch isolates households", "expected": "PASS",
+      "assertions": [
+        "AJ1 today is derived from the household timezone",
+        "AJ2 23:30 in New York is still that New York day",
+        "AJ3 entries store calendar dates and are never re-derived from instants"
+      ],
+      "evidence": [
+        "logicalDate"
+      ],
+      "tests": [
+        "DATE"
+      ],
+      "mutants": [
+        "M1"
+      ]
+    },
+    {
+      "id": "AK",
+      "tier": 1,
+      "title": "Account switch isolates households",
+      "expected": "PASS",
       "setup": "a device bound to account A meets account B",
-      "assertions": ["AK1 AccountState is boundOther and only the conflict route opens", "AK2 B's pull returns none of A's meals", "AK3 A's local meals are not readable through B's session"],
-      "evidence": ["scope"], "tests": ["SYNC"], "mutants": [] },
-    { "id": "AL", "tier": 1, "title": "An unrelated account is denied (backend introduced)", "expected": "PASS",
+      "assertions": [
+        "AK1 AccountState is boundOther and only the conflict route opens",
+        "AK2 B's pull returns none of A's meals",
+        "AK3 A's local meals are not readable through B's session"
+      ],
+      "evidence": [
+        "scope"
+      ],
+      "tests": [
+        "SYNC"
+      ],
+      "mutants": []
+    },
+    {
+      "id": "AL",
+      "tier": 1,
+      "title": "An unrelated account is denied (backend introduced)",
+      "expected": "PASS",
       "setup": "real PostgreSQL with USER C and anon",
-      "assertions": ["AL1 read, insert, update and archive are denied for USER C", "AL2 anon is denied", "AL3 the owner is permitted, so the denial is not an over-restriction"],
-      "evidence": ["scope"], "tests": ["SQL77", "JRN"], "mutants": ["M10"] },
-    { "id": "AM", "tier": 1, "title": "No allergy record does not produce a safe claim", "expected": "PASS",
+      "assertions": [
+        "AL1 read, insert, update and archive are denied for USER C",
+        "AL2 anon is denied",
+        "AL3 the owner is permitted, so the denial is not an over-restriction"
+      ],
+      "evidence": [
+        "scope"
+      ],
+      "tests": [
+        "SQL77",
+        "JRN"
+      ],
+      "mutants": [
+        "M10"
+      ]
+    },
+    {
+      "id": "AM",
+      "tier": 1,
+      "title": "No allergy record does not produce a safe claim",
+      "expected": "PASS",
       "setup": "meal titles such as 'Peanut noodles' and every copy string",
-      "assertions": ["AM1 no safe, allergen-free, fine-for or okay-for string can be produced", "AM2 unknownFacts includes allergens", "AM3 the view reads nothing from the title"],
-      "evidence": ["unknownFacts"], "tests": ["VIEW", "COPY"], "mutants": ["M6"] },
-    { "id": "AN", "tier": 1, "title": "A user-provided dietary fact stays attributed", "expected": "NOT-APPLICABLE",
+      "assertions": [
+        "AM1 no safe, allergen-free, fine-for or okay-for string can be produced",
+        "AM2 unknownFacts includes allergens",
+        "AM3 the view reads nothing from the title"
+      ],
+      "evidence": [
+        "unknownFacts"
+      ],
+      "tests": [
+        "VIEW",
+        "COPY"
+      ],
+      "mutants": [
+        "M6"
+      ]
+    },
+    {
+      "id": "AN",
+      "tier": 1,
+      "title": "A user-provided dietary fact stays attributed",
+      "expected": "NOT-APPLICABLE",
       "setup": "capability probe",
-      "assertions": ["AN1 the foundation has no dietary or allergy field (a test fails loudly if one appears, so this row is revisited)"],
-      "evidence": ["unknownFacts"], "tests": ["BOUND"], "mutants": [] },
-    { "id": "AO", "tier": 1, "title": "A meal plan does not become Calendar scheduled time", "expected": "PASS",
+      "assertions": [
+        "AN1 the foundation has no dietary or allergy field (a test fails loudly if one appears, so this row is revisited)"
+      ],
+      "evidence": [
+        "unknownFacts"
+      ],
+      "tests": [
+        "BOUND"
+      ],
+      "mutants": []
+    },
+    {
+      "id": "AO",
+      "tier": 1,
+      "title": "A meal plan does not become Calendar scheduled time",
+      "expected": "PASS",
       "setup": "Daily Load and projectDay with zero versus many meals",
-      "assertions": ["AO1 projectDay and the Daily Load output are identical", "AO2 the entry view has no time, start, end or duration field", "AO3 no copy names a time of day"],
-      "evidence": ["plannedState"], "tests": ["LIFE", "VIEW"], "mutants": [] },
-    { "id": "AP", "tier": 1, "title": "The same title on several dates stays separate", "expected": "PASS",
+      "assertions": [
+        "AO1 projectDay and the Daily Load output are identical",
+        "AO2 the entry view has no time, start, end or duration field",
+        "AO3 no copy names a time of day"
+      ],
+      "evidence": [
+        "plannedState"
+      ],
+      "tests": [
+        "LIFE",
+        "VIEW"
+      ],
+      "mutants": []
+    },
+    {
+      "id": "AP",
+      "tier": 1,
+      "title": "The same title on several dates stays separate",
+      "expected": "PASS",
       "setup": "'Tacos' on three Tuesdays",
-      "assertions": ["AP1 three ids and three records", "AP2 no repeats key and an empty recurringWork", "AP3 no copy says repeats or every"],
-      "evidence": ["mealPlanEntryId"], "tests": ["VIEW", "REC", "COPY"], "mutants": [] },
-    { "id": "AQ", "tier": 1, "title": "A stale editor cannot silently overwrite", "expected": "PASS",
+      "assertions": [
+        "AP1 three ids and three records",
+        "AP2 no repeats key and an empty recurringWork",
+        "AP3 no copy says repeats or every"
+      ],
+      "evidence": [
+        "mealPlanEntryId"
+      ],
+      "tests": [
+        "VIEW",
+        "REC",
+        "COPY"
+      ],
+      "mutants": []
+    },
+    {
+      "id": "AQ",
+      "tier": 1,
+      "title": "A stale editor cannot silently overwrite",
+      "expected": "PASS",
       "setup": "an editor opened, a change arrives, the editor saves; and a cross-device stale push",
-      "assertions": ["AQ1 updateMeal with a stale expected snapshot refuses with stale and returns the same state", "AQ2 a stale cross-device push becomes unapplied cas-conflict evidence and leaves the server row unchanged", "AQ3 the newer state wins on both devices"],
-      "evidence": ["lifecycle", "title"], "tests": ["ACT", "SYNC"], "mutants": ["M12"] },
-
-    { "id": "AR", "tier": 2, "title": "Dense 60+ MealPlanEntries", "expected": "PASS",
+      "assertions": [
+        "AQ1 updateMeal with a stale expected snapshot refuses with stale and returns the same state",
+        "AQ2 a stale cross-device push becomes unapplied cas-conflict evidence and leaves the server row unchanged",
+        "AQ3 the newer state wins on both devices"
+      ],
+      "evidence": [
+        "lifecycle",
+        "title"
+      ],
+      "tests": [
+        "ACT",
+        "SYNC"
+      ],
+      "mutants": [
+        "M12"
+      ]
+    },
+    {
+      "id": "AR",
+      "tier": 2,
+      "title": "Dense 60+ MealPlanEntries",
+      "expected": "PASS",
       "setup": "80 entries across 30 dates and all slots",
-      "assertions": ["AR1 horizon, ordering and bounds are correct", "AR2 median projection time under 100 ms, environment recorded"],
-      "evidence": ["logicalDate"], "tests": ["VIEW"], "mutants": [] },
-    { "id": "AS", "tier": 2, "title": "100+ Meals-context tasks", "expected": "PASS",
+      "assertions": [
+        "AR1 horizon, ordering and bounds are correct",
+        "AR2 median projection time under 100 ms, environment recorded"
+      ],
+      "evidence": [
+        "logicalDate"
+      ],
+      "tests": [
+        "VIEW"
+      ],
+      "mutants": []
+    },
+    {
+      "id": "AS",
+      "tier": 2,
+      "title": "100+ Meals-context tasks",
+      "expected": "PASS",
       "setup": "120 open tasks across responsibility states",
-      "assertions": ["AS1 correct standings and bounded rendering set", "AS2 median projection time under 100 ms, environment recorded"],
-      "evidence": ["mealTaskIds"], "tests": ["VIEW", "TASK"], "mutants": [] },
-    { "id": "AT", "tier": 2, "title": "UTC midnight", "expected": "PASS",
+      "assertions": [
+        "AS1 correct standings and bounded rendering set",
+        "AS2 median projection time under 100 ms, environment recorded"
+      ],
+      "evidence": [
+        "mealTaskIds"
+      ],
+      "tests": [
+        "VIEW",
+        "TASK"
+      ],
+      "mutants": []
+    },
+    {
+      "id": "AT",
+      "tier": 2,
+      "title": "UTC midnight",
+      "expected": "PASS",
       "setup": "23:30 New York, 00:30 Auckland around the UTC date change",
-      "assertions": ["AT1 today and the entry date agree with the household timezone", "AT2 push payload date equals the stored string"],
-      "evidence": ["logicalDate"], "tests": ["DATE"], "mutants": ["M1"] },
-    { "id": "AU", "tier": 2, "title": "Spring-forward", "expected": "PASS",
+      "assertions": [
+        "AT1 today and the entry date agree with the household timezone",
+        "AT2 push payload date equals the stored string"
+      ],
+      "evidence": [
+        "logicalDate"
+      ],
+      "tests": [
+        "DATE"
+      ],
+      "mutants": [
+        "M1"
+      ]
+    },
+    {
+      "id": "AU",
+      "tier": 2,
+      "title": "Spring-forward",
+      "expected": "PASS",
       "setup": "2026-03-08 in America/New_York",
-      "assertions": ["AU1 the entry date and ordering are unchanged across the transition", "AU2 addDays over the transition is exact"],
-      "evidence": ["logicalDate"], "tests": ["DATE"], "mutants": [] },
-    { "id": "AV", "tier": 2, "title": "Fall-back", "expected": "PASS",
+      "assertions": [
+        "AU1 the entry date and ordering are unchanged across the transition",
+        "AU2 addDays over the transition is exact"
+      ],
+      "evidence": [
+        "logicalDate"
+      ],
+      "tests": [
+        "DATE"
+      ],
+      "mutants": []
+    },
+    {
+      "id": "AV",
+      "tier": 2,
+      "title": "Fall-back",
+      "expected": "PASS",
       "setup": "2026-11-01 in America/New_York",
-      "assertions": ["AV1 the entry date and ordering are unchanged across the transition", "AV2 the repeated hour cannot yield two different today values for one date"],
-      "evidence": ["logicalDate"], "tests": ["DATE"], "mutants": [] },
-    { "id": "AW", "tier": 2, "title": "Travel timezone change", "expected": "PASS",
+      "assertions": [
+        "AV1 the entry date and ordering are unchanged across the transition",
+        "AV2 the repeated hour cannot yield two different today values for one date"
+      ],
+      "evidence": [
+        "logicalDate"
+      ],
+      "tests": [
+        "DATE"
+      ],
+      "mutants": []
+    },
+    {
+      "id": "AW",
+      "tier": 2,
+      "title": "Travel timezone change",
+      "expected": "PASS",
       "setup": "the device timezone changes while the app is running",
-      "assertions": ["AW1 no entry, today or ordering value changes", "AW2 household timezone travel remains deferred and is recorded"],
-      "evidence": ["logicalDate"], "tests": ["DATE"], "mutants": [] },
-    { "id": "AX", "tier": 2, "title": "Malformed MealPlanEntry", "expected": "PASS",
+      "assertions": [
+        "AW1 no entry, today or ordering value changes",
+        "AW2 household timezone travel remains deferred and is recorded"
+      ],
+      "evidence": [
+        "logicalDate"
+      ],
+      "tests": [
+        "DATE"
+      ],
+      "mutants": []
+    },
+    {
+      "id": "AX",
+      "tier": 2,
+      "title": "Malformed MealPlanEntry",
+      "expected": "PASS",
       "setup": "pull rows with an invalid slot, invalid status, invalid date, 250-character title, missing fields",
-      "assertions": ["AX1 state never becomes invalid and nothing throws", "AX2 an unknown slot or status is kept raw so the integrity gate refuses the WHOLE batch by name: nothing is coerced, nothing is partly applied, the cursor does not advance (the existing atomic-batch behavior)", "AX3 absent status reads active and absent slot reads unspecified", "AX4 a legacy title of 200 characters stays valid"],
-      "evidence": ["lifecycle", "mealSlot"], "tests": ["SYNC", "ENTRY"], "mutants": [] },
-    { "id": "AY", "tier": 2, "title": "Double save", "expected": "PASS",
+      "assertions": [
+        "AX1 state never becomes invalid and nothing throws",
+        "AX2 an unknown slot or status is kept raw so the integrity gate refuses the WHOLE batch by name: nothing is coerced, nothing is partly applied, the cursor does not advance (the existing atomic-batch behavior)",
+        "AX3 absent status reads active and absent slot reads unspecified",
+        "AX4 a legacy title of 200 characters stays valid"
+      ],
+      "evidence": [
+        "lifecycle",
+        "mealSlot"
+      ],
+      "tests": [
+        "SYNC",
+        "ENTRY"
+      ],
+      "mutants": []
+    },
+    {
+      "id": "AY",
+      "tier": 2,
+      "title": "Double save",
+      "expected": "PASS",
       "setup": "two commits with the same draft id",
-      "assertions": ["AY1 exactly one entry exists", "AY2 the second commit is a same-reference no-op"],
-      "evidence": ["mealPlanEntryId"], "tests": ["ACT"], "mutants": [] },
-    { "id": "AZ", "tier": 2, "title": "Move while a second client edits", "expected": "PASS",
+      "assertions": [
+        "AY1 exactly one entry exists",
+        "AY2 the second commit is a same-reference no-op"
+      ],
+      "evidence": [
+        "mealPlanEntryId"
+      ],
+      "tests": [
+        "ACT"
+      ],
+      "mutants": []
+    },
+    {
+      "id": "AZ",
+      "tier": 2,
+      "title": "Move while a second client edits",
+      "expected": "PASS",
       "setup": "A moves the date while B renames",
-      "assertions": ["AZ1 the loser becomes cas-conflict evidence", "AZ2 no silent overwrite", "AZ3 both devices converge on the cloud row"],
-      "evidence": ["mealPlanEntryId"], "tests": ["SYNC"], "mutants": ["M12"] },
-    { "id": "BA", "tier": 2, "title": "Archive while a second client edits", "expected": "PASS",
+      "assertions": [
+        "AZ1 the loser becomes cas-conflict evidence",
+        "AZ2 no silent overwrite",
+        "AZ3 both devices converge on the cloud row"
+      ],
+      "evidence": [
+        "mealPlanEntryId"
+      ],
+      "tests": [
+        "SYNC"
+      ],
+      "mutants": [
+        "M12"
+      ]
+    },
+    {
+      "id": "BA",
+      "tier": 2,
+      "title": "Archive while a second client edits",
+      "expected": "PASS",
       "setup": "A archives while B renames",
-      "assertions": ["BA1 the loser becomes cas-conflict evidence", "BA2 the final cloud row is the first writer's", "BA3 both devices converge"],
-      "evidence": ["lifecycle"], "tests": ["SYNC"], "mutants": ["M12", "M14"] },
-    { "id": "BB", "tier": 2, "title": "Sync retry", "expected": "PASS",
+      "assertions": [
+        "BA1 the loser becomes cas-conflict evidence",
+        "BA2 the final cloud row is the first writer's",
+        "BA3 both devices converge"
+      ],
+      "evidence": [
+        "lifecycle"
+      ],
+      "tests": [
+        "SYNC"
+      ],
+      "mutants": [
+        "M12",
+        "M14"
+      ]
+    },
+    {
+      "id": "BB",
+      "tier": 2,
+      "title": "Sync retry",
+      "expected": "PASS",
       "setup": "a transient transport failure on a meal push",
-      "assertions": ["BB1 the intent is retried and succeeds", "BB2 no duplicate row", "BB3 the queue empties"],
-      "evidence": ["mealPlanEntryId"], "tests": ["SYNC"], "mutants": [] },
-    { "id": "BC", "tier": 2, "title": "Permanent server refusal", "expected": "PASS",
+      "assertions": [
+        "BB1 the intent is retried and succeeds",
+        "BB2 no duplicate row",
+        "BB3 the queue empties"
+      ],
+      "evidence": [
+        "mealPlanEntryId"
+      ],
+      "tests": [
+        "SYNC"
+      ],
+      "mutants": []
+    },
+    {
+      "id": "BC",
+      "tier": 2,
+      "title": "Permanent server refusal",
+      "expected": "PASS",
       "setup": "the cloud refuses a meal row with a check violation",
-      "assertions": ["BC1 evidence is recorded and the row is not re-owed forever", "BC2 later valid rows still sync"],
-      "evidence": ["mealPlanEntryId"], "tests": ["SYNC"], "mutants": [] },
-    { "id": "BD", "tier": 2, "title": "A large household above historical limits", "expected": "PASS",
+      "assertions": [
+        "BC1 evidence is recorded and the row is not re-owed forever",
+        "BC2 later valid rows still sync"
+      ],
+      "evidence": [
+        "mealPlanEntryId"
+      ],
+      "tests": [
+        "SYNC"
+      ],
+      "mutants": []
+    },
+    {
+      "id": "BD",
+      "tier": 2,
+      "title": "A large household above historical limits",
+      "expected": "PASS",
       "setup": "700 meals created offline, and a second device pulling 700 rows",
-      "assertions": ["BD1 the queue ceiling never silently drops intent: everything is delivered or the backlog flag is set with nothing lost", "BD2 the second device hydrates all rows across pull chunks of 100", "BD3 the 5000 cap refuses with plan-full and never invalidates state"],
-      "evidence": ["mealPlanEntryId"], "tests": ["SYNC", "ACT"], "mutants": [] },
-    { "id": "BE", "tier": 2, "title": "Demo and account isolation", "expected": "PASS",
+      "assertions": [
+        "BD1 the queue ceiling never silently drops intent: everything is delivered or the backlog flag is set with nothing lost",
+        "BD2 the second device hydrates all rows across pull chunks of 100",
+        "BD3 the 5000 cap refuses with plan-full and never invalidates state"
+      ],
+      "evidence": [
+        "mealPlanEntryId"
+      ],
+      "tests": [
+        "SYNC",
+        "ACT"
+      ],
+      "mutants": []
+    },
+    {
+      "id": "BE",
+      "tier": 2,
+      "title": "Demo and account isolation",
+      "expected": "PASS",
       "setup": "demo household, real household, mode mismatch",
-      "assertions": ["BE1 demo meals never queue or sync", "BE2 mode mismatch yields a fresh state and disabled persistence", "BE3 no real data is overwritten"],
-      "evidence": ["provenance"], "tests": ["SYNC"], "mutants": [] },
-    { "id": "BF", "tier": 2, "title": "Local-only state is excluded", "expected": "PASS",
+      "assertions": [
+        "BE1 demo meals never queue or sync",
+        "BE2 mode mismatch yields a fresh state and disabled persistence",
+        "BE3 no real data is overwritten"
+      ],
+      "evidence": [
+        "provenance"
+      ],
+      "tests": [
+        "SYNC"
+      ],
+      "mutants": []
+    },
+    {
+      "id": "BF",
+      "tier": 2,
+      "title": "Local-only state is excluded",
+      "expected": "PASS",
       "setup": "open a sheet, type a draft, abandon it",
-      "assertions": ["BF1 persisted state and push payloads contain no draft or UI state", "BF2 a cancelled draft leaves no entry"],
-      "evidence": ["mealPlanEntryId"], "tests": ["ACT", "SYNC"], "mutants": [] },
-    { "id": "BG", "tier": 2, "title": "Stable same-slot ordering", "expected": "PASS",
+      "assertions": [
+        "BF1 persisted state and push payloads contain no draft or UI state",
+        "BF2 a cancelled draft leaves no entry"
+      ],
+      "evidence": [
+        "mealPlanEntryId"
+      ],
+      "tests": [
+        "ACT",
+        "SYNC"
+      ],
+      "mutants": []
+    },
+    {
+      "id": "BG",
+      "tier": 2,
+      "title": "Stable same-slot ordering",
+      "expected": "PASS",
       "setup": "ids that differ by case and locale-sensitive characters, shuffled",
-      "assertions": ["BG1 code-unit comparison yields one order regardless of input order", "BG2 the order matches on two devices"],
-      "evidence": ["mealPlanEntryId"], "tests": ["VIEW", "SYNC"], "mutants": ["M20"] },
-    { "id": "BH", "tier": 2, "title": "Screen-reader logical date and slot", "expected": "PASS",
+      "assertions": [
+        "BG1 code-unit comparison yields one order regardless of input order",
+        "BG2 the order matches on two devices"
+      ],
+      "evidence": [
+        "mealPlanEntryId"
+      ],
+      "tests": [
+        "VIEW",
+        "SYNC"
+      ],
+      "mutants": [
+        "M20"
+      ]
+    },
+    {
+      "id": "BH",
+      "tier": 2,
+      "title": "Screen-reader logical date and slot",
+      "expected": "PASS",
       "setup": "render the rows and the sheet",
-      "assertions": ["BH1 an entry row is announced with weekday, date, slot and title", "BH2 date and slot chips announce label and selected state", "BH3 every control has a role and a 44 point target"],
-      "evidence": ["logicalDate", "mealSlot"], "tests": ["SCREEN"], "mutants": [] },
-    { "id": "BI", "tier": 2, "title": "Screen-reader unknown and default task state", "expected": "PASS",
+      "assertions": [
+        "BH1 an entry row is announced with weekday, date, slot and title",
+        "BH2 date and slot chips announce label and selected state",
+        "BH3 every control has a role and a 44 point target"
+      ],
+      "evidence": [
+        "logicalDate",
+        "mealSlot"
+      ],
+      "tests": [
+        "SCREEN"
+      ],
+      "mutants": []
+    },
+    {
+      "id": "BI",
+      "tier": 2,
+      "title": "Screen-reader unknown and default task state",
+      "expected": "PASS",
       "setup": "render task rows with no date, default duration, responsibility",
-      "assertions": ["BI1 'No date' is announced, not silence", "BI2 an assumed duration is never announced as stated", "BI3 the responsibility phrase is announced"],
-      "evidence": ["durationSource", "responsibilityState"], "tests": ["SCREEN"], "mutants": [] },
-    { "id": "BJ", "tier": 2, "title": "Loading is not empty (rendered)", "expected": "PASS",
+      "assertions": [
+        "BI1 'No date' is announced, not silence",
+        "BI2 an assumed duration is never announced as stated",
+        "BI3 the responsibility phrase is announced"
+      ],
+      "evidence": [
+        "durationSource",
+        "responsibilityState"
+      ],
+      "tests": [
+        "SCREEN"
+      ],
+      "mutants": []
+    },
+    {
+      "id": "BJ",
+      "tier": 2,
+      "title": "Loading is not empty (rendered)",
+      "expected": "PASS",
       "setup": "render the screen in loading",
-      "assertions": ["BJ1 the loading state renders and the empty copy does not"],
-      "evidence": ["screenState"], "tests": ["SCREEN"], "mutants": ["M13"] },
-    { "id": "BK", "tier": 2, "title": "Quarantined or recovered is not empty", "expected": "PASS",
+      "assertions": [
+        "BJ1 the loading state renders and the empty copy does not"
+      ],
+      "evidence": [
+        "screenState"
+      ],
+      "tests": [
+        "SCREEN"
+      ],
+      "mutants": [
+        "M13"
+      ]
+    },
+    {
+      "id": "BK",
+      "tier": 2,
+      "title": "Quarantined or recovered is not empty",
+      "expected": "PASS",
       "setup": "render the screen in recovery",
-      "assertions": ["BK1 the recovery notice renders and the empty copy does not", "BK2 write actions are disabled while persistence is disabled or degraded"],
-      "evidence": ["screenState"], "tests": ["SCREEN", "VIEW"], "mutants": ["M13"] },
-    { "id": "BL", "tier": 2, "title": "Life-hub integration is not required", "expected": "PASS",
+      "assertions": [
+        "BK1 the recovery notice renders and the empty copy does not",
+        "BK2 write actions are disabled while persistence is disabled or degraded"
+      ],
+      "evidence": [
+        "screenState"
+      ],
+      "tests": [
+        "SCREEN",
+        "VIEW"
+      ],
+      "mutants": [
+        "M13"
+      ]
+    },
+    {
+      "id": "BL",
+      "tier": 2,
+      "title": "Life-hub integration is not required",
+      "expected": "PASS",
       "setup": "inspect the route files and diff",
-      "assertions": ["BL1 the direct route life/meals is used unchanged", "BL2 life/_layout.tsx, routeAccess.ts and app/_layout.tsx are untouched"],
-      "evidence": ["route"], "tests": ["BOUND"], "mutants": [] },
-    { "id": "BM", "tier": 2, "title": "No sibling imports", "expected": "PASS",
+      "assertions": [
+        "BL1 the direct route life/meals is used unchanged",
+        "BL2 life/_layout.tsx, routeAccess.ts and app/_layout.tsx are untouched"
+      ],
+      "evidence": [
+        "route"
+      ],
+      "tests": [
+        "BOUND"
+      ],
+      "mutants": []
+    },
+    {
+      "id": "BM",
+      "tier": 2,
+      "title": "No sibling imports",
+      "expected": "PASS",
       "setup": "mechanical scan of the final tree and history",
-      "assertions": ["BM1 no meals file imports a feature module outside the baseline whitelist", "BM2 no sibling feature tip is an ancestor of HEAD", "BM3 the diff touches no sibling-namespace path"],
-      "evidence": ["imports"], "tests": ["BOUND"], "mutants": [] },
-    { "id": "BN", "tier": 2, "title": "Copy-truth audit", "expected": "PASS",
+      "assertions": [
+        "BM1 no meals file imports a feature module outside the baseline whitelist",
+        "BM2 no sibling feature tip is an ancestor of HEAD",
+        "BM3 the diff touches no sibling-namespace path"
+      ],
+      "evidence": [
+        "imports"
+      ],
+      "tests": [
+        "BOUND"
+      ],
+      "mutants": []
+    },
+    {
+      "id": "BN",
+      "tier": 2,
+      "title": "Copy-truth audit",
+      "expected": "PASS",
       "setup": "every string in mealCopy.ts and every literal in the Meals components",
-      "assertions": ["BN1 each claim word in the audit list is mapped to canonical evidence", "BN2 unsupported claims are zero"],
-      "evidence": ["copy"], "tests": ["COPY"], "mutants": [] },
-    { "id": "BO", "tier": 2, "title": "Secret and privacy scan", "expected": "PASS",
+      "assertions": [
+        "BN1 each claim word in the audit list is mapped to canonical evidence",
+        "BN2 unsupported claims are zero"
+      ],
+      "evidence": [
+        "copy"
+      ],
+      "tests": [
+        "COPY"
+      ],
+      "mutants": []
+    },
+    {
+      "id": "BO",
+      "tier": 2,
+      "title": "Secret and privacy scan",
+      "expected": "PASS",
       "setup": "regex scan of added diff lines and the push payload",
-      "assertions": ["BO1 no secret or credential pattern in added lines", "BO2 the meal push payload keys equal the allow-list", "BO3 no meal title reaches any log, analytics or observation", "BO4 no notes field exists"],
-      "evidence": ["payloadKeys"], "tests": ["BOUND", "SYNC"], "mutants": [] },
-    { "id": "BP", "tier": 2, "title": "Fresh-install migration", "expected": "PASS",
+      "assertions": [
+        "BO1 no secret or credential pattern in added lines",
+        "BO2 the meal push payload keys equal the allow-list",
+        "BO3 no meal title reaches any log, analytics or observation",
+        "BO4 no notes field exists"
+      ],
+      "evidence": [
+        "payloadKeys"
+      ],
+      "tests": [
+        "BOUND",
+        "SYNC"
+      ],
+      "mutants": []
+    },
+    {
+      "id": "BP",
+      "tier": 2,
+      "title": "Fresh-install migration",
+      "expected": "PASS",
       "setup": "scratch database from baseline, shipping, IR01, F08",
-      "assertions": ["BP1 both columns, both CHECKs and both grants exist with the defaults", "BP2 the fingerprint moves exactly columns +2, constraints +2, privileges.columns +4 (gating 3625)"],
-      "evidence": ["fingerprint"], "tests": ["SQL77"], "mutants": [] },
-    { "id": "BQ", "tier": 2, "title": "Populated upgrade", "expected": "PASS",
+      "assertions": [
+        "BP1 both columns, both CHECKs and both grants exist with the defaults",
+        "BP2 the fingerprint moves exactly columns +2, constraints +2, privileges.columns +4 (gating 3625)"
+      ],
+      "evidence": [
+        "fingerprint"
+      ],
+      "tests": [
+        "SQL77"
+      ],
+      "mutants": []
+    },
+    {
+      "id": "BQ",
+      "tier": 2,
+      "title": "Populated upgrade",
+      "expected": "PASS",
       "setup": "scratch database populated at the IR01 state with meals, then F08 applied",
-      "assertions": ["BQ1 row bytes minus the new columns are identical", "BQ2 existing rows read unspecified and active", "BQ3 the census and RLS are unchanged"],
-      "evidence": ["fingerprint"], "tests": ["SQL77"], "mutants": [] },
-    { "id": "BR", "tier": 2, "title": "RLS owner behavior", "expected": "PASS",
+      "assertions": [
+        "BQ1 row bytes minus the new columns are identical",
+        "BQ2 existing rows read unspecified and active",
+        "BQ3 the census and RLS are unchanged"
+      ],
+      "evidence": [
+        "fingerprint"
+      ],
+      "tests": [
+        "SQL77"
+      ],
+      "mutants": []
+    },
+    {
+      "id": "BR",
+      "tier": 2,
+      "title": "RLS owner behavior",
+      "expected": "PASS",
       "setup": "owner JWT in real PostgreSQL",
-      "assertions": ["BR1 insert, patch and archive with the new columns are allowed", "BR2 server-owned columns are still refused with 42501", "BR3 hard DELETE is denied", "BR4 invalid slot or status is refused by the CHECK with the constraint named"],
-      "evidence": ["lifecycle"], "tests": ["SQL77"], "mutants": [] },
-    { "id": "BS", "tier": 2, "title": "Same-household RLS", "expected": "PASS",
+      "assertions": [
+        "BR1 insert, patch and archive with the new columns are allowed",
+        "BR2 server-owned columns are still refused with 42501",
+        "BR3 hard DELETE is denied",
+        "BR4 invalid slot or status is refused by the CHECK with the constraint named"
+      ],
+      "evidence": [
+        "lifecycle"
+      ],
+      "tests": [
+        "SQL77"
+      ],
+      "mutants": []
+    },
+    {
+      "id": "BS",
+      "tier": 2,
+      "title": "Same-household RLS",
+      "expected": "PASS",
       "setup": "constructed actor USER B (member of household A)",
-      "assertions": ["BS1 B reads and archives household-scope meals", "BS2 B sees no personal, professional or coparent-shared meals", "BS3 a scope flip across the owner boundary is refused", "BS4 recorded as APPLICABLE as a constructed actor, NOT-APPLICABLE as a product journey"],
-      "evidence": ["scope"], "tests": ["SQL77"], "mutants": ["M10"] },
-    { "id": "BT", "tier": 2, "title": "Unrelated-account RLS", "expected": "PASS",
+      "assertions": [
+        "BS1 B reads and archives household-scope meals",
+        "BS2 B sees no personal, professional or coparent-shared meals",
+        "BS3 a scope flip across the owner boundary is refused",
+        "BS4 recorded as APPLICABLE as a constructed actor, NOT-APPLICABLE as a product journey"
+      ],
+      "evidence": [
+        "scope"
+      ],
+      "tests": [
+        "SQL77"
+      ],
+      "mutants": [
+        "M10"
+      ]
+    },
+    {
+      "id": "BT",
+      "tier": 2,
+      "title": "Unrelated-account RLS",
+      "expected": "PASS",
       "setup": "USER C and anon against household A rows",
-      "assertions": ["BT1 no read, insert, patch or archive", "BT2 the same over PostgREST when the private instance runs"],
-      "evidence": ["scope"], "tests": ["SQL77", "JRN"], "mutants": ["M10"] },
-    { "id": "BU", "tier": 2, "title": "A disconnected central sync composition is caught", "expected": "PASS",
+      "assertions": [
+        "BT1 no read, insert, patch or archive",
+        "BT2 the same over PostgREST when the private instance runs"
+      ],
+      "evidence": [
+        "scope"
+      ],
+      "tests": [
+        "SQL77",
+        "JRN"
+      ],
+      "mutants": [
+        "M10"
+      ]
+    },
+    {
+      "id": "BU",
+      "tier": 2,
+      "title": "A disconnected central sync composition is caught",
+      "expected": "PASS",
       "setup": "run the meal journey through composeAccountApp",
-      "assertions": ["BU1 the second-device journey uses the production composition", "BU2 with the composition disconnected the journey fails"],
-      "evidence": ["composition"], "tests": ["SYNC"], "mutants": ["M11"] },
-    { "id": "BV", "tier": 2, "title": "Semantic-boundary scan", "expected": "PASS",
+      "assertions": [
+        "BU1 the second-device journey uses the production composition",
+        "BU2 with the composition disconnected the journey fails"
+      ],
+      "evidence": [
+        "composition"
+      ],
+      "tests": [
+        "SYNC"
+      ],
+      "mutants": [
+        "M11"
+      ]
+    },
+    {
+      "id": "BV",
+      "tier": 2,
+      "title": "Semantic-boundary scan",
+      "expected": "PASS",
       "setup": "scripts-dev/meals-boundary-scan.cjs at HEAD",
-      "assertions": ["BV1 new migrations: exactly the F08 migration", "BV2 new durable domain types: none (two fields on the existing MealPlanEntry)", "BV3 new tables or collections: none", "BV4 new sync kinds: none", "BV5 every shared-file diff maps to a permitted reason", "BV6 a second durable Meals model makes the scan fail"],
-      "evidence": ["boundaryScan"], "tests": ["BOUND"], "mutants": ["M16"] },
-
-    { "id": "BW", "tier": 3, "title": "Existing Meals systemRole / context", "expected": "PASS",
-      "setup": "categoryWithRole", "assertions": ["BW1 exercised by X and Y"], "evidence": ["mealsTaskContext"], "tests": ["TASK"], "mutants": [] },
-    { "id": "BX", "tier": 3, "title": "Existing amount / value task facet", "expected": "SAFE-UNAVAILABLE",
+      "assertions": [
+        "BV1 new migrations: exactly the F08 migration",
+        "BV2 new durable domain types: none (two fields on the existing MealPlanEntry)",
+        "BV3 new tables or collections: none",
+        "BV4 new sync kinds: none",
+        "BV5 every shared-file diff maps to a permitted reason",
+        "BV6 a second durable Meals model makes the scan fail"
+      ],
+      "evidence": [
+        "boundaryScan"
+      ],
+      "tests": [
+        "BOUND"
+      ],
+      "mutants": [
+        "M16"
+      ]
+    },
+    {
+      "id": "BW",
+      "tier": 3,
+      "title": "Existing Meals systemRole / context",
+      "expected": "PASS",
+      "setup": "categoryWithRole",
+      "assertions": [
+        "BW1 exercised by X and Y"
+      ],
+      "evidence": [
+        "mealsTaskContext"
+      ],
+      "tests": [
+        "TASK"
+      ],
+      "mutants": []
+    },
+    {
+      "id": "BX",
+      "tier": 3,
+      "title": "Existing amount / value task facet",
+      "expected": "SAFE-UNAVAILABLE",
       "setup": "Task.value exists in the schema but no UI exposes it",
-      "assertions": ["BX1 F08 sets no value and shows no amount, cost or budget"], "evidence": ["copy"], "tests": ["TASK", "COPY"], "mutants": [] },
-    { "id": "BY", "tier": 3, "title": "Existing dietary / allergy canonical context", "expected": "NOT-APPLICABLE",
-      "setup": "capability probe", "assertions": ["BY1 absent; equals AN1"], "evidence": ["unknownFacts"], "tests": ["BOUND"], "mutants": [] },
-    { "id": "BZ", "tier": 3, "title": "Existing meal-related System", "expected": "SAFE-UNAVAILABLE",
+      "assertions": [
+        "BX1 F08 sets no value and shows no amount, cost or budget"
+      ],
+      "evidence": [
+        "copy"
+      ],
+      "tests": [
+        "TASK",
+        "COPY"
+      ],
+      "mutants": []
+    },
+    {
+      "id": "BY",
+      "tier": 3,
+      "title": "Existing dietary / allergy canonical context",
+      "expected": "NOT-APPLICABLE",
+      "setup": "capability probe",
+      "assertions": [
+        "BY1 absent; equals AN1"
+      ],
+      "evidence": [
+        "unknownFacts"
+      ],
+      "tests": [
+        "BOUND"
+      ],
+      "mutants": []
+    },
+    {
+      "id": "BZ",
+      "tier": 3,
+      "title": "Existing meal-related System",
+      "expected": "SAFE-UNAVAILABLE",
       "setup": "fixture-only: no production path creates a System",
-      "assertions": ["BZ1 a Meals-category System is listed by name only with no running or working claim", "BZ2 creation is unavailable and recorded"], "evidence": ["recurringWork"], "tests": ["REC"], "mutants": [] },
-    { "id": "CA", "tier": 3, "title": "Existing recurring meal-prep task", "expected": "SAFE-UNAVAILABLE",
+      "assertions": [
+        "BZ1 a Meals-category System is listed by name only with no running or working claim",
+        "BZ2 creation is unavailable and recorded"
+      ],
+      "evidence": [
+        "recurringWork"
+      ],
+      "tests": [
+        "REC"
+      ],
+      "mutants": []
+    },
+    {
+      "id": "CA",
+      "tier": 3,
+      "title": "Existing recurring meal-prep task",
+      "expected": "SAFE-UNAVAILABLE",
       "setup": "fixture-only: no production path creates recurrence",
-      "assertions": ["CA1 an active rule on a Meals task shows a derived cadence and next date", "CA2 a rule about a meal is ignored", "CA3 the section is hidden when empty", "CA4 creation is unavailable and recorded"], "evidence": ["recurringWork"], "tests": ["REC"], "mutants": [] },
-    { "id": "CB", "tier": 3, "title": "Existing generic MealPlanEntry to Task relationship", "expected": "NOT-APPLICABLE",
-      "setup": "evaluated and rejected", "assertions": ["CB1 no dependency of any relation is created by F08 (HK-MISSING-MEALS-LINK-01)"], "evidence": ["boundaryScan"], "tests": ["BOUND", "TASK"], "mutants": [] },
-    { "id": "CC", "tier": 3, "title": "Existing observation / behavior hook", "expected": "NOT-APPLICABLE",
-      "setup": "evaluated and rejected", "assertions": ["CC1 no meal operation appends an observation"], "evidence": ["observations"], "tests": ["ACT"], "mutants": ["M18"] },
-    { "id": "CD", "tier": 3, "title": "Existing external recipe reference", "expected": "NOT-APPLICABLE",
-      "setup": "capability probe", "assertions": ["CD1 no recipe, URL or ExternalReference semantic is used"], "evidence": ["boundaryScan"], "tests": ["BOUND"], "mutants": [] },
-
-    { "id": "CE", "tier": 1, "title": "Today never treats an empty meal slot as unfinished work (resume brief)", "expected": "PASS",
+      "assertions": [
+        "CA1 an active rule on a Meals task shows a derived cadence and next date",
+        "CA2 a rule about a meal is ignored",
+        "CA3 the section is hidden when empty",
+        "CA4 creation is unavailable and recorded"
+      ],
+      "evidence": [
+        "recurringWork"
+      ],
+      "tests": [
+        "REC"
+      ],
+      "mutants": []
+    },
+    {
+      "id": "CB",
+      "tier": 3,
+      "title": "Existing generic MealPlanEntry to Task relationship",
+      "expected": "NOT-APPLICABLE",
+      "setup": "evaluated and rejected",
+      "assertions": [
+        "CB1 no dependency of any relation is created by F08 (HK-MISSING-MEALS-LINK-01)"
+      ],
+      "evidence": [
+        "boundaryScan"
+      ],
+      "tests": [
+        "BOUND",
+        "TASK"
+      ],
+      "mutants": []
+    },
+    {
+      "id": "CC",
+      "tier": 3,
+      "title": "Existing observation / behavior hook",
+      "expected": "NOT-APPLICABLE",
+      "setup": "evaluated and rejected",
+      "assertions": [
+        "CC1 no meal operation appends an observation"
+      ],
+      "evidence": [
+        "observations"
+      ],
+      "tests": [
+        "ACT"
+      ],
+      "mutants": [
+        "M18"
+      ]
+    },
+    {
+      "id": "CD",
+      "tier": 3,
+      "title": "Existing external recipe reference",
+      "expected": "NOT-APPLICABLE",
+      "setup": "capability probe",
+      "assertions": [
+        "CD1 no recipe, URL or ExternalReference semantic is used"
+      ],
+      "evidence": [
+        "boundaryScan"
+      ],
+      "tests": [
+        "BOUND"
+      ],
+      "mutants": []
+    },
+    {
+      "id": "CE",
+      "tier": 1,
+      "title": "Today never treats an empty meal slot as unfinished work (resume brief)",
+      "expected": "PASS",
       "setup": "projectDay, Needs Me and Daily Load with zero meals, many meals and a fully blank week",
-      "assertions": ["CE1 the outputs are identical across all three", "CE2 no Needs Me item or attention is produced by meals", "CE3 a fully empty week and a partial week are valid states"],
-      "evidence": ["plannedState"], "tests": ["LIFE"], "mutants": ["M3"] },
-    { "id": "CF", "tier": 1, "title": "Account bind keeps Tuesday (resume brief)", "expected": "PASS",
+      "assertions": [
+        "CE1 the outputs are identical across all three",
+        "CE2 no Needs Me item or attention is produced by meals",
+        "CE3 a fully empty week and a partial week are valid states"
+      ],
+      "evidence": [
+        "plannedState"
+      ],
+      "tests": [
+        "LIFE"
+      ],
+      "mutants": [
+        "M3"
+      ]
+    },
+    {
+      "id": "CF",
+      "tier": 1,
+      "title": "Account bind keeps Tuesday (resume brief)",
+      "expected": "PASS",
       "setup": "a local household with dated meals binds an account",
-      "assertions": ["CF1 the top-up creates carry meal_date exactly, slot and status", "CF2 the claim payload is unchanged (version 3, no meals)", "CF3 a second device then holds the same dates"],
-      "evidence": ["logicalDate", "mealSlot", "lifecycle"], "tests": ["SYNC"], "mutants": ["M1"] },
-    { "id": "CG", "tier": 1, "title": "Life hub row is truthful (resume brief)", "expected": "PASS",
+      "assertions": [
+        "CF1 the top-up creates carry meal_date exactly, slot and status",
+        "CF2 the claim payload is unchanged (version 3, no meals)",
+        "CF3 a second device then holds the same dates"
+      ],
+      "evidence": [
+        "logicalDate",
+        "mealSlot",
+        "lifecycle"
+      ],
+      "tests": [
+        "SYNC"
+      ],
+      "mutants": [
+        "M1"
+      ]
+    },
+    {
+      "id": "CG",
+      "tier": 1,
+      "title": "Life hub row is truthful (resume brief)",
+      "expected": "PASS",
       "setup": "deriveLifeStatus with none, one, archived-only and far-future entries",
-      "assertions": ["CG1 none reads 'No meals planned yet' with needsAttention false", "CG2 one or more reads 'Next: <label>' and never 'Planned through'", "CG3 archived entries are ignored", "CG4 a date beyond a week reads a calendar date, not a weekday"],
-      "evidence": ["copy"], "tests": ["LIFE", "COPY"], "mutants": [] }
+      "assertions": [
+        "CG1 none reads 'No meals planned yet' with needsAttention false",
+        "CG2 one or more reads 'Next: <label>' and never 'Planned through'",
+        "CG3 archived entries are ignored",
+        "CG4 a date beyond a week reads a calendar date, not a weekday"
+      ],
+      "evidence": [
+        "copy"
+      ],
+      "tests": [
+        "LIFE",
+        "COPY"
+      ],
+      "mutants": []
+    }
   ],
   "mutants": [
-    { "id": "M1", "guards": ["AH", "AI", "AJ", "AT", "CF"], "what": "apply.ts converts meal_date through an explicit-zone instant so Tuesday becomes Monday", "tests": ["DATE", "SYNC"] },
-    { "id": "M2", "guards": ["Q"], "what": "the projection marks a past active entry as eaten", "tests": ["VIEW"] },
-    { "id": "M3", "guards": ["A", "R", "CE"], "what": "the projection or Today treats a blank day as needing attention", "tests": ["VIEW", "LIFE"] },
-    { "id": "M4", "guards": ["AD"], "what": "a completed grocery task is projected as verified inventory", "tests": ["TASK"] },
-    { "id": "M5", "guards": ["AE"], "what": "prep completion marks the meal served", "tests": ["TASK", "VIEW"] },
-    { "id": "M6", "guards": ["AM"], "what": "an absent allergy record is projected as safe", "tests": ["VIEW", "COPY"] },
-    { "id": "M7", "guards": ["AC"], "what": "an assigned or accepted task is projected as covered", "tests": ["TASK"] },
-    { "id": "M8", "guards": ["K"], "what": "moving a date creates a duplicate instead of moving the stable id", "tests": ["ACT"] },
-    { "id": "M9", "guards": ["F", "M"], "what": "moving into an occupied date and slot overwrites the existing entry", "tests": ["ACT"] },
-    { "id": "M10", "guards": ["AL", "BS", "BT"], "what": "a policy mutant in a scratch database lets an unrelated account access meal rows", "tests": ["SQL77"], "kind": "sql" },
-    { "id": "M11", "guards": ["AG", "BU"], "what": "the production sync composition is disconnected", "tests": ["SYNC"] },
-    { "id": "M12", "guards": ["AQ", "AZ", "BA"], "what": "a stale editor is allowed to overwrite newer state", "tests": ["ACT", "SYNC"] },
-    { "id": "M13", "guards": ["B", "BJ", "BK"], "what": "the screen gate renders empty while hydration is incomplete", "tests": ["VIEW", "SCREEN"] },
-    { "id": "M14", "guards": ["O", "BA"], "what": "archive is not sent, so it stays active on the second device", "tests": ["SYNC"] },
-    { "id": "M15", "guards": ["AB"], "what": "a meal-derived due date is persisted without the explicit confirmation", "tests": ["TASK"] },
-    { "id": "M16", "guards": ["BV"], "what": "a second durable Meals model file is added", "tests": ["BOUND"] },
-    { "id": "M17", "guards": ["AA"], "what": "an untouched default duration is recorded as user-provided", "tests": ["TASK"] },
-    { "id": "M18", "guards": ["N", "P", "CC"], "what": "archive appends a skipped observation", "tests": ["ACT"] },
-    { "id": "M19", "guards": ["T", "U"], "what": "Plan This Again mutates the source entry", "tests": ["ACT"] },
-    { "id": "M20", "guards": ["E", "F", "BG"], "what": "ordering compares ids with localeCompare", "tests": ["VIEW"] }
+    {
+      "id": "M1",
+      "guards": [
+        "AH",
+        "AI",
+        "AJ",
+        "AT",
+        "CF"
+      ],
+      "what": "apply.ts converts meal_date through an explicit-zone instant so Tuesday becomes Monday",
+      "tests": [
+        "DATE",
+        "SYNC"
+      ]
+    },
+    {
+      "id": "M2",
+      "guards": [
+        "Q"
+      ],
+      "what": "the projection marks a past active entry as eaten",
+      "tests": [
+        "VIEW"
+      ]
+    },
+    {
+      "id": "M3",
+      "guards": [
+        "A",
+        "R",
+        "CE"
+      ],
+      "what": "the projection or Today treats a blank day as needing attention",
+      "tests": [
+        "VIEW"
+      ]
+    },
+    {
+      "id": "M4",
+      "guards": [
+        "AD"
+      ],
+      "what": "a completed grocery task is projected as verified inventory",
+      "tests": [
+        "VIEW"
+      ]
+    },
+    {
+      "id": "M5",
+      "guards": [
+        "AE"
+      ],
+      "what": "prep completion marks the meal served",
+      "tests": [
+        "VIEW"
+      ]
+    },
+    {
+      "id": "M6",
+      "guards": [
+        "AM"
+      ],
+      "what": "an absent allergy record is projected as safe",
+      "tests": [
+        "VIEW"
+      ]
+    },
+    {
+      "id": "M7",
+      "guards": [
+        "AC"
+      ],
+      "what": "an assigned or accepted task is projected as covered",
+      "tests": [
+        "TASK"
+      ]
+    },
+    {
+      "id": "M8",
+      "guards": [
+        "K"
+      ],
+      "what": "moving a date creates a duplicate instead of moving the stable id",
+      "tests": [
+        "ACT"
+      ]
+    },
+    {
+      "id": "M9",
+      "guards": [
+        "F",
+        "M"
+      ],
+      "what": "moving into an occupied date and slot overwrites the existing entry",
+      "tests": [
+        "ACT"
+      ]
+    },
+    {
+      "id": "M10",
+      "guards": [
+        "AL",
+        "BS",
+        "BT"
+      ],
+      "what": "a policy mutant in a scratch database lets an unrelated account access meal rows",
+      "tests": [
+        "SQL77"
+      ],
+      "kind": "sql"
+    },
+    {
+      "id": "M11",
+      "guards": [
+        "AG",
+        "BU"
+      ],
+      "what": "the production sync composition is disconnected",
+      "tests": [
+        "SYNC"
+      ]
+    },
+    {
+      "id": "M12",
+      "guards": [
+        "AQ",
+        "AZ",
+        "BA"
+      ],
+      "what": "a stale editor is allowed to overwrite newer state",
+      "tests": [
+        "ACT"
+      ]
+    },
+    {
+      "id": "M13",
+      "guards": [
+        "B",
+        "BJ",
+        "BK"
+      ],
+      "what": "the screen gate renders empty while hydration is incomplete",
+      "tests": [
+        "VIEW"
+      ]
+    },
+    {
+      "id": "M14",
+      "guards": [
+        "O",
+        "BA"
+      ],
+      "what": "archive is not sent, so it stays active on the second device",
+      "tests": [
+        "SYNC"
+      ]
+    },
+    {
+      "id": "M15",
+      "guards": [
+        "AB"
+      ],
+      "what": "a meal-derived due date is persisted without the explicit confirmation",
+      "tests": [
+        "TASK"
+      ]
+    },
+    {
+      "id": "M16",
+      "guards": [
+        "BV"
+      ],
+      "what": "a second durable Meals model file is added",
+      "tests": [
+        "BOUND"
+      ]
+    },
+    {
+      "id": "M17",
+      "guards": [
+        "AA"
+      ],
+      "what": "an untouched default duration is recorded as user-provided",
+      "tests": [
+        "TASK"
+      ]
+    },
+    {
+      "id": "M18",
+      "guards": [
+        "N",
+        "P",
+        "CC"
+      ],
+      "what": "archive appends a skipped observation",
+      "tests": [
+        "ACT"
+      ]
+    },
+    {
+      "id": "M19",
+      "guards": [
+        "T",
+        "U"
+      ],
+      "what": "Plan This Again mutates the source entry",
+      "tests": [
+        "ACT"
+      ]
+    },
+    {
+      "id": "M20",
+      "guards": [
+        "E",
+        "F",
+        "BG"
+      ],
+      "what": "ordering compares ids with localeCompare",
+      "tests": [
+        "VIEW"
+      ]
+    }
   ]
 }
