@@ -2,8 +2,8 @@
 
 Branch `feature/07-coparent-logistics` · worktree `C:\Users\jsmit\Her-Keys-F07` · LOCAL ONLY (no push, no PR, no merge).
 
-> Status of this document: **IN PROGRESS.** Sections 1–20 are the CP0/CP1 evidence and contracts (settled before any UI was built).
-> Sections marked `PENDING` are completed at the checkpoint that produces their evidence. Nothing in a `PENDING` section is a claim.
+> Status of this document: **COMPLETE — verdict PASS WITH DOCUMENTED DEBT (§45).** Sections 1–20 are the CP0/CP1 contracts, written and committed *before* any UI existed;
+> sections 21–45 record what was built, attacked and measured. Every figure is from a command run at the final code head (§44); nothing is carried over from a prompt.
 
 ---
 
@@ -329,11 +329,187 @@ The attacks changed nothing (no location rewritten, nothing planted, same event 
 * **Offline create + edit → restart offline → reconnect.** `syncComposition.test.mjs › K`: the change and its intent are durable in one write; a fresh runtime from the persisted envelope alone shows the handoff with its child and counterpart identities intact; on reconnect the cloud holds exactly one event / person / responsibility, the edit is applied, and a second device converges — with **no upgrade**: a recorded request never arrives as accepted.
 * **Restart against the real database.** No duplicate rows and no second claim (`run-coparent.mjs`, counts unchanged across restart).
 * **No** data loss, duplicate handoff, lost child or counterpart identity, responsibility upgrade, false agreement, false payment or stale preparation state was observed in any of these.
-## 26. Scenario assertion map — PENDING (CP7/CP8)
-## 27. Tier 1 results — PENDING
-## 28. Tier 2 results — PENDING
-## 29. Tier 3 results — PENDING
-## 30. Mutation evidence — PENDING (CP7)
+## 26. Scenario assertion map
+
+**Scenario prose is not coverage.** This table is GENERATED from the executable registry (`tests/fixtures/coparent/scenarios/index.mjs`, rendered by `scripts-dev/f07-scenario-map.mjs`). `tests/coparent/scenarioMap.test.mjs` mechanically verifies that (1) every required scenario (Tier 1, addendum Tier 1, Tier 2, Tier 3) has exactly one entry, (2) every named assertion exists as a real test title in its file, (3) every fixture reproduces its hand-written expected evidence, is deterministic, and matches its pinned semantic output (`tests/fixtures/coparent/scenarios/golden/<id>.json` — child, counterpart, transition/responsibility/coverage state, preparation, dependency standing, recurrence, amount, follow-up state, sharing state, unknown facts, available actions). "suite property" rows are cross-cutting behaviours proven by the named tests rather than by one semantic fixture. `journey` = `supabase/tests/run-coparent.mjs` (real PostgreSQL / PostgREST / RLS).
+
+| ID | Scenario | Status | Fixture (semantic output) | Named assertions (test file › title) |
+|---|---|---|---|---|
+| | **TIER 1** | | | |
+| A | No co-parent logistics records | PASS | `golden/A.json` | core › A: no records<br>state › A/AG |
+| B | One child / one upcoming handoff | PASS | `golden/B.json` | core › B/F/G |
+| C | Multiple children | PASS | `golden/C.json` | core › C: multiple children |
+| D | Different children, different counterpart adults | PASS | `golden/D.json` | identity › D: different children keep different counterpart adults |
+| E | Two counterpart adults with the same display name | PASS | `golden/E.json` | identity › E: two people with the SAME display name |
+| F | Handoff with known date/time | PASS | `golden/F.json` | core › B/F/G<br>schedule › AJ: an evening handoff |
+| G | Handoff with unknown location | PASS | `golden/G.json` | core › B/F/G |
+| H | Create handoff | PASS | suite property | editing › H: creating with a NEW counterpart<br>editing › create is ALL-OR-NOTHING<br>core › B/F/G |
+| I | Edit handoff | PASS | suite property | editing › I: an edit keeps scope<br>core › I: editing keeps child identity |
+| J | Restart after create/edit | PASS | suite property | editing › J: create + edit are durable |
+| K | Offline create → reconnect | PASS | suite property | syncComposition › K: create + edit OFFLINE |
+| L | Second device receives correct child identity | PASS | suite property | syncComposition › a representative journey<br>run-coparent (real PostgreSQL) › journey |
+| M | Second device receives correct counterpart identity | PASS | suite property | syncComposition › a representative journey<br>run-coparent (real PostgreSQL) › journey |
+| N | Assigned responsibility, unaccepted | PASS | `golden/N.json` | responsibility › N: a recorded request |
+| O | Accepted responsibility not automatically covered | PASS | `golden/O.json` | responsibility › O: accepted is not covered |
+| P | Covered only when common semantics support it | PASS | `golden/P.json` | responsibility › P: covered only |
+| Q | User is responsible | PASS | `golden/Q.json` | responsibility › Q: "you are responsible" |
+| R | Other adult assigned but item remains unresolved | PASS | `golden/R.json` | responsibility › R: another adult |
+| S | Preparation/packing task | PASS | `golden/S.json` | preparation › S: preparation is an ordinary canonical task |
+| T | Completed packing task does not claim other household received | PASS | `golden/T.json` | preparation › T: a completed preparation task |
+| U | Removed preparation prerequisite is unavailable, not completed | PASS | `golden/U.json` | preparation › U: a REMOVED prerequisite |
+| V | Recurring transition using existing recurrence | PASS | `golden/V.json` | schedule › V: weekly<br>schedule › every 2 weeks keeps its phase |
+| W | Recurring transition not described as a legal custody schedule | PASS | suite property | schedule › W: the wording never calls<br>copyTruth › no COPY string carries an unsupported claim |
+| X | User-recorded planned handoff not described as agreed | PASS | `golden/X.json` | responsibility › N: a recorded request<br>copyTruth › zero unsupported claims in anything |
+| Y | Recorded-complete not described as legal compliance | PASS ¹ | `golden/Y.json` | responsibility › a recorded-complete responsibility |
+| Z | Counterpart later archived / removed | PASS | `golden/Z.json` | responsibility › Z/AA: an accepted, covered counterpart<br>identity › AP: a responsibility naming a person |
+| AA | No automatic reassignment after counterpart invalidation | PASS | `golden/AA.json` | responsibility › Z/AA: an accepted, covered counterpart<br>identity › archiving a person changes nothing |
+| AB | Child-related amount / follow-up task | PASS | `golden/AB.json` | money › AB: a child-related follow-up |
+| AC | Follow-up task completion does not become payment received | PASS | `golden/AC.json` | money › AC: completing the follow-up |
+| AD | Amount entered does not become agreed debt | PASS | `golden/AD.json` | money › AD: an amount she entered |
+| AE | Feature remains useful without the other adult's account | PASS | `golden/AE.json` | sharing › the counterpart needs no account |
+| AF | No data-sharing claim without actual access evidence | PASS | `golden/AF.json` | sharing › CP1 capability fact<br>sharing › no presentation, for any state |
+| AG | Empty state does not imply relationship/logistics are problem-free | PASS | `golden/AG.json` | state › A/AG |
+| AH1 | User is sending / dropping off | PASS | `golden/AH1.json` | direction › AH1: the user-sending handoff |
+| AH2 | User is receiving / picking up | PASS | `golden/AH2.json` | direction › AH2: the user-receiving handoff |
+| AH3 | Cross-timezone canonical-time stability | PASS | `golden/AH3.json` | schedule › AH3: created in one zone |
+| AH4 | Child later archived / invalidated | PASS ¹ | `golden/AH4.json` | identity › AO/K: a handoff whose child is not in the household |
+| AH5 | Exact handoff location is not exposed on broad hub surfaces | PASS | `golden/AH5.json` | core › the hub view never carries the location text<br>copyTruth › the exact location is never on the hub |
+| AH6 | Recently Completed requires actual completion evidence | PASS | `golden/AH6.json` | preparation › AH6: recently completed requires |
+| AH7 | No canonical amount facet → truthful follow-up without amount | NOT-APPLICABLE ¹ | suite property | money › AB: a child-related follow-up |
+| | **TIER 2** | | | |
+| AH | Dense fixture with 3–5 children | PASS | suite property | state › AH: a dense household |
+| AI | 100+ logistics-related records | PASS | suite property | state › AI: 100+ logistics records |
+| AJ | Midnight / logical-day rollover | PASS | suite property | schedule › AJ: logical-day rollover |
+| AK | Spring-forward | PASS | suite property | schedule › AK: spring-forward<br>schedule › AK: a weekly 9:00 AM pattern |
+| AL | Fall-back / repeated hour | PASS | suite property | schedule › AL: fall-back |
+| AM | Account A → sign out → Account B | PASS | suite property | state › AM: Account A<br>run-coparent (real PostgreSQL) › journey |
+| AN | Demo / account isolation | PASS | suite property | state › AN: the demo household |
+| AO | Malformed child reference | PASS | suite property | identity › AO: the adult account user is not a child<br>identity › a handoff filed with no child |
+| AP | Malformed counterpart reference | PASS | suite property | identity › AP: a responsibility naming a person |
+| AQ | Stale handoff editor | PASS | `golden/AQ.json` | editing › AQ: a stale editor is refused |
+| AR | Double-save | PASS | suite property | editing › AR: a double-tap on Save<br>editing › a single concurrent double-submit |
+| AS | Sync retry | PASS | suite property | syncComposition › AS: a lost acknowledgement |
+| AT | Permanent server refusal | PASS | suite property | syncComposition › AT: a permanent server refusal |
+| AU | Large household above historical queue / pull thresholds | PASS | suite property | syncComposition › AU: a household above the queue |
+| AV | Local-only state excluded from cloud | PASS | suite property | state › AV: using the feature writes only synced<br>syncComposition › only synced canonical kinds are written |
+| AW | Stable deterministic ordering | PASS | suite property | state › AW: order is deterministic |
+| AX | Screen-reader responsibility state | PASS | suite property | copyTruth › every screen-reader label states |
+| AY | Screen-reader unknown state | PASS | suite property | copyTruth › every screen-reader label states |
+| AZ | Loading ≠ empty | PASS | suite property | state › AZ: LOADING is not EMPTY |
+| BA | Quarantined / unrecovered ≠ empty | PASS | suite property | state › BA: an unrecovered household |
+| BB | Common factual attention semantics do not contradict Calendar | PASS ¹ | suite property | preparation › property: for every combination<br>responsibility › answer overdue is the shared clock-derived fact |
+| BC | Same transition projected in several sections remains one canonical truth | PASS | suite property | state › BC: the same handoff |
+| BD | Scope label does not create sharing behavior | PASS | suite property | sharing › every row Feature 07 creates<br>sharing › the view says only |
+| BE | No sibling Wave 2 imports | PASS | suite property | copyTruth › BE: no sibling-feature import |
+| BF | Raw Talk It Out source excluded | PASS | suite property | privacy › BF: |
+| BG | Privacy / secret scan | PASS | suite property | privacy › BG: |
+| BH | RLS attacks where materially applicable | PASS ¹ | suite property | run-coparent (real PostgreSQL) › journey |
+| | **TIER 3 (conditional)** | | | |
+| BI | Existing canonical request / execution lifecycle | PASS ¹ | suite property | responsibility › request evidence |
+| BJ | Existing explicit acceptance lifecycle | PASS | suite property | responsibility › O: accepted is not covered |
+| BK | Existing explicit reimbursement-payment outcome | PASS ¹ | suite property | money › payment is shown ONLY from a real `paid` outcome |
+| BL | Existing canonical task → handoff relationship | PASS ¹ | suite property | preparation › S: preparation is an ordinary canonical task |
+| BM | Existing shared collaboration semantics | NOT-APPLICABLE ¹ | suite property | sharing › CP1 capability fact |
+| BN | Existing relationship-role semantic | PASS ¹ | suite property | identity › a person recorded as something other than co-parent |
+| BO | Existing recurring Systems relationship | NOT-APPLICABLE ¹ | suite property | — |
+| BP | Existing document / admin relationship | NOT-APPLICABLE ¹ | suite property | — |
+
+**Notes (¹)**
+
+* **Y** — A HANDOFF cannot be recorded complete (no event outcome exists — MP-07-02 / OC-1, capability stopped); the responsibility completion is what is recorded, and it is worded "You recorded …".
+* **AH4** — The foundation has no child lifecycle (MP-07-04), so an "archived" child cannot be stored; the projection is proven on hand-built (unvalidated) state where the child is no longer in the household: NEEDS REVIEW, never re-attached, never matched by name.
+* **AH7** — NOT-APPLICABLE — FOUNDATION CAPABILITY PRESENT: the `value` money facet exists on tasks and events (foundation/money.ts, commitment.ts), so AB / AC / AD apply as written. No amountless variant is manufactured.
+* **BB** — Feature 07 derives every timing/readiness fact from the shared primitives (isUnacknowledged, standingOf, readinessOf) and does not import attentionFor (MP-07-13). The shared Calendar itself is F03 and is integrated later (HK-INT-COPARENT-CALENDAR-01).
+* **BH** — Materially applicable: Feature 07 files its rows as owner-only `coparent-shared`. Attacked against the real rows by owner / same-household member / stranger / anon (34 checks in run-coparent.mjs); no new backend representation exists, so the inherited certified common posture is otherwise unchanged.
+* **BI** — READ-ONLY: the intent → execution → outcome model exists; no provider exists, so Feature 07 only renders "sent"/"delivered" from rows that exist (tested with pulled fixture rows). It creates none.
+* **BK** — READ-ONLY: a `paid` outcome under a succeeded `financial_action` execution about the task is the only payment evidence shown; none can be produced by a device on this baseline.
+* **BL** — EXISTS: Dependency{requires, event → task}. No new relationship was created.
+* **BM** — `coparent-shared` is an owner-only label (SD4-033); no collaboration semantic exists to consume.
+* **BN** — EXISTS: HouseholdPerson.relationship (PERSON_RELATIONSHIPS). Used only as recorded; no global child → co-parent relation was invented.
+* **BO** — No relationship between a System and a handoff exists, and Feature 07 creates no System (HK-INT-COPARENT-SYSTEMS-01).
+* **BP** — No document primitive exists on this baseline; Life Admin is a later domain (HK-INT-COPARENT-LIFEADMIN-01).
+
+## 27. Tier 1 results
+
+**40 items: 39 PASS, 1 NOT-APPLICABLE, 0 SAFE-UNAVAILABLE, 0 DEFERRED-IN-RUN, 0 FAIL.** (A–AG = 33 core scenarios; AH1–AH7 = the addendum's seven.) Full mapping in §26.
+
+* **Not a plain PASS, with the reason on the record:**
+  * **AH7 — NOT-APPLICABLE (foundation capability PRESENT).** The `value` money facet exists on tasks and events, so AB / AC / AD apply as written and PASS; no amountless variant was manufactured.
+  * **Y — PASS for what exists.** A *handoff* cannot be recorded complete (no event outcome exists, MP-07-02 / OC-1); the counterpart's *responsibility* completion is what is recorded, worded "You recorded …", and never as compliance.
+  * **AH4 — PASS by defensive projection.** The foundation has no child lifecycle (MP-07-04), so an "archived" child cannot be stored; on hand-built (unvalidated) state where the child is no longer in the household the handoff and its preparation are NEEDS REVIEW, never re-attached and never matched by name.
+* Every scenario has a fixture, named assertions, expected semantic evidence, a test file and a result (§26); none rests on a JSX snapshot.
+
+## 28. Tier 2 results
+
+**27 items (AH–BH): 27 PASS.** Builder hardening: every supported defect found was repaired (§31). Notes: **BB** is proven against the shared primitives (`isUnacknowledged`, `standingOf`, `readinessOf`) because the shared Calendar is F03 and is integrated later; **BH** (RLS) was materially applicable and attacked against the real rows (§24); **AM** and the account switch were exercised both in-model and against the real database (quarantine, 0 requests). No item is documented debt.
+
+## 29. Tier 3 results
+
+**8 conditional items: 5 PASS, 3 NOT-APPLICABLE — none manufactured.**
+
+| Item | Result | Note |
+|---|---|---|
+| BI existing request/execution lifecycle | PASS (read-only) | the intent → execution → outcome model exists; no provider exists, so Feature 07 only *renders* "sent"/"delivered" from rows that exist, and creates none |
+| BJ existing acceptance lifecycle | PASS | the responsibility lifecycle is used exactly as recorded |
+| BK explicit reimbursement-payment outcome | PASS (read-only) | a `paid` outcome under a succeeded `financial_action` execution about the task is the only payment evidence shown; a device cannot produce one |
+| BL task → handoff relationship | PASS (exists) | `Dependency{requires, event → task}` |
+| BM shared collaboration semantics | NOT-APPLICABLE | `coparent-shared` is an owner-only label; nothing to consume |
+| BN relationship-role semantic | PASS (exists) | `HouseholdPerson.relationship`, used only as recorded |
+| BO recurring Systems relationship | NOT-APPLICABLE | no System ↔ handoff relationship exists; Feature 07 creates no System |
+| BP document / admin relationship | NOT-APPLICABLE | no document primitive exists |
+## 30. Mutation evidence (test-the-test)
+
+`scripts-dev/f07-mutation-check.cjs` changes ONE source line the way a defect would, runs the tests meant to catch it, and restores the file byte for byte. It exits non-zero if any mutant survives, does not apply exactly once, or a file is not restored. Run serially at the final head (`33e44be`+): **42 caught, 0 survived, 0 broken.** `git status` was clean before and after.
+
+The 11 failure modes the contract requires (child identity, counterpart identity, assigned≠covered, agreement, legal, packing, reimbursement, counterpart invalidation, sharing, sync composition, loading≠empty) each have at least one mutant below (M1–M3, M4–M5, M6–M8, M9–M10, M11–M12, M13–M15, M16–M19, M20–M21/M42, M22–M24, M25–M27, M28–M29), plus hardening mutants.
+
+**Honest history.** The FIRST full run caught 38 of 42; four SURVIVED (M28 loading-by-status, M32 unrelated-edit schedule anchor, M38 next handoff needing review, M39 tie ordering) — each was a scenario no test exercised. A test was added for each and all four now fail under their mutant. One earlier mutant-shaped defect was found without a script: the stale-edit check that trusted `updatedAt` alone (D2, M31 now pins it).
+
+| Mutant | Result | Guards | The defect it introduces |
+|---|---|---|---|
+| M1 | **CAUGHT** (5 failing) | child identity | a handoff's child is looked up by position (the first child), not by id |
+| M2 | **CAUGHT** (14 failing) | child identity | creating a handoff drops the child (subjectMemberId is never written) |
+| M3 | **CAUGHT** (2 failing) | child identity | an edit drops the child when the form is saved |
+| M4 | **CAUGHT** (1 failing) | counterpart identity | a person is found by DISPLAY NAME, so two people named Alex collapse into the first |
+| M5 | **CAUGHT** (3 failing) | counterpart identity | same-name people share one label (the picker cannot tell them apart) |
+| M6 | **CAUGHT** (4 failing) | assigned != covered | a merely requested (assigned) counterpart counts as covering the handoff |
+| M7 | **CAUGHT** (2 failing) | accepted != covered | an acceptance alone (still needs her) counts as covered |
+| M8 | **CAUGHT** (1 failing) | assigned != requested | an `owned` person row (no request recorded) is worded as a request |
+| M9 | **CAUGHT** (5 failing) | planned != agreed | a recorded request is worded "agreed to this" |
+| M10 | **CAUGHT** (5 failing) | planned != agreed | the repeat line says the other party agreed |
+| M11 | **CAUGHT** (6 failing) | schedule != legal | an operational recurrence is worded as a custody schedule |
+| M12 | **CAUGHT** (4 failing) | complete != compliance | a recorded-complete responsibility is worded as compliance |
+| M13 | **CAUGHT** (2 failing) | packed != received | a completed preparation item is worded as delivered to the other household |
+| M14 | **CAUGHT** (2 failing) | removed != packed | a REMOVED preparation item reads as done |
+| M15 | **CAUGHT** (2 failing) | no packing != ready | an empty preparation list reads as "all marked done" |
+| M16 | **CAUGHT** (3 failing) | follow-up done != payment | a completed follow-up task is worded as payment received |
+| M17 | **CAUGHT** (3 failing) | follow-up done != payment | completing the follow-up task makes the payment evidence "reported paid" |
+| M18 | **CAUGHT** (1 failing) | amount entered != agreed | a zero amount is accepted as a follow-up about money |
+| M19 | **CAUGHT** (1 failing) | no direction != default | the money direction is defaulted when she did not choose one |
+| M20 | **CAUGHT** (3 failing) | invalidated counterpart | an archived counterpart keeps the positive coverage it had |
+| M42 | **CAUGHT** (3 failing) | invalidated counterpart | the stale "no longer needs you" of an archived counterpart still reads as not needing her |
+| M21 | **CAUGHT** (1 failing) | invalidated counterpart | a positive answer can be recorded for an archived person |
+| M22 | **CAUGHT** (6 failing) | scope label != sharing | the privacy line claims the record is shared with the other parent |
+| M23 | **CAUGHT** (2 failing) | scope label != sharing | Feature 07 files its rows household-visible instead of owner-only |
+| M24 | **CAUGHT** (1 failing) | scope label != sharing | the presenter says nothing-about-visibility rows are owner-only too |
+| M25 | **CAUGHT** (5 failing) | production composition | composeAccountApp stops telling the sync runtime about account state (a bound account never starts sync) |
+| M26 | **CAUGHT** (5 failing) | production composition | the change observer stops queueing (a canonical mutation never becomes sync intent) |
+| M27 | **CAUGHT** (3 failing) | child name across the boundary | the claim mangles a child's name again (the /s+/ defect) |
+| M28 | **CAUGHT** (1 failing) | loading != empty | the screen is allowed to render (and so to say "nothing recorded") while hydration is incomplete |
+| M29 | **CAUGHT** (1 failing) | unrecovered != empty | a household that could not be read is treated as ready (and would render empty) |
+| M30 | **CAUGHT** (2 failing) | stale editor | an editor opened on an old row overwrites newer content |
+| M31 | **CAUGHT** (1 failing) | stale editor | staleness is decided by updatedAt alone (blind to two edits in one clock tick) |
+| M32 | **CAUGHT** (1 failing) | recurrence edit | saving an unrelated field re-anchors the recorded schedule |
+| M33 | **CAUGHT** (1 failing) | location privacy | the hub view carries the exact location text |
+| M34 | **CAUGHT** (1 failing) | household zone | a handoff is placed in the DEVICE zone instead of the household zone |
+| M35 | **CAUGHT** (1 failing) | household isolation | a view for the wrong household is built anyway |
+| M36 | **CAUGHT** (1 failing) | answer overdue | an unanswered request never becomes an overdue fact |
+| M37 | **CAUGHT** (1 failing) | one live owner | a second recorded counterpart is not refused as already recorded |
+| M38 | **CAUGHT** (1 failing) | next handoff | the next handoff skips a handoff that needs review (hides the actual next one) |
+| M39 | **CAUGHT** (1 failing) | ordering | time ties are ordered by array position (no id tie-break) |
+| M40 | **CAUGHT** (2 failing) | recently completed | a REMOVED preparation item is listed as recently completed |
+| M41 | **CAUGHT** (1 failing) | no invented link | a preparation task is linked to the next handoff for the same child without an edge |
+
 ## 31. Defects found / repaired
 
 Found by reproduction (real-database journey, store tests, golden-fixture review, source audits, UI build), repaired inside approved Feature 07 semantics unless marked.
@@ -354,15 +530,6 @@ Found by reproduction (real-database journey, store tests, golden-fixture review
 
 No P0 defect was found. Nothing above required a schema change.
 
-## 34. Accessibility
-
-* **State is never carried by colour alone.** Every row's `accessibilityLabel` speaks child, day and time, tags, and the responsibility / coverage / preparation / unknown sentences *in words*; tags ("Needs you", "Covered", …) are also spoken. Copy-truth audit: every hub row label matches its child, a clock time, and a recorded-responsibility phrase; no doubled full stops.
-* **Unknown is said, not implied** (`No one is recorded as responsible`, `No preparation recorded`, `Not recorded whether this needs you personally`, `No location recorded`) — in the row, in the detail and in the spoken label.
-* **Roles and labels.** Every pressable has `accessibilityRole` and a label (UI render tests (c)); headings are `header`; errors are `alert`; live notices are polite.
-* **No swipe-only or gesture-only action.** Everything is a button; removal is an in-place two-step confirm, not an alert or a swipe.
-* **Touch targets.** The UI render test asserts none is below the design system's touch floor.
-* **Disabled controls are explained.** Create buttons disabled by a blocked state carry an `accessibilityHint` and a visible notice.
-* **Not verified:** real screen-reader behaviour (TalkBack/VoiceOver) and colour contrast on a device — see §39. The design-system contrast suite covers the tokens used.
 ## 32. Missing primitives — see `HK_FEATURE_07_MISSING_PRIMITIVES.md` (MP-07-01 … MP-07-14)
 ## 33. Integration candidates
 
@@ -385,8 +552,31 @@ Recorded for the controlled integration phase. **Feature 07 implemented none of 
 | HK-INT-COPARENT-EVENTSCOPE-01 | generic event editor scope | (n/a) | `EventForm` files every event as `household` scope, even in the co-parenting category (MP-07-14) — decide whether the category's own scope should default |
 | HK-INT-COPARENT-ATTENTION-ACK-01 | shared attention | (avoids `attentionFor`) | `attentionFor`'s `risk` branch treats an *acknowledged* delegation as "handled elsewhere" (MP-07-13), contradicting ACKNOWLEDGED ≠ ACCEPTED ≠ COVERED |
 | HK-INT-COPARENT-BACKEND-01 | backend harness | `supabase/tests/run-coparent.mjs` (34 checks) is a standalone runner beside `run.mjs` (a shared file this build did not edit) | fold `coparentJourneys(check, psql)` into `run.mjs` next to `productionCompositionJourneys` |
-## 34. Accessibility — PENDING
-## 35. Performance — PENDING
+## 34. Accessibility
+
+* **State is never carried by colour alone.** Every row's `accessibilityLabel` speaks child, day and time, tags, and the responsibility / coverage / preparation / unknown sentences *in words*; tags ("Needs you", "Covered", …) are also spoken. Copy-truth audit: every hub row label matches its child, a clock time, and a recorded-responsibility phrase; no doubled full stops.
+* **Unknown is said, not implied** (`No one is recorded as responsible`, `No preparation recorded`, `Not recorded whether this needs you personally`, `No location recorded`) — in the row, in the detail and in the spoken label.
+* **Roles and labels.** Every pressable has `accessibilityRole` and a label (UI render tests (c)); headings are `header`; errors are `alert`; live notices are polite.
+* **No swipe-only or gesture-only action.** Everything is a button; removal is an in-place two-step confirm, not an alert or a swipe.
+* **Touch targets.** The UI render test asserts none is below the design system's touch floor.
+* **Disabled controls are explained.** Create buttons disabled by a blocked state carry an `accessibilityHint` and a visible notice.
+* **Not verified:** real screen-reader behaviour (TalkBack/VoiceOver) and colour contrast on a device — see §39. The design-system contrast suite covers the tokens used.
+## 35. Performance
+
+**Methodology (recorded, not asserted).**
+
+| Item | Value |
+|---|---|
+| Environment | Windows 11 Home 10.0.26200, developer laptop; other sessions, Docker and an emulator running concurrently (memory-starved host) |
+| JS runtime | Node v24.14.0 |
+| Mode | `node --test` with TypeScript type-stripping, **test mode** (no bundler, no minification, no Hermes) |
+| Fixture | 175 records: 60 handoffs (a fifth recurring, a third with a counterpart), ~90 linked preparation items, 25 follow-ups; 3 children; `state.test.mjs › AI: 100+ logistics records` |
+| Samples | 25 builds per run, the first (cold) included; median and p95 of the 25 |
+| Measured | `buildCoParentLogisticsView` — the whole projection (no rendering) |
+
+**Results (three independent runs of the same test):** median **6.30 ms** / p95 **11.10 ms** (first run: cold module + JIT warm-up, host under load); median **2.92 ms** / p95 **6.68 ms**; median **2.64 ms** / p95 **3.84 ms** (final full-suite run). Soft target: bounded projection **< 100 ms median** — met by more than an order of magnitude, and the test asserts it.
+
+**What this is and is not.** Desktop Node is *algorithmic* evidence: the projection is linear in the household (indexed maps, one pass per collection, no per-record scan of the whole state). It is **not** device UI performance: Hermes, first render and layout on a phone were not measured (§39). Determinism is asserted alongside speed (two builds deep-equal; reversing the stored arrays changes nothing).
 ## 36. Privacy
 
 **Was additional glanceability protection for handoff location/timing considered, and what treatment was chosen?**
@@ -407,11 +597,66 @@ Yes — considered deliberately, against the real UI structure (Addendum L). Dec
 * **Demo isolation.** A handoff created in the demo household is `demo-seed` provenance and never reaches the cloud.
 * **Secret scan.** Zero credential patterns in every file Feature 07 owns (test BG). The one JWT-shaped string in the owned files is the *published* Supabase local-demo anon key that the repo's own harness (`support/syncDevice.mjs`) already carries; the scan treats that exact value as documentation, not a secret.
 * **Sensitive words are only the user's own.** Titles, locations and notes are stored exactly as typed in their own columns; no free text is copied into observations or evidence.
-## 37. Test accounting — PENDING
-## 38. Schema / fingerprint — baseline `43e7c8a4… / 3617` verified at CP0; final re-verification PENDING (CP8). No Feature 07 schema change is planned or made.
-## 39. Device evidence — PENDING
-## 40. Shared-file changes — PENDING (planned: **none** — Feature 07 owns `src/features/coparent/**`, `app/(app)/life/coparent.tsx`, tests, docs)
-## 41. Sibling-import result — PENDING (CP8)
+
+## 37. Test accounting
+
+| Suite | Baseline `14bd58e` | Final head | Note |
+|---|---|---|---|
+| Full application suite (serial) | 975 tests / 207 suites | **1258 tests / 239 suites, 1258 pass, 0 fail, 0 skipped** | **+283 tests / +32 suites** |
+| Targeted IR01 (`tests/hk-ir01`) | 163 / 163 | **163 / 163** | unchanged |
+| Backend harness (`supabase/tests/run.mjs`, real local PostgreSQL + PostgREST) | 800 / 800 (repair ledger) | **800 / 800** | run once, alone, at `f698878` (already carrying the claim repair). It exercises the backend and foundation, not the feature: `git diff --name-only f698878 HEAD -- supabase src/domain src/store src/platform src/persistence src/state` is **empty**, so its result stands for the final head |
+| Feature 07 real-database journey (`run-coparent.mjs`) | — | **34 / 34** | run three times: the first run (33 / 34) found D1; re-run after the repair (34 / 34); and again at the final head (34 / 34) |
+| Mutation check (`f07-mutation-check.cjs`) | — | **42 caught, 0 survived, 0 broken** | first full run 38 / 42 (§30) |
+| TypeScript (`tsc --noEmit`, `--max-old-space-size=1600`) | clean | **clean, exit 0** | includes the UI, route and all new tests' sources |
+| Expo Doctor | 21 / 21 | **21 / 21, no issues** | |
+| Android export (`expo export`, Metro + Hermes) | one bundle | **exit 0, one 6.5 MB Hermes bundle that CONTAINS Feature 07** | see the export caveat below |
+
+**New tests (+283):** `ui` 80 · `scenarioMap` 36 · `copyTruth` 24 · `responsibility` 18 · `schedule` 18 · `state` 17 · `editing` 15 · `money` 15 · `identity` 14 · `preparation` 11 · `core` 9 · `direction` 6 · `sharing` 6 · `syncComposition` 6 · `privacy` 4 (= 279 in `tests/coparent`) · `claimDisplayName` 4 (shared repair regression).
+
+**Inherited-test disposition (mission requirement): PRESERVED — all 975.** `git diff --name-status 14bd58e HEAD -- tests` shows only additions; **no inherited test was rewritten, replaced or removed.** (One new file, `tests/claimDisplayName.test.mjs`, pins the shared repair.)
+
+**Export caveat, and a finding for every parallel worktree.** A worktree whose `node_modules` is a *junction* to the main checkout does **not** bundle its own routes: Expo's Babel plugin computes the app root relative to the junction path, but Metro resolves the route context from the package's *real* path, which lands in the **main checkout's** `app/`. The first export here exited 0 and produced a 6.3 MB bundle that contained the main checkout's routes (`other-tasks`, `needs-me`) and **none** of Feature 07's strings — so it was discarded as evidence. A truthful export was made from a scratch copy of the worktree with a *real* `expo-router` and junctions for everything else (scratch removed afterwards; the main `node_modules` was verified untouched); that bundle contains "Co-parent logistics", "Show location", the owner-only line and the payment sentence. Other worktrees' recorded "Android export exit 0" gates should be re-checked for the same hazard.
+
+## 38. Schema / fingerprint
+
+**No Feature 07 schema change was made, planned or needed.** No migration was created; no RLS, sync kind, column or table was added; `git diff --name-only 14bd58e HEAD -- supabase/migrations supabase/tools src/domain/sync` is empty.
+
+| | Value |
+|---|---|
+| OLD fingerprint (repair baseline) | `43e7c8a4402a3387cb2e1add4170921e` / 3617 facts |
+| NEW fingerprint (final head, read-only measurement of the shared local DB, `verify --against baselines/ir01-local-fingerprint.json`) | `43e7c8a4402a3387cb2e1add4170921e` / 3617 — **MATCH** |
+| Migration SHA-256 (working tree) | baseline `81909daa46a9a2d124fb69a7a2f246cb434b7defbddf17f97d4aba0956ec3b47` (CRLF working-tree form; LF git blob `8bc38d66…8f16f`, the expected form) · shipping `1e9169de4cf21c46e2167089328de94ce07cb1fcf005c0461dece1b28ec8a7cb` · IR01 `73db663974354f0c968b6b11b0a92f901aff6e5f464ad9bcfc953ff43a1901a4` — **all unchanged** |
+| RLS impact / sync impact / rollback | none / none / not applicable (nothing to roll back) |
+| Owner-approved schema work | none (OC-1 would need one additive constraint change and is **not** approved or implemented) |
+
+The shared local database was used additively by the journey (fresh random users and households; nothing dropped, reset or altered). The fingerprint was measured *after* those runs and is unchanged.
+
+## 39. Device evidence
+
+**NOT EXECUTED — ENVIRONMENTAL LIMITATION.** No screenshot, device recording or on-device interaction is claimed, and none was fabricated.
+
+* The only running emulator (`emulator-5554`) is another session's runtime (the AVDs `HerKeys_Runtime` / `HerKeys_Runtime_B` belong to parallel sessions) and must not be taken over.
+* The host was memory-starved throughout (≈ 0.7–1.0 GB free physical; other sessions, Docker and an emulator running). Starting a second emulator plus Metro would risk starving the other sessions.
+* The Browser-pane preview tool runs the dev server in the *original* project directory (a documented hazard of this multi-worktree setup), and a junction-`node_modules` worktree bundles the main checkout's routes (§37), so a preview from here would not show Feature 07.
+* What was verified instead: **tsc** over every source file; **80 render tests** of the presentational components under the react-native stub (roles, labels, touch floor, reveal behaviour, every state on the hub and both details); a **Metro + Hermes export** whose bundle contains the screen; and pure tests of the container decisions. **Not verified on a device:** layout and appearance, the "Show location" reveal reset on navigation blur (`useFocusEffect`), same-pathname `router.push` stack behaviour (taken from the SDK 57 docs), keyboard behaviour, TalkBack/VoiceOver, colour contrast on screen. These are the reasons for the verdict qualifier in §45.
+
+## 40. Shared-file changes
+
+**Exactly one shared source file changed, by one line** (`git diff --name-status 14bd58e HEAD` outside Feature 07's own namespaces shows only this and its test):
+
+| File | Change | Reproduced need | Extension points inspected | New durable semantic? | Regression coverage |
+|---|---|---|---|---|---|
+| `src/domain/account/claim.ts` | `.replace(/s+/g, ' ')` → `.replace(/\s+/g, ' ')` in `cloudDisplayName` | the real-database journey found a child named Josie stored as "Jo ie" and pulled back into local state | none — the corruption happens inside the claim; no feature-owned composition can avoid it | **No** (restores the documented intent: NFC, single spaces, trimmed) | new `tests/claimDisplayName.test.mjs` (4) + mutant M27; existing `claimPayload` suite unchanged and passing |
+
+Everything else Feature 07 added is in its own namespaces: `src/features/coparent/**` (incl. `ui/`), `app/(app)/life/coparent.tsx`, `tests/coparent/**`, `tests/fixtures/coparent/**`, `supabase/tests/journey-coparent.mjs` + `run-coparent.mjs` (a standalone runner beside the shared `run.mjs`, which was not edited), `scripts-dev/f07-*`, `docs/builds/HK_FEATURE_07_*`. `app/(app)/life/_layout.tsx`, the Life `index.tsx`, `app.json` and every design-system file are untouched.
+
+## 41. Sibling-import result
+
+**CLEAN BY ISOLATED-BRANCH CONSTRUCTION + MECHANICAL VERIFICATION.** The branch was forked directly from `14bd58e` with no sibling ancestry, and no sibling exists in it to import. Mechanical verification (this proves the isolated branch is clean; it does **not** prove that future integrated code has no cross-feature conflicts — that is verified during integration, §33):
+
+* `grep` for `feature/05|06|08` and `src/features/(kids|home|meals|today|calendar|life|systems|money|work|daily-load|one-move|talk-it-out|tasks|onboarding)` over every Feature 07 file: **zero** matches outside the audit's own regex.
+* Every relative import in Feature 07 source resolves to `src/features/coparent/`, `src/domain/`, `src/design/`, `src/store/` or `src/state/` (test **BE**, run in the suite). No import of any sync mechanism (queue, engine, coordinator, transport, bridge, observer).
+* The feature-boundary rule holds: route file composes the screen; domain reasoning lives in `projection.ts` / `mutations.ts` / `present.ts`; no domain reasoning in JSX.
 ## 42. Owner checkpoints — see `HK_FEATURE_07_OWNER_CHECKPOINTS.md` (OC-1 prepared; capability stopped, everything else continues)
 ## 43. Considered / deferred
 
@@ -432,5 +677,115 @@ Yes — considered deliberately, against the real UI structure (Addendum L). Dec
 | Messaging, invitations, sharing, evidence export | **Refused by contract** | not built, not proposed |
 | Folding `run-coparent.mjs` into `run.mjs` | Deferred to integration | `run.mjs` is a shared file; a standalone runner avoids touching it |
 | On-device / emulator visual pass | See §39 | environmental |
-## 44. Exit gates — PENDING (CP8)
-## 45. Final verdict — PENDING (CP8)
+## 44. Exit gates
+
+Computed at **code HEAD `33e44be`** on `feature/07-coparent-logistics` (this ledger's own commit changes only `docs/`; `git diff --stat 33e44be HEAD -- src app supabase tests package.json scripts-dev` is empty). Git status was clean before and after every gate, including after each mutation run.
+
+| Gate | Result |
+|---|---|
+| Exact branch / HEAD | `feature/07-coparent-logistics`; forked from `14bd58ed3bdcb557ba308dfe2ecbc65253dba5e1` (no sibling ancestry) |
+| TypeScript | **clean** (exit 0) |
+| Full application suite (serial) | **1258 / 1258** (207 → 239 suites) |
+| Feature 07 suites | **279** in `tests/coparent` (+ **4** shared-repair regression) — §37 |
+| Tier 1 / Tier 2 / Tier 3 | **39 PASS + 1 N/A / 27 PASS / 5 PASS + 3 N/A**, none DEFERRED, none FAIL — §27–§29 |
+| Scenario assertion map | generated and **mechanically verified** (every scenario → real test titles + pinned semantic fixture) — §26 |
+| Mutation / test-the-test | **42 caught, 0 survived, 0 broken** — §30 |
+| Backend harness (real PostgreSQL + PostgREST) | **800 / 800** |
+| Actual application sync-composition test | **6 / 6** (`composeAccountApp`); disconnecting the composition (M25 / M26) fails it |
+| Real PostgreSQL representative journey | **34 / 34** |
+| Second-device round trip | in-model **and** real database, **both directions** (A → B and B → A) |
+| Offline / restart | offline create + edit → restart offline → reconnect: one row, edit applied, identities intact; real-DB restart: no duplicates |
+| Account switch · demo isolation | in-model (AM, AN) and real database (quarantine, 0 requests) |
+| Retry / refusal | lost acknowledgement → no duplicate; permanent refusal → record kept, surfaced, not hammered |
+| Child identity · counterpart identity · same-name people | identity suite (14) + real-DB checks; mutants M1–M5 |
+| Responsibility · handoff · recurrence · preparation · reimbursement truth | responsibility (18), schedule (18), preparation (11), money (15); mutants M6–M19 |
+| False-payment · false-agreement · false-legal · false-sharing | mutants M9–M12, M16–M17, M22–M24 and the copy-truth audit (24) — all caught |
+| Person invalidation | Z / AA; mutants M20–M21, M42; cross-device in the real-DB journey |
+| Privacy / raw-source scan | BF / BG (4 tests): zero hits, canary never shown, nothing logged |
+| RLS | materially applicable → attacked (owner / member / stranger / anon): 8 RLS checks of the 34 (+ the account-switch quarantine check) — §24 |
+| Expo Doctor | **21 / 21** |
+| Android export | **exit 0, 6.5 MB Hermes bundle containing Feature 07** (from a scratch copy; the junction-worktree hazard is documented in §37) |
+| Migration hashes · schema fingerprint | **unchanged** · `43e7c8a4402a3387cb2e1add4170921e` / 3617 **MATCH** |
+| Performance | projection median 2.64–6.30 ms on 175 records (soft target < 100 ms) — §35 |
+| Accessibility | labels in words, roles, touch floor, no swipe-only action (80 render tests); **device / screen-reader not verified** — §34, §39 |
+| Copy-truth audit | **zero** unsupported claims across the COPY catalogue, every presentation of the showcase household, and the UI source |
+| Affordance audit | **zero** TODO / fake / dead / unexplained controls; no message / send / share / invite control exists |
+| Shared-file report | one line in `claim.ts` + its regression test — §40 |
+| Sibling-import grep · feature-boundary grep | **zero** · **clean** — §41 |
+
+## 45. Final verdict
+
+### Minimum shippable Feature 07 — all 19 items
+
+| # | She can … | Evidence |
+|---|---|---|
+| 1 | open the feature through a direct feature-owned route | `app/(app)/life/coparent.tsx` (`/life/coparent`); in the Metro/Hermes bundle; wiring tests |
+| 2 | see the next represented child transition | hub "Next handoff" = the chronologically next one (`identity › the NEXT handoff…`, M38) |
+| 3 | identify the correct child | id-based `ChildRef`; C, AO/K, mutants M1–M3 |
+| 4 | identify the responsible / counterpart person where known | `counterpart` by person id; D, E, real DB |
+| 5 | understand what she needs to do | "Needs you" / "Waiting on someone" / "Needs review" with reasons in words |
+| 6 | distinguish assignment from acceptance / coverage | assigned ≠ requested ≠ acknowledged ≠ accepted ≠ covered; N / O / P; M6–M8 |
+| 7 | see preparation / packing work | preparation per handoff and per child; S / T / U |
+| 8 | create real transition-related preparation work | `createPreparation` + explicit `requires` edge |
+| 9 | create a real canonical child-linked handoff | `createHandoff` (H; real DB) — needs a child in the household (MP-07-01) |
+| 10 | meaningfully edit it | `editHandoff`, stale-safe (I, AQ) |
+| 11 | use supported recurrence for repeated transitions | weekly / every 2 weeks / monthly via the shared rule (V) |
+| 12 | preserve child and counterpart identities on restart | J; K; real-DB restart |
+| 13 | survive offline → reconnect | K |
+| 14 | round-trip supported state to a second device | in-model + real DB, both directions (L, M) |
+| 15 | use a bounded monetary follow-up path | task bridge with exact amount (AB) |
+| 16 | never turn a follow-up task into proof of payment | AC; M16, M17 |
+| 17 | never turn an operational schedule into a legal custody claim | W; M11 |
+| 18 | remain useful without the other parent having an account | AE — no account, no channel, no contact |
+| 19 | never imply data is shared | AF, BD; M22–M24 |
+
+### Completion value statement
+
+**After Feature 07, a woman can** open the Co-parent logistics screen (route `/life/coparent`; putting an entry point in the Life hub is left to integration) and see, in one calm place, her next child handoff — which child, when, and what is *recorded* about who is responsible and how far it got, with a request she recorded kept distinct from an acknowledgement, an acceptance and actual coverage. She can add and edit real handoffs (including repeating patterns), record what she asked of someone and what she was told, tie preparation to each handoff, and keep a follow-up on a child-related cost with the exact amount she entered — all of it durable, synced to a second device and safe offline — without the other parent needing an account, without anything being sent, and without Her Keys claiming agreement, legal status, payment, sharing or completion it does not have. (A household that has no child recorded sees a named blocked state until one exists; child creation belongs to Kids OS.)
+
+### The final questions
+
+1. **Can she understand the next child transition without reconstructing it from several places?** Yes — the next handoff, its child, time, responsibility, preparation and unknowns are on one screen; the exact location is one tap away.
+2. **Can different children have different counterpart adults without identity corruption?** Yes — by id, in tests (D) and against the real database.
+3. **Can two people with the same display name remain distinct?** Yes — distinct ids, unique labels, two "Alex" rows in PostgreSQL (E, M4–M5).
+4. **Can she distinguish assignment, acceptance and actual coverage?** Yes — five separate stages; covered only when accepted, she said it no longer needs her, and the person is available.
+5. **Can she see what needs preparing before a transition?** Yes — readiness sentence plus each item; no list is never "ready".
+6. **Can she create and edit a real canonical child-linked handoff?** Yes — one canonical event, child by id, owner-only scope, all-or-nothing, stale-safe.
+7. **Does it survive restart and second-device sync?** Yes — restart, offline→reconnect, and both directions against real PostgreSQL.
+8. **Can recurring transitions use shared recurrence without becoming a second custody-calendar model?** Yes — one shared rule per handoff; derived dates only; "the pattern you recorded".
+9. **Can a planned transition ever be described as agreed?** No — the wording is "You recorded a request …"; mutants M9–M10 are caught.
+10. **Can an operational schedule ever be described as a legal custody schedule?** No — M11 caught; the copy audit forbids the vocabulary.
+11. **Can a completed operational record be presented as proof of legal compliance?** No — a handoff cannot even be recorded complete (OC-1); a responsibility's completion reads "You recorded … part as complete" (M12).
+12. **Can she track a child-related monetary follow-up without Her Keys pretending an obligation was established?** Yes — "Amount you entered … isn't an agreed amount".
+13. **Can completing a follow-up task falsely mark payment as received?** No — "Marked done. Her Keys has no record of a payment."; payment appears only from a real `paid` outcome (M16–M17).
+14. **Does counterpart-person removal invalidate stale positive claims?** Yes — NEEDS REVIEW, no positive recording offered, nothing reassigned; cross-device in the real-DB journey (M20–M21, M42).
+15. **Does it remain useful when the other parent has no account?** Yes — nothing requires or contacts them.
+16. **Does any scope label falsely imply sharing?** No — `coparent-shared` is owner-only (proved in the migration and by attack); the only line is "Only your account can open this in Her Keys."
+17. **Does it avoid messaging / collaboration infrastructure?** Yes — no intent, execution, message, invite or share exists in the feature; source-audited.
+18. **Does it reuse canonical household truth instead of creating handoff / task / person / payment universes?** Yes — event, task, person, responsibility, dependency, recurrence, `value` facet; no new entity.
+19. **Can future intelligence reason from the state without being given false agreement, payment or legal certainty?** Yes — every view field states its source (`recordedBy: 'you'`, evidence flags, `coverage`), unknown stays unknown, and no field can carry those claims.
+20. **Were new durable semantics proposed?** One — a handoff outcome ("this took place"), proposed as OC-1 and **not implemented**.
+21. **Were owner checkpoints triggered?** One (OC-1); only that capability is stopped.
+22. **Were schema changes made?** **No.** Fingerprint and migration hashes unchanged.
+23. **Were sibling imports introduced?** **No** — clean by isolated-branch construction and mechanical verification (§41).
+
+### Replacement claim
+
+The builder concludes only that Feature 07 satisfies **this approved Feature 07 build contract**. It does **not** conclude that Her Keys replaces any co-parenting app: it intentionally reproduces no legal-evidence, court-record or messaging-platform functionality, and market-level adequacy is an owner / product judgment.
+
+### Documented debt (none of it undermines truth, durability, security or the core floor)
+
+1. **OC-1 — a handoff itself cannot be recorded complete** (owner checkpoint prepared; capability stopped; needs one additive constraint change and approval).
+2. **No on-device / visual verification** (environmental, §39): layout, the location-reveal reset on blur, same-pathname push behaviour, keyboard, TalkBack/VoiceOver and on-screen contrast are unverified; everything decidable without a device is tested.
+3. **A real household with no child cannot create a handoff** until Kids OS provides child creation (MP-07-01) — shown as a named blocked state, never a phantom child.
+4. **Shared-foundation gaps recorded, not repaired:** `attentionFor` treats acknowledged as handled (MP-07-13); the generic event editor files co-parenting events household-visible (MP-07-14); `accept()` defaults `stillNeedsMe` to false (Feature 07 never relies on it).
+5. **The shared claim repair must be included once at integration** (HK-INT-COPARENT-CLAIM-NAME-01); every branch forked from `14bd58e` carries the defect, and any real household claimed by an unrepaired client would need a data repair (owner-gated; nothing was applied remotely).
+6. **`run-coparent.mjs` is a standalone runner** to fold into `run.mjs` at integration.
+
+### Verdict
+
+**HK-FEATURE-07-COPARENT = PASS WITH DOCUMENTED DEBT**
+
+**READY FOR INDEPENDENT FEATURE 07 AUDIT = YES**
+
+**READY FOR WAVE 2 INTEGRATION = YES** — meaning only that Feature 07 itself has no known blocker to later controlled integration. It does not authorize a merge. Nothing was pushed, opened as a PR, merged, rebased, squashed or amended; no remote service (Supabase staging/production, Apple, Google, EAS, Gemini, RevenueCat, messaging, banking) was contacted.
