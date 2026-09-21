@@ -153,6 +153,10 @@ export function toCloudRow(state: AppState, ctx: ProjectionContext, kind: SyncEn
         owner_profile_id: ownerFor(row.scope, ctx.profileId),
         title: row.title,
         meal_date: row.date,
+        // A closed vocabulary, sent exactly as held. `unspecified` is the explicit "not stated", never a guess.
+        meal_slot: row.slot,
+        // Removal from active planning travels as this column: archiving is an ordinary update, never a delete.
+        status: row.status,
         category_id: category,
         scope: row.scope,
         ...provenanceColumns(ctx, kind, localId, row.provenance),

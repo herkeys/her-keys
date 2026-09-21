@@ -219,7 +219,7 @@
       "evidence": ["logicalDate"], "tests": ["DATE"], "mutants": [] },
     { "id": "AX", "tier": 2, "title": "Malformed MealPlanEntry", "expected": "PASS",
       "setup": "pull rows with an invalid slot, invalid status, invalid date, 250-character title, missing fields",
-      "assertions": ["AX1 state never becomes invalid and nothing throws", "AX2 valid rows in the same batch still apply", "AX3 absent status reads active and absent slot reads unspecified", "AX4 a legacy title of 200 characters stays valid"],
+      "assertions": ["AX1 state never becomes invalid and nothing throws", "AX2 an unknown slot or status is kept raw so the integrity gate refuses the WHOLE batch by name: nothing is coerced, nothing is partly applied, the cursor does not advance (the existing atomic-batch behavior)", "AX3 absent status reads active and absent slot reads unspecified", "AX4 a legacy title of 200 characters stays valid"],
       "evidence": ["lifecycle", "mealSlot"], "tests": ["SYNC", "ENTRY"], "mutants": [] },
     { "id": "AY", "tier": 2, "title": "Double save", "expected": "PASS",
       "setup": "two commits with the same draft id",

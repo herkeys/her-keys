@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { categoriesInOrder, categoryWithRole } from '../domain/categories';
 import { ageOn } from '../domain/logicalDay';
+import { activeMeals, compareMealPlanEntries } from '../domain/meals';
 import type { SystemRole } from '../domain/state';
 import { dayLabel } from '../features/today/formatDay';
 import { useHouseholdState } from './AppStateProvider';
@@ -22,9 +23,11 @@ export function useHousehold() {
       children: state.children.map((child) => ({ id: child.id, displayName: child.displayName, age: ageOn(child.birthDate, today) })),
       categories: categoriesInOrder(state),
       systems: state.systems,
-      upcomingMeals: state.meals
+      // Active planning only: an archived entry was removed from the plan, so it must not read as planned. The order is the
+      // shared device-independent one (date, slot, id by code unit), not a locale compare.
+      upcomingMeals: activeMeals(state)
         .filter((meal) => meal.date >= today)
-        .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id))
+        .sort(compareMealPlanEntries)
         .map((meal) => ({ id: meal.id, label: dayLabel(meal.date, today), title: meal.title, categoryId: meal.categoryId })),
       categoryIdForRole: (role: SystemRole) => categoryWithRole(state, role)?.id ?? null,
       categoryName: (categoryId: string) => categoryName.get(categoryId) ?? '',

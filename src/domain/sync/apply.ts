@@ -146,6 +146,10 @@ export function applyCloudRow(
           date: str(row.meal_date),
           title: str(row.title),
           categoryId: resolve(row.category_id as string) ?? str(row.category_id),
+          // An absent column reads as the default (a live plan with no stated slot). A value this client does not know is kept
+          // as it arrived, never coerced, so the integrity gate refuses the batch by name instead of silently rewriting the plan.
+          slot: (strOrNull(row.meal_slot) as never) ?? 'unspecified',
+          status: (strOrNull(row.status) as never) ?? 'active',
           ...facetsFromRow('meal', row),
           provenance: provenanceFromRow(row, resolve),
           scope: str(row.scope) as never,

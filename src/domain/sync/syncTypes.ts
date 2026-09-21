@@ -164,7 +164,9 @@ export const UPDATABLE_COLUMNS: Record<SyncEntityKind, readonly string[]> = {
                 'origin_updated_at', 'plan_kind', 'planned_date', 'planned_starts_at', 'scope', 'status',
                 'subject_member_id', 'title'], 'task'),
   system: merged(['category_id', 'description', 'name', 'origin_updated_at', 'scope', 'subject_member_id'], 'system'),
-  meal: merged(['category_id', 'meal_date', 'origin_updated_at', 'scope', 'subject_member_id', 'title'], 'meal'),
+  // `meal_slot` and `status` are listed by hand, like task `duration_source`: they are NOT facets, so they stay out of EXISTING_FACETS
+  // (and out of the generated shipping migration). Archiving a meal is an UPDATE of `status`; there is no delete.
+  meal: merged(['category_id', 'meal_date', 'meal_slot', 'origin_updated_at', 'scope', 'status', 'subject_member_id', 'title'], 'meal'),
   needsMe: merged(['category_id', 'due_date', 'status', 'title'], 'needsMe'),
   oneMove: merged(['cleared_at', 'completed_at', 'decided_at', 'status', 'target_needs_me_id',
                    'target_task_id', 'target_type', 'target_event_id', 'target_system_id',
