@@ -174,6 +174,10 @@ export function createAppStore(options: AppStoreOptions): AppStore {
     const changed = transition(state, ctx);
     if (changed === state) return;
     const next = withTodaysOneMove(changed, ctx);
+    // Dispatch is a persistence boundary just like commit. A malformed
+    // transition must not become the session's authoritative state while the
+    // repository repeatedly refuses to encode it.
+    if (!validateAppState(next).ok) return;
     publish({ state: next });
     persist(next);
   }

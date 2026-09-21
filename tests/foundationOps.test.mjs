@@ -12,7 +12,7 @@ import { captureNeedsMeItem, resolveNeedsMeItem } from '../src/domain/needsMe.ts
 import { appendObservation, observationsAbout } from '../src/domain/observations.ts';
 import { completeOnboarding, toggleOnboardingOption } from '../src/domain/onboarding.ts';
 import { completeOneMove, resolveOneMoveForToday } from '../src/domain/oneMove.ts';
-import { addPerson, accept, acknowledge, decline, delegate, liveResponsibilityFor, needsMePersonally, observeUnacknowledged, reassign, returnToSelf, completeResponsibility, unacknowledgedResponsibilities } from '../src/domain/responsibility.ts';
+import { addPerson, archivePerson, accept, acknowledge, decline, delegate, liveResponsibilityFor, needsMePersonally, observeUnacknowledged, reassign, returnToSelf, completeResponsibility, unacknowledgedResponsibilities } from '../src/domain/responsibility.ts';
 import { addDependency, addGoal, addRecurrence, addSystemStep, blockersOf, capacityWindowFor, DEFAULT_CAPACITY, goalProgress, isBlocked, nextOccurrence, occurrencesOf, setCapacity, skipOccurrence, stepsInOrder, stepsOf } from '../src/domain/structure.ts';
 import { addEvent, removeEvent } from '../src/domain/events.ts';
 import { addTask, archiveTask, completeTask, updateTask } from '../src/domain/tasks.ts';
@@ -491,6 +491,27 @@ describe('B4-FE01-013/-014 — people and the responsibility lifecycle', () => {
     assert.equal(delegate(s, at(), { about, to: { kind: 'person', id: 'nobody' } }), s);
     assert.equal(delegate(s, at(), { about: { kind: 'task', id: 'nothing' }, to: { kind: 'person', id: s.people[0].id } }), s);
   });
+
+  test('invalid reassignment is atomic and an archived person cannot receive new work', () => {
+    let { s, about, person } = setup();
+    s = delegate(s, at(), { about, to: person });
+    const assigned = s;
+    const id = s.responsibilities[0].id;
+
+    assert.equal(reassign(s, at(), id, { kind: 'person', id: 'missing' }), assigned, 'the old handoff remains live');
+    assert.equal(reassign(s, at(), id, person, -1), assigned, 'an invalid deadline cannot partially close it');
+
+    const archived = archivePerson(s, at(), person.id);
+    assert.equal(reassign(archived, at(), id, person), archived, 'archived people cannot receive reassigned work');
+    const returned = returnToSelf(archived, at(), id);
+    assert.equal(delegate(returned, at(), { about, to: person }), returned, 'archived people cannot receive a new request');
+  });
+
+  test('an explicit zero-minute acknowledgement window is due immediately', () => {
+    let { s, about, person } = setup();
+    s = delegate(s, at(), { about, to: person, ackWithinMinutes: 0 });
+    assert.equal(s.responsibilities[0].ackDueAt, new Date(MORNING).toISOString());
+  });
 });
 
 describe('B4-FE01-017/-018/-021/-022/-016 — dependencies, recurrence, goals, steps, capacity', () => {
@@ -542,6 +563,11 @@ describe('B4-FE01-017/-018/-021/-022/-016 — dependencies, recurrence, goals, s
     assert.equal(occurrencesOf(rule({ trigger: 'manual', frequency: null }), '2026-09-14', '2026-12-31').length, 0, 'a manual rule never fires on its own');
     assert.deepEqual(occurrencesOf(rule({ frequency: 'daily', occurrenceCount: 2 }), '2026-09-14', '2026-12-31'), ['2026-09-14', '2026-09-15']);
     assert.deepEqual(occurrencesOf(rule({ frequency: 'daily', endsOn: '2026-09-15' }), '2026-09-14', '2026-12-31'), ['2026-09-14', '2026-09-15']);
+    assert.deepEqual(
+      occurrencesOf(rule({ frequency: 'daily', anchorDate: '2010-01-01' }), '2026-09-14', '2026-09-16'),
+      ['2026-09-14', '2026-09-15', '2026-09-16'],
+      'an old active rule does not silently stop at an internal iteration guard',
+    );
   });
 
   test('a routine with a rule: its next occurrence skips a recorded exception, and the exception is history, not an edit', () => {
@@ -556,6 +582,9 @@ describe('B4-FE01-017/-018/-021/-022/-016 — dependencies, recurrence, goals, s
     assert.equal(nextOccurrence(s, rule, '2026-09-14'), '2026-09-27', 'this Sunday is an exception');
     assert.deepEqual(s.recurrences[0], rule, 'the rule itself was not edited');
     assert.equal(nextOccurrence({ ...s, recurrences: [{ ...rule, status: 'paused' }] }, { ...rule, status: 'paused' }, '2026-09-14'), null);
+
+    const fiveYearRule = { ...rule, frequency: 'yearly', interval: 5, byWeekday: null, anchorDate: '2020-09-20' };
+    assert.equal(nextOccurrence(s, fiveYearRule, '2026-09-14'), '2030-09-20', 'the next valid interval is not hidden by a fixed two-year horizon');
     valid(s);
     assert.equal(validateAppState({ ...s, recurrences: [{ ...rule, byMonthDay: 5 }] }).ok, false, 'a day of the month belongs to a monthly rule');
   });

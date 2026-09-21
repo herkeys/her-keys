@@ -12,7 +12,7 @@ import {
 } from './foundation/structure';
 import { refExists, refKey, type ContentRefKind, type TypedRef } from './foundation/typedRef';
 import { REQUIRED_TRANSITION_BUFFER_MINUTES } from '../features/daily-load/computeDailyLoad';
-import { addDays, parseLocalDate, formatLocalDate, toInstant, weekdayOf, type LocalDate } from './logicalDay';
+import { addDays, daysBetween, parseLocalDate, formatLocalDate, toInstant, weekdayOf, type LocalDate } from './logicalDay';
 import { appendObservation } from './observations';
 import type { AppState } from './state';
 
@@ -191,16 +191,25 @@ export function occurrencesOf(rule: Pick<RecurrenceRule, 'frequency' | 'interval
   };
 
   const anchor = parseLocalDate(rule.anchorDate);
-  let guard = 0;
   switch (rule.frequency) {
-    case 'daily':
-      for (let d = rule.anchorDate; d <= until && guard++ < 4000; d = addDays(d, rule.interval)) if (!step(d)) break;
+    case 'daily': {
+      const firstIndex = rule.occurrenceCount === null
+        ? Math.max(0, Math.ceil(daysBetween(rule.anchorDate, from) / rule.interval))
+        : 0;
+      produced = firstIndex;
+      for (let i = firstIndex, d = addDays(rule.anchorDate, firstIndex * rule.interval); d <= until; i += 1, d = addDays(rule.anchorDate, i * rule.interval)) {
+        if (!step(d)) break;
+      }
       break;
+    }
     case 'weekly': {
       const days = rule.byWeekday ?? [weekdayOf(rule.anchorDate)];
       // Walk week by week from the anchor's own week, so an interval keeps its phase.
       const weekStart = addDays(rule.anchorDate, -weekdayOf(rule.anchorDate));
-      for (let week = weekStart; week <= until && guard++ < 1000; week = addDays(week, 7 * rule.interval)) {
+      const firstWeekIndex = rule.occurrenceCount === null
+        ? Math.max(0, Math.floor(daysBetween(weekStart, from) / (7 * rule.interval)))
+        : 0;
+      for (let i = firstWeekIndex, week = addDays(weekStart, firstWeekIndex * 7 * rule.interval); week <= until; i += 1, week = addDays(weekStart, i * 7 * rule.interval)) {
         for (const wd of [...days].sort((a, b) => a - b)) {
           const date = addDays(week, wd);
           if (date < rule.anchorDate) continue;
@@ -211,7 +220,11 @@ export function occurrencesOf(rule: Pick<RecurrenceRule, 'frequency' | 'interval
     }
     case 'monthly': {
       const day = rule.byMonthDay ?? anchor.day;
-      for (let i = 0, y = anchor.year, m = anchor.month; guard++ < 1200; i += 1) {
+      const fromParts = parseLocalDate(from);
+      const monthsFromAnchor = (fromParts.year - anchor.year) * 12 + fromParts.month - anchor.month;
+      const firstIndex = rule.occurrenceCount === null ? Math.max(0, Math.floor(monthsFromAnchor / rule.interval)) : 0;
+      produced = firstIndex;
+      for (let i = firstIndex, y = anchor.year, m = anchor.month; ; i += 1) {
         const months = m - 1 + i * rule.interval;
         const year = y + Math.floor(months / 12);
         const month = (months % 12) + 1;
@@ -222,8 +235,12 @@ export function occurrencesOf(rule: Pick<RecurrenceRule, 'frequency' | 'interval
       }
       break;
     }
-    case 'yearly':
-      for (let i = 0; guard++ < 200; i += 1) {
+    case 'yearly': {
+      const firstIndex = rule.occurrenceCount === null
+        ? Math.max(0, Math.floor((parseLocalDate(from).year - anchor.year) / rule.interval))
+        : 0;
+      produced = firstIndex;
+      for (let i = firstIndex; ; i += 1) {
         const year = anchor.year + i * rule.interval;
         const last = new Date(Date.UTC(year, anchor.month, 0)).getUTCDate();
         const date = formatLocalDate({ year, month: anchor.month, day: Math.min(anchor.day, last) });
@@ -231,6 +248,7 @@ export function occurrencesOf(rule: Pick<RecurrenceRule, 'frequency' | 'interval
         if (!step(date)) break;
       }
       break;
+    }
   }
   return out;
 }
@@ -247,7 +265,17 @@ export function nextOccurrence(state: AppState, rule: RecurrenceRule, from: Loca
       .filter((o) => o.outcome === 'skipped' && o.about.kind === rule.about.kind && o.about.id === rule.about.id)
       .map((o) => o.plannedDate ?? o.logicalDate)
   );
-  const horizon = addDays(from, 366 * 2);
+  const skippedPeriods = skipped.size + 1;
+  const periodDays = rule.frequency === 'daily'
+    ? rule.interval
+    : rule.frequency === 'weekly'
+      ? 7 * rule.interval
+      : rule.frequency === 'monthly'
+        ? 31 * rule.interval
+        : rule.frequency === 'yearly'
+          ? 366 * rule.interval
+          : 1;
+  const horizon = addDays(from, periodDays * skippedPeriods);
   return occurrencesOf(rule, from, horizon).find((d) => !skipped.has(d)) ?? null;
 }
 

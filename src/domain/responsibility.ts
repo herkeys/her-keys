@@ -68,6 +68,14 @@ export interface DelegateInput {
   stillNeedsMe?: boolean;
 }
 
+const validHolder = (state: AppState, to: Exclude<Holder, { kind: 'self' }>): boolean =>
+  to.kind === 'person'
+    ? state.people.some((person) => person.id === to.id && person.status === 'active')
+    : state.children.some((child) => child.id === to.id);
+
+const validAckWindow = (minutes: number | null | undefined): boolean =>
+  minutes == null || (Number.isFinite(minutes) && minutes >= 0);
+
 export const liveResponsibilityFor = (state: Pick<AppState, 'responsibilities'>, about: TypedRef): Responsibility | null =>
   state.responsibilities.find((r) => r.about.kind === about.kind && r.about.id === about.id && isActiveResponsibility(r)) ?? null;
 
@@ -97,8 +105,7 @@ const observe = (state: AppState, ctx: TransitionContext, id: string, outcome: P
 export function delegate(state: AppState, ctx: TransitionContext, input: DelegateInput, previousResponsibilityId: string | null = null): AppState {
   if (!refExists(state, input.about)) return state;
   if (liveResponsibilityFor(state, input.about) !== null) return state;
-  const holderExists = input.to.kind === 'person' ? state.people.some((p) => p.id === input.to.id) : state.children.some((c) => c.id === input.to.id);
-  if (!holderExists) return state;
+  if (!validHolder(state, input.to) || !validAckWindow(input.ackWithinMinutes)) return state;
 
   const at = toInstant(ctx.nowMs);
   const responsibility: Responsibility = {
@@ -111,7 +118,7 @@ export function delegate(state: AppState, ctx: TransitionContext, input: Delegat
     respondedAt: null,
     completedAt: null,
     returnedAt: null,
-    ackDueAt: input.ackWithinMinutes ? toInstant(ctx.nowMs + input.ackWithinMinutes * 60_000) : null,
+    ackDueAt: input.ackWithinMinutes == null ? null : toInstant(ctx.nowMs + input.ackWithinMinutes * 60_000),
     stillNeedsMe: input.stillNeedsMe ?? true,
     previousResponsibilityId,
     createdAt: at,
@@ -169,7 +176,9 @@ export function returnToSelf(state: AppState, ctx: TransitionContext, id: string
 /** Hand it to somebody else. The earlier handoff is closed as returned and named by its successor. */
 export function reassign(state: AppState, ctx: TransitionContext, id: string, to: Exclude<Holder, { kind: 'self' }>, ackWithinMinutes?: number | null): AppState {
   const r = state.responsibilities.find((x) => x.id === id);
-  if (!r || !isActiveResponsibility(r)) return state;
+  // Validate the successor before closing the current handoff. Otherwise a stale UI choice
+  // (or malformed caller input) can silently return the work to her without reassigning it.
+  if (!r || !isActiveResponsibility(r) || !validHolder(state, to) || !validAckWindow(ackWithinMinutes)) return state;
   const returned = returnToSelf(state, ctx, id);
   if (returned === state) return state;
   const closed = observe(returned, ctx, id, 'reassigned');

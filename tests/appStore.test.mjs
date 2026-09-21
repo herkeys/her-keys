@@ -86,6 +86,22 @@ describe('Hydration lifecycle', () => {
     assert.equal(h.storage.writeLog.length, 0);
   });
 
+  test('dispatch refuses invalid state before it becomes session-authoritative', async () => {
+    const h = harness({ initial: { [STORAGE_KEYS.primary]: stored(onboardedState()) } });
+    const store = await launch(h);
+    const before = store.getSnapshot().state;
+
+    store.dispatch((state) => ({
+      ...state,
+      tasks: state.tasks.map((task, index) => (index === 0 ? { ...task, durationMinutes: -1 } : task)),
+    }));
+    await store.flush();
+
+    assert.equal(store.getSnapshot().state, before, 'invalid state is never published');
+    assert.deepEqual(h.readPrimary().data, before, 'invalid state is never queued for persistence');
+    assert.equal(store.getSnapshot().persistenceDegraded, false, 'a refused transition is not a storage failure');
+  });
+
   test('commit saves a change before showing it', async () => {
     const h = harness({ storageOptions: { writeDelayMs: () => 15 } });
     const store = await launch(h);
