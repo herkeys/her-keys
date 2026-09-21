@@ -77,7 +77,7 @@ export function PreviewPanel({
       {!current ? <InlineNotice tone="attention" title={COPY.previewOutOfDate} style={styles.gap} /> : null}
       {current && notice === 'updated' ? <InlineNotice tone="waiting" title={COPY.previewUpdated} style={styles.gap} /> : null}
       {notice === 'failed' ? <InlineNotice tone="attention" title={COPY.saveFailed} style={styles.gap} /> : null}
-      <View style={styles.lines} accessibilityLabel="What would change">
+      <View style={styles.lines} accessibilityLabel={COPY.whatWouldChange}>
         {lines.map((line) => (
           <AppText key={line} variant="body">
             {line}
@@ -85,9 +85,9 @@ export function PreviewPanel({
         ))}
       </View>
       <View style={styles.buttons}>
-        <Button label={ACCEPT_LABEL[preview.intent.kind]} onPress={onAccept} disabled={busy || !current} accessibilityHint="Applies this change" />
+        <Button label={ACCEPT_LABEL[preview.intent.kind]} onPress={onAccept} disabled={busy || !current} accessibilityHint={COPY.hintAccept} />
         {!current ? <Button label={COPY.previewAgain} variant="secondary" onPress={onPreviewAgain} /> : null}
-        <Button label={COPY.cancel} variant="ghost" onPress={onCancel} accessibilityHint="Discards the preview and changes nothing" />
+        <Button label={COPY.cancel} variant="ghost" onPress={onCancel} accessibilityHint={COPY.hintCancelPreview} />
       </View>
     </Card>
   );

@@ -45,7 +45,7 @@ export function UnplacedRow({ item, unplaced, ctx, onOpen }: { item: DayItem; un
         onPress={onOpen}
         accessibilityRole="button"
         accessibilityLabel={`${item.title}. ${itemLine(item, ctx)}. ${copy.label ? `${copy.label}. ` : ''}${copy.sentence}`}
-        accessibilityHint="Opens this item to edit it"
+        accessibilityHint={COPY.hintOpenItem}
         style={({ pressed }) => [styles.main, pressed ? styles.pressed : null]}
       >
         <AppText variant={item.flexibility === 'fixed' ? 'bodyStrong' : 'body'}>{item.title}</AppText>

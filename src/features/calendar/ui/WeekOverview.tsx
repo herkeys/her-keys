@@ -31,7 +31,7 @@ export function WeekDayRow({ day, isToday, last, onPress }: { day: WeekDaySummar
       accessibilityRole="button"
       accessibilityState={{ selected: day.isSelected }}
       accessibilityLabel={label}
-      accessibilityHint="Opens this day"
+      accessibilityHint={COPY.hintOpenDay}
       style={({ pressed }) => [styles.row, last ? null : styles.divider, pressed ? styles.pressed : null]}
     >
       <View style={styles.date}>

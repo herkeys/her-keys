@@ -51,7 +51,7 @@ export function AgendaRow({ item, ctx, last, onOpen, onProtect }: { item: DayIte
         onPress={onOpen}
         accessibilityRole="button"
         accessibilityLabel={itemAccessibilityLabel(item, ctx)}
-        accessibilityHint="Opens this item to edit it"
+        accessibilityHint={COPY.hintOpenItem}
         style={({ pressed }) => [styles.main, pressed ? styles.pressed : null]}
       >
         <AppText variant="metadata" color={elapsed ? colors.textTertiary : colors.textSecondary} style={styles.time}>
@@ -83,7 +83,7 @@ export function AgendaRow({ item, ctx, last, onOpen, onProtect }: { item: DayIte
           {open ? (
             <DetailLines lines={details}>
               {onProtect !== undefined ? (
-                <Button label={COPY.protect} variant="secondary" size="sm" onPress={onProtect} style={styles.protect} accessibilityHint="Shows what this does before anything changes" />
+                <Button label={COPY.protect} variant="secondary" size="sm" onPress={onProtect} style={styles.protect} accessibilityHint={COPY.hintProtect} />
               ) : null}
             </DetailLines>
           ) : null}

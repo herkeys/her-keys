@@ -43,7 +43,7 @@ export function DayNavigator({
 
 export function ViewSwitch({ view, onChange }: { view: CalendarView; onChange: (view: CalendarView) => void }) {
   return (
-    <View style={styles.switch} accessibilityRole="tablist">
+    <View style={styles.switch} accessibilityLabel={COPY.viewSwitchLabel}>
       <ChipToggle label={COPY.dayView} selected={view === 'day'} onPress={() => onChange('day')} />
       <ChipToggle label={COPY.weekView} selected={view === 'week'} onPress={() => onChange('week')} />
     </View>

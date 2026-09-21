@@ -34,6 +34,7 @@ export const COPY = {
   addEvent: 'Add event',
   dayView: 'Day',
   weekView: 'Week',
+  viewSwitchLabel: 'Calendar view',
   today: 'Today',
   previousDay: 'Previous day',
   nextDay: 'Next day',
@@ -66,6 +67,12 @@ export const COPY = {
   protect: 'Protect this',
   undo: 'Undo',
   keepAsPlanned: 'Not today',
+  whatWouldChange: 'What would change',
+  hintOpenItem: 'Opens this item to edit it',
+  hintOpenDay: 'Opens this day',
+  hintProtect: 'Shows what this does before anything changes',
+  hintAccept: 'Applies this change',
+  hintCancelPreview: 'Discards the preview and changes nothing',
 } as const;
 
 export const undoLine = (title: string): string => `You moved ${title} to tomorrow. That can still be undone today.`;

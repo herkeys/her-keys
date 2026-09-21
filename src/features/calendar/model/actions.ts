@@ -1,5 +1,5 @@
 import type { TransitionContext } from '../../../domain/context';
-import { approveDailyLoadMove, keepDailyLoadPlan, latestTransitionDecision, undoableMove } from '../../../domain/dailyLoadDecisions';
+import { approveDailyLoadMove, keepDailyLoadPlan, latestTransitionDecision, todaysIssues, undoableMove } from '../../../domain/dailyLoadDecisions';
 import { approveDropTask, approveMoveEvent, approveProtectItem, approveShortenTask, keepCapacityPlan } from '../../../domain/recommendationActions';
 import type { LocalDate } from '../../../domain/logicalDay';
 import type { AppState } from '../../../domain/state';
@@ -55,27 +55,38 @@ export function actionAvailability({ state, today, nowMs, mode, items }: ActionI
   const timingDecided = latestTransitionDecision(state, today) !== null;
   const capacityDecided = state.actions.some((action) => action.logicalDate === today && CAPACITY_ACTION_TYPES.has(action.type));
 
+  // WHICH items are worth asking the foundation about is read from the foundation's own verdict, computed ONCE. Each
+  // mutation recomputes the whole day's verdict when called, so dry-running every flexible item would cost the day's
+  // size squared over again. The dry-run stays the authority on whether an action is legitimate: this only limits the
+  // question to the handful of items the verdict actually names, and it names exactly the sets the mutations check.
+  const issues = todaysIssues(state, today);
+  const offeredEvents = new Set<string>(
+    issues.focus !== null ? issues.focus.movableEventIds : issues.primary?.kind === 'overlap' && issues.primary.movableEventId !== null ? [issues.primary.movableEventId] : []
+  );
+  const offeredMoveTasks = new Set<string>(issues.focus !== null ? issues.focus.candidates.map((candidate) => candidate.task.id) : []);
+  const capacityTask = issues.capacityPressure === null ? null : issues.capacityPressure.largestTaskId;
+
   let moves = 0;
   let drops = 0;
   let shortens = 0;
   for (const item of flexible) {
     const id = item.ref.id;
     if (item.ref.kind === 'event') {
-      if (changes(approveMoveEvent(state, dryRun, id))) {
+      if (offeredEvents.has(id) && changes(approveMoveEvent(state, dryRun, id))) {
         add('MOVE', item, true, 'offered_by_verdict');
         moves++;
       }
       continue;
     }
-    if (changes(approveDailyLoadMove(state, dryRun, id))) {
+    if (offeredMoveTasks.has(id) && changes(approveDailyLoadMove(state, dryRun, id))) {
       add('MOVE', item, true, 'offered_by_verdict');
       moves++;
     }
-    if (changes(approveDropTask(state, dryRun, id))) {
+    if (capacityTask === id && changes(approveDropTask(state, dryRun, id))) {
       add('DROP', item, true, 'offered_by_verdict');
       drops++;
     }
-    if (changes(approveShortenTask(state, dryRun, id))) {
+    if (capacityTask === id && changes(approveShortenTask(state, dryRun, id))) {
       add('SHORTEN', item, true, 'offered_by_verdict');
       shortens++;
     }
