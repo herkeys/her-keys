@@ -1,0 +1,36 @@
+{
+  "scenario": "Q",
+  "description": "accepted and off her list: covered",
+  "childId": "child-1",
+  "childLabel": "Sam, 8",
+  "nextItem": null,
+  "needsAttentionReasons": [],
+  "openWork": {
+    "needsYou": [],
+    "withSomeoneElse": [
+      "Costume"
+    ],
+    "waiting": [],
+    "nobodyRecorded": []
+  },
+  "focus": {
+    "title": "Costume",
+    "responsibilityState": "accepted",
+    "coverageState": "covered",
+    "requiresYou": false,
+    "dependencyStanding": null,
+    "durationSource": "default-estimate",
+    "fallbackPlanState": "PLAN_IN_PLACE:accepted_and_off_your_list",
+    "openSteps": [],
+    "unknownFacts": [
+      "when",
+      "length_confirmed"
+    ],
+    "availableActions": [
+      "edit",
+      "mark_done",
+      "remove",
+      "take_back"
+    ]
+  }
+}

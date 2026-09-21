@@ -212,6 +212,15 @@ export async function kidsJourneys(check, psql) {
   check('kids: RLS SAME-HOUSEHOLD SECOND MEMBER - reads the household\'s child tasks, events and children', memberSees.tasks > 0 && memberSees.events > 0 && memberSees.household_members > 0, JSON.stringify(memberSees));
   check('kids: ...but not the owner-private people and responsibilities beside them (a known limit, MP-K-13)', memberSees.responsibilities === 0 && memberSees.household_people === 0, JSON.stringify(memberSees));
 
+  // What a second member may WRITE is whatever the household semantics say: child- and household-scoped rows belong to the household,
+  // so a member may edit one; the owner-private people, responsibilities and dependencies are not theirs to read, let alone change.
+  const memberEdit = await second.from('tasks').update({ notes: 'a household member may edit a child task' }).eq('id', taskCloudId).select('id');
+  const memberPeople = await second.from('household_people').update({ status: 'archived' }).eq('household_id', household).select('id');
+  const memberPlant = await second.from('responsibilities').delete().eq('household_id', household).select('id');
+  check('kids: RLS SAME-HOUSEHOLD SECOND MEMBER - may edit the household\'s child task (permitted), and can neither change nor delete the owner-private people and responsibilities',
+    (memberEdit.data ?? []).length === 1 && (memberPeople.data ?? []).length === 0 && (memberPlant.data ?? []).length === 0,
+    `edit=${(memberEdit.data ?? []).length} people=${(memberPeople.data ?? []).length} resp=${(memberPlant.data ?? []).length} err=${memberEdit.error?.code ?? '-'}`);
+
   // ---- 9. OC-01 evidence: a child added AFTER binding has no cloud identity ------------------------------------------------------------
   await K(a, (s, c) => mut.addChildToHousehold(s, c, { displayName: 'Late', birthDate: '2024-01-01' }));
   const late = state().children.find((k) => k.displayName === 'Late').id;
@@ -224,4 +233,30 @@ export async function kidsJourneys(check, psql) {
       && JSON.stringify(a.persisted().identity.sync.evidence).includes('unresolvable-dependency'));
   check('kids: OC-01 - and it blocks nothing: a later task for another child still reaches the cloud',
     sql(`SELECT count(*) FROM public.tasks WHERE household_id='${household}' AND title='Still syncs after that';`) === '1');
+
+  // ---- 10. A large household: 450 child-linked tasks, above the queue ceiling (400) and two pull chunks -----------------------------------
+  const S = crypto.randomUUID();
+  psql('postgres', `INSERT INTO auth.users (id, email, aud, role) VALUES ('${S}','kids-${S}@local.test','authenticated','authenticated') ON CONFLICT (id) DO NOTHING;`, { label: 'kids bulk user' });
+  const big = await device(m, { account: S, sent });
+  await mutate(big, (s) => ({ ...s, oneMoves: [WITHHELD_MOVE] }));
+  for (const name of ['Bo', 'Cy', 'Di', 'Ed', 'Flo']) await K(big, (s, c) => mut.addChildToHousehold(s, c, { displayName: name, birthDate: '2017-04-04' }));
+  await mutate(big, (s, c) => {
+    let next = s;
+    for (let i = 0; i < 450; i += 1) next = mut.createChildTask(next, c, { childId: next.children[i % 5].id, title: `Bulk ${i}`, ...D, durationText: '20', durationTouched: true }).state;
+    return next;
+  });
+  await big.store.flush();
+  const bigBound = await big.signIn();
+  const perChild = (h) => sql(`SELECT string_agg(z.c || ':' || z.n, ',' ORDER BY z.c) FROM (SELECT m.local_id AS c, count(*) AS n FROM public.tasks t JOIN public.household_members m ON m.id = t.subject_member_id AND m.household_id = t.household_id WHERE t.household_id='${h}' GROUP BY m.local_id) z;`);
+  const wantSplit = state(big).children.map((k) => `${k.id}:90`).sort().join(',');
+  check('kids: a 450-task child-linked household is sent in full by ONE sign-in, 90 to each of five children, each attributed to its own child, queue drained',
+    bigBound.kind === 'accountBound' && perChild(bigBound.householdId) === wantSplit && big.persisted().identity.sync.queue.length === 0, `${bigBound.kind} ${perChild(bigBound.householdId)}`);
+  const bigFetched = [];
+  const bigB = await device(m, { account: S, sent, fetched: bigFetched });
+  await bindAsNewDevice(m, bigB, S, bigBound.householdId);
+  await bigB.signIn();
+  const bigDigestA = digest(state(big));
+  const bigDigestB = digest(state(bigB));
+  check('kids: a second device pulls all 450 through the real sync_pull in bounded requests, and its Kids projection is identical for every child',
+    state(bigB).tasks.length === 450 && bigFetched.filter((r) => r.table === 'tasks').every((r) => r.count <= 100) && JSON.stringify(bigDigestA) === JSON.stringify(bigDigestB), `${state(bigB).tasks.length} tasks`);
 }

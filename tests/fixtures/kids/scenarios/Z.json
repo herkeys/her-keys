@@ -1,0 +1,40 @@
+{
+  "scenario": "Z",
+  "description": "the person relied on is later archived",
+  "childId": "child-1",
+  "childLabel": "Sam, 8",
+  "nextItem": {
+    "title": "Tuesday pickup",
+    "kind": "event",
+    "localDate": "2026-09-22",
+    "startMinutes": 1020
+  },
+  "needsAttentionReasons": [
+    "fact:holder_unavailable:none"
+  ],
+  "openWork": {
+    "needsYou": [],
+    "withSomeoneElse": [],
+    "waiting": [],
+    "nobodyRecorded": []
+  },
+  "focus": {
+    "title": "Tuesday pickup",
+    "responsibilityState": "accepted",
+    "coverageState": "holder_unavailable",
+    "requiresYou": false,
+    "dependencyStanding": null,
+    "durationSource": null,
+    "fallbackPlanState": "NEEDS_A_PLAN:holder_unavailable",
+    "openSteps": [],
+    "unknownFacts": [
+      "location"
+    ],
+    "availableActions": [
+      "edit",
+      "remove",
+      "take_back",
+      "add_plan_step"
+    ]
+  }
+}

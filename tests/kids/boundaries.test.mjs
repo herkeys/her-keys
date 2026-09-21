@@ -12,7 +12,7 @@ import { addDependency } from '../../src/domain/structure.ts';
 import { buildChildDetail, buildKidsView } from '../../src/features/kids/projection.ts';
 import { addChildToHousehold, createChildEvent, createChildTask, recordAccepted, requestHandoffToNewPerson } from '../../src/features/kids/mutations.ts';
 import { demoState, onboardedState } from '../support/fixtures.mjs';
-import { NOW, stringLiterals } from './support.mjs';
+import { NOW, stringLiterals, withoutComments } from './support.mjs';
 
 const ROOT = join(import.meta.dirname, '..', '..');
 const walk = (dir) => readdirSync(dir).flatMap((name) => {
@@ -145,5 +145,23 @@ describe('AFFORDANCE AUDIT: nothing unexplained, fake or dead reaches a user', (
     for (const file of kidsFiles().filter((f) => f.endsWith('.tsx'))) {
       for (const match of read(file).matchAll(/onPress=\{(?:\(\)\s*=>\s*)?(?:noop|undefined|null)\}/g)) assert.fail(`${rel(file)}: ${match[0]}`);
     }
+  });
+});
+
+describe('PRIVACY: child-operational content is never logged, sent or borrowed from Talk It Out (AS)', () => {
+  const code = (file) => withoutComments(read(file));
+  const all = () => [...kidsFiles(), ...routeFiles()];
+
+  test('nothing in the feature logs, reports or leaves the device with a child\'s details, notes or instructions', () => {
+    for (const file of all()) assert.doesNotMatch(code(file), /\bconsole\.|\bLogger\b|analytics|track\(|Sentry|crashlytics|Share\.share|Linking\.|clipboard/i, rel(file));
+  });
+
+  test('Kids never reads an interpretation, a source artifact or a Talk It Out reading, so no raw utterance or derived title can enter it', () => {
+    for (const file of all()) assert.doesNotMatch(code(file), /\binterpretations?\b|sourceArtifacts?|talkItOut|TalkItOut|utterance|readingTitle|titleForCloud/, rel(file));
+  });
+
+  test('the only durable things Kids writes are canonical rows the store already validates and syncs (no new collection, no new stored field)', () => {
+    const writes = code(join(ROOT, 'src', 'features', 'kids', 'mutations.ts'));
+    for (const forbidden of ['kids:', 'kidItems', 'childProfiles', 'fallbackPlans', 'emergency', 'authorization']) assert.equal(writes.includes(forbidden), false, forbidden);
   });
 });

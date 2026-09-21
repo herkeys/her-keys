@@ -1,0 +1,38 @@
+{
+  "scenario": "F",
+  "description": "a child-linked unresolved task",
+  "childId": "child-1",
+  "childLabel": "Sam, 8",
+  "nextItem": null,
+  "needsAttentionReasons": [
+    "shared:deadline:soon"
+  ],
+  "openWork": {
+    "needsYou": [],
+    "withSomeoneElse": [],
+    "waiting": [],
+    "nobodyRecorded": [
+      "Permission slip"
+    ]
+  },
+  "focus": {
+    "title": "Permission slip",
+    "responsibilityState": "none",
+    "coverageState": "nobody_recorded",
+    "requiresYou": null,
+    "dependencyStanding": null,
+    "durationSource": "default-estimate",
+    "fallbackPlanState": null,
+    "openSteps": [],
+    "unknownFacts": [
+      "who_is_handling",
+      "length_confirmed"
+    ],
+    "availableActions": [
+      "edit",
+      "mark_done",
+      "remove",
+      "request_handoff"
+    ]
+  }
+}

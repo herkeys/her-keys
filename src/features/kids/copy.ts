@@ -262,6 +262,8 @@ export const DETAIL = {
   emptyChild: 'Nothing recorded for this child yet. Add a task or an event and it will show up here.',
   where: (place: string) => `At ${place}`,
   notRecorded: (parts: string[]) => `Not recorded: ${parts.join(', ')}.`,
+  /** Her own words, shown as she wrote them. Kids adds no meaning to them and draws no conclusion from them. */
+  notes: (text: string) => `Notes: ${text}`,
   preparation: (minutes: number) => `${minutesText(minutes)} to get ready`,
   travelBefore: (minutes: number) => `${minutesText(minutes)} to get there`,
   travelAfter: (minutes: number) => `${minutesText(minutes)} to get back`,
@@ -436,7 +438,7 @@ export function handoffMessage(outcome: HandoffOutcome | ResponseOutcome): strin
 // ----------------------------------------------------------- accessibility ---
 
 /** One composed label per row, so a screen reader reads identity, state and unknowns in a sensible linear order. */
-export function itemAccessibilityLabel(item: ItemFact, childName: string, today: LocalDate): string {
+export function itemAccessibilityLabel(item: ItemFact, childName: string, today: LocalDate, expanded = false): string {
   const parts = [`${item.ref.kind === 'event' ? 'Event' : 'Task'} for ${childName}`, item.title];
   const when = whenPhrase(item, today);
   if (when) parts.push(when);
@@ -449,7 +451,8 @@ export function itemAccessibilityLabel(item: ItemFact, childName: string, today:
   const dep = dependencyLine(item);
   if (dep) parts.push(dep);
   const unknown = visibleUnknowns(item);
-  if (unknown.length > 0) parts.push(DETAIL.notRecorded(unknown));
+  if (expanded && unknown.length > 0) parts.push(DETAIL.notRecorded(unknown));
+  if (expanded && item.notes) parts.push(DETAIL.notes(item.notes));
   return parts.join('. ').replace(/\.\./g, '.');
 }
 

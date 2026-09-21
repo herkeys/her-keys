@@ -1,0 +1,39 @@
+{
+  "scenario": "R",
+  "description": "requires her: the handoff was declined",
+  "childId": "child-1",
+  "childLabel": "Sam, 8",
+  "nextItem": null,
+  "needsAttentionReasons": [
+    "fact:handed_back:none"
+  ],
+  "openWork": {
+    "needsYou": [
+      "Costume"
+    ],
+    "withSomeoneElse": [],
+    "waiting": [],
+    "nobodyRecorded": []
+  },
+  "focus": {
+    "title": "Costume",
+    "responsibilityState": "declined",
+    "coverageState": "declined",
+    "requiresYou": true,
+    "dependencyStanding": null,
+    "durationSource": "default-estimate",
+    "fallbackPlanState": "NEEDS_A_PLAN:declined",
+    "openSteps": [],
+    "unknownFacts": [
+      "when",
+      "length_confirmed"
+    ],
+    "availableActions": [
+      "edit",
+      "mark_done",
+      "remove",
+      "request_handoff",
+      "add_plan_step"
+    ]
+  }
+}

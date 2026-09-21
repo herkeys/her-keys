@@ -1,0 +1,39 @@
+{
+  "scenario": "AA",
+  "description": "a person who is not in this household cannot hold it",
+  "childId": "child-1",
+  "childLabel": "Sam, 8",
+  "nextItem": {
+    "title": "Tuesday pickup",
+    "kind": "event",
+    "localDate": "2026-09-22",
+    "startMinutes": 1020
+  },
+  "needsAttentionReasons": [],
+  "openWork": {
+    "needsYou": [],
+    "withSomeoneElse": [],
+    "waiting": [],
+    "nobodyRecorded": []
+  },
+  "focus": {
+    "title": "Tuesday pickup",
+    "responsibilityState": "none",
+    "coverageState": "nobody_recorded",
+    "requiresYou": null,
+    "dependencyStanding": null,
+    "durationSource": null,
+    "fallbackPlanState": "NOT_ENOUGH_KNOWN:nothing_recorded",
+    "openSteps": [],
+    "unknownFacts": [
+      "location",
+      "who_is_handling"
+    ],
+    "availableActions": [
+      "edit",
+      "remove",
+      "request_handoff",
+      "add_plan_step"
+    ]
+  }
+}

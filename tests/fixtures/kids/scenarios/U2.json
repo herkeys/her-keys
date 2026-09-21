@@ -1,0 +1,45 @@
+{
+  "scenario": "U2",
+  "description": "a removed EVENT prerequisite is unavailable too",
+  "childId": "child-1",
+  "childLabel": "Sam, 8",
+  "nextItem": null,
+  "needsAttentionReasons": [
+    "fact:prerequisite_unavailable:none"
+  ],
+  "openWork": {
+    "needsYou": [],
+    "withSomeoneElse": [],
+    "waiting": [],
+    "nobodyRecorded": [
+      "Prepare questions"
+    ]
+  },
+  "focus": {
+    "title": "Prepare questions",
+    "responsibilityState": "none",
+    "coverageState": "nobody_recorded",
+    "requiresYou": null,
+    "dependencyStanding": {
+      "readiness": "needsReview",
+      "waitingOn": [],
+      "unavailable": [
+        "School meeting:retired"
+      ]
+    },
+    "durationSource": "default-estimate",
+    "fallbackPlanState": null,
+    "openSteps": [],
+    "unknownFacts": [
+      "when",
+      "who_is_handling",
+      "length_confirmed"
+    ],
+    "availableActions": [
+      "edit",
+      "mark_done",
+      "remove",
+      "request_handoff"
+    ]
+  }
+}

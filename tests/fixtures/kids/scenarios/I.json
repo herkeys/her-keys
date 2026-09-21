@@ -1,0 +1,36 @@
+{
+  "scenario": "I",
+  "description": "explicit user duration (a stated 15)",
+  "childId": "child-1",
+  "childLabel": "Sam, 8",
+  "nextItem": null,
+  "needsAttentionReasons": [],
+  "openWork": {
+    "needsYou": [],
+    "withSomeoneElse": [],
+    "waiting": [],
+    "nobodyRecorded": [
+      "Stated length"
+    ]
+  },
+  "focus": {
+    "title": "Stated length",
+    "responsibilityState": "none",
+    "coverageState": "nobody_recorded",
+    "requiresYou": null,
+    "dependencyStanding": null,
+    "durationSource": "user-provided",
+    "fallbackPlanState": null,
+    "openSteps": [],
+    "unknownFacts": [
+      "when",
+      "who_is_handling"
+    ],
+    "availableActions": [
+      "edit",
+      "mark_done",
+      "remove",
+      "request_handoff"
+    ]
+  }
+}

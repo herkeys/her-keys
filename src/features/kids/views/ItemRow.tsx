@@ -49,7 +49,7 @@ export function ItemRow({
     <Pressable
       onPress={() => onOpen(item)}
       accessibilityRole="button"
-      accessibilityLabel={itemAccessibilityLabel(item, childName, today)}
+      accessibilityLabel={itemAccessibilityLabel(item, childName, today, showUnknowns)}
       accessibilityHint="Opens this item"
       style={({ pressed }) => [styles.row, pressed ? { opacity: interaction.pressedOpacity } : null]}
     >
@@ -83,6 +83,11 @@ export function ItemRow({
       {dependency ? (
         <AppText variant="supporting" color={color.status.attention}>
           {dependency}
+        </AppText>
+      ) : null}
+      {showUnknowns && item.notes ? (
+        <AppText variant="supporting" color={color.text.secondary}>
+          {DETAIL.notes(item.notes)}
         </AppText>
       ) : null}
       {showUnknowns && visibleUnknowns(item).length > 0 ? (
