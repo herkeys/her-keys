@@ -4,7 +4,8 @@ import { emptyMealFacets } from './foundation/commitment';
 import { provenanceFor, userProvenance, type Provenance } from './foundation/provenance';
 import { isLocalDate, type LocalDate } from './logicalDay';
 import { ID_PATTERN } from './schemaPrimitives';
-import { MEAL_PLAN_CAPACITY, MEAL_SLOTS, type AppState, type MealPlanEntry, type MealSlot, type MealStatus } from './state';
+import { FIELD_LIMITS, MEAL_PLAN_CAPACITY, MEAL_SLOTS, type AppState, type MealPlanEntry, type MealSlot, type MealStatus } from './state';
+import { addTask } from './tasks';
 
 /**
  * Meal decisions. A MealPlanEntry is a PLANNING RECORD: "this household plans this meal for this logical date". Nothing here
@@ -25,13 +26,18 @@ const LINE_BREAKS = new RegExp(`[${LINE_BREAK_CHARS}]+`, 'g');
 
 export type MealTitleCheck = { ok: true; title: string } | { ok: false; problem: 'blank' | 'too-long' };
 
-/** User-entered text: line breaks collapse to one space, then trimmed. Unicode is permitted; no slug, no parsing. */
-export function checkMealTitle(raw: string): MealTitleCheck {
+/** User-entered single-line text: line breaks collapse to one space, then trimmed. Unicode is permitted; no slug, no parsing. */
+function checkLine(raw: string, max: number): MealTitleCheck {
   const title = raw.replace(LINE_BREAKS, ' ').trim();
   if (title.length === 0) return { ok: false, problem: 'blank' };
-  if (title.length > MEAL_TITLE_MAX) return { ok: false, problem: 'too-long' };
+  if (title.length > max) return { ok: false, problem: 'too-long' };
   return { ok: true, title };
 }
+
+export const checkMealTitle = (raw: string): MealTitleCheck => checkLine(raw, MEAL_TITLE_MAX);
+
+/** A meal task's title is an ordinary task title, so it is held to the task limit, and to the same single-line rule. */
+export const checkMealTaskTitle = (raw: string): MealTitleCheck => checkLine(raw, FIELD_LIMITS.titleLength);
 
 export function isMealSlot(value: unknown): value is MealSlot {
   return typeof value === 'string' && (MEAL_SLOTS as readonly string[]).includes(value);
@@ -199,3 +205,73 @@ export const mealDraftFrom = (source: Pick<MealPlanEntry, 'title' | 'slot'>, tod
   slot: source.slot,
   date: today,
 });
+
+// ------------------------------------------------------------------------------------------------------- meal tasks ---
+
+/**
+ * A MEAL TASK is an ordinary canonical Task filed under the Meals category: buy tortillas, defrost chicken, pack lunches. It means
+ * only that she chose to track that work. It proves no pantry state, no purchase and no preparation, it is not linked to any meal
+ * (no truthful link exists yet), and Feature 08 stores no grocery-or-prep distinction, which would be a second semantic.
+ */
+
+/** The longest a task may be said to take, in minutes (a day). */
+export const MEAL_TASK_MAX_MINUTES = 1440;
+
+/** The task limit in state.ts; a refused add is friendlier than a whole-state validation failure. */
+const TASK_CAPACITY = 5000;
+
+export interface AddMealTaskInput {
+  title: string;
+  /** Minutes she typed. Omitted or null means she did not say: the task takes the planning default and is recorded AS a default. */
+  minutes?: number | null;
+  /**
+   * The day of the meal this task is for, offered as a PROPOSAL. It is stored only when `confirmed` is true, which only her explicit
+   * choice sets. The foundation records no provenance for a due date, so a date Her Keys suggested must never be stored as if she
+   * had chosen it; unconfirmed, the task simply has no due date.
+   */
+  due?: { date: LocalDate; confirmed: boolean } | null;
+  /** A draft id allocated when the sheet opened: saving the same draft twice creates one task. */
+  id?: string;
+}
+
+export type MealTaskRefusal = 'no-meals-context' | 'invalid-title' | 'invalid-minutes' | 'invalid-date' | 'invalid-id' | 'task-full' | 'exists';
+
+export interface MealTaskResult {
+  state: AppState;
+  /** `exists` is a repeat of a save that already happened: treat it as success. */
+  refusal: MealTaskRefusal | null;
+  id: string | null;
+}
+
+export function addMealTask(state: AppState, ctx: TransitionContext, input: AddMealTaskInput): MealTaskResult {
+  const id = input.id ?? ctx.createId('task');
+  const refuseTask = (refusal: MealTaskRefusal, at: string | null = null): MealTaskResult => ({ state, refusal, id: at });
+  if (state.tasks.some((task) => task.id === id)) return refuseTask('exists', id);
+  if (!ID_PATTERN.test(id)) return refuseTask('invalid-id');
+
+  const title = checkMealTaskTitle(input.title);
+  if (!title.ok) return refuseTask('invalid-title');
+
+  const minutes = input.minutes ?? null;
+  if (minutes !== null && (!Number.isInteger(minutes) || minutes < 1 || minutes > MEAL_TASK_MAX_MINUTES)) return refuseTask('invalid-minutes');
+
+  const confirmedDue = input.due?.confirmed === true ? input.due.date : null;
+  if (confirmedDue !== null && !isLocalDate(confirmedDue)) return refuseTask('invalid-date');
+
+  const context = categoryWithRole(state, 'meals');
+  if (context === null) return refuseTask('no-meals-context');
+  if (state.tasks.length >= TASK_CAPACITY) return refuseTask('task-full');
+
+  // The one place an id is chosen for the task: addTask asks its context for it, so the draft id becomes the task's id.
+  const withId: TransitionContext = { ...ctx, createId: (prefix) => (prefix === 'task' ? id : ctx.createId(prefix)) };
+  const next = addTask(state, withId, {
+    title: title.title,
+    categoryId: context.id,
+    scope: 'household',
+    // Typed minutes are hers ('user'); no minutes is the planning default, recorded AS a default (never promoted to hers).
+    ...(minutes === null ? {} : { durationMinutes: minutes, durationSource: 'user' as const }),
+    // Only a date she confirmed. It never sets a plan, so it claims no Calendar time and no capacity beyond an ordinary due date.
+    dueDate: confirmedDue,
+  });
+  return { state: next, refusal: null, id };
+}
