@@ -35,6 +35,7 @@ export function evidenceOfDetail(view: SystemDetailView) {
               interval: schedule.interval,
               byWeekday: schedule.byWeekday,
               byMonthDay: schedule.byMonthDay,
+              anchorDate: schedule.anchorDate,
               timeOfDayMinutes: schedule.timeOfDayMinutes,
               endsOn: schedule.endsOn,
               occurrenceCount: schedule.occurrenceCount,

@@ -52,7 +52,7 @@ export function scheduleViewFor(state: AppState, systemId: string, today: LocalD
   const skipped = skippedDatesFor(state, systemId);
   if (rule === null) {
     return {
-      ruleId: null, state: 'none', trigger: null, frequency: null, interval: null, byWeekday: null, byMonthDay: null,
+      ruleId: null, state: 'none', trigger: null, frequency: null, interval: null, byWeekday: null, byMonthDay: null, anchorDate: null,
       timeOfDayMinutes: null, endsOn: null, occurrenceCount: null, timezone: null, nextExpected: null, noNextReason: 'no_schedule', skipped,
     };
   }
@@ -73,6 +73,7 @@ export function scheduleViewFor(state: AppState, systemId: string, today: LocalD
     interval: rule.interval,
     byWeekday: rule.byWeekday === null ? null : [...rule.byWeekday].sort((a, b) => a - b),
     byMonthDay: rule.byMonthDay,
+    anchorDate: rule.anchorDate,
     timeOfDayMinutes: rule.timeOfDayMinutes,
     endsOn: rule.endsOn,
     occurrenceCount: rule.occurrenceCount,

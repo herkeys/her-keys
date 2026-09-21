@@ -32,6 +32,8 @@ export interface ScheduleView {
   /** 0 = Sunday … 6 = Saturday. */
   byWeekday: number[] | null;
   byMonthDay: number | null;
+  /** The day the schedule counts from. A weekly rule with no listed weekday falls on this day's weekday. */
+  anchorDate: LocalDate | null;
   timeOfDayMinutes: number | null;
   endsOn: LocalDate | null;
   occurrenceCount: number | null;
@@ -205,7 +207,7 @@ export interface HubItem {
   duration: DurationView;
   schedule: Pick<
     ScheduleView,
-    'state' | 'trigger' | 'frequency' | 'interval' | 'byWeekday' | 'byMonthDay' | 'timeOfDayMinutes' | 'nextExpected' | 'noNextReason'
+    'state' | 'trigger' | 'frequency' | 'interval' | 'byWeekday' | 'byMonthDay' | 'anchorDate' | 'timeOfDayMinutes' | 'nextExpected' | 'noNextReason'
   >;
   responsibility: { holderName: string | null; holderKind: HolderView['kind']; state: ResponsibilityState; unanswered: boolean } | null;
   needsAttention: boolean;

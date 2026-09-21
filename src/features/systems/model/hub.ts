@@ -62,6 +62,7 @@ export function projectSystemsHub(input: HubInput): HubView {
         interval: schedule.interval,
         byWeekday: schedule.byWeekday,
         byMonthDay: schedule.byMonthDay,
+        anchorDate: schedule.anchorDate,
         timeOfDayMinutes: schedule.timeOfDayMinutes,
         nextExpected: schedule.nextExpected,
         noNextReason: schedule.noNextReason,

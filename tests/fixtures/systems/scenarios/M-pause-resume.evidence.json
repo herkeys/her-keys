@@ -1,5 +1,6 @@
 {
   "paused": {
+    "anchorDate": "2026-09-01",
     "byMonthDay": null,
     "byWeekday": [
       0
@@ -18,6 +19,7 @@
     "trigger": "schedule"
   },
   "resumed": {
+    "anchorDate": "2026-09-01",
     "byMonthDay": null,
     "byWeekday": [
       0

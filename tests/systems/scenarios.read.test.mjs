@@ -46,6 +46,11 @@ describe('SCENARIO AB — loading is not empty', () => {
     // even "ready" with no state yet is not a known-empty household
     const halfway = projectSystemsHub(snapshot(null, { status: 'ready', today: null }));
     assert.equal(halfway.isEmpty, false);
+    // and a state that is PRESENT but not yet settled must not be read as known-empty either: the status decides, not the state
+    for (const status of ['unhydrated', 'hydrating']) {
+      const early = projectSystemsHub(snapshot(realHousehold(), { status }));
+      assert.deepEqual([early.availability, early.isEmpty, early.canCreate, early.items], [{ kind: 'loading' }, false, false, []], `${status} with a state already present`);
+    }
     assertEvidence('AB-loading', { scenario: 'AB', view: evidenceOfHub(projectSystemsHub(snapshot(null, { status: 'hydrating', today: null }))) });
   });
 });

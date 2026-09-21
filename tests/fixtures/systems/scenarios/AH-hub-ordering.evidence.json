@@ -26,6 +26,7 @@
           "unanswered": true
         },
         "schedule": {
+          "anchorDate": null,
           "byMonthDay": null,
           "byWeekday": null,
           "frequency": null,
@@ -51,6 +52,7 @@
         },
         "responsibility": null,
         "schedule": {
+          "anchorDate": "2026-09-16",
           "byMonthDay": null,
           "byWeekday": null,
           "frequency": "daily",
@@ -76,6 +78,7 @@
         },
         "responsibility": null,
         "schedule": {
+          "anchorDate": "2026-09-16",
           "byMonthDay": null,
           "byWeekday": [
             0
@@ -103,6 +106,7 @@
         },
         "responsibility": null,
         "schedule": {
+          "anchorDate": "2026-09-16",
           "byMonthDay": null,
           "byWeekday": [
             0
@@ -130,6 +134,7 @@
         },
         "responsibility": null,
         "schedule": {
+          "anchorDate": "2026-09-01",
           "byMonthDay": 28,
           "byWeekday": null,
           "frequency": "monthly",
@@ -155,6 +160,7 @@
         },
         "responsibility": null,
         "schedule": {
+          "anchorDate": null,
           "byMonthDay": null,
           "byWeekday": null,
           "frequency": null,
@@ -180,6 +186,7 @@
         },
         "responsibility": null,
         "schedule": {
+          "anchorDate": null,
           "byMonthDay": null,
           "byWeekday": null,
           "frequency": null,
@@ -205,6 +212,7 @@
         },
         "responsibility": null,
         "schedule": {
+          "anchorDate": "2026-09-16",
           "byMonthDay": null,
           "byWeekday": null,
           "frequency": "weekly",

@@ -171,6 +171,7 @@
         "producer": "user-action"
       },
       "recurrence": {
+        "anchorDate": "2026-09-16",
         "byMonthDay": null,
         "byWeekday": [
           0
