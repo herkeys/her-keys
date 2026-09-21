@@ -3,7 +3,7 @@
 Talk It Out + Life Inbox. Autonomous feature build (parallel wave, sibling of Features 01 / 03 / 04).
 Builder: Claude. Independent audit: Codex (afterwards). This ledger is the builder's evidence, not the audit.
 
-STATUS: IN PROGRESS (see §21 for the final verdicts; they are written last).
+STATUS: **PASS — builder-verified** (verdicts in §28). On-device/visual verification was **not** executed (§23). Two owner decisions are pending (OD-1, OD-2, §17).
 
 ---------------------------------------------------------------------------------------------------
 
@@ -38,10 +38,10 @@ appear as an untracked path in the sibling sessions' `git status` gates. The mai
 | TypeScript (`tsc --noEmit`) | pass | **pass** |
 | Shipping migration SHA-256 (`…231500_build4_cloud_schema.sql`) | `1e9169de…a7cb` | **match** (working-tree bytes) |
 | Baseline migration SHA-256 (`…230054_build4_baseline.sql`) | `8bc38d66…16f` | **match on the LF form** (see 1.3) |
-| Backend harness | 684 / 684 | measured at exit (see §20 — shared Docker container, see 1.4) |
-| Local fingerprint | `199ed4d4…` / 3613 facts | measured at exit |
-| Expo Doctor | 21 / 21 | measured at exit |
-| Expo Android export | pass | measured at exit |
+| Backend harness | 684 / 684 | measured at exit — **684 / 684** (§24; shared Docker container, see 1.4) |
+| Local fingerprint | `199ed4d4…` / 3613 facts | measured at exit — **MATCH** (§24) |
+| Expo Doctor | 21 / 21 | measured at exit — **21 / 21** (§24) |
+| Expo Android export | pass | measured at exit — **pass** (§24) |
 
 ### 1.3 Line-ending note on the baseline hash (not foundation drift)
 
@@ -426,7 +426,7 @@ natural-language fix ─┘        (capture/revise.ts)                (foundatio
 |---|---|---|---|
 | `app/(app)/life/_layout.tsx` | register one Stack screen (`inbox`) inside the *existing* Life stack | `ecf63f1` | low — no sibling feature owns Life |
 | `app/(app)/life/index.tsx` | one "Life Inbox" row in the existing "Where things stand" list | `ecf63f1` | low–moderate — Feature 01 may add Life-related rows; merge is an additive list entry |
-| `src/store/TalkItOutContext.tsx` | route a first free-typed message to capture; nest `CaptureProvider`; async send | `ecf63f1` | low — Talk It Out is this feature's surface (Feature 01's Today entry only calls `router.push`) |
+| `src/store/TalkItOutContext.tsx` | route free-typed messages between capture and the existing conversation (`capture/routing.ts`); nest `CaptureProvider`; async send | `ecf63f1`, `4970978` | low — Talk It Out is this feature's surface (Feature 01's Today entry only calls `router.push`) |
 | `src/features/talk-it-out/TalkItOutView.tsx` | render captures inline; remove the non-functional Voice pill; new composer copy | `ecf63f1` | low |
 | `tests/support/rn-stub.tsx` | add an `AppState` stub so the real store provider can mount under `node --test` | `ecf63f1` | **moderate** — any sibling adding component render tests may also extend this stub; trivial additive merge |
 
@@ -595,4 +595,175 @@ screenshots in `docs/feature-02-evidence/` (§23.2).
 
 No scenario is classified DEFERRED-ON-LLM as a whole; the deferred-on-LLM *phrasings* listed in §10 each behave safely.
 
-*(Sections 23–25 — exit gates, git, and verdicts — are appended by the closing commits.)*
+## 23. Runtime and visual evidence — HONEST STATUS
+
+**On-device / visual verification was NOT EXECUTED. It was attempted and blocked by the host, not by the feature.**
+
+A sub-agent was given an isolated 12-step device pass (own emulator, own Metro port, no contact with any sibling
+session's device). Its notes are kept verbatim in `docs/feature-02-evidence/RUNTIME_NOTES.txt`. In short:
+
+* the emulator refused to boot: `Insufficient RAM free for launching emulator` (commit 61 GB of a 65 GB limit; the
+  AVD forces 4,096 MB and `-memory 3072` did not lower it);
+* a later attempt started a process that never got a running guest (`emulator-5556 offline` for 13+ minutes, working
+  set 0 MB, CPU frozen);
+* the only running device (`emulator-5554`) belongs to another session and was not touched;
+* the host stayed starved for the rest of the run (available RAM never above 577 MB; heavy paging), which sibling
+  builds also hit; the headless emulator's `screencap` is also known to return an empty file on this machine;
+* no web fallback exists (`react-native-web` is not installed; adding it would be a new dependency).
+
+**Consequently no screenshots exist and contract §70 (visual evidence) is NOT satisfied.** This is recorded as an
+audit item, not glossed over.
+
+**What stands in for it (and what each does and does not prove):**
+
+| Evidence | Proves | Does **not** prove |
+|---|---|---|
+| Golden view-model text trees (`talkItOutCapture.views.test.mjs`) | phase, source, proposals, confidence, unresolved reason, actions, Inbox presence, attention state for representative scenarios (contract §69) | pixels |
+| 21 render tests on the real providers, real store, real coordinator (`…ui.test.mjs`) | structure, copy, roles and labels, and behaviour through the actual components (accept, double-tap, area gating, question by choice/text, Fix it both routes, Inbox states) | layout, truncation, touch-target size, native keyboard behaviour |
+| Mechanical scans (copy in JSX, tokens only, no logging/network/storage, no sibling imports, no UI domain writes) | the absence of whole classes of defect | visual quality |
+| Hermes compile check (`…hermes.test.mjs`) | the reader's ~110 regex literals and 37 runtime-built expressions are accepted by the **real Hermes compiler** (with a negative control that fails as it should) | Hermes *runtime* behaviour |
+| Expo Android export (§24) | the app bundles with the new imports and routes | the app runs correctly |
+
+**Not covered by anything here:** layout and clipping on a real screen, keyboard avoidance for the composer and the
+Fix sheet, persistence across a real force-stop on a device, the Calendar showing an accepted item, screen-reader
+behaviour on TalkBack, and the visual result of dark mode.
+
+**Device checklist for the auditor** (needs ≈6 GB of physical RAM free; run the emulator as a tracked background
+task; the app uses the curly apostrophe ’ in copy): (1) Life → Life Inbox: row says "Nothing waiting"; empty state has
+no button. (2) Her Keys AI: no Voice control; disclaimer line present. (3) "Dentist Friday at 3pm" → review card with
+POSSIBLE badge, assumption note, three buttons. (4) Save → "Saved as an appointment."; the event appears in Calendar
+once. (5) "Pick him up from practice at 5pm" → child question, no Save, no time shown as fact; answer → review. (6)
+The three-item message → Area chooser gates Save; reject one; leave one. (7) Fix it → say "No, I meant next Friday at
+4pm" → card updates. (8) Decide later → "Left in your Life Inbox." (9) Life Inbox lists only unresolved items. (10)
+Force-stop Expo Go, relaunch: unresolved items remain; the words are replaced by the honest message; the event exists
+exactly once. (11) "He hit me again and I have to call the school tomorrow" → calm message, no card, nothing in the
+Inbox. (12) "I feel like I am always behind" → the existing discovery conversation, no capture card.
+
+## 26. Builder validation (an attack pass by the builder — explicitly NOT the independent audit)
+
+Each item was attacked, in tests where a test can attack it and by reading where it cannot.
+
+| Attack | Result | Evidence |
+|---|---|---|
+| chatbot drift | none | no generative reply anywhere; discovery conversation is the inherited script; capture is cards, not chat |
+| therapy / cheerleading / cutesy copy | none | every string audited mechanically (`copyCorpus`) against forbidden phrases, emoji, `!` |
+| notes-app drift | none | the source is evidence, not an editable note; "a note for you" is the foundation's own Needs Me kind, created only on her acceptance |
+| activity-feed Inbox drift | none | active = unresolved only; accepted/rejected/superseded/withdrawn never listed (views M, N) |
+| source rewritten after submit | none | source record byte-identical after answer, correction, accept (coordinator S); no edit path exists |
+| inference shown as fact | none | POSSIBLE badge, "You weren't sure", assumption notes, provenance label "Her Keys inferred this"; no provisional value shown while a question is open |
+| rejected proposal resurfacing | none | stays rejected across restart; cannot be accepted (coordinator 33); server-side freeze trigger exists |
+| unresolved remainder disappearing | none | partial acceptance + restart keeps the open reading (coordinator D); note kept for unsupported clauses |
+| child subject guessed or null | none | 2,000 random sentences: `childScoped ⇒ subject ∨ asking who`; U1–U3; foundation validator agrees |
+| unknown person auto-created | none | `people` and `responsibilities` stay empty (J/Y) |
+| money direction reversed / invented | none | outflow ≠ inflow persisted; no cue ⇒ asked or untyped |
+| unsupported meaning forced into "other" | none | proposal shape is exactly the typed set (asserted over 2,000 random inputs) |
+| fixture-string interpreter posing as NLP | bounded and disclosed | novel phrasings read; weekday rule property-tested; disclosure in §9.1 |
+| excessive clarification | none | only three material questions exist; none for category or optional fields; a one-child household and an unambiguous weekday are never asked |
+| infinite clarification | impossible | ≤3 steps by construction; ≤3 unparseable answers then manual correction |
+| duplicate materialisation | none | double, concurrent and post-restart accept: one row, one observation |
+| raw-source logging | none | §18 |
+| generic JSON bag | none | no `any`, no `Record<string, any>`, no `@ts-ignore` in the feature; `unknown` appears once, in `copyCorpus()`'s local narrowing helper (a tone-audit utility), never in a domain contract; the proposal shape is asserted exact |
+| direct UI domain writes | none | §71 scan + all writes through `coordinator` → `store.commit` |
+| new primary tab / shell change | none | `app/(app)/_layout.tsx`, `app/_layout.tsx` unchanged (§14) |
+| Feature 01 dependency | none | zero imports either way (§24) |
+| global primitive duplication | none | §15 register, no new global primitive |
+| foundation mutation | none | `git diff 5007b0f..HEAD` empty for `supabase`, `src/domain`, `src/persistence`, `src/state`, `src/design`, `src/types`, package files |
+
+**Known limitations, stated plainly:** (1) her words do not survive an app restart (OD-1); (2) multi-clause splitting is a
+heuristic and English/US-only, dollars-only; (3) assumption notes and area choices are session-only, so after a restart
+the review says so generically rather than reconstructing them; (4) an unread source is only a hollow "you shared
+something" entry after a restart; (5) no on-device verification (§23); (6) the design system's `Sheet` backdrop lacks an
+accessibility role (MGP-4).
+
+## 24. Exit gates (recomputed at the final `HEAD`, not copied from the contract)
+
+| Gate | Expected | Measured at exit |
+|---|---|---|
+| TypeScript | pass | **pass** (`tsc --noEmit`, exit 0) |
+| App tests (`npm test`, no forced exit) | ≥ 808 / 0 fail | **1074 / 1074, 204 suites, 0 fail, exit 0** |
+| Feature 02 tests | — | **266** (reader 167 · coordinator 41 · views 26 · ui 21 · routing 7 · hermes 4) |
+| Backend harness (`supabase/tests/run.mjs`) | 684 / 684 | **684 / 684, exit 0** — run against this worktree's migrations; no sibling harness was running (checked first) |
+| Expo Doctor | 21 / 21 | **21 / 21** |
+| Expo Android export | pass | **pass** — 1,628 modules bundled and Hermes-compiled to a 6.4 MB `.hbc` (`dist/` is git-ignored) |
+| Shipping migration SHA-256 | `1e9169de…a7cb` | **`1e9169de4cf21c46e2167089328de94ce07cb1fcf005c0461dece1b28ec8a7cb`** (on-disk bytes) |
+| Baseline migration SHA-256 | `8bc38d66…16f` | **`8bc38d66fcffbb9fa83502329bd4738a53a8446dd5ce89327013751872f8f16f`** (LF git blob); on-disk in this worktree it is CRLF (`81909daa…`) because `core.autocrlf=true` — explained in §1.3, not drift |
+| `git diff 5007b0f..HEAD -- supabase src/domain src/persistence src/state src/design src/types package*.json app.json` | empty | **empty** |
+| Local fingerprint | `199ed4d4…` / 3613 facts | **MATCH — 3613 facts, `199ed4d4c1b37cd654b5853e91cbde27`**, measured read-only on the default local database (no `db reset`). A bare `create database` gives 3606: exactly 7 fewer environmental ACL facts, every migration-derived dimension identical |
+| Privacy review | no raw-source logging path | **clean** — §18, and enforced by a test |
+| Feature 01 independence | none | **none** — commands below |
+| Shared-file touch report | minimal, recorded | **5 pre-existing files modified**, all in §14; everything else new |
+| `git status` | clean | clean at the closing commit |
+
+**Feature 01 independence — commands and results (worktree `C:\Users\jsmit\Her-Keys-F02`):**
+
+```
+grep -nE "^\s*(import|export)[^;]*from\s+['\"][^'\"]*(features/(today|calendar|systems|daily-load|home|kids|work|money|meals|one-move|life|tasks)|/today/)[^'\"]*['\"]" \
+     -r src/features/talk-it-out tests/talkItOutCapture.*.test.mjs tests/support/capture*.mjs        → no matches
+grep -rnE "(import|require)\(['\"][^'\"]*features/(today|calendar|systems)" src/features/talk-it-out tests/talkItOutCapture.*  → no matches
+grep -rln "talk-it-out/capture" src app tests  (outside the feature and its tests)
+                                                                                                    → src/store/TalkItOutContext.tsx, app/(app)/life/inbox.tsx, app/(app)/life/index.tsx
+                                                                                                       (the three shared files §14 records; no sibling-owned file)
+```
+
+A test (`…ui.test.mjs`, "independence") asserts the same in both directions on every run.
+
+## 25. Git
+
+Stacking commits on `feature/02-talk-it-out-life-inbox`, forked directly from `5007b0f`; explicit path staging; no amend,
+no rebase, no squash, no push, no PR, no merge.
+
+| Commit | Content |
+|---|---|
+| `029a306` | L0/L1 — ledger: entry gates, inheritance, foundation trace, lifecycle + sync maps, owner decisions |
+| `cbfab72` | L2/L3 — typed interpreter port, deterministic local reader, capability envelope, 150 reader tests |
+| `c34789a` | L3–L5 — coordinator (source, propose, clarify, correct, accept/reject, idempotency), text-store port, 40 state tests |
+| `777254b` | L4/L6 — view models, unresolved-capture attention projection, centralised copy, tone audit |
+| `ecf63f1` | L5/L6 — capture UI, Talk It Out integration, Life Inbox in the Life stack, 20 render tests |
+| `4970978` | L7/L8 — routing rule, kind-change answers, linear-time clause merging, performance guards |
+| *(closing)* | L9 — Hermes compile-check test, runtime notes, ledger completion |
+
+## 27. Test accounting (contract §81)
+
+| ENTRY | PRESERVED | REWRITTEN | REPLACED | REMOVED | ADDED | FINAL | FAILURES |
+|---|---|---|---|---|---|---|---|
+| 808 | 808 | 0 | 0 | 0 | 266 | **1074** | **0** |
+
+No existing test file was edited (`git diff --name-only 5007b0f..HEAD -- tests` lists only new `talkItOutCapture.*`
+files, `tests/support/capture*.mjs`, and one **additive** test-support change: an `AppState` stub in
+`tests/support/rn-stub.tsx`). The increase in count is not offered as proof of coverage: the coverage argument is the
+per-scenario mapping in §22 and the invariants in §26.
+
+## 28. Feature verdicts and final status
+
+**1. Does Talk It Out turn messy human input into reviewable, traceable, correctable structure without pretending
+interpretation is truth?** — **PASS.** Every reading is a typed proposal held outside canonical state at `possible`,
+labelled as Her Keys' inference with its assumptions and hedges; nothing becomes real without an explicit accept, which
+is the only thing that reaches `established`; a rejection is permanent; a correction is a new reading that names the one
+it replaces (the original claim is kept, never rewritten); the source record is never edited; child subject, money
+direction and unknown people are never guessed. **Caveat (OD-1):** "traceable" is to the source *record* and the
+reading chain; her exact words are not retained beyond the session, because the foundation has no content store and
+creating one is an owner decision.
+
+**2. Does Life Inbox represent unresolved life admin rather than becoming a second task list or an activity feed?** —
+**PASS.** Membership is derived from unresolved readings only; accepted rows, history and withdrawn sources are never
+listed; empty is a calm fact; loading, recovery and empty are three different states; ordering is by meaning with no
+score; a time-bound unresolved capture keeps rising in urgency and never fades after its time passes.
+
+**3. Does the local interpreter stay honest about its capability boundary rather than simulating general NLP through
+fixture rules?** — **PASS.** **LOCAL INTERPRETER CAPABILITY: GENERALIZES WITHIN DOCUMENTED ENVELOPE.** It reads by rule
+(novel phrasings are read; the weekday rule is property-tested), never claims more than `possible`, reports what it
+does not support explicitly, and refuses to read past its window. It is bounded pattern matching over a listed
+vocabulary and is not general natural-language understanding.
+
+**Audit priorities** (things a reviewer should weigh first): (a) **OD-1** — her words do not survive a restart; **OD-2** —
+the high-stakes guard is a stopgap, not a policy; (b) **on-device and visual verification were not executed** (§23);
+(c) foundation gaps G1–G5 (§5); (d) the design system's `Sheet` backdrop accessibility role (MGP-4).
+
+```
+FINAL STATUS:
+HK-FEATURE-02-TALK-IT-OUT = PASS   (builder-verified; on-device/visual verification NOT executed — see §23)
+READY FOR INDEPENDENT FEATURE 02 AUDIT = YES
+```
+
+Not done, by contract: no merge, push or PR; no import of another feature; no Gemini, Supabase, cloud speech or auth
+work; no shared-foundation change; no integration begun.

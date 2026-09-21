@@ -1,0 +1,96 @@
+FEATURE 02 (Talk It Out + Life Inbox) - RUNTIME VERIFICATION NOTES
+Worktree: C:\Users\jsmit\Her-Keys-F02   branch feature/02-talk-it-out-life-inbox   HEAD 4970978
+Run window: 2026-09-20 ~23:40 to 2026-09-21 ~00:30 (host local time)
+
+OVERALL RESULT: BLOCKED - NO RUNTIME STEP WAS EXECUTED. NO STEP IS MARKED PASS.
+Cause: the host has no memory to boot a second Android emulator. This is not an app defect and says
+nothing either way about the feature. No screenshots exist because no device ever booted.
+
+STEP RESULTS (all 12 steps)
+ 1  Life tab / Life Inbox empty state        NOT EXECUTED (blocked, no device)
+ 2  Her Keys AI tab, no Voice button         NOT EXECUTED
+ 3  "Dentist Friday at 3pm" review card      NOT EXECUTED
+ 4  Save it like that + Calendar             NOT EXECUTED
+ 5  Child question (Josie/Theo/Neither)      NOT EXECUTED
+ 6  Three proposals, Money chip, reject      NOT EXECUTED
+ 7  Fix it sheet, "next Friday at 4pm"       NOT EXECUTED
+ 8  Decide later                             NOT EXECUTED
+ 9  Life Inbox lists only unresolved         NOT EXECUTED
+10  Restart test (force-stop Expo Go)        NOT EXECUTED
+11  High-stakes text, no card, not in Inbox  NOT EXECUTED
+12  Discovery conversation, no capture card  NOT EXECUTED
+
+WHAT HAPPENED (facts, in order)
+ a) emulator-5554 (HerKeys_Runtime, qemu PID 209820, another session) was already running.
+    I never sent it an adb command; I only ran `adb devices`, which lists it.
+ b) Attempt 1: `emulator -avd HerKeys_Runtime_B -port 5556 -gpu swiftshader_indirect -no-window ...`
+    Refused to start:
+      "ERROR: Insufficient RAM free for launching emulator."
+      Currently committed: 61086 MB / Commit limit: 65095 MB / Remaining: 4009 MB / Needed: 4096 MB
+    The AVD config says hw.ramSize=2048 but the emulator logs "Increasing RAM size to 4096MB";
+    `-memory 3072` did not lower it (still "Increasing RAM size to 4096MB"). The 4096 MB floor is not
+    something I could change without editing the AVD, which is outside my permitted writes.
+ c) Attempt 2 (foreground, backgrounded with &): emulator was killed when the tool call ended.
+ d) Attempt 3: refused again, "Remaining: 3525 MB, Needed: 4096 MB". At that moment even a plain bash
+    fork failed: "fork: retry: Resource temporarily unavailable" (host at its commit ceiling).
+ e) Attempt 4 (retry loop, run as a tracked background task): the emulator process started
+    (qemu PID 217104, listening on 5556/5557) but adb reported `emulator-5556 offline` for 13+ minutes.
+    The process showed working set 0 MB and CPU time frozen at 10 s across a 10 s sample and across
+    minutes, i.e. the guest never ran. adbd never came up. `adb emu kill` had no effect on an offline
+    device, so I killed only my own PID 217104 (launcher PID 238528 had already exited).
+ f) After that I sampled the host for ~10 more minutes (44 samples, every ~12 s):
+      available physical RAM: min 110 MB, max 577 MB (never near the ~2.5 GB I would want free)
+      commit headroom: about 4.1 to 5.7 GB (enough for the emulator's 4 GB commit, not for its RAM)
+      hard paging: PagesInput/s between about 4,000 and 42,000
+    Metro was never started, so the app was never loaded.
+
+HOST MEMORY PICTURE (measured; other sessions' processes, none mine)
+    Total RAM 15,944 MB.  Commit at limit: about 64.5 GB of 65.1 GB (pagefile 48 GB).
+    vmmemWSL (Docker/WSL2)            private/commit ~7.9 GB
+    qemu 209820 (other emulator)      commit ~5.7-6.1 GB (working set later fell to 20 KB, fully paged out)
+    node PID 211380                   commit ~3.4 GB
+    ~9 claude.exe processes           ~0.65-0.95 GB commit each
+    Memory Compression                ~2.9 GB resident
+  Sum of all process working sets ~10.3 GB; the rest of physical RAM is held by hypervisor-backed VM
+  memory (WSL2 and the other emulator's guest), so the machine is thrashing.
+  I did not stop any of these (isolation rules). Booting a 4 GB guest on top would also have slowed
+  the other session's emulator, so I stopped rather than keep pushing.
+
+WHY NO WEB FALLBACK
+  react-native-web is not installed in the worktree (node_modules has react-dom only), so
+  `expo start --web` cannot run without writing to node_modules and using the network. Not attempted.
+
+TO UNBLOCK (owner / parent decisions, not things I may do)
+  1. Free memory first: the largest lever is Docker Desktop / WSL2 (`wsl --shutdown` releases ~8 GB commit),
+     or wait until the other session finishes with emulator-5554 and its Metro.
+  2. Then re-run the pass. Target: at least ~6 GB of physical RAM available before boot
+     (emulator 4 GB + Metro ~1-2 GB). If both emulators must coexist, give the AVD a lower fixed RAM only if
+     the API 37 ps16k image tolerates it (the emulator currently forces 4096 MB).
+  3. Tip for the re-run: run the emulator as a tracked background task, not `cmd &` inside a foreground
+     call (that got killed when the call returned).
+  4. Tip for UI-tree text matching: the app uses the curly apostrophe (U+2019) in copy such as
+     "What’s going on?" and "That’s not it"; a straight-apostrophe uiautomator match will miss them.
+
+STATIC CROSS-CHECK (source read only - this is NOT runtime evidence and does not count as a pass)
+  Read: TalkItOutView.tsx, TalkItOutContext.tsx, capture/CaptureCards.tsx, capture/LifeInboxView.tsx,
+  capture/copy.ts, app/(app)/life/index.tsx, app/(app)/life/inbox.tsx, viewModel.ts (actions).
+  - Life hub adds a "Life Inbox" row (label copy.inbox.rowLabel; empty value string "Nothing waiting" exists).
+  - LifeInboxView renders title "Life Inbox", the subtitle, and the empty state "Nothing is waiting on a
+    decision." via EmptyState(title, body). The body is copy.inbox.emptyBody, "Things you tell Her Keys that need
+    a decision are listed here." The empty branch has no action button in the source.
+  - TalkItOutView has no Voice control (a source comment says so); placeholder and disclaimer strings match the
+    brief apart from the curly apostrophe.
+  - "Decide later" is rendered whenever the capture is not resolved (canDismiss = phase !== 'resolved'), so it
+    should be visible on open cards next to "Dismiss".
+  - The high-stakes reply string in copy.ts matches the brief; TalkItOutContext returns it without creating a
+    capture card for outcome.kind 'high-stakes'.
+  What none of this proves: layout, truncation, touch-target size, keyboard behaviour, timing, persistence across
+  a force-stop, Calendar integration, or any on-screen text. Those need the device run.
+
+CLEANUP CONFIRMED (2026-09-21 ~00:30)
+  - My emulator: qemu PID 217104 killed; launcher 238528 gone; nothing listening on 5556/5557.
+  - Metro: never started; nothing listening on 8082.
+  - adb reverse: none created. adb server not restarted or killed.
+  - emulator-5554 still listed by `adb devices` as `device`; qemu 209820 still running; untouched.
+  - No source, git state, app.json or other repo file changed. Worktree HEAD 4970978, status clean.
+  - Files written: this notes file (and the empty evidence folder). Scratch scripts are in the session scratchpad only.
