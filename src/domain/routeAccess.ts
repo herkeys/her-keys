@@ -28,6 +28,8 @@ export const ROOT_SCREEN_GUARDS = {
   'event-editor': 'app',
   'task-editor': 'app',
   'dev-tools': 'internal',
+  /** Development design gallery — same internal-build gate as dev-tools. */
+  gallery: 'internal',
   'sign-in': 'signedOut',
   /** The one screen a device holding another account's household may open. */
   'account-conflict': 'quarantined',

@@ -104,6 +104,9 @@ function RootNavigator() {
               <Stack.Protected guard={allow('dev-tools')}>
                 <Stack.Screen name="dev-tools" options={{ headerShown: true, title: 'Internal tools' }} />
               </Stack.Protected>
+              <Stack.Protected guard={allow('gallery')}>
+                <Stack.Screen name="gallery" options={{ headerShown: true, title: 'Design gallery' }} />
+              </Stack.Protected>
               <Stack.Protected guard={allow('sign-in')}>
                 <Stack.Screen name="sign-in" options={{ presentation: 'modal', headerShown: true, title: 'Your account' }} />
               </Stack.Protected>

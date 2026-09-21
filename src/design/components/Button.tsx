@@ -1,15 +1,25 @@
 import { Pressable, StyleSheet, type ViewStyle } from 'react-native';
-import { colors, radius, spacing } from '../tokens';
+import { color, interaction, radius, sizing, spacing } from '../tokens';
 import { AppText } from './AppText';
 
-type Variant = 'primary' | 'secondary' | 'ghost';
-type Size = 'md' | 'sm';
+/**
+ * The one button system. Variants:
+ * - primary   — the one action a surface wants her to take
+ * - secondary — a real alternative, visually quiet but present
+ * - ghost     — a low-commitment action ("Start over", "Show another option")
+ *
+ * Disabled is a real color pair (action.disabled), not lowered opacity:
+ * an unreadable disabled button still frustrates, and the WCAG exemption for
+ * inactive components is a floor, not a target.
+ */
+export type ButtonVariant = 'primary' | 'secondary' | 'ghost';
+export type ButtonSize = 'md' | 'sm';
 
-interface ButtonProps {
+export interface ButtonProps {
   label: string;
   onPress: () => void;
-  variant?: Variant;
-  size?: Size;
+  variant?: ButtonVariant;
+  size?: ButtonSize;
   disabled?: boolean;
   accessibilityHint?: string;
   style?: ViewStyle;
@@ -36,22 +46,25 @@ export function Button({
         styles.base,
         size === 'sm' ? styles.sizeSm : styles.sizeMd,
         variantStyles[variant],
-        disabled ? styles.disabled : null,
+        disabled ? (variant === 'ghost' ? styles.disabledGhost : styles.disabled) : null,
         pressed && !disabled ? styles.pressed : null,
         style,
       ]}
     >
-      <AppText variant={size === 'sm' ? 'caption' : 'bodyStrong'} color={textColor(variant)}>
+      <AppText
+        variant={size === 'sm' ? 'metadata' : 'actionLabel'}
+        color={disabled ? color.action.disabledText : textColor(variant)}
+      >
         {label}
       </AppText>
     </Pressable>
   );
 }
 
-function textColor(variant: Variant): string {
-  if (variant === 'primary') return colors.textInverse;
-  if (variant === 'secondary') return colors.accent;
-  return colors.textSecondary;
+function textColor(variant: ButtonVariant): string {
+  if (variant === 'primary') return color.text.inverse;
+  if (variant === 'secondary') return color.action.primary;
+  return color.text.secondary;
 }
 
 const styles = StyleSheet.create({
@@ -60,15 +73,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  sizeMd: { paddingVertical: spacing.md, paddingHorizontal: spacing.xl, minHeight: 50 },
+  sizeMd: {
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+    minHeight: sizing.control.height,
+  },
   // Still meets the 44px touch-target guideline at the smaller size.
-  sizeSm: { paddingVertical: spacing.sm, paddingHorizontal: spacing.lg, minHeight: 44 },
-  pressed: { opacity: 0.75 },
-  disabled: { opacity: 0.35 },
+  sizeSm: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    minHeight: sizing.control.heightSmall,
+  },
+  pressed: { opacity: interaction.pressedOpacity },
+  disabled: { backgroundColor: color.action.disabled },
+  disabledGhost: { backgroundColor: 'transparent' },
 });
 
 const variantStyles = StyleSheet.create({
-  primary: { backgroundColor: colors.accent },
-  secondary: { backgroundColor: colors.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.accentBorder },
+  primary: { backgroundColor: color.action.primary },
+  secondary: {
+    backgroundColor: color.surface.primary,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: color.action.primaryBorder,
+  },
   ghost: { backgroundColor: 'transparent' },
 });

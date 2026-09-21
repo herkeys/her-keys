@@ -1,35 +1,47 @@
 import type { ReactNode } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, spacing } from '../tokens';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { color, sizing, spacing } from '../tokens';
 
-interface ScreenProps {
+export interface ScreenProps {
   children: ReactNode;
   scroll?: boolean;
+  /** Extra clearance at the bottom when no tab bar is present (e.g. modals). */
+  bottomClearance?: number;
 }
 
-export function Screen({ children, scroll = true }: ScreenProps) {
+/**
+ * The application screen shell: safe areas, app background, margins, scroll
+ * convention. The tab bar owns 68pt + system inset; scrollable screens pad
+ * past it so the last row is never trapped underneath.
+ */
+export function Screen({ children, scroll = true, bottomClearance }: ScreenProps) {
+  const insets = useSafeAreaInsets();
+  const bottom = bottomClearance ?? spacing.xxxl + 68 + insets.bottom;
+
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       {scroll ? (
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: bottom }]}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
           {children}
         </ScrollView>
       ) : (
-        <View style={styles.flex}>{children}</View>
+        <View style={[styles.flex, { paddingBottom: bottom }]}>{children}</View>
       )}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.background },
+  safe: { flex: 1, backgroundColor: color.background },
   flex: { flex: 1 },
   scrollContent: {
-    paddingHorizontal: spacing.xl,
+    paddingHorizontal: sizing.screenMargin,
     paddingTop: spacing.xl,
-    // Clears the tab bar so the last row is never trapped under it.
-    paddingBottom: 56,
     flexGrow: 1,
   },
 });

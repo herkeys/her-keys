@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View, type ViewStyle } from 'react-native';
 import { colors, radius, spacing } from '../tokens';
 import { AppText } from './AppText';
 
@@ -16,9 +16,9 @@ export interface StatusItem {
  * summary and the Life hub so the two read as the same system rather than two
  * different screens.
  */
-export function StatusList({ items }: { items: StatusItem[] }) {
+export function StatusList({ items, style }: { items: StatusItem[]; style?: ViewStyle }) {
   return (
-    <View style={styles.surface}>
+    <View style={[styles.surface, style]}>
       {items.map((item, index) => (
         <Row key={item.key} item={item} isLast={index === items.length - 1} />
       ))}

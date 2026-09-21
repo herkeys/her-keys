@@ -33,25 +33,20 @@ No REPLACE is used where REFINE suffices.
 
 ## B. Shared primitives (`src/design/components/`)
 
-| Component | Class | Evidence | Issue / action |
-|---|---|---|---|
-| `Screen` | **REFINE** | Screen.tsx | Concept (safe area + scroll + margins) correct; add keyboard-aware behavior, bottom-inset handling, optional title treatment, and a non-scroll variant contract for sheets/modals. |
-| `AppText` / `Overline` | **REFINE** | AppText.tsx | Keep the typed-text concept; variants remapped to permanent hierarchy; semantic color defaults come from tokens, not call-site hex (already true). |
-| `Button` | **REFINE** | Button.tsx:57-68 | Variant model (primary/secondary/ghost) maps to permanent primary/secondary/tertiary + text button. Disabled at opacity 0.35 fails AA — replace with a token-backed disabled state that keeps text ≥4.5:1. Ghost needs a real tertiary treatment (not just transparent). |
-| `Card` | **REFINE** | Card.tsx | Tone model survives; tones re-keyed to semantic status tokens; `raised` stays single-surface-only. |
-| `ChipToggle` | **REFINE** | ChipToggle.tsx | Selected state inverts to accent bg + inverse text — survives revalue; keep, plus add FilterChip sibling when K2 primitives land (search/filter justified only if ≥2 surfaces consume). |
-| `SegmentBar` | **PRESERVE** | SegmentBar.tsx | "About this much, not measurement" rationale is exactly the calm-precision direction; contrast of filled segments re-measured in matrix. |
-| `StatusList` | **PRESERVE** | StatusList.tsx | Label/value rows + attention dot (never color-alone) already match the system; visual re-key to tokens only. |
-| `Tag` | **REFINE** | Tag.tsx | Tones re-keyed to status/AI semantic tokens; uppercase overline stays for status labels. |
-| `TextField` | **REFINE** | TextField.tsx | Solid labeled input; add explicit focus state token and disabled state; error treatment survives. |
-| `Divider` | **PRESERVE** | Divider.tsx | Hairline; re-key to border token. |
-
-Primitives the system lacks (created in K2, not replacements — nothing to
-classify): IconButton, ListRow/DetailRow/MetadataRow, StatusBadge, ValueDisplay,
-LoadingState/Skeleton, EmptyState, ErrorState, OfflineState, InlineNotice,
-ConfirmationState, Modal/Sheet/ConfirmationSheet. Each is justified by ≥2
-plausible consumers in the candidate families (section 11) and gets a
-render/props contract test (section 12).
+| Component | Class | Status |
+|---|---|---|
+| `Screen` | REFINE | **MIGRATED** (K2): bottom-inset-aware clearance, keyboard-safe taps, non-scroll variant |
+| `AppText` / `Overline` | REFINE | **MIGRATED** (K1/K2): canonical rungs + legacy aliases, semantic label color |
+| `Button` | REFINE | **MIGRATED** (K2): disabled is a real color pair (no opacity), ghost stays transparent when disabled, touch floors from sizing tokens |
+| `Card` | REFINE | **MIGRATED** (K2): tones re-keyed to semantic status families |
+| `ChipToggle` | REFINE | **MIGRATED** (K2): semantic action tokens, pressed opacity token |
+| `SegmentBar` | PRESERVE | **PRESERVED** (re-valued through tokens) |
+| `StatusList` | PRESERVE | **PRESERVED** (+ optional style prop, K2) |
+| `Tag` | REFINE | **MIGRATED** (K2): tones re-keyed to semantic families |
+| `TextField` | REFINE | **MIGRATED** (K2): control-identifying border (3:1), explicit focus state, editable=false declared state |
+| `Divider` | PRESERVE | PRESERVED |
+| `LoadingState` / `EmptyState` / `ErrorState` / `OfflineState` / `InlineNotice` | (new, §11 SYSTEM STATES) | **MIGRATED** (K2): text-first states; InlineNotice derives treatment from a fixed tone union |
+| `Sheet` / `ConfirmationSheet` | (new, §11 OVERLAYS) | **MIGRATED** (K2): scrim dismiss + close control, both confirmation paths explicitly labeled |
 
 ## C. Shell / navigation
 
@@ -87,10 +82,16 @@ role).
 
 ## F. Test accounting
 
-- Tests before: 705 app tests, 0 component tests.
-- Removed: none (none will be removed without a named reason).
-- Component test floor added in K2: render/props contract per canonical
-  primitive. Requires `react-test-renderer` — **no renderer exists in the
-  current stack** (devDependencies: typescript only; node --test cannot mount
-  RN components). Justified per section 26: direct implementation need, existing
-  stack cannot satisfy, no runtime cost (dev-only).
+- Tests before this build: 705 app tests, 0 component tests.
+- After K1: 763 (+58 contrast-matrix tests).
+- After K2: 790 (+27 primitive contract tests: render + props, disabled/
+  selected/pressed, accessibility role/state, semantic treatments derived from
+  allowed input unions).
+- Removed: none.
+- Component test floor: `react-test-renderer@19.2.3` (exact React match) +
+  `esbuild` (dev-only). Justified per section 26: node --test cannot mount RN
+  component trees (JSX + Flow sources), the test floor is mandatory, and both
+  are zero runtime cost. Real RN sources are NOT executed in tests — a typed
+  stub renders the tree and tests assert the props contract; layout and visual
+  output are verified in the running app (gallery + screenshots). Honest
+  scope, recorded here.

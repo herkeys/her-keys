@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet } from 'react-native';
 import { AppText, Button, Card, Overline, Screen } from '../src/design/components';
@@ -52,6 +53,7 @@ export default function DevToolsScreen() {
   return (
     <Screen>
       <Overline>Demo data only</Overline>
+      <Button label="Open design gallery" variant="secondary" onPress={() => router.push('/gallery')} style={styles.card} />
       <Card tone="subtle" style={styles.card}>
         {rows.map(([label, value]) => (
           <AppText key={label} variant="bodySm" color={colors.textSecondary}>
