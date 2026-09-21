@@ -10,6 +10,7 @@ import { describe, test } from 'node:test';
 import TestRenderer from 'react-test-renderer';
 import { StyleSheet } from 'react-native';
 import { parseMoney } from '../../src/domain/foundation/money.ts';
+import { ATTENTION_REASONS } from '../../src/domain/reasoning/attention.ts';
 import { sizing } from '../../src/design/tokens.ts';
 import { MAX_PRIMARY_BLOCKS, buildTodayView, deterministicNarrative } from '../../src/features/today/model/index.ts';
 import { render } from '../support/render.tsx';
@@ -85,6 +86,13 @@ describe('structure — complexity follows the day', () => {
       const ranks = rows.map((r) => rank[r.urgency]);
       assert.deepEqual(ranks, [...ranks].sort((a, b) => a - b), `${name}: ${rows.map((r) => r.urgency).join(' > ')}`);
       if (new Set(ranks).size > 1) multi += 1;
+
+      // Within an urgency, Today keeps the FOUNDATION's own order (attentionFor's tie-break by reason) — it ranks nothing
+      // itself, and the order decides which rows make the first-glance three.
+      for (const urgency of ['now', 'today']) {
+        const reasons = rows.filter((r) => r.urgency === urgency && ATTENTION_REASONS.includes(r.reason)).map((r) => ATTENTION_REASONS.indexOf(r.reason));
+        assert.deepEqual(reasons, [...reasons].sort((a, b) => a - b), `${name}: within "${urgency}", rows follow attentionFor's reason order`);
+      }
     }
     assert.ok(multi >= 2, 'the corpus must include days with rows of DIFFERENT urgency, or this proves nothing');
   });
