@@ -15,14 +15,30 @@ function parts(ms: number, timeZone: string): { hour12: number; minute: string; 
   return { hour12: ((hour24 + 11) % 12) + 1, minute: String(total % 60).padStart(2, '0'), period: hour24 >= 12 ? 'PM' : 'AM' };
 }
 
-/** "9:00 AM" */
-export function formatClock(ms: number, timeZone: string): string {
+/** The zone's short name at that instant ("EDT", "EST"), used only where a clock time is ambiguous. */
+function zoneName(ms: number, timeZone: string): string {
+  const found = new Intl.DateTimeFormat('en-US', { timeZone, timeZoneName: 'short' }).formatToParts(new Date(ms)).find((part) => part.type === 'timeZoneName');
+  return found === undefined ? '' : found.value;
+}
+
+export interface ClockOptions {
+  /** True when this wall-clock time happens twice that day, so the zone says which one. */
+  ambiguous?: boolean;
+}
+
+/** "9:00 AM", or "1:30 AM EDT" inside a repeated hour. */
+export function formatClock(ms: number, timeZone: string, options: ClockOptions = {}): string {
   const p = parts(ms, timeZone);
-  return `${p.hour12}:${p.minute} ${p.period}`;
+  const base = `${p.hour12}:${p.minute} ${p.period}`;
+  return options.ambiguous === true ? `${base} ${zoneName(ms, timeZone)}` : base;
 }
 
 /** "9:00–10:00 AM", or "11:30 AM–12:30 PM" when the period changes. */
-export function formatClockRange(startMs: number, endMs: number, timeZone: string): string {
+export function formatClockRange(startMs: number, endMs: number, timeZone: string, options: { startAmbiguous?: boolean; endAmbiguous?: boolean } = {}): string {
+  if (options.startAmbiguous === true || options.endAmbiguous === true) {
+    // A repeated hour: each end names its own zone, so "1:30 AM EDT–1:30 AM EST" cannot be read as zero minutes.
+    return `${formatClock(startMs, timeZone, { ambiguous: options.startAmbiguous === true })}–${formatClock(endMs, timeZone, { ambiguous: options.endAmbiguous === true })}`;
+  }
   const a = parts(startMs, timeZone);
   const b = parts(endMs, timeZone);
   const start = a.period === b.period ? `${a.hour12}:${a.minute}` : `${a.hour12}:${a.minute} ${a.period}`;

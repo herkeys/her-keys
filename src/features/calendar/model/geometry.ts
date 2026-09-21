@@ -93,7 +93,7 @@ const missingTravel = (item: DayItem, side: 'travelMinutesBefore' | 'travelMinut
 /** The free stretches inside [lo, hi]. A gap is uncertain when either commitment bounding it implies travel that was not entered. */
 export function gapsWithin(unions: Union[], lo: number, hi: number): Gap[] {
   const gaps: Gap[] = [];
-  let cursor = lo;
+  let freeFrom = lo;
   let previous: Union | null = null;
 
   const push = (start: number, end: number, before: TimedItem | null, after: TimedItem | null) => {
@@ -112,13 +112,13 @@ export function gapsWithin(unions: Union[], lo: number, hi: number): Gap[] {
       continue;
     }
     if (union.startMinute >= hi) break;
-    const before = previous !== null && previous.endMinute === cursor ? previous.endItem : null;
+    const before = previous !== null && previous.endMinute === freeFrom ? previous.endItem : null;
     const gapEnd = Math.min(union.startMinute, hi);
-    push(cursor, gapEnd, before, union.startMinute <= hi ? union.startItem : null);
-    cursor = Math.max(cursor, union.endMinute);
+    push(freeFrom, gapEnd, before, union.startMinute <= hi ? union.startItem : null);
+    freeFrom = Math.max(freeFrom, union.endMinute);
     previous = union;
   }
-  if (cursor < hi) push(cursor, hi, previous !== null && previous.endMinute === cursor ? previous.endItem : null, null);
+  if (freeFrom < hi) push(freeFrom, hi, previous !== null && previous.endMinute === freeFrom ? previous.endItem : null, null);
   return gaps;
 }
 

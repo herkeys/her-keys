@@ -1,4 +1,4 @@
-import { addDays, daysBetween, weekdayOf, zonedTimeToEpochMs, type LocalDate } from '../../../domain/logicalDay';
+import { addDays, daysBetween, offsetMinutesAt, weekdayOf, zonedTimeToEpochMs, type LocalDate } from '../../../domain/logicalDay';
 import { CAPACITY_DAY_END_MINUTES, CAPACITY_DAY_START_MINUTES } from '../../../domain/dailyLoadIssues';
 import type { DayMode } from './types';
 
@@ -19,6 +19,8 @@ export interface DayFrame {
   endMs: number;
   /** 1380 on the spring-forward day, 1500 on the fall-back day, 1440 otherwise. */
   lengthMinutes: number;
+  /** On a fall-back day, the stretch whose wall-clock times happen twice; null on every other day. */
+  repeatedHour: { startMs: number; endMs: number } | null;
 }
 
 const MINUTE_MS = 60_000;
@@ -26,7 +28,26 @@ const MINUTE_MS = 60_000;
 export function dayFrameFor(date: LocalDate, timeZone: string): DayFrame {
   const startMs = zonedTimeToEpochMs(date, 0, timeZone);
   const endMs = zonedTimeToEpochMs(addDays(date, 1), 0, timeZone);
-  return { date, timeZone, startMs, endMs, lengthMinutes: Math.round((endMs - startMs) / MINUTE_MS) };
+  return { date, timeZone, startMs, endMs, lengthMinutes: Math.round((endMs - startMs) / MINUTE_MS), repeatedHour: repeatedHourIn(startMs, endMs, timeZone) };
+}
+
+/**
+ * The wall-clock stretch that happens twice on a fall-back day: [change - shift, change + shift). Found by
+ * bisecting for the instant the offset drops, at minute resolution. Null when the offset never falls.
+ */
+function repeatedHourIn(startMs: number, endMs: number, timeZone: string): { startMs: number; endMs: number } | null {
+  const before = offsetMinutesAt(startMs, timeZone);
+  const after = offsetMinutesAt(endMs - MINUTE_MS, timeZone);
+  if (after >= before) return null;
+  let low = startMs;
+  let high = endMs - MINUTE_MS;
+  while (high - low > MINUTE_MS) {
+    const mid = Math.floor((low + high) / 2 / MINUTE_MS) * MINUTE_MS;
+    if (offsetMinutesAt(mid, timeZone) === before) low = mid;
+    else high = mid;
+  }
+  const shiftMs = (before - after) * MINUTE_MS;
+  return { startMs: high - shiftMs, endMs: high + shiftMs };
 }
 
 /** Elapsed minutes from the start of the day; not clipped, so it may be negative or beyond the day's length. */

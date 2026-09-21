@@ -7,14 +7,14 @@ import { undoableMove } from '../../domain/dailyLoadDecisions';
 import type { AppState } from '../../domain/state';
 import { useAppStore, useStoreSnapshot } from '../../store/AppStateProvider';
 import { COPY } from './copy';
-import { calendarAvailability } from './model/availability';
 import { acceptIntent, computePreview, refreshPreview, validityOf, type ActionIntent, type ActionPreview, type PreviewableIntent } from './model/preview';
 import { initialPresentation, reducePresentation, selectedDateOf, type CalendarPresentation, type PresentationAction } from './model/presentation';
 import { projectCalendarDay, projectCalendarWeek } from './model/projectCalendar';
 import type { ItemRef } from './model/types';
 import { PreviewPanel, type PreviewNotice } from './ui/ActionPanels';
 import { CalendarDayView, type DayActions } from './ui/CalendarDayView';
-import { CalendarDegradedNotice, CalendarLoading, CalendarRecovery } from './ui/CalendarStates';
+import { CalendarDegradedNotice } from './ui/CalendarStates';
+import { CalendarGate } from './ui/CalendarGate';
 import { DayNavigator, ViewSwitch } from './ui/DayHeader';
 import { WeekOverview } from './ui/WeekOverview';
 
@@ -34,23 +34,7 @@ function useNow(intervalMs = 60_000): number {
  */
 export function CalendarScreen() {
   const snapshot = useStoreSnapshot();
-  const availability = calendarAvailability(snapshot);
-
-  if (availability.kind === 'loading') {
-    return (
-      <Screen>
-        <CalendarLoading />
-      </Screen>
-    );
-  }
-  if (availability.kind === 'recovery' || snapshot.state === null || snapshot.today === null) {
-    return (
-      <Screen>
-        <CalendarRecovery />
-      </Screen>
-    );
-  }
-  return <ReadyCalendar state={snapshot.state} today={snapshot.today} degraded={availability.persistenceDegraded} />;
+  return <CalendarGate snapshot={snapshot} ready={(state, today, degraded) => <ReadyCalendar state={state} today={today} degraded={degraded} />} />;
 }
 
 const titleOfRef = (state: AppState, ref: ItemRef): string =>

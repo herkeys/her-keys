@@ -328,6 +328,8 @@ export interface CalendarDayViewModel {
   timeZone: string;
   /** The instant this logical day starts. Used only to turn elapsed minutes into clock times for display. */
   frameStartMs: number;
+  /** On a fall-back day, the stretch whose clock times happen twice, so a label can say which one. Display only. */
+  repeatedHour: { startMs: number; endMs: number } | null;
   /** The clock the projection was computed against (elapsed items and unacknowledged requests depend on it). */
   asOfMs: number;
   householdOrigin: 'demo' | 'real';

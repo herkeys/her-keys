@@ -107,6 +107,8 @@ export interface CopyContext {
 
 export function copyContextFor(view: CalendarDayViewModel): CopyContext {
   const at = (minute: number) => view.frameStartMs + minute * 60_000;
+  const hour = view.repeatedHour;
+  const repeated = (ms: number) => hour !== null && ms >= hour.startMs && ms < hour.endMs;
   const titles = new Map<string, string>();
   const items = new Map<string, DayItem>();
   for (const item of view.dayItems) {
@@ -116,8 +118,8 @@ export function copyContextFor(view: CalendarDayViewModel): CopyContext {
   }
   return {
     view,
-    clock: (minute) => formatClock(at(minute), view.timeZone),
-    range: (start, end) => formatClockRange(at(start), at(end), view.timeZone),
+    clock: (minute) => formatClock(at(minute), view.timeZone, { ambiguous: repeated(at(minute)) }),
+    range: (start, end) => formatClockRange(at(start), at(end), view.timeZone, { startAmbiguous: repeated(at(start)), endAmbiguous: repeated(at(end)) }),
     titleOf: (ref) => titles.get(`${ref.kind}:${ref.id}`) ?? 'that item',
     item: (ref) => items.get(`${ref.kind}:${ref.id}`),
   };
