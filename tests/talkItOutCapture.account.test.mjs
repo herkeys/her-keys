@@ -295,6 +295,43 @@ describe('B — a capture session on a bound account reaches the cloud as metada
     assert.deepEqual(device.text.refs(), [], 'and her words were forgotten with it');
   });
 
+  test('a capture made while SIGNED OUT is queued durably, sends nothing, and is delivered - without her words - when the same account signs back in', async () => {
+    const world = await boundWorld();
+    const { device, tap, cloud } = world;
+    await device.accountRuntime.signOut();
+    assert.equal(device.syncRuntime.running(), null, 'sign-out stopped the coordinator');
+    await device.settle();
+    const requests = tap.requests();
+    const calls = cloud.calls.length;
+
+    const out = await device.coordinator.submit({ text: UTTERANCE, submissionKey: keyOf(0) });
+    assert.equal(out.kind, 'captured');
+    await device.settle();
+    assert.deepEqual(device.queueKinds(), ['sourceArtifact', 'interpretation'], 'the intent is durable although nothing can be sent');
+    assert.deepEqual([tap.requests(), cloud.calls.length], [requests, calls], 'and nothing was sent while signed out');
+
+    assert.equal((await device.signIn()).kind, 'accountBound');
+    assert.deepEqual([cloudCount(world, 'source_artifacts'), cloudCount(world, 'interpretations'), cloudCount(world, 'tasks')], [1, 1, 0]);
+    assert.equal(device.queue().length, 0);
+    assert.deepEqual(leaksOf(surfacesOf(world), UTTERANCE, { tokens: [CANARY, CHATTER] }), []);
+  });
+
+  test('a DEMO household\'s captures are part of the rehearsal: they queue nothing, send nothing, and no session can bind them', async () => {
+    const cloud = createFakeCloud();
+    const tap = tapCloud(cloud);
+    const accountCloud = accountCloudFor(cloud, ACCOUNT_A);
+    const device = await makeCaptureDevice({ cloud, tap, accountCloud, mode: 'demo' });
+    assert.equal((await device.signIn()).kind, 'authenticatedUnbound', 'a demo household is refused as a whole');
+    const out = await device.coordinator.submit({ text: 'Dentist Friday at 3pm.', submissionKey: keyOf(0) });
+    assert.equal(out.kind, 'captured');
+    assert.equal((await device.coordinator.accept(out.readingIds[0])).kind, 'accepted');
+    await device.settle();
+    assert.equal(device.state().origin, 'demo');
+    assert.equal(device.state().events.at(-1).provenance.producer, 'demo-seed');
+    assert.deepEqual([tap.requests(), cloud.calls.length, cloud.rows.size], [0, 0, 0]);
+    assert.equal(device.persisted().identity.sync, null, 'not even a namespace');
+  });
+
   test('HA-001 for Feature 02: a capture-only household made BEFORE sign-in is not an empty household, and reaches the cloud on binding', async () => {
     const cloud = createFakeCloud();
     const tap = tapCloud(cloud);
