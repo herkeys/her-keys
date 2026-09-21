@@ -1,16 +1,17 @@
+import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { AppText, Overline } from '../../design/components';
 import { color, spacing } from '../../design/tokens';
 import type { TodayReady } from './model';
-import { PersistenceNotice } from './PersistenceNotice';
-import { SyncNotice } from './SyncNotice';
 
 /**
- * Orientation: which day this is — the household's logical day, never the device's —
- * who it is for, and one sentence on what the day is. The two notices are the shell's own
- * runtime affordance, kept where they were; Today builds no sync surface of its own.
+ * Orientation: which day this is — the household's logical day, never the device's — who it is for,
+ * and one sentence on what the day is.
+ *
+ * `children` is where the shell's own runtime notices sit (the persistence and sync lines). Today builds no
+ * sync surface of its own; it only leaves the existing affordance where it always was.
  */
-export function TodayHeader({ view }: { view: TodayReady }) {
+export function TodayHeader({ view, children }: { view: TodayReady; children?: ReactNode }) {
   return (
     <View style={styles.header}>
       <Overline>{`Today · ${view.day.label}`}</Overline>
@@ -20,8 +21,7 @@ export function TodayHeader({ view }: { view: TodayReady }) {
       <AppText variant="sectionTitle" color={color.text.secondary} style={styles.headline}>
         {view.headline}
       </AppText>
-      <PersistenceNotice />
-      <SyncNotice />
+      {children}
     </View>
   );
 }

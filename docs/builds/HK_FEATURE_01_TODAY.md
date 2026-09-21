@@ -252,15 +252,15 @@ No test is removed or rewritten at T0.
 | FR-12 | What changed — no presentation markers in state (§21, P) | IMPLEMENTED | scenario C (`changedToday` from dated observations); `lifecycle.test.mjs` "what changed": no presentation marker in `AppState` or the model; yesterday is not "today" |
 | FR-13 | Correction / adjustment through existing paths only (§22, H) | IMPLEMENTED | Scenario M (`tests/today/correction.test.mjs`): real store, persisted, re-derived; task edit, take-back, approve / decline; MP-01..04 offer nothing |
 | FR-14 | Progressive disclosure, accessible (§23) | IMPLEMENTED | UI: `TodayDisclosure` (`components.test.mjs`); "See why" -> "Evidence and source"; "More that needs you"; "N more"; "Everything today"; "Also checked"; "Changes you approved" |
-| FR-15 | Adaptive density; ≤3 primary blocks on an ordinary day (§24, S) | IN PROGRESS | model: scenarios A, D, I |
+| FR-15 | Adaptive density; ≤3 primary blocks on an ordinary day (§24, S) | IMPLEMENTED | scenarios A, D, I; `guarantees.test.mjs` "structure": over 33 corpus entries never more than 3 primary blocks, every list bounded, a section is in the composition iff it has content |
 | FR-16 | Time: household timezone, logical day, DST, time-of-day, rollover (§25, P, W) | IMPLEMENTED | scenarios J (zone, near-midnight, spring-forward, fall-back), P (08:00 / 15:00 / 21:00), W (real store + real hook across midnight: `lifecycle.test.mjs`, `hooks.test.mjs`) |
 | FR-17 | Local-first; unknown ≠ light; unrecovered ≠ light; sync stays infrastructure (§26, J, K, M) | IMPLEMENTED | scenarios K, O (`lifecycle.test.mjs`): real-store recoveries — newer version, unreadable storage, other mode, corrupt — Today is unavailable or honestly empty, never "light"; no sync surface in Today |
 | FR-18 | Demo isolation and onboarding guard intact (L) | IMPLEMENTED | scenario L (`lifecycle.test.mjs`): demo renders, is pure, claims no handled work, names no account/cloud; the model imports no account/storage/network module; onboarding guard and single Today route intact |
-| FR-19 | Typed future-LLM seam, nothing wired (§27) | NOT STARTED | |
-| FR-20 | Tone: calm, precise, adult; no cheerleading / dramatization (Q) | NOT STARTED | |
-| FR-21 | Minimum sensitive detail at first glance (R) | NOT STARTED | |
-| FR-22 | Accessibility: order, headings, dynamic text, targets, non-color status, expand state (§38) | NOT STARTED | |
-| FR-23 | Dense reference derivation < 100 ms, measured and reported (X) | NOT STARTED | |
+| FR-19 | Typed future-LLM seam, nothing wired (§27) | IMPLEMENTED | `model/narrative.ts`; `guarantees.test.mjs` "seam": a provider replaces the headline and nothing else; no model / network / key / library anywhere |
+| FR-20 | Tone: calm, precise, adult; no cheerleading / dramatization (Q) | IMPLEMENTED | `guarantees.test.mjs` "tone": every projected string in 33 scenarios AND every string literal in the components and model (>150 checked) against eight banned families |
+| FR-21 | Minimum sensitive detail at first glance (R) | IMPLEMENTED | `guarantees.test.mjs` "first-glance privacy": locations, notes, amounts, a child's name and birth date, travel never enter the projection; deeper detail stays behind disclosure |
+| FR-22 | Accessibility: order, headings, dynamic text, targets, non-color status, expand state (§38) | IMPLEMENTED | `guarantees.test.mjs` "accessibility": role + name + 44pt on every control, headings, reading order, status as words, expanded state, no truncation / fixed heights / font-scaling off, long titles and names wrap |
+| FR-23 | Dense reference derivation < 100 ms, measured and reported (X) | IMPLEMENTED | `guarantees.test.mjs` "performance": dense reference (20 events, 40 tasks, 6 delegations, 5 captured) median 4.8-6.5 ms, p95 8-11 ms over 40 runs (target < 100 ms); no cache added |
 | FR-24 | Permanent UI system consumed; ≤15 feature-local components; no new dependency (§7, Y, Z, AC) | NOT STARTED | |
 
 ---
@@ -300,6 +300,8 @@ No test is removed or rewritten at T0.
 | `tests/today/correction.test.mjs` | Scenario M: correction end to end through a real store; every route is an existing screen; no fake affordance | T6 |
 | `tests/today/lifecycle.test.mjs` | Scenarios K, L, O, P, W; the upcoming constraint; what changed | T7 |
 | `tests/today/hooks.test.mjs`, `tests/today/support/rn-with-appstate.mjs`, `stub-appstate.mjs` | The real `useTodayView` under the real `AppStateProvider` across midnight; a test-local `AppState` stub (shared test support untouched) | T7 |
+| `tests/today/corpus.mjs` | 33 named, real households + instants: the range of days every guarantee runs over | T8 |
+| `tests/today/guarantees.test.mjs` | Structure, tone, privacy, purity, no JSON-bag, the seam, accessibility, performance | T8 |
 
 **Existing Today files modified** are listed with their classification in §2.8 and their commits in the commit series (§10).
 

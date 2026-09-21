@@ -20,6 +20,7 @@ import { TodayList } from './TodayList';
 import { TodayMatters } from './TodayMatters';
 import { TodayStateNotice } from './TodayStateNotice';
 import { PersistenceNotice } from './PersistenceNotice';
+import { SyncNotice } from './SyncNotice';
 
 /**
  * The Today screen body: one projection, rendered in the order the projection composed.
@@ -47,7 +48,10 @@ export function TodayBriefing({ view }: { view: TodayView }) {
 
   return (
     <>
-      <TodayHeader view={view} />
+      <TodayHeader view={view}>
+        <PersistenceNotice />
+        <SyncNotice />
+      </TodayHeader>
       {view.load ? <LoadMeter load={view.load} note={view.capacityNote} /> : null}
       {view.composition.map(({ key }) => {
         const section = renderSection(key, view, complete, actions);
