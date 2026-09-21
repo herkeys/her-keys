@@ -4,6 +4,7 @@ import { DailyLoadCard } from '../daily-load/DailyLoadCard';
 import { LoadMeter } from '../daily-load/LoadMeter';
 import { LifeStatusSummary } from '../life/LifeStatusSummary';
 import { OneMoveCard } from '../one-move/OneMoveCard';
+import { useOneMove } from '../../store/OneMoveContext';
 import { TalkItOutEntry } from '../talk-it-out/TalkItOutEntry';
 import { spacing } from '../../design/tokens';
 import { HandledLedger } from './HandledLedger';
@@ -26,6 +27,9 @@ import { PersistenceNotice } from './PersistenceNotice';
  * in the composition, so it is not rendered — there are no empty boxes.
  */
 export function TodayBriefing({ view }: { view: TodayView }) {
+  // Completing today's move is an existing store action; the hook is called before any early return.
+  const { complete } = useOneMove();
+
   if (view.availability === 'unknown') return <TodayStateNotice kind="unknown" />;
 
   if (view.availability === 'unavailable') {
@@ -42,7 +46,7 @@ export function TodayBriefing({ view }: { view: TodayView }) {
       <TodayHeader view={view} />
       {view.load ? <LoadMeter load={view.load} note={view.capacityNote} /> : null}
       {view.composition.map(({ key }) => {
-        const section = renderSection(key, view);
+        const section = renderSection(key, view, complete);
         return section ? (
           <View key={key} style={styles.block}>
             {section}
@@ -54,7 +58,7 @@ export function TodayBriefing({ view }: { view: TodayView }) {
   );
 }
 
-function renderSection(key: SectionKey, view: TodayReady) {
+function renderSection(key: SectionKey, view: TodayReady, completeOneMove: () => void) {
   switch (key) {
     case 'sparse':
       return view.sparse ? <TodayStateNotice kind={view.sparse.kind} entry={view.sparse.entry} /> : null;
@@ -63,7 +67,7 @@ function renderSection(key: SectionKey, view: TodayReady) {
     case 'matters':
       return view.matters ? <TodayMatters section={view.matters} /> : null;
     case 'oneMove':
-      return <OneMoveCard />;
+      return view.oneMove ? <OneMoveCard section={view.oneMove} onComplete={completeOneMove} /> : null;
     case 'upcoming':
       return view.upcoming ? (
         <TodayList

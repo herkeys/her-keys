@@ -240,8 +240,8 @@ No test is removed or rewritten at T0.
 |---|---|---|---|
 | FR-01 | Orientation: logical-day label + concise framing (§9A, J) | IN PROGRESS | model: scenarios A, J; UI: `TodayHeader` |
 | FR-02 | "What matters today" prioritized, not every item (§11) | IN PROGRESS | model: scenarios A, I; UI: `TodayMatters` (`components.test.mjs`) |
-| FR-03 | One Move — full presentation lifecycle, all registered target kinds (§15, N) | IN PROGRESS | model: scenarios D, F |
-| FR-04 | "Why this One Move" from structured evidence, progressive (§16) | IN PROGRESS | model: scenario F |
+| FR-03 | One Move — full presentation lifecycle, all registered target kinds (§15, N) | IMPLEMENTED | model: scenarios D, F, N (`tests/today/oneMove.test.mjs`: none / selected / completed / withheld / rollover, all six kinds); UI: `OneMoveCard` (`components.test.mjs`) |
+| FR-04 | "Why this One Move" from structured evidence, progressive (§16) | IMPLEMENTED | model: scenario F (reasons re-checked, stale links dropped, unknown codes never rendered); UI: "See why" → reasons → "Evidence and source" (`components.test.mjs`) |
 | FR-05 | Needs Me — things that exist vs things that need her (§12) | IN PROGRESS | model: scenario B, C |
 | FR-06 | Risk / attention — specific, evidence-based (§13) | IN PROGRESS | model: scenario B, C, E |
 | FR-07 | Capacity — "does the day fit", no scores (§14) | IN PROGRESS | model: scenario B; UI pending |

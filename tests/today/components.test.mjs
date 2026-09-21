@@ -13,7 +13,9 @@ import TestRenderer from 'react-test-renderer';
 import { StyleSheet } from 'react-native';
 import { sizing } from '../../src/design/tokens.ts';
 import { render } from '../support/render.tsx';
-import { DAY, ev, household, nyMs, tk, valid, view, withMove } from './fixtures.mjs';
+import { completeOneMove } from '../../src/domain/oneMove.ts';
+import { demoState, onboardedState } from '../support/fixtures.mjs';
+import { DAY, at, ev, facet, household, mkCtx, nyInstant, nyMs, tk, valid, view, withMove } from './fixtures.mjs';
 
 await import('./support/stub-expo-router.mjs');
 const { router } = await import('./support/expo-router-stub.mjs');
@@ -24,6 +26,7 @@ const { TodayMatters } = await import('../../src/features/today/TodayMatters.tsx
 const { TodayList } = await import('../../src/features/today/TodayList.tsx');
 const { NeedsMeChip } = await import('../../src/features/today/NeedsMeChip.tsx');
 const { LoadMeter } = await import('../../src/features/daily-load/LoadMeter.tsx');
+const oneMoveModule = await import('../../src/features/one-move/OneMoveCard.tsx');
 
 const flat = (node) => StyleSheet.flatten(node.props.style) ?? {};
 const text = (root) =>
@@ -215,5 +218,102 @@ describe('NeedsMeChip and LoadMeter', () => {
     assert.match(text(r.root), /default day/);
     assert.doesNotMatch(text(r.root), /\d+\s?%|score/i, 'no percentage and no score');
     assert.equal(r.root.findAllByType('View').find((v) => v.props.accessible).props.accessibilityLabel, 'Estimated load: Tight. One window is short on room. The rest of the day has space.');
+  });
+});
+
+describe('OneMoveCard — the lifecycle, and “why” that opens in stages', () => {
+  const { OneMoveCard } = oneMoveModule;
+  const noop = () => {};
+  const labels = (r) => r.root.findAllByType('Pressable').map((p) => p.props.accessibilityLabel);
+
+  const selectedView = (opts = {}) => {
+    let s = household();
+    s = tk(s, { title: 'File the insurance claim', minutes: 30, due: DAY, plan: { kind: 'unplanned' }, category: 'cat-money', ...opts });
+    s = facet(s, 'File the insurance claim', { consequence: 'high' });
+    return view(withMove(valid(s)), nyMs(9)).oneMove;
+  };
+
+  test('first glance is the recommendation and one button; there is no “not today” and no “show another”', async () => {
+    let done = 0;
+    const r = await render(<OneMoveCard section={selectedView()} onComplete={() => { done += 1; }} />);
+    assert.match(text(r.root), /WHAT I RECOMMEND/);
+    assert.match(text(r.root), /File the insurance claim/);
+    assert.match(text(r.root), /ABOUT 30 MINUTES/);
+    assert.deepEqual(labels(r), ['I did it', 'See why']);
+    assert.doesNotMatch(text(r.root), /Not today|Show another|WHY THIS/);
+    await press(pressable(r.root, 'I did it'));
+    assert.equal(done, 1);
+  });
+
+  test('“See why” opens the reasons and says what “I did it” will do; the evidence is one level further down', async () => {
+    router.reset();
+    const r = await render(<OneMoveCard section={selectedView()} onComplete={noop} />);
+    await press(pressable(r.root, 'See why'));
+    assert.match(text(r.root), /WHY THIS/);
+    assert.match(text(r.root), /It’s due today\./);
+    assert.match(text(r.root), /If this slips, the cost is high\./);
+    assert.match(text(r.root), /Marking it done also completes the task on your list\./);
+    assert.doesNotMatch(text(r.root), /Deadline —/, 'the structured evidence is deeper still');
+
+    await press(pressable(r.root, 'Evidence and source'));
+    assert.match(text(r.root), /Deadline — File the insurance claim/);
+    assert.match(text(r.root), /You said/, 'a stated task says so');
+    await press(pressable(r.root, 'Open it'));
+    assert.equal(router.calls[0][0].pathname, '/task-editor');
+  });
+
+  test('a kind with no completion effect of its own says so plainly and never claims to finish a row', async () => {
+    let s = ev(household(), { title: 'Parent conference', from: [16], to: [17] });
+    const e = s.events[0];
+    s = valid({ ...s, oneMoves: [{ id: `onemove-${DAY}`, forDate: DAY, targetId: e.id, targetType: 'event', status: 'selected', decidedAt: nyInstant(7), completedAt: null, provenance: { producer: 'system-derived', artifactId: null, confidence: null }, scope: 'personal' }] });
+    const r = await render(<OneMoveCard section={view(s, nyMs(9)).oneMove} onComplete={noop} />);
+    await press(pressable(r.root, 'See why'));
+    assert.match(text(r.root), /Marking it done records that you did it\. Nothing else changes\./);
+    assert.doesNotMatch(text(r.root), /completes|resolves/);
+  });
+
+  test('a completed move asks for nothing: there is no button left to press', async () => {
+    let s = withMove(valid(tk(household(), { title: 'Renew library card' })));
+    s = completeOneMove(s, mkCtx(nyMs(9)));
+    const r = await render(<OneMoveCard section={view(s, nyMs(9, 5)).oneMove} onComplete={noop} />);
+    assert.match(text(r.root), /Done\. That’s enough for today\./);
+    assert.deepEqual(labels(r), []);
+  });
+
+  test('a withheld move is Her Keys noticing the day is full — named as an observation, with nothing to press', async () => {
+    let s = household();
+    s = ev(s, { title: 'Work call', from: [15], to: [16, 30], category: 'cat-work' });
+    s = ev(s, { title: 'Soccer practice', from: [17], to: [18, 30] });
+    s = tk(s, { title: 'Prep dinner', minutes: 40, plan: { kind: 'timed', startsAt: at(16, 30) } });
+    const r = await render(<OneMoveCard section={view(withMove(valid(s)), nyMs(14)).oneMove} onComplete={noop} />);
+    assert.match(text(r.root), /HER KEYS NOTICED/);
+    assert.match(text(r.root), /Today is already full, so Her Keys isn’t adding anything\./);
+    assert.deepEqual(labels(r), []);
+  });
+
+  test('a move pointing at an unconfirmed claim carries the permanent badge at first glance', async () => {
+    const inferred = { producer: 'ai-inference', artifactId: null, confidence: 'possible' };
+    const section = selectedView({ provenance: inferred });
+    const r = await render(<OneMoveCard section={section} onComplete={noop} />);
+    assert.match(text(r.root), /POSSIBLE/);
+    assert.match(text(r.root), /Her Keys inferred this/);
+  });
+
+  test('a demo move shows its own observation as the reason, with no evidence and no route invented', async () => {
+    const s = onboardedState(demoState());
+    const r = await render(<OneMoveCard section={view(s, nyMs(9)).oneMove} onComplete={noop} />);
+    await press(pressable(r.root, 'See why'));
+    assert.match(text(r.root), /Mail has been piling up/);
+    assert.equal(labels(r).includes('Evidence and source'), false);
+    assert.equal(labels(r).includes('Open it'), false);
+  });
+
+  test('long titles and long reasoning wrap instead of being cut off', async () => {
+    // The longest title the stored shape allows (200 characters) — the layout must hold at the limit.
+    const long = 'Follow up with the county clerk about the corrected permit paperwork for the back-yard fence replacement '.repeat(3).slice(0, 199).trim();
+    const r = await render(<OneMoveCard section={selectedView({ title: long })} onComplete={noop} />);
+    await press(pressable(r.root, 'See why'));
+    assert.match(text(r.root), /Follow up with the county clerk/);
+    assert.equal(r.root.findAll((n) => n.props && n.props.numberOfLines !== undefined).length, 0, 'nothing truncates');
   });
 });
