@@ -165,6 +165,7 @@ describe('Responsibility: assigned ≠ acknowledged ≠ accepted ≠ covered, an
     const t = first(w);
     assert.equal(t.responsibility.coverage, 'needs_review', 'the positive claim must not survive the person being unavailable');
     assert.equal(t.section, 'needs_review');
+    assert.equal(t.needsMe, true, 'the stale "no longer needs you" of an unavailable counterpart does not survive: it needs her review');
     assert.ok(t.review.includes('counterpart_unavailable'));
     assert.deepEqual(availableResponsibilityActions(t.responsibility), ['reassign', 'returned']);
     const lines = text(t);

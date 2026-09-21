@@ -45,6 +45,8 @@ export const COPY = {
     notFoundBody: 'It may have been removed, or it belongs to a different household.',
     notAHandoffTitle: "That isn't a co-parenting handoff",
     notAHandoffBody: 'Open it from where it lives instead.',
+    notAFollowUpTitle: "That isn't a money follow-up",
+    notAFollowUpBody: 'Open it from where it lives instead.',
   },
 
   blocked: {
@@ -319,6 +321,7 @@ export const NEGATED_BOUNDARY_SENTENCES: readonly string[] = [
   COPY.money.amountNote,
   COPY.money.done,
   COPY.editor.followUpHelp,
+  COPY.editor.repeatHelp,
   COPY.prep.doneNote,
 ];
 

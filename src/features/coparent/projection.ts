@@ -278,7 +278,9 @@ function transitionViewOf(ctx: Ctx, event: CalendarEvent): TransitionView {
   const needsMeReasons = needsMeReasonsOf(ctx, event, responsibility);
   const timeStatus: TimeStatus = occurrence.endsAtMs <= ctx.nowMs ? 'past' : occurrence.startsAtMs <= ctx.nowMs ? 'in_progress' : 'upcoming';
 
-  const needsMe = needsMePersonally(ctx.state, ref, ctx.nowMs);
+  // The shared answer reads the recorded `stillNeedsMe`, which knows nothing about the holder becoming unavailable. Once the
+  // counterpart is gone the recorded "it no longer needs you" no longer holds: the item needs HER review, so it says so.
+  const needsMe = responsibility.coverage === 'needs_review' ? true : needsMePersonally(ctx.state, ref, ctx.nowMs);
   const unknowns: UnknownFact[] = [];
   if (child.status === 'not_recorded') unknowns.push('child_not_recorded');
   if (event.location === null || event.location.trim() === '') unknowns.push('location_not_recorded');

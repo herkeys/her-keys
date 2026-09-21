@@ -1,0 +1,25 @@
+{
+  "amount": null,
+  "availableActions": [
+    "record_asked"
+  ],
+  "childId": "child-josie",
+  "counterpartLabel": null,
+  "counterpartPersonId": null,
+  "coverageState": "unknown",
+  "dependencyStanding": "no_prep_recorded",
+  "moneyFollowUpState": null,
+  "needsMe": true,
+  "preparationItems": [],
+  "recurrenceState": "none",
+  "responsibilityState": "none_recorded",
+  "section": "needs_me",
+  "sharingState": "owner_only",
+  "transitionId": "evt-1",
+  "transitionState": "active/upcoming/recorded",
+  "unknownFacts": [
+    "location_not_recorded",
+    "counterpart_not_recorded",
+    "preparation_not_recorded"
+  ]
+}

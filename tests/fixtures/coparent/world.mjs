@@ -8,7 +8,7 @@
  * Time: `NOW` is Wednesday 2026-09-16 10:00 America/New_York (EDT, UTC-4). The household zone is New York; tests that need a
  * different DEVICE zone pass it to the clock, never to the state.
  */
-import { addPerson } from '../../../src/domain/responsibility.ts';
+import { addPerson, archivePerson } from '../../../src/domain/responsibility.ts';
 import { validateAppState } from '../../../src/domain/state.ts';
 import { createEmptyState } from '../../../src/state/initialState.ts';
 import {
@@ -19,6 +19,8 @@ import {
   createPreparation,
   recordAnswer,
   recordCounterpart,
+  removeFollowUp,
+  removePreparation,
 } from '../../../src/features/coparent/mutations.ts';
 
 export const TZ = 'America/New_York';
@@ -119,3 +121,67 @@ export const finishPrep = (w, taskId) => w.run((s, ctx) => completePreparation(s
 export const finishFollowUp = (w, taskId) => w.run((s, ctx) => completeFollowUp(s, ctx, taskId));
 
 export const respOf = (state, kind, id) => state.responsibilities.filter((r) => r.about.kind === kind && r.about.id === id);
+
+/**
+ * A household that shows EVERY state Feature 07 can present — used by the copy-truth audit, the accessibility checks and the
+ * scenario fixtures, so they all look at the same, complete picture. Dates are relative to NOW (Wed 2026-09-16 10:00 NY).
+ * Returns `{ w, ids }` where `ids` names each handoff / task / person / responsibility by role.
+ */
+export function showcaseWorld() {
+  const w = world({ children: [JOSIE, MILO, RUBY] });
+  const alex = w.person('Alex', 'co-parent');
+  const alex2 = w.person('Alex', 'co-parent');
+  const jordan = w.person('Jordan', 'caregiver');
+  const june = w.person('Grandma June', 'grandparent');
+  const pat = w.person('Pat', 'other');
+  const p = (personId) => ({ kind: 'person', personId });
+  const ids = { people: { alex, alex2, jordan, june, pat } };
+
+  ids.requested = handoff(w, { child: JOSIE, title: 'Pickup Josie', date: '2026-09-18', location: "Dad's place, 12 Elm St", repeat: 'weekly', counterpart: p(alex) });
+  ids.prepDone = prep(w, { child: JOSIE, title: 'Pack the school laptop', dueDate: '2026-09-17', linkEventId: ids.requested });
+  ids.prepOpen = prep(w, { child: JOSIE, title: 'Bring the medication bag', dueDate: '2026-09-18', linkEventId: ids.requested });
+  finishPrep(w, ids.prepDone);
+
+  ids.acknowledged = handoff(w, { child: MILO, title: 'Drop off Milo', date: '2026-09-19', counterpart: p(jordan) });
+  answer(w, respOf(w.state, 'event', ids.acknowledged)[0].id, 'acknowledged');
+
+  ids.acceptedNeeds = handoff(w, { child: RUBY, title: 'Sunday handoff', date: '2026-09-20', counterpart: p(june) });
+  answer(w, respOf(w.state, 'event', ids.acceptedNeeds)[0].id, 'accepted_needs_me');
+
+  ids.covered = handoff(w, { child: JOSIE, title: 'Monday pickup', date: '2026-09-21', repeat: 'every_2_weeks', counterpart: p(alex2) });
+  answer(w, respOf(w.state, 'event', ids.covered)[0].id, 'accepted_covered');
+
+  ids.declined = handoff(w, { child: MILO, title: 'Tuesday drop-off', date: '2026-09-22', counterpart: p(jordan) });
+  answer(w, respOf(w.state, 'event', ids.declined)[0].id, 'declined');
+
+  ids.markedNeeds = handoff(w, { child: RUBY, title: 'Wednesday pickup', date: '2026-09-23', needsMe: true });
+  ids.plain = handoff(w, { child: JOSIE, title: 'Thursday handoff', date: '2026-09-24' });
+
+  ids.archived = handoff(w, { child: MILO, title: 'Friday exchange', date: '2026-09-25', counterpart: p(pat) });
+  answer(w, respOf(w.state, 'event', ids.archived)[0].id, 'accepted_covered');
+  w.apply((s, c) => archivePerson(s, c, pat));
+
+  ids.removedPrep = handoff(w, { child: RUBY, title: 'Saturday handoff', date: '2026-09-26' });
+  const keep = prep(w, { child: RUBY, title: 'Pack the swim bag', linkEventId: ids.removedPrep });
+  const drop = prep(w, { child: RUBY, title: 'Bring the library book', linkEventId: ids.removedPrep });
+  finishPrep(w, keep);
+  w.run((s, c) => removePreparation(s, c, drop));
+
+  ids.noChild = handoff(w, { child: JOSIE, title: 'Handoff with no child', date: '2026-09-27' });
+  w.state = { ...w.state, events: w.state.events.map((e) => (e.id === ids.noChild ? { ...e, subjectMemberId: null } : e)) };
+
+  ids.loosePrep = prep(w, { child: MILO, title: 'Return the soccer jersey', dueDate: '2026-09-19' });
+
+  ids.followOpen = followUp(w, { title: 'Soccer registration', childId: JOSIE, amountText: '80', followUpDate: '2026-09-25', counterpart: p(alex) });
+  ids.followNoCounterpart = followUp(w, { title: 'Field trip fee', childId: MILO, amountText: '12.50', followUpDate: '' });
+  ids.followDone = followUp(w, { title: 'Dentist copay', childId: RUBY, amountText: '25', followUpDate: '2026-09-15' });
+  w.run((s, c) => completeFollowUp(s, c, ids.followDone), { ms: NOW - 86_400_000 });
+  ids.followRemoved = followUp(w, { title: 'Cancelled camp fee', childId: MILO, amountText: '300' });
+  w.run((s, c) => removeFollowUp(s, c, ids.followRemoved));
+
+  // A responsibility recorded complete, recently.
+  ids.completedResp = handoff(w, { child: JOSIE, title: 'Earlier handoff', date: '2026-09-28', counterpart: p(alex) });
+  answer(w, respOf(w.state, 'event', ids.completedResp)[0].id, 'completed', { ms: NOW - 2 * 86_400_000 });
+
+  return { w, ids };
+}

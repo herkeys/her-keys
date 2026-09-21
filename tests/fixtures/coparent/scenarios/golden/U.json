@@ -1,0 +1,28 @@
+{
+  "amount": null,
+  "availableActions": [
+    "record_asked"
+  ],
+  "childId": "child-josie",
+  "counterpartLabel": null,
+  "counterpartPersonId": null,
+  "coverageState": "unknown",
+  "dependencyStanding": "needs_review",
+  "moneyFollowUpState": null,
+  "needsMe": null,
+  "preparationItems": [
+    "Bring the uniform:removed",
+    "Pack the school laptop:done"
+  ],
+  "recurrenceState": "none",
+  "responsibilityState": "none_recorded",
+  "section": "needs_review",
+  "sharingState": "owner_only",
+  "transitionId": "evt-1",
+  "transitionState": "active/upcoming/recorded",
+  "unknownFacts": [
+    "location_not_recorded",
+    "counterpart_not_recorded",
+    "needs_you_not_recorded"
+  ]
+}
