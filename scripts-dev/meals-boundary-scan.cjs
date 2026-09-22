@@ -25,8 +25,12 @@ const ROOT = path.resolve(__dirname, '..');
 // every feature branch forked from), which is what Feature 08 was certified against on its own, isolated branch. Once merged into
 // the Wave 2 integration line (integration/wave2-f01-f08), that same diff would also show every sibling feature's own history —
 // not a boundary violation, just the wrong question. Re-pointed to the integration checkpoint immediately BEFORE F08 entered this
-// line (W2I-F07, 38ab7f14d017146883a939339eb604607eff623b), so the scan asks exactly what integrating F08 changed, the same
-// question it always asked, now relative to where F08 actually landed.
+// line (W2I-F07, 38ab7f14d017146883a939339eb604607eff623b), so the scan asks exactly what integrating F08 changed — its own
+// migration, its own MealPlanEntry fields (checks A/B need THIS exact baseline to see them as "new" at all) — the same question
+// it always asked, now relative to where F08 actually landed. (Advancing this further, to the certified Wave 2 checkpoint after
+// F08 merged, was tried and reverted: checks A/B then saw F08's own migration as pre-existing, not new, and failed for the wrong
+// reason. The Wave 2 integrated hostile audit, AUDIT-W2-*, runs after F08 is already in the tree; its changes to files outside
+// Meals' own lane are accounted for in SHARED below, each with its own AUDIT-W2-* reason.)
 const BASE = '38ab7f14d017146883a939339eb604607eff623b';
 const F08_MIGRATION = 'supabase/migrations/20260921160000_f08_meal_slot_and_status.sql';
 
@@ -70,13 +74,38 @@ const SHARED = [
   ['tests/support/legacyShapes.mjs', 'test infrastructure: typed literals and the v3 to v4 shape helper'],
   ['tests/support/richHousehold.mjs', 'test infrastructure: the meal literal carries the new fields'],
   ['tests/foundationAcceptance.test.mjs', 'test infrastructure: raw meal literal carries the new fields'],
-  ['tests/foundationAcceptance3.test.mjs', 'test infrastructure: raw meal literal carries the new fields'],
+  ['tests/foundationAcceptance3.test.mjs', 'test infrastructure: raw meal literal carries the new fields; AUDIT-W2-02 also added a regression test here (unrelated to Meals)'],
+
+  // AUDIT-W2-* — the Wave 2 integrated hostile audit and repair pass, run after all of F01-F08 were already merged and
+  // certified (a28bde2, the new BASE above). None of these are Meals changes; each fixes a real defect found by
+  // attacking the INTEGRATED product as a whole, which is exactly the kind of cross-feature bug no single feature's
+  // own isolated branch could have found. Listed here only because this scan's diff can no longer tell "F08 did this"
+  // apart from "a later, unrelated commit on the same branch did this" once BASE sits after F08's own merge.
+  ['src/domain/account/claim.ts', 'AUDIT-W2-05: cloudDisplayName\'s control-char regex was mis-ranged (\\x7F-\\xC2 instead of \\x7F-\\x9F) and silently stripped accented capitals like Á/Â from real names'],
+  ['src/domain/oneMove.ts', 'AUDIT-W2-01: the One Move candidate pool never checked dependency blocking; a blocked task could be offered as the day\'s one recommended move'],
+  ['src/features/today/model/mattersView.ts', 'AUDIT-W2-01: the same dependency-blocking gap in "What Matters Today"\'s due-today list'],
+  ['src/domain/reasoning/attention.ts', 'AUDIT-W2-02: risk suppression treated ACKNOWLEDGED as ACCEPTED, contradicting the product\'s own ACKNOWLEDGED ≠ ACCEPTED boundary (already flagged by F07 as HK-INT-COPARENT-KIDS-ATTENTION-01, unresolved until this audit)'],
+  ['src/features/systems/commands/responsibility.ts', 'AUDIT-W2-04: recordAnswer(\'accepted\') relied on accept()\'s stillNeedsMe default, which contradicts accept()\'s own doctrine comment ("accepting is not, by itself, proof the load left")'],
+  ['src/domain/sync/applySupport.ts', 'AUDIT-W2-03: looksLikeInstant\'s regex was missing every backslash (/^d{4}-d{2}.../), so it never matched a real timestamp and sameCloudValue could miss two equal instants rendered differently'],
+  ['src/domain/sync/pullEngine.ts', 'AUDIT-W2-06: a non-member row adopted as "ours coming home" left its pending create in the queue, replayed next cycle as a redundant CAS update on a row nothing had changed'],
+  ['tests/claimDisplayName.test.mjs', 'AUDIT-W2-05 regression coverage'],
+  ['tests/oneMove.test.mjs', 'AUDIT-W2-01 regression coverage'],
+  ['tests/today/mattersBlocking.test.mjs', 'AUDIT-W2-01 regression coverage (new file)'],
+  ['tests/systems/scenarios.lifecycle.test.mjs', 'AUDIT-W2-04 regression coverage'],
+  ['tests/fixtures/systems/scenarios/J-responsibility.evidence.json', 'AUDIT-W2-04: regenerated via UPDATE_SYSTEMS_EVIDENCE=1 after the stillNeedsMe fix; reviewed, the diff is exactly that one field'],
+  ['tests/sync/sameCloudValue.test.mjs', 'AUDIT-W2-03 regression coverage (new file)'],
+  ['tests/hk-ir01/syncComposition.test.mjs', 'AUDIT-W2-06 regression coverage'],
 ];
 
-/** Files Feature 08 must NOT change. */
+/**
+ * Files Feature 08 (Meals) itself must never change — no Meals reason ever touches these.
+ * `src/domain/account/claim.ts` was moved out of this list to SHARED below: the Wave 2 integrated hostile audit
+ * fixed a real, unrelated bug there (a mis-ranged control-character regex), which is exactly the kind of change
+ * this list exists to catch if MEALS made it, but this one wasn't Meals — see the SHARED entry for the evidence.
+ */
 const PROTECTED = [
   /^src\/domain\/taskLists\.ts$/, /^tests\/build3Audit\.capture\.test\.mjs$/, /^src\/domain\/routeAccess\.ts$/, /^app\/_layout\.tsx$/, /^app\/\(app\)\/life\/_layout\.tsx$/,
-  /^src\/domain\/account\/claim\.ts$/, /^supabase\/migrations\/20260919/, /^supabase\/migrations\/20260921120000/, /^tests\/fixtures\/v3\//, /^app\.json$/,
+  /^supabase\/migrations\/20260919/, /^supabase\/migrations\/20260921120000/, /^tests\/fixtures\/v3\//, /^app\.json$/,
   /^package(-lock)?\.json$/, /^src\/domain\/responsibility\.ts$/, /^src\/domain\/structure\.ts$/, /^src\/domain\/foundation\//, /^src\/domain\/tasks\.ts$/,
   /^src\/domain\/projectDay\.ts$/, /^src\/domain\/observations\.ts$/, /^src\/persistence\//,
 ];

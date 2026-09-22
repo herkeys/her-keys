@@ -98,7 +98,8 @@ describe('[BO] no network, no logging, no secrets in Meals code', () => {
 
   test('[BO1] no secret or credential pattern in any line Feature 08 added', () => {
     // 38ab7f14d017146883a939339eb604607eff623b: the Wave 2 integration checkpoint (W2I-F07) immediately before F08 was merged into
-    // it — see scripts-dev/meals-boundary-scan.cjs for why this replaced the original standalone-branch baseline (14bd58e).
+    // it — see scripts-dev/meals-boundary-scan.cjs for why this baseline is what it is (kept, not advanced further; advancing it
+    // past F08's own migration broke the checks that need to see that migration as new).
     const added = execFileSync('git', ['diff', '38ab7f14d017146883a939339eb604607eff623b'], { cwd: ROOT, encoding: 'utf8', maxBuffer: 256 * 1024 * 1024 })
       .split('\n').filter((l) => l.startsWith('+') && !l.startsWith('+++')).join('\n');
     const patterns = [
