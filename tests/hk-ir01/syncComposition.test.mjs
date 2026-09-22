@@ -622,8 +622,12 @@ describe('HA-001 — she keeps using the app while the network is busy (no silen
     await a.settle();
     cloud.state.loseNextAck = 0;
     await a.syncRuntime.request('manual');
-    assert.equal(cloud.table('tasks').filter((t) => t.title === 'Ack will be lost').length, 1);
+    const settled = cloud.table('tasks').filter((t) => t.title === 'Ack will be lost');
+    assert.equal(settled.length, 1);
     assert.equal(a.persisted().identity.sync.queue.length, 0);
+    // AUDIT W2-06: settling must be a pure adoption of the row already on the server, not a redundant CAS
+    // update replayed on top of it — a genuine update would have bumped this straight from 1 to 2.
+    assert.equal(settled[0].revision, 1, 'nothing was re-sent for a row that already arrived exactly as she made it');
   });
 });
 

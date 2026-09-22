@@ -489,9 +489,16 @@ function applyOne(
     (fromAnotherDevice && carried.queue.some((q) => q.kind === kind && q.localId === wanted && q.op === 'create'));
   const localId = taken ? ctx.mintLocalId(kind, wanted) : wanted;
 
+  // Ours coming home (audit W2-06): the server already holds what THIS device tried to create, so the matching
+  // pending create is settled right here — the same thing the explicit `adopt` branch above does — instead of
+  // being left in the queue to be replayed next cycle as a redundant CAS update on a row nothing actually changed.
+  const settled = ownRow
+    ? { ...carried, queue: carried.queue.filter((q) => !(q.kind === kind && q.localId === localId && q.op === 'create')) }
+    : carried;
+
   return {
-    state: ctx.applyRow(state, kind, localId, row, resolverFor(carried)),
-    namespace: rememberMapping(carried, { kind, localId, cloudId, revision: serverRevision }),
+    state: ctx.applyRow(state, kind, localId, row, resolverFor(settled)),
+    namespace: rememberMapping(settled, { kind, localId, cloudId, revision: serverRevision }),
     changed: true,
   };
 }
