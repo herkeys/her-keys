@@ -322,3 +322,25 @@ legacyCatalogRemediation + persistence + migrationV3ToV4, after the fix -> 79/79
 The four transient failures were one cause (the historical-shape helper did not strip F11's new roots, so the FROZEN v1–v3
 validators correctly refused the "legacy" fixture); fixed in the fixture helper, not in any validator. The remaining two failures are
 the pre-existing F08 scan tests (ENTRY).
+
+Mini-gate after M2: `feature/11-me-rebuild-os` @ `da1b0f7`, working tree clean.
+
+---
+
+## F11-M3 — Focus → canonical Task relationship, relaunch, and the Today seam
+
+No new production code was needed beyond M2's `addNextStep` / `linkToFocus`: M3 is the proof that the relationship behaves as the
+contract says across the canonical systems it touches. `tests/rebuild/focus.relationships.test.mjs` (15 tests, 4 suites; 15/15):
+
+| Contract | Evidence |
+|---|---|
+| **Focus → Task** | Saving a next step creates exactly ONE canonical Task (`scope: 'personal'`, `user-action`, her exact title, the category she chose) and ONE `next_action` link; no Goal/System/Event; the Focus row is not modified; the Focus note is never copied into the Task. Blank step, archived Focus and missing category create nothing. A paused Focus may still gain a step. |
+| **Relaunch** | Focus + link + open Task recovered through the real store and in-memory storage. |
+| **Today (Addenda F, S)** | `buildTodayView` is deep-equal with and without a Focus (with a note); neither title nor note appears anywhere in its strings; `attentionFor` is identical. |
+| **One Move** | One Move decides the day identically with and without a Focus; no record ever targets a Focus. A next-step Task planned for today is shown by Today as a task and selected by One Move as `task` — ordinary rules only. |
+| **Capacity** | `projectStateDay` (what Daily Load reads) is identical with twelve Focuses and with none: zero invented minutes. |
+| **Focus → Goal / System / Event** | Linking leaves every linked row unchanged and adds no Focus field to any canonical row; a household-visible System stays household-visible under a private link. Goal achieved / abandoned and Event removed leave the Focus exactly as it was; the links remain as history and none counts as a next action. Archiving the Focus touches no Goal, System, Event or Task. |
+| **Task invalidation (Addenda N, O)** | Only an OPEN linked next-action Task counts: completed and archived Tasks drop out; a link whose Task is absent is inert (no crash, no count); a Focus-created Task is edited through the ordinary `updateTask`; an unlinked Task is never a next step. |
+
+**Low-energy support**: no F11 energy model. The M4 home may show an existing `alternative_to` Task for a linked next step via the
+existing `alternativesTo()`; F11 never creates one.
