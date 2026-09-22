@@ -206,3 +206,36 @@ suite still passes on top of it (38/38).
 | `tests/support/richHousehold.mjs` | one context + one follow-up (after One Move resolution) so the lossless round trip covers both kinds | append-only | no: the round trip requires every kind |
 
 Missing primitives and integration candidates so far: `docs/builds/HK_FEATURE_13_MISSING_PRIMITIVES.md`.
+
+Git at M1 close: `ef303ef`, clean. Tests executed at M1 (targeted): `tests/foundationSpecs`, `foundationRoundtrip`,
+`hk-ir01/changeBridge` — `ℹ tests 116 · pass 116 · fail 0`; also `foundationAcceptance2/3`, `tokenBoundary`, `today/attentionUi` in an
+earlier targeted run (158: 157 pass + the count test fixed above). `tsc --noEmit` exit 0. Full suites: DEFERRED-IN-RUN to M6.
+
+---
+
+## F13-M2 — local identity / context commands + persistence
+
+Built: `src/domain/people.ts` (commands, named outcomes), `src/features/people/commit.ts` (`commitPeople` → `store.commit`, reports the
+command's own outcome; a success the store could not make durable is `not_saved`), and the read side the tests use
+(`src/features/people/projection.ts`, `privateNote.ts`, `lifeTile.ts`, `copy.ts`).
+
+Tests (new, F13-owned): `tests/people/domain.test.mjs` — **29/29**; `tests/people/store.test.mjs` — **5/5** (real store, memory storage,
+relaunch = a second store on the same storage).
+
+| Scenario | Status | Evidence |
+|---|---|---|
+| external person create → immediate → relaunch → same id/labels/note | PASS | store › LOCAL-FIRST 1 |
+| rename without identity split; links/context/Task untouched | PASS | domain › RENAME; store › LOCAL-FIRST 2 |
+| same-name distinct people; same org/label distinct | PASS | domain › SAME NAME … (2 tests) |
+| one context per person; archived context restored, never duplicated | PASS | domain › PERSON CONTEXT |
+| label/org/note limits in code points, control chars, clearing, schema refusal | PASS | domain › RELATIONSHIP LABEL … (5 tests) |
+| co-parent read-only identity (rename/archive refused) | PASS | domain › RENAME 2 |
+| child context without duplicating or touching the child | PASS | domain › PERSON CONTEXT 1 |
+| Add Follow-up success (1 private Task + 1 link, typed title only, no name/label/note copied) | PASS | domain › ADD FOLLOW-UP 1 |
+| cancel → 0 Task / 0 link | PASS | domain › ADD FOLLOW-UP 2 (the command is never called; UI proof in M4) |
+| retry → no duplicate (domain AND through the store after a failed write) | PASS | domain › RETRY; store › all-or-nothing 1 |
+| partial failure → full rollback (failed write; store-refused invalid state) OR explicit recovery (task without link → link added) | PASS | store › all-or-nothing 1–2; domain › PARTIAL STATE |
+| Task complete/archive leaves context + link intact; context archive leaves Task/person/child/co-parent intact | PASS | domain › TASK COMPLETED … (3 tests) |
+| integrity: duplicate context, link to household Task, dangling child; messages carry ids only | PASS | domain › integrity |
+
+Shared-file edits at M2: none beyond M1.
