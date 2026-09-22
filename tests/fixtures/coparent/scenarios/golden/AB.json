@@ -1,0 +1,21 @@
+{
+  "amount": "80.00 USD",
+  "availableActions": [
+    "acknowledged",
+    "accepted_covered",
+    "accepted_needs_me",
+    "declined",
+    "completed",
+    "reassign",
+    "returned"
+  ],
+  "childId": "child-josie",
+  "counterpartPersonId": "person-1",
+  "coverageState": "not_covered",
+  "followUpDate": "2026-09-25",
+  "moneyFollowUpState": "open",
+  "paymentEvidence": "none",
+  "responsibilityState": "requested",
+  "review": [],
+  "taskId": "task-2"
+}

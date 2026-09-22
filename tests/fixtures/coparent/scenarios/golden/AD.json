@@ -1,0 +1,20 @@
+{
+  "amount": "80.00 USD",
+  "availableActions": [
+    "record_asked"
+  ],
+  "childId": "child-josie",
+  "counterpartPersonId": null,
+  "coverageState": "unknown",
+  "followUpDate": "2026-09-25",
+  "moneyFollowUpState": "open",
+  "paymentEvidence": "none",
+  "responsibilityState": "none_recorded",
+  "review": [],
+  "stored": {
+    "amountMinor": 8000,
+    "currency": "USD",
+    "direction": "inflow"
+  },
+  "taskId": "task-1"
+}

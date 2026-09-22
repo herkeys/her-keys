@@ -1,0 +1,54 @@
+{
+  "afterFirst": {
+    "amount": null,
+    "availableActions": [
+      "record_asked"
+    ],
+    "childId": "child-josie",
+    "counterpartLabel": null,
+    "counterpartPersonId": null,
+    "coverageState": "unknown",
+    "dependencyStanding": "no_prep_recorded",
+    "moneyFollowUpState": null,
+    "needsMe": null,
+    "preparationItems": [],
+    "recurrenceState": "active/weekly/2",
+    "responsibilityState": "none_recorded",
+    "section": "none",
+    "sharingState": "owner_only",
+    "transitionId": "evt-1",
+    "transitionState": "active/upcoming/repeat_pattern",
+    "unknownFacts": [
+      "location_not_recorded",
+      "counterpart_not_recorded",
+      "preparation_not_recorded",
+      "needs_you_not_recorded"
+    ]
+  },
+  "now": {
+    "amount": null,
+    "availableActions": [
+      "record_asked"
+    ],
+    "childId": "child-josie",
+    "counterpartLabel": null,
+    "counterpartPersonId": null,
+    "coverageState": "unknown",
+    "dependencyStanding": "no_prep_recorded",
+    "moneyFollowUpState": null,
+    "needsMe": null,
+    "preparationItems": [],
+    "recurrenceState": "active/weekly/2",
+    "responsibilityState": "none_recorded",
+    "section": "none",
+    "sharingState": "owner_only",
+    "transitionId": "evt-1",
+    "transitionState": "active/upcoming/recorded",
+    "unknownFacts": [
+      "location_not_recorded",
+      "counterpart_not_recorded",
+      "preparation_not_recorded",
+      "needs_you_not_recorded"
+    ]
+  }
+}

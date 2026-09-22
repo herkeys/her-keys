@@ -1,0 +1,8 @@
+{
+  "intents": 0,
+  "personChannel": "unspecified",
+  "sentEvidence": {
+    "delivered": false,
+    "sent": false
+  }
+}

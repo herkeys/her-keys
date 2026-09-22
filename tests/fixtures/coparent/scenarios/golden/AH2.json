@@ -1,0 +1,27 @@
+{
+  "amount": null,
+  "availableActions": [
+    "completed",
+    "still_needs_me",
+    "reassign",
+    "returned"
+  ],
+  "childId": "child-josie",
+  "counterpartLabel": "Alex",
+  "counterpartPersonId": "person-1",
+  "coverageState": "covered",
+  "dependencyStanding": "no_prep_recorded",
+  "moneyFollowUpState": null,
+  "needsMe": false,
+  "preparationItems": [],
+  "recurrenceState": "none",
+  "responsibilityState": "accepted",
+  "section": "none",
+  "sharingState": "owner_only",
+  "transitionId": "evt-2",
+  "transitionState": "active/upcoming/recorded",
+  "unknownFacts": [
+    "location_not_recorded",
+    "preparation_not_recorded"
+  ]
+}
