@@ -6,6 +6,7 @@ import { loadTierForDay } from '../src/domain/loadTier.ts';
 import { captureNeedsMeItem } from '../src/domain/needsMe.ts';
 import { completeOnboarding, toggleOnboardingOption } from '../src/domain/onboarding.ts';
 import { completeOneMove, oneMoveForDay, resolveOneMoveForToday } from '../src/domain/oneMove.ts';
+import { addDependency } from '../src/domain/structure.ts';
 import { addTask } from '../src/domain/tasks.ts';
 import { toInstant, zonedTimeToEpochMs } from '../src/domain/logicalDay.ts';
 import { createEmptyState } from '../src/state/initialState.ts';
@@ -139,6 +140,32 @@ describe('One Move on real household data', () => {
 
     const after = resolveOneMoveForToday(state, ctx());
     assert.equal(oneMoveForDay(after, DAY).move.action, 'Small task');
+  });
+
+  test('a blocked task is never offered as the One Move, however small — she cannot do it yet (audit W2-01)', () => {
+    const context = ctx();
+    let state = onboardedEmpty(context);
+    state = addTask(state, context, { title: 'Big prerequisite', categoryId: 'cat-home', durationMinutes: 60, dueDate: DAY, scope: 'household' });
+    state = addTask(state, context, { title: 'Small blocked task', categoryId: 'cat-home', durationMinutes: 5, dueDate: DAY, scope: 'household' });
+    const big = state.tasks.find((t) => t.title === 'Big prerequisite');
+    const small = state.tasks.find((t) => t.title === 'Small blocked task');
+    state = addDependency(state, context, { relation: 'requires', from: { kind: 'task', id: small.id }, to: { kind: 'task', id: big.id } }).state;
+
+    const after = resolveOneMoveForToday(state, ctx());
+    // The small task is smaller, but it requires the still-open big one: it must be skipped in favor of the unblocked task.
+    assert.equal(oneMoveForDay(after, DAY).move.action, 'Big prerequisite');
+  });
+
+  test('every open task blocked leaves no honest move to offer', () => {
+    const context = ctx();
+    let state = onboardedEmpty(context);
+    state = addTask(state, context, { title: 'Prerequisite', categoryId: 'cat-home', durationMinutes: 10, scope: 'household' });
+    state = addTask(state, context, { title: 'Blocked task', categoryId: 'cat-home', durationMinutes: 5, dueDate: DAY, scope: 'household' });
+    const pre = state.tasks.find((t) => t.title === 'Prerequisite');
+    const blocked = state.tasks.find((t) => t.title === 'Blocked task');
+    state = addDependency(state, context, { relation: 'requires', from: { kind: 'task', id: blocked.id }, to: { kind: 'task', id: pre.id } }).state;
+
+    assert.deepEqual(resolveOneMoveForToday(state, ctx()).oneMoves, []);
   });
 
   test('a Needs Me item never claims a duration it does not have', () => {

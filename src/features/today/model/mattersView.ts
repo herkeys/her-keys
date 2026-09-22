@@ -3,6 +3,7 @@ import { consequenceRank } from '../../../domain/foundation/authorization';
 import { refKey, type TypedRef } from '../../../domain/foundation/typedRef';
 import type { DayView } from '../../../domain/projectDay';
 import type { AppState } from '../../../domain/state';
+import { isBlocked } from '../../../domain/structure';
 import type { CalendarEventItem, TaskItem } from '../../../types';
 import { formatTime } from '../../daily-load/computeDailyLoad';
 import { eventRoute, sourceOf, taskRoute } from './refs';
@@ -50,8 +51,9 @@ export function mattersSection(args: { state: AppState; day: DayView; nowMinutes
     const level = row ? commitmentFacetsOf({ kind: 'task', row }).consequence : null;
     return level === null ? -1 : consequenceRank(level);
   };
+  // A task still waiting on something live is not yet hers to do — it does not belong among today's actionable matters.
   const dueTasks = day.tasks
-    .filter((t) => t.dueToday && t.daysOverdue === 0)
+    .filter((t) => t.dueToday && t.daysOverdue === 0 && !isBlocked(state, { kind: 'task', id: t.id }))
     .sort((a, b) => consequenceOf(b) - consequenceOf(a) || a.id.localeCompare(b.id));
 
   const ordered: Array<{ reason: MatterReason; event?: CalendarEventItem; task?: TaskItem }> = [];

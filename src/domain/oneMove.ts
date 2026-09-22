@@ -11,6 +11,7 @@ import { addEvidence } from './patterns';
 import { isOnboardingComplete } from './onboarding';
 import { projectStateDay } from './projectDay';
 import type { AppState, NeedsMeItem, OneMoveRecord, Task } from './state';
+import { isBlocked } from './structure';
 import { completeTask } from './tasks';
 
 /**
@@ -151,8 +152,9 @@ function candidatePoolFor(state: AppState, date: LocalDate): OneMoveCandidate[] 
   if (state.origin === 'demo') return demoOneMoves.map((item) => ({ targetType: 'catalog', item }));
 
   const todaysTaskIds = new Set(projectStateDay(state, date).tasks.map((task) => task.id));
+  // A blocked task cannot honestly be offered as the one thing to do: she cannot do it yet, whatever it's waiting on.
   const taskCandidates: OneMoveCandidate[] = state.tasks
-    .filter((task) => task.status === 'open' && todaysTaskIds.has(task.id))
+    .filter((task) => task.status === 'open' && todaysTaskIds.has(task.id) && !isBlocked(state, { kind: 'task', id: task.id }))
     .sort((a, b) => a.durationMinutes - b.durationMinutes || a.id.localeCompare(b.id))
     .map((task) => ({ targetType: 'task', item: taskAsOneMoveItem(task) }));
 
