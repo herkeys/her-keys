@@ -102,6 +102,8 @@ export function toCloudRow(state: AppState, ctx: ProjectionContext, kind: SyncEn
         scope: row.scope,
         origin_created_at: row.createdAt,
         origin_updated_at: row.updatedAt,
+        // Hand-sent like duration_source: not a generated facet (F09-M2).
+        payment_mechanism: row.paymentMechanism ?? null,
         ...provenanceColumns(ctx, kind, localId, row.provenance),
         ...facetColumns('task', row),
       };

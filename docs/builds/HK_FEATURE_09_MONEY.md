@@ -153,4 +153,89 @@ language) or F09's own obligation/income mutations (for bill/income language), n
 
 ## F09-M2 — Local commands / persistence
 
-(to be recorded as implementation proceeds)
+### M2a — `paymentMechanism` facet (foundation extension)
+
+Added `PAYMENT_MECHANISMS = ['manual', 'autopay']` and a `paymentMechanism: PaymentMechanism | null` field to
+`taskFacetFields` in `src/domain/foundation/commitment.ts` (nullable, defaults null = "not known / not a money
+task"), plumbed through `emptyTaskFacets`, `CommitmentFacets`, `ANSWERABLE_FACETS.task` and `commitmentFacetsOf`'s
+task case. Added to `AddTaskInput` in `src/domain/tasks.ts` (optional, defaults null via `emptyTaskFacets()`).
+
+**Deliberately NOT added** to `EDITABLE_TASK_FIELDS` (`src/domain/tasks.ts`) or to `EXISTING_FACETS` in
+`src/domain/sync/foundationSpecs.ts` — two separate, precedented decisions:
+
+- Like `value` (MP-07-11), a facet written only through a feature-owned transition, never generic `updateTask`.
+  Money's own mutations write it directly, mirroring exactly how F07's `editMoneyFollowUp` writes `value`.
+- Like task `durationSource` and meal `slot`/`status` (F08), hand-listed in the sync layer rather than run
+  through `gen-foundation-sql.mjs`, because that generator targets the ORIGINAL, already Staging-verified Build 4
+  migration file (`20260919231500_build4_cloud_schema.sql`) — regenerating it would mean editing a shipped
+  migration rather than adding a new one. Hand-listed in `src/domain/sync/syncTypes.ts`
+  (`UPDATABLE_COLUMNS.task`), `src/domain/sync/projection.ts` (push) and `src/domain/sync/apply.ts` (pull),
+  exactly where `duration_source` already is.
+- `tests/support/legacyShapes.mjs` (`TASK_FACETS`) updated so the frozen v3->v4 local-migration losslessness
+  test correctly expects the new field as an honest "unknown" (`null`) addition on legacy rows.
+
+New migration (additive only, does not touch the shipped Build 4 file):
+`supabase/migrations/<timestamp>_f09_task_payment_mechanism.sql` — see schema bookkeeping below.
+
+`tsc --noEmit`: clean.
+
+### Test accounting (M2a checkpoint)
+
+ENTRY (WAVE3_BASE, per brief): 2814/2814 application tests.
+EXIT (after M2a): `tests 2814, pass 2811, fail 3`. **DELTA: 0 — no test disappeared.** All 3 failures explained
+below, none are F09 regressions:
+
+| Test | Cause | Evidence it is not an F09 regression |
+|---|---|---|
+| `tests/hk-ir01/syncComposition.test.mjs` — "HA-001 — cost — observing a mutation in a 5,000-task household ... stays well under a millisecond-scale budget" | CPU/GC contention from running the full 2814-test suite in one process (838ms observed vs. the < 1ms / < 5ms budgets) | Re-run of this file ALONE: 111.86ms, passes cleanly. Same class of environmental flakiness already documented in [[parallel-worktree-gotchas]]. |
+| `tests/meals/boundary.test.mjs` — `[BV1]...every shared-file change explained` | F08's own protected-file scanner (`scripts-dev/meals-boundary-scan.cjs`) correctly detects that `src/domain/foundation/commitment.ts` and `src/domain/tasks.ts` changed — which they did, intentionally, for M2a | This scanner is F08's own historical exit gate (baselined at commit `38ab7f14`, immediately pre-F08-merge). It was never a general "no foundation file may ever change again" rule — F05, F07 and IR01 each made their own single justified shared-file change under the identical doctrine. Not modified; out of F09's scope to edit another feature's committed exit-gate tooling. |
+| `tests/meals/boundary.test.mjs` — `[BM1][BM2][BM3] no sibling imports...by ancestry` | The scanner's sibling-ancestry check enumerates local `feature/*` branches and flags `feature/09-money-os` as "an ancestor of HEAD" | **Reproduces identically on the untouched `Her-Keys-W2I` (WAVE3_BASE) checkout**, purely because the `feature/09-money-os` branch now exists in the shared repository — confirmed by running this exact test file against Her-Keys-W2I before any F09 code existed. A structural side effect of Wave 3 having begun (a 9th feature branch now exists), not something F09's code caused. |
+
+Both `meals/boundary.test.mjs` findings are recorded as an integration-sensitive item (`HK-INT-MONEY-BOUNDARY-01`
+below) for whoever owns F08/integration to decide: retire the test's temporal assumption, rescope its baseline,
+or build a proper per-feature declared-changes registry at the integration layer.
+
+### M2b — domain layer: mutations, projections, F07 mapping (implementation)
+
+Built `src/features/money/` (identity, mutations, projection, reimbursements, types, index) exactly as designed
+in M1: obligations/expected-income are ordinary canonical `Task` rows in the `cat-money` category, `value`
+direction fixed per mutation (`createObligation` = outflow, `createExpectedIncome` = inflow — never a picker),
+currency always `'USD'` (never a caller-supplied value), `scope: 'household'`. Resolution reuses `completeTask`/
+`archiveTask` directly — no new status field; "resolved" and "cancelled" are `Task.status` exactly as everywhere
+else in the app, so shared reasoning (Today, One Move, Calendar) is automatically consistent with Money's own
+view. `paymentMechanism`/`value` are written only by Money's own transitions, never through `updateTask` — same
+precedent as F07's `value` (MP-07-11).
+
+Added one small, additive, tested conditional to the shared `attentionFor`'s `deadline` loop
+(`src/domain/reasoning/attention.ts`) — `autopayPreDueSuppressed(dueDate, paymentMechanism, today)`, exported so
+Money Home's own "needs attention" computation can apply the byte-identical rule (proven by a same-input test
+in `tests/money/projection.test.mjs`). This is the one shared-file change the boundary-scan finding above
+refers to; no parallel attention/briefing system was built (`MONEY DOES NOT CREATE A SECOND TODAY` holds because
+Today's own pipeline is what surfaces Money's rows — nothing new to duplicate it).
+
+**A design-time correction found by writing the tests, not assumed:** `buildCoParentLogisticsView(...).
+moneyFollowUps` only carries OPEN follow-ups (`src/features/coparent/projection.ts:437`); a completed one moves
+to a separate, time-windowed `recentlyCompleted` array with a different shape (`CompletedEntry`, not
+`MoneyFollowUpView`). Reading only the hub view would have silently dropped an older "marked done, no payment
+record" item out of Money entirely — precisely the doctrine-critical row. Fixed before it shipped: `reimbursementProjections`
+instead enumerates money-follow-up task ids directly from canonical state (via the generic,
+non-F07-owned `categoryWithRole(state, 'coparenting')`) and calls the exported `buildMoneyFollowUpDetail` per
+task id, which returns the full view regardless of standing. Still zero changes to `src/features/coparent/**`,
+still only its public exports.
+
+Tests written: `tests/money/mutations.test.mjs` (19), `tests/money/reimbursements.test.mjs` (8),
+`tests/money/projection.test.mjs` (13) — 40 new tests, covering the create/edit/resolve/cancel/duplicate-forward
+mutations, the full F07 mapping table against F07's real responsibility states, and Money Home's verdict/
+attention/coming-up/recently-resolved assembly including the autopay-Today agreement test.
+
+`tsc --noEmit`: clean.
+
+### Test accounting (M2b checkpoint, serial run — avoids the known CPU-contention flakiness in a full concurrent run)
+
+ENTRY (WAVE3_BASE): 2814/2814. EXIT (M2b, `--test-concurrency=1`): **`tests 2854, pass 2852, fail 2`.**
+DELTA: **+40 tests, 0 removed.** The 2 failures are the exact same two pre-existing `meals/boundary.test.mjs`
+findings recorded above (M2a) — unchanged, still fully explained, still not F09 regressions. A concurrent
+(default) full-suite run additionally flaked 2-4 unrelated performance-budget tests
+(`tests/hk-ir01/syncComposition.test.mjs`, `tests/calendarPerformance.test.mjs`, `tests/systems/audits.test.mjs`)
+under full-suite CPU/GC contention; each passes cleanly in isolation and in the serial run, confirming the
+class of flakiness already documented in [[parallel-worktree-gotchas]] rather than any regression.

@@ -34,6 +34,16 @@ export const TIMES_OF_DAY = ['morning', 'afternoon', 'evening'] as const;
 export const SYSTEM_AUTOMATION_MODES = ['manual', ...AUTONOMY_MODES] as const;
 export type SystemAutomationMode = (typeof SYSTEM_AUTOMATION_MODES)[number];
 
+/**
+ * How a money-bearing task would be paid, her own descriptive truth — never bank verification
+ * (F09-M2, B4-FE01-020 extension). `null` means not known / not a money task. Listed BY HAND in
+ * `src/domain/sync/syncTypes.ts` and its own migration, exactly like task `durationSource` and
+ * meal `slot`/`status` — deliberately NOT added to `EXISTING_FACETS` in `foundationSpecs.ts`,
+ * because that would require regenerating the already Staging-verified Build 4 migration.
+ */
+export const PAYMENT_MECHANISMS = ['manual', 'autopay'] as const;
+export type PaymentMechanism = (typeof PAYMENT_MECHANISMS)[number];
+
 const nullable = <T extends z.ZodType>(schema: T) => schema.nullable().default(null);
 const TravelMinutes = nullable(z.number().int().min(0).max(240));
 
@@ -62,6 +72,7 @@ export const taskFacetFields = {
   travelMinutesAfter: TravelMinutes,
   preparationMinutes: TravelMinutes,
   value: nullable(MoneySchema),
+  paymentMechanism: nullable(z.enum(PAYMENT_MECHANISMS)),
 };
 
 /** The facets an EVENT can answer beyond the ones it already had (travel, preparation, commitment, times). */
@@ -90,6 +101,7 @@ export const emptyTaskFacets = () => ({
   dueAt: null, earliestStartAt: null, latestFinishAt: null, splittable: null, minChunkMinutes: null,
   preferredTimeOfDay: null, energyDemand: null, consequence: null, needsMePersonally: null,
   travelMinutesBefore: null, travelMinutesAfter: null, preparationMinutes: null, value: null,
+  paymentMechanism: null,
 });
 export const emptyEventFacets = () => ({ energyDemand: null, consequence: null, needsMePersonally: null, value: null });
 export const emptyMealFacets = () => ({ prepMinutes: null, energyDemand: null });
@@ -110,6 +122,7 @@ export interface CommitmentFacets {
   needsMePersonally: boolean | null;
   transition: { before: number | null; after: number | null; preparation: number | null } | null;
   value: Money | null;
+  paymentMechanism: PaymentMechanism | null;
 }
 
 export type CommitmentSource =
@@ -122,7 +135,7 @@ const nul = <T>(value: T | null | undefined): T | null => (value === undefined ?
 
 /** Which facets a kind can answer AT ALL, as opposed to merely not yet knowing. */
 export const ANSWERABLE_FACETS: Record<CommitmentSource['kind'], readonly (keyof CommitmentFacets)[]> = {
-  task: ['dueDate', 'dueAt', 'effortMinutes', 'flexibility', 'earliestStartAt', 'latestFinishAt', 'splittable', 'minChunkMinutes', 'preferredTimeOfDay', 'energyDemand', 'consequence', 'needsMePersonally', 'transition', 'value'],
+  task: ['dueDate', 'dueAt', 'effortMinutes', 'flexibility', 'earliestStartAt', 'latestFinishAt', 'splittable', 'minChunkMinutes', 'preferredTimeOfDay', 'energyDemand', 'consequence', 'needsMePersonally', 'transition', 'value', 'paymentMechanism'],
   event: ['effortMinutes', 'flexibility', 'energyDemand', 'consequence', 'needsMePersonally', 'transition', 'value'],
   meal: ['dueDate', 'effortMinutes', 'energyDemand'],
   system: ['effortMinutes', 'energyDemand'],
@@ -138,7 +151,7 @@ export function commitmentFacetsOf(source: CommitmentSource): CommitmentFacets {
   const empty: CommitmentFacets = {
     dueDate: null, dueAt: null, effortMinutes: null, flexibility: null, earliestStartAt: null, latestFinishAt: null,
     splittable: null, minChunkMinutes: null, preferredTimeOfDay: null, energyDemand: nul(row.energyDemand),
-    consequence: null, needsMePersonally: null, transition: null, value: null,
+    consequence: null, needsMePersonally: null, transition: null, value: null, paymentMechanism: null,
   };
 
   switch (source.kind) {
@@ -158,6 +171,7 @@ export function commitmentFacetsOf(source: CommitmentSource): CommitmentFacets {
         needsMePersonally: nul(row.needsMePersonally),
         transition: transitionOf(row),
         value: nul(row.value),
+        paymentMechanism: nul(row.paymentMechanism),
       };
     case 'event': {
       const minutes = Math.round((Date.parse(row.endsAt) - Date.parse(row.startsAt)) / 60_000);

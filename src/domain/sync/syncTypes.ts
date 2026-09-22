@@ -172,9 +172,11 @@ export const UPDATABLE_COLUMNS: Record<SyncEntityKind, readonly string[]> = {
   event: merged(['category_id', 'commitment', 'ends_at', 'location', 'notes', 'origin_updated_at',
                  'preparation_minutes', 'scope', 'starts_at', 'status', 'subject_member_id', 'title',
                  'travel_minutes_after', 'travel_minutes_before'], 'event'),
+  // `payment_mechanism` is listed by hand, like `duration_source`: it is NOT a generated facet (out of
+  // EXISTING_FACETS and out of the shipping migration), so this build's own migration adds it (F09-M2).
   task: merged(['category_id', 'commitment', 'completed_at', 'due_date', 'duration_minutes', 'duration_source', 'notes',
-                'origin_updated_at', 'plan_kind', 'planned_date', 'planned_starts_at', 'scope', 'status',
-                'subject_member_id', 'title'], 'task'),
+                'origin_updated_at', 'payment_mechanism', 'plan_kind', 'planned_date', 'planned_starts_at', 'scope',
+                'status', 'subject_member_id', 'title'], 'task'),
   system: merged(['category_id', 'description', 'name', 'origin_updated_at', 'scope', 'subject_member_id'], 'system'),
   // `meal_slot` and `status` are listed by hand, like task `duration_source`: they are NOT facets, so they stay out of EXISTING_FACETS
   // (and out of the generated shipping migration). Archiving a meal is an UPDATE of `status`; there is no delete.
