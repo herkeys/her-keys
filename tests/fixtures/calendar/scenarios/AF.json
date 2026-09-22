@@ -1,0 +1,388 @@
+{
+  "availableActions": [
+    {
+      "action": "EDIT",
+      "available": true,
+      "itemRef": {
+        "id": "evt-clinic",
+        "kind": "event"
+      },
+      "reason": "legitimate_edit_path"
+    },
+    {
+      "action": "EDIT",
+      "available": true,
+      "itemRef": {
+        "id": "evt-school",
+        "kind": "event"
+      },
+      "reason": "legitimate_edit_path"
+    },
+    {
+      "action": "EDIT",
+      "available": true,
+      "itemRef": {
+        "id": "tsk-form",
+        "kind": "task"
+      },
+      "reason": "legitimate_edit_path"
+    },
+    {
+      "action": "EDIT",
+      "available": true,
+      "itemRef": {
+        "id": "tsk-renewal",
+        "kind": "task"
+      },
+      "reason": "legitimate_edit_path"
+    },
+    {
+      "action": "MOVE",
+      "available": false,
+      "itemRef": null,
+      "reason": "not_offered_by_verdict"
+    },
+    {
+      "action": "KEEP",
+      "available": false,
+      "itemRef": null,
+      "reason": "no_recommendation_shown"
+    },
+    {
+      "action": "DROP",
+      "available": false,
+      "itemRef": null,
+      "reason": "not_offered_by_verdict"
+    },
+    {
+      "action": "SHORTEN",
+      "available": false,
+      "itemRef": null,
+      "reason": "not_offered_by_verdict"
+    },
+    {
+      "action": "KEEP_CAPACITY",
+      "available": false,
+      "itemRef": null,
+      "reason": "no_recommendation_shown"
+    },
+    {
+      "action": "PROTECT",
+      "available": true,
+      "itemRef": {
+        "id": "tsk-form",
+        "kind": "task"
+      },
+      "reason": "flexible_item"
+    },
+    {
+      "action": "PROTECT",
+      "available": true,
+      "itemRef": {
+        "id": "tsk-renewal",
+        "kind": "task"
+      },
+      "reason": "flexible_item"
+    },
+    {
+      "action": "UNDO",
+      "available": false,
+      "itemRef": null,
+      "reason": "nothing_to_undo"
+    }
+  ],
+  "capacityState": {
+    "category": "not_known",
+    "evidence": {
+      "missing": [
+        {
+          "betweenWith": null,
+          "field": "durationMinutes",
+          "itemRef": {
+            "id": "tsk-renewal",
+            "kind": "task"
+          },
+          "reason": "no_usable_duration"
+        },
+        {
+          "betweenWith": null,
+          "field": "travelMinutesAfter",
+          "itemRef": {
+            "id": "evt-clinic",
+            "kind": "event"
+          },
+          "reason": "location_entered_travel_not_entered"
+        },
+        {
+          "betweenWith": {
+            "id": "evt-clinic",
+            "kind": "event"
+          },
+          "field": "travelMinutesAfter",
+          "itemRef": {
+            "id": "evt-school",
+            "kind": "event"
+          },
+          "reason": "location_entered_travel_not_entered"
+        },
+        {
+          "betweenWith": {
+            "id": "evt-school",
+            "kind": "event"
+          },
+          "field": "travelMinutesBefore",
+          "itemRef": {
+            "id": "evt-clinic",
+            "kind": "event"
+          },
+          "reason": "location_entered_travel_not_entered"
+        },
+        {
+          "betweenWith": null,
+          "field": "travelMinutesBefore",
+          "itemRef": {
+            "id": "evt-school",
+            "kind": "event"
+          },
+          "reason": "location_entered_travel_not_entered"
+        }
+      ],
+      "status": "insufficient"
+    },
+    "evidenceRefs": [],
+    "foundationTier": "open",
+    "pressure": null,
+    "tier": null,
+    "verdict": null
+  },
+  "conflicts": [],
+  "dayItems": [
+    {
+      "blockedBy": [],
+      "flexibility": "fixed",
+      "progress": "upcoming",
+      "ref": {
+        "id": "evt-school",
+        "kind": "event"
+      },
+      "repeats": null,
+      "responsibility": null,
+      "subject": {
+        "kind": "unstated"
+      },
+      "timing": {
+        "continuesFromPreviousDay": false,
+        "continuesIntoNextDay": false,
+        "endKnown": true,
+        "endMinute": 660,
+        "kind": "timed",
+        "startMinute": 600
+      },
+      "title": "School conference"
+    },
+    {
+      "blockedBy": [],
+      "flexibility": "fixed",
+      "progress": "upcoming",
+      "ref": {
+        "id": "evt-clinic",
+        "kind": "event"
+      },
+      "repeats": null,
+      "responsibility": null,
+      "subject": {
+        "kind": "unstated"
+      },
+      "timing": {
+        "continuesFromPreviousDay": false,
+        "continuesIntoNextDay": false,
+        "endKnown": true,
+        "endMinute": 750,
+        "kind": "timed",
+        "startMinute": 710
+      },
+      "title": "Clinic visit"
+    },
+    {
+      "blockedBy": [],
+      "flexibility": "flexible",
+      "progress": "untimed",
+      "ref": {
+        "id": "tsk-renewal",
+        "kind": "task"
+      },
+      "repeats": null,
+      "responsibility": null,
+      "subject": {
+        "kind": "unstated"
+      },
+      "timing": {
+        "basis": "due",
+        "daysOverdue": 0,
+        "dueDate": "2026-09-16",
+        "kind": "date_only"
+      },
+      "title": "Renew car registration"
+    },
+    {
+      "blockedBy": [],
+      "flexibility": "flexible",
+      "progress": "untimed",
+      "ref": {
+        "id": "tsk-form",
+        "kind": "task"
+      },
+      "repeats": null,
+      "responsibility": null,
+      "subject": {
+        "kind": "unstated"
+      },
+      "timing": {
+        "basis": "due",
+        "daysOverdue": 0,
+        "dueDate": "2026-09-16",
+        "kind": "date_only"
+      },
+      "title": "Sign the permission form"
+    }
+  ],
+  "dayMode": "today",
+  "householdOrigin": "real",
+  "narrowTransitions": [],
+  "openWindows": [],
+  "preview": {
+    "active": false
+  },
+  "selectedDate": "2026-09-16",
+  "timeZone": "America/New_York",
+  "unknownStates": [
+    {
+      "betweenWith": null,
+      "field": "durationMinutes",
+      "itemRef": {
+        "id": "tsk-renewal",
+        "kind": "task"
+      },
+      "reason": "no_usable_duration"
+    },
+    {
+      "betweenWith": null,
+      "field": "travelMinutesAfter",
+      "itemRef": {
+        "id": "evt-clinic",
+        "kind": "event"
+      },
+      "reason": "location_entered_travel_not_entered"
+    },
+    {
+      "betweenWith": {
+        "id": "evt-clinic",
+        "kind": "event"
+      },
+      "field": "travelMinutesAfter",
+      "itemRef": {
+        "id": "evt-school",
+        "kind": "event"
+      },
+      "reason": "location_entered_travel_not_entered"
+    },
+    {
+      "betweenWith": {
+        "id": "evt-school",
+        "kind": "event"
+      },
+      "field": "travelMinutesBefore",
+      "itemRef": {
+        "id": "evt-clinic",
+        "kind": "event"
+      },
+      "reason": "location_entered_travel_not_entered"
+    },
+    {
+      "betweenWith": null,
+      "field": "travelMinutesBefore",
+      "itemRef": {
+        "id": "evt-school",
+        "kind": "event"
+      },
+      "reason": "location_entered_travel_not_entered"
+    }
+  ],
+  "unplacedItems": [
+    {
+      "durationKnown": false,
+      "itemRef": {
+        "id": "tsk-renewal",
+        "kind": "task"
+      },
+      "missing": [
+        {
+          "betweenWith": null,
+          "field": "durationMinutes",
+          "itemRef": {
+            "id": "tsk-renewal",
+            "kind": "task"
+          },
+          "reason": "no_usable_duration"
+        }
+      ],
+      "openings": [],
+      "reason": "no_usable_duration",
+      "state": "insufficient_information"
+    },
+    {
+      "durationKnown": true,
+      "itemRef": {
+        "id": "tsk-form",
+        "kind": "task"
+      },
+      "missing": [
+        {
+          "betweenWith": null,
+          "field": "travelMinutesBefore",
+          "itemRef": {
+            "id": "evt-school",
+            "kind": "event"
+          },
+          "reason": "location_entered_travel_not_entered"
+        },
+        {
+          "betweenWith": {
+            "id": "evt-clinic",
+            "kind": "event"
+          },
+          "field": "travelMinutesAfter",
+          "itemRef": {
+            "id": "evt-school",
+            "kind": "event"
+          },
+          "reason": "location_entered_travel_not_entered"
+        },
+        {
+          "betweenWith": {
+            "id": "evt-school",
+            "kind": "event"
+          },
+          "field": "travelMinutesBefore",
+          "itemRef": {
+            "id": "evt-clinic",
+            "kind": "event"
+          },
+          "reason": "location_entered_travel_not_entered"
+        },
+        {
+          "betweenWith": null,
+          "field": "travelMinutesAfter",
+          "itemRef": {
+            "id": "evt-clinic",
+            "kind": "event"
+          },
+          "reason": "location_entered_travel_not_entered"
+        }
+      ],
+      "openings": [],
+      "reason": "opening_depends_on_missing_facts",
+      "state": "insufficient_information"
+    }
+  ]
+}

@@ -1,0 +1,169 @@
+{
+  "availableActions": [
+    {
+      "action": "EDIT",
+      "available": true,
+      "itemRef": {
+        "id": "evt-clinic",
+        "kind": "event"
+      },
+      "reason": "legitimate_edit_path"
+    },
+    {
+      "action": "EDIT",
+      "available": true,
+      "itemRef": {
+        "id": "evt-school",
+        "kind": "event"
+      },
+      "reason": "legitimate_edit_path"
+    },
+    {
+      "action": "MOVE",
+      "available": false,
+      "itemRef": null,
+      "reason": "not_offered_by_verdict"
+    },
+    {
+      "action": "KEEP",
+      "available": true,
+      "itemRef": null,
+      "reason": "offered_by_verdict"
+    },
+    {
+      "action": "DROP",
+      "available": false,
+      "itemRef": null,
+      "reason": "not_offered_by_verdict"
+    },
+    {
+      "action": "SHORTEN",
+      "available": false,
+      "itemRef": null,
+      "reason": "not_offered_by_verdict"
+    },
+    {
+      "action": "KEEP_CAPACITY",
+      "available": false,
+      "itemRef": null,
+      "reason": "no_recommendation_shown"
+    },
+    {
+      "action": "PROTECT",
+      "available": false,
+      "itemRef": null,
+      "reason": "fixed_commitment"
+    },
+    {
+      "action": "UNDO",
+      "available": false,
+      "itemRef": null,
+      "reason": "nothing_to_undo"
+    }
+  ],
+  "capacityState": {
+    "category": "tight",
+    "evidence": {
+      "missing": [],
+      "status": "complete"
+    },
+    "evidenceRefs": [
+      {
+        "id": "evt-school",
+        "kind": "event"
+      },
+      {
+        "id": "evt-clinic",
+        "kind": "event"
+      }
+    ],
+    "foundationTier": "overloaded",
+    "pressure": null,
+    "tier": "overloaded",
+    "verdict": "transition_conflict"
+  },
+  "conflicts": [],
+  "dayItems": [
+    {
+      "blockedBy": [],
+      "flexibility": "fixed",
+      "progress": "upcoming",
+      "ref": {
+        "id": "evt-school",
+        "kind": "event"
+      },
+      "repeats": null,
+      "responsibility": null,
+      "subject": {
+        "kind": "unstated"
+      },
+      "timing": {
+        "continuesFromPreviousDay": false,
+        "continuesIntoNextDay": false,
+        "endKnown": true,
+        "endMinute": 660,
+        "kind": "timed",
+        "startMinute": 600
+      },
+      "title": "School drop-off"
+    },
+    {
+      "blockedBy": [],
+      "flexibility": "fixed",
+      "progress": "upcoming",
+      "ref": {
+        "id": "evt-clinic",
+        "kind": "event"
+      },
+      "repeats": null,
+      "responsibility": null,
+      "subject": {
+        "kind": "unstated"
+      },
+      "timing": {
+        "continuesFromPreviousDay": false,
+        "continuesIntoNextDay": false,
+        "endKnown": true,
+        "endMinute": 750,
+        "kind": "timed",
+        "startMinute": 690
+      },
+      "title": "Clinic visit"
+    }
+  ],
+  "dayMode": "today",
+  "householdOrigin": "real",
+  "narrowTransitions": [
+    {
+      "after": {
+        "endMinute": 750,
+        "ref": {
+          "id": "evt-clinic",
+          "kind": "event"
+        },
+        "startMinute": 690
+      },
+      "before": {
+        "endMinute": 660,
+        "ref": {
+          "id": "evt-school",
+          "kind": "event"
+        },
+        "startMinute": 600
+      },
+      "gapMinutes": 30,
+      "scheduledMinutes": 0,
+      "slackMinutes": 15,
+      "storedTransitionMinutes": 15,
+      "tier": "overloaded"
+    }
+  ],
+  "openWindows": [],
+  "preview": {
+    "active": false
+  },
+  "selectedDate": "2026-09-16",
+  "timeZone": "America/New_York",
+  "unknownStates": [],
+  "unplacedItems": []
+}

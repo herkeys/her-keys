@@ -1,0 +1,270 @@
+{
+  "availableActions": [
+    {
+      "action": "EDIT",
+      "available": true,
+      "itemRef": {
+        "id": "evt-long",
+        "kind": "event"
+      },
+      "reason": "legitimate_edit_path"
+    },
+    {
+      "action": "EDIT",
+      "available": true,
+      "itemRef": {
+        "id": "tsk-due",
+        "kind": "task"
+      },
+      "reason": "legitimate_edit_path"
+    },
+    {
+      "action": "EDIT",
+      "available": true,
+      "itemRef": {
+        "id": "tsk-garage",
+        "kind": "task"
+      },
+      "reason": "legitimate_edit_path"
+    },
+    {
+      "action": "MOVE",
+      "available": false,
+      "itemRef": null,
+      "reason": "not_offered_by_verdict"
+    },
+    {
+      "action": "KEEP",
+      "available": false,
+      "itemRef": null,
+      "reason": "no_recommendation_shown"
+    },
+    {
+      "action": "DROP",
+      "available": true,
+      "itemRef": {
+        "id": "tsk-garage",
+        "kind": "task"
+      },
+      "reason": "offered_by_verdict"
+    },
+    {
+      "action": "SHORTEN",
+      "available": true,
+      "itemRef": {
+        "id": "tsk-garage",
+        "kind": "task"
+      },
+      "reason": "offered_by_verdict"
+    },
+    {
+      "action": "KEEP_CAPACITY",
+      "available": true,
+      "itemRef": null,
+      "reason": "offered_by_verdict"
+    },
+    {
+      "action": "PROTECT",
+      "available": true,
+      "itemRef": {
+        "id": "tsk-garage",
+        "kind": "task"
+      },
+      "reason": "flexible_item"
+    },
+    {
+      "action": "UNDO",
+      "available": false,
+      "itemRef": null,
+      "reason": "nothing_to_undo"
+    }
+  ],
+  "capacityState": {
+    "category": "more_than_fits",
+    "evidence": {
+      "missing": [],
+      "status": "complete"
+    },
+    "evidenceRefs": [
+      {
+        "id": "tsk-garage",
+        "kind": "task"
+      }
+    ],
+    "foundationTier": "overloaded",
+    "pressure": {
+      "availableMinutes": 240,
+      "neededMinutes": 300,
+      "pressureMinutes": 60
+    },
+    "tier": "overloaded",
+    "verdict": "capacity_pressure"
+  },
+  "conflicts": [
+    {
+      "evidence": {
+        "durationMinutes": 200,
+        "gaps": [
+          {
+            "endMinute": 540,
+            "lengthMinutes": 120,
+            "startMinute": 420,
+            "uncertain": false
+          },
+          {
+            "endMinute": 1320,
+            "lengthMinutes": 60,
+            "startMinute": 1260,
+            "uncertain": false
+          }
+        ],
+        "item": {
+          "id": "tsk-garage",
+          "kind": "task"
+        },
+        "kind": "placement",
+        "occupied": [
+          {
+            "endMinute": 1260,
+            "ref": {
+              "id": "evt-long",
+              "kind": "event"
+            },
+            "startMinute": 540
+          }
+        ],
+        "windowEndMinute": 1320,
+        "windowStartMinute": 420
+      },
+      "evidenceRefs": [
+        {
+          "id": "tsk-garage",
+          "kind": "task"
+        },
+        {
+          "id": "evt-long",
+          "kind": "event"
+        }
+      ],
+      "itemRefs": [
+        {
+          "id": "tsk-garage",
+          "kind": "task"
+        }
+      ],
+      "type": "PLACEMENT_FAILURE"
+    }
+  ],
+  "dayItems": [
+    {
+      "blockedBy": [],
+      "flexibility": "fixed",
+      "progress": "upcoming",
+      "ref": {
+        "id": "evt-long",
+        "kind": "event"
+      },
+      "repeats": null,
+      "responsibility": null,
+      "subject": {
+        "kind": "unstated"
+      },
+      "timing": {
+        "continuesFromPreviousDay": false,
+        "continuesIntoNextDay": false,
+        "endKnown": true,
+        "endMinute": 1260,
+        "kind": "timed",
+        "startMinute": 540
+      },
+      "title": "Conference"
+    },
+    {
+      "blockedBy": [],
+      "flexibility": "fixed",
+      "progress": "untimed",
+      "ref": {
+        "id": "tsk-due",
+        "kind": "task"
+      },
+      "repeats": null,
+      "responsibility": null,
+      "subject": {
+        "kind": "unstated"
+      },
+      "timing": {
+        "basis": "due",
+        "daysOverdue": 0,
+        "dueDate": "2026-09-16",
+        "kind": "date_only"
+      },
+      "title": "File the tax form"
+    },
+    {
+      "blockedBy": [],
+      "flexibility": "flexible",
+      "progress": "untimed",
+      "ref": {
+        "id": "tsk-garage",
+        "kind": "task"
+      },
+      "repeats": null,
+      "responsibility": null,
+      "subject": {
+        "kind": "unstated"
+      },
+      "timing": {
+        "basis": "planned",
+        "daysOverdue": 0,
+        "dueDate": null,
+        "kind": "date_only"
+      },
+      "title": "Deep clean the garage"
+    }
+  ],
+  "dayMode": "today",
+  "householdOrigin": "real",
+  "narrowTransitions": [],
+  "openWindows": [
+    {
+      "endMinute": 540,
+      "lengthMinutes": 120,
+      "startMinute": 420
+    },
+    {
+      "endMinute": 1320,
+      "lengthMinutes": 60,
+      "startMinute": 1260
+    }
+  ],
+  "preview": {
+    "active": false
+  },
+  "selectedDate": "2026-09-16",
+  "timeZone": "America/New_York",
+  "unknownStates": [],
+  "unplacedItems": [
+    {
+      "durationKnown": true,
+      "itemRef": {
+        "id": "tsk-due",
+        "kind": "task"
+      },
+      "missing": [],
+      "openings": [],
+      "reason": "fixed_commitment_no_time",
+      "state": "fixed_without_time"
+    },
+    {
+      "durationKnown": true,
+      "itemRef": {
+        "id": "tsk-garage",
+        "kind": "task"
+      },
+      "missing": [],
+      "openings": [],
+      "reason": "no_feasible_window",
+      "state": "needs_a_place"
+    }
+  ]
+}

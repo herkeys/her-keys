@@ -1,0 +1,17 @@
+# SHOWN
+ROOM
+A handoff isn’t confirmed.
+NOT CONFIRMED
+Pick up Josie from school: Waiting for Marcus to accept.
+Why
+SCHEDULE
+3:30 PM
+Pick up Josie from school
+3:30–4:00 PM · Fixed
+Waiting for Marcus to accept
+Details
+
+# ANNOUNCED
+button: Why: Pick up Josie from school: Waiting for Marcus to accept. {"expanded":false}
+button: Pick up Josie from school. 3:30–4:00 PM · Fixed. Waiting for Marcus to accept
+button: Details: Pick up Josie from school {"expanded":false}

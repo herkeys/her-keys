@@ -1,0 +1,22 @@
+# SHOWN
+TIGHT
+One window between commitments is tight.
+FITS NARROWLY
+School drop-off to Clinic visit fits, with 15 min to spare.
+Why
+SCHEDULE
+10:00 AM
+School drop-off
+10:00–11:00 AM · Fixed
+Details
+11:30 AM
+Clinic visit
+11:30 AM–12:30 PM · Fixed
+Details
+
+# ANNOUNCED
+button: Why: School drop-off to Clinic visit fits, with 15 min to spare. {"expanded":false}
+button: School drop-off. 10:00–11:00 AM · Fixed
+button: Details: School drop-off {"expanded":false}
+button: Clinic visit. 11:30 AM–12:30 PM · Fixed
+button: Details: Clinic visit {"expanded":false}

@@ -1,0 +1,10 @@
+# SHOWN
+ROOM
+Everything scheduled fits.
+SCHEDULE
+2:00 PM
+Dentist
+2:00–3:00 PM · Fixed
+
+# ANNOUNCED
+button: Dentist. 2:00–3:00 PM · Fixed

@@ -1,0 +1,31 @@
+# SHOWN
+MORE THAN FITS
+Something doesn’t have a place today.
+WHAT I RECOMMEND
+NEEDS YOUR YES
+Shortening Deep clean the garage would bring today back within what fits.
+Preview shortening it
+Show another option
+Not today
+Why
+SCHEDULE
+9:00 AM
+Conference
+9:00 AM–9:00 PM · Fixed
+NOT ON THE SCHEDULE YET
+File the tax form
+Due this day · Fixed · About 1 hr 40 min
+File the tax form is fixed and has no time set.
+Deep clean the garage
+Planned for this day · Flexible · About 3 hr 20 min
+NEEDS A PLACE
+No open stretch today is long enough for it.
+
+# ANNOUNCED
+button: Preview shortening it {"disabled":false}
+button: Show another option {"disabled":false}
+button: Not today {"disabled":false}
+button: Why: Shortening Deep clean the garage would bring today back within what fits. {"expanded":false}
+button: Conference. 9:00 AM–9:00 PM · Fixed
+button: File the tax form. Due this day · Fixed · About 1 hr 40 min. File the tax form is fixed and has no time set.
+button: Deep clean the garage. Planned for this day · Flexible · About 3 hr 20 min. Needs a place. No open stretch today is long enough for it.

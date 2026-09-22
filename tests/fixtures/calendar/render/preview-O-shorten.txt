@@ -1,0 +1,10 @@
+# SHOWN
+Preview — nothing has changed yet.
+Deep clean the garage would go from about 3 hr 20 min to about 2 hr 20 min.
+Today would stay more than fits.
+Shorten it
+Cancel
+
+# ANNOUNCED
+button: Shorten it {"disabled":false}
+button: Cancel {"disabled":false}

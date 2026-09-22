@@ -1,0 +1,186 @@
+{
+  "availableActions": [
+    {
+      "action": "EDIT",
+      "available": true,
+      "itemRef": {
+        "id": "evt-wed-1",
+        "kind": "event"
+      },
+      "reason": "legitimate_edit_path"
+    },
+    {
+      "action": "EDIT",
+      "available": true,
+      "itemRef": {
+        "id": "evt-wed-2",
+        "kind": "event"
+      },
+      "reason": "legitimate_edit_path"
+    },
+    {
+      "action": "MOVE",
+      "available": false,
+      "itemRef": null,
+      "reason": "not_today"
+    },
+    {
+      "action": "KEEP",
+      "available": false,
+      "itemRef": null,
+      "reason": "not_today"
+    },
+    {
+      "action": "DROP",
+      "available": false,
+      "itemRef": null,
+      "reason": "not_today"
+    },
+    {
+      "action": "SHORTEN",
+      "available": false,
+      "itemRef": null,
+      "reason": "not_today"
+    },
+    {
+      "action": "KEEP_CAPACITY",
+      "available": false,
+      "itemRef": null,
+      "reason": "not_today"
+    },
+    {
+      "action": "PROTECT",
+      "available": false,
+      "itemRef": null,
+      "reason": "fixed_commitment"
+    },
+    {
+      "action": "UNDO",
+      "available": false,
+      "itemRef": null,
+      "reason": "not_today"
+    }
+  ],
+  "capacityState": {
+    "category": "not_known",
+    "evidence": {
+      "missing": [
+        {
+          "betweenWith": {
+            "id": "evt-wed-2",
+            "kind": "event"
+          },
+          "field": "travelMinutesAfter",
+          "itemRef": {
+            "id": "evt-wed-1",
+            "kind": "event"
+          },
+          "reason": "location_entered_travel_not_entered"
+        },
+        {
+          "betweenWith": {
+            "id": "evt-wed-1",
+            "kind": "event"
+          },
+          "field": "travelMinutesBefore",
+          "itemRef": {
+            "id": "evt-wed-2",
+            "kind": "event"
+          },
+          "reason": "location_entered_travel_not_entered"
+        }
+      ],
+      "status": "insufficient"
+    },
+    "evidenceRefs": [],
+    "foundationTier": "open",
+    "pressure": null,
+    "tier": null,
+    "verdict": null
+  },
+  "conflicts": [],
+  "dayItems": [
+    {
+      "blockedBy": [],
+      "flexibility": "fixed",
+      "progress": "upcoming",
+      "ref": {
+        "id": "evt-wed-1",
+        "kind": "event"
+      },
+      "repeats": null,
+      "responsibility": null,
+      "subject": {
+        "kind": "unstated"
+      },
+      "timing": {
+        "continuesFromPreviousDay": false,
+        "continuesIntoNextDay": false,
+        "endKnown": true,
+        "endMinute": 660,
+        "kind": "timed",
+        "startMinute": 600
+      },
+      "title": "School conference"
+    },
+    {
+      "blockedBy": [],
+      "flexibility": "fixed",
+      "progress": "upcoming",
+      "ref": {
+        "id": "evt-wed-2",
+        "kind": "event"
+      },
+      "repeats": null,
+      "responsibility": null,
+      "subject": {
+        "kind": "unstated"
+      },
+      "timing": {
+        "continuesFromPreviousDay": false,
+        "continuesIntoNextDay": false,
+        "endKnown": true,
+        "endMinute": 750,
+        "kind": "timed",
+        "startMinute": 705
+      },
+      "title": "Clinic visit"
+    }
+  ],
+  "dayMode": "future",
+  "householdOrigin": "real",
+  "narrowTransitions": [],
+  "openWindows": [],
+  "preview": {
+    "active": false
+  },
+  "selectedDate": "2026-09-16",
+  "timeZone": "America/New_York",
+  "unknownStates": [
+    {
+      "betweenWith": {
+        "id": "evt-wed-2",
+        "kind": "event"
+      },
+      "field": "travelMinutesAfter",
+      "itemRef": {
+        "id": "evt-wed-1",
+        "kind": "event"
+      },
+      "reason": "location_entered_travel_not_entered"
+    },
+    {
+      "betweenWith": {
+        "id": "evt-wed-1",
+        "kind": "event"
+      },
+      "field": "travelMinutesBefore",
+      "itemRef": {
+        "id": "evt-wed-2",
+        "kind": "event"
+      },
+      "reason": "location_entered_travel_not_entered"
+    }
+  ],
+  "unplacedItems": []
+}

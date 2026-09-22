@@ -1,0 +1,75 @@
+# SHOWN
+TIGHT
+11 windows between commitments are tight.
+FITS NARROWLY
+11 windows between commitments are tight. Each one fits.
+Why
+SCHEDULE
+7:00 AM
+Meeting 7
+7:00–7:20 AM · Fixed
+8:00 AM
+Meeting 8
+8:00–8:20 AM · Fixed
+9:00 AM
+Meeting 9
+9:00–9:20 AM · Flexible
+Details
+10:00 AM
+Meeting 10
+10:00–10:20 AM · Fixed
+Details
+11:00 AM
+Meeting 11
+11:00–11:20 AM · Fixed
+12:00 PM
+Meeting 12
+12:00–12:20 PM · Flexible
+Details
+1:00 PM
+Meeting 13
+1:00–1:20 PM · Fixed
+2:00 PM
+Meeting 14
+2:00–2:20 PM · Fixed
+3:00 PM
+Meeting 15
+3:00–3:20 PM · Flexible
+Details
+4:00 PM
+Meeting 16
+4:00–4:20 PM · Fixed
+5:00 PM
+Meeting 17
+5:00–5:20 PM · Fixed
+6:00 PM
+Meeting 18
+6:00–6:20 PM · Flexible
+Details
+NOT ON THE SCHEDULE YET
+Reply to the landlord
+Due this day · Flexible · About 15 min
+There’s room from 6:00–7:00 AM, and 12 more windows. Nothing is scheduled for it.
+Why
+
+# ANNOUNCED
+button: Why: 11 windows between commitments are tight. Each one fits. {"expanded":false}
+button: Meeting 7. 7:00–7:20 AM · Fixed
+button: Meeting 8. 8:00–8:20 AM · Fixed
+button: Meeting 9. 9:00–9:20 AM · Flexible
+button: Details: Meeting 9 {"expanded":false}
+button: Meeting 10. 10:00–10:20 AM · Fixed
+button: Details: Meeting 10 {"expanded":false}
+button: Meeting 11. 11:00–11:20 AM · Fixed
+button: Meeting 12. 12:00–12:20 PM · Flexible
+button: Details: Meeting 12 {"expanded":false}
+button: Meeting 13. 1:00–1:20 PM · Fixed
+button: Meeting 14. 2:00–2:20 PM · Fixed
+button: Meeting 15. 3:00–3:20 PM · Flexible
+button: Details: Meeting 15 {"expanded":false}
+button: Meeting 16. 4:00–4:20 PM · Fixed
+button: Meeting 17. 5:00–5:20 PM · Fixed
+button: Meeting 18. 6:00–6:20 PM · Flexible
+button: Details: Meeting 18 {"expanded":false}
+button: Reply to the landlord. Due this day · Flexible · About 15 min. There’s room from 6:00–7:00 AM, and 12 more windows. Nothing is scheduled for it.
+button: Why: Reply to the landlord {"expanded":false}

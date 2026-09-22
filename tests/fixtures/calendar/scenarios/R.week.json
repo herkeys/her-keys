@@ -1,0 +1,93 @@
+{
+  "days": [
+    {
+      "category": "room",
+      "conflictCount": 0,
+      "conflictTypes": [],
+      "date": "2026-09-13",
+      "dayMode": "today",
+      "evidenceStatus": "complete",
+      "isSelected": false,
+      "itemCount": 1,
+      "tier": "open",
+      "unplacedCount": 0
+    },
+    {
+      "category": "tight",
+      "conflictCount": 0,
+      "conflictTypes": [],
+      "date": "2026-09-14",
+      "dayMode": "future",
+      "evidenceStatus": "complete",
+      "isSelected": false,
+      "itemCount": 2,
+      "tier": "tight",
+      "unplacedCount": 0
+    },
+    {
+      "category": "more_than_fits",
+      "conflictCount": 1,
+      "conflictTypes": [
+        "FIXED_OVERLAP"
+      ],
+      "date": "2026-09-15",
+      "dayMode": "future",
+      "evidenceStatus": "complete",
+      "isSelected": false,
+      "itemCount": 2,
+      "tier": "overloaded",
+      "unplacedCount": 0
+    },
+    {
+      "category": "not_known",
+      "conflictCount": 0,
+      "conflictTypes": [],
+      "date": "2026-09-16",
+      "dayMode": "future",
+      "evidenceStatus": "insufficient",
+      "isSelected": true,
+      "itemCount": 2,
+      "tier": null,
+      "unplacedCount": 0
+    },
+    {
+      "category": "room",
+      "conflictCount": 0,
+      "conflictTypes": [],
+      "date": "2026-09-17",
+      "dayMode": "future",
+      "evidenceStatus": "complete",
+      "isSelected": false,
+      "itemCount": 0,
+      "tier": "open",
+      "unplacedCount": 0
+    },
+    {
+      "category": "more_than_fits",
+      "conflictCount": 1,
+      "conflictTypes": [
+        "PLACEMENT_FAILURE"
+      ],
+      "date": "2026-09-18",
+      "dayMode": "future",
+      "evidenceStatus": "complete",
+      "isSelected": false,
+      "itemCount": 4,
+      "tier": "overloaded",
+      "unplacedCount": 1
+    },
+    {
+      "category": "room",
+      "conflictCount": 0,
+      "conflictTypes": [],
+      "date": "2026-09-19",
+      "dayMode": "future",
+      "evidenceStatus": "complete",
+      "isSelected": false,
+      "itemCount": 0,
+      "tier": "open",
+      "unplacedCount": 0
+    }
+  ],
+  "selectedDate": "2026-09-16"
+}

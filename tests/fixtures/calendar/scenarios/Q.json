@@ -1,0 +1,1003 @@
+{
+  "availableActions": [
+    {
+      "action": "EDIT",
+      "available": true,
+      "itemRef": {
+        "id": "evt-07",
+        "kind": "event"
+      },
+      "reason": "legitimate_edit_path"
+    },
+    {
+      "action": "EDIT",
+      "available": true,
+      "itemRef": {
+        "id": "evt-08",
+        "kind": "event"
+      },
+      "reason": "legitimate_edit_path"
+    },
+    {
+      "action": "EDIT",
+      "available": true,
+      "itemRef": {
+        "id": "evt-09",
+        "kind": "event"
+      },
+      "reason": "legitimate_edit_path"
+    },
+    {
+      "action": "EDIT",
+      "available": true,
+      "itemRef": {
+        "id": "evt-10",
+        "kind": "event"
+      },
+      "reason": "legitimate_edit_path"
+    },
+    {
+      "action": "EDIT",
+      "available": true,
+      "itemRef": {
+        "id": "evt-11",
+        "kind": "event"
+      },
+      "reason": "legitimate_edit_path"
+    },
+    {
+      "action": "EDIT",
+      "available": true,
+      "itemRef": {
+        "id": "evt-12",
+        "kind": "event"
+      },
+      "reason": "legitimate_edit_path"
+    },
+    {
+      "action": "EDIT",
+      "available": true,
+      "itemRef": {
+        "id": "evt-13",
+        "kind": "event"
+      },
+      "reason": "legitimate_edit_path"
+    },
+    {
+      "action": "EDIT",
+      "available": true,
+      "itemRef": {
+        "id": "evt-14",
+        "kind": "event"
+      },
+      "reason": "legitimate_edit_path"
+    },
+    {
+      "action": "EDIT",
+      "available": true,
+      "itemRef": {
+        "id": "evt-15",
+        "kind": "event"
+      },
+      "reason": "legitimate_edit_path"
+    },
+    {
+      "action": "EDIT",
+      "available": true,
+      "itemRef": {
+        "id": "evt-16",
+        "kind": "event"
+      },
+      "reason": "legitimate_edit_path"
+    },
+    {
+      "action": "EDIT",
+      "available": true,
+      "itemRef": {
+        "id": "evt-17",
+        "kind": "event"
+      },
+      "reason": "legitimate_edit_path"
+    },
+    {
+      "action": "EDIT",
+      "available": true,
+      "itemRef": {
+        "id": "evt-18",
+        "kind": "event"
+      },
+      "reason": "legitimate_edit_path"
+    },
+    {
+      "action": "EDIT",
+      "available": true,
+      "itemRef": {
+        "id": "tsk-email",
+        "kind": "task"
+      },
+      "reason": "legitimate_edit_path"
+    },
+    {
+      "action": "MOVE",
+      "available": false,
+      "itemRef": null,
+      "reason": "not_offered_by_verdict"
+    },
+    {
+      "action": "KEEP",
+      "available": true,
+      "itemRef": null,
+      "reason": "offered_by_verdict"
+    },
+    {
+      "action": "DROP",
+      "available": false,
+      "itemRef": null,
+      "reason": "not_offered_by_verdict"
+    },
+    {
+      "action": "SHORTEN",
+      "available": false,
+      "itemRef": null,
+      "reason": "not_offered_by_verdict"
+    },
+    {
+      "action": "KEEP_CAPACITY",
+      "available": false,
+      "itemRef": null,
+      "reason": "no_recommendation_shown"
+    },
+    {
+      "action": "PROTECT",
+      "available": true,
+      "itemRef": {
+        "id": "evt-09",
+        "kind": "event"
+      },
+      "reason": "flexible_item"
+    },
+    {
+      "action": "PROTECT",
+      "available": true,
+      "itemRef": {
+        "id": "evt-12",
+        "kind": "event"
+      },
+      "reason": "flexible_item"
+    },
+    {
+      "action": "PROTECT",
+      "available": true,
+      "itemRef": {
+        "id": "evt-15",
+        "kind": "event"
+      },
+      "reason": "flexible_item"
+    },
+    {
+      "action": "PROTECT",
+      "available": true,
+      "itemRef": {
+        "id": "evt-18",
+        "kind": "event"
+      },
+      "reason": "flexible_item"
+    },
+    {
+      "action": "PROTECT",
+      "available": true,
+      "itemRef": {
+        "id": "tsk-email",
+        "kind": "task"
+      },
+      "reason": "flexible_item"
+    },
+    {
+      "action": "UNDO",
+      "available": false,
+      "itemRef": null,
+      "reason": "nothing_to_undo"
+    }
+  ],
+  "capacityState": {
+    "category": "tight",
+    "evidence": {
+      "missing": [],
+      "status": "complete"
+    },
+    "evidenceRefs": [
+      {
+        "id": "evt-07",
+        "kind": "event"
+      },
+      {
+        "id": "evt-08",
+        "kind": "event"
+      }
+    ],
+    "foundationTier": "tight",
+    "pressure": null,
+    "tier": "tight",
+    "verdict": "tight_window"
+  },
+  "conflicts": [],
+  "dayItems": [
+    {
+      "blockedBy": [],
+      "flexibility": "fixed",
+      "progress": "upcoming",
+      "ref": {
+        "id": "evt-07",
+        "kind": "event"
+      },
+      "repeats": null,
+      "responsibility": null,
+      "subject": {
+        "kind": "unstated"
+      },
+      "timing": {
+        "continuesFromPreviousDay": false,
+        "continuesIntoNextDay": false,
+        "endKnown": true,
+        "endMinute": 440,
+        "kind": "timed",
+        "startMinute": 420
+      },
+      "title": "Meeting 7"
+    },
+    {
+      "blockedBy": [],
+      "flexibility": "fixed",
+      "progress": "upcoming",
+      "ref": {
+        "id": "evt-08",
+        "kind": "event"
+      },
+      "repeats": null,
+      "responsibility": null,
+      "subject": {
+        "kind": "unstated"
+      },
+      "timing": {
+        "continuesFromPreviousDay": false,
+        "continuesIntoNextDay": false,
+        "endKnown": true,
+        "endMinute": 500,
+        "kind": "timed",
+        "startMinute": 480
+      },
+      "title": "Meeting 8"
+    },
+    {
+      "blockedBy": [],
+      "flexibility": "flexible",
+      "progress": "upcoming",
+      "ref": {
+        "id": "evt-09",
+        "kind": "event"
+      },
+      "repeats": null,
+      "responsibility": null,
+      "subject": {
+        "kind": "unstated"
+      },
+      "timing": {
+        "continuesFromPreviousDay": false,
+        "continuesIntoNextDay": false,
+        "endKnown": true,
+        "endMinute": 560,
+        "kind": "timed",
+        "startMinute": 540
+      },
+      "title": "Meeting 9"
+    },
+    {
+      "blockedBy": [],
+      "flexibility": "fixed",
+      "progress": "upcoming",
+      "ref": {
+        "id": "evt-10",
+        "kind": "event"
+      },
+      "repeats": null,
+      "responsibility": null,
+      "subject": {
+        "kind": "unstated"
+      },
+      "timing": {
+        "continuesFromPreviousDay": false,
+        "continuesIntoNextDay": false,
+        "endKnown": true,
+        "endMinute": 620,
+        "kind": "timed",
+        "startMinute": 600
+      },
+      "title": "Meeting 10"
+    },
+    {
+      "blockedBy": [],
+      "flexibility": "fixed",
+      "progress": "upcoming",
+      "ref": {
+        "id": "evt-11",
+        "kind": "event"
+      },
+      "repeats": null,
+      "responsibility": null,
+      "subject": {
+        "kind": "unstated"
+      },
+      "timing": {
+        "continuesFromPreviousDay": false,
+        "continuesIntoNextDay": false,
+        "endKnown": true,
+        "endMinute": 680,
+        "kind": "timed",
+        "startMinute": 660
+      },
+      "title": "Meeting 11"
+    },
+    {
+      "blockedBy": [],
+      "flexibility": "flexible",
+      "progress": "upcoming",
+      "ref": {
+        "id": "evt-12",
+        "kind": "event"
+      },
+      "repeats": null,
+      "responsibility": null,
+      "subject": {
+        "kind": "unstated"
+      },
+      "timing": {
+        "continuesFromPreviousDay": false,
+        "continuesIntoNextDay": false,
+        "endKnown": true,
+        "endMinute": 740,
+        "kind": "timed",
+        "startMinute": 720
+      },
+      "title": "Meeting 12"
+    },
+    {
+      "blockedBy": [],
+      "flexibility": "fixed",
+      "progress": "upcoming",
+      "ref": {
+        "id": "evt-13",
+        "kind": "event"
+      },
+      "repeats": null,
+      "responsibility": null,
+      "subject": {
+        "kind": "unstated"
+      },
+      "timing": {
+        "continuesFromPreviousDay": false,
+        "continuesIntoNextDay": false,
+        "endKnown": true,
+        "endMinute": 800,
+        "kind": "timed",
+        "startMinute": 780
+      },
+      "title": "Meeting 13"
+    },
+    {
+      "blockedBy": [],
+      "flexibility": "fixed",
+      "progress": "upcoming",
+      "ref": {
+        "id": "evt-14",
+        "kind": "event"
+      },
+      "repeats": null,
+      "responsibility": null,
+      "subject": {
+        "kind": "unstated"
+      },
+      "timing": {
+        "continuesFromPreviousDay": false,
+        "continuesIntoNextDay": false,
+        "endKnown": true,
+        "endMinute": 860,
+        "kind": "timed",
+        "startMinute": 840
+      },
+      "title": "Meeting 14"
+    },
+    {
+      "blockedBy": [],
+      "flexibility": "flexible",
+      "progress": "upcoming",
+      "ref": {
+        "id": "evt-15",
+        "kind": "event"
+      },
+      "repeats": null,
+      "responsibility": null,
+      "subject": {
+        "childId": "child-1",
+        "displayName": "Josie",
+        "kind": "child"
+      },
+      "timing": {
+        "continuesFromPreviousDay": false,
+        "continuesIntoNextDay": false,
+        "endKnown": true,
+        "endMinute": 920,
+        "kind": "timed",
+        "startMinute": 900
+      },
+      "title": "Meeting 15"
+    },
+    {
+      "blockedBy": [],
+      "flexibility": "fixed",
+      "progress": "upcoming",
+      "ref": {
+        "id": "evt-16",
+        "kind": "event"
+      },
+      "repeats": null,
+      "responsibility": null,
+      "subject": {
+        "kind": "unstated"
+      },
+      "timing": {
+        "continuesFromPreviousDay": false,
+        "continuesIntoNextDay": false,
+        "endKnown": true,
+        "endMinute": 980,
+        "kind": "timed",
+        "startMinute": 960
+      },
+      "title": "Meeting 16"
+    },
+    {
+      "blockedBy": [],
+      "flexibility": "fixed",
+      "progress": "upcoming",
+      "ref": {
+        "id": "evt-17",
+        "kind": "event"
+      },
+      "repeats": null,
+      "responsibility": null,
+      "subject": {
+        "kind": "unstated"
+      },
+      "timing": {
+        "continuesFromPreviousDay": false,
+        "continuesIntoNextDay": false,
+        "endKnown": true,
+        "endMinute": 1040,
+        "kind": "timed",
+        "startMinute": 1020
+      },
+      "title": "Meeting 17"
+    },
+    {
+      "blockedBy": [],
+      "flexibility": "flexible",
+      "progress": "upcoming",
+      "ref": {
+        "id": "evt-18",
+        "kind": "event"
+      },
+      "repeats": null,
+      "responsibility": null,
+      "subject": {
+        "kind": "unstated"
+      },
+      "timing": {
+        "continuesFromPreviousDay": false,
+        "continuesIntoNextDay": false,
+        "endKnown": true,
+        "endMinute": 1100,
+        "kind": "timed",
+        "startMinute": 1080
+      },
+      "title": "Meeting 18"
+    },
+    {
+      "blockedBy": [],
+      "flexibility": "flexible",
+      "progress": "untimed",
+      "ref": {
+        "id": "tsk-email",
+        "kind": "task"
+      },
+      "repeats": null,
+      "responsibility": null,
+      "subject": {
+        "kind": "unstated"
+      },
+      "timing": {
+        "basis": "due",
+        "daysOverdue": 0,
+        "dueDate": "2026-09-16",
+        "kind": "date_only"
+      },
+      "title": "Reply to the landlord"
+    }
+  ],
+  "dayMode": "today",
+  "householdOrigin": "real",
+  "narrowTransitions": [
+    {
+      "after": {
+        "endMinute": 500,
+        "ref": {
+          "id": "evt-08",
+          "kind": "event"
+        },
+        "startMinute": 480
+      },
+      "before": {
+        "endMinute": 440,
+        "ref": {
+          "id": "evt-07",
+          "kind": "event"
+        },
+        "startMinute": 420
+      },
+      "gapMinutes": 40,
+      "scheduledMinutes": 0,
+      "slackMinutes": 40,
+      "storedTransitionMinutes": 0,
+      "tier": "tight"
+    },
+    {
+      "after": {
+        "endMinute": 560,
+        "ref": {
+          "id": "evt-09",
+          "kind": "event"
+        },
+        "startMinute": 540
+      },
+      "before": {
+        "endMinute": 500,
+        "ref": {
+          "id": "evt-08",
+          "kind": "event"
+        },
+        "startMinute": 480
+      },
+      "gapMinutes": 40,
+      "scheduledMinutes": 0,
+      "slackMinutes": 40,
+      "storedTransitionMinutes": 0,
+      "tier": "tight"
+    },
+    {
+      "after": {
+        "endMinute": 620,
+        "ref": {
+          "id": "evt-10",
+          "kind": "event"
+        },
+        "startMinute": 600
+      },
+      "before": {
+        "endMinute": 560,
+        "ref": {
+          "id": "evt-09",
+          "kind": "event"
+        },
+        "startMinute": 540
+      },
+      "gapMinutes": 40,
+      "scheduledMinutes": 0,
+      "slackMinutes": 30,
+      "storedTransitionMinutes": 10,
+      "tier": "tight"
+    },
+    {
+      "after": {
+        "endMinute": 680,
+        "ref": {
+          "id": "evt-11",
+          "kind": "event"
+        },
+        "startMinute": 660
+      },
+      "before": {
+        "endMinute": 620,
+        "ref": {
+          "id": "evt-10",
+          "kind": "event"
+        },
+        "startMinute": 600
+      },
+      "gapMinutes": 40,
+      "scheduledMinutes": 0,
+      "slackMinutes": 30,
+      "storedTransitionMinutes": 10,
+      "tier": "tight"
+    },
+    {
+      "after": {
+        "endMinute": 740,
+        "ref": {
+          "id": "evt-12",
+          "kind": "event"
+        },
+        "startMinute": 720
+      },
+      "before": {
+        "endMinute": 680,
+        "ref": {
+          "id": "evt-11",
+          "kind": "event"
+        },
+        "startMinute": 660
+      },
+      "gapMinutes": 40,
+      "scheduledMinutes": 0,
+      "slackMinutes": 40,
+      "storedTransitionMinutes": 0,
+      "tier": "tight"
+    },
+    {
+      "after": {
+        "endMinute": 800,
+        "ref": {
+          "id": "evt-13",
+          "kind": "event"
+        },
+        "startMinute": 780
+      },
+      "before": {
+        "endMinute": 740,
+        "ref": {
+          "id": "evt-12",
+          "kind": "event"
+        },
+        "startMinute": 720
+      },
+      "gapMinutes": 40,
+      "scheduledMinutes": 0,
+      "slackMinutes": 40,
+      "storedTransitionMinutes": 0,
+      "tier": "tight"
+    },
+    {
+      "after": {
+        "endMinute": 860,
+        "ref": {
+          "id": "evt-14",
+          "kind": "event"
+        },
+        "startMinute": 840
+      },
+      "before": {
+        "endMinute": 800,
+        "ref": {
+          "id": "evt-13",
+          "kind": "event"
+        },
+        "startMinute": 780
+      },
+      "gapMinutes": 40,
+      "scheduledMinutes": 0,
+      "slackMinutes": 40,
+      "storedTransitionMinutes": 0,
+      "tier": "tight"
+    },
+    {
+      "after": {
+        "endMinute": 920,
+        "ref": {
+          "id": "evt-15",
+          "kind": "event"
+        },
+        "startMinute": 900
+      },
+      "before": {
+        "endMinute": 860,
+        "ref": {
+          "id": "evt-14",
+          "kind": "event"
+        },
+        "startMinute": 840
+      },
+      "gapMinutes": 40,
+      "scheduledMinutes": 0,
+      "slackMinutes": 40,
+      "storedTransitionMinutes": 0,
+      "tier": "tight"
+    },
+    {
+      "after": {
+        "endMinute": 980,
+        "ref": {
+          "id": "evt-16",
+          "kind": "event"
+        },
+        "startMinute": 960
+      },
+      "before": {
+        "endMinute": 920,
+        "ref": {
+          "id": "evt-15",
+          "kind": "event"
+        },
+        "startMinute": 900
+      },
+      "gapMinutes": 40,
+      "scheduledMinutes": 0,
+      "slackMinutes": 40,
+      "storedTransitionMinutes": 0,
+      "tier": "tight"
+    },
+    {
+      "after": {
+        "endMinute": 1040,
+        "ref": {
+          "id": "evt-17",
+          "kind": "event"
+        },
+        "startMinute": 1020
+      },
+      "before": {
+        "endMinute": 980,
+        "ref": {
+          "id": "evt-16",
+          "kind": "event"
+        },
+        "startMinute": 960
+      },
+      "gapMinutes": 40,
+      "scheduledMinutes": 0,
+      "slackMinutes": 40,
+      "storedTransitionMinutes": 0,
+      "tier": "tight"
+    },
+    {
+      "after": {
+        "endMinute": 1100,
+        "ref": {
+          "id": "evt-18",
+          "kind": "event"
+        },
+        "startMinute": 1080
+      },
+      "before": {
+        "endMinute": 1040,
+        "ref": {
+          "id": "evt-17",
+          "kind": "event"
+        },
+        "startMinute": 1020
+      },
+      "gapMinutes": 40,
+      "scheduledMinutes": 0,
+      "slackMinutes": 40,
+      "storedTransitionMinutes": 0,
+      "tier": "tight"
+    }
+  ],
+  "openWindows": [
+    {
+      "endMinute": 420,
+      "lengthMinutes": 60,
+      "startMinute": 360
+    },
+    {
+      "endMinute": 1320,
+      "lengthMinutes": 220,
+      "startMinute": 1100
+    }
+  ],
+  "preview": {
+    "active": false
+  },
+  "selectedDate": "2026-09-16",
+  "timeZone": "America/New_York",
+  "unknownStates": [],
+  "unplacedItems": [
+    {
+      "durationKnown": true,
+      "itemRef": {
+        "id": "tsk-email",
+        "kind": "task"
+      },
+      "missing": [],
+      "openings": [
+        {
+          "after": {
+            "id": "evt-07",
+            "kind": "event"
+          },
+          "before": null,
+          "endMinute": 420,
+          "leavesMinutes": 45,
+          "leavesTier": null,
+          "lengthMinutes": 60,
+          "startMinute": 360
+        },
+        {
+          "after": {
+            "id": "evt-08",
+            "kind": "event"
+          },
+          "before": {
+            "id": "evt-07",
+            "kind": "event"
+          },
+          "endMinute": 480,
+          "leavesMinutes": 25,
+          "leavesTier": "tight",
+          "lengthMinutes": 40,
+          "startMinute": 440
+        },
+        {
+          "after": {
+            "id": "evt-09",
+            "kind": "event"
+          },
+          "before": {
+            "id": "evt-08",
+            "kind": "event"
+          },
+          "endMinute": 540,
+          "leavesMinutes": 25,
+          "leavesTier": "tight",
+          "lengthMinutes": 40,
+          "startMinute": 500
+        },
+        {
+          "after": {
+            "id": "evt-10",
+            "kind": "event"
+          },
+          "before": {
+            "id": "evt-09",
+            "kind": "event"
+          },
+          "endMinute": 590,
+          "leavesMinutes": 15,
+          "leavesTier": "overloaded",
+          "lengthMinutes": 30,
+          "startMinute": 560
+        },
+        {
+          "after": {
+            "id": "evt-11",
+            "kind": "event"
+          },
+          "before": {
+            "id": "evt-10",
+            "kind": "event"
+          },
+          "endMinute": 660,
+          "leavesMinutes": 15,
+          "leavesTier": "overloaded",
+          "lengthMinutes": 30,
+          "startMinute": 630
+        },
+        {
+          "after": {
+            "id": "evt-12",
+            "kind": "event"
+          },
+          "before": {
+            "id": "evt-11",
+            "kind": "event"
+          },
+          "endMinute": 720,
+          "leavesMinutes": 25,
+          "leavesTier": "tight",
+          "lengthMinutes": 40,
+          "startMinute": 680
+        },
+        {
+          "after": {
+            "id": "evt-13",
+            "kind": "event"
+          },
+          "before": {
+            "id": "evt-12",
+            "kind": "event"
+          },
+          "endMinute": 780,
+          "leavesMinutes": 25,
+          "leavesTier": "tight",
+          "lengthMinutes": 40,
+          "startMinute": 740
+        },
+        {
+          "after": {
+            "id": "evt-14",
+            "kind": "event"
+          },
+          "before": {
+            "id": "evt-13",
+            "kind": "event"
+          },
+          "endMinute": 840,
+          "leavesMinutes": 25,
+          "leavesTier": "tight",
+          "lengthMinutes": 40,
+          "startMinute": 800
+        },
+        {
+          "after": {
+            "id": "evt-15",
+            "kind": "event"
+          },
+          "before": {
+            "id": "evt-14",
+            "kind": "event"
+          },
+          "endMinute": 900,
+          "leavesMinutes": 25,
+          "leavesTier": "tight",
+          "lengthMinutes": 40,
+          "startMinute": 860
+        },
+        {
+          "after": {
+            "id": "evt-16",
+            "kind": "event"
+          },
+          "before": {
+            "id": "evt-15",
+            "kind": "event"
+          },
+          "endMinute": 960,
+          "leavesMinutes": 25,
+          "leavesTier": "tight",
+          "lengthMinutes": 40,
+          "startMinute": 920
+        },
+        {
+          "after": {
+            "id": "evt-17",
+            "kind": "event"
+          },
+          "before": {
+            "id": "evt-16",
+            "kind": "event"
+          },
+          "endMinute": 1020,
+          "leavesMinutes": 25,
+          "leavesTier": "tight",
+          "lengthMinutes": 40,
+          "startMinute": 980
+        },
+        {
+          "after": {
+            "id": "evt-18",
+            "kind": "event"
+          },
+          "before": {
+            "id": "evt-17",
+            "kind": "event"
+          },
+          "endMinute": 1080,
+          "leavesMinutes": 25,
+          "leavesTier": "tight",
+          "lengthMinutes": 40,
+          "startMinute": 1040
+        },
+        {
+          "after": null,
+          "before": {
+            "id": "evt-18",
+            "kind": "event"
+          },
+          "endMinute": 1320,
+          "leavesMinutes": 205,
+          "leavesTier": null,
+          "lengthMinutes": 220,
+          "startMinute": 1100
+        }
+      ],
+      "reason": "certain_opening_exists",
+      "state": "has_opening"
+    }
+  ]
+}

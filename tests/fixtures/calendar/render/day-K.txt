@@ -1,0 +1,21 @@
+# SHOWN
+ROOM
+Everything scheduled fits.
+SCHEDULE
+11:00 AM
+Notary appointment
+11:00 AM–12:00 PM · Fixed
+1:00 PM
+Team sync
+1:00–1:30 PM · Fixed
+NOT ON THE SCHEDULE YET
+Submit the permit form
+Due this day · Flexible · About 20 min
+There’s room from 12:00–1:00 PM, and 1 more window. Nothing is scheduled for it.
+Why
+
+# ANNOUNCED
+button: Notary appointment. 11:00 AM–12:00 PM · Fixed
+button: Team sync. 1:00–1:30 PM · Fixed
+button: Submit the permit form. Due this day · Flexible · About 20 min. There’s room from 12:00–1:00 PM, and 1 more window. Nothing is scheduled for it.
+button: Why: Submit the permit form {"expanded":false}

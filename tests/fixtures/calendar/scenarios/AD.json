@@ -1,0 +1,104 @@
+{
+  "availableActions": [
+    {
+      "action": "EDIT",
+      "available": true,
+      "itemRef": {
+        "id": "evt-trip",
+        "kind": "event"
+      },
+      "reason": "legitimate_edit_path"
+    },
+    {
+      "action": "MOVE",
+      "available": false,
+      "itemRef": null,
+      "reason": "not_offered_by_verdict"
+    },
+    {
+      "action": "KEEP",
+      "available": false,
+      "itemRef": null,
+      "reason": "no_recommendation_shown"
+    },
+    {
+      "action": "DROP",
+      "available": false,
+      "itemRef": null,
+      "reason": "not_offered_by_verdict"
+    },
+    {
+      "action": "SHORTEN",
+      "available": false,
+      "itemRef": null,
+      "reason": "not_offered_by_verdict"
+    },
+    {
+      "action": "KEEP_CAPACITY",
+      "available": false,
+      "itemRef": null,
+      "reason": "no_recommendation_shown"
+    },
+    {
+      "action": "PROTECT",
+      "available": false,
+      "itemRef": null,
+      "reason": "fixed_commitment"
+    },
+    {
+      "action": "UNDO",
+      "available": false,
+      "itemRef": null,
+      "reason": "nothing_to_undo"
+    }
+  ],
+  "capacityState": {
+    "category": "room",
+    "evidence": {
+      "missing": [],
+      "status": "complete"
+    },
+    "evidenceRefs": [],
+    "foundationTier": "open",
+    "pressure": null,
+    "tier": "open",
+    "verdict": null
+  },
+  "conflicts": [],
+  "dayItems": [
+    {
+      "blockedBy": [],
+      "flexibility": "fixed",
+      "progress": "in_progress",
+      "ref": {
+        "id": "evt-trip",
+        "kind": "event"
+      },
+      "repeats": null,
+      "responsibility": null,
+      "subject": {
+        "kind": "unstated"
+      },
+      "timing": {
+        "continuesFromPreviousDay": true,
+        "continuesIntoNextDay": true,
+        "endKnown": true,
+        "endMinute": 1440,
+        "kind": "timed",
+        "startMinute": 0
+      },
+      "title": "Grandma visit"
+    }
+  ],
+  "dayMode": "today",
+  "householdOrigin": "real",
+  "narrowTransitions": [],
+  "openWindows": [],
+  "preview": {
+    "active": false
+  },
+  "selectedDate": "2026-09-16",
+  "timeZone": "America/New_York",
+  "unknownStates": [],
+  "unplacedItems": []
+}

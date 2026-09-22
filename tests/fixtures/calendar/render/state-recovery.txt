@@ -1,0 +1,6 @@
+# SHOWN
+Your household is being restored
+Calendar will show your day once your household has been restored. Nothing is assessed from data that has not been recovered.
+
+# ANNOUNCED
+

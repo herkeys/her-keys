@@ -1,0 +1,241 @@
+{
+  "availableActions": [
+    {
+      "action": "EDIT",
+      "available": true,
+      "itemRef": {
+        "id": "evt-a",
+        "kind": "event"
+      },
+      "reason": "legitimate_edit_path"
+    },
+    {
+      "action": "EDIT",
+      "available": true,
+      "itemRef": {
+        "id": "evt-b",
+        "kind": "event"
+      },
+      "reason": "legitimate_edit_path"
+    },
+    {
+      "action": "EDIT",
+      "available": true,
+      "itemRef": {
+        "id": "evt-c",
+        "kind": "event"
+      },
+      "reason": "legitimate_edit_path"
+    },
+    {
+      "action": "MOVE",
+      "available": true,
+      "itemRef": {
+        "id": "evt-b",
+        "kind": "event"
+      },
+      "reason": "offered_by_verdict"
+    },
+    {
+      "action": "KEEP",
+      "available": true,
+      "itemRef": null,
+      "reason": "offered_by_verdict"
+    },
+    {
+      "action": "DROP",
+      "available": false,
+      "itemRef": null,
+      "reason": "not_offered_by_verdict"
+    },
+    {
+      "action": "SHORTEN",
+      "available": false,
+      "itemRef": null,
+      "reason": "not_offered_by_verdict"
+    },
+    {
+      "action": "KEEP_CAPACITY",
+      "available": false,
+      "itemRef": null,
+      "reason": "no_recommendation_shown"
+    },
+    {
+      "action": "PROTECT",
+      "available": true,
+      "itemRef": {
+        "id": "evt-b",
+        "kind": "event"
+      },
+      "reason": "flexible_item"
+    },
+    {
+      "action": "UNDO",
+      "available": false,
+      "itemRef": null,
+      "reason": "nothing_to_undo"
+    }
+  ],
+  "capacityState": {
+    "category": "tight",
+    "evidence": {
+      "missing": [],
+      "status": "complete"
+    },
+    "evidenceRefs": [
+      {
+        "id": "evt-a",
+        "kind": "event"
+      },
+      {
+        "id": "evt-b",
+        "kind": "event"
+      }
+    ],
+    "foundationTier": "overloaded",
+    "pressure": null,
+    "tier": "overloaded",
+    "verdict": "transition_conflict"
+  },
+  "conflicts": [],
+  "dayItems": [
+    {
+      "blockedBy": [],
+      "flexibility": "fixed",
+      "progress": "upcoming",
+      "ref": {
+        "id": "evt-a",
+        "kind": "event"
+      },
+      "repeats": null,
+      "responsibility": null,
+      "subject": {
+        "kind": "unstated"
+      },
+      "timing": {
+        "continuesFromPreviousDay": false,
+        "continuesIntoNextDay": false,
+        "endKnown": true,
+        "endMinute": 660,
+        "kind": "timed",
+        "startMinute": 600
+      },
+      "title": "Client call"
+    },
+    {
+      "blockedBy": [],
+      "flexibility": "flexible",
+      "progress": "upcoming",
+      "ref": {
+        "id": "evt-b",
+        "kind": "event"
+      },
+      "repeats": null,
+      "responsibility": null,
+      "subject": {
+        "kind": "unstated"
+      },
+      "timing": {
+        "continuesFromPreviousDay": false,
+        "continuesIntoNextDay": false,
+        "endKnown": true,
+        "endMinute": 710,
+        "kind": "timed",
+        "startMinute": 670
+      },
+      "title": "Errand"
+    },
+    {
+      "blockedBy": [],
+      "flexibility": "fixed",
+      "progress": "upcoming",
+      "ref": {
+        "id": "evt-c",
+        "kind": "event"
+      },
+      "repeats": null,
+      "responsibility": null,
+      "subject": {
+        "kind": "unstated"
+      },
+      "timing": {
+        "continuesFromPreviousDay": false,
+        "continuesIntoNextDay": false,
+        "endKnown": true,
+        "endMinute": 780,
+        "kind": "timed",
+        "startMinute": 720
+      },
+      "title": "Board meeting"
+    }
+  ],
+  "dayMode": "today",
+  "householdOrigin": "real",
+  "narrowTransitions": [
+    {
+      "after": {
+        "endMinute": 710,
+        "ref": {
+          "id": "evt-b",
+          "kind": "event"
+        },
+        "startMinute": 670
+      },
+      "before": {
+        "endMinute": 660,
+        "ref": {
+          "id": "evt-a",
+          "kind": "event"
+        },
+        "startMinute": 600
+      },
+      "gapMinutes": 10,
+      "scheduledMinutes": 0,
+      "slackMinutes": 10,
+      "storedTransitionMinutes": 0,
+      "tier": "overloaded"
+    },
+    {
+      "after": {
+        "endMinute": 780,
+        "ref": {
+          "id": "evt-c",
+          "kind": "event"
+        },
+        "startMinute": 720
+      },
+      "before": {
+        "endMinute": 710,
+        "ref": {
+          "id": "evt-b",
+          "kind": "event"
+        },
+        "startMinute": 670
+      },
+      "gapMinutes": 10,
+      "scheduledMinutes": 0,
+      "slackMinutes": 10,
+      "storedTransitionMinutes": 0,
+      "tier": "overloaded"
+    }
+  ],
+  "openWindows": [
+    {
+      "endMinute": 600,
+      "lengthMinutes": 180,
+      "startMinute": 420
+    },
+    {
+      "endMinute": 1320,
+      "lengthMinutes": 540,
+      "startMinute": 780
+    }
+  ],
+  "preview": {
+    "active": false
+  },
+  "selectedDate": "2026-09-16",
+  "timeZone": "America/New_York",
+  "unknownStates": [],
+  "unplacedItems": []
+}

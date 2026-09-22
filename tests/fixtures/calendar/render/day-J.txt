@@ -1,0 +1,13 @@
+# SHOWN
+ROOM
+Everything scheduled fits.
+SCHEDULE
+3:30 PM
+Pick up Josie from school
+3:30–4:00 PM · Fixed
+Marcus accepted
+Details
+
+# ANNOUNCED
+button: Pick up Josie from school. 3:30–4:00 PM · Fixed. Marcus accepted
+button: Details: Pick up Josie from school {"expanded":false}

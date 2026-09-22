@@ -1,0 +1,21 @@
+# SHOWN
+ROOM
+Everything scheduled fits.
+SCHEDULE
+10:00 AM
+Morning appointment
+10:00–11:00 AM · Fixed
+NOT ON THE SCHEDULE YET
+Pay orthodontist invoice
+Due this day · Fixed · About 10 min
+Pay orthodontist invoice is fixed and has no time set.
+Reply to the landlord
+Due this day · Flexible · About 15 min
+There’s room from 7:00–10:00 AM, and 1 more window. Nothing is scheduled for it.
+Why
+
+# ANNOUNCED
+button: Morning appointment. 10:00–11:00 AM · Fixed
+button: Pay orthodontist invoice. Due this day · Fixed · About 10 min. Pay orthodontist invoice is fixed and has no time set.
+button: Reply to the landlord. Due this day · Flexible · About 15 min. There’s room from 7:00–10:00 AM, and 1 more window. Nothing is scheduled for it.
+button: Why: Reply to the landlord {"expanded":false}

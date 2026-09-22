@@ -1,0 +1,14 @@
+# SHOWN
+Preview — nothing has changed yet.
+The schedule changed. Preview again before applying this.
+Errand would move to tomorrow at 11:10 AM.
+Today would go from tight to room.
+Nothing new would conflict tomorrow.
+Move to tomorrow
+Preview again
+Cancel
+
+# ANNOUNCED
+button: Move to tomorrow {"disabled":true}
+button: Preview again {"disabled":false}
+button: Cancel {"disabled":false}

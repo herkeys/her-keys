@@ -1,0 +1,323 @@
+{
+  "availableActions": [
+    {
+      "action": "EDIT",
+      "available": true,
+      "itemRef": {
+        "id": "evt-piano",
+        "kind": "event"
+      },
+      "reason": "legitimate_edit_path"
+    },
+    {
+      "action": "EDIT",
+      "available": true,
+      "itemRef": {
+        "id": "evt-plumber",
+        "kind": "event"
+      },
+      "reason": "legitimate_edit_path"
+    },
+    {
+      "action": "EDIT",
+      "available": true,
+      "itemRef": {
+        "id": "evt-soccer",
+        "kind": "event"
+      },
+      "reason": "legitimate_edit_path"
+    },
+    {
+      "action": "EDIT",
+      "available": true,
+      "itemRef": {
+        "id": "tsk-form",
+        "kind": "task"
+      },
+      "reason": "legitimate_edit_path"
+    },
+    {
+      "action": "MOVE",
+      "available": false,
+      "itemRef": null,
+      "reason": "not_offered_by_verdict"
+    },
+    {
+      "action": "KEEP",
+      "available": true,
+      "itemRef": null,
+      "reason": "offered_by_verdict"
+    },
+    {
+      "action": "DROP",
+      "available": false,
+      "itemRef": null,
+      "reason": "not_offered_by_verdict"
+    },
+    {
+      "action": "SHORTEN",
+      "available": false,
+      "itemRef": null,
+      "reason": "not_offered_by_verdict"
+    },
+    {
+      "action": "KEEP_CAPACITY",
+      "available": false,
+      "itemRef": null,
+      "reason": "no_recommendation_shown"
+    },
+    {
+      "action": "PROTECT",
+      "available": true,
+      "itemRef": {
+        "id": "tsk-form",
+        "kind": "task"
+      },
+      "reason": "flexible_item"
+    },
+    {
+      "action": "UNDO",
+      "available": false,
+      "itemRef": null,
+      "reason": "nothing_to_undo"
+    }
+  ],
+  "capacityState": {
+    "category": "tight",
+    "evidence": {
+      "missing": [],
+      "status": "complete"
+    },
+    "evidenceRefs": [
+      {
+        "id": "evt-soccer",
+        "kind": "event"
+      },
+      {
+        "id": "evt-piano",
+        "kind": "event"
+      }
+    ],
+    "foundationTier": "tight",
+    "pressure": null,
+    "tier": "tight",
+    "verdict": "tight_window"
+  },
+  "conflicts": [],
+  "dayItems": [
+    {
+      "blockedBy": [],
+      "flexibility": "fixed",
+      "progress": "upcoming",
+      "ref": {
+        "id": "evt-plumber",
+        "kind": "event"
+      },
+      "repeats": null,
+      "responsibility": null,
+      "subject": {
+        "kind": "unstated"
+      },
+      "timing": {
+        "continuesFromPreviousDay": false,
+        "continuesIntoNextDay": false,
+        "endKnown": true,
+        "endMinute": 840,
+        "kind": "timed",
+        "startMinute": 780
+      },
+      "title": "Plumber visit"
+    },
+    {
+      "blockedBy": [],
+      "flexibility": "fixed",
+      "progress": "upcoming",
+      "ref": {
+        "id": "evt-soccer",
+        "kind": "event"
+      },
+      "repeats": null,
+      "responsibility": null,
+      "subject": {
+        "childId": "child-1",
+        "displayName": "Josie",
+        "kind": "child"
+      },
+      "timing": {
+        "continuesFromPreviousDay": false,
+        "continuesIntoNextDay": false,
+        "endKnown": true,
+        "endMinute": 1020,
+        "kind": "timed",
+        "startMinute": 960
+      },
+      "title": "Soccer practice"
+    },
+    {
+      "blockedBy": [],
+      "flexibility": "fixed",
+      "progress": "upcoming",
+      "ref": {
+        "id": "evt-piano",
+        "kind": "event"
+      },
+      "repeats": null,
+      "responsibility": null,
+      "subject": {
+        "childId": "child-2",
+        "displayName": "Theo",
+        "kind": "child"
+      },
+      "timing": {
+        "continuesFromPreviousDay": false,
+        "continuesIntoNextDay": false,
+        "endKnown": true,
+        "endMinute": 1080,
+        "kind": "timed",
+        "startMinute": 1050
+      },
+      "title": "Piano lesson"
+    },
+    {
+      "blockedBy": [],
+      "flexibility": "flexible",
+      "progress": "untimed",
+      "ref": {
+        "id": "tsk-form",
+        "kind": "task"
+      },
+      "repeats": null,
+      "responsibility": null,
+      "subject": {
+        "childId": "child-1",
+        "displayName": "Josie",
+        "kind": "child"
+      },
+      "timing": {
+        "basis": "due",
+        "daysOverdue": 0,
+        "dueDate": "2026-09-16",
+        "kind": "date_only"
+      },
+      "title": "Field trip form"
+    }
+  ],
+  "dayMode": "today",
+  "householdOrigin": "real",
+  "narrowTransitions": [
+    {
+      "after": {
+        "endMinute": 1080,
+        "ref": {
+          "id": "evt-piano",
+          "kind": "event"
+        },
+        "startMinute": 1050
+      },
+      "before": {
+        "endMinute": 1020,
+        "ref": {
+          "id": "evt-soccer",
+          "kind": "event"
+        },
+        "startMinute": 960
+      },
+      "gapMinutes": 30,
+      "scheduledMinutes": 0,
+      "slackMinutes": 30,
+      "storedTransitionMinutes": 0,
+      "tier": "tight"
+    }
+  ],
+  "openWindows": [
+    {
+      "endMinute": 780,
+      "lengthMinutes": 360,
+      "startMinute": 420
+    },
+    {
+      "endMinute": 960,
+      "lengthMinutes": 120,
+      "startMinute": 840
+    },
+    {
+      "endMinute": 1320,
+      "lengthMinutes": 240,
+      "startMinute": 1080
+    }
+  ],
+  "preview": {
+    "active": false
+  },
+  "selectedDate": "2026-09-16",
+  "timeZone": "America/New_York",
+  "unknownStates": [],
+  "unplacedItems": [
+    {
+      "durationKnown": true,
+      "itemRef": {
+        "id": "tsk-form",
+        "kind": "task"
+      },
+      "missing": [],
+      "openings": [
+        {
+          "after": {
+            "id": "evt-plumber",
+            "kind": "event"
+          },
+          "before": null,
+          "endMinute": 780,
+          "leavesMinutes": 350,
+          "leavesTier": null,
+          "lengthMinutes": 360,
+          "startMinute": 420
+        },
+        {
+          "after": {
+            "id": "evt-soccer",
+            "kind": "event"
+          },
+          "before": {
+            "id": "evt-plumber",
+            "kind": "event"
+          },
+          "endMinute": 960,
+          "leavesMinutes": 110,
+          "leavesTier": "open",
+          "lengthMinutes": 120,
+          "startMinute": 840
+        },
+        {
+          "after": {
+            "id": "evt-piano",
+            "kind": "event"
+          },
+          "before": {
+            "id": "evt-soccer",
+            "kind": "event"
+          },
+          "endMinute": 1050,
+          "leavesMinutes": 20,
+          "leavesTier": "overloaded",
+          "lengthMinutes": 30,
+          "startMinute": 1020
+        },
+        {
+          "after": null,
+          "before": {
+            "id": "evt-piano",
+            "kind": "event"
+          },
+          "endMinute": 1320,
+          "leavesMinutes": 230,
+          "leavesTier": null,
+          "lengthMinutes": 240,
+          "startMinute": 1080
+        }
+      ],
+      "reason": "certain_opening_exists",
+      "state": "has_opening"
+    }
+  ]
+}

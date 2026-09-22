@@ -1,0 +1,21 @@
+# SHOWN
+ROOM
+Everything scheduled fits.
+SCHEDULE
+9:00 AM
+Standup
+9:00–9:30 AM · Fixed
+12:00 PM
+Lunch
+12:00–1:00 PM · Fixed
+NOT ON THE SCHEDULE YET
+Call the pharmacy
+Due this day · Flexible · About 45 min
+There’s room from 7:00–9:00 AM, and 2 more windows. Nothing is scheduled for it.
+Why
+
+# ANNOUNCED
+button: Standup. 9:00–9:30 AM · Fixed
+button: Lunch. 12:00–1:00 PM · Fixed
+button: Call the pharmacy. Due this day · Flexible · About 45 min. There’s room from 7:00–9:00 AM, and 2 more windows. Nothing is scheduled for it.
+button: Why: Call the pharmacy {"expanded":false}
