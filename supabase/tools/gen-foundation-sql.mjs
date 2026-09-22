@@ -29,7 +29,12 @@ export const MIGRATION = join(REPO, 'supabase', 'migrations', '20260919231500_bu
 
 const specsModule = await import(pathToFileURL(join(REPO, 'src', 'domain', 'sync', 'foundationSpecs.ts')).href);
 const refModule = await import(pathToFileURL(join(REPO, 'src', 'domain', 'foundation', 'typedRef.ts')).href);
-const { FOUNDATION_SPECS, EXISTING_FACETS, EXISTING_ROW_CHECKS, PROVENANCE_EXISTING, CLOUD_PRODUCERS, columnsOfSpec } = specsModule;
+const { FOUNDATION_SPECS: ALL_SPECS, EXISTING_FACETS, EXISTING_ROW_CHECKS, PROVENANCE_EXISTING, CLOUD_PRODUCERS, columnsOfSpec, migrationOf, SHIPPING_MIGRATION } = specsModule;
+// The shipping migration carries only the kinds that were born with it. A kind added later names its own ADDITIVE migration
+// (`FoundationSpec.migration`) and is generated there, between its own marker pair — never spliced into a migration that may
+// already be applied to a populated database.
+const FOUNDATION_SPECS = ALL_SPECS.filter((spec) => migrationOf(spec) === SHIPPING_MIGRATION);
+const ADDITIVE = [...new Set(ALL_SPECS.map((spec) => migrationOf(spec)).filter((file) => file !== SHIPPING_MIGRATION))];
 const { KIND_CLOUD } = refModule;
 
 const SQL_TYPE = { text: 'text', int: 'integer', bigint: 'bigint', bool: 'boolean', instant: 'timestamptz', date: 'date', smallints: 'smallint[]' };
@@ -55,9 +60,10 @@ const LINK_TARGET = {
   system: { table: 'household_systems', ownerPrivate: false },
   category: { table: 'household_categories', ownerPrivate: false },
   member: { table: 'household_members', ownerPrivate: false, child: true },
+  personContext: { table: 'person_contexts', ownerPrivate: true },
 };
 
-const specByKind = new Map(FOUNDATION_SPECS.map((s) => [s.kind, s]));
+const specByKind = new Map(ALL_SPECS.map((s) => [s.kind, s]));
 const tableOf = (kind) => (KIND_CLOUD[kind] ? KIND_CLOUD[kind].table : specByKind.get(kind).table);
 
 const ident = (name) => {
@@ -323,6 +329,27 @@ export function generate() {
   return { tables: banner('foundation-tables', tables), grants: banner('foundation-grants', grants) };
 }
 
+/**
+ * The generated DDL of the kinds an ADDITIVE migration carries: the same four phases (tables, keys, rules, grants) as the shipping
+ * block, for those kinds only. Nothing on an existing table is emitted here — whatever an additive migration needs from one is
+ * written out by hand in that migration, where it can be reviewed.
+ */
+export function generateAdditive(file) {
+  const specs = ALL_SPECS.filter((spec) => migrationOf(spec) === file);
+  if (specs.length === 0) throw new Error(`no manifest kind names ${file}`);
+  const tables = [
+    '-- Phase 1 — the tables.',
+    ...specs.map(tableDdl),
+    '-- Phase 2 — their keys.',
+    ...specs.map(tableKeys),
+    '',
+    '-- Phase 3 — constraints, indexes, triggers and policies.',
+    ...specs.map((s) => `-- ${s.table}\n${tableRest(s)}`),
+  ].join('\n');
+  const grants = specs.map(tableGrants).join('\n');
+  return { tables: banner('additive-tables', tables), grants: banner('additive-grants', grants) };
+}
+
 function region(text, name) {
   const start = text.indexOf(`-- >>> GENERATED ${name}`);
   const endMarker = `-- <<< GENERATED ${name}\n`;
@@ -331,32 +358,42 @@ function region(text, name) {
   return { start, end: end + endMarker.length };
 }
 
-export function splice(text, generated) {
+export function splice(text, generated, prefix = 'foundation') {
   let out = text;
-  for (const name of ['foundation-tables', 'foundation-grants']) {
+  for (const part of ['tables', 'grants']) {
+    const name = `${prefix}-${part}`;
     const r = region(out, name);
     if (!r) throw new Error(`the migration has no ${name} marker pair`);
-    out = out.slice(0, r.start) + generated[name === 'foundation-tables' ? 'tables' : 'grants'] + out.slice(r.end);
+    out = out.slice(0, r.start) + generated[part] + out.slice(r.end);
   }
   return out;
 }
 
 const mode = process.argv[2];
 if (mode === '--write' || mode === '--check') {
-  const current = readFileSync(MIGRATION, 'utf8');
-  const crlf = current.includes('\r\n');
-  const normalized = current.replace(/\r\n/g, '\n');
-  const next = splice(normalized, generate());
-  if (mode === '--check') {
-    if (next !== normalized) {
-      console.error('the migration differs from what the manifest generates — run --write');
-      process.exit(1);
+  // The shipping migration, then every additive migration a manifest kind names.
+  const targets = [
+    { file: MIGRATION, generated: generate(), prefix: 'foundation' },
+    ...ADDITIVE.map((file) => ({ file: join(REPO, 'supabase', 'migrations', file), generated: generateAdditive(file), prefix: 'additive' })),
+  ];
+  let stale = 0;
+  for (const target of targets) {
+    const current = readFileSync(target.file, 'utf8');
+    const crlf = current.includes('\r\n');
+    const normalized = current.replace(/\r\n/g, '\n');
+    const next = splice(normalized, target.generated, target.prefix);
+    if (mode === '--check') {
+      if (next !== normalized) {
+        console.error(`${target.file} differs from what the manifest generates — run --write`);
+        stale += 1;
+      }
+    } else if (next !== normalized) {
+      writeFileSync(target.file, crlf ? next.replace(/\n/g, '\r\n') : next);
+      console.log(`wrote ${target.file}`);
     }
-    console.log('foundation SQL is up to date');
-  } else {
-    writeFileSync(MIGRATION, crlf ? next.replace(/\n/g, '\r\n') : next);
-    console.log(`wrote ${MIGRATION}`);
   }
+  if (stale > 0) process.exit(1);
+  if (mode === '--check') console.log('foundation SQL is up to date');
 } else if (mode === '--print') {
   const g = generate();
   process.stdout.write(g.tables + '\n' + g.grants);

@@ -43,6 +43,8 @@ export function createEmptyState(timeZone: string): AppState {
     capacity: null,
     patterns: [],
     evidenceLinks: [],
+    personContexts: [],
+    personTaskLinks: [],
   };
 }
 

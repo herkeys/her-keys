@@ -12,6 +12,7 @@ import { eventFacetFields, mealFacetFields, systemFacetFields, taskFacetFields }
 import { ExternalReferenceSchema } from './foundation/externalReference';
 import { BehaviorObservationSchema, MAX_LOCAL_OBSERVATIONS } from './foundation/observation';
 import { EvidenceLinkSchema, PatternSchema } from './foundation/pattern';
+import { PersonContextSchema, PersonTaskLinkSchema, peopleIntegrityProblems } from './foundation/personContext';
 import { PROVENANCE_SOURCES, ProvenanceSchema } from './foundation/provenance';
 import { HouseholdPersonSchema, ResponsibilitySchema, isActiveResponsibility } from './foundation/responsibility';
 import { SourceArtifactSchema } from './foundation/sourceArtifact';
@@ -527,6 +528,12 @@ export const AppStateSchema = z.strictObject({
   capacity: CapacityProfileSchema.nullable(),
   patterns: z.array(PatternSchema).max(2000),
   evidenceLinks: z.array(EvidenceLinkSchema).max(20_000),
+  /**
+   * People OS (HK-FEATURE-13). What she wants Her Keys to remember about a child or a non-account person — owner-private, one per
+   * person — and the follow-up Tasks she created from one. Additive: a household saved before they existed reads as having none.
+   */
+  personContexts: z.array(PersonContextSchema).max(500).default([]),
+  personTaskLinks: z.array(PersonTaskLinkSchema).max(5000).default([]),
 });
 
 export type Household = z.infer<typeof HouseholdSchema>;
@@ -907,6 +914,9 @@ export function findIntegrityProblems(state: AppState): string[] {
       problems.push(`external reference ${ref.id} is linked to missing ${ref.linked.kind} ${ref.linked.id}`);
     }
   }
+
+  // ---- People OS (HK-FEATURE-13): contexts name a real child or person, one per person; follow-ups name a private task.
+  problems.push(...peopleIntegrityProblems(state));
 
   return problems;
 }

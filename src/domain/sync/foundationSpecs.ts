@@ -37,13 +37,25 @@ export type Field =
 /** What a `link` points at: another foundation/core kind by sync kind, or a household member (a child). */
 export type LinkTarget =
   | 'sourceArtifact' | 'interpretation' | 'externalReference' | 'observation' | 'authority' | 'intent' | 'decision'
-  | 'execution' | 'person' | 'responsibility' | 'goal' | 'system' | 'category' | 'member';
+  | 'execution' | 'person' | 'responsibility' | 'goal' | 'system' | 'category' | 'member' | 'personContext';
 
-/** The synced kinds the foundation adds. A closed list, so `SyncEntityKind` stays a union of literals. */
+/**
+ * The synced kinds the foundation adds. A closed list, so `SyncEntityKind` stays a union of literals.
+ * The last two are People OS (HK-FEATURE-13); their DDL lives in the F13 migration (see `FoundationSpec.migration`).
+ */
 export const FOUNDATION_KIND_NAMES = [
   'sourceArtifact', 'interpretation', 'externalReference', 'observation', 'authority', 'intent', 'decision', 'execution',
   'outcome', 'person', 'responsibility', 'dependency', 'recurrence', 'goal', 'systemStep', 'capacity', 'pattern', 'evidenceLink',
+  'personContext', 'personTaskLink',
 ] as const;
+
+/** The shipping migration the original eighteen kinds' DDL is generated into. */
+export const SHIPPING_MIGRATION = '20260919231500_build4_cloud_schema.sql';
+/** HK-FEATURE-13 (People OS): an ADDITIVE migration; the shipping migration is never regenerated for these kinds. */
+export const F13_PEOPLE_MIGRATION = '20260922200000_f13_people_os.sql';
+
+/** The migration file that carries a kind's generated DDL. */
+export const migrationOf = (spec: Pick<FoundationSpec, 'migration'>): string => spec.migration ?? SHIPPING_MIGRATION;
 export type FoundationKind = (typeof FOUNDATION_KIND_NAMES)[number];
 
 export interface FoundationSpec {
@@ -80,6 +92,11 @@ export interface FoundationSpec {
    * reference graph from these fields and fails if any kind ranks at or below a kind it points at.
    */
   rank: number;
+  /**
+   * The ADDITIVE migration this kind's DDL is generated into. Absent: the shipping migration. A kind added after the
+   * shipping migration was applied anywhere must never be spliced into it — that would not upgrade a populated database.
+   */
+  migration?: string;
 }
 
 // ------------------------------------------------------------------ columns ----
@@ -655,6 +672,61 @@ export const FOUNDATION_SPECS: readonly FoundationSpec[] = [
     ],
     updatable: [],
     checks: [['code_check', `code ${OPEN_CODE}`]],
+  },
+
+  // ----------------------------------------------------------- person context (HK-FEATURE-13, People OS)
+  {
+    // What SHE wants Her Keys to remember about one canonical person. Owner-private like every foundation row; exactly one real
+    // foreign key names the person — a CHILD member (the existing child-proving key, so the account holder, an adult, can never be
+    // named) or her own non-account person. One per owner and person, and the boundary is the OWNER's: another member of the
+    // household making her own context on the same child can never collide with, and so never learn of, this one.
+    kind: 'personContext', collection: 'personContexts', table: 'person_contexts', mutable: true, provenance: 'standard', profileOnDelete: 'cascade', rank: 3,
+    migration: F13_PEOPLE_MIGRATION,
+    fields: [
+      { local: 'childId', col: 'child_id', type: 'link', to: 'member', nullable: true },
+      { local: 'personId', col: 'person_id', type: 'link', to: 'person', nullable: true },
+      { local: 'relationshipLabel', col: 'relationship_label', type: 'text', nullable: true },
+      { local: 'organizationLabel', col: 'organization_label', type: 'text', nullable: true },
+      { local: 'contextNote', col: 'context_note', type: 'text', nullable: true },
+      { local: 'status', col: 'status', type: 'text' },
+    ],
+    // Which person it is about is fixed at insert: a context is never re-pointed at somebody else.
+    updatable: ['relationship_label', 'organization_label', 'context_note', 'status', 'origin_updated_at'],
+    checks: [
+      ['one_person_check', `(child_id IS NULL) <> (person_id IS NULL)`],
+      ['relationship_label_check', `relationship_label IS NULL OR (relationship_label = btrim(relationship_label) AND char_length(relationship_label) >= 1 AND char_length(relationship_label) <= 60 AND relationship_label !~ '[[:cntrl:]]')`],
+      ['organization_label_check', `organization_label IS NULL OR (organization_label = btrim(organization_label) AND char_length(organization_label) >= 1 AND char_length(organization_label) <= 80 AND organization_label !~ '[[:cntrl:]]')`],
+      // Line breaks and tabs are hers; any other control character is refused.
+      ['context_note_check', `context_note IS NULL OR (context_note = btrim(context_note) AND char_length(context_note) >= 1 AND char_length(context_note) <= 500 AND replace(replace(replace(context_note, chr(10), ''), chr(13), ''), chr(9), '') !~ '[[:cntrl:]]')`],
+      ['status_check', `status = ANY (ARRAY['active','archived'])`],
+      // What she tells Her Keys about a person is hers. An inference about a person is not a relationship fact.
+      ['stated_by_her_check', `producer = 'user-action'`],
+    ],
+    indexes: [
+      ['one_per_child_uq', `ON public.person_contexts (household_id, profile_id, child_id) WHERE child_id IS NOT NULL`, true],
+      ['one_per_person_uq', `ON public.person_contexts (household_id, profile_id, person_id) WHERE person_id IS NOT NULL`, true],
+    ],
+  },
+
+  // -------------------------------------------------------- person task link (HK-FEATURE-13, People OS)
+  {
+    // "This Task is a follow-up I created from this person context." Created once, with the Task, and never edited. The Task must be
+    // one of the caller's OWN private tasks, and that is checked BEFORE any key is consulted (`guard_follow_up_task`), so a link can
+    // neither expose private context through a household-visible Task nor be used to probe for somebody else's private Task.
+    kind: 'personTaskLink', collection: 'personTaskLinks', table: 'person_task_links', mutable: false, provenance: 'standard', profileOnDelete: 'cascade', rank: 4,
+    migration: F13_PEOPLE_MIGRATION,
+    fields: [
+      { local: 'contextId', col: 'context_id', type: 'link', to: 'personContext' },
+      { local: 'followUp', type: 'ref', prefix: 'follow_up', kinds: ['task'], required: true, onDelete: 'cascade' },
+      { local: 'relation', col: 'relation', type: 'text' },
+    ],
+    updatable: [],
+    checks: [
+      ['relation_check', `relation = 'follow_up'`],
+      ['stated_by_her_check', `producer = 'user-action'`],
+    ],
+    indexes: [['one_link_per_task_uq', `ON public.person_task_links (household_id, profile_id, follow_up_task_id)`, true]],
+    triggers: [['follow_up_task_guard', 'BEFORE', 'INSERT', `public.guard_follow_up_task()`]],
   },
 ];
 

@@ -20,6 +20,7 @@ import { captureNeedsMeItem } from '../../src/domain/needsMe.ts';
 import { resolveOneMoveForToday } from '../../src/domain/oneMove.ts';
 import { completeOnboarding, toggleOnboardingOption } from '../../src/domain/onboarding.ts';
 import { validateAppState } from '../../src/domain/state.ts';
+import { addFollowUp, openPersonContext } from '../../src/domain/people.ts';
 import { createEmptyState } from '../../src/state/initialState.ts';
 import { DAY, MORNING, TZ } from './fixtures.mjs';
 
@@ -30,6 +31,7 @@ export const USER = { producer: 'user-action', artifactId: null, confidence: nul
 export const CLIENT_WRITTEN = [
   'sourceArtifact', 'externalReference', 'interpretation', 'authority', 'intent', 'decision', 'observation', 'person',
   'responsibility', 'dependency', 'recurrence', 'goal', 'systemStep', 'capacity', 'pattern', 'evidenceLink',
+  'personContext', 'personTaskLink',
 ];
 
 export function richHousehold({ withServerRows = false, withOneMove = true } = {}) {
@@ -118,6 +120,11 @@ export function richHousehold({ withServerRows = false, withOneMove = true } = {
   // A One Move's day is the SERVER's (it derives it from the account's timezone), so a household that is
   // going to be pushed to a live database leaves it out; the One Move journey covers it with today's date.
   if (withOneMove) s = resolveOneMoveForToday(s, at());
+
+  // ---- People OS (HK-FEATURE-13): her private context about Grandma June, and a follow-up Task created from it -------------
+  // After the One Move is decided, so this private Task cannot change which move the rest of the household's fixtures expect.
+  ({ state: s } = openPersonContext(s, at(), { kind: 'person', id: s.people[0].id }, { relationshipLabel: 'Grandma', organizationLabel: 'Maple Street Library', contextNote: 'Likes a call on Sunday mornings.' }));
+  ({ state: s } = addFollowUp(s, at(), { contextId: s.personContexts[0].id, draftKey: 'richhouseholdfollowupkey01', title: 'Ask about Sunday lunch', dueDate: '2026-09-26' }));
 
   if (withServerRows) {
     const intent = s.intents[0];

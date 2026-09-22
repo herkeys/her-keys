@@ -45,10 +45,11 @@ const ctx = () => {
 const withTask = (s, c, title = 'A task') => addTask(s, c, { title, categoryId: s.categories[0].id, scope: 'household', durationMinutes: 10, durationSource: 'user' });
 
 describe('HA-001 — the inventory of sync-capable canonical kinds', () => {
-  test('29 kinds: 27 are pushed, and exactly the two server-written kinds are pull-only', () => {
-    // 28 + `member` (a child; HK-FEATURE-05, owner checkpoint OC-01). The account holder's own member row is not a kind of ours.
-    assert.equal(SYNC_ENTITY_KINDS.length, 29);
-    assert.equal(PUSHABLE_KINDS.length, 27);
+  test('31 kinds: 29 are pushed, and exactly the two server-written kinds are pull-only', () => {
+    // 28 + `member` (a child; HK-FEATURE-05, owner checkpoint OC-01) + People OS's `personContext` and `personTaskLink`
+    // (HK-FEATURE-13, both owner-private and client-written). The account holder's own member row is not a kind of ours.
+    assert.equal(SYNC_ENTITY_KINDS.length, 31);
+    assert.equal(PUSHABLE_KINDS.length, 29);
     const pullOnly = SYNC_ENTITY_KINDS.filter((kind) => ALLOWED_OPS[kind].length === 0);
     assert.deepEqual([...pullOnly].sort(), ['execution', 'outcome']);
   });
