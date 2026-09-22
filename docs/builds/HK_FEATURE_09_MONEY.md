@@ -423,3 +423,24 @@ catch, so it is recorded here too.
   already exhaustively cover, and Money adds no sync code of its own.
 - MP-09-01 through MP-09-07 (missing primitives) are open by design, not oversight — see
   `docs/builds/HK_FEATURE_09_MISSING_PRIMITIVES.md`.
+
+---
+
+## Completion
+
+**Final test accounting (serial run, `--test-concurrency=1`, avoids the documented CPU-contention flakiness):**
+ENTRY (WAVE3_BASE) 2814/2814 application tests. EXIT **2878 tests, 2875 pass, 3 fail**. DELTA: **+64 tests, 0
+removed.** All 3 failures are `tests/meals/boundary.test.mjs` (F08's own protected-file/sibling-ancestry exit
+gate) — `[BV1-5]`, `[BM1-3]`, `[BL1-2]` — all one root cause (a temporally-scoped exit gate baselined before
+Wave 3 existed, now seeing a legitimate sibling branch and legitimate shared-file changes), fully explained
+above and in `HK_FEATURE_09_MISSING_PRIMITIVES.md` (`HK-INT-MONEY-BOUNDARY-01`), not F09 regressions.
+
+`tsc --noEmit`: clean throughout. Mutation testing: 6/6 caught. RLS attack matrix: 47/47 real-role checks pass.
+Schema fingerprint delta: exactly +1 column, +1 constraint, +2 column-grants; every other dimension unchanged.
+
+Final F09 HEAD: `e180e512c9d9b8aacae7bb602da5d6541b553082`, pushed to `origin` (non-force) and independently
+verified via `git ls-remote origin refs/heads/feature/09-money-os` — remote SHA matches exactly. Not merged into
+`integration/wave2-f01-f08`. Staging and Production received zero writes (no migration was applied anywhere but
+disposable, uniquely-named local scratch databases, all dropped afterward).
+
+**F09 MONEY OS: COMPLETE — READY FOR WAVE 3 INTEGRATION**
