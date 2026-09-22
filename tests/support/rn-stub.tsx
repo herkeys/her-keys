@@ -45,8 +45,11 @@ export const StyleSheet = {
   },
 };
 
+/** Enough of RN's AppState for the store provider to mount: it subscribes, and never fires. */
+export const AppState = { addEventListener: (_event: string, _handler: (state: string) => void) => ({ remove: () => {} }) };
+
 const rn = {
   View, Text, ScrollView, Pressable, TextInput, KeyboardAvoidingView, Modal,
-  SafeAreaView, ActivityIndicator, useSafeAreaInsets, Platform, StyleSheet,
+  SafeAreaView, ActivityIndicator, useSafeAreaInsets, Platform, StyleSheet, AppState,
 };
 export default rn;

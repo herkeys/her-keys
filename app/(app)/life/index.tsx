@@ -5,10 +5,14 @@ import { colors, spacing } from '../../../src/design/tokens';
 import { openTasksWithoutList } from '../../../src/domain/taskLists';
 import { NeedsMeQuickAdd } from '../../../src/features/life/NeedsMeQuickAdd';
 import { useLifeStatus } from '../../../src/features/life/useLifeStatus';
+import { useLifeInbox } from '../../../src/features/talk-it-out/capture/CaptureContext';
+import { copy } from '../../../src/features/talk-it-out/capture/copy';
+import { inboxRowValue } from '../../../src/features/talk-it-out/capture/viewModel';
 import { useHouseholdState } from '../../../src/store/AppStateProvider';
 
 export default function LifeHub() {
   const statuses = useLifeStatus();
+  const inbox = useLifeInbox();
   const { state, today } = useHouseholdState();
   const openNeedsMe = state.needsMe.filter((item) => item.status === 'open');
   const otherOpenTasks = openTasksWithoutList(state, today).length;
@@ -45,6 +49,14 @@ export default function LifeHub() {
                 },
               ]
             : []),
+          // Unresolved captures — what still needs a decision. Never says "nothing" while loading or recovering.
+          {
+            key: 'life-inbox',
+            label: copy.inbox.rowLabel,
+            value: inboxRowValue(inbox),
+            needsAttention: inbox.phase === 'items' && inbox.items.some((item) => item.urgency === 'now' || item.urgency === 'today'),
+            onPress: () => router.push('/life/inbox'),
+          },
           {
             key: 'needs-me',
             label: 'Needs Me',

@@ -1,21 +1,43 @@
-import { useRef, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
-import { AppText, Button, ConfidenceBadge, Overline, WhyThis } from '../../design/components';
-import { colors, interaction, radius, sizing, spacing, type as typeScale } from '../../design/tokens';
+import { router } from 'expo-router';
+import { Fragment, useRef, useState } from 'react';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { AppText, Button, ConfidenceBadge, InlineNotice, Overline, WhyThis } from '../../design/components';
+import { colors, radius, sizing, spacing, type as typeScale } from '../../design/tokens';
 import { useTalkItOut } from '../../store/TalkItOutContext';
 import type { TalkItOutMessage, TalkItOutStage } from '../../types';
+import { CaptureGroup } from './capture/CaptureCards';
+import { copy } from './capture/copy';
+
+/**
+ * A capture in the conversation. "Decide later" folds it away and leaves it in the Life Inbox; it is never
+ * dropped and never treated as decided.
+ */
+function CaptureEntry({ captureId }: { captureId: string }) {
+  const [parked, setParked] = useState(false);
+  if (!parked) return <CaptureGroup captureId={captureId} onLater={() => setParked(true)} />;
+  return (
+    <View style={styles.parked}>
+      <InlineNotice tone="waiting" title={copy.capture.parked} />
+      <View style={styles.parkedActions}>
+        <Button label={copy.capture.reopen} variant="secondary" size="sm" onPress={() => setParked(false)} />
+        <Button label={copy.capture.openInbox} variant="ghost" size="sm" onPress={() => router.push('/life/inbox')} />
+      </View>
+    </View>
+  );
+}
 
 export function TalkItOutView({ showHeader = false }: { showHeader?: boolean }) {
-  const { messages, quickReplies, canRestart, sendMessage, selectQuickReply, restart } = useTalkItOut();
+  const { messages, quickReplies, captures, canRestart, sendMessage, selectQuickReply, restart } = useTalkItOut();
   const [draft, setDraft] = useState('');
-  const [voiceNoteVisible, setVoiceNoteVisible] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   const frameRef = useRef<View>(null);
   const [screenTop, setScreenTop] = useState(0);
 
-  function handleSend() {
-    sendMessage(draft);
+  async function handleSend() {
+    const words = draft;
     setDraft('');
+    // If nothing could be saved, her words go back where she can send them again.
+    if ((await sendMessage(words)) === 'not-saved') setDraft(words);
   }
 
   // KeyboardAvoidingView compares the keyboard's position on screen with its
@@ -48,7 +70,14 @@ export function TalkItOutView({ showHeader = false }: { showHeader?: boolean }) 
           )}
 
           {messages.map((message, index) => (
-            <Bubble key={message.id} message={message} previous={messages[index - 1]} />
+            <Fragment key={message.id}>
+              <Bubble message={message} previous={messages[index - 1]} />
+              {captures
+                .filter((c) => c.afterMessageId === message.id)
+                .map((c) => (
+                  <CaptureEntry key={c.captureId} captureId={c.captureId} />
+                ))}
+            </Fragment>
           ))}
 
           {quickReplies.length > 0 && (
@@ -70,38 +99,26 @@ export function TalkItOutView({ showHeader = false }: { showHeader?: boolean }) 
         <View style={styles.composerWrap}>
           {canRestart && (
             <View style={styles.restartRow}>
-              <Button label="Start over" variant="ghost" size="sm" onPress={restart} />
+              <Button label={copy.composer.startOver} variant="ghost" size="sm" onPress={restart} />
             </View>
           )}
 
+          {/* No Voice control: there is no working transcription, and a control that does nothing is not shown (voice: DEFERRED). */}
           <View style={styles.composer}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Voice input"
-              accessibilityHint="Prototype only — Her Keys is not recording"
-              onPress={() => setVoiceNoteVisible((v) => !v)}
-              style={({ pressed }) => [styles.voiceButton, pressed ? styles.pressed : null]}
-            >
-              <AppText variant="metadata" color={colors.accent}>
-                Voice
-              </AppText>
-            </Pressable>
             <TextInput
               value={draft}
               onChangeText={setDraft}
-              placeholder={quickReplies.length > 0 ? 'Or answer in your own words…' : "What's going on?"}
+              placeholder={quickReplies.length > 0 ? copy.composer.placeholderAnswer : copy.composer.placeholderFirst}
               placeholderTextColor={colors.textTertiary}
               style={[typeScale.body, styles.input]}
               multiline
-              accessibilityLabel="Message to Her Keys"
+              accessibilityLabel={copy.composer.accessibilityLabel}
             />
-            <Button label="Send" size="sm" onPress={handleSend} disabled={!draft.trim()} />
+            <Button label={copy.composer.send} size="sm" onPress={handleSend} disabled={!draft.trim()} />
           </View>
 
           <AppText variant="statusLabel" color={colors.textTertiary} style={styles.disclaimer}>
-            {voiceNoteVisible
-              ? 'Voice arrives in a later build — nothing is being recorded. Typing works for now.'
-              : 'Prototype conversation — responses are scripted for this build.'}
+            {copy.composer.disclaimer}
           </AppText>
         </View>
       </KeyboardAvoidingView>
@@ -205,14 +222,8 @@ const styles = StyleSheet.create({
   },
   restartRow: { alignItems: 'flex-end', marginBottom: spacing.xs },
   composer: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm },
-  voiceButton: {
-    minHeight: sizing.minTouchTarget,
-    paddingHorizontal: spacing.lg,
-    justifyContent: 'center',
-    borderRadius: radius.pill,
-    backgroundColor: colors.accentSoft,
-  },
-  pressed: { opacity: interaction.pressedOpacity },
+  parked: { marginTop: spacing.md },
+  parkedActions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },
   input: {
     flex: 1,
     minHeight: sizing.minTouchTarget,
