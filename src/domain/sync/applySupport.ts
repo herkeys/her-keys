@@ -60,7 +60,7 @@ export function sameCloudValue(a: unknown, b: unknown): boolean {
   if (x === y) return true;
   if (x === null || y === null) return false;
   if (Array.isArray(x) && Array.isArray(y)) return x.length === y.length && x.every((v, i) => sameCloudValue(v, y[i]));
-  const looksLikeInstant = (v: unknown) => /^d{4}-d{2}-d{2}[ T]d/.test(String(v));
+  const looksLikeInstant = (v: unknown) => /^\d{4}-\d{2}-\d{2}[ T]\d/.test(String(v));
   if (looksLikeInstant(x) && looksLikeInstant(y)) return Date.parse(String(x)) === Date.parse(String(y));
   return String(x) === String(y);
 }
