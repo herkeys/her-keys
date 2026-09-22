@@ -4,6 +4,9 @@ import { apiReachable, clientFor } from './support/syncDevice.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = join(HERE, '..', '..');
+// The database the journeys run against: the private stack's scratch database when startJourneyStack() started one (the combined
+// "journeys"/full-suite run), or the shared default database when this journey runs on its own (`only=home`). See journey-composition.mjs.
+const STACK_DB = process.env.HERKEYS_LOCAL_STACK_DB ?? 'postgres';
 const TZ = 'America/Chicago';
 const NOW = Date.UTC(2026, 8, 21, 15, 0, 0);
 const TODAY = '2026-09-21';
@@ -33,9 +36,9 @@ export async function homeJourneys(check, psql) {
 
   const P = crypto.randomUUID();
   const Q = crypto.randomUUID();
-  psql('postgres', `INSERT INTO auth.users (id, email, aud, role) VALUES ('${P}','home-${P}@local.test','authenticated','authenticated'),('${Q}','home-${Q}@local.test','authenticated','authenticated') ON CONFLICT (id) DO NOTHING;`, { label: 'home fixture users' });
+  psql(STACK_DB, `INSERT INTO auth.users (id, email, aud, role) VALUES ('${P}','home-${P}@local.test','authenticated','authenticated'),('${Q}','home-${Q}@local.test','authenticated','authenticated') ON CONFLICT (id) DO NOTHING;`, { label: 'home fixture users' });
   const sql = (text) => {
-    const out = psql('postgres', `\\pset format unaligned\n\\pset tuples_only on\n${text}`, { label: 'home query' }).out;
+    const out = psql(STACK_DB, `\\pset format unaligned\n\\pset tuples_only on\n${text}`, { label: 'home query' }).out;
     return out.split('\n').map((line) => line.trim()).filter((line) => line !== '' && !/^Output format|^Tuples only/.test(line)).join('|');
   };
 

@@ -5,6 +5,9 @@ import { anonClient, apiReachable, clientFor } from './support/syncDevice.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = join(HERE, '..', '..');
+// The database the journeys run against: the private stack's scratch database when startJourneyStack() started one (the combined
+// "journeys"/full-suite run), or the shared default database when this journey runs on its own (`only=kids`). See journey-composition.mjs.
+const STACK_DB = process.env.HERKEYS_LOCAL_STACK_DB ?? 'postgres';
 
 /**
  * HK-FEATURE-05 — Kids OS against REAL PostgreSQL, PostgREST, RLS and the real claim RPC.
@@ -31,13 +34,13 @@ export async function kidsJourneys(check, psql) {
   const P = crypto.randomUUID(); // the owner
   const Q = crypto.randomUUID(); // a second member of the same household
   const R = crypto.randomUUID(); // an unrelated account
-  psql('postgres', `INSERT INTO auth.users (id, email, aud, role) VALUES
+  psql(STACK_DB, `INSERT INTO auth.users (id, email, aud, role) VALUES
       ('${P}','kids-${P}@local.test','authenticated','authenticated'),
       ('${Q}','kids-${Q}@local.test','authenticated','authenticated'),
       ('${R}','kids-${R}@local.test','authenticated','authenticated')
     ON CONFLICT (id) DO NOTHING;`, { label: 'kids fixture users' });
   const sql = (text) => {
-    const out = psql('postgres', `\\pset format unaligned\n\\pset tuples_only on\n${text}`, { label: 'kids query' }).out;
+    const out = psql(STACK_DB, `\\pset format unaligned\n\\pset tuples_only on\n${text}`, { label: 'kids query' }).out;
     return out.split('\n').map((line) => line.trim()).filter((line) => line !== '' && !/^Output format|^Tuples only/.test(line)).join('|');
   };
 
@@ -205,7 +208,7 @@ export async function kidsJourneys(check, psql) {
   const ownerWrite = await owner.from('tasks').update({ notes: 'the owner may' }).eq('id', taskCloudId).select('id');
   check('kids: RLS OWNER - reads every child-linked table and may change her own task', ownerSees.every((s) => !s.endsWith(':0')) && (ownerWrite.data ?? []).length === 1, ownerSees.join(' '));
 
-  psql('postgres', `INSERT INTO public.profiles (id, timezone) VALUES ('${Q}', 'America/Chicago') ON CONFLICT (id) DO NOTHING;
+  psql(STACK_DB, `INSERT INTO public.profiles (id, timezone) VALUES ('${Q}', 'America/Chicago') ON CONFLICT (id) DO NOTHING;
     INSERT INTO public.household_members (household_id, local_id, profile_id, member_type, role, display_name, scope) VALUES ('${household}', 'user-2', '${Q}', 'adult', 'member', NULL, 'personal');`, { label: 'kids second member' });
   const second = clientFor(Q);
   const memberSees = {};
@@ -284,7 +287,7 @@ export async function kidsJourneys(check, psql) {
     JSON.stringify(digest(state())) === JSON.stringify(digest(state(b))));
 
   // A rename made where the child is held (the server) is the SAME child everywhere: same id, new name in place, no duplicate.
-  psql('postgres', `UPDATE public.household_members SET display_name='Lately' WHERE household_id='${household}' AND local_id='${late}';`, { label: 'kids server-side rename' });
+  psql(STACK_DB, `UPDATE public.household_members SET display_name='Lately' WHERE household_id='${household}' AND local_id='${late}';`, { label: 'kids server-side rename' });
   const kidsNow = childCount(household);
   for (const d of [a, b]) {
     await d.app.syncRuntime.request('manual');
@@ -350,7 +353,7 @@ export async function kidsJourneys(check, psql) {
   // Account switching: an account's pending child is never uploaded under another account.
   const T = crypto.randomUUID();
   const V = crypto.randomUUID();
-  psql('postgres', `INSERT INTO auth.users (id, email, aud, role) VALUES ('${T}','kids-${T}@local.test','authenticated','authenticated'), ('${V}','kids-${V}@local.test','authenticated','authenticated') ON CONFLICT (id) DO NOTHING;`, { label: 'kids switch users' });
+  psql(STACK_DB, `INSERT INTO auth.users (id, email, aud, role) VALUES ('${T}','kids-${T}@local.test','authenticated','authenticated'), ('${V}','kids-${V}@local.test','authenticated','authenticated') ON CONFLICT (id) DO NOTHING;`, { label: 'kids switch users' });
   const tSent = [];
   const tGate = { offline: false, refuse: null, loseAck: 0 };
   const tDev = await device(m, { account: T, sent: tSent, gate: tGate });
@@ -374,7 +377,7 @@ export async function kidsJourneys(check, psql) {
 
   // Demo and local-only households never sync a child.
   const W = crypto.randomUUID();
-  psql('postgres', `INSERT INTO auth.users (id, email, aud, role) VALUES ('${W}','kids-${W}@local.test','authenticated','authenticated') ON CONFLICT (id) DO NOTHING;`, { label: 'kids demo user' });
+  psql(STACK_DB, `INSERT INTO auth.users (id, email, aud, role) VALUES ('${W}','kids-${W}@local.test','authenticated','authenticated') ON CONFLICT (id) DO NOTHING;`, { label: 'kids demo user' });
   const dSent = [];
   const demoDev = await device(m, { account: W, sent: dSent, mode: 'demo' });
   const demoIn = await demoDev.signIn();
@@ -433,7 +436,7 @@ export async function kidsJourneys(check, psql) {
 
   // ---- 10. A large household: 450 child-linked tasks, above the queue ceiling (400) and two pull chunks -----------------------------------
   const S = crypto.randomUUID();
-  psql('postgres', `INSERT INTO auth.users (id, email, aud, role) VALUES ('${S}','kids-${S}@local.test','authenticated','authenticated') ON CONFLICT (id) DO NOTHING;`, { label: 'kids bulk user' });
+  psql(STACK_DB, `INSERT INTO auth.users (id, email, aud, role) VALUES ('${S}','kids-${S}@local.test','authenticated','authenticated') ON CONFLICT (id) DO NOTHING;`, { label: 'kids bulk user' });
   const big = await device(m, { account: S, sent });
   await mutate(big, (s) => ({ ...s, oneMoves: [WITHHELD_MOVE] }));
   for (const name of ['Bo', 'Cy', 'Di', 'Ed', 'Flo']) await K(big, (s, c) => mut.addChildToHousehold(s, c, { displayName: name, birthDate: '2017-04-04' }));
