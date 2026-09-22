@@ -42,11 +42,15 @@ export const V4_ROW_ADDITIONS = {
  */
 export const UNKNOWN_FACET = (key) => (key === 'automationMode' ? 'manual' : key === 'slot' ? 'unspecified' : key === 'status' ? 'active' : null);
 
-/** Roots v4 introduced. */
+/**
+ * Roots v4 introduced. The last two are Feature 11's (Me / Rebuild), added to the v4 shape later with a `[]` default rather than a
+ * new envelope version, so no earlier version ever stored them either.
+ */
 export const V4_ROOTS = [
   'migrationLineage', 'sourceArtifacts', 'externalReferences', 'interpretations', 'observations', 'authorities',
   'intents', 'decisions', 'executions', 'outcomes', 'people', 'responsibilities', 'dependencies', 'recurrences',
   'goals', 'systemSteps', 'capacity', 'patterns', 'evidenceLinks',
+  'rebuildFocuses', 'rebuildFocusLinks',
 ];
 
 const without = (row, keys) => {

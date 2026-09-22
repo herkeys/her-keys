@@ -274,3 +274,51 @@ an account is bound reaches the cloud through the ordinary post-binding seed, li
 - **Recent Progress**: completed linked Tasks, and a linked Goal's recorded `completed` observation; System step completion is NOT
   PRESENT in the canonical model → that source is SAFE-UNAVAILABLE.
 - **Talk It Out → RebuildFocus**: PENDING WAVE 3 INTEGRATION; the interpreter is not modified.
+
+Mini-gate after M0/M1: `feature/11-me-rebuild-os` @ `8e770a2`; working tree: M2 work in progress (uncommitted), nothing else.
+
+---
+
+## F11-M2 — Local model, commands, persistence, lifecycle
+
+### What was built
+
+| File | Role |
+|---|---|
+| `src/domain/rebuild/schema.ts` (new) | `RebuildFocusSchema`, `RebuildFocusLinkSchema` (strict; trimmed title 1..200; optional trimmed note 1..500; `state` active/paused/archived; `scope: 'personal'`; target `refOf(['task','goal','system','event'])`; `next_action ⇒ task`). |
+| `src/domain/rebuild/commands.ts` (new) | Pure transitions: `addRebuildFocus`, `renameRebuildFocus`, `setRebuildFocusNote`, `pauseRebuildFocus`/`resumeRebuildFocus`/`archiveRebuildFocus` (`setRebuildFocusState`), `linkToFocus`, `unlinkFromFocus`, `addNextStep`; `focusInputProblem` for forms. |
+| `src/domain/rebuild/read.ts` (new) | `orderedFocuses` (Addendum K), `liveLinksOf`, `openNextActions` / `hasOpenNextAction` (only a live `next_action` link to an `open` Task counts). |
+| `src/domain/state.ts` (shared) | `AppState.rebuildFocuses` (max 200) and `AppState.rebuildFocusLinks` (max 5000), both `.default([])`; integrity: unique ids, link → existing Focus, link → existing typed target, one live link per (Focus, target). |
+| `src/state/initialState.ts`, `src/data/seed/demoHousehold.ts` (shared) | the two empty collections in the typed literals. The demo household seeds NO Focus (it seeds no Goal either), so demo mode shows the V1 empty state. |
+| `tests/support/legacyShapes.mjs` (shared test infrastructure) | `V4_ROOTS` gains the two F11 roots, so a "what v1–v3 stored" fixture derived from the live shape does not carry them. |
+
+**Persistence without an envelope bump.** The two collections are `.default([])`, the precedent F08 set for `MealPlanEntry.slot` and
+`status`: a household saved before F11 still validates as envelope v4 and loads with no Focuses (tested). `src/persistence/**` is
+untouched.
+
+**Shared-file changes, each with its reason** (for the Wave 3 integration review; F11 did not edit the F08 scan's allowlist):
+`src/domain/state.ts` (the two roots + integrity), `src/state/initialState.ts` and `src/data/seed/demoHousehold.ts` (typed literals),
+`tests/support/legacyShapes.mjs` (historical-shape fixture plumbing).
+
+### Tests — `tests/rebuild/focus.model.test.mjs` (17 tests, 6 suites; 17/17)
+
+Title-only Focus valid and creates no Task/Goal/System/Event/link · no score/progress/streak/priority/completion field, no
+completed/failed/behind/abandoned state · trimmed storage, blank refused, note bounded at 500 · duplicate titles allowed, replayed save
+of one id is one Focus · demo household → `demo-seed` · rename keeps id, links and linked Task · note set/change/clear · PAUSED DOES
+NOT MEAN FAILED (Task stays open, links untouched) · ARCHIVED DOES NOT MEAN FAILED (kept, off-surface, history kept, resumable) · TASK
+COMPLETED DOES NOT MEAN FOCUS COMPLETED; completed and archived Tasks are inert for "open next action" · Addendum K order · link
+validation (next action must be a Task; missing target; archived Focus; duplicate) · unlink is `removed`, nothing else changes ·
+load-time integrity refuses orphan/dangling/duplicate links · relaunch through the real store + in-memory storage recovers the same
+Focus · a pre-F11 save loads with no Focuses · pause / rename / archive each survive relaunch while the Task stays open.
+
+### Test accounting (M2 checkpoint)
+
+```
+tsc --noEmit                               -> exit 0
+full app suite (serial)                    -> ℹ tests 2831  ℹ suites 620  ℹ pass 2825  ℹ fail 6   (before the legacyShapes fix)
+legacyCatalogRemediation + persistence + migrationV3ToV4, after the fix -> 79/79
+```
+
+The four transient failures were one cause (the historical-shape helper did not strip F11's new roots, so the FROZEN v1–v3
+validators correctly refused the "legacy" fixture); fixed in the fixture helper, not in any validator. The remaining two failures are
+the pre-existing F08 scan tests (ENTRY).

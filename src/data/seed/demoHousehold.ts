@@ -164,5 +164,7 @@ export function materializeDemoState({ anchorDate, timeZone }: { anchorDate: Loc
     capacity: null,
     patterns: [],
     evidenceLinks: [],
+    rebuildFocuses: [],
+    rebuildFocusLinks: [],
   };
 }
