@@ -54,6 +54,43 @@ const matches = (f) => (arg === '--all' ? true : arg ? f.startsWith(arg) : f.inc
 let failures = 0;
 let passes = 0;
 
+// `journey`: the Life Admin journey over REAL HTTP, against a private stack with F12-only names (its own scratch database and its
+// own PostgREST container on its own ports), so it can never drop or migrate another session's database, stack or the shared one.
+if (arg === 'journey') {
+  process.env.HERKEYS_PRIVATE_DB = 'f12_stack';
+  process.env.HERKEYS_PRIVATE_REST_NAME = 'f12_postgrest';
+  process.env.HERKEYS_PRIVATE_REST_PORT = process.env.HERKEYS_PRIVATE_REST_PORT ?? '54397';
+  process.env.HERKEYS_PRIVATE_API_PORT = process.env.HERKEYS_PRIVATE_API_PORT ?? '54398';
+  const { startPrivateStack } = await import('./private-stack.mjs');
+  const stack = await startPrivateStack();
+  process.env.HERKEYS_LOCAL_API_URL = stack.apiUrl;
+  process.env.HERKEYS_LOCAL_STACK_DB = stack.database;
+  const check = (name, condition, detail = '') => {
+    if (condition) passes += 1;
+    else failures += 1;
+    console.log(`  ${condition ? 'ok  ' : 'FAIL'}  ${name}${!condition && detail ? `  — ${detail}` : ''}`);
+  };
+  const psqlIn = (db, sql, { expectFailure = false, label = '' } = {}) => {
+    try {
+      const out = docker(['exec', '-i', CONTAINER, 'psql', '-v', 'ON_ERROR_STOP=1', '-U', 'postgres', '-d', db, '-f', '-'], sql);
+      if (expectFailure) return { ok: false, out: `${label}: expected failure, but the statement succeeded` };
+      return { ok: true, out };
+    } catch (err) {
+      const text = `${err.stdout ?? ''}${err.stderr ?? ''}`;
+      if (expectFailure) return { ok: false, out: text };
+      throw new Error(`${label || db} failed:\n${text}`);
+    }
+  };
+  try {
+    const { lifeAdminJourneys } = await import('./journey-life-admin.mjs');
+    await lifeAdminJourneys(check, psqlIn);
+  } finally {
+    await stack.stop();
+  }
+  console.log(`\nF12 journey: ${passes} passed, ${failures} failed (${passes + failures} checks)`);
+  process.exit(failures === 0 ? 0 : 1);
+}
+
 admin(`DROP DATABASE IF EXISTS ${DB} WITH (FORCE);`);
 admin(`CREATE DATABASE ${DB};`);
 psql(readFileSync(join(HERE, 'helpers', '00-auth-stub.sql'), 'utf8'), 'auth stub');

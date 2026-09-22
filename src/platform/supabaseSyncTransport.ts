@@ -119,9 +119,9 @@ export function createSupabaseSyncTransport(client: SupabaseClient): SyncTranspo
  * devices, not a validation error, and treating it as one would hide a real
  * disagreement behind a generic failure.
  */
-function failureFrom(error: PostgrestError): TransportFailure {
+export function failureFrom(error: Pick<PostgrestError, 'code' | 'message' | 'details'>): TransportFailure {
   const code = error.code ?? null;
-  const detail = [error.message, error.details].filter(Boolean).join(' | ').slice(0, 400);
+  const detail = [error.message, error.details ? withoutRowValues(error.details) : null].filter(Boolean).join(' | ').slice(0, 400);
 
   if (!code) return { kind: 'failure', failure: 'unreachable', detail, code };
   if (code === '42501' || code === 'PGRST301' || code === '28000') {
@@ -157,6 +157,17 @@ const DOMAIN_INVARIANTS = [
   'source_artifacts_digest_uq',
   'system_steps_system_position_key',
 ];
+
+/**
+ * PostgreSQL answers a CHECK or NOT NULL refusal with the WHOLE refused row in its DETAIL ("Failing row contains (...)"). That row
+ * is her content — a task note, a Life Admin reference number, a location hint — and this detail becomes DURABLE sync evidence, so
+ * the values are withheld and only the fact of the refusal is kept (HK-FEATURE-12). The message still names the constraint, which
+ * is all a person resolving it, or the classifier above, needs.
+ */
+function withoutRowValues(details: string): string {
+  const at = details.indexOf('Failing row contains');
+  return at < 0 ? details : `${details.slice(0, at)}Failing row contains (values withheld)`;
+}
 
 function isDomainInvariant(detail: string): boolean {
   return DOMAIN_INVARIANTS.some((name) => detail.includes(name));

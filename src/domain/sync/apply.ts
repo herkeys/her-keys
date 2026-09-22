@@ -238,6 +238,48 @@ export function applyCloudRow(
         },
       };
 
+    case 'lifeRecord':
+      // HK-FEATURE-12. Arrives meaning exactly what it meant when it was pushed. A child this device cannot resolve keeps the raw
+      // uuid, so the integrity gate names it and the cursor does not advance; it is never dropped to "about no one".
+      return {
+        ...state,
+        lifeRecords: upsert(state.lifeRecords, {
+          id: localId,
+          title: str(row.title),
+          kind: str(row.record_kind) as never,
+          typeName: strOrNull(row.type_name),
+          issuerName: strOrNull(row.issuer_name),
+          referenceNumber: strOrNull(row.reference_number),
+          issuedOn: strOrNull(row.issued_on),
+          expiresOn: strOrNull(row.expires_on),
+          renewBy: strOrNull(row.renew_by),
+          reviewOn: strOrNull(row.review_on),
+          locationHint: strOrNull(row.location_hint),
+          note: strOrNull(row.note),
+          subjectMemberId: strOrNull(row.subject_member_id) === null ? null : (resolve(row.subject_member_id as string) ?? str(row.subject_member_id)),
+          status: str(row.status) as never,
+          archivedAt: instant(row.archived_at),
+          createdAt: instantOr(row.origin_created_at, str(row.origin_created_at)),
+          updatedAt: instantOr(row.origin_updated_at, str(row.origin_updated_at)),
+          provenance: provenanceFromRow(row, resolve),
+          scope: 'personal',
+        }),
+      };
+
+    case 'lifeRecordLink':
+      return {
+        ...state,
+        lifeRecordLinks: upsert(state.lifeRecordLinks, {
+          id: localId,
+          lifeRecordId: resolve(row.life_record_id as string) ?? str(row.life_record_id),
+          taskId: resolve(row.task_id as string) ?? str(row.task_id),
+          relation: str(row.relation) as never,
+          createdAt: instantOr(row.origin_created_at, str(row.origin_created_at)),
+          provenance: provenanceFromRow(row, resolve),
+          scope: 'personal',
+        }),
+      };
+
     case 'action':
       // The ledger is immutable history. A pulled action is added if this device
       // has never seen it and is otherwise left exactly alone: it is never

@@ -36,6 +36,8 @@ const IR01 = join(REPO, 'supabase', 'migrations', '20260921120000_ir01_duration_
 const F08 = join(REPO, 'supabase', 'migrations', '20260921160000_f08_meal_slot_and_status.sql');
 // HK-FEATURE-05 closeout repair (OC-01): additive, follows F08 and never edits it.
 const F05 = join(REPO, 'supabase', 'migrations', '20260921190000_f05_add_child_after_binding.sql');
+// HK-FEATURE-12 (Life Admin / Documents): additive, follows F05 and never edits it. Two owner-private tables.
+const F12 = join(REPO, 'supabase', 'migrations', '20260922180000_f12_life_records.sql');
 const AUTH_STUB = join(HERE, 'helpers', '00-auth-stub.sql');
 const TEST_HELPERS = join(HERE, 'helpers', '01-test-helpers.sql');
 const TEST_DEFAULTS = join(HERE, 'helpers', '05-test-defaults.sql');
@@ -71,6 +73,7 @@ const applyBuild4 = (db, opts = {}) => psqlFile(db, BUILD4, opts);
 const applyIr01 = (db, opts = {}) => psqlFile(db, IR01, opts);
 const applyF08 = (db, opts = {}) => psqlFile(db, F08, opts);
 const applyF05 = (db, opts = {}) => psqlFile(db, F05, opts);
+const applyF12 = (db, opts = {}) => psqlFile(db, F12, opts);
 
 function admin(sql) {
   return execFileSync(
@@ -111,8 +114,17 @@ function envA() {
   applyIr01('b4_env_a', { label: 'ENV A ir01' });
   applyF08('b4_env_a', { label: 'ENV A f08' });
   applyF05('b4_env_a', { label: 'ENV A f05' });
+  applyF12('b4_env_a', { label: 'ENV A f12' });
 
   check('ENV A: Build 4 migration applies on an empty surface', true);
+  check('ENV A: the additive F12 migration (Life Admin records) applies on top of all of them (fresh install)', true);
+  check('ENV A: the F12 tables are owner-private: RLS on, no delete policy, anon holds nothing, scope pinned to personal',
+        scalar('b4_env_a', "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relname in ('life_records','life_record_task_links') and c.relrowsecurity;") === '2'
+        && scalar('b4_env_a', "select count(*) from pg_policies where schemaname='public' and tablename in ('life_records','life_record_task_links') and cmd='DELETE';") === '0'
+        && scalar('b4_env_a', "select count(*) from information_schema.role_table_grants where table_schema='public' and table_name in ('life_records','life_record_task_links') and grantee in ('anon','PUBLIC');") === '0'
+        && scalar('b4_env_a', "select count(*) from pg_constraint where conname in ('life_records_scope_check','life_record_task_links_scope_check');") === '2');
+  check('ENV A: the F12 link guard runs as the CALLER (SECURITY INVOKER), pinned to an empty search_path, not executable by anon',
+        scalar('b4_env_a', "select (not p.prosecdef)::text || '/' || coalesce(array_to_string(p.proconfig, ','), 'none') || '/' || has_function_privilege('anon', p.oid, 'EXECUTE')::text from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='private' and p.proname='guard_life_record_task_link';") === 'true/search_path=""/false');
   check('ENV A: the additive IR01 migration applies on top of it (fresh install)', true);
   check('ENV A: the additive F08 migration applies on top of IR01 (fresh install)', true);
   check('ENV A: meal_plan_entries.meal_slot and .status are text NOT NULL defaulting to unspecified and active (a legacy row is a live plan with no stated slot)',
@@ -129,7 +141,7 @@ function envA() {
         scalar('b4_env_a', "select count(*) || '/' || string_agg(cmd, ',') from pg_policies where schemaname='public' and tablename='household_members';") === '1/SELECT');
   check('ENV A: tasks.duration_source is nullable text with no default (an unstated source is unknown)',
         scalar('b4_env_a', "select data_type || '/' || is_nullable || '/' || coalesce(column_default, 'none') from information_schema.columns where table_schema='public' and table_name='tasks' and column_name='duration_source';") === 'text/YES/none');
-  check('ENV A: 34 application tables', scalar('b4_env_a', "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r';") === '34');
+  check('ENV A: 36 application tables (the 34 of Build 4 and the 2 of F12)', scalar('b4_env_a', "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r';") === '36');
   // The test-only producer default (helpers/05) must never be in the shipped schema: a writer that does not say where a row came from is refused.
   check('ENV A: the shipped schema gives `producer` NO default on any of the nine synced content tables',
         scalar('b4_env_a', "select count(*) from information_schema.columns where table_schema='public' and column_name='producer' and column_default is not null;") === '0');
@@ -226,6 +238,7 @@ function envC(only) {
   applyIr01('b4_env_c', { label: 'ENV C ir01 (while empty)' });
   applyF08('b4_env_c', { label: 'ENV C f08 (while empty)' });
   applyF05('b4_env_c', { label: 'ENV C f05 (while empty)' });
+  applyF12('b4_env_c', { label: 'ENV C f12 (while empty)' });
   check('ENV C: migrated while empty, before any fixture exists', true);
   // Test-environment convenience ONLY: see the header of helpers/05-test-defaults.sql.
   psqlFile('b4_env_c', TEST_DEFAULTS, { label: 'ENV C test defaults' });
@@ -362,10 +375,24 @@ function migrationQuality() {
   // Exactly one Build 4 shipping migration in the tree.
   const migs = readdirSync(join(REPO, 'supabase', 'migrations')).filter((f) => f.endsWith('.sql'));
   const after = migs.filter((f) => f.split('_')[0] > '20260919230054');
-  check('quality: exactly ONE Build 4 shipping migration plus the ONE additive IR01 repair, the ONE additive F08 (meal slot/status) and the ONE additive F05 (child after binding) migration after the baseline',
-        after.length === 4 && after[0] === '20260919231500_build4_cloud_schema.sql' && after[1] === '20260921120000_ir01_duration_source_and_claim_v3.sql'
-        && after[2] === '20260921160000_f08_meal_slot_and_status.sql' && after[3] === '20260921190000_f05_add_child_after_binding.sql', after.join(', '));
-  check('quality: their timestamps sort strictly after the baseline, in order', after.every((f) => f.split('_')[0] > '20260919230054') && after[0] < after[1] && after[1] < after[2] && after[2] < after[3], after.join(' < '));
+  check('quality: exactly ONE Build 4 shipping migration plus the ONE additive IR01 repair, the ONE additive F08 (meal slot/status), the ONE additive F05 (child after binding) and the ONE additive F12 (Life Admin records) migration after the baseline',
+        after.length === 5 && after[0] === '20260919231500_build4_cloud_schema.sql' && after[1] === '20260921120000_ir01_duration_source_and_claim_v3.sql'
+        && after[2] === '20260921160000_f08_meal_slot_and_status.sql' && after[3] === '20260921190000_f05_add_child_after_binding.sql'
+        && after[4] === '20260922180000_f12_life_records.sql', after.join(', '));
+  check('quality: their timestamps sort strictly after the baseline, in order', after.every((f) => f.split('_')[0] > '20260919230054') && after[0] < after[1] && after[1] < after[2] && after[2] < after[3] && after[3] < after[4], after.join(' < '));
+  const f12Sql = readFileSync(F12, 'utf8');
+  const f12Code = f12Sql.replace(/\$fn\$[\s\S]*?\$fn\$/g, '').replace(/--.*$/gm, '');
+  check('quality: the F12 migration is additive - it drops no table or column, deletes or rewrites no row, and truncates nothing',
+        !/(^|\n)\s*(DROP TABLE|DROP COLUMN|TRUNCATE|DELETE FROM|UPDATE public\.|INSERT INTO)/i.test(f12Code));
+  check('quality: the F12 migration alters only its own two tables and the change_log entity list (no shared canonical table changes)',
+        (f12Code.match(/ALTER TABLE public\.(\w+)/g) ?? []).every((s) => /public\.(life_records|life_record_task_links|change_log)$/.test(s))
+        && (f12Code.match(/ALTER TABLE public\.change_log DROP CONSTRAINT (\w+)/g) ?? []).join() === 'ALTER TABLE public.change_log DROP CONSTRAINT change_log_entity_table_check');
+  check('quality: the F12 migration creates exactly its two tables and touches exactly two functions (its link guard and the replaced sync_push)',
+        (f12Code.match(/CREATE TABLE public\.(\w+)/g) ?? []).join() === 'CREATE TABLE public.life_records,CREATE TABLE public.life_record_task_links'
+        && (f12Sql.match(/^CREATE (OR REPLACE )?FUNCTION [\w.]+/gm) ?? []).map((s) => s.replace(/^CREATE (OR REPLACE )?FUNCTION /, '')).join(',') === 'private.guard_life_record_task_link,public.sync_push');
+  check('quality: the F12 migration is pinned to LF, so its function digests are the same on every checkout', !f12Sql.includes(String.fromCharCode(13)));
+  check('quality: the F12 migration opens and closes its own transaction and ends with the fail-closed assertion',
+        /^\s*BEGIN;\s*$/m.test(f12Sql) && f12Sql.trim().endsWith('SELECT private.assert_app_schema_secured();\n\nCOMMIT;'));
   const ir01Sql = readFileSync(IR01, 'utf8');
   check('quality: the IR01 migration is additive - it drops no table, column or data and rewrites no row',
         !/(^|\n)\s*(DROP TABLE|DROP COLUMN|TRUNCATE|DELETE FROM|UPDATE public\.)/i.test(ir01Sql.replace(/\$fn\$[\s\S]*?\$fn\$/g, '').replace(/--.*$/gm, '')));
@@ -597,6 +624,41 @@ function envD() {
           COMMIT;`, { expectFailure: true, label: 'ENV D stranger add child' }).out.includes('not a member of household')
         && scalar(db, "select count(*) from public.household_members where local_id = 'child-evil';") === '0');
   check('ENV D: the fail-closed assertion still passes after F05', psql(db, 'SELECT private.assert_app_schema_secured();').ok);
+
+  // ---- The THIRD additive upgrade, on the same populated database: F12 (Life Admin records). Two new owner-private tables, one
+  // guard function, sync_push replaced; nothing that already exists may be lost or rewritten.
+  const changeLogCount = () => scalar(db, 'select count(*) from public.change_log;');
+  const preF12 = { census: census(), members: memberDigest(), tasks: digest(), log: changeLogCount() };
+  applyF12(db, { label: 'ENV D f12 upgrade' });
+  check('ENV D: the additive F12 migration applies to the populated, already-upgraded database (no interlock, no abort)', true);
+  check('ENV D: F12 lost nothing - every table keeps its row count, and the change log keeps every pointer',
+        census() === preF12.census && changeLogCount() === preF12.log, `${preF12.census} -> ${census()}; log ${preF12.log} -> ${changeLogCount()}`);
+  check('ENV D: F12 rewrote no existing row (every household member and every task is byte-identical)', memberDigest() === preF12.members && digest() === preF12.tasks);
+  check('ENV D: the new tables start empty', scalar(db, 'select (select count(*) from public.life_records) + (select count(*) from public.life_record_task_links);') === '0');
+  const pushRecord = (sub, house, localId) => scalar(db, `
+    BEGIN;
+    SET LOCAL ROLE authenticated;
+    SET LOCAL request.jwt.claims = '{"sub":"${sub}"}';
+    SELECT public.sync_push('life_records', 'd4000000-0000-4000-8000-0000000000e1'::uuid,
+      jsonb_build_object('household_id','${house}','local_id','${localId}','profile_id','${sub}','title','Passport','record_kind','credential','status','active',
+        'scope','personal','producer','user-action','origin_created_at',now(),'origin_updated_at',now())) ->> 'status';
+    COMMIT;`).split('\n').map((line) => line.trim()).find((line) => ['created', 'already_exists', 'local_id_collision'].includes(line));
+  check('ENV D: after F12 the owner of the populated household keeps a private record through sync_push', pushRecord(uid, uidHouse, 'life-record-1') === 'created');
+  check('ENV D: ...a retry from the same install answers already_exists and adds no second record',
+        pushRecord(uid, uidHouse, 'life-record-1') === 'already_exists'
+        && scalar(db, `select count(*) from public.life_records where household_id = '${uidHouse}' and local_id = 'life-record-1';`) === '1');
+  check('ENV D: ...and an unrelated account can neither read it nor write into that household',
+        scalar(db, `BEGIN; SET LOCAL ROLE authenticated; SET LOCAL request.jwt.claims = '{"sub":"${other}"}'; SELECT count(*) FROM public.life_records; COMMIT;`).split('\n').map((l) => l.trim()).includes('0')
+        && psql(db, `
+          BEGIN;
+          SET LOCAL ROLE authenticated;
+          SET LOCAL request.jwt.claims = '{"sub":"${other}"}';
+          SELECT public.sync_push('life_records', 'd4000000-0000-4000-8000-0000000000e2'::uuid,
+            jsonb_build_object('household_id','${uidHouse}','local_id','evil','profile_id','${other}','title','X','record_kind','other','status','active',
+              'scope','personal','producer','user-action','origin_created_at',now(),'origin_updated_at',now()));
+          COMMIT;`, { expectFailure: true, label: 'ENV D stranger record' }).out.includes('not a member of household')
+        && scalar(db, "select count(*) from public.life_records where local_id = 'evil';") === '0');
+  check('ENV D: the fail-closed assertion still passes after F12', psql(db, 'SELECT private.assert_app_schema_secured();').ok);
 }
 
 // ---------------------------------------------------------------- ENV E -----
@@ -780,6 +842,9 @@ try {
     await kidsJourneys(check, psql);
     const { homeJourneys } = await import(`file://${join(HERE, 'journey-home.mjs')}`);
     await homeJourneys(check, psql);
+    // HK-FEATURE-12: Life Admin records, their Tasks and links over real HTTP, including a same-household member's hydration.
+    const { lifeAdminJourneys } = await import(`file://${join(HERE, 'journey-life-admin.mjs')}`);
+    await lifeAdminJourneys(check, psql);
   }
   if (privateStack) await privateStack.stop();
 } catch (err) {

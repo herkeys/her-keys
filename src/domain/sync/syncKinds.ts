@@ -28,6 +28,8 @@ const CORE_COLLECTION: Partial<Record<SyncEntityKind, keyof AppState>> = {
   needsMe: 'needsMe',
   oneMove: 'oneMoves',
   action: 'actions',
+  lifeRecord: 'lifeRecords',
+  lifeRecordLink: 'lifeRecordLinks',
 };
 
 const FOUNDATION_BY_KIND = new Map<string, FoundationSpec>(FOUNDATION_SPECS.map((spec) => [spec.kind, spec]));

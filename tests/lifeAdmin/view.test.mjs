@@ -155,6 +155,8 @@ describe('F12 Needs Review — bounded and ordered (addendum I)', () => {
     let state = make([{ id: 'r1', title: 'Registration' }]);
     state = addLifeRecordTask(state, at(), { recordId: 'r1', taskId: 'task-x', linkId: 'link-x', relation: 'follow_up', title: 'Call', categoryId: 'cat-home' }).state;
     const purged = { ...state, tasks: state.tasks.filter((task) => task.id !== 'task-x') };
+    assert.doesNotThrow(() => buildRecordDetail(purged, TODAY, 'r1'), 'the detail survives a Task that is gone');
+    assert.doesNotThrow(() => buildLifeAdminView(purged, TODAY), 'and so does the home');
     const detail = buildRecordDetail(purged, TODAY, 'r1');
     assert.deepEqual(detail.tasks.map((task) => [task.title, task.standing, task.open]), [[null, COPY.taskUnavailable, false]]);
     assert.equal(view(purged).records[0].openTaskText, null);

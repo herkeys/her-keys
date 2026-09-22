@@ -11,8 +11,9 @@
 \pset format unaligned
 \pset tuples_only on
 
-SELECT CASE WHEN count(*) = 34 THEN 'PASS' ELSE 'FAIL' END
-       || ' | 34 application tables exist after the migration (' || count(*)::text || ')'
+-- 34 from Build 4, plus the two owner-private Life Admin tables of the additive F12 migration.
+SELECT CASE WHEN count(*) = 36 THEN 'PASS' ELSE 'FAIL' END
+       || ' | 36 application tables exist after the migrations (' || count(*)::text || ')'
 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
 WHERE n.nspname = 'public' AND c.relkind = 'r';
 

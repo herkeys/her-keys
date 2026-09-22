@@ -101,6 +101,7 @@ describe('F12 LifeRecord — creation and the minimum content', () => {
     state = only(add(state, { id: 'rec-2', title: 'Passport', referenceNumber: 'A-1' }));
     assert.equal(state.lifeRecords.length, 2);
     assert.deepEqual(state.lifeRecords.map((row) => row.id), ['rec-1', 'rec-2']);
+    assert.deepEqual(activeLifeRecords(state).map((row) => row.id), ['rec-1', 'rec-2'], 'a newer same-title record does not replace (archive) the older one');
     survives(state, 'duplicate titles');
   });
 
@@ -288,6 +289,7 @@ describe('F12 record → Task: one accepted creation, one Task, one link', () =>
     let state = only(add(household(), { id: 'rec-1', title: 'Registration' }));
     state = addLifeRecordTask(state, at(), taskInput()).state;
     const purged = { ...state, tasks: state.tasks.filter((task) => task.id !== 'task-f12-1') };
+    assert.doesNotThrow(() => linkedTasksOf(purged, 'rec-1'), 'a missing Task never crashes the record');
     assert.deepEqual(linkedTasksOf(purged, 'rec-1').map((linked) => linked.task), [null]);
     assert.equal(openLinkedTaskCount(purged, 'rec-1'), 0);
     assert.equal(validateAppState(purged).ok, false, 'the stored-state gate still refuses a dangling link by name');
