@@ -99,6 +99,7 @@ const SHARED = [
   // STAGING-W2-* — the Wave 2 Staging certification pass, run after the integrated hostile audit. Not Meals changes;
   // listed here for the same reason the AUDIT-W2-* block above is.
   ['.env.example', 'STAGING-W2-01: documented the 5 Supabase/Google EXPO_PUBLIC_ vars src/config/supabase.ts already read but .env.example never listed, discovered while proving the app could bind to Staging'],
+  ['README.md', 'STAGING-W2-03: added the Wave 2 engineering closeout Build Status section (F01-F08 integrated, audit/tests/Staging status, OAuth explicitly out of product-stage scope)'],
 ];
 
 /**
