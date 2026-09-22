@@ -5,10 +5,10 @@ import { deriveLifeStatus, shownOnLife, type ShownLifeStatus } from './lifeStatu
 
 export function useLifeStatus(): ShownLifeStatus[] {
   const { events, tasks } = useSchedule();
-  const { categories, systems, upcomingMeals } = useHousehold();
+  const { categories, systems, upcomingMeals, openTaskCounts } = useHousehold();
 
   return useMemo(
-    () => shownOnLife(deriveLifeStatus({ categories, events, tasks, systems, upcomingMeals })),
-    [categories, events, tasks, systems, upcomingMeals]
+    () => shownOnLife(deriveLifeStatus({ categories, events, tasks, systems, upcomingMeals, openTaskCounts })),
+    [categories, events, tasks, systems, upcomingMeals, openTaskCounts]
   );
 }

@@ -22,6 +22,15 @@ export interface LifeStatusInput {
   tasks: TaskItem[];
   systems: HouseholdSystem[];
   upcomingMeals: Array<{ label: string; categoryId: string }>;
+  /**
+   * Open tasks per category id, counted from stored state rather than today's
+   * slice. `tasks` above is only what today's projection includes, so a
+   * category holding nothing but undated or future work looks empty there;
+   * this is how a reading can tell "nothing is due" apart from "nothing
+   * exists". Read by Home, whose fallback would otherwise talk about systems
+   * while her list is not empty.
+   */
+  openTaskCounts: ReadonlyMap<string, number>;
 }
 
 /** The Life screens that exist, keyed by the role they specialize in — never by what a household calls the category. */
@@ -78,7 +87,7 @@ function describeCategory(category: HouseholdCategory, input: LifeStatusInput): 
     case 'kids':
       return describeTasks(tasks, 'Nothing due');
     case 'home':
-      return describeHome(tasks, inCategory(input.systems));
+      return describeHome(tasks, inCategory(input.systems), input.openTaskCounts.get(category.id) ?? 0);
     case 'money':
       return describeTasks(tasks, 'Nothing due this week');
     case 'meals':
@@ -93,7 +102,8 @@ function describeCategory(category: HouseholdCategory, input: LifeStatusInput): 
 function describeTasks(tasks: TaskItem[], emptyLabel: string): Reading {
   const due = tasks.filter((t) => t.dueToday);
   if (due.length > 0) {
-    return { value: due.length === 1 ? '1 thing due today' : `${due.length} things due today`, needsAttention: true };
+    const overdue = due.filter((t) => t.daysOverdue > 0).length;
+    return { value: describeDue(due.length - overdue, overdue), needsAttention: true };
   }
 
   const scheduled = tasks.filter((t) => t.scheduledStartMinutes != null);
@@ -104,10 +114,38 @@ function describeTasks(tasks: TaskItem[], emptyLabel: string): Reading {
   return { value: emptyLabel, needsAttention: false };
 }
 
-function describeHome(tasks: TaskItem[], systems: HouseholdSystem[]): Reading {
+/**
+ * `dueToday` covers what is already overdue too, so the two are counted
+ * apart. Announcing a task that was owed a fortnight ago as "due today"
+ * misstates when it came due — and the category's own screen, reading the
+ * same task, says "Overdue since Sep 1" right beside it.
+ */
+function describeDue(dueToday: number, overdue: number): string {
+  if (overdue === 0) return dueToday === 1 ? '1 thing due today' : `${dueToday} things due today`;
+  if (dueToday === 0) return overdue === 1 ? '1 thing overdue' : `${overdue} things overdue`;
+  return `${dueToday} due today, ${overdue} overdue`;
+}
+
+/**
+ * Home is the one category that falls back to describing its systems, so it
+ * is the one that can change the subject. Today's slice leaves out everything
+ * undated or still ahead, and "2 systems running" beside three untouched home
+ * tasks answers a question she didn't ask while reading as reassurance — the
+ * hub would call Home clear while her list is not. The open count decides:
+ * systems are what's left to say only when nothing is actually on the list.
+ */
+function describeHome(tasks: TaskItem[], systems: HouseholdSystem[], openTasks: number): Reading {
   const fromTasks = describeTasks(tasks, '');
   if (fromTasks.needsAttention || fromTasks.value !== '') return fromTasks;
-  return { value: `${systems.length} systems running`, needsAttention: false };
+
+  if (openTasks > 0) {
+    return { value: `${openTasks} on your list, nothing due`, needsAttention: false };
+  }
+  if (systems.length > 0) {
+    return { value: systems.length === 1 ? '1 system running' : `${systems.length} systems running`, needsAttention: false };
+  }
+  // Her list, not her house: Her Keys has no way to know the home is fine.
+  return { value: 'Nothing on your list', needsAttention: false };
 }
 
 function describeMeals(meals: Array<{ label: string }>): Reading {

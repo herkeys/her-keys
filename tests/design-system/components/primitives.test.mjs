@@ -202,6 +202,37 @@ describe('StatusList', () => {
     assert.equal(p.props.accessibilityRole, 'button');
     assert.equal(p.props.accessibilityLabel, 'Kids: 1 scheduled');
   });
+
+  /**
+   * A row that leads nowhere is still a statement. Left unlabelled, a screen
+   * reader walks the two Texts separately and the value arrives detached from
+   * the thing it describes — "3 on your list, nothing due" with no way to know
+   * it was Home. Most rows on the Life hub and the Today summary are of this
+   * kind, so the label cannot depend on the row happening to be pressable.
+   */
+  test('a row that is not pressable is still announced as one statement', async () => {
+    const r = await render(
+      <StatusList items={[{ key: 'home', label: 'Home', value: '3 on your list, nothing due' }]} />,
+    );
+    assert.equal(r.root.findAllByType('Pressable').length, 0);
+
+    const spoken = r.root.findAllByType('View').find((v) => v.props.accessible === true);
+    assert.ok(spoken, 'a non-pressable row exposes an accessible element');
+    assert.equal(spoken.props.accessibilityLabel, 'Home: 3 on your list, nothing due');
+  });
+
+  test('an explicit accessibilityLabel wins over the derived one, pressable or not', async () => {
+    const still = await render(
+      <StatusList items={[{ key: 'kid', label: 'Ada, 7', value: 'Nothing today', accessibilityLabel: 'Ada, 7, born Mar 4, 2019: Nothing today' }]} />,
+    );
+    const spokenStill = still.root.findAllByType('View').find((v) => v.props.accessible === true);
+    assert.equal(spokenStill.props.accessibilityLabel, 'Ada, 7, born Mar 4, 2019: Nothing today');
+
+    const pressable = await render(
+      <StatusList items={[{ key: 'kid', label: 'Ada, 7', value: 'Nothing today', accessibilityLabel: 'Ada, 7, born Mar 4, 2019: Nothing today', onPress: () => {} }]} />,
+    );
+    assert.equal(pressable.root.findByType('Pressable').props.accessibilityLabel, 'Ada, 7, born Mar 4, 2019: Nothing today');
+  });
 });
 
 describe('System states', () => {

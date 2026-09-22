@@ -8,6 +8,8 @@ export interface StatusItem {
   value: string;
   /** Marks the row as wanting the user, with a small dot — never a red badge. */
   needsAttention?: boolean;
+  /** Overrides the spoken row. Defaults to "label: value" whether or not the row is pressable. */
+  accessibilityLabel?: string;
   onPress?: () => void;
 }
 
@@ -50,13 +52,22 @@ function Row({ item, isLast }: { item: StatusItem; isLast: boolean }) {
     </View>
   );
 
-  if (!item.onPress) return content;
+  // Label and value are one statement, so both kinds of row are announced as one.
+  const label = item.accessibilityLabel ?? `${item.label}: ${item.value}`;
+
+  if (!item.onPress) {
+    return (
+      <View accessible accessibilityLabel={label}>
+        {content}
+      </View>
+    );
+  }
 
   return (
     <Pressable
       onPress={item.onPress}
       accessibilityRole="button"
-      accessibilityLabel={`${item.label}: ${item.value}`}
+      accessibilityLabel={label}
       style={({ pressed }) => (pressed ? styles.pressed : null)}
     >
       {content}

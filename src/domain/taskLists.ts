@@ -82,6 +82,20 @@ export function openTasksInCategory(state: TaskListSource, categoryId: string, t
     .sort(compareEntries);
 }
 
+/**
+ * How many open tasks each category holds, in one pass — the same "open" the
+ * lists above use, so a count can never disagree with the list it summarizes.
+ * Categories with nothing open are absent rather than zero.
+ */
+export function openTaskCountsByCategory(state: Pick<AppState, 'tasks'>): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const task of state.tasks) {
+    if (task.status !== 'open') continue;
+    counts.set(task.categoryId, (counts.get(task.categoryId) ?? 0) + 1);
+  }
+  return counts;
+}
+
 /** Every open task no category screen lists — "Other open tasks" on the Life hub. */
 export function openTasksWithoutList(state: TaskListSource, today: LocalDate): OpenTaskEntry[] {
   const listed = new Set(state.categories.filter(hasOwnTaskList).map((category) => category.id));

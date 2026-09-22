@@ -14,6 +14,7 @@ import {
 } from '../src/domain/categories.ts';
 import { projectStateDay } from '../src/domain/projectDay.ts';
 import { validateAppState } from '../src/domain/state.ts';
+import { openTaskCountsByCategory } from '../src/domain/taskLists.ts';
 import { computeDailyLoad } from '../src/features/daily-load/computeDailyLoad.ts';
 import { deriveLifeStatus } from '../src/features/life/lifeStatus.ts';
 import { dayLabel } from '../src/features/today/formatDay.ts';
@@ -36,6 +37,7 @@ const lifeStatusFor = (state) => {
     tasks: day.tasks,
     systems: state.systems,
     upcomingMeals: state.meals.filter((m) => m.date >= DAY).map((m) => ({ label: dayLabel(m.date, DAY), categoryId: m.categoryId })),
+    openTaskCounts: openTaskCountsByCategory(state),
   });
 };
 
