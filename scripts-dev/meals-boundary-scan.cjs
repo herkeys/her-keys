@@ -95,6 +95,10 @@ const SHARED = [
   ['tests/fixtures/systems/scenarios/J-responsibility.evidence.json', 'AUDIT-W2-04: regenerated via UPDATE_SYSTEMS_EVIDENCE=1 after the stillNeedsMe fix; reviewed, the diff is exactly that one field'],
   ['tests/sync/sameCloudValue.test.mjs', 'AUDIT-W2-03 regression coverage (new file)'],
   ['tests/hk-ir01/syncComposition.test.mjs', 'AUDIT-W2-06 regression coverage'],
+
+  // STAGING-W2-* — the Wave 2 Staging certification pass, run after the integrated hostile audit. Not Meals changes;
+  // listed here for the same reason the AUDIT-W2-* block above is.
+  ['.env.example', 'STAGING-W2-01: documented the 5 Supabase/Google EXPO_PUBLIC_ vars src/config/supabase.ts already read but .env.example never listed, discovered while proving the app could bind to Staging'],
 ];
 
 /**
