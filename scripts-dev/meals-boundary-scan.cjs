@@ -103,6 +103,39 @@ const SHARED = [
 ];
 
 /**
+ * LATER FEATURES ON THIS LINE. Wave 3 and Wave 4 features branch from the certified Wave 2 closeout (INTEGRATION_CHECKPOINTS), so
+ * this scan — which diffs against a fixed pre-F08 base — sees THEIR migration, tables, collections and files as well. None of that is
+ * a Meals change, and "a finding needs an owner checkpoint" was never meant to demand one for another feature's own lane. So a later
+ * feature REGISTERS its lane here, exactly as the AUDIT-W2 block above registers the audit's files: the paths it owns, the durable
+ * additions it is authorized to make, and each shared file it changes with its reason. The scan subtracts a registered lane and still
+ * asks every Meals question of everything else. (Wave 3/4 integration: each feature adds its own entry; take the union.)
+ */
+const INTEGRATION_CHECKPOINTS = ['363e473fdf053547a21a41a67b7f62bd9aa2bcdf'];
+const LATER_FEATURES = [
+  {
+    id: 'HK-FEATURE-13 (People OS)',
+    owned: [
+      /^src\/features\/people\//, /^src\/domain\/people\.ts$/, /^src\/domain\/foundation\/personContext\.ts$/, /^src\/data\/seed\/demoPeople\.ts$/,
+      /^app\/\(app\)\/life\/(people|person|person-add|person-follow-up)\.tsx$/, /^tests\/people\//, /^docs\/builds\/HK_FEATURE_13_/,
+      /^supabase\/tests\/79-f13-/, /^supabase\/tests\/run-f13\.mjs$/, /^supabase\/migrations\/20260922200000_f13_people_os\.sql$/, /^scripts-dev\/f13-/,
+    ],
+    migrations: ['supabase/migrations/20260922200000_f13_people_os.sql'],
+    schemas: ['PersonContextSchema', 'PersonTaskLinkSchema'],
+    rootCollections: ['personContexts', 'personTaskLinks'],
+    shared: [
+      ['src/domain/sync/foundationSpecs.ts', 'HK-FEATURE-13: two People kinds in the one foundation manifest, generated into their own additive migration'],
+      ['supabase/tools/gen-foundation-sql.mjs', 'HK-FEATURE-13: the generator emits an additive migration\'s kinds there, never into the shipping migration'],
+      ['src/state/initialState.ts', 'HK-FEATURE-13: the two People collections start empty'],
+      ['tests/foundationSpecs.test.mjs', 'HK-FEATURE-13: manifest counts 18 -> 20, each kind checked in its own migration'],
+      ['tests/hk-ir01/changeBridge.test.mjs', 'HK-FEATURE-13: the sync kind inventory gains the two People kinds'],
+      ['supabase/tests/run.mjs', 'HK-FEATURE-13: the harness applies the additive People migration'],
+      ['supabase/tests/sync-integration.mjs', 'HK-FEATURE-13: the multi-device journeys carry the People kinds'],
+      ['supabase/tests/journey-composition.mjs', 'HK-FEATURE-13: the composition journey stack carries the People migration'],
+    ],
+  },
+];
+
+/**
  * Files Feature 08 (Meals) itself must never change — no Meals reason ever touches these.
  * `src/domain/account/claim.ts` was moved out of this list to SHARED below: the Wave 2 integrated hostile audit
  * fixed a real, unrelated bug there (a mis-ranged control-character regex), which is exactly the kind of change
@@ -150,10 +183,15 @@ function scan() {
   const findings = [];
   const facts = {};
   const changed = changedFiles();
-  const owned = (file) => OWNED.some((re) => re.test(file));
+  const laterOwned = (file) => LATER_FEATURES.some((feature) => feature.owned.some((re) => re.test(file)));
+  const owned = (file) => OWNED.some((re) => re.test(file)) || laterOwned(file);
+  const laterMigrations = new Set(LATER_FEATURES.flatMap((feature) => feature.migrations));
+  const laterSchemas = new Set(LATER_FEATURES.flatMap((feature) => feature.schemas));
+  const laterRoots = new Set(LATER_FEATURES.flatMap((feature) => feature.rootCollections));
+  facts.laterFeatures = LATER_FEATURES.map((feature) => feature.id);
 
-  // A. new migrations
-  const newMigrations = [...changed].filter(([f, s]) => s === 'A' && /^supabase\/migrations\/.+\.sql$/.test(f)).map(([f]) => f);
+  // A. new migrations (a registered later feature's own migration is its lane, not Meals')
+  const newMigrations = [...changed].filter(([f, s]) => s === 'A' && /^supabase\/migrations\/.+\.sql$/.test(f) && !laterMigrations.has(f)).map(([f]) => f);
   facts.newMigrations = newMigrations;
   if (newMigrations.length !== 1 || newMigrations[0] !== F08_MIGRATION) findings.push(`A: new migrations must be exactly ${F08_MIGRATION}, found [${newMigrations.join(', ')}]`);
 
@@ -162,7 +200,8 @@ function scan() {
   const nowDomain = [...new Set([...baseDomain, ...[...changed].filter(([f]) => /^src\/domain\/.*\.ts$/.test(f)).map(([f]) => f)])];
   const baseSchemas = new Set(baseDomain.flatMap((f) => [...schemaNames(atBase(f))]));
   const nowSchemas = new Set(nowDomain.flatMap((f) => [...schemaNames(now(f))]));
-  const schemaDiff = diff(baseSchemas, nowSchemas);
+  const rawSchemaDiff = diff(baseSchemas, nowSchemas);
+  const schemaDiff = { added: rawSchemaDiff.added.filter((name) => !laterSchemas.has(name)), removed: rawSchemaDiff.removed };
   facts.newDurableSchemas = schemaDiff.added;
   if (schemaDiff.added.length > 0 || schemaDiff.removed.length > 0) findings.push(`B: durable domain schemas changed: +[${schemaDiff.added}] -[${schemaDiff.removed}]`);
   const header = 'export const MealPlanEntrySchema = z.strictObject({';
@@ -177,7 +216,8 @@ function scan() {
   facts.newTables = createTables;
   if (createTables.length > 0) findings.push(`C: new tables: ${createTables}`);
   const rootHeader = 'export const AppStateSchema = z.strictObject({';
-  const rootDiff = diff(blockKeys(atBase('src/domain/state.ts'), rootHeader) ?? new Set(), blockKeys(now('src/domain/state.ts'), rootHeader) ?? new Set());
+  const rawRootDiff = diff(blockKeys(atBase('src/domain/state.ts'), rootHeader) ?? new Set(), blockKeys(now('src/domain/state.ts'), rootHeader) ?? new Set());
+  const rootDiff = { added: rawRootDiff.added.filter((key) => !laterRoots.has(key)), removed: rawRootDiff.removed };
   facts.newRootCollections = rootDiff.added;
   if (rootDiff.added.length > 0 || rootDiff.removed.length > 0) findings.push(`C: AppState root keys changed: +[${rootDiff.added}] -[${rootDiff.removed}]`);
 
@@ -187,7 +227,7 @@ function scan() {
   if (kindDiff.added.length > 0 || kindDiff.removed.length > 0) findings.push(`D: sync kinds changed: +[${kindDiff.added}] -[${kindDiff.removed}]`);
 
   // E. shared-file changes and protected files
-  const shared = new Map(SHARED);
+  const shared = new Map([...LATER_FEATURES.flatMap((feature) => feature.shared), ...SHARED]);
   facts.sharedFileChanges = [];
   for (const [file, status] of changed) {
     if (owned(file)) continue;
@@ -235,7 +275,10 @@ function scan() {
       continue;
     }
     const mergeBase = gitOk('merge-base', 'HEAD', tip).out.trim();
-    if (mergeBase && !gitOk('merge-base', '--is-ancestor', mergeBase, BASE).ok) ancestry.push(`${branch}: shares history with HEAD above the baseline (${mergeBase.slice(0, 7)})`);
+    // History shared only up to a certified integration checkpoint is the integration line itself (every Wave 3/4 feature branches
+    // from it), not a sibling reaching HEAD. Anything shared ABOVE the checkpoint still is.
+    const integrationHistory = mergeBase && INTEGRATION_CHECKPOINTS.some((checkpoint) => gitOk('merge-base', '--is-ancestor', mergeBase, checkpoint).ok);
+    if (mergeBase && !integrationHistory && !gitOk('merge-base', '--is-ancestor', mergeBase, BASE).ok) ancestry.push(`${branch}: shares history with HEAD above the baseline (${mergeBase.slice(0, 7)})`);
   }
   facts.siblingAncestry = ancestry;
   if (ancestry.length > 0) findings.push(`G: sibling history reaches HEAD: ${ancestry.join('; ')}`);

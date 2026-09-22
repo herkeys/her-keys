@@ -123,7 +123,7 @@ export function richHousehold({ withServerRows = false, withOneMove = true } = {
 
   // ---- People OS (HK-FEATURE-13): her private context about Grandma June, and a follow-up Task created from it -------------
   // After the One Move is decided, so this private Task cannot change which move the rest of the household's fixtures expect.
-  ({ state: s } = openPersonContext(s, at(), { kind: 'person', id: s.people[0].id }, { relationshipLabel: 'Grandma', organizationLabel: 'Maple Street Library', contextNote: 'Likes a call on Sunday mornings.' }));
+  ({ state: s } = openPersonContext(s, at(), { kind: 'person', id: s.people[0].id }, { relationshipName: 'Grandma', organizationName: 'Maple Street Library', contextNote: 'Likes a call on Sunday mornings.' }));
   ({ state: s } = addFollowUp(s, at(), { contextId: s.personContexts[0].id, draftKey: 'richhouseholdfollowupkey01', title: 'Ask about Sunday lunch', dueDate: '2026-09-26' }));
 
   if (withServerRows) {

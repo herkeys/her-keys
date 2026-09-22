@@ -260,3 +260,69 @@ Tests: `tests/people/today.test.mjs` — **4/4** (uses the Today suite's own fix
 | No People-specific Today ranking, queue or duplicate card | PASS (structural) | no Today/One Move file is modified by F13 (`git diff 363e473 -- src/features/today src/domain/oneMove.ts` is empty) |
 
 Calendar boundary: F13 creates no Event and changes no Event code. Person↔Event linkage: PENDING-INTEGRATION (MP-13-06).
+
+Git at M3 close: `f982692`, clean.
+
+---
+
+## F13-M4 — People projections / UI / demo
+
+**Built.** Pure read side (`src/features/people/projection.ts`, `privateNote.ts`, `lifeTile.ts`, `copy.ts`), pure views
+(`ui/PeopleHomeView`, `PersonDetailView`, `FollowUpFormView`, `AddPersonView`), thin containers (`containers.tsx`: `commitPeople`,
+router, expo-crypto draft key) and four thin routes `app/(app)/life/people.tsx`, `person.tsx`, `person-add.tsx`,
+`person-follow-up.tsx` that set their own titles — the Life hub (`app/(app)/life/index.tsx`), its `_layout.tsx` and `lifeStatus.ts`
+are NOT edited (addendum AM: registration DEFERRED, MP-13-08; the ready-to-wire tile model is `peopleLifeTile`). Demo: F13-owned
+`src/data/seed/demoPeople.ts` — four fictional people, two both named "Jordan Lee" with separate ids, three demo contexts; all
+`demo-seed`, no contact data.
+
+**Decision D11 — stored field names.** `tests/designIndependence.test.mjs` (a shared foundation guard) forbids stored keys that read
+as presentation (`/label/`). The spec's `relationshipLabel` / `organizationLabel` are therefore STORED as `relationshipName` /
+`organizationName` (cloud `relationship_name` / `organization_name`); the UI still calls the first a "Short label". Same semantics,
+same limits (60 / 80). Applied across F13 files by an EOL-preserving script; the migration was regenerated from the manifest.
+
+**Ordering (addendum AA), exact comparison.** No repository name-sort helper exists. Rows compare by
+`displayName.normalize('NFC').toLowerCase()` by UTF-16 code unit, ties by the canonical key (`child:<id>` / `person:<id>`) by code unit —
+no `localeCompare`, identical on every runtime (`compareRows`).
+
+**Verdict / follow-up rules as built:** addendum W ordering; cap 3 + "See all N" (`allFollowUps`); X categories exactly (an undated
+open follow-up is category 3 "Nothing needs attention." — it is due at no time); Y recently updated = latest 5 active contexts about
+live people, name + her label + date; Z secondary = her label, else organization, else nothing (no numbering); AH empty copy.
+
+Tests (new): `tests/people/projection.test.mjs` **15/15**; `tests/people/ui.test.mjs` **14/14** (rendered views; static guards: only
+`privateNote.ts`, `PersonDetailView.tsx`, `AddPersonView.tsx` read a note inside People, nothing outside People reads one; People code
+logs nothing and calls no network/contacts/SMS/mail/phone API; the Life hub/layout/lifeStatus and Today/One Move files carry no People
+reference; copy safety over every People string).
+
+**Full application suite at M4 (serialized, F13 worktree, before the fixes below):** `tests 2858 · suites 624 · pass 2851 · fail 7`:
+`designIndependence` (1 — the label names → D11), `legacyCatalogRemediation` (3) and `persistence` v1-forward (1) — `toV3Shape`
+did not strip the two new roots (`tests/support/legacyShapes.mjs` V4_ROOTS += 2), and `meals/boundary` (2 — see below). After the
+fixes, the affected files re-run: `ℹ tests 172 · pass 172 · fail 0`; `meals/boundary` `9/9`; `tsc` exit 0.
+
+**Meals boundary scan (F08's `scripts-dev/meals-boundary-scan.cjs`).** It diffs the whole tree against a fixed pre-F08 base, so it
+reports every later feature's migration/tables/collections/files — and it already failed at ENTRY because `feature/09-money-os`
+descends from WAVE3_BASE. Repaired WITHOUT weakening any Meals question: (1) a `LATER_FEATURES` register (the AUDIT-W2 precedent) in
+which F13 declares its owned paths, its one migration, its two schemas and two root collections, and each shared file with a reason;
+the scan subtracts only that lane; (2) `INTEGRATION_CHECKPOINTS = [363e473…]`: history shared only up to the certified Wave 2 closeout
+is the integration line, not a sibling. Wave 3/4 integration must take the union of every feature's entry (IC-13-13).
+
+| Scenario | Status | Evidence |
+|---|---|---|
+| Open People; truthful empty state (no CRM framing) | PASS | ui › EMPTY; projection › EMPTY |
+| Canonical people without duplication; account holder excluded; rows traceable to source | PASS | projection › ONE projection (2 tests) |
+| Co-parent read-only row "Co-parent"; child "Child"; neither editable from People | PASS | projection; ui › Person detail |
+| Duplicate names: separate rows, her label/org as secondary, never numbered/merged | PASS | projection › DUPLICATE NAMES; ui › DEMO |
+| Order by name, never by work/recency | PASS | projection › ORDER |
+| Needs follow-up ordering, cap 3, See all | PASS | projection › ordering; ui › home (2) |
+| Verdict count-aware, one category, no names on the tile | PASS | projection › VERDICT, Life tile |
+| Completed/archived/missing linked Task inert; context untouched; no re-link | PASS | projection › LINK TARGET |
+| Archived context/person inert on active surfaces; restorable from Archived | PASS | projection (2) |
+| Canonical target vanished → no crash, no count; restored → eligible again | PASS | projection › VANISHED |
+| contextNote only on the detail surface (runtime + static) | PASS | ui › Person detail, static guards; projection › detail |
+| Add Follow-up opens with EMPTY title; open + cancel writes nothing | PASS | ui › Add Follow-up (2) |
+| Demo: ≤5 fictional people, two same-name, separate ids, no contact data | PASS | ui › DEMO; `demoPeople.ts` |
+| Search | SAFE-UNAVAILABLE | no owner-private search primitive exists (MP-13-10); not built |
+| Adult co-members in People | SAFE-UNAVAILABLE | MP-13-01 |
+
+**Shared-file edits added at M4** (addendum AL): `src/data/seed/demoHousehold.ts` (demo cast from the F13-owned seed; append-only),
+`tests/support/legacyShapes.mjs` (two v4-additive roots stripped for v3 shapes), `scripts-dev/meals-boundary-scan.cjs` (lane register +
+integration checkpoint — every Wave 3/4 feature will need its own entry: expected merge conflict, take the union).

@@ -26,8 +26,8 @@ export interface PersonDetail {
   context: {
     id: string;
     status: 'active' | 'archived';
-    relationshipLabel: string | null;
-    organizationLabel: string | null;
+    relationshipName: string | null;
+    organizationName: string | null;
     contextNote: string | null;
   } | null;
   /** Every follow-up created from this context: open ones first by the same work ordering, then done/archived ones. */
@@ -90,8 +90,8 @@ export function personDetail(state: AppState, key: string, today: LocalDate): Pe
     context: context && {
       id: context.id,
       status: context.status,
-      relationshipLabel: context.relationshipLabel,
-      organizationLabel: context.organizationLabel,
+      relationshipName: context.relationshipName,
+      organizationName: context.organizationName,
       contextNote: context.contextNote,
     },
     followUps,

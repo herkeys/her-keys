@@ -17,7 +17,7 @@ const SECRET_LABEL = 'LABEL-9d1e';
 const NAME = 'Quinn Harper';
 
 function withPeople(state) {
-  const person = addExternalPerson(state, mkCtx(), { displayName: NAME, relationshipLabel: SECRET_LABEL, contextNote: SECRET_NOTE });
+  const person = addExternalPerson(state, mkCtx(), { displayName: NAME, relationshipName: SECRET_LABEL, contextNote: SECRET_NOTE });
   return { state: person.state, personId: person.id, contextId: person.state.personContexts.at(-1).id };
 }
 

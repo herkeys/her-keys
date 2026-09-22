@@ -26,8 +26,8 @@ import { ProvenanceSchema } from './provenance';
 
 /** Model/domain bounds, mirrored by CHECK constraints in the F13 migration. Counted in characters (code points), as PostgreSQL does. */
 export const PEOPLE_LIMITS = {
-  relationshipLabel: 60,
-  organizationLabel: 80,
+  relationshipName: 60,
+  organizationName: 80,
   contextNote: 500,
   displayName: 80,
 } as const;
@@ -71,9 +71,9 @@ export const PersonContextSchema = z
     /** The non-account person this context is about (a `household_people` row of the same owner). */
     personId: Id.nullable(),
     /** Her own short label ("Mom", "Coach", "Attorney"). Display and context only: never identity, never security, never inferred. */
-    relationshipLabel: ShortLabel(PEOPLE_LIMITS.relationshipLabel).nullable(),
+    relationshipName: ShortLabel(PEOPLE_LIMITS.relationshipName).nullable(),
     /** Where they are from ("Lincoln Elementary"). Optional context, not identity. */
-    organizationLabel: ShortLabel(PEOPLE_LIMITS.organizationLabel).nullable(),
+    organizationName: ShortLabel(PEOPLE_LIMITS.organizationName).nullable(),
     /** Private memory. Shown ONLY on this person's own detail/edit surface (see `people/privateNote.ts`). */
     contextNote: ContextNote.nullable(),
     /** Archived = off the active People surfaces. It asserts nothing about the real relationship. */

@@ -78,8 +78,8 @@ CREATE TABLE public.person_contexts (
   child_id           uuid,
   child_type         text,
   person_id          uuid,
-  relationship_label text,
-  organization_label text,
+  relationship_name  text,
+  organization_name  text,
   context_note       text,
   status             text NOT NULL,
   producer           text NOT NULL,
@@ -143,8 +143,8 @@ ALTER TABLE public.person_contexts ADD CONSTRAINT person_contexts_child_id_fkey 
 ALTER TABLE public.person_contexts ADD CONSTRAINT person_contexts_person_id_fkey FOREIGN KEY (person_id, household_id, profile_id)
     REFERENCES public.household_people(id, household_id, profile_id) ON DELETE NO ACTION;
 ALTER TABLE public.person_contexts ADD CONSTRAINT person_contexts_one_person_check CHECK ((child_id IS NULL) <> (person_id IS NULL));
-ALTER TABLE public.person_contexts ADD CONSTRAINT person_contexts_relationship_label_check CHECK (relationship_label IS NULL OR (relationship_label = btrim(relationship_label) AND char_length(relationship_label) >= 1 AND char_length(relationship_label) <= 60 AND relationship_label !~ '[[:cntrl:]]'));
-ALTER TABLE public.person_contexts ADD CONSTRAINT person_contexts_organization_label_check CHECK (organization_label IS NULL OR (organization_label = btrim(organization_label) AND char_length(organization_label) >= 1 AND char_length(organization_label) <= 80 AND organization_label !~ '[[:cntrl:]]'));
+ALTER TABLE public.person_contexts ADD CONSTRAINT person_contexts_relationship_name_check CHECK (relationship_name IS NULL OR (relationship_name = btrim(relationship_name) AND char_length(relationship_name) >= 1 AND char_length(relationship_name) <= 60 AND relationship_name !~ '[[:cntrl:]]'));
+ALTER TABLE public.person_contexts ADD CONSTRAINT person_contexts_organization_name_check CHECK (organization_name IS NULL OR (organization_name = btrim(organization_name) AND char_length(organization_name) >= 1 AND char_length(organization_name) <= 80 AND organization_name !~ '[[:cntrl:]]'));
 ALTER TABLE public.person_contexts ADD CONSTRAINT person_contexts_context_note_check CHECK (context_note IS NULL OR (context_note = btrim(context_note) AND char_length(context_note) >= 1 AND char_length(context_note) <= 500 AND replace(replace(replace(context_note, chr(10), ''), chr(13), ''), chr(9), '') !~ '[[:cntrl:]]'));
 ALTER TABLE public.person_contexts ADD CONSTRAINT person_contexts_status_check CHECK (status = ANY (ARRAY['active','archived']));
 ALTER TABLE public.person_contexts ADD CONSTRAINT person_contexts_stated_by_her_check CHECK (producer = 'user-action');
@@ -424,10 +424,10 @@ GRANT EXECUTE ON FUNCTION public.sync_push(text, uuid, jsonb) TO authenticated;
 -- >>> Do not edit by hand: edit the manifest and regenerate. A test fails on any difference.
 GRANT SELECT ON public.person_contexts TO authenticated;
 GRANT INSERT (household_id, local_id, origin_device_id, profile_id, child_id, person_id, 
-              relationship_label, organization_label, context_note, status, producer, 
+              relationship_name, organization_name, context_note, status, producer, 
               source_artifact_id, confidence, scope, origin_created_at, origin_updated_at)
   ON public.person_contexts TO authenticated;
-GRANT UPDATE (relationship_label, organization_label, context_note, status, origin_updated_at)
+GRANT UPDATE (relationship_name, organization_name, context_note, status, origin_updated_at)
   ON public.person_contexts TO authenticated;
 GRANT SELECT ON public.person_task_links TO authenticated;
 GRANT INSERT (household_id, local_id, origin_device_id, profile_id, context_id, follow_up_type, 

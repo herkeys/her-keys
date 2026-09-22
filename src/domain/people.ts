@@ -95,23 +95,23 @@ function checkName(raw: string): Checked<string> {
 }
 
 export interface ContextFields {
-  relationshipLabel?: string | null;
-  organizationLabel?: string | null;
+  relationshipName?: string | null;
+  organizationName?: string | null;
   contextNote?: string | null;
 }
 
 /** Only the fields the caller NAMED, normalized; an emptied field becomes null ("cleared"). */
-function checkFields(fields: ContextFields): Checked<Partial<Pick<PersonContext, 'relationshipLabel' | 'organizationLabel' | 'contextNote'>>> {
-  const out: Partial<Pick<PersonContext, 'relationshipLabel' | 'organizationLabel' | 'contextNote'>> = {};
-  if ('relationshipLabel' in fields && fields.relationshipLabel !== undefined) {
-    const value = normalizeLabel(fields.relationshipLabel);
-    if (labelProblem(value, PEOPLE_LIMITS.relationshipLabel) !== null) return { ok: false, outcome: 'invalid_label' };
-    out.relationshipLabel = value;
+function checkFields(fields: ContextFields): Checked<Partial<Pick<PersonContext, 'relationshipName' | 'organizationName' | 'contextNote'>>> {
+  const out: Partial<Pick<PersonContext, 'relationshipName' | 'organizationName' | 'contextNote'>> = {};
+  if ('relationshipName' in fields && fields.relationshipName !== undefined) {
+    const value = normalizeLabel(fields.relationshipName);
+    if (labelProblem(value, PEOPLE_LIMITS.relationshipName) !== null) return { ok: false, outcome: 'invalid_label' };
+    out.relationshipName = value;
   }
-  if ('organizationLabel' in fields && fields.organizationLabel !== undefined) {
-    const value = normalizeLabel(fields.organizationLabel);
-    if (labelProblem(value, PEOPLE_LIMITS.organizationLabel) !== null) return { ok: false, outcome: 'invalid_label' };
-    out.organizationLabel = value;
+  if ('organizationName' in fields && fields.organizationName !== undefined) {
+    const value = normalizeLabel(fields.organizationName);
+    if (labelProblem(value, PEOPLE_LIMITS.organizationName) !== null) return { ok: false, outcome: 'invalid_label' };
+    out.organizationName = value;
   }
   if ('contextNote' in fields && fields.contextNote !== undefined) {
     const value = normalizeNote(fields.contextNote);
@@ -145,8 +145,8 @@ export function openPersonContext(state: AppState, ctx: TransitionContext, targe
     id: ctx.createId('pctx'),
     childId: target.kind === 'child' ? target.id : null,
     personId: target.kind === 'person' ? target.id : null,
-    relationshipLabel: checked.value.relationshipLabel ?? null,
-    organizationLabel: checked.value.organizationLabel ?? null,
+    relationshipName: checked.value.relationshipName ?? null,
+    organizationName: checked.value.organizationName ?? null,
     contextNote: checked.value.contextNote ?? null,
     status: 'active',
     createdAt: at,
@@ -165,7 +165,7 @@ export function editPersonContext(state: AppState, ctx: TransitionContext, conte
   const checked = checkFields(fields);
   if (!checked.ok) return refuse(state, checked.outcome);
   const next = { ...current, ...checked.value };
-  if (next.relationshipLabel === current.relationshipLabel && next.organizationLabel === current.organizationLabel && next.contextNote === current.contextNote) {
+  if (next.relationshipName === current.relationshipName && next.organizationName === current.organizationName && next.contextNote === current.contextNote) {
     return done(state, 'unchanged', current.id);
   }
   const updated: PersonContext = { ...next, updatedAt: toInstant(ctx.nowMs) };

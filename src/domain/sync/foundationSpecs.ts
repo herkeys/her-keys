@@ -685,17 +685,17 @@ export const FOUNDATION_SPECS: readonly FoundationSpec[] = [
     fields: [
       { local: 'childId', col: 'child_id', type: 'link', to: 'member', nullable: true },
       { local: 'personId', col: 'person_id', type: 'link', to: 'person', nullable: true },
-      { local: 'relationshipLabel', col: 'relationship_label', type: 'text', nullable: true },
-      { local: 'organizationLabel', col: 'organization_label', type: 'text', nullable: true },
+      { local: 'relationshipName', col: 'relationship_name', type: 'text', nullable: true },
+      { local: 'organizationName', col: 'organization_name', type: 'text', nullable: true },
       { local: 'contextNote', col: 'context_note', type: 'text', nullable: true },
       { local: 'status', col: 'status', type: 'text' },
     ],
     // Which person it is about is fixed at insert: a context is never re-pointed at somebody else.
-    updatable: ['relationship_label', 'organization_label', 'context_note', 'status', 'origin_updated_at'],
+    updatable: ['relationship_name', 'organization_name', 'context_note', 'status', 'origin_updated_at'],
     checks: [
       ['one_person_check', `(child_id IS NULL) <> (person_id IS NULL)`],
-      ['relationship_label_check', `relationship_label IS NULL OR (relationship_label = btrim(relationship_label) AND char_length(relationship_label) >= 1 AND char_length(relationship_label) <= 60 AND relationship_label !~ '[[:cntrl:]]')`],
-      ['organization_label_check', `organization_label IS NULL OR (organization_label = btrim(organization_label) AND char_length(organization_label) >= 1 AND char_length(organization_label) <= 80 AND organization_label !~ '[[:cntrl:]]')`],
+      ['relationship_name_check', `relationship_name IS NULL OR (relationship_name = btrim(relationship_name) AND char_length(relationship_name) >= 1 AND char_length(relationship_name) <= 60 AND relationship_name !~ '[[:cntrl:]]')`],
+      ['organization_name_check', `organization_name IS NULL OR (organization_name = btrim(organization_name) AND char_length(organization_name) >= 1 AND char_length(organization_name) <= 80 AND organization_name !~ '[[:cntrl:]]')`],
       // Line breaks and tabs are hers; any other control character is refused.
       ['context_note_check', `context_note IS NULL OR (context_note = btrim(context_note) AND char_length(context_note) >= 1 AND char_length(context_note) <= 500 AND replace(replace(replace(context_note, chr(10), ''), chr(13), ''), chr(9), '') !~ '[[:cntrl:]]')`],
       ['status_check', `status = ANY (ARRAY['active','archived'])`],

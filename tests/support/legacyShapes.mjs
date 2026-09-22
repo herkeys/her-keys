@@ -47,6 +47,8 @@ export const V4_ROOTS = [
   'migrationLineage', 'sourceArtifacts', 'externalReferences', 'interpretations', 'observations', 'authorities',
   'intents', 'decisions', 'executions', 'outcomes', 'people', 'responsibilities', 'dependencies', 'recurrences',
   'goals', 'systemSteps', 'capacity', 'patterns', 'evidenceLinks',
+  // People OS (HK-FEATURE-13): added to v4 additively (`.default([])`); a v3 blob never had them.
+  'personContexts', 'personTaskLinks',
 ];
 
 const without = (row, keys) => {

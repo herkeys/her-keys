@@ -72,9 +72,9 @@ export const peopleCopy = {
   },
 
   detail: {
-    relationshipLabel: 'Short label',
+    relationshipName: 'Short label',
     relationshipHint: 'For example: Mom, Coach, Attorney, Neighbor.',
-    organizationLabel: 'Organization (optional)',
+    organizationName: 'Organization (optional)',
     contextNote: 'Private note',
     contextNoteHint: 'Only you see this, and only here.',
     name: 'Name',

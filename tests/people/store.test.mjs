@@ -38,7 +38,7 @@ describe('LOCAL-FIRST: create -> immediate -> persist -> relaunch -> same identi
   test('an external person and her private context survive a relaunch with the same ids and words', async () => {
     const h = harness({ mode: 'empty' });
     const store = await boot(h);
-    const created = await commitPeople(store, (s, c) => addExternalPerson(s, c, { displayName: 'Jordan Lee', relationshipLabel: 'Neighbor', organizationLabel: 'Elm Street', contextNote: 'Has a spare key.' }));
+    const created = await commitPeople(store, (s, c) => addExternalPerson(s, c, { displayName: 'Jordan Lee', relationshipName: 'Neighbor', organizationName: 'Elm Street', contextNote: 'Has a spare key.' }));
     assert.equal(created.outcome, 'saved');
     // Immediate: the change is in the snapshot the moment commit resolves — no network, no acknowledgement.
     const now = store.getSnapshot().state;
@@ -50,14 +50,14 @@ describe('LOCAL-FIRST: create -> immediate -> persist -> relaunch -> same identi
     const person = s.people.find((p) => p.id === created.id);
     assert.ok(person, 'the same person id after relaunch');
     const context = s.personContexts.find((c) => c.personId === created.id);
-    assert.deepEqual([context.relationshipLabel, context.organizationLabel, context.contextNote], ['Neighbor', 'Elm Street', 'Has a spare key.']);
+    assert.deepEqual([context.relationshipName, context.organizationName, context.contextNote], ['Neighbor', 'Elm Street', 'Has a spare key.']);
   });
 
   test('rename, a follow-up and an archive all survive relaunch, and the follow-up link still names the same Task', async () => {
     const h = harness({ mode: 'empty' });
     const store = await boot(h);
-    const opened = await commitPeople(store, (s, c) => openPersonContext(s, c, { kind: 'child', id: JOSIE }, { relationshipLabel: 'Daughter' }));
-    const person = await commitPeople(store, (s, c) => addExternalPerson(s, c, { displayName: 'Sam', relationshipLabel: 'Coach' }));
+    const opened = await commitPeople(store, (s, c) => openPersonContext(s, c, { kind: 'child', id: JOSIE }, { relationshipName: 'Daughter' }));
+    const person = await commitPeople(store, (s, c) => addExternalPerson(s, c, { displayName: 'Sam', relationshipName: 'Coach' }));
     await commitPeople(store, (s, c) => renamePerson(s, c, person.id, 'Sam Ortiz'));
     const saved = await commitPeople(store, (s, c) => addFollowUp(s, c, { contextId: opened.id, draftKey: draft(1), title: 'Ask about the recital', dueDate: DAY }));
     assert.equal(saved.outcome, 'saved');
@@ -128,7 +128,7 @@ describe('ADD FOLLOW-UP through the store: all or nothing', () => {
     const store = await boot(h);
     const opened = await commitPeople(store, (s, c) => openPersonContext(s, c, { kind: 'child', id: MILO }));
     const before = h.primaryWrites().length;
-    const r = await commitPeople(store, (s, c) => editPersonContext(s, c, opened.id, { relationshipLabel: 'x'.repeat(61) }));
+    const r = await commitPeople(store, (s, c) => editPersonContext(s, c, opened.id, { relationshipName: 'x'.repeat(61) }));
     assert.equal(r.outcome, 'invalid_label');
     await store.flush();
     assert.equal(h.primaryWrites().length, before, 'nothing was written');

@@ -47,7 +47,7 @@ describe('PERSON IDENTITY IS NOT DISPLAY NAME — SAME NAME DOES NOT MEAN SAME P
     let s = w.state;
     const ids = [];
     for (let i = 0; i < 2; i += 1) {
-      const r = addExternalPerson(s, w.at(), { displayName: 'Sam Lee', relationshipLabel: 'Coach', organizationLabel: 'Riverside FC' });
+      const r = addExternalPerson(s, w.at(), { displayName: 'Sam Lee', relationshipName: 'Coach', organizationName: 'Riverside FC' });
       ids.push(r.id);
       s = r.state;
     }
@@ -68,7 +68,7 @@ describe('PERSON IDENTITY IS NOT DISPLAY NAME — SAME NAME DOES NOT MEAN SAME P
 
   test('a person created from People is a canonical non-account person recorded as `other`, never a household member', () => {
     const w = world();
-    const r = addExternalPerson(w.state, w.at(), { displayName: 'Taylor Brooks', relationshipLabel: 'Mom' });
+    const r = addExternalPerson(w.state, w.at(), { displayName: 'Taylor Brooks', relationshipName: 'Mom' });
     const person = r.state.people.find((p) => p.id === r.id);
     assert.equal(person.relationship, 'other', 'her label stays hers; the canonical category says nothing more');
     assert.equal(person.channel, 'unspecified');
@@ -90,7 +90,7 @@ describe('PERSON IDENTITY IS NOT DISPLAY NAME — SAME NAME DOES NOT MEAN SAME P
 describe('RENAME — the same person under a new name', () => {
   test('renaming keeps the id, the context and every follow-up link; nothing is created', () => {
     const w = world();
-    let r = addExternalPerson(w.state, w.at(), { displayName: 'Chris', relationshipLabel: 'Neighbor' });
+    let r = addExternalPerson(w.state, w.at(), { displayName: 'Chris', relationshipName: 'Neighbor' });
     const id = r.id;
     const ctxId = r.state.personContexts[0].id;
     r = addFollowUp(r.state, w.at(), { contextId: ctxId, draftKey: draft(1), title: 'Return the ladder' });
@@ -116,7 +116,7 @@ describe('RENAME — the same person under a new name', () => {
 describe('PERSON CONTEXT — one private context per person', () => {
   test('a context on a CHILD names the child by id and does not touch the child', () => {
     const w = world();
-    const r = openPersonContext(w.state, w.at(), { kind: 'child', id: JOSIE }, { relationshipLabel: 'Daughter' });
+    const r = openPersonContext(w.state, w.at(), { kind: 'child', id: JOSIE }, { relationshipName: 'Daughter' });
     assert.equal(r.outcome, 'saved');
     assert.equal(r.state.personContexts[0].childId, JOSIE);
     assert.equal(r.state.personContexts[0].personId, null);
@@ -136,7 +136,7 @@ describe('PERSON CONTEXT — one private context per person', () => {
   test('opening a second context for the same person returns the FIRST (one per person)', () => {
     const w = world();
     const first = openPersonContext(w.state, w.at(), { kind: 'child', id: MILO });
-    const again = openPersonContext(first.state, w.at(), { kind: 'child', id: MILO }, { relationshipLabel: 'Son' });
+    const again = openPersonContext(first.state, w.at(), { kind: 'child', id: MILO }, { relationshipName: 'Son' });
     assert.equal(again.outcome, 'already_saved');
     assert.equal(again.id, first.id);
     assert.equal(again.state.personContexts.length, 1);
@@ -144,7 +144,7 @@ describe('PERSON CONTEXT — one private context per person', () => {
 
   test('ARCHIVED CONTEXT DOES NOT MEAN RELATIONSHIP ENDED — and archiving never frees a second slot: opening restores it', () => {
     const w = world();
-    const first = openPersonContext(w.state, w.at(), { kind: 'child', id: MILO }, { relationshipLabel: 'Son' });
+    const first = openPersonContext(w.state, w.at(), { kind: 'child', id: MILO }, { relationshipName: 'Son' });
     const archived = archivePersonContext(first.state, w.at(), first.id);
     assert.equal(archived.state.personContexts[0].status, 'archived');
     assert.deepEqual(archived.state.children, w.state.children, 'the child is untouched');
@@ -152,7 +152,7 @@ describe('PERSON CONTEXT — one private context per person', () => {
     assert.equal(reopened.outcome, 'saved');
     assert.equal(reopened.id, first.id, 'the SAME context comes back');
     assert.equal(reopened.state.personContexts.length, 1);
-    assert.equal(reopened.state.personContexts[0].relationshipLabel, 'Son', 'with what she saved');
+    assert.equal(reopened.state.personContexts[0].relationshipName, 'Son', 'with what she saved');
   });
 
   test('the account holder and unknown ids are never a target', () => {
@@ -179,12 +179,12 @@ describe('RELATIONSHIP LABEL / ORGANIZATION / NOTE — validated in the model, n
 
   test('a label is trimmed, runs collapse, and 60 characters (code points) is the limit — an emoji counts once', () => {
     const { w, state, id } = base();
-    assert.equal(editPersonContext(state, w.at(), id, { relationshipLabel: '  Big   sister  ' }).state.personContexts[0].relationshipLabel, 'Big sister');
-    assert.equal(editPersonContext(state, w.at(), id, { relationshipLabel: 'x'.repeat(60) }).outcome, 'saved');
-    assert.equal(editPersonContext(state, w.at(), id, { relationshipLabel: 'x'.repeat(61) }).outcome, 'invalid_label');
+    assert.equal(editPersonContext(state, w.at(), id, { relationshipName: '  Big   sister  ' }).state.personContexts[0].relationshipName, 'Big sister');
+    assert.equal(editPersonContext(state, w.at(), id, { relationshipName: 'x'.repeat(60) }).outcome, 'saved');
+    assert.equal(editPersonContext(state, w.at(), id, { relationshipName: 'x'.repeat(61) }).outcome, 'invalid_label');
     const emoji = '\u{1F9E1}'.repeat(60);
     assert.equal(emoji.length, 120, 'UTF-16 length is twice the characters');
-    assert.equal(editPersonContext(state, w.at(), id, { relationshipLabel: emoji }).outcome, 'saved', 'sixty characters, as PostgreSQL counts them');
+    assert.equal(editPersonContext(state, w.at(), id, { relationshipName: emoji }).outcome, 'saved', 'sixty characters, as PostgreSQL counts them');
   });
 
   test('a note is up to 500 characters and may hold line breaks; control characters are refused', () => {
@@ -199,18 +199,18 @@ describe('RELATIONSHIP LABEL / ORGANIZATION / NOTE — validated in the model, n
 
   test('every field can be cleared; clearing is a real edit and the schema holds null', () => {
     const { w, state, id } = base();
-    let s = editPersonContext(state, w.at(), id, { relationshipLabel: 'Coach', organizationLabel: 'Riverside FC', contextNote: 'Tuesdays' }).state;
-    s = editPersonContext(s, w.at(), id, { relationshipLabel: '', organizationLabel: '   ', contextNote: '' }).state;
+    let s = editPersonContext(state, w.at(), id, { relationshipName: 'Coach', organizationName: 'Riverside FC', contextNote: 'Tuesdays' }).state;
+    s = editPersonContext(s, w.at(), id, { relationshipName: '', organizationName: '   ', contextNote: '' }).state;
     const c = s.personContexts[0];
-    assert.deepEqual([c.relationshipLabel, c.organizationLabel, c.contextNote], [null, null, null]);
+    assert.deepEqual([c.relationshipName, c.organizationName, c.contextNote], [null, null, null]);
     valid(s);
   });
 
   test('the stored schema refuses an untrimmed or over-long label even if a caller skips the command layer', () => {
     const { state } = base();
     const row = state.personContexts[0];
-    assert.equal(PersonContextSchema.safeParse({ ...row, relationshipLabel: ' padded' }).success, false);
-    assert.equal(PersonContextSchema.safeParse({ ...row, relationshipLabel: 'x'.repeat(PEOPLE_LIMITS.relationshipLabel + 1) }).success, false);
+    assert.equal(PersonContextSchema.safeParse({ ...row, relationshipName: ' padded' }).success, false);
+    assert.equal(PersonContextSchema.safeParse({ ...row, relationshipName: 'x'.repeat(PEOPLE_LIMITS.relationshipName + 1) }).success, false);
     assert.equal(PersonContextSchema.safeParse({ ...row, contextNote: '' }).success, false, 'an empty note is null, not ""');
     assert.equal(PersonContextSchema.safeParse({ ...row, childId: null }).success, false, 'a context names exactly one person');
     assert.equal(PersonContextSchema.safeParse({ ...row, personId: 'person-1' }).success, false, 'never two');
@@ -218,7 +218,7 @@ describe('RELATIONSHIP LABEL / ORGANIZATION / NOTE — validated in the model, n
 
   test('an unchanged edit writes nothing', () => {
     const { w, state, id } = base();
-    const r = editPersonContext(state, w.at(), id, { relationshipLabel: null });
+    const r = editPersonContext(state, w.at(), id, { relationshipName: null });
     assert.equal(r.outcome, 'unchanged');
     assert.equal(r.state, state);
   });
@@ -227,7 +227,7 @@ describe('RELATIONSHIP LABEL / ORGANIZATION / NOTE — validated in the model, n
 describe('ADD FOLLOW-UP — one canonical private Task and one link, together or not at all', () => {
   const setup = () => {
     const w = world();
-    const r = openPersonContext(w.state, w.at(), { kind: 'person', id: w.coParentId }, { relationshipLabel: 'Co-parent', contextNote: 'SECRET-NOTE-TEXT' });
+    const r = openPersonContext(w.state, w.at(), { kind: 'person', id: w.coParentId }, { relationshipName: 'Co-parent', contextNote: 'SECRET-NOTE-TEXT' });
     return { w, state: r.state, contextId: r.id };
   };
 
@@ -294,7 +294,7 @@ describe('ADD FOLLOW-UP — one canonical private Task and one link, together or
       assert.equal(r.outcome, outcome, JSON.stringify(input));
       assert.equal(r.state, s);
     }
-    const person = addExternalPerson(w.state, w.at(), { displayName: 'Robin', relationshipLabel: 'Friend' });
+    const person = addExternalPerson(w.state, w.at(), { displayName: 'Robin', relationshipName: 'Friend' });
     const pctx = person.state.personContexts.at(-1).id;
     const gone = archiveExternalPerson(person.state, w.at(), person.id).state;
     assert.equal(addFollowUp(gone, w.at(), { contextId: pctx, draftKey: draft(5), title: 'x' }).outcome, 'person_unavailable');
@@ -304,7 +304,7 @@ describe('ADD FOLLOW-UP — one canonical private Task and one link, together or
 describe('TASK COMPLETED DOES NOT MEAN RELATIONSHIP RESOLVED — a Task never rewrites People truth', () => {
   test('completing, archiving or losing the linked Task leaves the context and the link exactly as they were', () => {
     const w = world();
-    const opened = openPersonContext(w.state, w.at(), { kind: 'child', id: JOSIE }, { relationshipLabel: 'Daughter' });
+    const opened = openPersonContext(w.state, w.at(), { kind: 'child', id: JOSIE }, { relationshipName: 'Daughter' });
     const saved = addFollowUp(opened.state, w.at(), { contextId: opened.id, draftKey: draft(6), title: 'Ask about the recital' });
     const taskId = followUpTaskId(draft(6));
     for (const s of [completeTask(saved.state, w.at(), taskId), archiveTask(saved.state, w.at(), taskId)]) {
@@ -353,7 +353,7 @@ describe('integrity: what a shape cannot express', () => {
 
   test('integrity messages carry ids only — never a label or a note', () => {
     const w = world();
-    const opened = openPersonContext(w.state, w.at(), { kind: 'child', id: JOSIE }, { relationshipLabel: 'LABEL-TEXT', contextNote: 'NOTE-TEXT' });
+    const opened = openPersonContext(w.state, w.at(), { kind: 'child', id: JOSIE }, { relationshipName: 'LABEL-TEXT', contextNote: 'NOTE-TEXT' });
     const broken = { ...opened.state, children: [] };
     for (const problem of peopleIntegrityProblems(broken)) assert.ok(!/LABEL-TEXT|NOTE-TEXT/.test(problem), problem);
     const verdict = validateAppState(broken);

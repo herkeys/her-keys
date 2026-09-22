@@ -76,7 +76,7 @@ export function contextTargetActive(state: AppState, context: PersonContext): bo
 
 function rowOf(state: AppState, source: PersonSource): PersonRow | null {
   const context = activeContext(state, source);
-  const secondary = context ? (context.relationshipLabel ?? context.organizationLabel) : null;
+  const secondary = context ? (context.relationshipName ?? context.organizationName) : null;
   if (source.kind === 'child') {
     const child = state.children.find((c) => c.id === source.id);
     if (!child || child.id === state.user.id) return null;
@@ -193,7 +193,7 @@ export function peopleVerdict(items: readonly FollowUpItem[], today: LocalDate):
 export interface RecentItem {
   key: string;
   displayName: string;
-  relationshipLabel: string | null;
+  relationshipName: string | null;
   updatedAt: string;
 }
 
@@ -205,7 +205,7 @@ export function recentlyUpdated(state: AppState, limit = 5): RecentItem[] {
     const source: PersonSource = context.childId !== null ? { kind: 'child', id: context.childId } : { kind: 'person', id: context.personId! };
     const row = rowOf(state, source);
     if (!row) continue;
-    items.push({ key: row.key, displayName: row.displayName, relationshipLabel: context.relationshipLabel, updatedAt: context.updatedAt });
+    items.push({ key: row.key, displayName: row.displayName, relationshipName: context.relationshipName, updatedAt: context.updatedAt });
   }
   items.sort((a, b) => (a.updatedAt !== b.updatedAt ? (a.updatedAt < b.updatedAt ? 1 : -1) : a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
   return items.slice(0, limit);
@@ -243,6 +243,8 @@ export interface PeopleHomeView {
   verdict: string;
   /** At most three; `followUpTotal` says how many exist, for "See all N". */
   followUps: FollowUpItem[];
+  /** Every follow-up, in the same order, for "See all N". */
+  allFollowUps: FollowUpItem[];
   followUpTotal: number;
   people: PersonRow[];
   recent: RecentItem[];
@@ -257,6 +259,7 @@ export function buildPeopleHome(state: AppState, today: LocalDate): PeopleHomeVi
   return {
     verdict: peopleVerdict(all, today),
     followUps: all.slice(0, NEEDS_FOLLOW_UP_CAP),
+    allFollowUps: all,
     followUpTotal: all.length,
     people,
     recent: recentlyUpdated(state),
