@@ -44,7 +44,16 @@ const F12 = migration('20260922180000_f12_life_records.sql');
  * F12's removals are the two things it REPLACES: the body of public.sync_push and the definition of change_log_entity_table_check.
  */
 const EXPECTED_F08 = { added: { columns: 2, constraints: 2, 'privileges.columns': 4 }, removed: {} };
-const EXPECTED_F12 = JSON.parse(process.env.HERKEYS_F12_EXPECTED ?? 'null');
+// Measured 2026-09-22 and pinned. Added: the two tables (relations 2, columns 29 + 16, constraints 40 incl. the new change_log check,
+// indexes 13 incl. primary and unique keys, policies 3 + 2, triggers 4 + 3), the guard function and the new sync_push body, and the
+// grants they carry. Removed: exactly the replaced change_log_entity_table_check definition and the replaced sync_push body.
+const EXPECTED_F12 = {
+  added: {
+    columns: 45, constraints: 40, functions: 2, indexes: 13, policies: 5, 'privileges.columns': 52, 'privileges.effective': 16,
+    'privileges.functions': 1, 'privileges.relations': 34, relations: 2, triggers: 7,
+  },
+  removed: { constraints: 1, functions: 1 },
+};
 
 const { buildSql } = await import(pathToFileURL(join(HERE, 'schema-fingerprint.mjs')).href);
 

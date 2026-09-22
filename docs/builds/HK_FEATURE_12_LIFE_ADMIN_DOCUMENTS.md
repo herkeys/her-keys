@@ -409,3 +409,149 @@ F12 app tests so far: 72/72 (20 suites) across `tests/lifeAdmin/*.test.mjs`.
 | analytics payloads | SAFE-UNAVAILABLE | no analytics SDK or module exists in the codebase (`package.json` and source scan), so there is no payload to inspect |
 | error payloads | PASS | refusal results and `validateAppState` issues; sync evidence is checked in M5 |
 | crash metadata | SAFE-UNAVAILABLE | no crash-reporting SDK exists in the codebase |
+
+M4 checkpoint (after commit): `feature/12-life-admin-documents` @ `b880589`, `git status --short` empty.
+
+---
+
+## F12-M5 — Backend / sync / RLS / fresh client / account isolation
+
+### Schema: `supabase/migrations/20260922180000_f12_life_records.sql`
+
+Additive, one transaction, ends with `SELECT private.assert_app_schema_secured();`, pinned to LF (`.gitattributes`). No earlier
+migration is edited. No shared canonical table (tasks, events, goals, systems, household_members, ...) gains a column, constraint,
+index, policy or trigger.
+
+| Object | Shape |
+|---|---|
+| `public.life_records` | the owner-private foundation pattern: `profile_id NOT NULL`, `scope` CHECK = 'personal', uniqueness `(household_id, profile_id, local_id)` and `(id, household_id, profile_id)`; CHECKs mirroring every local bound (title 1..200, kind taxonomy, type 60, issuer 120, reference 64, location 120, note 500 — each trimmed-non-blank or NULL), `status` active/archived with `archived_at` set exactly when archived (there is no stored "expired"), producer/confidence/artifact provenance rules (demo-seed refused), child subject via the same composite FK + `set_subject_member_type` trigger tasks use; `force_server_owned_id`, `set_row_updated_at`, `log_row_change('household_id','profile_id')` |
+| `public.life_record_task_links` | owner-private the same way; record end = composite FK `(life_record_id, household_id, profile_id)` onto the record (an owner can only link her own record); Task end = FK `(task_id, household_id)` ON DELETE CASCADE (a purged Task takes its link with it) PLUS the guard below; one link per (record, Task); immutable (no UPDATE grant or policy) |
+| `private.guard_life_record_task_link()` | BEFORE INSERT/UPDATE, SECURITY INVOKER, empty search_path: the caller must be the link owner and the Task must be the owner's `personal` Task in the same household — under the caller's own RLS, so "someone else's Task", "a household-visible Task" and "no such Task" are the SAME refusal (`42501 life_record_task_links: that task cannot be linked to this record`). This closes, for this table, the known-id FK probe M0 found on the foundation relationship tables (MP-12-02). |
+| RLS | records: select/insert/update own rows (`auth.uid() = profile_id AND private.is_household_member(household_id)`); links: select/insert own; no DELETE policy on either |
+| Grants | the Build 4 posture: `REVOKE ALL ... FROM PUBLIC, anon, authenticated` (the baseline's default privileges would otherwise hand anon everything on a new table), `GRANT ALL ... TO service_role`, then SELECT + column-level INSERT (+ UPDATE on records) to `authenticated`; no DELETE, TRUNCATE, REFERENCES or TRIGGER |
+| `change_log_entity_table_check` | the Build 4 list plus the two tables (drop + re-add) |
+| `public.sync_push` | CREATE OR REPLACE with EXACTLY one difference from the F05 body (verified by a line diff): the two tables join the owner-keyed list, so their collision probe is `(household, OWNER, local_id)` and a member reusing the owner's local id is simply a new row of hers |
+
+### Schema bookkeeping
+
+| Item | Value |
+|---|---|
+| OLD FINGERPRINT (WAVE3_BASE = IR01 + F08 + F05) | `96f93f3d46dcf5735e7a0b50996944bf`, 3629 facts — DERIVED (no committed baseline existed for the integrated Wave 2 schema) |
+| NEW FINGERPRINT (WAVE3_BASE + F12) | `60af45784ddd7373c7a56cd57c51b802`, 3844 facts — DERIVED; written to `supabase/tools/baselines/f12-local-fingerprint.json` |
+| Method | `supabase/tools/f12-fingerprint.mjs derive --write`: the shared default database read-only MATCHES the committed F05 baseline (`8bf3c7c6…`, 3621) — which also proves the Node digest reproduces the tool's — then the F08 delta (exactly its certified 2 columns / 2 constraints / 4 column privileges) and the F12 delta are measured on scratch databases `f12_fp_x / f12_fp_w / f12_fp_w12` and applied to the shared database's own rows. The shared database is NEVER migrated (other sessions verify against it). |
+| EXACT INTENDED DIMENSIONS (pinned in the tool; anything else moving fails it) | added: columns 45 (29 + 16), constraints 40, functions 2 (the guard, the new sync_push body), indexes 13, policies 5, privileges.columns 52, privileges.effective 16, privileges.functions 1, privileges.relations 34, relations 2, triggers 7; removed: constraints 1 (the replaced change_log entity-list check), functions 1 (the replaced sync_push body). Net per dimension: columns 716→761, constraints 681→720, functions 28→29, indexes 284→297, policies 85→90, privileges.columns 725→777, privileges.effective 310→326, privileges.functions 55→56, privileges.relations 587→621, relations 35→37, triggers 104→111; every other dimension unchanged |
+| MIGRATION FILE(S) | `supabase/migrations/20260922180000_f12_life_records.sql` (the only one) |
+| FRESH-INSTALL RESULT | PASS — applied while empty after the full shipped sequence in `f12_env` (every `run-f12.mjs` run), in the three fingerprint scratch databases, and in the private journey stack; ENV A of the full harness: see M6 |
+| POPULATED-UPGRADE RESULT | ENV D (full harness) gained an F12 step on the populated, IR01+F05-upgraded database: nothing lost (row census and change-log pointer count unchanged), no row rewritten (member and task digests), new tables empty, owner creates a record via sync_push (retry = already_exists, no second row), a stranger is refused; fail-closed assertion passes. Result: see M6 (full harness run) |
+| RLS RESULT | `79-f12-life-records.sql` 59/59 (below) |
+| SYNC RESULT | `journey-life-admin.mjs` 24/24 over real PostgREST; `tests/lifeAdmin/sync.test.mjs` 12/12 through the production composition |
+
+### RLS attack matrix (`supabase/tests/79-f12-life-records.sql`, 59/59, private `f12_env`)
+
+| Actor / surface | records | links |
+|---|---|---|
+| unauthenticated (anon) | SELECT, INSERT refused; no table privilege | same |
+| owner | SELECT, INSERT, UPDATE (rename, clear, archive) ALLOWED; server-owned and identity columns (revision, owner, household) not writable; no DELETE | INSERT ALLOWED onto her own personal Task only; no UPDATE, no DELETE |
+| same-household member | SELECT by id and whole-table: none of the owner's (sees exactly her own); UPDATE/DELETE touch nothing; INSERT in the owner's name refused | sees none; a link to the owner's record is refused exactly like a non-existent record; a link to the owner's private Task is refused exactly like a non-existent Task; forging a link in the owner's name answers the same whether her Task exists or not |
+| unrelated household (valid foreign ids) | nothing by crafted id; a record naming the other household's child refused (household-keyed subject FK); a record inside the other household refused | links to the other household's record or Task refused |
+| crafted subjectMemberId | an adult member is never a subject; an id naming no child refused; another household's child refused | — |
+| crafted link targets | — | household-visible Task, another member's personal Task, another household's Task, a non-existent id: ONE identical refusal; another member's record refused; one link per (record, Task) |
+| supersession references | NOT-APPLICABLE (supersession not built; see F12-STRETCH-01) | — |
+| relationship inference | no row, no count, no change pointer for the owner's record, link or linked Task; a member's own pointers are only her own | same |
+| sync / change log | member: no pointer for the owner's record, link or Task; sync_pull from 0 delivers none; sync_push reusing the owner's local id → her own new row (`created`); pushing a record in the owner's name refused; pushing a link onto the owner's private Task refused by the guard. Stranger: sync_pull / sync_push naming the other household refused (42501); change log shows nothing | same |
+| error payloads | refusal message, DETAIL and HINT carry no private value | same |
+| lifecycle | archive → no member pointer; purging the Task (server side) cascades the link away (tombstone pointer reaches the owner only); the record survives the purge | same |
+| privileges | anon nothing; authenticated only the verbs/columns it uses; RLS on both; 3 + 2 policies, none DELETE; guard and sync_push are SECURITY INVOKER; anon cannot execute the guard | |
+
+### Sync registration (client)
+
+`lifeRecord` (create, update) and `lifeRecordLink` (create only) — registered by hand exactly like the owner-private `needsMe`
+(the foundation manifest route would require regenerating into the shipped Build 4 migration): `CORE_SYNC_KINDS`, `CLOUD_TABLE`,
+`IDENTITY_COLUMN`, `ALLOWED_OPS`, `UPDATABLE_COLUMNS` (exactly the migration's UPDATE grant), `DEPENDENCY_RANK` (record 2, link 3:
+after the child, the artifact and the Task it names), `syncKinds.CORE_COLLECTION`, `projection.toCloudRow` (owner stamped from the
+bound account; child subject and both link ends as cloud ids; an unmapped end is a scheduling fact), `apply.applyCloudRow` (arrives as
+it left; an unresolvable child keeps the raw uuid so the integrity gate names it), `claimSeam.kindOfLocalId`. The claim does NOT carry
+records (they reach the cloud as ordinary creates after binding); `describeLocalHousehold` counts them as content (M1).
+`tests/hk-ir01/changeBridge.test.mjs` inventory updated 29/27 → 31/29 kinds (the one pinned count; explained in the test).
+
+### Repair found in M5: refused-row values in durable sync evidence
+
+`src/platform/supabaseSyncTransport.ts` copied PostgreSQL's DETAIL into sync evidence. For a CHECK or NOT NULL refusal that DETAIL
+is "Failing row contains (…)" — the whole row, i.e. a note, a reference number, a location hint — and evidence is durable. Repaired
+generically (every kind benefits): the row values are withheld ("Failing row contains (values withheld)"), the message still names
+the constraint, and key-only details (unique / FK: ids) are kept. `failureFrom` is exported so the rule is unit-tested
+(`sync.test.mjs` error-payload test). Shared-file change, recorded as `HK-INT-F12-TRANSPORT-01`.
+
+### Fresh client, archive, stale revision, isolation — over REAL HTTP (`supabase/tests/journey-life-admin.mjs`, 24/24)
+
+Run by `node supabase/tests/run-f12.mjs journey` on a private stack with F12-only names (`f12_stack` database, `f12_postgrest`
+container, ports 54397/54398; `private-stack.mjs` gained env overrides for the database and container names, defaults unchanged) and
+also registered in `run.mjs`'s combined journeys block. Every device is built by `composeAccountApp` with the real Supabase clients.
+
+- a record made BEFORE binding + records, a record → Task link and a household Task made after binding reach PostgreSQL:
+  records owner-private, the Task `personal` and hers, the link by cloud ids, every Life Admin change pointer stamped with her profile;
+  the claim carried no record; the queue drained.
+- a FRESH second device of hers hydrates and shows an IDENTICAL Life Admin home; its link resolves to its own record and its own
+  personal Task; the reference survived; its state is valid; hydration produced no outbound work.
+- archive on A reaches PostgreSQL as an ordinary update (revision 2, nothing deleted); B receives it; an edit from an editor opened
+  before it is refused as STALE; a restarted device keeps it archived and creates no duplicate (no resurrection).
+- a SECOND ADULT MEMBER of the SAME household, bound to that household on her own device, hydrates it and receives NO record, NO link,
+  NOT the owner's personal Task — but DOES receive the household Task; none of the private values is anywhere in her persisted state;
+  through PostgREST she reads no record, no link and no Life Admin change pointer, and cannot edit the owner's record.
+- a stranger reads nothing and cannot plant a record; anon is refused; the attacks changed nothing.
+
+Observed and handled honestly: `sync_pull` hands out only changes committed below the CLUSTER-WIDE snapshot barrier (SD4-012), and
+sibling sessions' harnesses share the container, so on a busy host a change can arrive a pull or two later. The journey pulls until
+the change arrives (bounded: 20 pulls, 0.5 s apart) — the property tested is that nothing is LOST or overwritten, never that it is
+instant. Two earlier journey failures were my own sequencing (a device checked before its scheduled sync ran); fixed in the journey,
+not in product code.
+
+### Client sync through the production composition (`tests/lifeAdmin/sync.test.mjs`, 12/12, the Meals two-device harness, reused)
+
+offline create (record, Task and link durable and queued in one envelope; nothing sent) then online (all three in the cloud,
+owner-private, link by cloud ids); lost acknowledgement settles with one row; a refused row stays local as `validation-failure`
+evidence; fresh device reconstructs identical fields, link and personal Task; rename + clear reach B as the same record and the
+cleared value is null in the cloud; archive propagates and survives relaunch + another pull; STALE REVISION: B's queued edit cannot
+overwrite A's newer archive, B keeps the cloud's truth and her edit as `cas-conflict` evidence; the claim payload carries no record;
+ACCOUNT SWITCH: a device holding A's private (unsent) record and Task meets account B → quarantined (`boundOther`), zero requests on
+B's behalf, nothing of A in any table; an interrupted claim by A over a household holding ONLY records is quarantined from B (records
+count as content; control: a truly empty household bootstraps); DEMO: never queues or syncs, `sync` namespace null; the transport
+withholds refused-row values.
+
+### Account-switch isolation (brief section)
+
+| Surface | Status | Evidence |
+|---|---|---|
+| canonical records | PASS | sync.test ACCOUNT SWITCH (no upload under B; quarantine) |
+| link rows | PASS | same (link queued offline under A never reaches B's cloud) |
+| Needs Review projection | PASS | the projection reads only the device's state; a quarantined device renders no account data (`canRenderAccountData` false for `boundOther`, foundation) — nothing of A is shown to B |
+| cached/store state | PASS | quarantine keeps A's state on disk without rendering it for B (foundation behaviour, exercised) |
+| masked identifiers | PASS | same, plus privacy.test (no identifier anywhere outside the detail) |
+
+
+### Test-the-test (`scripts-dev/life-admin-mutation-check.cjs`; mutant code never committed; every file restored byte for byte)
+
+Run at `f773587` (source mutants, serially, 17/17) and in F12's private `f12_env` (SQL mutants, 3/3): **20 / 20 CAUGHT**, each by a
+genuine assertion failure (a crash or an unparseable run would be BROKEN, not caught). Plus the three M0 policy mutants (3/3).
+
+| Brief # | Required mutant | Implemented as | Verdict |
+|---|---|---|---|
+| 1 | expiresOn passage marks record archived/superseded/invalid | LA1 — a record whose recorded expiration date passed is dropped from her active records | CAUGHT (view) |
+| 2 | a date creates a Task without acceptance | LA2 — saving a dated record also creates a Task | CAUGHT (commands, today) |
+| 3 | completing a linked renewal Task marks the record renewed | LA3 — a record with a completed linked Task stops needing review | CAUGHT (view) |
+| 4 | matching title auto-supersedes | LA4 — a new same-title record retires (archives) the older one. Supersession is NOT BUILT, so the INFERENCE itself is the mutant | CAUGHT (commands) |
+| 5 | superseding deletes the old record | LA5 — archiving, V1's only history-retiring action, deletes the record (supersession NOT BUILT) | CAUGHT (commands, screen) |
+| 6 | same-household member reads a private LifeRecord | LA6 (SQL) — record SELECT policy opened to the household | CAUGHT (79) |
+| 7 | a private link reveals LifeRecord existence | LA7 (SQL) — link SELECT policy opened; LA7b (SQL) — the guard answers "someone else's Task" differently from "no such Task" | CAUGHT (79), CAUGHT (79, 8 checks) |
+| 8 | child display-name change breaks the subject relationship | LA8 — the subject is resolved by display name instead of id | CAUGHT (commands) |
+| 9 | archived record reappears active after hydration | LA9 — a pulled record always arrives active | CAUGHT (sync) |
+| 10 | archived/deleted linked Task counts as active admin work | LA10 — any non-completed Task (archived included) counts as open work | CAUGHT (commands, view) |
+| 11 | duplicate titles are one canonical record | LA11 — a matching title is treated as a repeat save | CAUGHT (commands) |
+| 12 | referenceNumber / locationHint / userNote leak into home / verdict / log | LA12a home row; LA12b console log; LA12c durable sync evidence; LA12d Life hub | CAUGHT (privacy); CAUGHT (privacy); CAUGHT (sync); CAUGHT (view, privacy) |
+| W | a dangling/unavailable linked target crashes | LA13 — a link whose Task is gone throws | CAUGHT (commands, view) |
+| (extra) | expires today is treated as passed (addendum G) | LA14 | CAUGHT (view) |
+| (extra) | Needs Review is not bounded at three (addendum I) | LA15 | CAUGHT (view, screen) |
+| (extra) | a Task created from a private record is household-visible (addendum D) | LA16 | CAUGHT (commands, screen) |
+
+Telemetry surfaces for mutant 12 (addendum O): home, Life hub, Today and verdict, logs and error evidence are tested; analytics and
+crash metadata are SAFE-UNAVAILABLE (no such module exists in the codebase to inspect); notifications and search NOT-APPLICABLE.

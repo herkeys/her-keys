@@ -1,0 +1,84 @@
+{
+  "tool": "herkeys-schema-fingerprint",
+  "toolVersion": 1,
+  "label": "HK-FEATURE-12 (Life Admin / Documents): local database after WAVE3_BASE (IR01 + F08 + F05) and the additive migration 20260922180000_f12_life_records.sql. DERIVED, not measured on the shared database: OLD (WAVE3_BASE) = 96f93f3d46dcf5735e7a0b50996944bf / 3629 facts; the F08 and F12 deltas were measured on scratch databases and applied to the shared database's own rows after it matched the F05 baseline (supabase/tools/f12-fingerprint.mjs).",
+  "searchPath": "''",
+  "scope": [
+    "public",
+    "private"
+  ],
+  "wave3Base": {
+    "items": 3629,
+    "digest": "96f93f3d46dcf5735e7a0b50996944bf"
+  },
+  "dimensions": {
+    "columns": {
+      "items": 761,
+      "digest": "11a61f0d36cbcb765e8d6671a4547dd5"
+    },
+    "constraints": {
+      "items": 720,
+      "digest": "300f4eb69d4d77252f4045ee6e9ac0f0"
+    },
+    "functions": {
+      "items": 29,
+      "digest": "0ed9a2158b0e970f4d1ac3d2a0d6365a"
+    },
+    "indexes": {
+      "items": 297,
+      "digest": "0a3b34c3a913c3dbd6f3cdf69735e840"
+    },
+    "info.event_triggers": {
+      "items": 7,
+      "digest": "460fef42355350673d98786b2395e9f7"
+    },
+    "info.extensions": {
+      "items": 6,
+      "digest": "7d12895eecbafc55a6fb3f91e7ce78b7"
+    },
+    "policies": {
+      "items": 90,
+      "digest": "e8cc9d2f12301bf7dc49b899650c91e3"
+    },
+    "privileges.columns": {
+      "items": 777,
+      "digest": "c6b08b59a33d5895410727dbf0e8477f"
+    },
+    "privileges.default_acl": {
+      "items": 7,
+      "digest": "84cba4e765aaa559cf174135e54549ff"
+    },
+    "privileges.effective": {
+      "items": 326,
+      "digest": "461cc6ca78a2c90b14fd0a277ed10be7"
+    },
+    "privileges.functions": {
+      "items": 56,
+      "digest": "7e05afae74c30479c4e72b37113461e3"
+    },
+    "privileges.relations": {
+      "items": 621,
+      "digest": "7b1261186aac92b48304129f24358a9d"
+    },
+    "privileges.schemas": {
+      "items": 10,
+      "digest": "eda0330fda8cc1898fa30c327ab67768"
+    },
+    "relations": {
+      "items": 37,
+      "digest": "ed7bec3304d5f0aa0e4d30d4d3ef1fc1"
+    },
+    "schemas": {
+      "items": 2,
+      "digest": "0e57bd8fd092941a34193a365f9fd211"
+    },
+    "triggers": {
+      "items": 111,
+      "digest": "1dd651fadc4ebb3b4ede570c12785dcf"
+    }
+  },
+  "gating": {
+    "items": 3844,
+    "digest": "60af45784ddd7373c7a56cd57c51b802"
+  }
+}
