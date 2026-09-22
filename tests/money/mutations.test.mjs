@@ -52,6 +52,13 @@ describe('Money OS — createObligation / createExpectedIncome', () => {
     assert.equal(state.categories.find((c2) => c2.id === task.categoryId).systemRole, 'money');
   });
 
+  test('a default/unstated payment mechanism is never silently promoted: leaving it unset stays null, not "manual"', () => {
+    const result = createObligation(base(), ctx(), fields({ paymentMechanism: null }));
+    assert.equal(result.outcome, 'saved');
+    const task = result.state.tasks.find((t) => t.id === result.id);
+    assert.equal(task.paymentMechanism, null, 'an unstated mechanism is honestly "not known", never defaulted to a plausible-looking value');
+  });
+
   test('expected income is inflow, and never carries a payment mechanism (that concept does not apply to money arriving)', () => {
     const result = createExpectedIncome(base(), ctx(), fields({ title: 'Reimbursement from work', paymentMechanism: 'autopay' }));
     assert.equal(result.outcome, 'saved');
