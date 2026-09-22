@@ -1,0 +1,11 @@
+{
+  "scenario": "AH",
+  "tier": 1,
+  "title": "Everything closed: \"nothing open\", never \"nothing needs attention\"",
+  "label": "Home",
+  "context": "active",
+  "canCreate": true,
+  "recordsConsidered": 1,
+  "sections": {},
+  "items": []
+}

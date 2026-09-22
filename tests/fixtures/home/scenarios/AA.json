@@ -1,0 +1,44 @@
+{
+  "scenario": "AA",
+  "tier": 1,
+  "title": "Legitimate completion history gives Last Done",
+  "label": "Home",
+  "context": "active",
+  "canCreate": true,
+  "recordsConsidered": 1,
+  "sections": {
+    "repeats": [
+      "task:aa-task-3"
+    ],
+    "recentlyDone": [
+      "task:aa-task-3"
+    ]
+  },
+  "items": [
+    {
+      "homeItemId": "task:aa-task-3",
+      "canonicalKind": "task",
+      "homeContextId": "cat-home",
+      "homeSystemRole": "home",
+      "attentionFacts": [],
+      "responsibilityState": "none",
+      "coverageState": "not_delegated",
+      "dependencyStanding": "none",
+      "durationSource": "user",
+      "recurrenceState": "active",
+      "lastDone": "2026-09-10",
+      "lastDoneEvidenceType": "completion_observation",
+      "lastDoneApplicable": true,
+      "nextExpected": "2026-12-12",
+      "scheduledState": "not_scheduled",
+      "resolutionState": "marked_done",
+      "unknownFacts": [
+        "condition_not_verified"
+      ],
+      "availableActions": [
+        "due_again",
+        "edit"
+      ]
+    }
+  ]
+}

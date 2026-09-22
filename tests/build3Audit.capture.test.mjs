@@ -17,6 +17,7 @@ import { projectStateDay } from '../src/domain/projectDay.ts';
 import { FIELD_LIMITS, SYSTEM_ROLES, validateAppState } from '../src/domain/state.ts';
 import { describeOpenTask, hasOwnTaskList, openTasksInCategory, openTasksWithoutList, TASK_LIST_ROLES } from '../src/domain/taskLists.ts';
 import { addTask, archiveTask, completeTask, updateTask } from '../src/domain/tasks.ts';
+import { buildHomeView } from '../src/features/home/model/buildHomeView.ts';
 import { openTaskLabel } from '../src/features/life/openTaskLabel.ts';
 import { createEmptyState } from '../src/state/initialState.ts';
 import { DAY, NEXT_DAY, TZ, ctx, harness, launch, onboardedState } from './support/fixtures.mjs';
@@ -121,7 +122,10 @@ describe('Build 3 audit — every open task is reachable (B3-AUD-004)', () => {
       // in the kids category stays reachable from the Kids screen - but a child's own items now live under that child, so this screen
       // lists the ones that name no child (`unlinkedKidsTasks`). tests/kids/reachability.test.mjs proves the union covers every task.
       kids: 'src/features/kids/unlinked.ts',
-      home: 'src/features/home/HomeOverview.tsx',
+      // HK-FEATURE-06 REWRITE (test disposition: REWRITTEN, not weakened). Home Overview was replaced by Home OS. The invariant this
+      // row guarded is unchanged — the Home screen is wired to its ROLE (never a name) and lists every open task in its category, not
+      // just today's — and is now checked against Home's own module below.
+      home: 'src/features/home/model/homeContext.ts',
       money: 'src/features/money/MoneyOverview.tsx',
       work: 'src/features/work/WorkOverview.tsx',
     };
@@ -135,9 +139,22 @@ describe('Build 3 audit — every open task is reachable (B3-AUD-004)', () => {
         assert.match(source('app/(app)/life/kids.tsx'), /<KidsHub \/>/, 'the Life route renders the Kids hub');
         continue;
       }
+      if (role === 'home') {
+        assert.match(text, /categoryWithRole\(state, HOME_ROLE\)/, path);
+        assert.match(text, /HOME_ROLE: SystemRole = 'home'/, path);
+        assert.doesNotMatch(text, /\.name\s*(===|!==)/, 'Home never decides by a category name');
+        continue;
+      }
       assert.match(text, new RegExp(`categoryIdForRole\\('${role}'\\)`), path);
       assert.match(text, /<CategoryTaskList categoryId=/, path);
     }
+    // ...and the behaviour behind it: every open Home task is listed by Home OS (the Life hub does not list them anywhere else).
+    const withHomeTasks = everyKindOfTask();
+    const openHome = withHomeTasks.tasks.filter((t) => t.categoryId === 'cat-home' && t.status === 'open').map((t) => `task:${t.id}`);
+    assert.ok(openHome.length >= 2, 'the fixture has open Home tasks');
+    const homeView = buildHomeView(withHomeTasks, zonedTimeToEpochMs(DAY, 10 * 60, TZ));
+    const listed = new Set(['attention', 'waiting', 'comingUp', 'unresolved'].flatMap((key) => homeView.sections.find((s) => s.key === key).itemIds));
+    assert.deepEqual(openHome.filter((id) => !listed.has(id)), [], 'no open Home task is missing from Home OS');
     for (const role of SYSTEM_ROLES.filter((r) => !TASK_LIST_ROLES.includes(r))) {
       assert.ok(!Object.keys(screens).includes(role));
     }

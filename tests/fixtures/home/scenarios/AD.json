@@ -1,0 +1,41 @@
+{
+  "scenario": "AD",
+  "tier": 1,
+  "title": "Task completion does not create a fixed/safe claim",
+  "label": "Home",
+  "context": "active",
+  "canCreate": true,
+  "recordsConsidered": 1,
+  "sections": {
+    "recentlyDone": [
+      "task:ad-task-3"
+    ]
+  },
+  "items": [
+    {
+      "homeItemId": "task:ad-task-3",
+      "canonicalKind": "task",
+      "homeContextId": "cat-home",
+      "homeSystemRole": "home",
+      "attentionFacts": [],
+      "responsibilityState": "none",
+      "coverageState": "not_delegated",
+      "dependencyStanding": "none",
+      "durationSource": "user",
+      "recurrenceState": "none",
+      "lastDone": "2026-09-21",
+      "lastDoneEvidenceType": "completion_observation",
+      "lastDoneApplicable": true,
+      "nextExpected": null,
+      "scheduledState": "not_scheduled",
+      "resolutionState": "marked_done",
+      "unknownFacts": [
+        "condition_not_verified"
+      ],
+      "availableActions": [
+        "due_again",
+        "edit"
+      ]
+    }
+  ]
+}

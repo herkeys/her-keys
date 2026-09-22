@@ -1,0 +1,44 @@
+{
+  "scenario": "U",
+  "tier": 1,
+  "title": "Another person owns it and it remains unresolved",
+  "label": "Home",
+  "context": "active",
+  "canCreate": true,
+  "recordsConsidered": 1,
+  "sections": {
+    "waiting": [
+      "task:u-task-3"
+    ]
+  },
+  "items": [
+    {
+      "homeItemId": "task:u-task-3",
+      "canonicalKind": "task",
+      "homeContextId": "cat-home",
+      "homeSystemRole": "home",
+      "attentionFacts": [],
+      "responsibilityState": "accepted",
+      "coverageState": "covered",
+      "dependencyStanding": "none",
+      "durationSource": "user",
+      "recurrenceState": "none",
+      "lastDone": null,
+      "lastDoneEvidenceType": null,
+      "lastDoneApplicable": true,
+      "nextExpected": null,
+      "scheduledState": "not_scheduled",
+      "resolutionState": "unresolved",
+      "unknownFacts": [
+        "no_due_date",
+        "provider_not_verified"
+      ],
+      "availableActions": [
+        "edit",
+        "mark_done",
+        "take_back",
+        "remove"
+      ]
+    }
+  ]
+}

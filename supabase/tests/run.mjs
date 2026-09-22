@@ -644,6 +644,11 @@ try {
     const { kidsJourneys } = await import(`file://${join(HERE, 'journey-kids.mjs')}`);
     await kidsJourneys(check, psql);
   }
+  if (only === 'home') {
+    ensureLocalStackCurrent();
+    const { homeJourneys } = await import(`file://${join(HERE, 'journey-home.mjs')}`);
+    await homeJourneys(check, psql);
+  }
   if (!only) {
     ensureLocalStackCurrent();
     const { syncIntegration } = await import(`file://${join(HERE, 'sync-integration.mjs')}`);
@@ -652,6 +657,8 @@ try {
     await productionCompositionJourneys(check, psql);
     const { kidsJourneys } = await import(`file://${join(HERE, 'journey-kids.mjs')}`);
     await kidsJourneys(check, psql);
+    const { homeJourneys } = await import(`file://${join(HERE, 'journey-home.mjs')}`);
+    await homeJourneys(check, psql);
   }
 } catch (err) {
   console.error(`\nHARNESS ERROR: ${err.message}`);

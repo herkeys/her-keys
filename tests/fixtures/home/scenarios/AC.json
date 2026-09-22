@@ -1,0 +1,70 @@
+{
+  "scenario": "AC",
+  "tier": 1,
+  "title": "Service appointment scheduled, work still unresolved",
+  "label": "Home",
+  "context": "active",
+  "canCreate": true,
+  "recordsConsidered": 2,
+  "sections": {
+    "comingUp": [
+      "event:ac-evt-4"
+    ],
+    "unresolved": [
+      "task:ac-task-3"
+    ]
+  },
+  "items": [
+    {
+      "homeItemId": "event:ac-evt-4",
+      "canonicalKind": "event",
+      "homeContextId": "cat-home",
+      "homeSystemRole": "home",
+      "attentionFacts": [],
+      "responsibilityState": "none",
+      "coverageState": "not_delegated",
+      "dependencyStanding": "none",
+      "durationSource": "not_applicable",
+      "recurrenceState": "none",
+      "lastDone": null,
+      "lastDoneEvidenceType": null,
+      "lastDoneApplicable": false,
+      "nextExpected": null,
+      "scheduledState": "scheduled_visit",
+      "resolutionState": "scheduled",
+      "unknownFacts": [],
+      "availableActions": [
+        "edit",
+        "ask_someone",
+        "remove"
+      ]
+    },
+    {
+      "homeItemId": "task:ac-task-3",
+      "canonicalKind": "task",
+      "homeContextId": "cat-home",
+      "homeSystemRole": "home",
+      "attentionFacts": [],
+      "responsibilityState": "none",
+      "coverageState": "not_delegated",
+      "dependencyStanding": "none",
+      "durationSource": "user",
+      "recurrenceState": "none",
+      "lastDone": null,
+      "lastDoneEvidenceType": null,
+      "lastDoneApplicable": true,
+      "nextExpected": null,
+      "scheduledState": "not_scheduled",
+      "resolutionState": "unresolved",
+      "unknownFacts": [
+        "no_due_date"
+      ],
+      "availableActions": [
+        "edit",
+        "mark_done",
+        "ask_someone",
+        "remove"
+      ]
+    }
+  ]
+}

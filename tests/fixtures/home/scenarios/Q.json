@@ -1,0 +1,47 @@
+{
+  "scenario": "Q",
+  "tier": 1,
+  "title": "Assigned, not accepted",
+  "label": "Home",
+  "context": "active",
+  "canCreate": true,
+  "recordsConsidered": 1,
+  "sections": {
+    "waiting": [
+      "task:q-task-3"
+    ]
+  },
+  "items": [
+    {
+      "homeItemId": "task:q-task-3",
+      "canonicalKind": "task",
+      "homeContextId": "cat-home",
+      "homeSystemRole": "home",
+      "attentionFacts": [],
+      "responsibilityState": "requested",
+      "coverageState": "asked",
+      "dependencyStanding": "none",
+      "durationSource": "user",
+      "recurrenceState": "none",
+      "lastDone": null,
+      "lastDoneEvidenceType": null,
+      "lastDoneApplicable": true,
+      "nextExpected": null,
+      "scheduledState": "not_scheduled",
+      "resolutionState": "unresolved",
+      "unknownFacts": [
+        "no_due_date",
+        "provider_not_verified"
+      ],
+      "availableActions": [
+        "edit",
+        "mark_done",
+        "record_seen",
+        "record_accepted",
+        "record_declined",
+        "take_back",
+        "remove"
+      ]
+    }
+  ]
+}

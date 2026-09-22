@@ -1,0 +1,43 @@
+{
+  "scenario": "T",
+  "tier": 1,
+  "title": "Home task that requires her (nobody holds it)",
+  "label": "Home",
+  "context": "active",
+  "canCreate": true,
+  "recordsConsidered": 1,
+  "sections": {
+    "unresolved": [
+      "task:t-task-3"
+    ]
+  },
+  "items": [
+    {
+      "homeItemId": "task:t-task-3",
+      "canonicalKind": "task",
+      "homeContextId": "cat-home",
+      "homeSystemRole": "home",
+      "attentionFacts": [],
+      "responsibilityState": "none",
+      "coverageState": "not_delegated",
+      "dependencyStanding": "none",
+      "durationSource": "user",
+      "recurrenceState": "none",
+      "lastDone": null,
+      "lastDoneEvidenceType": null,
+      "lastDoneApplicable": true,
+      "nextExpected": null,
+      "scheduledState": "not_scheduled",
+      "resolutionState": "unresolved",
+      "unknownFacts": [
+        "no_due_date"
+      ],
+      "availableActions": [
+        "edit",
+        "mark_done",
+        "ask_someone",
+        "remove"
+      ]
+    }
+  ]
+}

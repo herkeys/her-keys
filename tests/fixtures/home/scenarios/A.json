@@ -1,0 +1,11 @@
+{
+  "scenario": "A",
+  "tier": 1,
+  "title": "No Home records",
+  "label": "Home",
+  "context": "active",
+  "canCreate": true,
+  "recordsConsidered": 0,
+  "sections": {},
+  "items": []
+}

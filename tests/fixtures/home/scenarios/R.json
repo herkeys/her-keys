@@ -1,0 +1,44 @@
+{
+  "scenario": "R",
+  "tier": 1,
+  "title": "Accepted, still needs her: not covered",
+  "label": "Home",
+  "context": "active",
+  "canCreate": true,
+  "recordsConsidered": 1,
+  "sections": {
+    "waiting": [
+      "task:r-task-3"
+    ]
+  },
+  "items": [
+    {
+      "homeItemId": "task:r-task-3",
+      "canonicalKind": "task",
+      "homeContextId": "cat-home",
+      "homeSystemRole": "home",
+      "attentionFacts": [],
+      "responsibilityState": "accepted",
+      "coverageState": "accepted_needs_you",
+      "dependencyStanding": "none",
+      "durationSource": "user",
+      "recurrenceState": "none",
+      "lastDone": null,
+      "lastDoneEvidenceType": null,
+      "lastDoneApplicable": true,
+      "nextExpected": null,
+      "scheduledState": "not_scheduled",
+      "resolutionState": "unresolved",
+      "unknownFacts": [
+        "no_due_date",
+        "provider_not_verified"
+      ],
+      "availableActions": [
+        "edit",
+        "mark_done",
+        "take_back",
+        "remove"
+      ]
+    }
+  ]
+}

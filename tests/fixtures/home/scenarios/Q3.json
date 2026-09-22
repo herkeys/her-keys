@@ -1,0 +1,46 @@
+{
+  "scenario": "Q3",
+  "tier": 1,
+  "title": "Seen but not accepted; declined is hers again",
+  "label": "Home",
+  "context": "active",
+  "canCreate": true,
+  "recordsConsidered": 1,
+  "sections": {
+    "waiting": [
+      "task:q3-task-3"
+    ]
+  },
+  "items": [
+    {
+      "homeItemId": "task:q3-task-3",
+      "canonicalKind": "task",
+      "homeContextId": "cat-home",
+      "homeSystemRole": "home",
+      "attentionFacts": [],
+      "responsibilityState": "acknowledged",
+      "coverageState": "seen",
+      "dependencyStanding": "none",
+      "durationSource": "user",
+      "recurrenceState": "none",
+      "lastDone": null,
+      "lastDoneEvidenceType": null,
+      "lastDoneApplicable": true,
+      "nextExpected": null,
+      "scheduledState": "not_scheduled",
+      "resolutionState": "unresolved",
+      "unknownFacts": [
+        "no_due_date",
+        "provider_not_verified"
+      ],
+      "availableActions": [
+        "edit",
+        "mark_done",
+        "record_accepted",
+        "record_declined",
+        "take_back",
+        "remove"
+      ]
+    }
+  ]
+}

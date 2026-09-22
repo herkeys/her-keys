@@ -1,10 +1,5 @@
-import { Screen } from '../../../src/design/components';
-import { HomeOverview } from '../../../src/features/home/HomeOverview';
+import { HomeScreen } from '../../../src/features/home/HomeScreen';
 
-export default function HomeScreen() {
-  return (
-    <Screen>
-      <HomeOverview />
-    </Screen>
-  );
+export default function HomeRoute() {
+  return <HomeScreen />;
 }

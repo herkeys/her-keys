@@ -1,0 +1,71 @@
+{
+  "scenario": "V",
+  "tier": 1,
+  "title": "Completed prerequisite is satisfied",
+  "label": "Home",
+  "context": "active",
+  "canCreate": true,
+  "recordsConsidered": 2,
+  "sections": {
+    "unresolved": [
+      "task:v-task-4"
+    ],
+    "recentlyDone": [
+      "task:v-task-3"
+    ]
+  },
+  "items": [
+    {
+      "homeItemId": "task:v-task-3",
+      "canonicalKind": "task",
+      "homeContextId": "cat-home",
+      "homeSystemRole": "home",
+      "attentionFacts": [],
+      "responsibilityState": "none",
+      "coverageState": "not_delegated",
+      "dependencyStanding": "none",
+      "durationSource": "user",
+      "recurrenceState": "none",
+      "lastDone": "2026-09-21",
+      "lastDoneEvidenceType": "completion_observation",
+      "lastDoneApplicable": true,
+      "nextExpected": null,
+      "scheduledState": "not_scheduled",
+      "resolutionState": "marked_done",
+      "unknownFacts": [
+        "condition_not_verified"
+      ],
+      "availableActions": [
+        "due_again",
+        "edit"
+      ]
+    },
+    {
+      "homeItemId": "task:v-task-4",
+      "canonicalKind": "task",
+      "homeContextId": "cat-home",
+      "homeSystemRole": "home",
+      "attentionFacts": [],
+      "responsibilityState": "none",
+      "coverageState": "not_delegated",
+      "dependencyStanding": "ready",
+      "durationSource": "user",
+      "recurrenceState": "none",
+      "lastDone": null,
+      "lastDoneEvidenceType": null,
+      "lastDoneApplicable": true,
+      "nextExpected": null,
+      "scheduledState": "not_scheduled",
+      "resolutionState": "unresolved",
+      "unknownFacts": [
+        "no_due_date"
+      ],
+      "availableActions": [
+        "edit",
+        "mark_done",
+        "ask_someone",
+        "remove"
+      ]
+    }
+  ]
+}
