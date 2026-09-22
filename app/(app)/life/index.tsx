@@ -4,6 +4,8 @@ import { AppText, Overline, Screen, StatusList } from '../../../src/design/compo
 import { colors, spacing } from '../../../src/design/tokens';
 import { openTasksWithoutList } from '../../../src/domain/taskLists';
 import { NeedsMeQuickAdd } from '../../../src/features/life/NeedsMeQuickAdd';
+import { LIFE_ADMIN_COPY } from '../../../src/features/lifeAdmin/lifeAdminCopy';
+import { lifeAdminHubSummary } from '../../../src/features/lifeAdmin/lifeAdminView';
 import { useLifeStatus } from '../../../src/features/life/useLifeStatus';
 import { useLifeInbox } from '../../../src/features/talk-it-out/capture/CaptureContext';
 import { copy } from '../../../src/features/talk-it-out/capture/copy';
@@ -62,6 +64,13 @@ export default function LifeHub() {
             label: 'Needs Me',
             value: openNeedsMe.length === 0 ? 'Nothing captured' : `${openNeedsMe.length} captured`,
             onPress: () => router.push('/life/needs-me'),
+          },
+          // Life Admin / Documents (HK-FEATURE-12): a count only. No title, number, note, place, issuer or child name reaches the hub.
+          {
+            key: 'life-admin',
+            label: LIFE_ADMIN_COPY.hubLabel,
+            ...lifeAdminHubSummary(state, today),
+            onPress: () => router.push('/life/admin'),
           },
         ]}
       />

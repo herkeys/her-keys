@@ -324,3 +324,88 @@ Today behaviour (`tests/lifeAdmin/today.test.mjs`, **2/2**):
   What Matters Today under the Task's title; the record's own title never appears there.
 
 M3 checkpoint: recorded with the M3 commit below.
+
+M3 checkpoint (after commit): `feature/12-life-admin-documents` @ `c7c72da`, `git status --short` empty.
+
+---
+
+## F12-M4 — Life Admin UI / dates / masking / bounded review
+
+### Files
+
+| File | Role |
+|---|---|
+| `app/(app)/life/admin.tsx` | the one route, under Life; declares its own header (the Co-Parent pattern), so `app/(app)/life/_layout.tsx` is unchanged |
+| `app/(app)/life/index.tsx` | ONE new hub row, "Life Admin / Documents", valued by `lifeAdminHubSummary` (a count only); no hub redesign, no new tab |
+| `src/features/lifeAdmin/lifeAdminView.ts` | the pure projection: Needs Review, verdict, Coming Up, ordering, archived list, hub summary, record detail |
+| `src/features/lifeAdmin/sensitive.ts` | `maskReference`, `DETAIL_ONLY_FIELDS` |
+| `src/features/lifeAdmin/lifeAdminDates.ts` | calendar-date labels from the date's own parts (the year is always said) |
+| `src/features/lifeAdmin/lifeAdminCopy.ts` | every word, factual and calm |
+| `src/features/lifeAdmin/lifeAdminGate.ts` | loading / recovery / ready; no emptiness claim before the household is read |
+| `src/features/lifeAdmin/LifeAdminBody.tsx`, `RecordSheet.tsx`, `RecordDetailSheet.tsx`, `RecordTaskSheet.tsx` | pure views (no store, router, persistence, platform module or clock) |
+| `src/features/lifeAdmin/LifeAdminContainer.tsx` | the sheet state machine; one `store.commit` per Save / Archive / Restore; the store is PASSED IN, so tests drive it against a real store |
+| `src/features/lifeAdmin/LifeAdminScreen.tsx` | the connected wrapper: reads the store and account hooks, renders the shared persistence/sync notices, hands everything to the container |
+
+### Behaviour as built
+
+- **Home hierarchy:** plain verdict, Add record, Needs Review (at most 3; "See all N" expands inline), Coming up (next 14 days, at
+  most 5, records not already in review), Records (all active), Archived (collapsed, "Show archived (N)"). No "Recently updated"
+  section was built (optional, AD); no bespoke archive navigation (AC).
+- **Empty state:** only when she has no records at all (active or archived): "Add one record you don't want to keep track of in your
+  head." with Add record and Skip (Skip goes back). No inventory, no category onboarding.
+- **Date rules (addendum G):** `expiresOn == today` reads "Recorded expiration date is today." (Coming up, NOT passed);
+  `expiresOn < today` reads "Recorded expiration date passed (date)." Nothing ever says invalid, illegal or unusable, and no stored
+  status changes when time passes. `renewBy` / `reviewOn` today or earlier is category 1. `renewBy > expiresOn` is preserved and
+  not warned about (addendum H).
+- **Needs Review (addendum I):** one item per record under its highest category, carrying its OLDEST applicable date; category 1
+  oldest first, category 2 oldest first, id ascending; cap 3.
+- **Verdict (addendum J):** exactly one category, count-aware: "One record needs review." / "N records need review." /
+  "One record has passed its recorded expiration date." / "N records have passed their recorded expiration dates." /
+  "Next: [title] — [date]." / "Nothing needs review."
+- **Upcoming (addendum K):** 14 calendar days, a projection constant; stored nowhere; creates no Task and no notification.
+  `reviewOn` is surfaced only on the Life Admin home and detail (addendum L): no push, email, system notification or Event.
+- **Ordering:** Needs Review order, then upcoming (soonest), then `updatedAt` descending, id ascending. No importance score.
+- **Record detail:** the ONE surface with the reference number, location hint and note. The reference is masked (four bullets plus
+  the last 4 of the normalised value when it has 8 or more characters, four bullets otherwise); Reveal / Hide lives in component
+  state only (reopened means masked again; nothing stored). Copy is SAFE-UNAVAILABLE and said on screen ("Copy isn't available on
+  this device."): no clipboard module exists and adding a dependency is out of scope. The detail states what a record is: "What you
+  recorded. Her Keys hasn't checked it with anyone, and keeps these details, not the document itself."
+- **Task from record (addendum M):** "Add renewal task" / "Add follow-up" / "Add next step" open a sheet with the relationship fixed
+  and draft ids allocated; opening and cancelling write nothing; Save creates ONE personal Task and ONE link in one commit; the
+  category is her required pick; the record's renew-by date is offered as one explicit chip, never applied on her behalf.
+- **Edit and clear (addendum Z):** every optional field is cleared by emptying it; archived records can be corrected and restored.
+- **Child subject:** chosen by chip (canonical id); displayed by the child's CURRENT name, resolved by id every time; a missing child
+  is said as missing.
+- **Life hub (addendum T):** "N records need review." / "N records." / "Nothing needs review." Never a title, number, note, location,
+  issuer or child name.
+- **Search:** NOT BUILT (DD-12-08).
+
+### Timezone (addendum F)
+
+Proven, not assumed: at 2026-09-16T12:30Z a household whose persisted profile timezone is `Pacific/Auckland` loads (real store,
+in-memory repository, device zone `America/New_York`) with logical today `2026-09-17`, so a record expiring `2026-09-16` has passed;
+evaluated at the device-zone date it would still be "expires today".
+
+### Tests (M4)
+
+| File | Result | Covers |
+|---|---|---|
+| `tests/lifeAdmin/view.test.mjs` | 24/24 | expires today vs yesterday; no legal words and no status change; renew/review today and past; no-date record; renewBy > expiresOn; review order, cap and See all; one item per record at its oldest date; archived excluded; a completed renewal Task leaves the record in review; archived/completed Task is not active work; unavailable Task; verdict forms (one category only); 14-day boundary (day 14 in, day 15 out); no repeat of review items in Coming up; home ordering incl. the id tie-break; duplicate titles are two rows; child rename by id and missing child; empty phase; hub forms and hub privacy; the profile-timezone date source |
+| `tests/lifeAdmin/screen.test.mjs` | 9/9 | loading/recovery never claim emptiness; empty state and Skip; cap 3 then See all; archived one tap away; REAL STORE: opening/cancelling Add record writes nothing, a title-only save writes one record and no Task; opening/cancelling the task sheet writes nothing; category required; a double-pressed Save is one personal Task and one link, with no due date applied; reference masked, Reveal, reopened masked, nothing stored; archive keeps the record and the SAME Task; presentational files import no store/router/persistence/platform/clock and no F12 file has logging, network or telemetry |
+| `tests/lifeAdmin/privacy.test.mjs` | 5/5 | mask rules (8 or more gives the last 4; 7 or fewer gives nothing; normalised); sentinels in reference/location/note (plus type/issuer/child name for the hub) absent from the home view, its rendered text and labels, the hub summary, attention, What Matters, One Move, briefing, the Calendar day and (structurally) the Life areas; refusals and state-validation issues name fields only; store diagnostics and all console output through create, task, edit, archive and relaunch |
+| `tests/lifeAdmin/copyAudit.test.mjs` | 6/6 | no shaming words, no legal conclusion, no verification or possession claim, the "not a secret store" guidance, no invented renewal window, the exact verdict forms |
+| `tests/lifeAdmin/demo.test.mjs` | 3/3 | at most 5 fictional records, `DEMO-000N` only; no realistic sensitive pattern (each pattern proven to catch its sample); demo state valid and showing one review and one upcoming; `demo-seed` refused by the cloud; a demo household never binds |
+
+F12 app tests so far: 72/72 (20 suites) across `tests/lifeAdmin/*.test.mjs`.
+
+### Telemetry surfaces (addendum O)
+
+| Surface | Status | Evidence |
+|---|---|---|
+| Life Admin home, Life hub row, Today, verdict | PASS | privacy.test.mjs, view.test.mjs |
+| search result rows | NOT-APPLICABLE | search not built |
+| notifications | NOT-APPLICABLE | no notification surface exists in the product |
+| application logs | PASS | store diagnostics and every console method captured across the lifecycle; F12 source contains no `console.` (static scan) |
+| analytics payloads | SAFE-UNAVAILABLE | no analytics SDK or module exists in the codebase (`package.json` and source scan), so there is no payload to inspect |
+| error payloads | PASS | refusal results and `validateAppState` issues; sync evidence is checked in M5 |
+| crash metadata | SAFE-UNAVAILABLE | no crash-reporting SDK exists in the codebase |
