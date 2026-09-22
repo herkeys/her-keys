@@ -1,0 +1,39 @@
+{
+  "scenario": "C",
+  "description": "two children with the same first name",
+  "childId": "child-2",
+  "childLabel": "Sam, 6 · born Jul 7, 2020",
+  "nextItem": {
+    "title": "Swim",
+    "kind": "event",
+    "localDate": "2026-09-22",
+    "startMinutes": 1020
+  },
+  "needsAttentionReasons": [],
+  "openWork": {
+    "needsYou": [],
+    "withSomeoneElse": [],
+    "waiting": [],
+    "nobodyRecorded": []
+  },
+  "focus": {
+    "title": "Swim",
+    "responsibilityState": "none",
+    "coverageState": "nobody_recorded",
+    "requiresYou": null,
+    "dependencyStanding": null,
+    "durationSource": null,
+    "fallbackPlanState": "NOT_ENOUGH_KNOWN:nothing_recorded",
+    "openSteps": [],
+    "unknownFacts": [
+      "location",
+      "who_is_handling"
+    ],
+    "availableActions": [
+      "edit",
+      "remove",
+      "request_handoff",
+      "add_plan_step"
+    ]
+  }
+}

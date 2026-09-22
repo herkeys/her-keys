@@ -1,0 +1,37 @@
+{
+  "scenario": "AB",
+  "description": "a household-level task never becomes a child's",
+  "childId": "child-1",
+  "childLabel": "Sam, 8",
+  "nextItem": null,
+  "needsAttentionReasons": [],
+  "openWork": {
+    "needsYou": [],
+    "withSomeoneElse": [],
+    "waiting": [],
+    "nobodyRecorded": [
+      "Sam only"
+    ]
+  },
+  "focus": {
+    "title": "Sam only",
+    "responsibilityState": "none",
+    "coverageState": "nobody_recorded",
+    "requiresYou": null,
+    "dependencyStanding": null,
+    "durationSource": "default-estimate",
+    "fallbackPlanState": null,
+    "openSteps": [],
+    "unknownFacts": [
+      "when",
+      "who_is_handling",
+      "length_confirmed"
+    ],
+    "availableActions": [
+      "edit",
+      "mark_done",
+      "remove",
+      "request_handoff"
+    ]
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "scenario": "O2",
+  "description": "acknowledged (seen) but not accepted",
+  "childId": "child-1",
+  "childLabel": "Sam, 8",
+  "nextItem": null,
+  "needsAttentionReasons": [
+    "fact:not_accepted:none"
+  ],
+  "openWork": {
+    "needsYou": [
+      "Costume"
+    ],
+    "withSomeoneElse": [],
+    "waiting": [],
+    "nobodyRecorded": []
+  },
+  "focus": {
+    "title": "Costume",
+    "responsibilityState": "acknowledged",
+    "coverageState": "seen_not_accepted",
+    "requiresYou": true,
+    "dependencyStanding": null,
+    "durationSource": "default-estimate",
+    "fallbackPlanState": "NOT_ENOUGH_KNOWN:seen_not_accepted",
+    "openSteps": [],
+    "unknownFacts": [
+      "when",
+      "length_confirmed"
+    ],
+    "availableActions": [
+      "edit",
+      "mark_done",
+      "remove",
+      "record_accepted",
+      "record_declined",
+      "take_back",
+      "add_plan_step"
+    ]
+  }
+}

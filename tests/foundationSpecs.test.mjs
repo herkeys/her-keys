@@ -117,13 +117,13 @@ describe('the manifest agrees with the sync engine', () => {
 
 describe('the reference graph is acyclic, so a push order exists', () => {
   const SELF = new Map(FOUNDATION_SPECS.map((s) => [s.kind, s]));
-  const linkKind = (to) => to; // link targets are named by sync kind, except `member` (claim-only, never pushed)
+  const linkKind = (to) => to; // link targets are named by sync kind; `member` (a child) is one since HK-FEATURE-05 / OC-01
 
   /** Every kind a row of `spec` points at: its links, its typed references, and its provenance's artifact. */
   const dependenciesOf = (spec) => {
     const deps = new Set();
     for (const f of spec.fields) {
-      if (f.type === 'link' && f.to !== 'member') deps.add(linkKind(f.to));
+      if (f.type === 'link') deps.add(linkKind(f.to));
       if (f.type === 'ref') for (const k of f.kinds) deps.add(k);
     }
     if (spec.provenance === 'standard') deps.add('sourceArtifact');

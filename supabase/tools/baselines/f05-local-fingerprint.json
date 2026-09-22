@@ -1,0 +1,80 @@
+{
+  "tool": "herkeys-schema-fingerprint",
+  "toolVersion": 1,
+  "label": "HK-FEATURE-05 closeout repair (OC-01): local database after the additive migration 20260921190000_f05_add_child_after_binding.sql (private.push_household_child + sync_push delegating a child insert to it). Follows ir01-local-fingerprint.json (43e7c8a4..., 3617 facts); changes exactly three dimensions: functions, privileges.effective, privileges.functions (+4 facts).",
+  "searchPath": "''",
+  "scope": [
+    "public",
+    "private"
+  ],
+  "dimensions": {
+    "columns": {
+      "items": 714,
+      "digest": "615f3edb21f7bdeaffe274f96d764dd0"
+    },
+    "constraints": {
+      "items": 679,
+      "digest": "728c9f294d2ff64f0ddf3e35a85308a0"
+    },
+    "functions": {
+      "items": 28,
+      "digest": "4de5c2d23a0255f0362cbc7a88d6fd68"
+    },
+    "indexes": {
+      "items": 284,
+      "digest": "7dcfc54f3ff8ab1e3102e937caffd51f"
+    },
+    "info.event_triggers": {
+      "items": 7,
+      "digest": "460fef42355350673d98786b2395e9f7"
+    },
+    "info.extensions": {
+      "items": 6,
+      "digest": "7d12895eecbafc55a6fb3f91e7ce78b7"
+    },
+    "policies": {
+      "items": 85,
+      "digest": "20fa34345c0e4e530506aad4c23a315f"
+    },
+    "privileges.columns": {
+      "items": 721,
+      "digest": "69b4ff815c41dc5e85270120ad9325a3"
+    },
+    "privileges.default_acl": {
+      "items": 7,
+      "digest": "84cba4e765aaa559cf174135e54549ff"
+    },
+    "privileges.effective": {
+      "items": 310,
+      "digest": "147021fb57cb9814967cb88d848c4ef2"
+    },
+    "privileges.functions": {
+      "items": 55,
+      "digest": "1bae4fe577be924edafc9399ab4b4544"
+    },
+    "privileges.relations": {
+      "items": 587,
+      "digest": "6dcc6008d4f6c463d266c44a5345f816"
+    },
+    "privileges.schemas": {
+      "items": 10,
+      "digest": "eda0330fda8cc1898fa30c327ab67768"
+    },
+    "relations": {
+      "items": 35,
+      "digest": "d96433fa6acf2a1c49f23c5a2afecccc"
+    },
+    "schemas": {
+      "items": 2,
+      "digest": "0e57bd8fd092941a34193a365f9fd211"
+    },
+    "triggers": {
+      "items": 104,
+      "digest": "3349217a986a8890446692fc1f918324"
+    }
+  },
+  "gating": {
+    "items": 3621,
+    "digest": "8bf3c7c6367c06b79128eb83147fd17e"
+  }
+}

@@ -75,7 +75,7 @@ second claim and no duplicate rows; offline at bind loses nothing (the seed is i
 | `interpretation`, `externalReference`, `observation`, `authority`, `intent`, `decision`, `person`, `responsibility`, `dependency`, `recurrence`, `goal`, `systemStep`, `capacity`, `pattern`, `evidenceLink` | matching collections | **QUEUED AFTER CLAIM** |
 | `execution`, `outcome` | `executions`, `outcomes` | **PULLED ONLY** (server-written; a device cannot forge one) |
 | `household` | `household` | mapping-only, **CLAIMED** |
-| `member` | `user`, `children` | mapping-only: owner created by bootstrap; children **CLAIMED** (v3) and **PULLED** on second devices |
+| `member` | `user`, `children` | mapping-only: owner created by bootstrap; children **CLAIMED** (v3) and **PULLED** on second devices. **SUPERSEDED IN PART (HK-FEATURE-05 closeout, owner checkpoint OC-01):** a CHILD is now also a create-only pushed kind (`member`, over `children`): a child added after binding is queued and created through `sync_push` by the household's owner. The account holder's own member row is still mapped and never pushed. See `HK_FEATURE_05_OWNER_CHECKPOINT_01.md`. |
 
 **Intentionally local-only:** `migrationEvidence`, `migrationLineage` (local record of what a migration could not carry; a canary in one
 never appears in any row sent or any cloud table — proved against PostgreSQL); quarantined corrupt bytes (they live in a separate storage key,
@@ -168,7 +168,7 @@ journey, sending 450 rows and pulling them back, runs in about one second).
 D1 R7/R10 adoption of an existing cloud household on a new device (contract recorded, unimplemented; owner decision on quarantine UX);
 D2 `discovery_answers` has no transport; D3 a mutation arriving while 500 items are queued sets `backlog` (durable, surfaced) but the
 un-queued *update* is not auto-recovered (creates are, via the stateless seed); D4 no row-level pull quarantine (HA-014); D5 no network-restored
-event (no NetInfo dependency) — backoff covers it; D6 post-bind child creation has no server path (and no app path exists); D7 HA-013 destructive
+event (no NetInfo dependency) — backoff covers it; D6 post-bind child creation has no server path (and no app path exists) — **CLOSED by the HK-FEATURE-05 closeout repair: the owner may add a child after binding, through `sync_push`; see `HK_FEATURE_05_OWNER_CHECKPOINT_01.md`**; D7 HA-013 destructive
 shipping migration stays zero-data-only; D8 `sync_pull` has no server-side bound: a device far behind (or a new one) receives one metadata
 row (`table, id, op, revision`, ~100 bytes) per change-log row since its cursor, and the engine de-duplicates by entity before it requests any
 row body. Bounding that on the server needs a composite `(xid, seq)` cursor — an owner-gated server change, not a client one, and not needed

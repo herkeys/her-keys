@@ -117,7 +117,10 @@ describe('Build 3 audit — every open task is reachable (B3-AUD-004)', () => {
 
   test('every Life screen with a task list is wired to its role, and the hub links to the rest', () => {
     const screens = {
-      kids: 'src/features/kids/KidsOverview.tsx',
+      // REWRITTEN (HK-FEATURE-05, test disposition in the ledger): Kids OS replaced KidsOverview. The INTENT is unchanged - every open task
+      // in the kids category stays reachable from the Kids screen - but a child's own items now live under that child, so this screen
+      // lists the ones that name no child (`unlinkedKidsTasks`). tests/kids/reachability.test.mjs proves the union covers every task.
+      kids: 'src/features/kids/unlinked.ts',
       home: 'src/features/home/HomeOverview.tsx',
       money: 'src/features/money/MoneyOverview.tsx',
       work: 'src/features/work/WorkOverview.tsx',
@@ -125,6 +128,13 @@ describe('Build 3 audit — every open task is reachable (B3-AUD-004)', () => {
     assert.deepEqual(Object.keys(screens).sort(), [...TASK_LIST_ROLES].sort());
     for (const [role, path] of Object.entries(screens)) {
       const text = source(path);
+      if (role === 'kids') {
+        assert.match(text, /categoryWithRole\(state, 'kids'\)/, path);
+        assert.match(text, /openTasksInCategory\(/, path);
+        assert.match(source('src/features/kids/containers.tsx'), /unlinkedKidsTasks\(/, 'the Kids hub lists them');
+        assert.match(source('app/(app)/life/kids.tsx'), /<KidsHub \/>/, 'the Life route renders the Kids hub');
+        continue;
+      }
       assert.match(text, new RegExp(`categoryIdForRole\\('${role}'\\)`), path);
       assert.match(text, /<CategoryTaskList categoryId=/, path);
     }

@@ -1,3 +1,4 @@
+import { cloudDisplayName } from '../account/claim';
 import type { AppState } from '../state';
 import { foundationToCloudRow, isFoundationKind } from './foundationProjection';
 import {
@@ -45,6 +46,20 @@ export function toCloudRow(state: AppState, ctx: ProjectionContext, kind: SyncEn
   const base = { household_id: ctx.householdId, local_id: localId };
 
   switch (kind) {
+    case 'member': {
+      // A CHILD, and only ever a child: `children` never holds the account holder. What a person states about a child and nothing
+      // else: no `id`, `role`, `profile_id` or `revision` (server-owned; the function refuses them), and never a name-derived key.
+      // The name goes out exactly as the claim would send it, so a child added later is the same row a claim would have made.
+      const row = require_(state.children.find((c) => c.id === localId), kind, localId);
+      return {
+        ...base,
+        member_type: 'child',
+        display_name: cloudDisplayName(row.displayName),
+        birth_date: row.birthDate,
+        scope: 'child',
+      };
+    }
+
     case 'category': {
       const row = require_(state.categories.find((c) => c.id === localId), kind, localId);
       return {

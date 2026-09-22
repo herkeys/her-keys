@@ -49,6 +49,11 @@ export function clientFor(accountId) {
   });
 }
 
+/** An UNAUTHENTICATED client: the `anon` role, no session. What a stranger with the public key and no account can do. */
+export function anonClient() {
+  return createClient(API_URL, ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } });
+}
+
 export async function apiReachable() {
   try {
     const response = await fetch(`${API_URL}/rest/v1/`, { headers: { apikey: ANON_KEY } });

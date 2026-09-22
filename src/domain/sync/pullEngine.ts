@@ -102,7 +102,7 @@ export type PullOutcome =
 /** One table's worth of a fetched batch. `kind` is null for a table this client does not sync. */
 export interface FetchedTable {
   table: string;
-  kind: SyncEntityKind | 'member' | null;
+  kind: SyncEntityKind | null;
   ids: string[];
   rows: Array<Record<string, unknown>>;
 }
@@ -117,9 +117,6 @@ export type FetchOutcome =
   | { kind: 'fetched'; batch: FetchedBatch }
   | { kind: 'paused'; detail: string }
   | { kind: 'failed'; detail: string; retriable: boolean };
-
-/** The table a household's members live in. Members are claim-only, so a device only ever READS them. */
-const MEMBER_TABLE = 'household_members';
 
 export async function fetchPullBatch(namespace: SyncNamespace, ctx: PullContext): Promise<FetchOutcome> {
   const chunk = Math.max(1, ctx.fetchChunk ?? PULL_FETCH_CHUNK);
@@ -140,7 +137,7 @@ export async function fetchPullBatch(namespace: SyncNamespace, ctx: PullContext)
   // move), and the next cycle simply reads it again.
   const tables: FetchedTable[] = [];
   for (const [table, ids] of groupByTable(result.rows)) {
-    const kind: FetchedTable['kind'] = table === MEMBER_TABLE ? 'member' : (TABLE_TO_KIND[table] ?? null);
+    const kind: FetchedTable['kind'] = TABLE_TO_KIND[table] ?? null;
     // A table this client does not sync is not an error. change_log carries
     // everything; the matrix decides what this device is interested in.
     if (kind === null) continue;
@@ -148,7 +145,7 @@ export async function fetchPullBatch(namespace: SyncNamespace, ctx: PullContext)
     const wanted = [...ids];
     const rows: Array<Record<string, unknown>> = [];
     for (let at = 0; at < wanted.length; at += chunk) {
-      const fetched = await ctx.transport.fetchRows(table, wanted.slice(at, at + chunk), kind === 'member' ? 'id' : IDENTITY_COLUMN[kind]);
+      const fetched = await ctx.transport.fetchRows(table, wanted.slice(at, at + chunk), IDENTITY_COLUMN[kind]);
       if (isFailure(fetched)) {
         if (fetched.failure === 'unauthorized') return { kind: 'paused', detail: fetched.detail };
         return { kind: 'failed', detail: fetched.detail, retriable: fetched.failure !== 'forbidden' };
@@ -247,13 +244,20 @@ export async function pullOnce(state: AppState, namespace: SyncNamespace, ctx: P
 }
 
 /**
- * Children, read-only.
+ * Children.
  *
- * Membership is claim-only: a device can never create, change or remove one, so there is nothing to conflict with and nothing
- * queued. But a second device has to learn that a child exists, or every task, event and routine that names that child arrives
- * with a subject it cannot resolve. A child arrives under the local id it was created with when that is free here; a local id
- * that already means something else keeps its own row and the pulled child gets a fresh one — two entities are never merged
- * because they happen to share a device-relative id (SD4-006). Adult members are accounts, not children, and are not applied.
+ * A child reaches the cloud through the claim, or later through the household owner's own `create` (HK-FEATURE-05, OC-01); a device
+ * never edits or removes one. A second device has to learn that a child exists, or every task, event and routine that names that
+ * child arrives with a subject it cannot resolve.
+ *
+ * IDENTITY IS THE CLOUD ID, NEVER A NAME. A child is matched to what this device already holds by its mapping (cloud id -> local id)
+ * and by nothing else, so two children who share a name are two children, and a child whose name the cloud changed is the same child.
+ *
+ * A child arrives under the local id it was created with when that is free here. A local id that already means something else keeps
+ * its own row and the pulled child gets a fresh one: two entities are never merged because they happen to share a device-relative
+ * id (SD4-006). The one exception is a row THIS device created whose acknowledgement was lost: it is ours coming home, so it is
+ * ADOPTED — mapped to the local child it came from, its pending create settled — and never minted again as a second child (the
+ * same rule `applyOne` applies to every other kind). Adult members are accounts, not children, and are not applied.
  */
 function applyMembers(
   state: AppState,
@@ -271,14 +275,18 @@ function applyMembers(
   for (const row of ordered) {
     if (row.member_type !== 'child') continue;
     const cloudId = String(row.id ?? '');
-    const existing = Object.values(nextNamespace.mappings).find((mapping) => mapping.kind === 'member' && mapping.cloudId === cloudId);
+    const existing = byCloudId(nextNamespace, 'member', cloudId);
 
     const wanted = String(row.local_id ?? cloudId);
+    const heldLocally = nextState.children.some((child) => child.id === wanted);
+    const ownRow = row.origin_device_id !== undefined && row.origin_device_id !== null && String(row.origin_device_id) === nextNamespace.deviceId;
+    // Ours coming home: this device created it, it holds that very local child, and nothing else has claimed the mapping.
+    const adopts = existing === null && ownRow && heldLocally && nextNamespace.mappings[mappingKey('member', wanted)] === undefined;
     const taken =
       nextNamespace.mappings[mappingKey('member', wanted)] !== undefined ||
       nextState.user.id === wanted ||
-      nextState.children.some((child) => child.id === wanted);
-    const localId = existing?.localId ?? (taken ? ctx.mintLocalId('member' as unknown as SyncEntityKind, wanted) : wanted);
+      (heldLocally && !adopts);
+    const localId = existing?.localId ?? (taken ? ctx.mintLocalId('member', wanted) : wanted);
 
     const child = { id: localId, displayName: String(row.display_name ?? ''), birthDate: String(row.birth_date ?? ''), scope: 'child' as const };
     const known = nextState.children.find((candidate) => candidate.id === localId);
@@ -289,7 +297,10 @@ function applyMembers(
       };
       changed += 1;
     }
-    nextNamespace = rememberMapping(nextNamespace, { kind: 'member', localId, cloudId, revision: typeof row.revision === 'number' ? row.revision : 1 });
+    // The server already holds the child, so a create still waiting for it is settled. Left in the queue it would be replayed as an
+    // update, and a child has no update.
+    const settled = adopts ? { ...nextNamespace, queue: nextNamespace.queue.filter((q) => !(q.kind === 'member' && q.localId === localId)) } : nextNamespace;
+    nextNamespace = rememberMapping(settled, { kind: 'member', localId, cloudId, revision: typeof row.revision === 'number' ? row.revision : 1 });
   }
   return { state: nextState, namespace: nextNamespace, changed };
 }

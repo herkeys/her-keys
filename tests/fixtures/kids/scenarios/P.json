@@ -1,0 +1,37 @@
+{
+  "scenario": "P",
+  "description": "accepted but still needs her: NOT covered",
+  "childId": "child-1",
+  "childLabel": "Sam, 8",
+  "nextItem": null,
+  "needsAttentionReasons": [],
+  "openWork": {
+    "needsYou": [
+      "Costume"
+    ],
+    "withSomeoneElse": [],
+    "waiting": [],
+    "nobodyRecorded": []
+  },
+  "focus": {
+    "title": "Costume",
+    "responsibilityState": "accepted",
+    "coverageState": "accepted_still_yours",
+    "requiresYou": true,
+    "dependencyStanding": null,
+    "durationSource": "default-estimate",
+    "fallbackPlanState": "NOT_ENOUGH_KNOWN:accepted_still_yours",
+    "openSteps": [],
+    "unknownFacts": [
+      "when",
+      "length_confirmed"
+    ],
+    "availableActions": [
+      "edit",
+      "mark_done",
+      "remove",
+      "take_back",
+      "add_plan_step"
+    ]
+  }
+}

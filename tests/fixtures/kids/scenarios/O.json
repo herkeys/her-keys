@@ -1,0 +1,42 @@
+{
+  "scenario": "O",
+  "description": "assigned but unaccepted",
+  "childId": "child-1",
+  "childLabel": "Sam, 8",
+  "nextItem": null,
+  "needsAttentionReasons": [
+    "fact:not_accepted:none"
+  ],
+  "openWork": {
+    "needsYou": [
+      "Costume"
+    ],
+    "withSomeoneElse": [],
+    "waiting": [],
+    "nobodyRecorded": []
+  },
+  "focus": {
+    "title": "Costume",
+    "responsibilityState": "requested",
+    "coverageState": "asked_no_answer",
+    "requiresYou": true,
+    "dependencyStanding": null,
+    "durationSource": "default-estimate",
+    "fallbackPlanState": "NOT_ENOUGH_KNOWN:awaiting_answer",
+    "openSteps": [],
+    "unknownFacts": [
+      "when",
+      "length_confirmed"
+    ],
+    "availableActions": [
+      "edit",
+      "mark_done",
+      "remove",
+      "record_acknowledged",
+      "record_accepted",
+      "record_declined",
+      "take_back",
+      "add_plan_step"
+    ]
+  }
+}

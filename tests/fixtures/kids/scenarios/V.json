@@ -1,0 +1,45 @@
+{
+  "scenario": "V",
+  "description": "a missing prerequisite is not satisfied",
+  "childId": "child-1",
+  "childLabel": "Sam, 8",
+  "nextItem": null,
+  "needsAttentionReasons": [
+    "fact:prerequisite_unavailable:none"
+  ],
+  "openWork": {
+    "needsYou": [],
+    "withSomeoneElse": [],
+    "waiting": [],
+    "nobodyRecorded": [
+      "Hand in the form"
+    ]
+  },
+  "focus": {
+    "title": "Hand in the form",
+    "responsibilityState": "none",
+    "coverageState": "nobody_recorded",
+    "requiresYou": null,
+    "dependencyStanding": {
+      "readiness": "needsReview",
+      "waitingOn": [],
+      "unavailable": [
+        "null:missing"
+      ]
+    },
+    "durationSource": "default-estimate",
+    "fallbackPlanState": null,
+    "openSteps": [],
+    "unknownFacts": [
+      "when",
+      "who_is_handling",
+      "length_confirmed"
+    ],
+    "availableActions": [
+      "edit",
+      "mark_done",
+      "remove",
+      "request_handoff"
+    ]
+  }
+}

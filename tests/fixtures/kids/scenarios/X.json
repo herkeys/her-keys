@@ -1,0 +1,40 @@
+{
+  "scenario": "X",
+  "description": "a fallback gap: NEEDS A PLAN",
+  "childId": "child-1",
+  "childLabel": "Sam, 8",
+  "nextItem": {
+    "title": "Tuesday pickup",
+    "kind": "event",
+    "localDate": "2026-09-22",
+    "startMinutes": 1020
+  },
+  "needsAttentionReasons": [
+    "fact:handed_back:none"
+  ],
+  "openWork": {
+    "needsYou": [],
+    "withSomeoneElse": [],
+    "waiting": [],
+    "nobodyRecorded": []
+  },
+  "focus": {
+    "title": "Tuesday pickup",
+    "responsibilityState": "declined",
+    "coverageState": "declined",
+    "requiresYou": true,
+    "dependencyStanding": null,
+    "durationSource": null,
+    "fallbackPlanState": "NEEDS_A_PLAN:declined",
+    "openSteps": [],
+    "unknownFacts": [
+      "location"
+    ],
+    "availableActions": [
+      "edit",
+      "remove",
+      "request_handoff",
+      "add_plan_step"
+    ]
+  }
+}

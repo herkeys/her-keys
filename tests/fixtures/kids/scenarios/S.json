@@ -1,0 +1,42 @@
+{
+  "scenario": "S",
+  "description": "assigned to someone else, still unresolved and still hers",
+  "childId": "child-1",
+  "childLabel": "Sam, 8",
+  "nextItem": null,
+  "needsAttentionReasons": [
+    "shared:deadline:today",
+    "fact:not_accepted:none"
+  ],
+  "openWork": {
+    "needsYou": [
+      "Sign the form"
+    ],
+    "withSomeoneElse": [],
+    "waiting": [],
+    "nobodyRecorded": []
+  },
+  "focus": {
+    "title": "Sign the form",
+    "responsibilityState": "requested",
+    "coverageState": "asked_no_answer",
+    "requiresYou": true,
+    "dependencyStanding": null,
+    "durationSource": "default-estimate",
+    "fallbackPlanState": "NOT_ENOUGH_KNOWN:awaiting_answer",
+    "openSteps": [],
+    "unknownFacts": [
+      "length_confirmed"
+    ],
+    "availableActions": [
+      "edit",
+      "mark_done",
+      "remove",
+      "record_acknowledged",
+      "record_accepted",
+      "record_declined",
+      "take_back",
+      "add_plan_step"
+    ]
+  }
+}

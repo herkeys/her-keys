@@ -1,3 +1,6 @@
 # Pin the additive HK-INTEGRATION-READINESS-01 migration to LF so its function-body digest (schema fingerprint) is
 # identical on every checkout. Existing migrations are untouched.
 supabase/migrations/20260921120000_ir01_duration_source_and_claim_v3.sql text eol=lf
+
+# Pin the additive HK-FEATURE-05 (child after binding) migration to LF for the same reason.
+supabase/migrations/20260921190000_f05_add_child_after_binding.sql text eol=lf

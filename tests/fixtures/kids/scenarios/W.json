@@ -1,0 +1,37 @@
+{
+  "scenario": "W",
+  "description": "a fallback plan genuinely supported by evidence",
+  "childId": "child-1",
+  "childLabel": "Sam, 8",
+  "nextItem": {
+    "title": "Tuesday pickup",
+    "kind": "event",
+    "localDate": "2026-09-22",
+    "startMinutes": 1020
+  },
+  "needsAttentionReasons": [],
+  "openWork": {
+    "needsYou": [],
+    "withSomeoneElse": [],
+    "waiting": [],
+    "nobodyRecorded": []
+  },
+  "focus": {
+    "title": "Tuesday pickup",
+    "responsibilityState": "accepted",
+    "coverageState": "covered",
+    "requiresYou": false,
+    "dependencyStanding": null,
+    "durationSource": null,
+    "fallbackPlanState": "PLAN_IN_PLACE:accepted_and_off_your_list",
+    "openSteps": [],
+    "unknownFacts": [
+      "location"
+    ],
+    "availableActions": [
+      "edit",
+      "remove",
+      "take_back"
+    ]
+  }
+}

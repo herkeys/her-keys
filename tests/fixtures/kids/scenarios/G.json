@@ -1,0 +1,37 @@
+{
+  "scenario": "G",
+  "description": "unknown duration provenance (a legacy row)",
+  "childId": "child-1",
+  "childLabel": "Sam, 8",
+  "nextItem": null,
+  "needsAttentionReasons": [],
+  "openWork": {
+    "needsYou": [],
+    "withSomeoneElse": [],
+    "waiting": [],
+    "nobodyRecorded": [
+      "Old row"
+    ]
+  },
+  "focus": {
+    "title": "Old row",
+    "responsibilityState": "none",
+    "coverageState": "nobody_recorded",
+    "requiresYou": null,
+    "dependencyStanding": null,
+    "durationSource": "unrecorded",
+    "fallbackPlanState": null,
+    "openSteps": [],
+    "unknownFacts": [
+      "when",
+      "who_is_handling",
+      "length_confirmed"
+    ],
+    "availableActions": [
+      "edit",
+      "mark_done",
+      "remove",
+      "request_handoff"
+    ]
+  }
+}

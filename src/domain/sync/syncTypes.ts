@@ -22,11 +22,15 @@ import {
  * The entity kinds that actually travel, from the participation matrix. Each
  * maps one local collection to one cloud table.
  *
- * Absent on purpose: `households` and `household_members` are claim-only
- * (B4-P0-019 — "ordinary client sync can never create, change or remove a
+ * `member` is a CHILD of the household and nothing else (HK-FEATURE-05, owner checkpoint OC-01): an adult member IS an account and is
+ * created by the server alone. A child is created by the household's owner through the same `sync_push` every other kind uses, and is
+ * never edited or removed by a client (its only operation is `create`).
+ *
+ * Absent on purpose: `households` is claim-only (B4-P0-019 — "ordinary client sync can never create, change or remove a
  * membership"); `change_log` is transport; `account_claims` is server-only.
  */
 export const CORE_SYNC_KINDS = [
+  'member',
   'category',
   'event',
   'task',
@@ -54,11 +58,12 @@ const fromFoundation = <T>(pick: (spec: FoundationSpec) => T): Record<Foundation
 
 /**
  * Kinds that carry a local/cloud mapping but never travel through the sync
- * queue. Claim creates them and claim alone: `household_members` and
- * `households` have no client write grant at all. The mapping still matters,
- * because a child-scoped task has to resolve its subject to a cloud uuid.
+ * queue. Claim creates it and claim alone: `households` has no client write
+ * grant at all. (`member` used to be here too; a child now travels as the
+ * `member` kind, while the account holder's own member row is still only ever
+ * mapped, never pushed.)
  */
-export const MAPPING_ONLY_KINDS = ['member', 'household'] as const;
+export const MAPPING_ONLY_KINDS = ['household'] as const;
 export type MappingOnlyKind = (typeof MAPPING_ONLY_KINDS)[number];
 
 export type MappedKind = SyncEntityKind | MappingOnlyKind;
@@ -66,6 +71,7 @@ export type MappedKind = SyncEntityKind | MappingOnlyKind;
 /** Cloud table per kind. The matrix, executable. */
 export const CLOUD_TABLE: Record<SyncEntityKind, string> = {
   ...fromFoundation((spec) => spec.table),
+  member: 'household_members',
   category: 'household_categories',
   event: 'events',
   task: 'tasks',
@@ -88,6 +94,7 @@ export const CLOUD_TABLE: Record<SyncEntityKind, string> = {
  */
 export const IDENTITY_COLUMN: Record<SyncEntityKind, string> = {
   ...fromFoundation(() => 'id'),
+  member: 'id',
   category: 'id',
   event: 'id',
   task: 'id',
@@ -108,6 +115,9 @@ export const IDENTITY_COLUMN: Record<SyncEntityKind, string> = {
  * the 10,000 cap is cache eviction and must never emit a cloud delete
  * (SD4-021) — which is true here by construction, because no path produces one.
  *
+ * `member` (a child) is insert-only for the same shape of reason: a client holds no UPDATE or DELETE on `household_members`, and
+ * there is no rename, so nothing about an existing child is ever sent. What her device knows of a child arrives by pull.
+ *
  * `discovery` is the only kind with a tombstone, and it is a soft one:
  * `deleted_at`, an UPDATE. Every other kind has no DELETE policy and no DELETE
  * privilege, so this wave does not invent removal for them.
@@ -116,6 +126,7 @@ export const ALLOWED_OPS: Record<SyncEntityKind, readonly SyncOp[]> = {
   // A server-written kind (an execution, an outcome) is never pushed: a device cannot forge one.
   // An append-only kind is created and never edited.
   ...fromFoundation((spec): readonly SyncOp[] => (spec.serverWritten ? [] : spec.mutable ? ['create', 'update'] : ['create'])),
+  member: ['create'],
   category: ['create', 'update'],
   event: ['create', 'update'],
   task: ['create', 'update'],
@@ -156,6 +167,7 @@ const merged = (columns: readonly string[], kind: Parameters<typeof existingUpda
 
 export const UPDATABLE_COLUMNS: Record<SyncEntityKind, readonly string[]> = {
   ...fromFoundation((spec) => updatableColumnsOf(spec)),
+  member: [],
   category: merged(['name', 'origin_updated_at', 'sort_order', 'status', 'subject_member_id', 'system_role'], 'category'),
   event: merged(['category_id', 'commitment', 'ends_at', 'location', 'notes', 'origin_updated_at',
                  'preparation_minutes', 'scope', 'starts_at', 'status', 'subject_member_id', 'title',
@@ -197,6 +209,8 @@ export const DEPENDENCY_RANK: Record<SyncEntityKind, number> = {
   // responsibility, so it comes after the foundation kinds at rank 3. The foundation kinds carry
   // their own rank in the manifest, and a test derives the reference graph and holds them to it.
   ...fromFoundation((spec) => spec.rank),
+  // A child is what a task, event, System, category or routine names as its subject, so it goes before every one of them.
+  member: 0,
   category: 1,
   task: 2,
   needsMe: 2,
