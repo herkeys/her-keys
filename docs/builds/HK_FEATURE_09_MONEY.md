@@ -385,3 +385,41 @@ and F08's own production-composition suites (`tests/coparent/syncComposition.tes
 column (`payment_mechanism`) was independently proven to push/pull correctly via the schema/RLS validation
 (F09-M2c) and by reading the actual `projection.ts`/`apply.ts` wiring. Building a duplicate full-cloud harness
 for Money would re-prove infrastructure Money doesn't own or change, rather than anything specific to F09.
+
+## F09-M6 — hostile self-review
+
+Going through the owner brief's own attack list:
+
+| Question | Answer | Evidence |
+|---|---|---|
+| Can due become paid accidentally? | No | `Task.status` only changes via an explicit `resolveMoneyItem` call; date passage never touches it. Doctrine test + mutation M1 (CAUGHT). |
+| Can expected become received accidentally? | No | Same mechanism, same tests, same mutant M1. |
+| Can autopay become falsely "cleared"? | No | `autopayPreDueSuppressed` only ever suppresses a Today/Money-Home *nudge*; it never writes state. Resolution is always the same explicit `resolveMoneyItem` call, regardless of mechanism. No code path ever asserts "failed" or "cleared" from silence. |
+| Can Money disagree with F07 reimbursement truth? | No, by construction | `reimbursementProjections` re-reads live canonical state on every call (`buildMoneyFollowUpDetail` per task id) — there is no cached or duplicated copy to drift. |
+| Can Money duplicate reimbursement storage? | No | Zero new columns, tables or fields for reimbursements; confirmed by the schema fingerprint (F09-M2c) showing only the `payment_mechanism` facet changed. |
+| Can Today show duplicate money work? | No | Money items are ordinary `Task` rows read by the SAME `attentionFor`/`oneMove` functions Today already uses — there is no second candidate list to duplicate against. |
+| Can Money bypass the Today cap? | No | `MAX_PRIMARY_BLOCKS`/slot logic in `todayView.ts` operates on `attentionFor`'s output regardless of source; Money Home's own `NEEDS_ATTENTION_LIMIT` is a separate, Money-Home-only bound and never affects Today's. |
+| Can One Move suggest something non-actionable? | No, inherited | A Money item is only One-Move-eligible as an ordinary open, non-blocked `Task` — the exact same generic `candidatePoolFor` gate every feature's tasks go through; F09 adds no new eligibility rule. |
+| Can due dates drift from Calendar? | No | Calendar's `collectDayItems` already reads `state.tasks` directly by `dueDate` — a Money obligation's due date and its Calendar appearance are the literal same field, not two facts that could disagree. |
+| Can recurrence duplicate obligations? | No | `duplicateMoneyItemForward` is the only path to a new occurrence, and it is always an explicit, user-confirmed call (MP-09-01) — nothing runs automatically. |
+| Can stale sync overwrite newer truth? | No | `editMoneyItem` carries the same `baseUpdatedAt` revision guard F07's `editMoneyFollowUp` uses; tested (`'editing with a stale revision token is refused'`). |
+| Can a second household see Money? | No | `scope: 'household'` default, enforced by the unmodified, already-audited `tasks` RLS policies; proven by the 47/47 real-role attack matrix (F09-M2c), including crafted foreign-household attempts. F07 reimbursement projections stay exactly as owner-only as F07 itself wrote them. |
+| Can local Money disappear offline? | No | Proven through the real store (`tests/money/localFirst.test.mjs`): create → visible immediately → persists to storage → survives a relaunch, unaltered. |
+| Can financial amounts lose precision? | No | Integer minor units end to end (`Money`/`parseMoney`); mutation M3 (float-based parsing) is CAUGHT. |
+| Can child/person identity split? | No | Always referenced by canonical id (`subjectMemberId`), never by name — same pattern proven rename-safe for categories/children elsewhere in the codebase. |
+| Can a default value become user-confirmed truth? | No | Mutation M6 (silently defaulting an unset payment mechanism to `'manual'`) is CAUGHT. |
+| Can the user be forced to maintain the same fact twice? | No | Money reads F07's reimbursement truth read-only; it never asks her to re-enter a fact another feature already owns. |
+| Did we accidentally build accounting software? | No | No ledger, balance, transaction history, reconciliation, budget or report exists — only attention surfacing over obligations/expected income the household actually has, exactly the V1 beachhead scope. |
+
+**Repairs made during this review**: the task-reachability gap (F09-M3 addendum, `otherOpenTasks`) — found by
+running the existing suite, not by this checklist, but it is exactly the class of defect this section exists to
+catch, so it is recorded here too.
+
+**Known, explicitly-not-closed gaps** (stated, not silently skipped):
+- Live device/browser UI verification was not performed this pass (F09-M3) — component-render tests substitute,
+  per this codebase's own established method for the same limitation.
+- The full cloud sync round-trip (queue → push → pull → second device) is not independently re-proven for
+  Money specifically — it is the same canonical transitions F07's/F08's own production-composition suites
+  already exhaustively cover, and Money adds no sync code of its own.
+- MP-09-01 through MP-09-07 (missing primitives) are open by design, not oversight — see
+  `docs/builds/HK_FEATURE_09_MISSING_PRIMITIVES.md`.
