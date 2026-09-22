@@ -57,8 +57,10 @@ export function attentionFor(state: AppState, nowMs: number): AttentionItem[] {
   for (const task of state.tasks) {
     if (task.status !== 'open' || task.consequence === null || consequenceRank(task.consequence) < consequenceRank('high')) continue;
     const dueSoon = task.dueDate !== null && task.dueDate <= today;
+    // ACKNOWLEDGED ≠ ACCEPTED: seeing a request is not agreeing to it, so only an actual ACCEPTED responsibility counts as
+    // handled elsewhere. Treating "acknowledged" as covered would silently drop the risk alert for work nobody has agreed to do.
     const handledElsewhere = state.responsibilities.some(
-      (r) => r.about.kind === 'task' && r.about.id === task.id && r.responsibleKind !== 'self' && (r.state === 'accepted' || r.state === 'acknowledged')
+      (r) => r.about.kind === 'task' && r.about.id === task.id && r.responsibleKind !== 'self' && r.state === 'accepted'
     );
     if (dueSoon && !handledElsewhere) items.push({ reason: 'risk', urgency: 'now', about: { kind: 'task', id: task.id } });
   }

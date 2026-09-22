@@ -282,6 +282,26 @@ describe('SCENARIO B — money pressure: a bill, a car repair and a school fee i
     assert.equal(briefingFor(s, MORNING, MORNING - 3_600_000).needsApproval.length, 2);
     survives(s, 'SCENARIO B');
   });
+
+  test('ACKNOWLEDGED ≠ ACCEPTED (audit W2-02): a high-consequence task someone only acknowledged is still a risk', () => {
+    let s = real();
+    s = withTask(s, { title: 'Car repair', dueDate: '2026-09-15', categoryId: 'cat-money' });
+    s = { ...s, tasks: s.tasks.map((t) => (t.id === lastTask(s).id ? { ...t, consequence: 'high' } : t)) };
+    const task = lastTask(s);
+    s = addPerson(s, at(), { displayName: 'Sam', relationship: 'friend' });
+    const person = s.people[0];
+    s = delegate(s, at(), { about: { kind: 'task', id: task.id }, to: { kind: 'person', id: person.id } });
+    const respId = s.responsibilities.find((r) => r.about.id === task.id).id;
+
+    // Merely seeing the request must not clear the risk: she has said yes to nothing yet.
+    s = acknowledge(s, at(), respId);
+    assert.equal(s.responsibilities.find((r) => r.id === respId).state, 'acknowledged');
+    assert.ok(attentionFor(s, MORNING).some((i) => i.reason === 'risk' && i.about?.id === task.id), 'acknowledged-but-not-accepted is still a risk');
+
+    // Only actual acceptance may stand down the risk.
+    s = { ...s, responsibilities: s.responsibilities.map((r) => (r.id === respId ? { ...r, state: 'accepted' } : r)) };
+    assert.ok(!attentionFor(s, MORNING).some((i) => i.reason === 'risk' && i.about?.id === task.id), 'accepted is genuinely handled elsewhere');
+  });
 });
 
 describe('SCENARIO C — practice, travel, dinner and the end of her workday', () => {
