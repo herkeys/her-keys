@@ -301,3 +301,26 @@ and conflict; eight refusal cases create nothing; completing or archiving the li
 drops open admin work to 0; a missing Task resolves to `null` while the stored-state gate still refuses the dangling link;
 integrity refuses a link to a non-personal Task; **store relaunch** (in-memory repository, three launches) keeps the same record,
 link and personal Task through create → relaunch → rename → archive → relaunch; a pre-F12 v4 blob loads with empty collections.
+
+M2 checkpoint (after commit): `feature/12-life-admin-documents` @ `75dab17`, `git status --short` empty.
+
+---
+
+## F12-M3 — Private canonical Task creation + private typed relationship
+
+The domain half landed with M2 (`addLifeRecordTask`, `linkedTasksOf`, `openLinkedTaskCount`, local integrity: a link names an
+existing record and an existing `personal` Task, once per pair). The cloud half (owner-private link table, same-owner/personal
+trigger, RLS, sync registration) is M5.
+
+Record → Task architecture: canonical `Task` is the ONLY administrative work object. No AdminTask / DocumentTask / RenewalTask entity
+exists. No shared Task/Event/Goal/System schema gained a `lifeRecordId`. The relationship is an F12-owned, owner-private, typed row
+(`LifeRecordTaskLink`: exactly one record id and one Task id, both enforced), never `targetKind + targetId`.
+
+Today behaviour (`tests/lifeAdmin/today.test.mjs`, **2/2**):
+- records with a passed expiration date, a renew-by and a review date of today, and an expiration date of today leave
+  `attentionFor`, What Matters Today (`mattersSection`) and `oneMoveForDay` IDENTICAL to the same household without them; the One
+  Move never targets a record; no reference number appears.
+- a Task created from a record with a due date of today appears as exactly one `deadline` attention item about that Task, and in
+  What Matters Today under the Task's title; the record's own title never appears there.
+
+M3 checkpoint: recorded with the M3 commit below.
