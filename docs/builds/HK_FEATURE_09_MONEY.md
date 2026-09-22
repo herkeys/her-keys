@@ -230,6 +230,46 @@ attention/coming-up/recently-resolved assembly including the autopay-Today agree
 
 `tsc --noEmit`: clean.
 
+### M2c — backend validation: fresh install, populated upgrade, RLS attack matrix, schema fingerprint
+
+Run entirely in databases isolated from the shared default (`b4_env_*`) — another session's
+`supabase/tests/run-f13.mjs` and `run.mjs` were live on the shared instance at the time (confirmed via
+`Get-CimInstance Win32_Process`), so none of this touched them. Used uniquely-named databases
+(`f09_fresh_install_check`, `f09_populated_upgrade_check`, `f09_env_c_check`, `f09_fp_before`/`f09_fp_after`),
+all dropped afterward.
+
+- **Fresh install**: the full migration chain (build4 baseline → cloud schema → IR01 → F08 → F05 → **F09**)
+  applies cleanly on an empty surface. `payment_mechanism` is a nullable `text` column with the correct CHECK
+  (`manual`/`autopay`/null); `authenticated` may INSERT/UPDATE it, `anon` may not (column privilege, same as
+  every other facet); an invalid value is refused by the CHECK constraint; a valid one is accepted;
+  `private.assert_app_schema_secured()` still passes (no widened surface).
+- **Populated upgrade**: seeded a real household + money-category task through F05, *then* applied the F09
+  migration. The pre-existing row is byte-identical on every pre-existing field afterward; `payment_mechanism`
+  reads as `NULL` — honestly "not known," never a guess; row count unchanged (no row added or removed by the
+  migration itself).
+- **RLS attack matrix**: no new table or policy exists for F09 (the column lives on the already-audited
+  `public.tasks`), so re-ran the existing attack matrix (`supabase/tests/10-rls-matrix.sql`,
+  `20-scope-isolation.sql`, `40-server-columns.sql`) against the full chain including F09, using real
+  `authenticated`/`anon`/`service_role` Postgres roles (not superuser): **47/47 PASS** — unauthenticated denied
+  at the privilege layer (before RLS is even consulted), owner allowed, same-household member allowed for
+  household-scope / denied for another member's personal-scope task, unrelated household denied including
+  crafted exact-UUID attempts, `service_role` bypass proven (not inferred), all server-owned columns
+  (`id`/`revision`/`updated_at`/etc.) refuse client writes. Proves the additive column did not weaken the
+  existing posture.
+- **Schema fingerprint** (`supabase/tools/schema-fingerprint.mjs print-sql --mode digest`, piped to `psql`
+  against the isolated before/after databases, per [[local-fingerprint-readonly-recipe]]):
+
+  | dimension | before (through F05) | after (through F09) | delta |
+  |---|---|---|---|
+  | columns | 716 | 717 | **+1** (`tasks.payment_mechanism`) |
+  | constraints | 681 | 682 | **+1** (`tasks_payment_mechanism_check`) |
+  | privileges.columns | 725 | 727 | **+2** (INSERT + UPDATE grant on the new column) |
+  | privileges.effective | 310 | 310 | 0 — no new principal/table-privilege combination, only a column added within an already-granted privilege |
+  | functions, indexes, policies, triggers, relations, schemas, privileges.functions, privileges.relations, privileges.default_acl, privileges.schemas | unchanged | unchanged | **0** — confirms no new table, function, policy, trigger or index |
+
+  Exactly the minimal footprint claimed: one column, one constraint, two column-grants. Everything else,
+  including the policy count, is bit-for-bit identical to before.
+
 ### Test accounting (M2b checkpoint, serial run — avoids the known CPU-contention flakiness in a full concurrent run)
 
 ENTRY (WAVE3_BASE): 2814/2814. EXIT (M2b, `--test-concurrency=1`): **`tests 2854, pass 2852, fail 2`.**
