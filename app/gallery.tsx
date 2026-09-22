@@ -106,7 +106,7 @@ export default function DesignGallery() {
           items={[
             { key: 'kids', label: 'Kids', value: '1 scheduled, nothing due', onPress: () => {} },
             { key: 'money', label: 'Money', value: '1 thing due today', needsAttention: true, onPress: () => {} },
-            { key: 'meals', label: 'Meals', value: 'Planned through Tuesday', onPress: () => {} },
+            { key: 'meals', label: 'Meals', value: 'Next: Tuesday', onPress: () => {} },
           ]}
         />
       </GallerySection>

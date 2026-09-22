@@ -4,6 +4,8 @@ import { apiReachable, clientFor } from './support/syncDevice.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = join(HERE, '..', '..');
+/** The database the API serves. The shared default one unless the run started a private stack (private-stack.mjs). */
+const STACK_DB = process.env.HERKEYS_LOCAL_STACK_DB ?? 'postgres';
 const TZ = 'America/Chicago';
 const NOW = Date.UTC(2026, 8, 21, 15, 0, 0);
 const TODAY = '2026-09-21';
@@ -35,7 +37,7 @@ export async function productionCompositionJourneys(check, psql) {
   const Q = crypto.randomUUID();
   const R = crypto.randomUUID();
   psql(
-    'postgres',
+    STACK_DB,
     `INSERT INTO auth.users (id, email, aud, role) VALUES
        ('${P}','comp-${P}@local.test','authenticated','authenticated'),
        ('${Q}','comp-${Q}@local.test','authenticated','authenticated'),
@@ -45,7 +47,7 @@ export async function productionCompositionJourneys(check, psql) {
   );
 
   const sql = (text) => {
-    const out = psql('postgres', `\\pset format unaligned\n\\pset tuples_only on\n${text}`, { label: 'composition query' }).out;
+    const out = psql(STACK_DB, `\\pset format unaligned\n\\pset tuples_only on\n${text}`, { label: 'composition query' }).out;
     return out.split('\n').map((line) => line.trim()).filter((line) => line !== '' && !/^Output format|^Tuples only/.test(line)).join('|');
   };
 
@@ -150,7 +152,7 @@ export async function productionCompositionJourneys(check, psql) {
 
   // ---- a household bigger than one batch, through the REAL sync_pull (which has no limit and one-transaction claims) --------
   const S = crypto.randomUUID();
-  psql('postgres', `INSERT INTO auth.users (id, email, aud, role) VALUES ('${S}','comp-${S}@local.test','authenticated','authenticated') ON CONFLICT (id) DO NOTHING;`, { label: 'composition big-household user' });
+  psql(STACK_DB, `INSERT INTO auth.users (id, email, aud, role) VALUES ('${S}','comp-${S}@local.test','authenticated','authenticated') ON CONFLICT (id) DO NOTHING;`, { label: 'composition big-household user' });
   const big = await device(m, { account: S, sent });
   await mutate(big, (s) => ({ ...s, oneMoves: [WITHHELD_MOVE] }));
   await mutate(big, (s, ctx) => {
@@ -179,7 +181,7 @@ export async function productionCompositionJourneys(check, psql) {
 
   // ---- OD-A: an undecided reading reaches PostgreSQL as structured state, under a neutral label -------------------------------
   const U = crypto.randomUUID();
-  psql('postgres', `INSERT INTO auth.users (id, email, aud, role) VALUES ('${U}','comp-${U}@local.test','authenticated','authenticated') ON CONFLICT (id) DO NOTHING;`, { label: 'composition reading user' });
+  psql(STACK_DB, `INSERT INTO auth.users (id, email, aud, role) VALUES ('${U}','comp-${U}@local.test','authenticated','authenticated') ON CONFLICT (id) DO NOTHING;`, { label: 'composition reading user' });
   const FIRST = 'Call Dr. Okonkwo about the cardiology referral';
   const SECOND = 'Book the orthodontist for Theo';
   const giveaways = ['Okonkwo', 'cardiology', 'referral', 'orthodontist', 'Theo'];
@@ -229,11 +231,13 @@ export async function productionCompositionJourneys(check, psql) {
   check('composition: ...and is in no cloud table the household owns',
     sql(`SELECT count(*) FROM (SELECT t::text AS x FROM public.tasks t WHERE t.household_id='${household}' UNION ALL SELECT e::text FROM public.events e WHERE e.household_id='${household}' UNION ALL SELECT s::text FROM public.household_systems s WHERE s.household_id='${household}' UNION ALL SELECT o::text FROM public.one_move_records o WHERE o.household_id='${household}' UNION ALL SELECT b::text FROM public.onboarding_state b WHERE b.household_id='${household}' UNION ALL SELECT d::text FROM public.dependencies d WHERE d.household_id='${household}') z WHERE z.x LIKE '%${CANARY}%';`) === '0');
   check('composition: the local-only record is still on the device', JSON.stringify(a.store.getSnapshot().state.migrationEvidence).includes(CANARY));
+
+  await mealsJourney(check, psql, m, sql, sent);
 }
 
 async function loadModules() {
   const at = (p) => `file://${join(REPO, 'src', ...p)}`;
-  const [compose, appStore, observer, repo, storage, provider, secure, cloud, transport, claimSeam, events, tasks, struct, initial, envelope, interpretations] = await Promise.all([
+  const [compose, appStore, observer, repo, storage, provider, secure, cloud, transport, claimSeam, events, tasks, struct, initial, envelope, interpretations, meals] = await Promise.all([
     import(at(['store', 'composeAccountApp.ts'])),
     import(at(['state', 'appStore.ts'])),
     import(at(['domain', 'sync', 'changeObserver.ts'])),
@@ -250,8 +254,9 @@ async function loadModules() {
     import(at(['state', 'initialState.ts'])),
     import(at(['persistence', 'envelope.ts'])),
     import(at(['domain', 'interpretations.ts'])),
+    import(at(['domain', 'meals.ts'])),
   ]);
-  return { compose, appStore, observer, repo, storage, provider, secure, cloud, transport, claimSeam, events, tasks, struct, initial, envelope, interpretations };
+  return { compose, appStore, observer, repo, storage, provider, secure, cloud, transport, claimSeam, events, tasks, struct, initial, envelope, interpretations, meals };
 }
 
 /**
@@ -362,6 +367,94 @@ async function householdWithContent(m, d) {
     systems: [{ id: 'sys-1', name: 'Homework wind-down', description: '', categoryId: s.categories[0].id, subjectMemberId: 'child-1', automationMode: 'manual', effortMinutes: null, energyDemand: null, provenance: USER, scope: 'child' }],
   }));
   await d.store.flush();
+}
+
+/**
+ * HK-FEATURE-08-MEALS — a meal decision through the REAL database, over real HTTP, by the app's own production composition.
+ *
+ * Meals made before the account is bound reach the cloud as ordinary creates (the claim carries none); an archive is an ordinary
+ * compare-and-set UPDATE of `status` that another device pulls; a stale push is a real refusal; and an unrelated account, the
+ * owner's own attempt to delete, and an unknown slot are all refused by the database. The same-household second account is a
+ * constructed actor with no product path, so it is attacked at SQL level in supabase/tests/77-meals-slot-status.sql, not here.
+ */
+async function mealsJourney(check, psql, m, sql, sent) {
+  console.log('\n  meals — production composition against real PostgreSQL and PostgREST');
+  const T = crypto.randomUUID();
+  const X = crypto.randomUUID();
+  psql(STACK_DB, `INSERT INTO auth.users (id, email, aud, role) VALUES ('${T}','meals-${T}@local.test','authenticated','authenticated'), ('${X}','meals-${X}@local.test','authenticated','authenticated') ON CONFLICT (id) DO NOTHING;`, { label: 'meals fixture users' });
+
+  const a = await device(m, { account: T, sent });
+  await mutate(a, (s) => ({ ...s, oneMoves: [WITHHELD_MOVE] }));
+  const ids = {};
+  const make = (name, input) => mutate(a, (s, ctx) => { const r = m.meals.addMeal(s, ctx, input); ids[name] = r.id; return r.state; });
+  await make('tuesday', { title: 'Tacos', date: '2026-09-22', slot: 'dinner' });
+  await make('removed', { title: 'Changed my mind', date: '2026-09-23', slot: 'lunch' });
+  await mutate(a, (s, ctx) => m.meals.archiveMeal(s, ctx, ids.removed).state);
+  await make('leftovers', { title: 'Leftovers', date: '2026-09-22' });
+  await a.store.flush();
+
+  const bound = await a.signIn();
+  check('meals: signing in binds the account, and the meals made before binding reach PostgreSQL as ordinary creates', bound.kind === 'accountBound', bound.kind);
+  const household = bound.householdId;
+  const rows = () => sql(`SELECT string_agg(title || '=' || to_char(meal_date, 'YYYY-MM-DD') || ':' || meal_slot || ':' || status || ':r' || revision, ',' ORDER BY title) FROM public.meal_plan_entries WHERE household_id='${household}';`);
+  check('meals: each plan keeps its exact logical date, slot and status in PostgreSQL (Tuesday is 2026-09-22, an unstated slot is unspecified, the removed plan is archived)',
+    rows() === 'Changed my mind=2026-09-23:lunch:archived:r1,Leftovers=2026-09-22:unspecified:active:r1,Tacos=2026-09-22:dinner:active:r1', rows());
+
+  await mutate(a, (s, ctx) => m.meals.archiveMeal(s, ctx, ids.tuesday).state);
+  await a.settle();
+  check('meals: archiving after binding is a compare-and-set UPDATE of status (revision 2); the row is still there and nothing was deleted',
+    rows().includes('Tacos=2026-09-22:dinner:archived:r2') && sql(`SELECT count(*) FROM public.meal_plan_entries WHERE household_id='${household}';`) === '3', rows());
+  check('meals: the change log records the archive as an upsert pointer another device pulls, never as a tombstone',
+    sql(`SELECT count(*) FROM public.change_log WHERE household_id='${household}' AND entity_table='meal_plan_entries' AND op='tombstone';`) === '0'
+      && Number(sql(`SELECT count(*) FROM public.change_log WHERE household_id='${household}' AND entity_table='meal_plan_entries' AND op='upsert';`)) >= 4);
+
+  // ---- a second install of the same account ----------------------------------------------------------------------
+  const b = await device(m, { account: T, sent });
+  await bindAsNewDevice(m, b, T, household);
+  const resumed = await b.signIn();
+  const held = b.store.getSnapshot().state.meals.map((x) => `${x.title}|${x.date}|${x.slot}|${x.status}`).sort().join(';');
+  check('meals: CLIENT A -> queue -> PostgreSQL -> CLIENT B: the second device holds every plan with the exact logical date, slot and status, and made no outbound work',
+    resumed.kind === 'accountBound' && b.persisted().identity.sync.queue.length === 0
+      && held === 'Changed my mind|2026-09-23|lunch|archived;Leftovers|2026-09-22|unspecified|active;Tacos|2026-09-22|dinner|archived', held);
+  check('meals: the archived plans are held on B but are not in its active plan (removal propagated across devices)',
+    m.meals.activeMeals(b.store.getSnapshot().state).map((x) => x.title).join('|') === 'Leftovers');
+
+  // ---- a stale push is a real compare-and-set refusal -------------------------------------------------------------
+  await mutate(a, (s, ctx) => m.meals.updateMeal(s, ctx, ids.leftovers, { title: 'My edit' }).state);
+  psql(STACK_DB, `UPDATE public.meal_plan_entries SET title = 'Their edit', meal_slot = 'breakfast' WHERE household_id='${household}' AND local_id='${ids.leftovers}';`, { label: 'meals concurrent edit' });
+  await a.settle();
+  check('meals: a stale push (another device changed the row first) is refused by the server: it keeps the other edit and A records the conflict instead of overwriting',
+    sql(`SELECT title || ':' || meal_slot FROM public.meal_plan_entries WHERE household_id='${household}' AND local_id='${ids.leftovers}';`) === 'Their edit:breakfast'
+      && a.persisted().identity.sync.evidence.some((e) => e.evidence === 'cas-conflict' && e.localId === ids.leftovers));
+
+  // ---- the database refuses what it must, over real HTTP ---------------------------------------------------------
+  const before = rows();
+  const stranger = clientFor(X);
+  const owner = clientFor(T);
+  const peek = await stranger.from('meal_plan_entries').select('id').eq('household_id', household);
+  check('meals: RLS - an unrelated account cannot read the household\'s plans', (peek.data ?? []).length === 0);
+  const tamper = await stranger.from('meal_plan_entries').update({ status: 'archived', meal_slot: 'snack' }).eq('household_id', household).select('id');
+  check('meals: RLS - nor archive or re-slot one (the rows are invisible to it)', (tamper.data ?? []).length === 0);
+  const category = (await owner.from('household_categories').select('id').eq('household_id', household).eq('system_role', 'meals')).data?.[0]?.id;
+  const plant = await stranger.from('meal_plan_entries').insert({ household_id: household, local_id: 'planted', meal_date: '2026-09-22', title: 'Planted', category_id: category, scope: 'household', producer: 'user-action', meal_slot: 'dinner' });
+  check('meals: RLS - nor plant a plan in it (insert WITH CHECK)', plant.error !== null, plant.error?.code ?? 'no error');
+  const strangerDelete = await stranger.from('meal_plan_entries').delete().eq('household_id', household).select('id');
+  check('meals: RLS - nor delete one', strangerDelete.error !== null || (strangerDelete.data ?? []).length === 0, strangerDelete.error?.code ?? 'no rows');
+  const ownerDelete = await owner.from('meal_plan_entries').delete().eq('household_id', household).select('id');
+  check('meals: even the owner cannot hard-delete a plan (there is no delete grant): removal can only be an archive',
+    ownerDelete.error !== null && (ownerDelete.data ?? []).length === 0, ownerDelete.error?.code ?? 'no error');
+  const badSlot = await owner.from('meal_plan_entries').update({ meal_slot: 'dessert' }).eq('household_id', household).eq('local_id', ids.leftovers).select('id');
+  check('meals: an unknown slot is refused by the CHECK, by name', badSlot.error !== null && /meal_plan_entries_meal_slot_check/.test(badSlot.error.message), badSlot.error?.message ?? 'no error');
+  const badStatus = await owner.from('meal_plan_entries').update({ status: 'skipped' }).eq('household_id', household).eq('local_id', ids.leftovers).select('id');
+  check('meals: a removed plan can never be recorded as skipped: that status does not exist', badStatus.error !== null && /meal_plan_entries_status_check/.test(badStatus.error.message), badStatus.error?.message ?? 'no error');
+  const dates = await owner.from('meal_plan_entries').select('meal_date').eq('household_id', household).eq('local_id', ids.tuesday);
+  check('meals: the logical date comes back over HTTP as the same calendar date string', dates.data?.[0]?.meal_date === '2026-09-22', JSON.stringify(dates.data));
+  check('meals: the attacks changed nothing', rows() === before && sql(`SELECT count(*) FROM public.meal_plan_entries WHERE household_id='${household}' AND local_id='planted';`) === '0');
+
+  // ---- what crossed the account boundary --------------------------------------------------------------------------
+  const titles = ['Tacos', 'Changed my mind', 'Leftovers'];
+  check('meals: a meal title appears only in meal_plan_entries rows the client sent, never in any other table\'s row',
+    sent.filter((row) => row.table !== 'meal_plan_entries' && titles.some((t) => JSON.stringify(row).includes(t))).length === 0);
 }
 
 // Shared with journey-kids.mjs (HK-FEATURE-05): the same device and helpers, so a second journey composes the production path the same way.

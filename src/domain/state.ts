@@ -204,11 +204,38 @@ export const HouseholdSystemSchema = z.strictObject({
   scope: Scope,
 });
 
+/**
+ * A meal's place in the day. `unspecified` is the explicit "not stated" value, not a guess: nothing ever defaults to dinner,
+ * and a slot is never read out of a title. The set is closed; it is mirrored by a CHECK in the cloud.
+ */
+export const MEAL_SLOTS = ['unspecified', 'breakfast', 'lunch', 'dinner', 'snack', 'other'] as const;
+export type MealSlot = (typeof MEAL_SLOTS)[number];
+
+/**
+ * A meal plan is active, or archived: removed from active planning. Archived is NOT eaten, skipped or completed, and it is
+ * never deleted (there is no delete path), so the removal reaches every device as an ordinary update.
+ */
+export const MEAL_STATUSES = ['active', 'archived'] as const;
+export type MealStatus = (typeof MEAL_STATUSES)[number];
+
+/**
+ * Rows are retired by status, never deleted, so the count only grows. The cap matches tasks and events; a plan at the cap is
+ * refused by `addMeal` rather than left to make the whole household state stop validating.
+ */
+export const MEAL_PLAN_CAPACITY = 5000;
+
+/**
+ * A PLANNING RECORD: "this household plans this meal for this logical date". It is not an event, not a task, and not a claim
+ * that anything was prepared, cooked, served or eaten. `date` is a calendar date, never an instant. `slot` and `status` default
+ * so a row written before they existed is still truthful: it is a live plan with no stated slot.
+ */
 export const MealPlanEntrySchema = z.strictObject({
   id: Id,
   date: LocalDateSchema,
   title: NonBlank(200),
   categoryId: Id,
+  slot: z.enum(MEAL_SLOTS).default('unspecified'),
+  status: z.enum(MEAL_STATUSES).default('active'),
   ...mealFacetFields,
   provenance: ProvenanceSchema,
   scope: Scope,
@@ -464,7 +491,7 @@ export const AppStateSchema = z.strictObject({
   events: z.array(CalendarEventSchema).max(5000),
   tasks: z.array(TaskSchema).max(5000),
   systems: z.array(HouseholdSystemSchema).max(500),
-  meals: z.array(MealPlanEntrySchema).max(1000),
+  meals: z.array(MealPlanEntrySchema).max(MEAL_PLAN_CAPACITY),
   onboarding: OnboardingSchema,
   oneMoves: z.array(OneMoveRecordSchema).max(4000),
   needsMe: z.array(NeedsMeItemSchema).max(1000),

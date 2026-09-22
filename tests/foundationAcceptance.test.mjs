@@ -101,7 +101,7 @@ describe('FE-03 — a commitment answers the same questions whatever it is', () 
     let s = withTask(real(), { title: 'Sign the permission form', dueDate: '2026-09-23' });
     s = { ...s, tasks: s.tasks.map((t) => ({ ...t, dueAt: '2026-09-23T20:00:00.000Z', splittable: true, minChunkMinutes: 5, energyDemand: 'low', consequence: 'high', preparationMinutes: 10, needsMePersonally: true, value: parseMoney('35', 'USD', 'outflow') })) };
     s = addEvent(s, at(), { title: 'Field trip', categoryId: 'cat-kids', startsAt: '2026-09-25T14:00:00.000Z', endsAt: '2026-09-25T18:00:00.000Z', commitment: 'fixed', scope: 'household' });
-    s = { ...s, meals: [{ id: 'meal-1', date: '2026-09-21', title: 'Bake the trip snack', categoryId: 'cat-meals', prepMinutes: 30, energyDemand: 'moderate', provenance: USER, scope: 'household' }],
+    s = { ...s, meals: [{ id: 'meal-1', date: '2026-09-21', title: 'Bake the trip snack', categoryId: 'cat-meals', slot: 'unspecified', status: 'active', prepMinutes: 30, energyDemand: 'moderate', provenance: USER, scope: 'household' }],
       systems: [{ id: 'sys-1', name: 'Sunday reset', description: '', categoryId: 'cat-home', subjectMemberId: null, automationMode: 'manual', effortMinutes: 20, energyDemand: 'low', provenance: USER, scope: 'household' }] };
     const shapes = [
       commitmentFacetsOf({ kind: 'task', row: s.tasks[0] }), commitmentFacetsOf({ kind: 'event', row: s.events[0] }),

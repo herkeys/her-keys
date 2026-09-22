@@ -121,6 +121,9 @@ export function materializeDemoState({ anchorDate, timeZone }: { anchorDate: Loc
     ...meal,
     date: addDays(anchorDate, dayOffset),
     categoryId: category.meals,
+    // The defaults a legacy row reads as: a live plan with no stated slot.
+    slot: 'unspecified',
+    status: 'active',
     ...emptyMealFacets(),
     provenance: demoProvenance(),
     scope: 'household',

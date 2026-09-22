@@ -291,7 +291,7 @@ describe('SCENARIO C — practice, travel, dinner and the end of her workday', (
     s = addEvent(s, at(), { title: 'Soccer practice', categoryId: 'cat-kids', startsAt: nyInstant(17, 30), endsAt: nyInstant(18, 30), commitment: 'fixed', scope: 'household', travelMinutesBefore: 20, travelMinutesAfter: 20, preparationMinutes: 10 });
     s = withTask(s, { title: 'Get dinner on the table', categoryId: 'cat-meals', dueDate: DAY });
     s = { ...s, tasks: s.tasks.map((t) => ({ ...t, durationMinutes: 40, preparationMinutes: 15, energyDemand: 'moderate' })),
-      meals: [{ id: 'meal-1', date: DAY, title: 'Sheet-pan chicken', categoryId: 'cat-meals', prepMinutes: 25, energyDemand: 'low', provenance: USER, scope: 'household' }] };
+      meals: [{ id: 'meal-1', date: DAY, title: 'Sheet-pan chicken', categoryId: 'cat-meals', slot: 'unspecified', status: 'active', prepMinutes: 25, energyDemand: 'low', provenance: USER, scope: 'household' }] };
     s = setCapacity(s, at(), { dayEndMinutes: 21 * 60, transitionBufferMinutes: 15 });
     const practice = commitmentFacetsOf({ kind: 'event', row: s.events[1] });
     assert.deepEqual(practice.transition, { before: 20, after: 20, preparation: 10 });

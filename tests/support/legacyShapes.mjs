@@ -28,15 +28,19 @@ export const V4_ROW_ADDITIONS = {
   events: ['provenance', 'energyDemand', 'consequence', 'needsMePersonally', 'value'],
   tasks: ['provenance', 'durationSource', ...TASK_FACETS],
   systems: ['provenance', 'subjectMemberId', 'automationMode', 'effortMinutes', 'energyDemand'],
-  meals: ['provenance', 'prepMinutes', 'energyDemand'],
+  // `slot` and `status` are Feature 08's: a legacy meal is a live plan with no stated slot, which is exactly what they default to.
+  meals: ['provenance', 'slot', 'status', 'prepMinutes', 'energyDemand'],
   needsMe: ['provenance'],
   oneMoves: ['provenance'],
   discovery: ['provenance'],
   onboarding: ['provenance'],
 };
 
-/** What a facet reads as when it was never known: null everywhere except a system's automation mode. */
-export const UNKNOWN_FACET = (key) => (key === 'automationMode' ? 'manual' : null);
+/**
+ * What an added field reads as when it was never known: null everywhere except a system's automation mode and a meal's slot
+ * and status, whose "not stated" values are explicit members of their closed sets (`unspecified`, `active`), never a guess.
+ */
+export const UNKNOWN_FACET = (key) => (key === 'automationMode' ? 'manual' : key === 'slot' ? 'unspecified' : key === 'status' ? 'active' : null);
 
 /** Roots v4 introduced. */
 export const V4_ROOTS = [

@@ -3,7 +3,7 @@ import { categoriesInOrder, categoryWithRole } from '../domain/categories';
 import { ageOn } from '../domain/logicalDay';
 import type { SystemRole } from '../domain/state';
 import { openTaskCountsByCategory } from '../domain/taskLists';
-import { dayLabel } from '../features/today/formatDay';
+import { upcomingMealsOf } from '../features/meals/upcomingMeals';
 import { useHouseholdState } from './AppStateProvider';
 
 /**
@@ -25,10 +25,8 @@ export function useHousehold() {
       systems: state.systems,
       /** Every open task by category, not just today's — a category reading needs both to tell "nothing due" from "nothing there". */
       openTaskCounts: openTaskCountsByCategory(state),
-      upcomingMeals: state.meals
-        .filter((meal) => meal.date >= today)
-        .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id))
-        .map((meal) => ({ id: meal.id, label: dayLabel(meal.date, today), title: meal.title, categoryId: meal.categoryId })),
+      // Active planning only, in the shared device-independent order: see upcomingMealsOf.
+      upcomingMeals: upcomingMealsOf(state, today),
       categoryIdForRole: (role: SystemRole) => categoryWithRole(state, role)?.id ?? null,
       categoryName: (categoryId: string) => categoryName.get(categoryId) ?? '',
     };
