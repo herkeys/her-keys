@@ -65,6 +65,8 @@ const SHARED = [
   ['supabase/tests/run.mjs', 'test infrastructure: migration gate, fresh install, populated upgrade, f08 mode, private stack'],
   ['supabase/tests/journey-composition.mjs', 'test infrastructure: the meals journey and the served-database name'],
   ['supabase/tests/sync-integration.mjs', 'test infrastructure: the served-database name'],
+  ['supabase/tests/journey-kids.mjs', 'W2I follow-up: the combined journeys path now runs Kids through the F08 private stack too, so its verification queries read STACK_DB instead of a hardcoded postgres'],
+  ['supabase/tests/journey-home.mjs', 'W2I follow-up: same private-stack fix as journey-kids.mjs, for the same reason'],
   ['tests/support/legacyShapes.mjs', 'test infrastructure: typed literals and the v3 to v4 shape helper'],
   ['tests/support/richHousehold.mjs', 'test infrastructure: the meal literal carries the new fields'],
   ['tests/foundationAcceptance.test.mjs', 'test infrastructure: raw meal literal carries the new fields'],
