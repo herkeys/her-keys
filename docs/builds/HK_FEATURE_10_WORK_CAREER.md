@@ -11,7 +11,7 @@ conflict with the original prompt.
 | Worktree | `C:\Users\jsmit\Her-Keys-F10` |
 | WAVE3_BASE | `363e473fdf053547a21a41a67b7f62bd9aa2bcdf` (source: `integration/wave2-f01-f08`) |
 | Sibling (not modified) | `feature/09-money-os`, also at `363e473` at F10's start |
-| Status | IN PROGRESS — M1–M5 substantially complete; M6 hostile self-review and final validation pending |
+| Status | **F10 WORK / CAREER OS: STOPPED — RESUMABLE** (§16) — M1–M6 code, tests and mutation-check complete and committed; the one unexecuted item is a full-suite ENV C backend re-run, blocked by this machine's Docker Desktop service stopping mid-run |
 
 ---
 
@@ -210,8 +210,18 @@ every other feature uses — immediate UI update, background persistence, no onl
 |---|---|
 | `node supabase/tools/gen-foundation-sql.mjs --check` | up to date, before and after every manifest edit |
 | `supabase/tests/run.mjs 57` (foundation RLS) | **52/52 PASS** (clean, isolated rerun — see note below) |
-| `supabase/tests/run.mjs 58` (foundation integrity, incl. new §15 CareerOpportunity doctrine + widened-Dependency proofs) | *(recorded once the run completes — see §12)* |
-| Full `supabase/tests/run.mjs` (ENV A/B/B3/D/E/C, all suites) | *(pending — will confirm the 35-table interlock, fresh-install and populated-upgrade paths)* |
+| `supabase/tests/run.mjs 58` (foundation integrity, incl. new §15 CareerOpportunity doctrine + widened-Dependency proofs) | **150/150 PASS**, including all 15 new F10 checks (3 dependency cross-domain proofs + 12 opportunity doctrine proofs) |
+| Full `supabase/tests/run.mjs` (ENV A/B/B3/D/E/C, all suites) | *(pending — will confirm the 35-table interlock, fresh-install and populated-upgrade paths — see §12)* |
+
+A second hardcoded table count was found and fixed mid-run: `ENV A: 34 application tables` in `run.mjs`
+itself (a `pg_class`-count check distinct from the interlock-guard array already fixed) and the
+equivalent static pin in `supabase/tests/00-interlock.sql` — both updated to 35 and reconfirmed green.
+
+**Context noted, not a defect:** partway through this milestone, `Her-Keys-F09` was found to have
+active commits (through "F09-M6: hostile self-review") — a separate session is building the sibling
+Money OS feature concurrently, exactly as the prompt anticipates. `git status --short` in
+`Her-Keys-F09` was confirmed empty (zero changes from this session) before and after; only one
+`run.mjs` process was ever observed active at a time.
 
 **Environmental note:** the very first `run.mjs 57` attempt, executed while several other background
 processes were active on this machine, showed 3 unrelated FAILs in the "cursor snapshot barrier" section
@@ -226,9 +236,30 @@ both `57-foundation-rls.sql` and `58-foundation-integrity.sql`.
 
 ## 10. Test-the-test (ADDENDUM AD) — mutation results
 
-*(To be executed and recorded in M6, alongside the hostile self-review. Each of the 8 required mutations —
-relationship, interview, stage, closure, privacy, identity, One Move, money-boundary — will be applied to a
-throwaway copy, confirmed to make the relevant test fail, then discarded. No mutant is committed.)*
+Run via `node scripts-dev/f10-mutation-check.cjs` against the clean M1–M5 commit (`06848cf`). Each
+mutation is applied to the real source, `tests/work/opportunity.test.mjs` is run, the mutant is required
+to make it FAIL, and the file is restored byte-for-byte (`git checkout`) whether it was caught or not.
+No mutant was committed; the worktree was confirmed CLEAN after the run.
+
+| ID | Mutation (ADDENDUM AD) | File mutated | Result |
+|---|---|---|---|
+| M1 | RELATIONSHIP — an opportunity with no linked Task appears to have a next step | `opportunities.ts` (`hasOpenNextAction` forced to `true`) | **CAUGHT** (1 failing) |
+| M2 | INTERVIEW — an Event's time passing automatically advances the Opportunity stage | `opportunities.ts` (`scheduleOpportunityInterview` advances stage when `startsAt` is past) | **CAUGHT** (1 failing) |
+| M3 | STAGE — `applied` is silently treated as `interviewing` | `opportunities.ts` (`setOpportunityStage` rewrites the requested stage) | **CAUGHT** (2 failing) |
+| M4 | CLOSURE — closing an Opportunity automatically completes its linked Tasks | `opportunities.ts` (`setOpportunityStage` cascades into `state.tasks` on `closed`) | **CAUGHT** (1 failing) |
+| M5 | ONE MOVE — CareerOpportunity itself becomes a One Move target without a canonical Task | `state.ts` (`ONE_MOVE_TARGET_TYPES` gains `'opportunity'`) | **CAUGHT** (1 failing) |
+| M6 | MONEY BOUNDARY — a structured compensation field is added to the accepted schema | `foundation/opportunity.ts` (`CareerOpportunitySchema` gains `salaryCents`) | **CAUGHT** (9 failing — the schema-shape test plus every constructor test, since `strictObject` now demands the new field) |
+
+**6 / 6 caught.** The remaining two ADDENDUM AD mutations have no application-layer target to mutate and
+are proven at a different layer instead, per the automated check's own output:
+- **PRIVACY** ("a same-household but unauthorized profile reads an owner-private CareerOpportunity") is
+  enforced only by Postgres RLS (`career_opportunities_select_own`) — proven live in §9/§12
+  (`57-foundation-rls.sql`: "same-household member B: sees NONE of A's career opportunities" / "B: sees
+  exactly her own opportunity"), not by any application code that could be mutated.
+- **IDENTITY** ("F10 collision/context logic relies on a child's display name rather than its canonical
+  ID") has no F10 target: F10 introduces zero child-referencing logic (confirmed by a repo-wide grep for
+  `displayName` across every file this build touched — no matches). The identity guarantee this
+  mutation would attack belongs to F05 and is covered by F05's own mutation check.
 
 ## 11. Application test suite
 
@@ -237,16 +268,45 @@ throwaway copy, confirmed to make the relevant test fail, then discarded. No mut
 | ENTRY (pristine `Her-Keys-W2I`, before any F10 change) | 2814 | 614 | 2812 | 2 | Both fails are `tests/meals/boundary.test.mjs` — F08's own hostile-audit scan (`scripts-dev/meals-boundary-scan.cjs`) flags `feature/09-money-os`'s local branch as "sibling history reaching HEAD," a structural false positive: F09's branch tip is *identical* to `WAVE3_BASE`, which sits above the scan's hardcoded pre-F08 baseline commit, so it looks like sibling contamination when it is really just the shared Wave 3 fork point. Confirmed present in F10's own worktree *before any code change*, from a clean `git worktree add`. Not caused by F10; not F10's to fix (F08's own committed regression test). |
 | After M2 (foundation schema + sync + domain commands) | 2817 | 614 | 2809 | 8 | Fixed during the pass (real, required maintenance, not defects): `V4_EMPTY_COLLECTIONS`/`V4_ROOTS` needed `careerOpportunities` (legacy migration + test fixture builders build a full `AppState` literal); `FOUNDATION_SPECS.length`/table-uniqueness assertions and `SYNC_ENTITY_KINDS.length` needed 18→19 / 29→30; `richHousehold.mjs` needed one opportunity+task+dependency row so the generic "one row of every kind" projection/roundtrip tests exercise the new kind; `organizationLabel`→`organizationName` rename (design-independence lint false-positive, §3.3). |
 | After M3 (UI + Today integration) | 2817 | 614 | 2813 | 4 | Two more of the same F08-scan false positive (now also naming `src/domain/routeAccess.ts` as a changed "PROTECTED" file — again, an accurate but not-applicable-to-F10 finding from a script scoped to F08's own diff). One real, required fix: `tests/monetization.test.mjs`'s exhaustive "every onboarding-guarded screen must close after completion" loop needed `opportunity-editor` added to its exclusion list, alongside `event-editor`/`task-editor` (same guard type: opens once the app itself is unlocked, is not an onboarding step). |
-| Current | 2817 | 614 | 2813 | 2 (meals/boundary only) | Fixed the monetization gap; the two remaining fails are the pre-existing, out-of-scope F08 scan limitation, documented above. |
+| After M6 (mutation-check file added) | 2852 | 622 | 2848 | 4 | +35 tests / +8 suites is exactly `tests/work/opportunity.test.mjs` (added after the M3 count above). Of the 4 fails: 3 are the same pre-existing F08-scan limitation (one more assertion in that file now also names `tests/work/opportunity.test.mjs` and the mutation-check script as further "unexplained" shared-file/new-file changes — same root cause, not a new one); 1 is `tests/hk-ir01/syncComposition.test.mjs`'s "5,000-task household" performance budget test, which failed only under heavy concurrent load from this session's own parallel backend-harness/mutation-check runs (confirmed by re-running it fully isolated: **54/54 pass**, including that test, when nothing else was active — see §9's environmental note for the identical pattern). |
 
-**ENTRY = 2814 / EXIT = 2817 (+3: the demo-seed opportunity's task, the new Dependency edge, and the
-opportunity row itself add exactly 3 new assertions where fixtures assert exact totals — no test
-disappeared without a named reason.)**
+**ENTRY = 2814 tests (2812 pass) / EXIT = 2852 tests (2848 pass).** No test disappeared without a named
+reason — every count change from ENTRY to EXIT is accounted for in the rows above.
 
 ## 12. Backend harness accounting
 
-*(Populated once the full `supabase/tests/run.mjs` run completes: ENTRY backend check count, EXIT count,
-delta, and the fresh-install / populated-upgrade / RLS matrix results.)*
+A full, unscoped `node supabase/tests/run.mjs` (migration quality + ENV A/B/B3/D/E, then ENV C) was
+started against the clean `06848cf` commit. Everything through ENV E passed with **zero failures**:
+
+| Section | Result |
+|---|---|
+| Migration quality (static inspection) | all PASS, including the "35 application tables" guard-enumeration checks |
+| ENV A — empty apply (fresh install) | all PASS, including `ENV A: 35 application tables` |
+| ENV B/B1/B2 — zero-data interlock attack | all PASS |
+| ENV B3 — interlock re-run over a populated foundation table | all PASS, including `ENV B3: ...and every one of the 35 tables is still there` |
+| ENV D — additive upgrade of a populated pre-IR01 database | all PASS |
+| ENV E — additive upgrade of a populated pre-F08 database | all PASS |
+
+**ENV C (the full numbered-suite pass, 00 through 99) did not finish.** Partway through its setup, this
+machine's Docker Desktop backend service (`com.docker.service`) stopped outright — confirmed via
+`Get-Service com.docker.service` reporting `Stopped`, not merely slow — and the harness process failed
+with `database "b4_env_c" does not exist` once its container connection was lost. This is a host/tooling
+failure, not a test result: no FAIL line was ever produced.
+
+**This is not a fresh gap.** Suites 57 and 58 — the two this feature actually changes the shape of — were
+already run individually against a live, correctly-migrated ENV C earlier in this same session, cleanly:
+**57: 52/52**, **58: 150/150** (§9), including every F10-specific RLS and doctrine check. What did *not*
+get a fresh confirmation is the *generic*, pre-existing suites (00, 10, 20, 30, 40, 50, 56, 60, 61, 70, 72,
+73, 74, 80, 90, 92, 95, 99) plus `authorization-parity` and the client-payload-integration check, run
+together in one ENV C pass alongside 57/58. F10's changes are additive-only (§3.2) and none of those
+suites' subject matter (child-subject rules, server columns, claim bootstrap/closure, revision CAS,
+change cursor, One Move, action records, fail-closed) touches `career_opportunities` or the widened
+`dependencies` columns, so the a priori risk is low — but it is genuinely UNEXECUTED, not passed, and is
+reported as such rather than assumed.
+
+**ENTRY/EXIT backend counts:** not captured, because this run did not reach a completed ENV C summary
+line (the harness prints pass/fail counts only at the end of that section). The individual suite runs
+(57, 58) reported their own totals above.
 
 ## 13. Known debt / deferred (see `HK_FEATURE_10_MISSING_PRIMITIVES.md` for the full table)
 
@@ -262,9 +322,65 @@ delta, and the fresh-install / populated-upgrade / RLS matrix results.)*
 
 | Milestone | Branch/HEAD at close | Status |
 |---|---|---|
-| M1 — prior-implementation audit + domain model | *(pre-commit)* | COMPLETE |
-| M2 — canonical opportunity, commands, local persistence, sync manifest | *(pre-commit)* | COMPLETE |
-| M3 — Work/Career projections + UI | *(pre-commit)* | COMPLETE |
-| M4 — Calendar/Capacity/Today integration | *(pre-commit)* | COMPLETE (scoped per ADDENDUM Q/S; see F10-MP-07) |
-| M5 — sync/backend/privacy | *(pre-commit)* | IN PROGRESS — suite 57 verified (52/52); suite 58 and the full harness pending |
-| M6 — hostile self-review + certification | not started | PENDING |
+| M1 — prior-implementation audit + domain model | `feature/10-work-career-os` @ `06848cf` | COMPLETE |
+| M2 — canonical opportunity, commands, local persistence, sync manifest | `06848cf` | COMPLETE |
+| M3 — Work/Career projections + UI | `06848cf` | COMPLETE |
+| M4 — Calendar/Capacity/Today integration | `06848cf` | COMPLETE (scoped per ADDENDUM Q/S; see F10-MP-07) |
+| M5 — sync/backend/privacy | `06848cf` | Suites 57 (52/52) and 58 (150/150) verified; ENV A/B/B3/D/E verified (§12); ENV C's full numbered-suite pass UNEXECUTED — Docker stopped mid-run |
+| M6 — hostile self-review + certification | `06848cf` (docs pending a final commit) | Mutation check 6/6 CAUGHT (§10); hostile checklist COMPLETE (§15); verdict is STOPPED — RESUMABLE (§16), not COMPLETE, because §12's ENV C gap is genuinely unexecuted |
+
+Mini-gate at `06848cf`: `git branch --show-current` → `feature/10-work-career-os`; `git rev-parse --short HEAD` → `06848cf`; `git status --short` → clean.
+
+## 15. Hostile self-review (pre-COMPLETE checklist)
+
+| Question | Answer |
+|---|---|
+| Did we create a second task system? | No — `addOpportunityNextAction` calls the canonical `addTask` |
+| Did we create a second calendar system? | No — `scheduleOpportunityInterview` calls the canonical `addEvent` |
+| Did we create a second goal system? | No — Goal untouched; deferred (F10-MP-04/05) |
+| Did we accidentally build an ATS? | No — no scoring, no CRM, no scraping, no auto-apply |
+| Can an opportunity advance without evidence? | No — `setOpportunityStage` is the only path, always explicit (proven M2/M3) |
+| Can accepted employment become fake Money income? | No — no structured compensation field exists at all (proven M6, §9 §10) |
+| Can a professional detail leak to another household member? | No — `scope:'personal'`, RLS owner-only (proven §9/§12) |
+| Can co-parenting see private career details? | No — F10 never touches `coparent-shared` scope or Co-Parent code |
+| Can a work deadline distort capacity incorrectly? | No — CareerOpportunity has no duration/start/end fields |
+| Can a child rename break relationships? | No — F10 introduces zero child-referencing logic (grep-confirmed) |
+| Can Today duplicate professional work? | No — Today reads the same canonical rows via the same Dependency edges |
+| Can One Move choose a non-action object? | No — `'opportunity'` is not in `ONE_MOVE_TARGET_TYPES` (proven M5) |
+| Can an offline opportunity edit disappear? | No — same `store.commit`/local-first pipeline as every canonical mutation |
+| Can stale sync overwrite newer career truth? | No — same generated CAS/revision mechanism as every foundation kind |
+| Did we build part of People OS prematurely? | No — `contactName` stays free text (F10-MP-06) |
+| Did we build part of Documents OS prematurely? | No — no document storage (F10-MP-08) |
+| Does F10 make the user maintain information twice? | No — the next action IS the canonical Task, not a duplicate |
+
+---
+
+## 16. Resumable stop
+
+**F10 WORK / CAREER OS: STOPPED — RESUMABLE**
+
+- **Last clean commit:** `06848cf` on `feature/10-work-career-os` ("F10 M1-M5: Work/Career OS —
+  CareerOpportunity foundation, domain commands, UI, Today/Capacity integration, backend RLS").
+- **Working-tree status:** clean at `06848cf`; this ledger file and `HK_FEATURE_10_MISSING_PRIMITIVES.md`
+  have further uncommitted edits (documentation only — no source change) recording this stop.
+- **Completed milestones:** M1–M4 fully complete; M5 complete except the single item below; M6's mutation
+  check and hostile self-review are complete and both clean.
+- **Exact blocker:** this machine's Docker Desktop backend service (`com.docker.service`) stopped during
+  the ENV C phase of a full, unscoped `supabase/tests/run.mjs` run, after ENV A/B/B3/D/E had all already
+  passed cleanly against the same migration. Confirmed via `Get-Service com.docker.service` → `Stopped`
+  (not merely slow) and the harness's own `database "b4_env_c" does not exist` failure once its
+  connection was lost. Docker is shared with other active work on this machine (a concurrent F09 build's
+  Expo server, other project stacks), so restarting it was treated as outside this build's authority to
+  decide unilaterally.
+- **Unexecuted validation:** one full ENV C pass covering the generic, pre-existing numbered suites (00,
+  10, 20, 30, 40, 50, 56, 60, 61, 70, 72, 73, 74, 80, 90, 92, 95, 99) plus `authorization-parity` and the
+  client-payload-integration check, run together in a single environment. The two suites F10 actually
+  changes the shape of (57 foundation-RLS, 58 foundation-integrity) were already run individually and
+  passed in full (52/52, 150/150) earlier in this session, against a correctly-migrated ENV C, before
+  Docker's interruption.
+- **Safe next action:** once Docker Desktop is confirmed healthy again (`docker ps` returns promptly, no
+  other `run.mjs` process active — `Get-CimInstance Win32_Process | Where CommandLine -match 'run\.mjs'`),
+  run `node supabase/tests/run.mjs` unscoped from `C:\Users\jsmit\Her-Keys-F10` and record ENV C's PASS
+  count here. No source change is anticipated; this is a validation-only remaining step. No destructive
+  action was taken or is needed — no database was left in a partial state (the harness drops and
+  recreates its own scratch databases at the start of every run).
