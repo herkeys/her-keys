@@ -239,3 +239,24 @@ relaunch = a second store on the same storage).
 | integrity: duplicate context, link to household Task, dangling child; messages carry ids only | PASS | domain › integrity |
 
 Shared-file edits at M2: none beyond M1.
+
+Git at M2 close: `7e10bb7`, clean. `tsc --noEmit` exit 0.
+
+---
+
+## F13-M3 — private Add Follow-up Task / link, and its reach into Today / One Move
+
+The flow's domain contract was built in M1/M2 (`addFollowUp`: D8). M3 proves where the follow-up goes and where it does not.
+
+Tests: `tests/people/today.test.mjs` — **4/4** (uses the Today suite's own fixtures and the real `buildTodayView` / One Move selector).
+
+| Scenario / doctrine | Status | Evidence |
+|---|---|---|
+| PERSON DOES NOT BECOME A TODAY OBJECT — people + context with no follow-up ⇒ Today and One Move deep-equal to the same household without them | PASS | today › 1 |
+| NO FOLLOW-UP TASK DOES NOT MEAN RELATIONSHIP NEGLECT (nothing added to Today) | PASS | today › 1, 4 |
+| Today sees the follow-up only as its canonical Task (typed title); never the person's name, label or note; no Today element carries a context or person id | PASS | today › 2 |
+| PERSON DOES NOT BECOME A ONE MOVE — the concrete follow-up Task IS selected by the normal selector (asserted, non-vacuous: `targetType 'task'`, `targetId task-fu-…`), never the person or context | PASS | today › 3 |
+| No child-level People queue in Today | PASS | today › 4 |
+| No People-specific Today ranking, queue or duplicate card | PASS (structural) | no Today/One Move file is modified by F13 (`git diff 363e473 -- src/features/today src/domain/oneMove.ts` is empty) |
+
+Calendar boundary: F13 creates no Event and changes no Event code. Person↔Event linkage: PENDING-INTEGRATION (MP-13-06).
