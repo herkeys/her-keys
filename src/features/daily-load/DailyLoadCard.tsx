@@ -11,12 +11,6 @@ import { formatTime } from './computeDailyLoad';
 const CAPACITY_ACTION_TYPES = new Set(['daily_load.drop_task', 'daily_load.shorten_task', 'daily_load.keep_capacity_plan']);
 const DAY_WINDOW = `${formatTime(CAPACITY_DAY_START_MINUTES)} and ${formatTime(CAPACITY_DAY_END_MINUTES)}`;
 
-/** Household has never had anything entered at all — a different moment than "today happens to be light." */
-function useIsHouseholdEverEmpty(): boolean {
-  const { state } = useHouseholdState();
-  return state.origin === 'empty' && state.events.length === 0 && state.tasks.length === 0 && state.needsMe.length === 0;
-}
-
 export function DailyLoadCard() {
   const schedule = useSchedule();
   const { events, tasks, issues, decision, candidates, candidateIndex, appliedMove, showNextCandidate, moveRecommendedTask, keepAsPlanned, moveEvent, dropTask, shortenTask, keepCapacity, protectItem } = schedule;
@@ -25,7 +19,6 @@ export function DailyLoadCard() {
   const [note, setNote] = useState<string | null>(null);
   // A second tap in the same frame would otherwise run an action twice before `busy` renders.
   const inFlight = useRef(false);
-  const everEmpty = useIsHouseholdEverEmpty();
 
   const run = async (action: () => Promise<boolean>) => {
     if (inFlight.current) return;
@@ -89,25 +82,6 @@ export function DailyLoadCard() {
         <AppText variant="body" color={colors.textSecondary} style={styles.impact}>
           Her Keys will watch how the afternoon actually goes.
         </AppText>
-      </Card>
-    );
-  }
-
-  if (everEmpty) {
-    return (
-      <Card tone="subtle" style={styles.card}>
-        <AppText variant="screenTitle">Nothing entered yet.</AppText>
-        <AppText variant="body" color={colors.textSecondary} style={styles.impact}>
-          Add your first event or task to see what Her Keys notices about your day.
-        </AppText>
-      </Card>
-    );
-  }
-
-  if (events.length === 0 && tasks.length === 0) {
-    return (
-      <Card tone="subtle" style={styles.card}>
-        <AppText variant="screenTitle">Nothing scheduled today.</AppText>
       </Card>
     );
   }
@@ -233,34 +207,10 @@ export function DailyLoadCard() {
     );
   }
 
-  if (primary?.kind === 'overdue') {
-    return (
-      <Card tone="subtle" style={styles.card}>
-        <Tag label="Overdue" />
-        <AppText variant="screenTitle" style={styles.headline}>
-          “{primary.taskTitle}” is {primary.daysOverdue} day{primary.daysOverdue === 1 ? '' : 's'} overdue.
-        </AppText>
-        <AppText variant="body" color={colors.textSecondary} style={styles.impact}>
-          Her Keys won’t reschedule this automatically — it’s still yours to decide.
-        </AppText>
-      </Card>
-    );
-  }
-
+  // Overdue is not a decision — it is a row in the attention block. And when there is nothing to decide the
+  // view model renders no card at all; "nothing needs moving" is not a claim worth a card.
   const focus = issues.focus;
-  if (!primary || !focus) {
-    return (
-      <Card tone="success" style={styles.card}>
-        <Tag label="Nothing needs moving" tone="success" />
-        <AppText variant="screenTitle" style={styles.headline}>
-          Your commitments have room between them.
-        </AppText>
-        <AppText variant="body" color={colors.textSecondary} style={styles.impact}>
-          Her Keys checked today’s transitions and found nothing that needs changing.
-        </AppText>
-      </Card>
-    );
-  }
+  if (!primary || primary.kind === 'overdue' || !focus) return null;
 
   // transition_conflict or tight_window: always the window the verdict names.
   const verdict = focus.issue;

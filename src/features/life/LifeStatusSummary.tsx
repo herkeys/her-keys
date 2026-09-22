@@ -1,26 +1,20 @@
 import { router } from 'expo-router';
-import { StyleSheet, View } from 'react-native';
-import { AppText, Overline, StatusList } from '../../design/components';
-import { colors, spacing } from '../../design/tokens';
+import { StatusList } from '../../design/components';
+import { TodayDisclosure } from '../today/TodayDisclosure';
 import { clearCount } from './lifeStatus';
 import { useLifeStatus } from './useLifeStatus';
 
 /**
- * Reassurance, not a dashboard: the point is that Her Keys already looked at
- * the rest of her life so she doesn't have to go check each area herself.
+ * Reassurance, not a dashboard: the point is that Her Keys already looked at the rest of her
+ * life so she doesn't have to go check each area herself. It is lower-priority context, so it
+ * is collapsed until she wants it — the one-line summary says how many areas are clear.
  */
 export function LifeStatusSummary() {
   const statuses = useLifeStatus();
   const clear = clearCount(statuses);
 
   return (
-    <View style={styles.wrap}>
-      <View style={styles.header}>
-        <Overline>Also checked</Overline>
-        <AppText variant="statusLabel" color={colors.textTertiary}>
-          {clear} of {statuses.length} clear
-        </AppText>
-      </View>
+    <TodayDisclosure title="Also checked" summary={`${clear} of ${statuses.length} clear`}>
       <StatusList
         items={statuses.map((s) => ({
           key: s.key,
@@ -32,16 +26,6 @@ export function LifeStatusSummary() {
           onPress: () => router.push(s.route, { withAnchor: true }),
         }))}
       />
-    </View>
+    </TodayDisclosure>
   );
 }
-
-const styles = StyleSheet.create({
-  wrap: { marginBottom: spacing.xxl },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: spacing.md,
-  },
-});

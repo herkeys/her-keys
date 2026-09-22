@@ -15,6 +15,12 @@ export function weekdayName(date: LocalDate): string {
   return WEEKDAYS[weekdayOf(date)];
 }
 
+/** "Wednesday, Sep 16" — a calendar fact about a logical date, so it needs no timezone and cannot drift with the device's. */
+export function fullDayLabel(date: LocalDate): string {
+  const { month, day } = parseLocalDate(date);
+  return `${weekdayName(date)}, ${MONTHS[month - 1]} ${day}`;
+}
+
 /** "Today" for today, otherwise the weekday. */
 export function dayLabel(date: LocalDate, today: LocalDate): string {
   return date === today ? 'Today' : weekdayName(date);

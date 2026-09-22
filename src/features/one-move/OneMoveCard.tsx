@@ -1,21 +1,40 @@
+import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
-import { AppText, Card, InsightBlock, Overline, RecommendationBlock, WhyThis } from '../../design/components';
+import { AppText, Button, Card, InsightBlock, Overline, RecommendationBlock, WhyThis } from '../../design/components';
 import { color, spacing } from '../../design/tokens';
-import { useOneMove } from '../../store/OneMoveContext';
+import type { OneMoveCompletion, OneMoveSection } from '../today/model';
+import { TodayDisclosure } from '../today/TodayDisclosure';
+import { TodaySourceLine } from '../today/TodaySourceLine';
 
 /**
- * The One Move surface, rendered entirely in the permanent intelligence
- * language (K3): a recommendation is a RECOMMENDATION until she acts — the
- * completed One Move is her DECISION (the ActionRecord), never the move
- * itself (semantics.ts). Withholding is Her Keys noticing the day is full,
- * so it gets the selective insight treatment rather than an action color.
+ * What "I did it" will actually change, said plainly. A kind with no completion effect of its own is
+ * never presented as finishing a row: it records that she did it, and nothing else changes.
  */
-export function OneMoveCard() {
-  const { status, move, complete } = useOneMove();
+const COMPLETION_TEXT: Record<OneMoveCompletion, string> = {
+  completes_task: 'Marking it done also completes the task on your list.',
+  resolves_needs_me: 'Marking it done also resolves that item.',
+  records_only: 'Marking it done records that you did it. Nothing else changes.',
+};
 
-  if (status === 'completed') {
+/**
+ * The One Move surface, rendered entirely in the permanent intelligence language (K3): a
+ * recommendation is a RECOMMENDATION until she acts — the completed One Move is her DECISION (the
+ * ActionRecord), never the move itself (semantics.ts). Withholding is Her Keys noticing the day is
+ * full, so it gets the selective insight treatment rather than an action color.
+ *
+ * The view model decides which of the lifecycle's presentations this is (`selected`, `completed`,
+ * `withheld`; "no decision" renders nothing at all, and yesterday's decision is never today's).
+ * First glance is the recommendation and the button. "See why" opens the reasons — each re-checked
+ * against the row, from the stored evidence links, never a transcript — and, one level deeper, the
+ * structured evidence, where it came from, and a way to open the item and correct it.
+ *
+ * There is deliberately no "not today" and no "show another": no domain mutation exists for either
+ * (MP-02), so no affordance implies one.
+ */
+export function OneMoveCard({ section, onComplete }: { section: OneMoveSection; onComplete: () => void }) {
+  if (section.status === 'completed') {
     return (
-      <Card tone="success" style={styles.card}>
+      <Card tone="success">
         <Overline color={color.status.success}>One move</Overline>
         <AppText variant="sectionTitle" style={styles.action}>
           Done. That’s enough for today.
@@ -28,39 +47,65 @@ export function OneMoveCard() {
   }
 
   // Not adding another obligation can be the right move (HER_KEYS_PRODUCT.md section 7).
-  if (status === 'withheld') {
-    return (
-      <View style={styles.card}>
-        <InsightBlock>Today is already full, so Her Keys isn’t adding anything.</InsightBlock>
-      </View>
-    );
+  if (section.status === 'withheld') {
+    return <InsightBlock>Today is already full, so Her Keys isn’t adding anything.</InsightBlock>;
   }
 
-  if (status !== 'selected' || !move) {
-    return (
-      <Card tone="subtle" style={styles.card}>
-        <Overline>No one move today</Overline>
-      </Card>
-    );
-  }
+  const { action, estimatedMinutes, why, source, open, completion } = section;
+  if (action === null) return null;
 
   return (
-    <View style={styles.card}>
+    <View>
       <RecommendationBlock
-        body={move.action}
+        body={action}
         approvalRequired={false}
         actionLabel="I did it"
-        meta={move.estimatedMinutes != null ? `ABOUT ${move.estimatedMinutes} MINUTES` : undefined}
-        onApprove={complete}
+        meta={estimatedMinutes != null ? `ABOUT ${estimatedMinutes} MINUTES` : undefined}
+        onApprove={onComplete}
       />
-      <WhyThis reasons={[move.observation]} style={styles.evidence} />
+      {source?.uncertain ? <TodaySourceLine source={source} /> : null}
+      {why ? (
+        <View style={styles.why}>
+          <TodayDisclosure title="See why">
+            <WhyThis reasons={why.reasons} />
+            {completion ? (
+              <AppText variant="supporting" color={color.text.secondary} style={styles.completion}>
+                {COMPLETION_TEXT[completion]}
+              </AppText>
+            ) : null}
+            {why.evidence.length > 0 || why.context.length > 0 || source || open ? (
+              <View style={styles.deeper}>
+                <TodayDisclosure title="Evidence and source">
+                  {why.evidence.map((row) => (
+                    <AppText key={`${row.code}:${row.aboutTitle ?? ''}`} variant="supporting" color={color.text.secondary} style={styles.evidenceRow}>
+                      {row.aboutTitle ? `${row.label} — ${row.aboutTitle}` : row.label}
+                    </AppText>
+                  ))}
+                  {why.context.map((line) => (
+                    <AppText key={line} variant="supporting" color={color.text.secondary} style={styles.evidenceRow}>
+                      {line}
+                    </AppText>
+                  ))}
+                  {source ? <TodaySourceLine source={source} always /> : null}
+                  {open ? (
+                    <Button label="Open it" variant="ghost" size="sm" onPress={() => router.push(open)} accessibilityHint="Opens it so you can check or change it" style={styles.open} />
+                  ) : null}
+                </TodayDisclosure>
+              </View>
+            ) : null}
+          </TodayDisclosure>
+        </View>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  card: { marginBottom: spacing.xxl },
   action: { marginTop: spacing.md },
   note: { marginTop: spacing.sm },
-  evidence: { marginTop: spacing.md },
+  why: { marginTop: spacing.xs },
+  completion: { marginTop: spacing.md },
+  deeper: { marginTop: spacing.sm },
+  evidenceRow: { marginTop: spacing.xs },
+  open: { alignSelf: 'flex-start', marginTop: spacing.sm },
 });
