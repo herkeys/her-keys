@@ -260,3 +260,44 @@ WAVE3_BASE has NO household timezone. The durable product timezone is the PROFIL
 transitions (`ctx.today`). F12 uses that value and nothing else; the device zone is only the seed of a brand-new state. No F12
 timezone field is invented, and no device-local fallback is needed (so no KNOWN V1 LIMITATION on this point). Tests pin a device
 zone that differs from the persisted zone (M4).
+
+Test accounting at M1 (full `npm test`, then targeted re-runs): the model change surfaced four new failures, all repaired in M1 —
+`designIndependence` (stored `*Label` names → renamed), `legacyCatalogRemediation` ×3 and `persistence` v1 (legacy fixtures built by
+stripping `V4_ROOTS` still carried the two new roots, which the frozen v1–v3 validators rightly refuse → the roots were added to
+`V4_ROOTS`). Re-runs: designIndependence 3/3, legacyCatalogRemediation 11/11, persistence 14/14, migrationV3ToV4 54/54,
+claimPayload 22/22, appStore 27/27. The remaining failures are the ENTRY four (the Meals scan now also lists F12's own files; see
+`HK-INT-W3-MEALS-SCAN-01`).
+
+M1 checkpoint (after commit): `feature/12-life-admin-documents` @ `23ba320`, `git status --short` empty.
+
+---
+
+## F12-M2 — Local commands / persistence / editing / archive (and M3's domain half)
+
+`src/domain/lifeRecords.ts` — pure `(state, ctx, …) → result` commands in the `tasks.ts` / `meals.ts` style. A refusal returns the
+SAME state reference (nothing to persist, nothing for the change bridge to send) and names the FIELD at fault, never the value.
+
+| Command | Behaviour |
+|---|---|
+| `addLifeRecord` | title + kind required; every optional field normalised (single-line fields collapse line breaks and trim; blank → `null`; dates must be real calendar dates; subject must be an existing child id); draft id makes a repeat save `exists` (success, no second record); capacity refusal at 2000 |
+| `updateLifeRecord` | field present = replace, `null`/blank = clear, title cannot be cleared; rename keeps the id; allowed on an archived record (addendum Z); unchanged save is a no-op; `expected` snapshot → `stale` instead of an overwrite |
+| `archiveLifeRecord` / `restoreLifeRecord` | status + `archivedAt` only; no Task, link or other row changes |
+| `addLifeRecordTask` (M3) | ONE transition: canonical `addTask` with `scope: 'personal'`, her explicit category, no subject, a due date only if she set one, then ONE owner-private link. Draft ids for both allocated when the sheet opens; a repeat save is `exists` (still one Task, one link); a draft id already naming something else is `conflict` |
+| `linkedTasksOf` / `openLinkedTaskCount` | a link whose Task is missing resolves to `task: null` (never a throw, never a re-link); only OPEN Tasks count as admin work |
+
+Atomicity (addendum M): the store's `commit` validates the WHOLE next state and persists it as one envelope, so the Task and its
+link are persisted together or not at all; there is no partial state to roll back.
+
+Draft ids: `src/features/lifeAdmin/draftId.ts` mints `prefix-<time36>-<32 hex>` (≈128 random bits via `crypto.randomUUID` /
+`getRandomValues`, with a multi-draw fallback), the MP-12-01 mitigation for the Tasks F12 creates.
+
+Tests: `tests/lifeAdmin/commands.test.mjs` — **23/23**. Title-only record (valid, owner-private, identical after save + reload);
+normalisation and field-named refusals; renewBy > expiresOn preserved; duplicate titles are two records; repeat save; zero Tasks /
+links / Needs Me / One Moves / Events from any date; rename keeps id and links; every sensitive field cleared (the cleared reference
+is absent from the stored state); stale edit refused; child display-name change keeps the subject id and another child taking the
+old name does not take the record; archive keeps record, fields, link and the SAME Task object; archived record corrected and
+restored; one save → one personal Task (no subject, no inferred due date, default duration recorded as default) + one link; repeat
+and conflict; eight refusal cases create nothing; completing or archiving the linked Task leaves the record the SAME object and
+drops open admin work to 0; a missing Task resolves to `null` while the stored-state gate still refuses the dangling link;
+integrity refuses a link to a non-personal Task; **store relaunch** (in-memory repository, three launches) keeps the same record,
+link and personal Task through create → relaunch → rename → archive → relaunch; a pre-F12 v4 blob loads with empty collections.
