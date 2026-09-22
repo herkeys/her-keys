@@ -10,7 +10,7 @@
     "live": true,
     "requestedAt": "2026-09-16T14:00:00.000Z",
     "state": "accepted",
-    "stillNeedsMe": false,
+    "stillNeedsMe": true,
     "unanswered": false
   },
   "afterDeclined": {

@@ -105,6 +105,9 @@ describe('SCENARIO J — responsibility keeps assigned, acknowledged and accepte
     step((s) => responsibilityCommands.recordAnswer(s, ctx, 'sys-1', 'acknowledged'));
     step((s) => responsibilityCommands.recordAnswer(s, ctx, 'sys-1', 'accepted'));
     assert.deepEqual(states, ['acknowledged', 'accepted'], 'seen, then yes — two separate facts');
+    // AUDIT W2-04: saying yes is not, by itself, proof the load left her — recordAnswer('accepted') must not
+    // silently mark a System as no longer needing her attention.
+    assert.equal(detail(state, 'sys-1').responsibility.stillNeedsMe, true, 'accepting a System is not proof the work is covered');
     assert.equal(state.observations.filter((o) => o.about.kind === 'responsibility').map((o) => o.outcome).join(), 'delegated,acknowledged,accepted');
 
     const declined = responsibilityCommands.recordAnswer(responsibilityCommands.assignResponsibility(base(), ctx, 'sys-1', { kind: 'child', id: 'child-1' }), ctx, 'sys-1', 'declined');

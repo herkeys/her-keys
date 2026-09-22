@@ -39,7 +39,9 @@ export function recordAnswer(state: AppState, ctx: TransitionContext, systemId: 
     case 'acknowledged':
       return acknowledge(state, ctx, live.id);
     case 'accepted':
-      return accept(state, ctx, live.id);
+      // Accepting is not, by itself, proof the load left (responsibility.ts): recording that someone said yes to a
+      // System must not silently stop it from needing her until she says the load is actually covered.
+      return accept(state, ctx, live.id, true);
     case 'declined':
       return decline(state, ctx, live.id);
   }
