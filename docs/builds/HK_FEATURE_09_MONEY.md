@@ -367,3 +367,21 @@ line to break without inventing a fake asymmetry that doesn't exist in the real 
 tests (`DUE DOES NOT MEAN PAID`, `EXPECTED DOES NOT MEAN RECEIVED`) are asserted against this one mutant and
 both genuinely failed under it. Working tree confirmed clean (byte-for-byte restoration) after every mutant;
 `tsc --noEmit` clean throughout.
+
+## F09-M2 addendum — local-first, through the real store
+
+`tests/money/localFirst.test.mjs` (4 tests): unlike the rest of `tests/money/**` (which call Money's mutation
+functions directly on a plain `AppState`), these go through the real `createAppStore`/`harness`/`launch` pattern
+(`tests/support/fixtures.mjs`, the same helpers Build 2's own suites use) on a real, non-demo, empty household.
+Proves the representative F09 mutation the brief requires: create → visible in the live snapshot immediately →
+persists to storage (`primaryWrites().length > 0`) → a fresh store instance reading the SAME storage (a
+relaunch) still has it, unresolved and unaltered → resolving survives a relaunch too, for both an obligation and
+expected income.
+
+The full cloud round-trip (queue → push → pull → second device) is NOT independently re-proven here: Money has
+no sync code of its own — `addTask`/`completeTask`/`archiveTask` are the exact same canonical transitions F07's
+and F08's own production-composition suites (`tests/coparent/syncComposition.test.mjs`,
+`supabase/tests/run-coparent.mjs`/`run.mjs f08`) already exhaustively prove work end-to-end, and the one new
+column (`payment_mechanism`) was independently proven to push/pull correctly via the schema/RLS validation
+(F09-M2c) and by reading the actual `projection.ts`/`apply.ts` wiring. Building a duplicate full-cloud harness
+for Money would re-prove infrastructure Money doesn't own or change, rather than anything specific to F09.
