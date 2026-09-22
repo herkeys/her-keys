@@ -109,6 +109,15 @@ describe('Money OS — createObligation / createExpectedIncome', () => {
   });
 });
 
+describe('Money OS — demo isolation (inherited, universal — provenanceFor)', () => {
+  test('a money item created in a demo household is automatically stamped demo-seed, regardless of what was asked for, and can never sync', () => {
+    const demo = { ...base(), origin: 'demo' };
+    const result = createObligation(demo, ctx(), fields());
+    const task = result.state.tasks.find((t) => t.id === result.id);
+    assert.equal(task.provenance.producer, 'demo-seed', 'the foundation forces this for every row while origin is demo — not something Money opts into or could opt out of');
+  });
+});
+
 describe('Money OS — editMoneyItem', () => {
   test('an open item can be corrected: title, amount, due date, notes, mechanism', () => {
     const created = createObligation(base(), ctx(), fields());
