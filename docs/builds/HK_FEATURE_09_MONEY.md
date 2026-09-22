@@ -343,3 +343,27 @@ lifting navigation out of `MoneyBody` into an `onOpenTask` callback prop, suppli
 codebase's own established container/presentational split.
 
 Full money suite after the fix: 58/58. `tsc --noEmit`: clean.
+
+## F09-M6 (partial) — test-the-test: mutation results
+
+`scripts-dev/money-mutation-check.cjs`, mirroring `scripts-dev/meals-mutation-check.cjs` /
+`scripts-dev/f07-mutation-check.cjs` exactly: patches ONE real source line, runs the guarding tests, requires a
+genuine assertion failure (not a crash), restores the file byte-for-byte, refuses to run against an already-dirty
+target file. `DRY=1` confirmed all 6 patches apply to exactly one location before the real run.
+
+| ID | Guards | What it breaks | Verdict |
+|---|---|---|---|
+| M1 | DUE/EXPECTED != PAID/RECEIVED | status derived from date passage instead of an explicit resolve/cancel | **CAUGHT** (3 failed, 33 passed) |
+| M2 | ACKNOWLEDGED reimbursement never reads PAID | an acknowledged-not-accepted follow-up is interpreted as paid | **CAUGHT** (1 failed, 7 passed) |
+| M3 | exact amount parsing, never a float | `parseMoney`'s exact digit parse replaced with `parseFloat` + round | **CAUGHT** (1 failed, 19 passed) |
+| M4 | resolving is idempotent | the `not_open` guard removed, allowing a second completion | **CAUGHT** (1 failed, 19 passed) |
+| M5 | one save = one canonical row | create silently adds a second Task for the same save | **CAUGHT** (5 failed, 15 passed) |
+| M6 | a default mechanism is never silently promoted to user-stated | an unset payment mechanism defaults to `'manual'` instead of staying `null` | **CAUGHT** (1 failed, 19 passed) |
+
+**6 / 6 caught.** M1 deliberately covers BOTH "due implies paid" and "expected implies received" from the owner
+brief's required list (items 1 and 2) in one mutant: `viewOf`'s status derivation is the SAME shared code for
+outflow and inflow by design (see M1 in F09-M1's canonical-model table) — there is no second, direction-specific
+line to break without inventing a fake asymmetry that doesn't exist in the real implementation. Both doctrine
+tests (`DUE DOES NOT MEAN PAID`, `EXPECTED DOES NOT MEAN RECEIVED`) are asserted against this one mutant and
+both genuinely failed under it. Working tree confirmed clean (byte-for-byte restoration) after every mutant;
+`tsc --noEmit` clean throughout.
