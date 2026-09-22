@@ -279,3 +279,36 @@ findings recorded above (M2a) — unchanged, still fully explained, still not F0
 (`tests/hk-ir01/syncComposition.test.mjs`, `tests/calendarPerformance.test.mjs`, `tests/systems/audits.test.mjs`)
 under full-suite CPU/GC contention; each passes cleanly in isolation and in the serial run, confirming the
 class of flakiness already documented in [[parallel-worktree-gotchas]] rather than any regression.
+
+---
+
+## F09-M3 — Money projections / UI
+
+Built `src/features/money/{moneyGate,moneyCopy,MoneySheet,MoneyBody,MoneyOverview}.tsx`, mirroring
+`src/features/meals/{mealsGate,mealCopy,MealSheet,MealsBody,MealsOverview}.tsx`'s architecture closely (gate ->
+projection -> body -> sheet -> commit, with `busy` disabling Save for the whole async window — the same
+double-submission guard Meals and Co-Parent already rely on). `app/(app)/life/money.tsx` is untouched: it
+already rendered `<MoneyOverview />` with no props (the existing seam, per M1 item 8), so filling in real
+content required no route change.
+
+Zero new design tokens — Money Home uses the existing Paper-and-Ink palette exactly as it already existed
+(`colors.attention` for Needs attention, `colors.waiting` available for outstanding/waiting states,
+`colors.success` for Recently resolved), satisfying the "OVERDUE VISUAL LANGUAGE" mandate by construction
+rather than by new styling work.
+
+**Live device/browser verification not completed in this pass.** `expo start --web` requires
+`react-native-web`, which is not a dependency of this project anywhere — confirmed absent even in the
+untouched `Her-Keys-W2I` (WAVE3_BASE) checkout, so this is a pre-existing condition, not something F09 broke;
+this app is verified on Android via Expo Go per [[android-emulator-smoke-setup]]. A full emulator pass (boot,
+install, Metro, uiautomator-driven navigation) was not run in this session — said explicitly here rather than
+claimed. In its place: 15 component-render tests (`tests/money/ui.test.mjs`), mirroring
+`tests/coparent/ui.test.mjs`'s established pattern (react-test-renderer under `node --test`, the same method
+this codebase already uses for presentational-component contracts without a device). These render
+`MoneyBody`/`MoneySheet` over state built by Money's own real mutations/projections — not mocked — and prove:
+the components render without crashing in every gate state (loading/recovery/ready), the verdict and section
+text match doctrine wording (an open obligation never says "paid"; resolved income says "Received" never
+"Paid"), sections hide when empty (adaptive density, matching Meals), button/chip presses invoke the right
+handler with the right payload, Save is disabled until the required fields are valid, payment-mechanism chips
+appear only for an obligation, and resolve/cancel/duplicate-forward controls appear only when editing an
+existing item. `tsc --noEmit`: clean. Device-level pixel/layout verification remains open (recorded as
+outstanding, not silently skipped).
