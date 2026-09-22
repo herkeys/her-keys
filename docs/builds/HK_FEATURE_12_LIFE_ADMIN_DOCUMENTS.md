@@ -159,4 +159,104 @@ metadata through change log / sync projections, which is what addendum B/E requi
 
 **F12-M0: PASS.** Proceed to M1.
 
-M0 checkpoint: see the git block recorded with the M0 commit below.
+M0 checkpoint (after commit): `feature/12-life-admin-documents` @ `204b7d9`, `git status --short` empty.
+
+---
+
+## F12-M1 — Existing-primitive audit + LifeRecord contract/model + sensitive-field rules
+
+### Prior implementation audit (WAVE3_BASE)
+
+Two read-only surveys (client sync architecture; domain/UI primitives) plus direct reading. Classification:
+
+| Capability | Found | Classification for F12 |
+|---|---|---|
+| Documents / Life Admin implementation | none: "Documents" only in `HER_KEYS_PRODUCT.md` §13's intelligence list; "life admin" only as Life Inbox copy; `HK-INT-HOME-LIFEADMIN-01` (F06) defers warranty/manual/document relationships to Life Admin | **NOT PRESENT** — F12 builds the first one; no second records system exists to collide with |
+| Generic records / asset models | none | NOT PRESENT |
+| Owner-private entity scope | `personal`, two server patterns (M0) | **PRESERVE / REUSE** — LifeRecord uses the owner-private foundation pattern (`profile_id`, scope pinned `personal`) |
+| Typed relationship primitive | `dependencies` / `evidence_links` / `external_references`: enforced typed FKs, one column per target kind, closed kind lists (`TYPED_REF_KINDS`, SQL CHECKs) | **PRESERVE, NOT EXTENDED** — expressing LifeRecord in them needs a new kind + new columns on SHARED foundation tables (a shared-schema change, forbidden by the stop rule). F12 adds its own owner-private typed link table instead (brief's fallback) |
+| External-reference primitive | `ExternalReference`: provider/account/objectId/version; **no URL field anywhere** | PRESERVE, NOT USED — it models objects in connected external systems, not a place she keeps a paper; F12 stores NO document URL (see external references below) |
+| File / storage / upload | none in app code (`supabase/config.toml` enables local storage, no buckets, no client code); `SourceArtifact.contentRef` is "a pointer into a content store that does not exist yet" | **NOT PRESENT** — F12 V1 is metadata-first; no vault, no upload, no signed URL, no OCR |
+| Expiry / date primitives | `logicalDay.ts` (`LocalDate`, `isLocalDate`, `addDays`, `daysBetween`, `logicalDateAt`), `LocalDateSchema` | PRESERVE / REUSE |
+| Reminder / deadline primitives | Task `dueDate` + attention `deadline` reason; no reminder/notification system | PRESERVE — a renewal becomes a canonical Task only when she creates one; no notification is built |
+| Tasks | `addTask(state, ctx, input)` pure transition, explicit `scope`, `personal` allowed; `completeTask` / `archiveTask`; no delete | **PRESERVE / REUSE** — the only way F12 creates work |
+| Events / Goals / Systems | canonical, unchanged | PRESERVE — no F12 link (Event: `PENDING-INTEGRATION`) |
+| Categories | data, `SYSTEM_ROLES` closed; no admin role | PRESERVE — the Task she creates is filed in a category SHE picks; F12 adds no role and no category |
+| Member / child identity | `Child {id, displayName, birthDate}`; rename and archive of a child are NOT supported by the foundation (MP-K-04 / B4-P0-066); cloud subject = composite FK to `household_members` child row | PRESERVE — LifeRecord names a child by id, like a System |
+| Home references | Home tasks are canonical Tasks; F06 defers document relationships to Life Admin | PRESERVE — F12 holds the record; Home work stays Task truth |
+| Archival / tombstone | status columns everywhere; only `discovery` tombstones | PRESERVE — LifeRecord archives by status |
+| Provenance | `ProvenanceSchema` + `provenanceFor(origin, …)` (demo forces `demo-seed`) | PRESERVE / REUSE |
+| Sync | owner-private core kinds registered by hand (`needsMe` precedent); foundation manifest route requires generating into the SHIPPED Build 4 migration (`gen-foundation-sql.mjs --check`), which may not be edited | **REUSE the hand-registered route** — two new kinds, `lifeRecord` and `lifeRecordLink`, in their own additive migration (M5) |
+| Search | none (no `search` / `matchesQuery` / index in `src`) | NOT PRESENT → **F12 search NOT BUILT** (addendum S): `PENDING-INTEGRATION — PRIVATE RECORD SEARCH` |
+| Sensitive-display / masking | none (no mask / redact / last-4 helper) | NOT PRESENT → F12 adds its own `maskReference` (M4), local to the feature |
+| Logging / analytics / crash reporting | no logger, analytics or crash SDK in `package.json`; dev-only `console.info('[herkeys] …')` diagnostics that carry "codes, counts, timings and ids only"; `validateAppState` issues name paths and ids, never values | PRESERVE — F12 writes no log line at all; its refusal codes carry no field values |
+| Demo mode | `resolveDataMode` (demo in dev, empty otherwise); demo never syncs or claims (five layers) | PRESERVE — F12 adds three fictional demo records (addendum V) |
+| Clipboard | no clipboard module in dependencies | NOT PRESENT → "Copy" is **SAFE-UNAVAILABLE** (adding a dependency is out of scope; `package.json` unchanged) |
+| Life hub | `app/(app)/life/index.tsx` hard-codes rows for destinations without a `SystemRole` (Other open tasks, Life Inbox, Needs Me) | PRESERVE — Life Admin is one more such row; no hub redesign; route declares its own header (the Co-Parent pattern) so the protected `life/_layout.tsx` is untouched |
+
+### LifeRecord semantic contract
+
+A LifeRecord MEANS: "this is durable administrative information she wants Her Keys to remember". It does NOT mean: the document was
+authenticated; the issuer confirms the data; Her Keys has inspected or holds the original; the record is legally sufficient; a date
+is legally controlling; an expired date proves invalidity; a renewal occurred; the record is a Task. It is never a Today object and
+never a One Move.
+
+### LifeRecord V1 model (as built in `src/domain/state.ts`)
+
+Names follow repository conventions: the brief's `typeLabel` / `issuerLabel` are stored as `typeName` / `issuerName`, because the
+repository forbids stored field names that describe presentation (`tests/designIndependence.test.mjs` refuses any stored key matching
+`label`, `badge`, `tone`, ...; the first draft tripped it and was renamed), and the brief's `userNote` is `note`.
+
+| Field | Type / bound | Notes |
+|---|---|---|
+| `id` | `Id` | canonical identity; title and reference never identify |
+| `title` | non-blank, ≤ 200 | display only; duplicates allowed; rename keeps `id` |
+| `kind` | `document \| credential \| policy \| registration \| reference \| other` | bounded; specifics go in `typeName` |
+| `typeName` | non-blank ≤ 60 or null | e.g. "Passport"; potentially identifying; list + detail only |
+| `issuerName` | non-blank ≤ 120 or null | free text; no People/contact model |
+| `referenceNumber` | non-blank ≤ 64 or null | SENSITIVE: masked outside detail, never on home/hub/Today/verdict/log |
+| `issuedOn`, `expiresOn`, `renewBy`, `reviewOn` | `LocalDate` or null | calendar dates; not related to each other |
+| `locationHint` | non-blank ≤ 120 or null | SENSITIVE: detail only; never parsed, fetched or logged |
+| `note` (the brief's `userNote`) | non-blank ≤ 500 or null | SENSITIVE: detail/edit only; never searched |
+| `subjectMemberId` | child `Id` or null | canonical child identity; never a name |
+| `status` | `active \| archived` | no `expired`, no `superseded` in the core |
+| `archivedAt` | instant or null | set exactly when archived |
+| `createdAt`, `updatedAt` | instants | |
+| `provenance` | `ProvenanceSchema` | |
+| `scope` | literal `personal` | owner-private by construction |
+
+`LifeRecordTaskLink`: `id`, `lifeRecordId`, `taskId`, `relation` (`renewal \| follow_up \| next_step`, a label only), `createdAt`,
+`provenance`, `scope: 'personal'`. Written once, with its Task, in one transition; immutable afterwards (no status: V1 exposes no
+unlink). Integrity (`findIntegrityProblems`): unique ids; one link per (record, Task); a link names an existing record and an
+existing Task whose scope is `personal`; a record's subject is an existing child.
+
+Collections: `lifeRecords` (≤ 2000) and `lifeRecordLinks` (≤ 5000) on `AppState`, both `.default([])`, so every v4 blob written
+before F12 loads unchanged and reads as "no records yet" (the truth). `CURRENT_SCHEMA_VERSION` stays 4; `src/persistence/**` is
+untouched.
+
+Minimum content: trimmed non-blank title + kind + (owner/scope, provenance, createdAt set by the action). Nothing else is required.
+
+### Decisions (inside existing semantics; product-WHY tie-breakers where a choice was needed)
+
+| ID | Decision | Why |
+|---|---|---|
+| DD-12-01 | Lifecycle `active \| archived` only; supersession is NOT in the core (addendum AA); expiration is derived, never stored | addendum AA/AB; "expiration date passed ≠ invalid" |
+| DD-12-02 | Owner-private pattern (`profile_id`, scope pinned) rather than a scoped table with a selectable scope | nothing in V1 shares a record; a household- or co-parent-visible record is future integration work, never a default |
+| DD-12-03 | Links are F12-owned rows, not a new kind in `dependencies` | the shared-primitive stop rule; `dependencies`' kind lists and columns are shared foundation schema |
+| DD-12-04 | A Task created from a record is `personal`, and a link may only name a `personal` Task (local integrity now; server trigger in M5) | addendum D: private record → private Task → private link, never a cross-scope link |
+| DD-12-05 | The Task she creates carries NO subject and NO due date unless she sets one; the category is her explicit pick | a record's subject or dates are not the Task's facts until she says so; no inference |
+| DD-12-06 | A record's subject is a CHILD only | the cloud's subject FK is a child row; a record about herself needs no subject (she is the owner) |
+| DD-12-07 | Archived records stay editable (fields can be corrected and sensitive fields cleared) and can be restored | addendum Z (clear mistakenly entered data); archive destroys nothing |
+| DD-12-08 | Search NOT BUILT | addendum S: no existing primitive that proves private isolation |
+| DD-12-09 | Copy-to-clipboard SAFE-UNAVAILABLE | addendum N "where existing platform interaction supports it": none exists |
+| DD-12-10 | Linked-Task overdue is NOT a Needs Review signal; the verdict uses exactly addendum J's four categories | the overdue Task already reaches Today through normal Task semantics; counting it again would build a second attention system |
+| DD-12-11 | No hard delete of a record | addendum Z; `USER-INITIATED PERMANENT RECORD DELETION` is a future product decision |
+
+### Date source (addendum F)
+
+WAVE3_BASE has NO household timezone. The durable product timezone is the PROFILE timezone: `state.user.timezone` locally
+(`profiles.timezone` in the cloud, set by `bootstrap_account`). The store derives logical today from it
+(`appStore.ts`: `todayFor = logicalDateAt(now(), state.user.timezone)`) and hands it to screens (`useHouseholdState().today`) and
+transitions (`ctx.today`). F12 uses that value and nothing else; the device zone is only the seed of a brand-new state. No F12
+timezone field is invented, and no device-local fallback is needed (so no KNOWN V1 LIMITATION on this point). Tests pin a device
+zone that differs from the persisted zone (M4).

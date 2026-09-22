@@ -4,6 +4,7 @@ import { demoProvenance } from '../../domain/foundation/provenance';
 import { addDays, addYears, toInstant, zonedTimeToEpochMs, type LocalDate } from '../../domain/logicalDay';
 import { initialOnboarding } from '../../domain/onboarding';
 import type { AppState, CalendarEvent, Child, HouseholdSystem, MealPlanEntry, Task, VisibilityScope } from '../../domain/state';
+import { demoLifeRecords } from './demoLifeRecords';
 
 /**
  * Entirely fictional household used to demonstrate Her Keys. No real person's
@@ -164,5 +165,7 @@ export function materializeDemoState({ anchorDate, timeZone }: { anchorDate: Loc
     capacity: null,
     patterns: [],
     evidenceLinks: [],
+    lifeRecords: demoLifeRecords(anchorDate, instantOn(0, 9 * 60)),
+    lifeRecordLinks: [],
   };
 }

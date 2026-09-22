@@ -47,6 +47,8 @@ export const V4_ROOTS = [
   'migrationLineage', 'sourceArtifacts', 'externalReferences', 'interpretations', 'observations', 'authorities',
   'intents', 'decisions', 'executions', 'outcomes', 'people', 'responsibilities', 'dependencies', 'recurrences',
   'goals', 'systemSteps', 'capacity', 'patterns', 'evidenceLinks',
+  // HK-FEATURE-12 (Life Admin): roots no v3 blob ever had. They default to [] when a v4 blob without them is read.
+  'lifeRecords', 'lifeRecordLinks',
 ];
 
 const without = (row, keys) => {
