@@ -1,0 +1,41 @@
+{
+  "scenario": "AC",
+  "startedOver": {
+    "availability": {
+      "kind": "ready",
+      "notice": "started_over"
+    },
+    "canCreate": true,
+    "isEmpty": true,
+    "items": []
+  },
+  "unavailable": {
+    "future_version": {
+      "availability": {
+        "kind": "unavailable",
+        "reason": "newer_version"
+      },
+      "canCreate": false,
+      "isEmpty": false,
+      "items": []
+    },
+    "mode_mismatch": {
+      "availability": {
+        "kind": "unavailable",
+        "reason": "memory_only"
+      },
+      "canCreate": false,
+      "isEmpty": false,
+      "items": []
+    },
+    "read_failed": {
+      "availability": {
+        "kind": "unavailable",
+        "reason": "unreadable"
+      },
+      "canCreate": false,
+      "isEmpty": false,
+      "items": []
+    }
+  }
+}

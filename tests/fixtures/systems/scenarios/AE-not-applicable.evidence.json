@@ -1,0 +1,6 @@
+{
+  "evidence": "HouseholdSystem.categoryId is a single required id; no multi-area field exists",
+  "relations": "dependencies (Scenario U)",
+  "scenario": "AE",
+  "status": "NOT-APPLICABLE"
+}

@@ -1,0 +1,15 @@
+{
+  "demoSessionOverRealData": {
+    "availability": {
+      "kind": "unavailable",
+      "reason": "memory_only"
+    },
+    "canCreate": false,
+    "isEmpty": false,
+    "items": []
+  },
+  "realAfterDemoSession": [
+    "Real routine"
+  ],
+  "scenario": "AA"
+}

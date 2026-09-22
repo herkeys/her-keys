@@ -1,0 +1,172 @@
+{
+  "canonical": {
+    "responsibilities": [],
+    "rules": [],
+    "steps": [],
+    "system": {
+      "automationMode": "manual",
+      "categoryId": "cat-home",
+      "description": "What we always buy.",
+      "effortMinutes": null,
+      "energyDemand": null,
+      "id": "sys-1",
+      "name": "Grocery reset",
+      "provenance": {
+        "artifactId": null,
+        "confidence": null,
+        "producer": "user-action"
+      },
+      "scope": "household",
+      "subjectMemberId": null
+    }
+  },
+  "scenario": "L",
+  "view": {
+    "actions": [
+      {
+        "action": "edit",
+        "available": true,
+        "reason": "available"
+      },
+      {
+        "action": "add_step",
+        "available": true,
+        "reason": "available"
+      },
+      {
+        "action": "edit_step",
+        "available": false,
+        "reason": "no_steps"
+      },
+      {
+        "action": "remove_step",
+        "available": false,
+        "reason": "no_retire_semantics"
+      },
+      {
+        "action": "reorder_steps",
+        "available": false,
+        "reason": "fewer_than_two_steps"
+      },
+      {
+        "action": "set_schedule",
+        "available": true,
+        "reason": "available"
+      },
+      {
+        "action": "stop_schedule",
+        "available": false,
+        "reason": "no_live_schedule"
+      },
+      {
+        "action": "pause_schedule",
+        "available": false,
+        "reason": "no_live_schedule"
+      },
+      {
+        "action": "resume_schedule",
+        "available": false,
+        "reason": "not_paused"
+      },
+      {
+        "action": "skip_next",
+        "available": false,
+        "reason": "no_live_schedule"
+      },
+      {
+        "action": "assign_responsibility",
+        "available": false,
+        "reason": "no_holder_available"
+      },
+      {
+        "action": "reassign_responsibility",
+        "available": false,
+        "reason": "no_live_handoff"
+      },
+      {
+        "action": "take_back_responsibility",
+        "available": false,
+        "reason": "no_live_handoff"
+      },
+      {
+        "action": "record_answer",
+        "available": false,
+        "reason": "nothing_awaiting_an_answer"
+      },
+      {
+        "action": "archive",
+        "available": false,
+        "reason": "no_status_semantics"
+      },
+      {
+        "action": "delete",
+        "available": false,
+        "reason": "no_delete_semantics"
+      },
+      {
+        "action": "duplicate",
+        "available": false,
+        "reason": "no_copy_semantics"
+      },
+      {
+        "action": "start_run",
+        "available": false,
+        "reason": "no_run_semantics"
+      },
+      {
+        "action": "complete_step",
+        "available": false,
+        "reason": "no_step_completion_semantics"
+      }
+    ],
+    "run": {
+      "currentRef": null,
+      "progress": null,
+      "supported": false
+    },
+    "steps": [],
+    "system": {
+      "actionEvidence": [],
+      "area": {
+        "id": "cat-home",
+        "name": "Home"
+      },
+      "duration": {
+        "kind": "unknown"
+      },
+      "name": "Grocery reset",
+      "neededBy": [],
+      "needs": [],
+      "nextExpected": null,
+      "provenance": {
+        "confidence": null,
+        "producer": "user-action"
+      },
+      "recurrence": null,
+      "ref": {
+        "id": "sys-1",
+        "kind": "system"
+      },
+      "responsibility": null,
+      "scope": "household",
+      "skipped": [],
+      "state": {
+        "lifecycle": "not_represented",
+        "schedule": "none"
+      },
+      "subject": {
+        "kind": "none"
+      }
+    },
+    "unknownStates": [
+      {
+        "field": "consequence",
+        "reason": "not_represented_for_systems"
+      },
+      {
+        "field": "duration",
+        "reason": "no_estimates"
+      }
+    ]
+  }
+}

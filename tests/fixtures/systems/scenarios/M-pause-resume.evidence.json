@@ -1,0 +1,41 @@
+{
+  "paused": {
+    "anchorDate": "2026-09-01",
+    "byMonthDay": null,
+    "byWeekday": [
+      0
+    ],
+    "endsOn": null,
+    "frequency": "weekly",
+    "interval": 1,
+    "occurrenceCount": null,
+    "ruleRef": {
+      "id": "rule-x",
+      "kind": "recurrence"
+    },
+    "state": "paused",
+    "timeOfDayMinutes": null,
+    "timezone": "America/New_York",
+    "trigger": "schedule"
+  },
+  "resumed": {
+    "anchorDate": "2026-09-01",
+    "byMonthDay": null,
+    "byWeekday": [
+      0
+    ],
+    "endsOn": null,
+    "frequency": "weekly",
+    "interval": 1,
+    "occurrenceCount": null,
+    "ruleRef": {
+      "id": "rule-x",
+      "kind": "recurrence"
+    },
+    "state": "active",
+    "timeOfDayMinutes": null,
+    "timezone": "America/New_York",
+    "trigger": "schedule"
+  },
+  "scenario": "M"
+}

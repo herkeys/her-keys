@@ -1,0 +1,14 @@
+{
+  "households": {
+    "America/Chicago": {
+      "logicalDay": "2026-09-20",
+      "nextExpected": "2026-09-20"
+    },
+    "UTC": {
+      "logicalDay": "2026-09-21",
+      "nextExpected": "2026-09-27"
+    }
+  },
+  "instant": "2026-09-21T03:30:00.000Z",
+  "scenario": "R"
+}

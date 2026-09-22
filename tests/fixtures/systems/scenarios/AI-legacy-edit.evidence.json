@@ -1,0 +1,203 @@
+{
+  "canonical": {
+    "responsibilities": [],
+    "rules": [],
+    "steps": [
+      {
+        "createdAt": "2026-09-16T14:00:00.000Z",
+        "effortMinutes": null,
+        "id": "sys-legacy.e0",
+        "position": 0,
+        "provenance": {
+          "artifactId": null,
+          "confidence": null,
+          "producer": "user-action"
+        },
+        "scope": "personal",
+        "systemId": "sys-legacy",
+        "title": "Brush teeth",
+        "updatedAt": "2026-09-16T14:00:00.000Z"
+      }
+    ],
+    "system": {
+      "automationMode": "suggest",
+      "categoryId": "cat-home",
+      "description": "From before.",
+      "effortMinutes": 20,
+      "energyDemand": "high",
+      "id": "sys-legacy",
+      "name": "Bedtime routine",
+      "provenance": {
+        "artifactId": null,
+        "confidence": "possible",
+        "producer": "ai-inference"
+      },
+      "scope": "child",
+      "subjectMemberId": null
+    }
+  },
+  "scenario": "AI",
+  "view": {
+    "actions": [
+      {
+        "action": "edit",
+        "available": true,
+        "reason": "available"
+      },
+      {
+        "action": "add_step",
+        "available": true,
+        "reason": "available"
+      },
+      {
+        "action": "edit_step",
+        "available": true,
+        "reason": "available"
+      },
+      {
+        "action": "remove_step",
+        "available": false,
+        "reason": "no_retire_semantics"
+      },
+      {
+        "action": "reorder_steps",
+        "available": false,
+        "reason": "fewer_than_two_steps"
+      },
+      {
+        "action": "set_schedule",
+        "available": true,
+        "reason": "available"
+      },
+      {
+        "action": "stop_schedule",
+        "available": false,
+        "reason": "no_live_schedule"
+      },
+      {
+        "action": "pause_schedule",
+        "available": false,
+        "reason": "no_live_schedule"
+      },
+      {
+        "action": "resume_schedule",
+        "available": false,
+        "reason": "not_paused"
+      },
+      {
+        "action": "skip_next",
+        "available": false,
+        "reason": "no_live_schedule"
+      },
+      {
+        "action": "assign_responsibility",
+        "available": true,
+        "reason": "available"
+      },
+      {
+        "action": "reassign_responsibility",
+        "available": false,
+        "reason": "no_live_handoff"
+      },
+      {
+        "action": "take_back_responsibility",
+        "available": false,
+        "reason": "no_live_handoff"
+      },
+      {
+        "action": "record_answer",
+        "available": false,
+        "reason": "nothing_awaiting_an_answer"
+      },
+      {
+        "action": "archive",
+        "available": false,
+        "reason": "no_status_semantics"
+      },
+      {
+        "action": "delete",
+        "available": false,
+        "reason": "no_delete_semantics"
+      },
+      {
+        "action": "duplicate",
+        "available": false,
+        "reason": "no_copy_semantics"
+      },
+      {
+        "action": "start_run",
+        "available": false,
+        "reason": "no_run_semantics"
+      },
+      {
+        "action": "complete_step",
+        "available": false,
+        "reason": "no_step_completion_semantics"
+      }
+    ],
+    "run": {
+      "currentRef": null,
+      "progress": null,
+      "supported": false
+    },
+    "steps": [
+      {
+        "dependencyRefs": [],
+        "duration": {
+          "known": false
+        },
+        "order": 1,
+        "ref": {
+          "id": "sys-legacy.e0",
+          "kind": "systemStep"
+        },
+        "responsibility": null,
+        "title": "Brush teeth"
+      }
+    ],
+    "system": {
+      "actionEvidence": [],
+      "area": {
+        "id": "cat-home",
+        "name": "Home"
+      },
+      "duration": {
+        "kind": "stated",
+        "minutes": 20
+      },
+      "name": "Bedtime routine",
+      "neededBy": [],
+      "needs": [],
+      "nextExpected": null,
+      "provenance": {
+        "confidence": "possible",
+        "producer": "ai-inference"
+      },
+      "recurrence": null,
+      "ref": {
+        "id": "sys-legacy",
+        "kind": "system"
+      },
+      "responsibility": null,
+      "scope": "child",
+      "skipped": [],
+      "state": {
+        "lifecycle": "not_represented",
+        "schedule": "none"
+      },
+      "subject": {
+        "kind": "child_not_recorded"
+      }
+    },
+    "unknownStates": [
+      {
+        "field": "consequence",
+        "reason": "not_represented_for_systems"
+      },
+      {
+        "field": "subject",
+        "reason": "child_not_recorded"
+      }
+    ]
+  }
+}

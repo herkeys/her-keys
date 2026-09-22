@@ -1,0 +1,14 @@
+{
+  "fallBackDay": {
+    "at0130": "2026-11-01T06:30:00.000Z",
+    "day": "2026-11-01",
+    "note": "earlier of the repeated times"
+  },
+  "scenario": "S",
+  "weeklySundayAt0230": {
+    "instant": "2026-03-08T08:30:00.000Z",
+    "note": "nonexistent time moves forward",
+    "springForwardDay": "2026-03-08"
+  },
+  "zone": "America/Chicago"
+}

@@ -1,0 +1,31 @@
+{
+  "actions": [
+    {
+      "action": "remove_step",
+      "available": false,
+      "reason": "no_retire_semantics"
+    },
+    {
+      "action": "archive",
+      "available": false,
+      "reason": "no_status_semantics"
+    },
+    {
+      "action": "delete",
+      "available": false,
+      "reason": "no_delete_semantics"
+    },
+    {
+      "action": "duplicate",
+      "available": false,
+      "reason": "no_copy_semantics"
+    }
+  ],
+  "scenario": "V / AG / AJ",
+  "status": "SAFE-UNAVAILABLE",
+  "why": {
+    "archive": "HouseholdSystem has no status field",
+    "delete": "sync ALLOWED_OPS for system/systemStep is create+update only; a local delete would dangle and resurrect",
+    "duplicate": "no copy mutation exists; what resets versus carries (accepted responsibility, history) is undefined"
+  }
+}
