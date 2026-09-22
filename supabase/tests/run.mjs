@@ -129,7 +129,7 @@ function envA() {
         scalar('b4_env_a', "select count(*) || '/' || string_agg(cmd, ',') from pg_policies where schemaname='public' and tablename='household_members';") === '1/SELECT');
   check('ENV A: tasks.duration_source is nullable text with no default (an unstated source is unknown)',
         scalar('b4_env_a', "select data_type || '/' || is_nullable || '/' || coalesce(column_default, 'none') from information_schema.columns where table_schema='public' and table_name='tasks' and column_name='duration_source';") === 'text/YES/none');
-  check('ENV A: 34 application tables', scalar('b4_env_a', "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r';") === '34');
+  check('ENV A: 35 application tables', scalar('b4_env_a', "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r';") === '35');
   // The test-only producer default (helpers/05) must never be in the shipped schema: a writer that does not say where a row came from is refused.
   check('ENV A: the shipped schema gives `producer` NO default on any of the nine synced content tables',
         scalar('b4_env_a', "select count(*) from information_schema.columns where table_schema='public' and column_name='producer' and column_default is not null;") === '0');
@@ -211,8 +211,8 @@ function envB3() {
   check('ENV B3: re-running the migration ABORTS when a foundation table holds a row', !again.ok);
   check('ENV B3: the abort names the foundation table', /public\.goals=1/.test(again.out), (again.out.match(/public\.goals=\d+/) ?? [''])[0]);
   check('ENV B3: no partial destructive state — the row survives', scalar('b4_env_b3', 'select count(*) from public.goals;') === '1');
-  check('ENV B3: ...and every one of the 34 tables is still there',
-        scalar('b4_env_b3', "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r';") === '34');
+  check('ENV B3: ...and every one of the 35 tables is still there',
+        scalar('b4_env_b3', "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r';") === '35');
 }
 
 // ---------------------------------------------------------------- ENV C -----
@@ -329,17 +329,17 @@ function migrationQuality() {
   check('quality: the fail-closed assertion is the LAST statement before COMMIT',
         assertCall > 0 && sql.slice(assertCall + CALL.length).trim() === 'COMMIT;');
 
-  // The protected list must name all 34 tables plus auth.users.
+  // The protected list must name all 35 tables plus auth.users.
   const guardBlock = sql.slice(guard, sql.indexOf('$interlock$;', guard));
   const protectedTables = [
     'profiles','households','household_members','household_categories','events','tasks',
     'household_systems','meal_plan_entries','onboarding_state','one_move_records',
     'needs_me_items','discovery_records','discovery_answers','action_records',
     'change_log','account_claims',
-    'source_artifacts','interpretations','external_references','behavior_observations','automation_authorities','action_intents','intent_decisions','action_executions','action_outcomes','household_people','responsibilities','dependencies','recurrence_rules','goals','system_steps','capacity_profiles','patterns','evidence_links',
+    'source_artifacts','interpretations','external_references','behavior_observations','automation_authorities','action_intents','intent_decisions','action_executions','action_outcomes','household_people','responsibilities','dependencies','recurrence_rules','goals','system_steps','capacity_profiles','patterns','evidence_links','career_opportunities',
   ];
   const missing = protectedTables.filter((t) => !guardBlock.includes(`'public.${t}'`));
-  check('quality: the guard enumerates all 34 application tables', missing.length === 0, missing.join(', ') || 'none missing');
+  check('quality: the guard enumerates all 35 application tables', missing.length === 0, missing.join(', ') || 'none missing');
   check('quality: the guard enumerates auth.users', guardBlock.includes("'auth.users'"));
 
   // Debris.

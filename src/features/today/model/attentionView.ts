@@ -238,6 +238,16 @@ function rowFor(state: AppState, item: AttentionItem, about: TypedRef, nowMs: nu
       if (title === null) return null;
       return { key: `xsrc:${about.kind}:${about.id}`, reason: 'external_source_changed', ...common, statement: `“${title}” may be out of date — the outside source it came from has changed.`, needsMe: null, actions: open };
     }
+    case 'opportunity_follow_up': {
+      const row = state.careerOpportunities.find((o) => o.id === about.id);
+      if (!row) return null;
+      const dates = [row.followUpDate, row.applicationDeadline].filter((d): d is typeof row.followUpDate & string => d !== null);
+      const earliest = dates.sort()[0];
+      const label = earliest === row.applicationDeadline ? 'application deadline' : 'follow-up';
+      const clause = earliest === today ? `is today` : earliest !== undefined && earliest < today ? `was ${relativeDay(earliest, today)}` : `is ${relativeDay(earliest ?? today, today)}`;
+      const org = row.organizationName ? ` at ${row.organizationName}` : '';
+      return { key: `opp:${row.id}`, reason: 'opportunity_follow_up', ...common, statement: `The ${label} for “${row.title}”${org} ${clause}.`, needsMe: true, actions: open };
+    }
     default:
       return null;
   }

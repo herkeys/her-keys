@@ -23,7 +23,7 @@ const MIGRATION = readFileSync(join(REPO, 'supabase', 'migrations', '20260919231
 /**
  * THE FOUNDATION MANIFEST HOLDS TOGETHER.
  *
- * `foundationSpecs.ts` is the one description of the eighteen kinds' columns; the migration's generated
+ * `foundationSpecs.ts` is the one description of the nineteen kinds' columns; the migration's generated
  * blocks, the projection and the sync engine's per-kind tables all read it. These tests hold the manifest
  * to the things it must agree with — the local schemas, the migration text, and the push order.
  */
@@ -67,9 +67,9 @@ describe('the manifest agrees with the local schemas', () => {
 
 describe('the manifest agrees with the sync engine', () => {
   test('every foundation kind is a sync kind with a table, an identity and its operations', () => {
-    assert.equal(FOUNDATION_SPECS.length, 18);
+    assert.equal(FOUNDATION_SPECS.length, 19);
     assert.deepEqual([...FOUNDATION_SPECS.map((s) => s.kind)].sort(), [...FOUNDATION_KIND_NAMES].sort());
-    assert.equal(new Set(FOUNDATION_SPECS.map((s) => s.table)).size, 18, 'no two kinds share a table');
+    assert.equal(new Set(FOUNDATION_SPECS.map((s) => s.table)).size, 19, 'no two kinds share a table');
     for (const spec of FOUNDATION_SPECS) {
       assert.ok(SYNC_ENTITY_KINDS.includes(spec.kind));
       assert.equal(CLOUD_TABLE[spec.kind], spec.table);

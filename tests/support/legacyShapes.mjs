@@ -46,7 +46,7 @@ export const UNKNOWN_FACET = (key) => (key === 'automationMode' ? 'manual' : key
 export const V4_ROOTS = [
   'migrationLineage', 'sourceArtifacts', 'externalReferences', 'interpretations', 'observations', 'authorities',
   'intents', 'decisions', 'executions', 'outcomes', 'people', 'responsibilities', 'dependencies', 'recurrences',
-  'goals', 'systemSteps', 'capacity', 'patterns', 'evidenceLinks',
+  'goals', 'systemSteps', 'capacity', 'patterns', 'evidenceLinks', 'careerOpportunities',
 ];
 
 const without = (row, keys) => {

@@ -24,6 +24,7 @@ export function sourceOf(row: { provenance: Provenance }): SourceLine {
 export const taskRoute = (taskId: string): TodayRoute => ({ pathname: '/task-editor', params: { taskId } });
 export const eventRoute = (eventId: string): TodayRoute => ({ pathname: '/event-editor', params: { eventId } });
 export const needsMeRoute = (): TodayRoute => ({ pathname: '/life/needs-me' });
+export const opportunityRoute = (opportunityId: string): TodayRoute => ({ pathname: '/opportunity-editor', params: { opportunityId } });
 
 export interface RefInfo {
   ref: TypedRef;
@@ -62,6 +63,10 @@ export function describeRef(state: AppState, ref: TypedRef): RefInfo {
     case 'person': {
       const row = state.people.find((p) => p.id === ref.id);
       return { ref, title: row?.displayName ?? null, route: null, source: row ? sourceOf(row) : null };
+    }
+    case 'opportunity': {
+      const row = state.careerOpportunities.find((o) => o.id === ref.id);
+      return { ref, title: row?.title ?? null, route: row ? opportunityRoute(row.id) : null, source: row ? sourceOf(row) : null };
     }
     case 'responsibility': {
       const row = state.responsibilities.find((r) => r.id === ref.id);

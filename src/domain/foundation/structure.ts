@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { Id, InstantSchema, LocalDateSchema, NonBlank } from '../schemaPrimitives';
 import { ProvenanceSchema } from './provenance';
-import { ContentRefSchema, refOf, refKey, type TypedRef } from './typedRef';
+import { CONTENT_REF_KINDS, refOf, refKey, type ContentRefKind, type TypedRef } from './typedRef';
 
 /**
  * STRUCTURE — dependencies, recurrence, goals, system steps and capacity.
@@ -25,12 +25,24 @@ import { ContentRefSchema, refOf, refKey, type TypedRef } from './typedRef';
 export const DEPENDENCY_RELATIONS = ['requires', 'part_of', 'alternative_to'] as const;
 export type DependencyRelation = (typeof DEPENDENCY_RELATIONS)[number];
 
+/**
+ * `Dependency`'s own endpoint vocabulary: every content kind, plus `opportunity` (F10). A career
+ * opportunity's next action (`part_of`, from a task) and interview (`part_of`, from an event) are
+ * ordinary steps in this same one mechanism — widened here, not by a second link table, and not by
+ * widening `CONTENT_REF_KINDS` itself, which stays the narrower list `Responsibility`, `Pattern`,
+ * `ExternalReference` and `Intent` actually need.
+ */
+export const DEPENDENCY_REF_KINDS = [...CONTENT_REF_KINDS, 'opportunity'] as const;
+export type DependencyRefKind = ContentRefKind | 'opportunity';
+
+export const DependencyRefSchema = refOf(DEPENDENCY_REF_KINDS);
+
 export const DependencySchema = z
   .strictObject({
     id: Id,
     relation: z.enum(DEPENDENCY_RELATIONS),
-    from: ContentRefSchema,
-    to: ContentRefSchema,
+    from: DependencyRefSchema,
+    to: DependencyRefSchema,
     status: z.enum(['active', 'removed']),
     createdAt: InstantSchema,
     updatedAt: InstantSchema,

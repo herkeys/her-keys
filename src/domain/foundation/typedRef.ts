@@ -34,6 +34,7 @@ export const TYPED_REF_KINDS = [
   'intent',
   'person',
   'interpretation',
+  'opportunity',
 ] as const;
 export type TypedRefKind = (typeof TYPED_REF_KINDS)[number];
 
@@ -56,6 +57,7 @@ export const KIND_COLLECTION: Record<TypedRefKind, string> = {
   intent: 'intents',
   person: 'people',
   interpretation: 'interpretations',
+  opportunity: 'careerOpportunities',
 };
 
 /** The cloud table and typed-FK column suffix for each kind. Mirrored by the migration's helper. */
@@ -73,6 +75,7 @@ export const KIND_CLOUD: Record<TypedRefKind, { table: string; column: string }>
   intent: { table: 'action_intents', column: 'intent_id' },
   person: { table: 'household_people', column: 'person_id' },
   interpretation: { table: 'interpretations', column: 'interpretation_id' },
+  opportunity: { table: 'career_opportunities', column: 'opportunity_id' },
 };
 
 export interface TypedRef<K extends TypedRefKind = TypedRefKind> {

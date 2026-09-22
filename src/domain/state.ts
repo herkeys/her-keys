@@ -13,6 +13,7 @@ import { ExternalReferenceSchema } from './foundation/externalReference';
 import { BehaviorObservationSchema, MAX_LOCAL_OBSERVATIONS } from './foundation/observation';
 import { EvidenceLinkSchema, PatternSchema } from './foundation/pattern';
 import { PROVENANCE_SOURCES, ProvenanceSchema } from './foundation/provenance';
+import { CareerOpportunitySchema } from './foundation/opportunity';
 import { HouseholdPersonSchema, ResponsibilitySchema, isActiveResponsibility } from './foundation/responsibility';
 import { SourceArtifactSchema } from './foundation/sourceArtifact';
 import {
@@ -527,6 +528,7 @@ export const AppStateSchema = z.strictObject({
   capacity: CapacityProfileSchema.nullable(),
   patterns: z.array(PatternSchema).max(2000),
   evidenceLinks: z.array(EvidenceLinkSchema).max(20_000),
+  careerOpportunities: z.array(CareerOpportunitySchema).max(1000),
 });
 
 export type Household = z.infer<typeof HouseholdSchema>;
@@ -639,6 +641,7 @@ export function findIntegrityProblems(state: AppState): string[] {
   requireUnique('system step id', state.systemSteps.map((row) => row.id));
   requireUnique('pattern id', state.patterns.map((row) => row.id));
   requireUnique('evidence link id', state.evidenceLinks.map((row) => row.id));
+  requireUnique('career opportunity id', state.careerOpportunities.map((row) => row.id));
 
   for (const category of state.categories) {
     if (category.householdId !== state.household.id) {
@@ -766,6 +769,7 @@ export function findIntegrityProblems(state: AppState): string[] {
   for (const row of state.systemSteps) checkArtifact('system step', row);
   for (const row of state.patterns) checkArtifact('pattern', row);
   for (const row of state.evidenceLinks) checkArtifact('evidence link', row);
+  for (const row of state.careerOpportunities) checkArtifact('career opportunity', row);
   if (state.capacity !== null) checkArtifact('capacity', { id: 'capacity', provenance: state.capacity.provenance });
 
   const referenceIds = new Set(state.externalReferences.map((ref) => ref.id));

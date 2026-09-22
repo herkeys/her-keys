@@ -14,6 +14,7 @@ import { addPerson, acknowledge, delegate } from '../../src/domain/responsibilit
 import { addDependency, addGoal, addRecurrence, addSystemStep, setCapacity } from '../../src/domain/structure.ts';
 import { addEvidence, proposePattern } from '../../src/domain/patterns.ts';
 import { addEvent } from '../../src/domain/events.ts';
+import { addOpportunity, addOpportunityNextAction } from '../../src/domain/opportunities.ts';
 import { addTask, completeTask } from '../../src/domain/tasks.ts';
 import { appendObservation } from '../../src/domain/observations.ts';
 import { captureNeedsMeItem } from '../../src/domain/needsMe.ts';
@@ -29,7 +30,7 @@ export const USER = { producer: 'user-action', artifactId: null, confidence: nul
 /** The kinds a device WRITES. Executions and outcomes are written by the server and pulled. */
 export const CLIENT_WRITTEN = [
   'sourceArtifact', 'externalReference', 'interpretation', 'authority', 'intent', 'decision', 'observation', 'person',
-  'responsibility', 'dependency', 'recurrence', 'goal', 'systemStep', 'capacity', 'pattern', 'evidenceLink',
+  'responsibility', 'dependency', 'recurrence', 'goal', 'systemStep', 'capacity', 'pattern', 'evidenceLink', 'opportunity',
 ];
 
 export function richHousehold({ withServerRows = false, withOneMove = true } = {}) {
@@ -83,6 +84,11 @@ export function richHousehold({ withServerRows = false, withOneMove = true } = {
   ({ state: s } = addDependency(s, at(), { relation: 'part_of', from: { kind: 'task', id: form.id }, to: { kind: 'goal', id: s.goals[0].id }, provenance: { producer: 'ai-inference', artifactId: null, confidence: 'possible' } }));
   s = addRecurrence(s, at(), { kind: 'system', id: 'sys-1' }, { frequency: 'weekly', byWeekday: [0], anchorDate: '2026-09-13' });
   s = setCapacity(s, at(), { dayEndMinutes: 20 * 60, transitionBufferMinutes: 15 });
+
+  // ---- F10: a career opportunity, with its next action linked through the SAME dependency edge a goal step uses --
+  s = addOpportunity(s, at(), { title: 'Senior Analyst role at Brightline', organizationName: 'Brightline Data', opportunityType: 'job', followUpDate: '2026-09-26' });
+  const opportunity = s.careerOpportunities[0];
+  ({ state: s } = addOpportunityNextAction(s, at(), opportunity.id, { title: 'Send follow-up email', categoryId: 'cat-work' }));
 
   // ---- authorization: a standing permission, an approved intent, an intent under the standing permission ------
   s = grantAuthority(s, at(), { category: 'internal_reminder', mode: 'execute_authorized', persistent: true });

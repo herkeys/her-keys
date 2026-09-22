@@ -43,6 +43,7 @@ export type LinkTarget =
 export const FOUNDATION_KIND_NAMES = [
   'sourceArtifact', 'interpretation', 'externalReference', 'observation', 'authority', 'intent', 'decision', 'execution',
   'outcome', 'person', 'responsibility', 'dependency', 'recurrence', 'goal', 'systemStep', 'capacity', 'pattern', 'evidenceLink',
+  'opportunity',
 ] as const;
 export type FoundationKind = (typeof FOUNDATION_KIND_NAMES)[number];
 
@@ -167,6 +168,13 @@ export const updatableColumnsOf = (spec: FoundationSpec): string[] =>
 
 const CONTENT6: readonly TypedRefKind[] = ['task', 'event', 'needsMe', 'system', 'meal', 'goal'];
 const CONTENT6_R: readonly TypedRefKind[] = [...CONTENT6, 'responsibility'];
+/**
+ * `Dependency`'s own endpoint list (F10): every content kind, plus `opportunity`, mirroring
+ * `DEPENDENCY_REF_KINDS` in `foundation/structure.ts`. Used ONLY by the `dependency` spec below —
+ * `observation`, `pattern`, `external_reference`, `responsibility` and `intent` keep the narrower
+ * `CONTENT6`/`CONTENT6_R` they actually need, so their cloud tables gain no unused column.
+ */
+const CONTENT6_OPP: readonly TypedRefKind[] = [...CONTENT6, 'opportunity'];
 
 const OPEN_CODE = `~ '^[a-z][a-z0-9_.-]{0,63}$'`;
 
@@ -513,17 +521,17 @@ export const FOUNDATION_SPECS: readonly FoundationSpec[] = [
     kind: 'dependency', collection: 'dependencies', table: 'dependencies', mutable: true, provenance: 'standard', profileOnDelete: 'cascade', rank: 3,
     fields: [
       { local: 'relation', col: 'relation', type: 'text' },
-      { local: 'from', type: 'ref', prefix: 'from', kinds: CONTENT6, required: true, onDelete: 'cascade' },
-      { local: 'to', type: 'ref', prefix: 'to', kinds: CONTENT6, required: true, onDelete: 'cascade' },
+      { local: 'from', type: 'ref', prefix: 'from', kinds: CONTENT6_OPP, required: true, onDelete: 'cascade' },
+      { local: 'to', type: 'ref', prefix: 'to', kinds: CONTENT6_OPP, required: true, onDelete: 'cascade' },
       { local: 'status', col: 'status', type: 'text' },
     ],
     updatable: ['status', 'confidence', 'origin_updated_at'],
     checks: [
       ['relation_check', `relation = ANY (ARRAY['requires','part_of','alternative_to'])`],
       ['status_check', `status = ANY (ARRAY['active','removed'])`],
-      ['not_self_check', `NOT (from_type = to_type AND COALESCE(from_task_id, from_event_id, from_needs_me_id, from_system_id, from_meal_id, from_goal_id) = COALESCE(to_task_id, to_event_id, to_needs_me_id, to_system_id, to_meal_id, to_goal_id))`],
+      ['not_self_check', `NOT (from_type = to_type AND COALESCE(from_task_id, from_event_id, from_needs_me_id, from_system_id, from_meal_id, from_goal_id, from_opportunity_id) = COALESCE(to_task_id, to_event_id, to_needs_me_id, to_system_id, to_meal_id, to_goal_id, to_opportunity_id))`],
     ],
-    indexes: [['live_edge_uq', `ON public.dependencies (household_id, relation, from_type, COALESCE(from_task_id, from_event_id, from_needs_me_id, from_system_id, from_meal_id, from_goal_id), to_type, COALESCE(to_task_id, to_event_id, to_needs_me_id, to_system_id, to_meal_id, to_goal_id)) WHERE status = 'active'`, true]],
+    indexes: [['live_edge_uq', `ON public.dependencies (household_id, relation, from_type, COALESCE(from_task_id, from_event_id, from_needs_me_id, from_system_id, from_meal_id, from_goal_id, from_opportunity_id), to_type, COALESCE(to_task_id, to_event_id, to_needs_me_id, to_system_id, to_meal_id, to_goal_id, to_opportunity_id)) WHERE status = 'active'`, true]],
     triggers: [['forbid_cycle', 'BEFORE', 'INSERT OR UPDATE', `public.forbid_dependency_cycle()`]],
   },
 
@@ -655,6 +663,49 @@ export const FOUNDATION_SPECS: readonly FoundationSpec[] = [
     ],
     updatable: [],
     checks: [['code_check', `code ${OPEN_CODE}`]],
+  },
+
+  // ------------------------------------------------------------ opportunity
+  // F10 Work/Career OS. A professional possibility she is tracking — never a verified fact about the
+  // world (ADR: F10 semantic contract). The next action is a Task and an interview is an Event, both
+  // reached through `dependency` above (`relation: 'part_of'`, endpoint kind `opportunity`); this table
+  // carries no next-action text and no interview sub-record, and no structured compensation amount.
+  {
+    kind: 'opportunity', collection: 'careerOpportunities', table: 'career_opportunities', mutable: true, provenance: 'standard', profileOnDelete: 'cascade', rank: 2,
+    fields: [
+      { local: 'title', col: 'title', type: 'text' },
+      { local: 'organizationName', col: 'organization_name', type: 'text', nullable: true },
+      { local: 'opportunityType', col: 'opportunity_type', type: 'text' },
+      { local: 'stage', col: 'stage', type: 'text' },
+      { local: 'closedReason', col: 'closed_reason', type: 'text', nullable: true },
+      { local: 'sourceNote', col: 'source_note', type: 'text', nullable: true },
+      { local: 'applicationDeadline', col: 'application_deadline', type: 'date', nullable: true },
+      { local: 'followUpDate', col: 'follow_up_date', type: 'date', nullable: true },
+      { local: 'contactName', col: 'contact_name', type: 'text', nullable: true },
+      { local: 'compensationNote', col: 'compensation_note', type: 'text', nullable: true },
+      { local: 'notes', col: 'notes', type: 'text', nullable: true },
+      { local: 'stageChangedAt', col: 'stage_changed_at', type: 'instant' },
+      { local: 'archivedAt', col: 'archived_at', type: 'instant', nullable: true },
+    ],
+    updatable: [
+      'title', 'organization_name', 'opportunity_type', 'stage', 'closed_reason', 'source_note',
+      'application_deadline', 'follow_up_date', 'contact_name', 'compensation_note', 'notes',
+      'stage_changed_at', 'archived_at', 'confidence', 'origin_updated_at',
+    ],
+    checks: [
+      ['title_check', `char_length(btrim(title)) >= 1 AND char_length(title) <= 200`],
+      ['org_check', `organization_name IS NULL OR char_length(organization_name) <= 120`],
+      ['type_check', `opportunity_type = ANY (ARRAY['job','freelance','contract','education_program','other'])`],
+      ['stage_check', `stage = ANY (ARRAY['exploring','interested','applied','interviewing','offer','accepted','closed'])`],
+      ['closed_reason_check', `closed_reason IS NULL OR closed_reason = ANY (ARRAY['withdrawn','declined_by_organization','offer_rescinded','no_further_response','other'])`],
+      // No response is never upgraded to a rejection she never received: a reason is recorded exactly when closed.
+      ['closed_pairing_check', `(stage = 'closed') = (closed_reason IS NOT NULL)`],
+      ['source_note_check', `source_note IS NULL OR char_length(source_note) <= 300`],
+      ['contact_name_check', `contact_name IS NULL OR char_length(contact_name) <= 120`],
+      // Deliberately no structured compensation column exists to check: F10 V1 carries compensation only as this free-text note.
+      ['compensation_note_check', `compensation_note IS NULL OR char_length(compensation_note) <= 300`],
+      ['notes_check', `notes IS NULL OR char_length(notes) <= 1000`],
+    ],
   },
 ];
 

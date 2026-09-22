@@ -27,6 +27,7 @@ export const ROOT_SCREEN_GUARDS = {
   'talk-it-out': 'app',
   'event-editor': 'app',
   'task-editor': 'app',
+  'opportunity-editor': 'app',
   'dev-tools': 'internal',
   /** Development design gallery — same internal-build gate as dev-tools. */
   gallery: 'internal',
@@ -92,6 +93,7 @@ export function rootScreenForPath(path: string): RootScreen | null {
   if (first === 'talk-it-out' && segments.length === 1) return 'talk-it-out';
   if (first === 'event-editor' && segments.length === 1) return 'event-editor';
   if (first === 'task-editor' && segments.length === 1) return 'task-editor';
+  if (first === 'opportunity-editor' && segments.length === 1) return 'opportunity-editor';
   if (first === 'dev-tools' && segments.length === 1) return 'dev-tools';
   if (first === 'sign-in' && segments.length === 1) return 'sign-in';
   if (first === 'account-conflict' && segments.length === 1) return 'account-conflict';

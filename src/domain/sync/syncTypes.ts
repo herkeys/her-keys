@@ -45,7 +45,7 @@ export const CORE_SYNC_KINDS = [
 export type CoreSyncKind = (typeof CORE_SYNC_KINDS)[number];
 
 /**
- * Core kinds plus the eighteen the foundation buildout adds (B4-FOUNDATION-BUILDOUT-01). The foundation
+ * Core kinds plus the nineteen the foundation buildout adds (B4-FOUNDATION-BUILDOUT-01). The foundation
  * kinds are described ONCE, in `foundationSpecs.ts`, and everything below that is per-kind is derived from
  * that description — the table, the identity column, the operations, the columns a client may update and
  * the dependency rank — so the migration, the projection and this file cannot disagree.

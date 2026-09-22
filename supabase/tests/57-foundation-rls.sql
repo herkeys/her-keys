@@ -1,8 +1,8 @@
 -- THE FOUNDATION'S ACCESS MODEL (B4-FE01-029..031) — both directions: what is refused, and what still works.
 --
--- Eighteen owner-private tables. The catalog is the evidence for the structural claims; concrete rows
--- and real roles prove the behavioural ones. Over-restriction is not a pass: the owner must be able to do
--- everything the product needs.
+-- Nineteen owner-private tables (career_opportunities added by F10 Work/Career OS). The catalog is the
+-- evidence for the structural claims; concrete rows and real roles prove the behavioural ones.
+-- Over-restriction is not a pass: the owner must be able to do everything the product needs.
 \pset format unaligned
 \pset tuples_only on
 
@@ -21,10 +21,11 @@ INSERT INTO ft VALUES
   ('intent_decisions', true, false), ('action_executions', true, true), ('action_outcomes', true, true),
   ('household_people', false, false), ('responsibilities', false, false), ('dependencies', false, false),
   ('recurrence_rules', false, false), ('goals', false, false), ('system_steps', false, false),
-  ('capacity_profiles', false, false), ('patterns', false, false), ('evidence_links', true, false);
+  ('capacity_profiles', false, false), ('patterns', false, false), ('evidence_links', true, false),
+  ('career_opportunities', false, false);
 
 -- ================= THE CATALOG ================================================================================
-SELECT CASE WHEN count(*) = 18 THEN 'PASS' ELSE 'FAIL' END || ' | 18 foundation tables exist (' || count(*)::text || ')'
+SELECT CASE WHEN count(*) = 19 THEN 'PASS' ELSE 'FAIL' END || ' | 19 foundation tables exist (' || count(*)::text || ')'
 FROM ft JOIN pg_class c ON c.relname = ft.t AND c.relnamespace = 'public'::regnamespace AND c.relkind = 'r';
 
 SELECT CASE WHEN count(*) = 0 THEN 'PASS' ELSE 'FAIL' END || ' | RLS is enabled on every foundation table (' || coalesce(string_agg(ft.t, ', '), 'none') || ' lack it)'
@@ -91,6 +92,8 @@ SELECT CASE WHEN herkeys_test.ins('household_people', jsonb_build_object('househ
             THEN 'PASS' ELSE 'FAIL' END || ' | owner: ALLOW inserting a person';
 SELECT CASE WHEN herkeys_test.ins('action_intents', jsonb_build_object('household_id', :'hh_a', 'profile_id', :'ua', 'local_id', 'intent-a', 'category', 'internal_reminder', 'consequence', 'low', 'reversibility', 'reversible', 'summary_code', 'nudge', 'permitted_mode', 'suggest', 'producer', 'ai-inference', 'confidence', 'possible')) IS NULL
             THEN 'PASS' ELSE 'FAIL' END || ' | owner: ALLOW recording an intent (evidence)';
+SELECT CASE WHEN herkeys_test.ins('career_opportunities', jsonb_build_object('household_id', :'hh_a', 'profile_id', :'ua', 'local_id', 'opp-a', 'title', 'Senior Analyst role', 'opportunity_type', 'job', 'stage', 'exploring', 'stage_changed_at', now())) IS NULL
+            THEN 'PASS' ELSE 'FAIL' END || ' | owner: ALLOW inserting her own career opportunity (F10)';
 COMMIT;
 
 -- User B is a second adult member of the SAME household: private means private.
@@ -100,6 +103,12 @@ SET LOCAL request.jwt.claims = '{"sub":"22222222-2222-4222-8222-222222222222"}';
 SELECT CASE WHEN count(*) = 0 THEN 'PASS' ELSE 'FAIL' END || ' | same-household member B: sees NONE of A''s private goals' FROM public.goals;
 SELECT CASE WHEN count(*) = 0 THEN 'PASS' ELSE 'FAIL' END || ' | ...nor A''s people' FROM public.household_people;
 SELECT CASE WHEN count(*) = 0 THEN 'PASS' ELSE 'FAIL' END || ' | ...nor A''s intents' FROM public.action_intents;
+SELECT CASE WHEN count(*) = 0 THEN 'PASS' ELSE 'FAIL' END || ' | ...nor A''s career opportunities (F10: professional privacy is not household-shared by default)' FROM public.career_opportunities;
+SELECT CASE WHEN herkeys_test.ins('career_opportunities', jsonb_build_object('household_id', :'hh_a', 'profile_id', :'ua', 'local_id', 'opp-forged', 'title', 'Forged as A', 'opportunity_type', 'job', 'stage', 'exploring', 'stage_changed_at', now())) LIKE '42501%'
+            THEN 'PASS' ELSE 'FAIL' END || ' | B: DENY writing an opportunity as A';
+SELECT CASE WHEN herkeys_test.ins('career_opportunities', jsonb_build_object('household_id', :'hh_a', 'profile_id', :'ub', 'local_id', 'opp-b', 'title', 'B''s own search', 'opportunity_type', 'job', 'stage', 'exploring', 'stage_changed_at', now())) IS NULL
+            THEN 'PASS' ELSE 'FAIL' END || ' | B: ALLOW writing her own private opportunity in the shared household';
+SELECT CASE WHEN count(*) = 1 THEN 'PASS' ELSE 'FAIL' END || ' | B: sees exactly her own opportunity' FROM public.career_opportunities;
 SELECT CASE WHEN herkeys_test.ins('goals', jsonb_build_object('household_id', :'hh_a', 'profile_id', :'ua', 'local_id', 'goal-forged', 'title', 'Forged as A', 'status', 'active')) LIKE '42501%'
             THEN 'PASS' ELSE 'FAIL' END || ' | B: DENY writing a row as A (the policy checks the caller against profile_id)';
 SELECT CASE WHEN herkeys_test.ins('goals', jsonb_build_object('household_id', :'hh_a', 'profile_id', :'ub', 'local_id', 'goal-b', 'title', 'B''s own', 'status', 'active')) IS NULL
@@ -111,17 +120,20 @@ COMMIT;
 BEGIN;
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claims = '{"sub":"33333333-3333-4333-8333-333333333333"}';
-SELECT CASE WHEN count(*) = 0 THEN 'PASS' ELSE 'FAIL' END || ' | unrelated user C: sees nothing in goals, people, intents' FROM (
-  SELECT id FROM public.goals UNION ALL SELECT id FROM public.household_people UNION ALL SELECT id FROM public.action_intents) x;
+SELECT CASE WHEN count(*) = 0 THEN 'PASS' ELSE 'FAIL' END || ' | unrelated user C: sees nothing in goals, people, intents, opportunities' FROM (
+  SELECT id FROM public.goals UNION ALL SELECT id FROM public.household_people UNION ALL SELECT id FROM public.action_intents UNION ALL SELECT id FROM public.career_opportunities) x;
 SELECT CASE WHEN herkeys_test.ins('goals', jsonb_build_object('household_id', :'hh_a', 'profile_id', :'uc', 'local_id', 'goal-intruder', 'title', 'Not my household', 'status', 'active')) LIKE '42501%'
             THEN 'PASS' ELSE 'FAIL' END || ' | C: DENY writing into a household she does not belong to';
+SELECT CASE WHEN herkeys_test.ins('career_opportunities', jsonb_build_object('household_id', :'hh_a', 'profile_id', :'uc', 'local_id', 'opp-intruder', 'title', 'Not my household', 'opportunity_type', 'job', 'stage', 'exploring', 'stage_changed_at', now())) LIKE '42501%'
+            THEN 'PASS' ELSE 'FAIL' END || ' | C: DENY writing a career opportunity into a household she does not belong to (F10 unrelated-household matrix)';
 COMMIT;
 
 -- Anon.
 BEGIN;
 SET LOCAL ROLE anon;
 SELECT CASE WHEN herkeys_test.test_denied('SELECT 1 FROM public.goals') AND herkeys_test.test_denied('SELECT 1 FROM public.action_executions')
-            AND herkeys_test.test_denied('SELECT 1 FROM public.interpretations') THEN 'PASS' ELSE 'FAIL' END
+            AND herkeys_test.test_denied('SELECT 1 FROM public.interpretations') AND herkeys_test.test_denied('SELECT 1 FROM public.career_opportunities')
+            THEN 'PASS' ELSE 'FAIL' END
        || ' | anon: DENY at the privilege layer';
 ROLLBACK;
 
