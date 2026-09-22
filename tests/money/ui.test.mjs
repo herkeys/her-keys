@@ -60,7 +60,7 @@ async function type(r, label, value) {
 describe('MoneyBody — renders without crashing, over real projected state', () => {
   test('the calm empty state renders the verdict and no sections', async () => {
     const view = buildMoneyHomeView(base(), 'household-1', { nowMs: MORNING });
-    const r = await render(React.createElement(MoneyBody, { gate: READY_GATE, view, onAddObligation: () => {}, onAddIncome: () => {}, onOpenItem: () => {} }));
+    const r = await render(React.createElement(MoneyBody, { gate: READY_GATE, view, today: DAY, onAddObligation: () => {}, onAddIncome: () => {}, onOpenItem: () => {}, onOpenTask: () => {} }));
     assert.match(allText(r), /Nothing needs attention\./);
     assert.doesNotMatch(allText(r), /Needs attention/);
   });
@@ -69,7 +69,7 @@ describe('MoneyBody — renders without crashing, over real projected state', ()
     const c = ctx();
     const created = createObligation(base(), c, fields());
     const view = buildMoneyHomeView(created.state, created.state.household.id, { nowMs: MORNING });
-    const r = await render(React.createElement(MoneyBody, { gate: READY_GATE, view, onAddObligation: () => {}, onAddIncome: () => {}, onOpenItem: () => {} }));
+    const r = await render(React.createElement(MoneyBody, { gate: READY_GATE, view, today: DAY, onAddObligation: () => {}, onAddIncome: () => {}, onOpenItem: () => {}, onOpenTask: () => {} }));
     assert.match(allText(r), /needs attention/i);
     assert.match(allText(r), /Car insurance/);
     assert.match(allText(r), /84\.50/);
@@ -81,7 +81,7 @@ describe('MoneyBody — renders without crashing, over real projected state', ()
     const created = createObligation(base(), c, fields());
     const view = buildMoneyHomeView(created.state, created.state.household.id, { nowMs: MORNING });
     let opened = null;
-    const r = await render(React.createElement(MoneyBody, { gate: READY_GATE, view, onAddObligation: () => {}, onAddIncome: () => {}, onOpenItem: (id) => (opened = id) }));
+    const r = await render(React.createElement(MoneyBody, { gate: READY_GATE, view, today: DAY, onAddObligation: () => {}, onAddIncome: () => {}, onOpenItem: (id) => (opened = id), onOpenTask: () => {} }));
     await press(r, `Car insurance: 84.50 · Due ${DAY} · Manual`);
     assert.equal(opened, created.id);
   });
@@ -91,14 +91,14 @@ describe('MoneyBody — renders without crashing, over real projected state', ()
     let addedObligation = false;
     let addedIncome = false;
     const r = await render(
-      React.createElement(MoneyBody, { gate: READY_GATE, view, onAddObligation: () => (addedObligation = true), onAddIncome: () => (addedIncome = true), onOpenItem: () => {} })
+      React.createElement(MoneyBody, { gate: READY_GATE, view, today: DAY, onAddObligation: () => (addedObligation = true), onAddIncome: () => (addedIncome = true), onOpenItem: () => {}, onOpenTask: () => {} })
     );
     await press(r, MONEY_COPY.addObligation);
     await press(r, MONEY_COPY.addIncome);
     assert.ok(addedObligation && addedIncome);
 
     const readOnly = await render(
-      React.createElement(MoneyBody, { gate: { state: 'ready', canWrite: false }, view, onAddObligation: () => {}, onAddIncome: () => {}, onOpenItem: () => {} })
+      React.createElement(MoneyBody, { gate: { state: 'ready', canWrite: false }, view, today: DAY, onAddObligation: () => {}, onAddIncome: () => {}, onOpenItem: () => {}, onOpenTask: () => {} })
     );
     const addBtn = pressables(readOnly).find((p) => p.props.accessibilityLabel === MONEY_COPY.addObligation);
     assert.equal(addBtn.props.disabled, true);
@@ -109,7 +109,7 @@ describe('MoneyBody — renders without crashing, over real projected state', ()
     const created = createObligation(base(), c, fields());
     const resolved = resolveMoneyItem(created.state, c, created.id);
     const view = buildMoneyHomeView(resolved.state, resolved.state.household.id, { nowMs: MORNING });
-    const r = await render(React.createElement(MoneyBody, { gate: READY_GATE, view, onAddObligation: () => {}, onAddIncome: () => {}, onOpenItem: () => {} }));
+    const r = await render(React.createElement(MoneyBody, { gate: READY_GATE, view, today: DAY, onAddObligation: () => {}, onAddIncome: () => {}, onOpenItem: () => {}, onOpenTask: () => {} }));
     assert.match(allText(r), /recently resolved/i);
     assert.match(allText(r), /Paid/);
     // The verdict sentence itself legitimately says "Nothing needs attention." — check the
@@ -122,16 +122,16 @@ describe('MoneyBody — renders without crashing, over real projected state', ()
     const created = createExpectedIncome(base(), c, fields({ title: 'Paycheck' }));
     const resolved = resolveMoneyItem(created.state, c, created.id);
     const view = buildMoneyHomeView(resolved.state, resolved.state.household.id, { nowMs: MORNING });
-    const r = await render(React.createElement(MoneyBody, { gate: READY_GATE, view, onAddObligation: () => {}, onAddIncome: () => {}, onOpenItem: () => {} }));
+    const r = await render(React.createElement(MoneyBody, { gate: READY_GATE, view, today: DAY, onAddObligation: () => {}, onAddIncome: () => {}, onOpenItem: () => {}, onOpenTask: () => {} }));
     assert.match(allText(r), /Received/);
     assert.doesNotMatch(allText(r), /\bPaid\b/);
   });
 
   test('the loading and recovery gates render without the sections', async () => {
     const view = buildMoneyHomeView(base(), 'household-1', { nowMs: MORNING });
-    const loading = await render(React.createElement(MoneyBody, { gate: { state: 'loading', canWrite: false }, view, onAddObligation: () => {}, onAddIncome: () => {}, onOpenItem: () => {} }));
+    const loading = await render(React.createElement(MoneyBody, { gate: { state: 'loading', canWrite: false }, view, today: DAY, onAddObligation: () => {}, onAddIncome: () => {}, onOpenItem: () => {}, onOpenTask: () => {} }));
     assert.match(allText(loading), /Getting your money picture ready/);
-    const recovery = await render(React.createElement(MoneyBody, { gate: { state: 'recovery', canWrite: false }, view, onAddObligation: () => {}, onAddIncome: () => {}, onOpenItem: () => {} }));
+    const recovery = await render(React.createElement(MoneyBody, { gate: { state: 'recovery', canWrite: false }, view, today: DAY, onAddObligation: () => {}, onAddIncome: () => {}, onOpenItem: () => {}, onOpenTask: () => {} }));
     assert.match(allText(recovery), /can't show your picture right now/);
   });
 });

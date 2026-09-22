@@ -23,6 +23,7 @@ export const MONEY_COPY = {
   sectionExpectedIn: 'Expected in',
   sectionOutstandingReimbursements: 'Outstanding reimbursements',
   sectionRecentlyResolved: 'Recently resolved',
+  sectionOtherOpenTasks: 'Other open tasks',
   showMore: (count: number) => `Show ${count} more`,
 
   // actions

@@ -4,6 +4,7 @@ import { addDays, logicalDateAt, type LocalDate } from '../../domain/logicalDay'
 import { autopayPreDueSuppressed } from '../../domain/reasoning/attention';
 import { FIRST_GLANCE_ATTENTION } from '../../features/today/model/todayView';
 import type { AppState, Task } from '../../domain/state';
+import { openTasksInCategory, type OpenTaskEntry } from '../../domain/taskLists';
 import { moneyCategoryId } from './identity';
 import { outstandingReimbursements, recentlyResolvedReimbursements, type ReimbursementProjection } from './reimbursements';
 
@@ -76,6 +77,16 @@ export interface MoneyHomeView {
   expectedIn: MoneyItemView[];
   outstandingReimbursements: ReimbursementProjection[];
   recentlyResolved: { own: MoneyItemView[]; reimbursements: ReimbursementProjection[] };
+  /**
+   * Open tasks filed in the money category that are NOT one of Money's own obligation/expected-
+   * income items (no `value` facet) — a generic task someone captured and categorized as Money
+   * without going through Money's own create flow. Money is a `TASK_LIST_ROLES` category
+   * (src/domain/taskLists.ts), so the Life hub's generic "Other open tasks" fallback deliberately
+   * excludes it, trusting THIS screen to list every open task in the category. Without this,
+   * such a task would be unreachable anywhere in the app (tests/build3Audit.capture.test.mjs,
+   * "every Life screen with a task list is wired to its role").
+   */
+  otherOpenTasks: OpenTaskEntry[];
 }
 
 const COMING_UP_WINDOW_DAYS = 14;
@@ -116,6 +127,9 @@ export function buildMoneyHomeView(state: AppState, householdId: string, clock: 
   const attentionCount = needsAttention.length + reimbursementsOut.length;
   const verdict = verdictSentence(attentionCount, dueNow.length + reimbursementsOut.length > NEEDS_ATTENTION_LIMIT, soonestOpen);
 
+  const categoryId = moneyCategoryId(state);
+  const otherOpenTasks = categoryId === null ? [] : openTasksInCategory(state, categoryId, today).filter((entry) => entry.task.value === null);
+
   return {
     verdict,
     needsAttention,
@@ -123,6 +137,7 @@ export function buildMoneyHomeView(state: AppState, householdId: string, clock: 
     expectedIn,
     outstandingReimbursements: reimbursementsOut,
     recentlyResolved: { own: recentlyResolvedOwn, reimbursements: recentlyResolvedReimb },
+    otherOpenTasks,
   };
 }
 

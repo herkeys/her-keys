@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { View } from 'react-native';
 import type { TransitionContext } from '../../domain/context';
@@ -156,7 +157,15 @@ export function MoneyOverview() {
     <View>
       <PersistenceNotice />
       <SyncNotice />
-      <MoneyBody gate={gate} view={view} onAddObligation={() => openCreate('outflow')} onAddIncome={() => openCreate('inflow')} onOpenItem={openEdit} />
+      <MoneyBody
+        gate={gate}
+        view={view}
+        today={today}
+        onAddObligation={() => openCreate('outflow')}
+        onAddIncome={() => openCreate('inflow')}
+        onOpenItem={openEdit}
+        onOpenTask={(taskId) => router.push({ pathname: '/task-editor', params: { taskId } })}
+      />
 
       {sheet ? (
         <MoneySheet

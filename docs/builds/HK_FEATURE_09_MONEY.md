@@ -312,3 +312,34 @@ handler with the right payload, Save is disabled until the required fields are v
 appear only for an obligation, and resolve/cancel/duplicate-forward controls appear only when editing an
 existing item. `tsc --noEmit`: clean. Device-level pixel/layout verification remains open (recorded as
 outstanding, not silently skipped).
+
+### M3 addendum — a real reachability gap, found by the existing test suite
+
+Running the full suite with the M3 UI code surfaced a genuine regression, not a stale test:
+`tests/build3Audit.capture.test.mjs` ("every Life screen with a task list is wired to its role") asserts that
+`money` (one of `TASK_LIST_ROLES`, `src/domain/taskLists.ts`) lists **every** open task in the money category on
+its own screen — because Money being a `TASK_LIST_ROLES` member means the Life hub's generic "Other open tasks"
+fallback (`src/features/life/OtherTasksList.tsx`) deliberately *excludes* it, trusting Money's own screen to be
+complete. Money Home's sections only ever listed tasks carrying the `value` facet (real obligations/expected
+income) — a plain task someone captured and filed under the Money category without going through Money's own
+create flow (no `value`) would have been unreachable anywhere in the app.
+
+Fixed: `buildMoneyHomeView` now also returns `otherOpenTasks` — every open money-category task with `value ===
+null`, via the same generic `openTasksInCategory` (`src/domain/taskLists.ts`) every other Life screen uses, so
+Money never invents its own scan logic. Rendered as an additional "Other open tasks" section in `MoneyBody`,
+using the same `openTaskLabel`/`needsAttention` presentation as `CategoryTaskList`/`OtherTasksList`, and opening
+the ordinary task editor route — never Money's own sheet, since these aren't Money-domain items. `tests/build3Audit.capture.test.mjs`
+updated to check Money's REAL implementation (REWRITTEN, not weakened — same disposition already used for the
+Kids OS and Home OS rewrites), and `tests/money/projection.test.mjs` gained three tests proving the union: a
+plain task is surfaced, a real Money item is never double-listed, and only open tasks are shown.
+
+A second, unrelated finding from the same full-suite run: `MoneyBody` originally called `router.push` from
+`expo-router` directly for this new section (matching `CategoryTaskList`'s own inline pattern) — this crashes
+`react-test-renderer` under `node --test` (`expo-router/build/views/Navigator.js` cannot resolve
+`tests/support/rn-stub.tsx` through the custom loader). `tests/coparent/ui.test.mjs`'s own header comment
+already documents this exact limitation ("CONTAINERS... need... expo-router and cannot render here"). Fixed by
+lifting navigation out of `MoneyBody` into an `onOpenTask` callback prop, supplied by the container
+(`MoneyOverview`) — keeping `MoneyBody` a pure, fully unit-testable presentational component, matching this
+codebase's own established container/presentational split.
+
+Full money suite after the fix: 58/58. `tsc --noEmit`: clean.

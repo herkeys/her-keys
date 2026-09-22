@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { AppText, Button, InlineNotice, LoadingState, Overline, StatusList } from '../../design/components';
 import { colors, spacing } from '../../design/tokens';
+import { needsAttention as taskNeedsAttention, openTaskLabel } from '../life/openTaskLabel';
 import type { MoneyGate } from './moneyGate';
 import type { MoneyHomeView, MoneyItemView } from './projection';
 import { MECHANISM_LABEL, MONEY_COPY } from './moneyCopy';
@@ -10,9 +11,12 @@ import type { ReimbursementProjection } from './reimbursements';
 export interface MoneyBodyProps {
   gate: MoneyGate;
   view: MoneyHomeView;
+  today: string;
   onAddObligation: () => void;
   onAddIncome: () => void;
   onOpenItem: (taskId: string) => void;
+  /** A generic (non-money) open task filed in the money category — opens the ordinary task editor. */
+  onOpenTask: (taskId: string) => void;
 }
 
 const itemLine = (item: MoneyItemView): string => {
@@ -43,7 +47,7 @@ const reimbursementLine = (r: ReimbursementProjection): string => {
  * Meals follows). The verdict sentence is deterministic — computed in projection.ts, never
  * hand-authored per state.
  */
-export function MoneyBody({ gate, view, onAddObligation, onAddIncome, onOpenItem }: MoneyBodyProps) {
+export function MoneyBody({ gate, view, today, onAddObligation, onAddIncome, onOpenItem, onOpenTask }: MoneyBodyProps) {
   if (gate.state === 'loading') return <LoadingState label={MONEY_COPY.loading} />;
   if (gate.state === 'recovery') return <InlineNotice tone="attention" title={MONEY_COPY.recoveryTitle} body={MONEY_COPY.recoveryBody} />;
 
@@ -117,6 +121,20 @@ export function MoneyBody({ gate, view, onAddObligation, onAddIncome, onOpenItem
           <Empty text={MONEY_COPY.noRecentlyResolved} />
         )}
       </Section>
+
+      {view.otherOpenTasks.length > 0 ? (
+        <Section title={MONEY_COPY.sectionOtherOpenTasks}>
+          <StatusList
+            items={view.otherOpenTasks.map((entry) => ({
+              key: entry.task.id,
+              label: entry.task.title,
+              value: openTaskLabel(entry, today),
+              needsAttention: taskNeedsAttention(entry),
+              onPress: () => onOpenTask(entry.task.id),
+            }))}
+          />
+        </Section>
+      ) : null}
     </View>
   );
 }

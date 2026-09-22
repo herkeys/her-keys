@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 import { attentionFor } from '../../src/domain/reasoning/attention.ts';
+import { addTask } from '../../src/domain/tasks.ts';
+import { moneyCategoryId } from '../../src/features/money/identity.ts';
 import { createEmptyState } from '../../src/state/initialState.ts';
 import { cancelMoneyItem, createExpectedIncome, createObligation, resolveMoneyItem } from '../../src/features/money/mutations.ts';
 import { buildMoneyHomeView, moneyItemsOf, NEEDS_ATTENTION_LIMIT, RECENTLY_RESOLVED_WINDOW_DAYS } from '../../src/features/money/projection.ts';
@@ -136,5 +138,34 @@ describe('moneyItemsOf', () => {
     const cancelled = cancelMoneyItem(created.state, c, created.id);
     const view = moneyItemsOf(cancelled.state, DAY).find((v) => v.taskId === created.id);
     assert.equal(view.status, 'cancelled');
+  });
+});
+
+describe('otherOpenTasks — every open task in the money category stays reachable (tests/build3Audit.capture.test.mjs)', () => {
+  test('a generic open task filed under Money without an amount is surfaced, distinct from Money\'s own items', () => {
+    const c = ctx();
+    const categoryId = moneyCategoryId(base());
+    const withPlainTask = addTask(base(), c, { title: 'Call the insurance company', categoryId, scope: 'household' });
+    const view = buildMoneyHomeView(withPlainTask, householdOf(withPlainTask), { nowMs: MORNING });
+    assert.equal(view.otherOpenTasks.length, 1);
+    assert.equal(view.otherOpenTasks[0].task.title, 'Call the insurance company');
+    assert.equal(view.otherOpenTasks[0].task.value, null);
+  });
+
+  test('a Money obligation (has a value facet) is never double-listed in otherOpenTasks', () => {
+    const c = ctx();
+    const created = createObligation(base(), c, fields());
+    const view = buildMoneyHomeView(created.state, householdOf(created.state), { nowMs: MORNING });
+    assert.equal(view.otherOpenTasks.some((entry) => entry.task.id === created.id), false);
+  });
+
+  test('a completed or archived plain task is not listed (only open tasks)', () => {
+    const c = ctx();
+    const categoryId = moneyCategoryId(base());
+    const state = addTask(base(), c, { title: 'Done already', categoryId, scope: 'household', durationMinutes: 5 });
+    const task = state.tasks[0];
+    const completed = { ...state, tasks: [{ ...task, status: 'completed' }] };
+    const view = buildMoneyHomeView(completed, householdOf(completed), { nowMs: MORNING });
+    assert.equal(view.otherOpenTasks.length, 0);
   });
 });
