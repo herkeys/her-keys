@@ -12,9 +12,10 @@
 \pset tuples_only on
 
 -- 34 from Build 4 (IR01, F08, F05 and F09 add none), plus HK-FEATURE-10's career_opportunities, HK-FEATURE-11's two
--- (rebuild_focuses, rebuild_focus_links) and HK-FEATURE-12's two owner-private Life Admin tables.
-SELECT CASE WHEN count(*) = 39 THEN 'PASS' ELSE 'FAIL' END
-       || ' | 39 application tables exist after the migrations (34 + 1 HK-FEATURE-10 + 2 HK-FEATURE-11 + 2 HK-FEATURE-12) (' || count(*)::text || ')'
+-- (rebuild_focuses, rebuild_focus_links), HK-FEATURE-12's two owner-private Life Admin tables and HK-FEATURE-13's two
+-- (person_contexts, person_task_links).
+SELECT CASE WHEN count(*) = 41 THEN 'PASS' ELSE 'FAIL' END
+       || ' | 41 application tables exist after the migrations (34 + 1 HK-FEATURE-10 + 2 HK-FEATURE-11 + 2 HK-FEATURE-12 + 2 HK-FEATURE-13) (' || count(*)::text || ')'
 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
 WHERE n.nspname = 'public' AND c.relkind = 'r';
 

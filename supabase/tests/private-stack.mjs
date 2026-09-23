@@ -18,8 +18,15 @@ const REPO = join(HERE, '..', '..');
 const DB_CONTAINER = process.env.HERKEYS_LOCAL_DB_CONTAINER ?? 'supabase_db_Her_Keys';
 const REST_REFERENCE = process.env.HERKEYS_LOCAL_REST_CONTAINER ?? 'supabase_rest_Her_Keys';
 // Overridable (like the ports) so two sessions can each run a private stack without dropping each other's database or container.
-export const PRIVATE_DB = process.env.HERKEYS_PRIVATE_DB ?? 'f08_stack';
+// HK-FEATURE-12 named the override HERKEYS_PRIVATE_DB (run.mjs sets it from HERKEYS_HARNESS_DB_PREFIX) and HK-FEATURE-13 named it
+// HERKEYS_PRIVATE_STACK_DB (run-f13.mjs); the integration honours both.
+export const PRIVATE_DB = process.env.HERKEYS_PRIVATE_DB ?? process.env.HERKEYS_PRIVATE_STACK_DB ?? 'f08_stack';
 const REST_NAME = process.env.HERKEYS_PRIVATE_REST_NAME ?? 'f08_postgrest';
+// This stack DROPS its database on start and stop, so it may only ever be given a scratch name: a feature stack (fNN_*) or a
+// harness-prefixed one (<prefix>_stack / <prefix>_postgrest). The shared `postgres` database can never be named here (HK-FEATURE-13).
+if (!/^(f\d\d_[a-z0-9_]+|[a-z][a-z0-9]{0,11}_stack)$/.test(PRIVATE_DB) || !/^(f\d\d_[a-z0-9_]+|[a-z][a-z0-9]{0,11}_postgrest)$/.test(REST_NAME)) {
+  throw new Error('a private stack is named fNN_* or <prefix>_stack / <prefix>_postgrest, and nothing else');
+}
 const REST_PORT = Number(process.env.HERKEYS_PRIVATE_REST_PORT ?? 54391);
 const API_PORT = Number(process.env.HERKEYS_PRIVATE_API_PORT ?? 54392);
 const ENV = { ...process.env, MSYS_NO_PATHCONV: '1' };
@@ -43,6 +50,8 @@ const SEQUENCE = [
   join(REPO, 'supabase', 'migrations', '20260922180000_f11_rebuild_focus.sql'),
   // HK-FEATURE-12 (Life Admin): the owner-private record tables, so the journeys can prove them over real HTTP.
   join(REPO, 'supabase', 'migrations', '20260922180000_f12_life_records.sql'),
+  // HK-FEATURE-13 (People OS): the journeys push person contexts and follow-up links (tests/support/richHousehold.mjs).
+  join(REPO, 'supabase', 'migrations', '20260922200000_f13_people_os.sql'),
 ];
 
 function buildDatabase() {

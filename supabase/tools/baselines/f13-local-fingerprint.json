@@ -1,0 +1,169 @@
+{
+  "tool": "herkeys-schema-fingerprint",
+  "toolVersion": 1,
+  "label": "HK-FEATURE-13 (People OS): a BARE local database (auth stub + the five WAVE3_BASE migrations + 20260922200000_f13_people_os.sql), measured by scripts-dev/f13-fingerprint.mjs. OLD (same method, WAVE3_BASE only) #GATING d739ceb48aaccadfb6cb47bb65d34f06 / 3622 facts. A bare database carries 7 fewer default-ACL facts than the Supabase default database.",
+  "searchPath": "''",
+  "scope": [
+    "public",
+    "private"
+  ],
+  "dimensions": {
+    "columns": {
+      "items": 752,
+      "digest": "a8efbd6a2c4a4215cf4b0347acbd42b6"
+    },
+    "constraints": {
+      "items": 719,
+      "digest": "20d71fa635b842cbc5ac68d9b8515625"
+    },
+    "functions": {
+      "items": 29,
+      "digest": "5437d799daab753768427a0d9f1f928a"
+    },
+    "indexes": {
+      "items": 301,
+      "digest": "064a680227b75a8682e232a2f843227d"
+    },
+    "info.event_triggers": {
+      "items": 1,
+      "digest": "59e25e4e9c8608adfc2d8f367591c5ab"
+    },
+    "info.extensions": {
+      "items": 1,
+      "digest": "e24dc995b588dbfb9121b42035cd8b7f"
+    },
+    "policies": {
+      "items": 90,
+      "digest": "d1112d2809301ba0bac2c434fc82bd80"
+    },
+    "privileges.columns": {
+      "items": 759,
+      "digest": "cd4a57ced53532cc11fe04b818e141ae"
+    },
+    "privileges.default_acl": {
+      "items": 4,
+      "digest": "1a7423677ff57d156ec66b85b4a8639d"
+    },
+    "privileges.effective": {
+      "items": 327,
+      "digest": "49d2c251e941c4ceac32af84be054718"
+    },
+    "privileges.functions": {
+      "items": 57,
+      "digest": "6966c118ca8e498ef4b113cabf1ae98c"
+    },
+    "privileges.relations": {
+      "items": 621,
+      "digest": "610ece3cd4200ec20335f1e8c61e922f"
+    },
+    "privileges.schemas": {
+      "items": 6,
+      "digest": "e060782b116f3451ea975d7595a3c125"
+    },
+    "relations": {
+      "items": 37,
+      "digest": "fca81d29a132c007ba9482ea87c4d798"
+    },
+    "schemas": {
+      "items": 2,
+      "digest": "0e57bd8fd092941a34193a365f9fd211"
+    },
+    "triggers": {
+      "items": 112,
+      "digest": "1e9da3e33f16086fd6902080b693e20c"
+    }
+  },
+  "gating": {
+    "items": 3816,
+    "digest": "9a9153e389d576c87275bf96b97322ff"
+  },
+  "old": {
+    "gating": {
+      "items": 3622,
+      "digest": "d739ceb48aaccadfb6cb47bb65d34f06"
+    }
+  },
+  "changed": [
+    {
+      "dimension": "columns",
+      "items": "716 -> 752",
+      "added": 36,
+      "removed": 0,
+      "removedLines": []
+    },
+    {
+      "dimension": "constraints",
+      "items": "681 -> 719",
+      "added": 39,
+      "removed": 1,
+      "removedLines": [
+        "public.change_log|change_log_entity_table_check|type=c|CHECK ((entity_table = ANY (ARRAY['households'::text, 'household_members'::text, 'household_categories'::text, 'events'::text, 'tasks'::text, 'household_systems'::text, 'meal_plan_entries'::text, 'onboarding_state'::text, 'one_move_records'::text, 'needs_me_items'::text, 'discovery_records'::text, 'action_records'::text, 'source_artifacts'::text, 'interpretations'::text, 'external_references'::text, 'behavior_observations'::text, 'automation_authorities'::text, 'action_intents'::text, 'intent_decisions'::text, 'action_executions'::text, 'action_outcomes'::text, 'household_people'::text, 'responsibilities'::text, 'dependencies'::text, 'recurrence_rules'::text, 'goals'::text, 'system_steps'::text, 'capacity_profiles'::text, 'patterns'::text, 'evidence_links'::text])))|validated=t|deferrable=f|deferred=f"
+      ]
+    },
+    {
+      "dimension": "functions",
+      "items": "28 -> 29",
+      "added": 2,
+      "removed": 1,
+      "removedLines": [
+        "public.sync_push(p_entity_table text, p_device_id uuid, p_row jsonb)|returns=jsonb|lang=plpgsql|kind=f|secdef=f|volatility=v|leakproof=f|strict=f|parallel=u|config={\"search_path=\\\"\\\"\"}|owner=postgres|body_md5=1c3d99a647126ec08136a652b08b49c9"
+      ]
+    },
+    {
+      "dimension": "indexes",
+      "items": "284 -> 301",
+      "added": 17,
+      "removed": 0,
+      "removedLines": []
+    },
+    {
+      "dimension": "policies",
+      "items": "85 -> 90",
+      "added": 5,
+      "removed": 0,
+      "removedLines": []
+    },
+    {
+      "dimension": "privileges.columns",
+      "items": "725 -> 759",
+      "added": 34,
+      "removed": 0,
+      "removedLines": []
+    },
+    {
+      "dimension": "privileges.effective",
+      "items": "310 -> 327",
+      "added": 17,
+      "removed": 0,
+      "removedLines": []
+    },
+    {
+      "dimension": "privileges.functions",
+      "items": "55 -> 57",
+      "added": 2,
+      "removed": 0,
+      "removedLines": []
+    },
+    {
+      "dimension": "privileges.relations",
+      "items": "587 -> 621",
+      "added": 34,
+      "removed": 0,
+      "removedLines": []
+    },
+    {
+      "dimension": "relations",
+      "items": "35 -> 37",
+      "added": 2,
+      "removed": 0,
+      "removedLines": []
+    },
+    {
+      "dimension": "triggers",
+      "items": "104 -> 112",
+      "added": 8,
+      "removed": 0,
+      "removedLines": []
+    }
+  ]
+}

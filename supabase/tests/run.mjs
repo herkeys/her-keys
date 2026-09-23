@@ -50,6 +50,8 @@ const F05 = join(REPO, 'supabase', 'migrations', '20260921190000_f05_add_child_a
 const F11 = join(REPO, 'supabase', 'migrations', '20260922180000_f11_rebuild_focus.sql');
 // HK-FEATURE-12 (Life Admin / Documents): additive, follows F05 and never edits it. Two owner-private tables.
 const F12 = join(REPO, 'supabase', 'migrations', '20260922180000_f12_life_records.sql');
+// HK-FEATURE-13 (People OS, a Wave 4 prebuild): additive, follows F05 and never edits it. Two owner-private tables.
+const F13 = join(REPO, 'supabase', 'migrations', '20260922200000_f13_people_os.sql');
 const AUTH_STUB = join(HERE, 'helpers', '00-auth-stub.sql');
 const TEST_HELPERS = join(HERE, 'helpers', '01-test-helpers.sql');
 const TEST_DEFAULTS = join(HERE, 'helpers', '05-test-defaults.sql');
@@ -87,6 +89,7 @@ const applyF08 = (db, opts = {}) => psqlFile(db, F08, opts);
 const applyF05 = (db, opts = {}) => psqlFile(db, F05, opts);
 const applyF11 = (db, opts = {}) => psqlFile(db, F11, opts);
 const applyF12 = (db, opts = {}) => psqlFile(db, F12, opts);
+const applyF13 = (db, opts = {}) => psqlFile(db, F13, opts);
 
 function admin(sql) {
   return execFileSync(
@@ -129,6 +132,7 @@ function envA() {
   applyF05(dbName('env_a'), { label: 'ENV A f05' });
   applyF11(dbName('env_a'), { label: 'ENV A f11' });
   applyF12(dbName('env_a'), { label: 'ENV A f12' });
+  applyF13(dbName('env_a'), { label: 'ENV A f13' });
 
   check('ENV A: Build 4 migration applies on an empty surface', true);
   check('ENV A: the additive F12 migration (Life Admin records) applies on top of all of them (fresh install)', true);
@@ -139,6 +143,13 @@ function envA() {
         && scalar(dbName('env_a'), "select count(*) from pg_constraint where conname in ('life_records_scope_check','life_record_task_links_scope_check');") === '2');
   check('ENV A: the F12 link guard runs as the CALLER (SECURITY INVOKER), pinned to an empty search_path, not executable by anon',
         scalar(dbName('env_a'), "select (not p.prosecdef)::text || '/' || coalesce(array_to_string(p.proconfig, ','), 'none') || '/' || has_function_privilege('anon', p.oid, 'EXECUTE')::text from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='private' and p.proname='guard_life_record_task_link';") === 'true/search_path=""/false');
+  check('ENV A: the additive F13 migration (People OS) applies on top of all of them (fresh install)', true);
+  check('ENV A: F13 left sync_push SECURITY INVOKER, and its follow-up guard is an invoker trigger function nobody may EXECUTE',
+        scalar(dbName('env_a'), "select string_agg(p.proname || '=' || (not p.prosecdef)::text || '/' || has_function_privilege('authenticated', p.oid, 'EXECUTE')::text, ',' order by p.proname) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname in ('sync_push','guard_follow_up_task');")
+          === 'guard_follow_up_task=true/false,sync_push=true/true');
+  check('ENV A: F13 gave the client NO table-level INSERT, UPDATE or DELETE on its tables (named columns only; links never updatable)',
+        scalar(dbName('env_a'), "select count(*) from information_schema.role_table_grants where table_schema='public' and table_name in ('person_contexts','person_task_links') and grantee in ('authenticated','anon','PUBLIC') and privilege_type <> 'SELECT';") === '0'
+        && scalar(dbName('env_a'), "select count(*) from information_schema.column_privileges where table_schema='public' and table_name='person_task_links' and grantee='authenticated' and privilege_type='UPDATE';") === '0');
   check('ENV A: the additive IR01 migration applies on top of it (fresh install)', true);
   check('ENV A: the additive F08 migration applies on top of IR01 (fresh install)', true);
   check('ENV A: meal_plan_entries.meal_slot and .status are text NOT NULL defaulting to unspecified and active (a legacy row is a live plan with no stated slot)',
@@ -156,8 +167,8 @@ function envA() {
   check('ENV A: tasks.duration_source is nullable text with no default (an unstated source is unknown)',
         scalar(dbName('env_a'), "select data_type || '/' || is_nullable || '/' || coalesce(column_default, 'none') from information_schema.columns where table_schema='public' and table_name='tasks' and column_name='duration_source';") === 'text/YES/none');
   // 34 through F05, plus HK-FEATURE-10's career_opportunities, HK-FEATURE-11's two (rebuild_focuses, rebuild_focus_links) and
-  // HK-FEATURE-12's two (life_records, life_record_task_links).
-  check('ENV A: 39 application tables (34 + 1 HK-FEATURE-10 + 2 HK-FEATURE-11 + 2 HK-FEATURE-12)', scalar(dbName('env_a'), "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r';") === '39');
+  // HK-FEATURE-12's two (life_records, life_record_task_links) and HK-FEATURE-13's two (person_contexts, person_task_links).
+  check('ENV A: 41 application tables (34 + 1 HK-FEATURE-10 + 2 HK-FEATURE-11 + 2 HK-FEATURE-12 + 2 HK-FEATURE-13)', scalar(dbName('env_a'), "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r';") === '41');
   check('ENV A: the additive F11 migration (Me / Rebuild) applies on top of all of them (fresh install)', true);
   check('ENV A: the two F11 tables are owner-private: RLS on, owner-only SELECT/INSERT/UPDATE policies, NO DELETE policy',
         scalar(dbName('env_a'), "select string_agg(tablename || ':' || cmd, ',' order by tablename, cmd) from pg_policies where schemaname='public' and tablename in ('rebuild_focuses','rebuild_focus_links');")
@@ -270,6 +281,7 @@ function envC(only) {
   applyF05(dbName('env_c'), { label: 'ENV C f05 (while empty)' });
   applyF11(dbName('env_c'), { label: 'ENV C f11 (while empty)' });
   applyF12(dbName('env_c'), { label: 'ENV C f12 (while empty)' });
+  applyF13(dbName('env_c'), { label: 'ENV C f13 (while empty)' });
   check('ENV C: migrated while empty, before any fixture exists', true);
   // Test-environment convenience ONLY: see the header of helpers/05-test-defaults.sql.
   psqlFile(dbName('env_c'), TEST_DEFAULTS, { label: 'ENV C test defaults' });
@@ -408,11 +420,11 @@ function migrationQuality() {
   const after = migs.filter((f) => f.split('_')[0] > '20260919230054');
   // Integration assembly (INT13-00d): the union of every feature's migration, F09's included (F09 never registered its migration here).
   // INT13-01 replaces this with one ordered chain whose versions are unique.
-  check('quality: exactly ONE Build 4 shipping migration plus the additive IR01, F08, F05, F09, F11 and F12 migrations after the baseline',
-        after.length === 7 && after[0] === '20260919231500_build4_cloud_schema.sql' && after[1] === '20260921120000_ir01_duration_source_and_claim_v3.sql'
+  check('quality: exactly ONE Build 4 shipping migration plus the additive IR01, F08, F05, F09, F11, F12 and F13 migrations after the baseline',
+        after.length === 8 && after[0] === '20260919231500_build4_cloud_schema.sql' && after[1] === '20260921120000_ir01_duration_source_and_claim_v3.sql'
         && after[2] === '20260921160000_f08_meal_slot_and_status.sql' && after[3] === '20260921190000_f05_add_child_after_binding.sql'
         && after[4] === '20260922180000_f09_task_payment_mechanism.sql' && after[5] === '20260922180000_f11_rebuild_focus.sql'
-        && after[6] === '20260922180000_f12_life_records.sql', after.join(', '));
+        && after[6] === '20260922180000_f12_life_records.sql' && after[7] === '20260922200000_f13_people_os.sql', after.join(', '));
   check('quality: their timestamps sort strictly after the baseline, in order', after.every((f) => f.split('_')[0] > '20260919230054') && after.every((f, i) => i === 0 || after[i - 1] < f), after.join(' < '));
   const f11Sql = readFileSync(F11, 'utf8');
   const f11Code = f11Sql.replace(/\$fn\$[\s\S]*?\$fn\$/g, '').replace(/--.*$/gm, '');
@@ -442,6 +454,18 @@ function migrationQuality() {
   check('quality: the F12 migration is pinned to LF, so its function digests are the same on every checkout', !f12Sql.includes(String.fromCharCode(13)));
   check('quality: the F12 migration opens and closes its own transaction and ends with the fail-closed assertion',
         /^\s*BEGIN;\s*$/m.test(f12Sql) && f12Sql.trim().endsWith('SELECT private.assert_app_schema_secured();\n\nCOMMIT;'));
+  const f13Sql = readFileSync(F13, 'utf8');
+  const f13Code = f13Sql.replace(/\$fn\$[\s\S]*?\$fn\$/g, '').replace(/--.*$/gm, '');
+  check('quality: the F13 migration is additive - it drops no table or column, rewrites and deletes no row, and alters no existing table but the change-log CHECK it widens',
+        !/(^|\n)\s*(DROP TABLE|DROP COLUMN|TRUNCATE|DELETE FROM|UPDATE public\.|INSERT INTO)/i.test(f13Code)
+        && [...f13Code.matchAll(/ALTER TABLE public\.(\w+)/g)].every((m) => ['person_contexts', 'person_task_links', 'change_log'].includes(m[1]))
+        && (f13Code.match(/DROP CONSTRAINT (\w+)/g) ?? []).join() === 'DROP CONSTRAINT change_log_entity_table_check');
+  check('quality: the F13 migration touches exactly two functions (the new follow-up guard and the replaced sync_push)',
+        (f13Sql.match(/^CREATE (OR REPLACE )?FUNCTION [\w.]+/gm) ?? []).map((s) => s.replace(/^CREATE (OR REPLACE )?FUNCTION /, '')).join(',') === 'public.guard_follow_up_task,public.sync_push');
+  check('quality: the F13 migration grants no DELETE and no TRUNCATE to a client', !/\bGRANT\b[^;]*\b(DELETE|TRUNCATE)\b[^;]*\bTO (authenticated|anon)/i.test(f13Code));
+  check('quality: the F13 migration is pinned to LF, so its function digest is the same on every checkout', !f13Sql.includes(String.fromCharCode(13)));
+  check('quality: the F13 migration opens and closes its own transaction and ends with the fail-closed assertion',
+        /^\s*BEGIN;\s*$/m.test(f13Sql) && f13Sql.trim().endsWith('SELECT private.assert_app_schema_secured();\n\nCOMMIT;'));
   const ir01Sql = readFileSync(IR01, 'utf8');
   check('quality: the IR01 migration is additive - it drops no table, column or data and rewrites no row',
         !/(^|\n)\s*(DROP TABLE|DROP COLUMN|TRUNCATE|DELETE FROM|UPDATE public\.)/i.test(ir01Sql.replace(/\$fn\$[\s\S]*?\$fn\$/g, '').replace(/--.*$/gm, '')));
@@ -731,6 +755,38 @@ function envD() {
           COMMIT;`, { expectFailure: true, label: 'ENV D stranger record' }).out.includes('not a member of household')
         && scalar(db, "select count(*) from public.life_records where local_id = 'evil';") === '0');
   check('ENV D: the fail-closed assertion still passes after F12', psql(db, 'SELECT private.assert_app_schema_secured();').ok);
+
+  // ---- The FIFTH additive upgrade, on the same populated database: F13 (People OS). Two new, empty, owner-private tables, a widened
+  // change-log CHECK and a replaced sync_push. It must lose nothing, rewrite nothing, and work at once on the household's existing rows.
+  const preF13 = { census: census(), members: memberDigest(), tasks: digest(), people: scalar(db, "SELECT count(*) FROM public.household_people;") };
+  applyF13(db, { label: 'ENV D f13 upgrade' });
+  check('ENV D: the additive F13 migration applies to the populated, already-upgraded database (no interlock, no abort)', true);
+  check('ENV D: F13 lost nothing and rewrote nothing (row counts, every member and every task byte-identical)',
+        census() === preF13.census && memberDigest() === preF13.members && digest() === preF13.tasks
+        && scalar(db, "SELECT count(*) FROM public.household_people;") === preF13.people, `${preF13.census} -> ${census()}`);
+  check('ENV D: the two People tables arrive EMPTY — no context or link is ever invented for an existing household',
+        scalar(db, "SELECT (SELECT count(*) FROM public.person_contexts) || '/' || (SELECT count(*) FROM public.person_task_links);") === '0/0');
+  const childOne = scalar(db, `select id from public.household_members where household_id = '${uidHouse}' and local_id = 'child-1';`);
+  const pushPeople = (sub, table, row) => scalar(db, `
+    BEGIN;
+    SET LOCAL ROLE authenticated;
+    SET LOCAL request.jwt.claims = '{"sub":"${sub}"}';
+    SELECT public.sync_push('${table}', 'd3000000-0000-4000-8000-0000000000f1'::uuid, '${JSON.stringify(row).replace(/'/g, "''")}'::jsonb) ->> 'status';
+    COMMIT;`).split('\n').map((line) => line.trim()).find((line) => ['created', 'already_exists', 'local_id_collision'].includes(line));
+  const contextRow = { household_id: uidHouse, profile_id: uid, local_id: 'pctx-upgrade-1', child_id: childOne, relationship_name: 'Daughter', status: 'active', producer: 'user-action', origin_created_at: '2026-09-22T12:00:00Z', origin_updated_at: '2026-09-22T12:00:00Z' };
+  check('ENV D: after F13 the owner can push a private context about the PRE-EXISTING child (the upgrade works on old identities)', pushPeople(uid, 'person_contexts', contextRow) === 'created');
+  check('ENV D: ...and a retry from the same install answers already_exists with one row', pushPeople(uid, 'person_contexts', contextRow) === 'already_exists'
+        && scalar(db, "select count(*) from public.person_contexts where local_id = 'pctx-upgrade-1';") === '1');
+  check('ENV D: ...a follow-up link onto a PRE-EXISTING household-visible task is refused (private context never links to a shared task)',
+        psql(db, `
+          BEGIN;
+          SET LOCAL ROLE authenticated;
+          SET LOCAL request.jwt.claims = '{"sub":"${uid}"}';
+          SELECT public.sync_push('person_task_links', 'd3000000-0000-4000-8000-0000000000f1'::uuid, jsonb_build_object('household_id','${uidHouse}','profile_id','${uid}','local_id','ptl-upgrade',
+            'context_id',(select id from public.person_contexts where local_id='pctx-upgrade-1'),'follow_up_type','task',
+            'follow_up_task_id',(select id from public.tasks where household_id='${uidHouse}' and local_id='task-15'),'relation','follow_up','producer','user-action','origin_created_at',now()));
+          COMMIT;`, { expectFailure: true, label: 'ENV D f13 shared-task link' }).out.includes('a follow-up must be one of your own private tasks'));
+  check('ENV D: the fail-closed assertion still passes after F13', psql(db, 'SELECT private.assert_app_schema_secured();').ok);
 }
 
 // ---------------------------------------------------------------- ENV E -----
@@ -883,8 +939,19 @@ try {
   }
   // The Kids journey runs against the local stack's default database, exactly as the composition journey does; it needs no ENV C.
   // Feature 08 (meals) already ran its own ENV C (suite 77), scoped to its own migration, above; it is not re-run here.
+  if (only === 'people') {
+    // HK-FEATURE-13 (People OS) evidence on its own: the migration gate, a fresh install, the populated upgrade (ENV D ends with
+    // F13), the People suites (79-f13-*) in ENV C, and the People journeys over real HTTP on a private stack.
+    migrationQuality();
+    envA();
+    envD();
+    envC('79');
+    await startJourneyStack();
+    const { peopleJourneys } = await import(`file://${join(HERE, 'journey-people.mjs')}`);
+    await peopleJourneys(check, psql);
+  }
   // The Me / Rebuild journey (HK-FEATURE-11) needs no ENV C either; its RLS matrix is ENV C suite 78, run with the others.
-  if (only !== 'kids' && only !== 'f08' && only !== 'rebuild') envC(only);
+  if (only !== 'kids' && only !== 'f08' && only !== 'rebuild' && only !== 'people') envC(only);
   if (!only || only === 'parity') {
     const { authorizationParity } = await import(`file://${join(HERE, 'authorization-parity.mjs')}`);
     await authorizationParity(check, psql, dbName('env_c'));
@@ -926,6 +993,9 @@ try {
     // HK-FEATURE-12: Life Admin records, their Tasks and links over real HTTP, including a same-household member's hydration.
     const { lifeAdminJourneys } = await import(`file://${join(HERE, 'journey-life-admin.mjs')}`);
     await lifeAdminJourneys(check, psql);
+    // HK-FEATURE-13 (People OS).
+    const { peopleJourneys } = await import(`file://${join(HERE, 'journey-people.mjs')}`);
+    await peopleJourneys(check, psql);
   }
   if (privateStack) await privateStack.stop();
 } catch (err) {

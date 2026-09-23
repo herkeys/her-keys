@@ -3,6 +3,7 @@ import { emptyEventFacets, emptyMealFacets, emptySystemFacets, emptyTaskFacets }
 import type { CareerOpportunity } from '../../domain/foundation/opportunity';
 import type { Dependency } from '../../domain/foundation/structure';
 import { demoProvenance } from '../../domain/foundation/provenance';
+import { DEMO_PEOPLE, DEMO_PERSON_CONTEXTS } from './demoPeople';
 import { addDays, addYears, toInstant, zonedTimeToEpochMs, type LocalDate } from '../../domain/logicalDay';
 import { initialOnboarding } from '../../domain/onboarding';
 import type { AppState, CalendarEvent, Child, HouseholdSystem, MealPlanEntry, Task, VisibilityScope } from '../../domain/state';
@@ -218,7 +219,8 @@ export function materializeDemoState({ anchorDate, timeZone }: { anchorDate: Loc
     decisions: [],
     executions: [],
     outcomes: [],
-    people: [],
+    // People OS (HK-FEATURE-13): a fictional demo cast, two of whom share a name on purpose.
+    people: DEMO_PEOPLE.map((row) => ({ ...row })),
     responsibilities: [],
     dependencies: opportunityDependencies,
     recurrences: [],
@@ -232,5 +234,7 @@ export function materializeDemoState({ anchorDate, timeZone }: { anchorDate: Loc
     rebuildFocusLinks: [],
     lifeRecords: demoLifeRecords(anchorDate, instantOn(0, 9 * 60)),
     lifeRecordLinks: [],
+    personContexts: DEMO_PERSON_CONTEXTS.map((row) => ({ ...row })),
+    personTaskLinks: [],
   };
 }

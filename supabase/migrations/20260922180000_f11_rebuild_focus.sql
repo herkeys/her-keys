@@ -85,9 +85,9 @@ REVOKE ALL ON FUNCTION private.rebuild_focus_link_target_visible() FROM PUBLIC, 
 -- 2. The two tables (generated from the manifest)
 -- ============================================================================
 
--- >>> GENERATED f11-tables — supabase/tools/gen-foundation-sql.mjs from src/domain/sync/foundationSpecs.ts.
+-- >>> GENERATED additive-tables — supabase/tools/gen-foundation-sql.mjs from src/domain/sync/foundationSpecs.ts.
 -- >>> Do not edit by hand: edit the manifest and regenerate. A test fails on any difference.
--- Phase 1 — the tables. Columns only.
+-- Phase 1 — the tables.
 CREATE TABLE public.rebuild_focuses (
   id                 uuid NOT NULL DEFAULT gen_random_uuid(),
   household_id       uuid NOT NULL,
@@ -137,7 +137,7 @@ CREATE TABLE public.rebuild_focus_links (
 
 ALTER TABLE public.rebuild_focus_links ENABLE ROW LEVEL SECURITY;
 
--- Phase 2 — the keys every reference depends on.
+-- Phase 2 — their keys.
 ALTER TABLE public.rebuild_focuses ADD CONSTRAINT rebuild_focuses_pkey PRIMARY KEY (id);
 ALTER TABLE public.rebuild_focuses ADD CONSTRAINT rebuild_focuses_id_household_id_profile_id_key UNIQUE (id, household_id, profile_id);
 ALTER TABLE public.rebuild_focuses ADD CONSTRAINT rebuild_focuses_household_id_profile_id_local_id_key UNIQUE (household_id, profile_id, local_id);
@@ -145,7 +145,7 @@ ALTER TABLE public.rebuild_focus_links ADD CONSTRAINT rebuild_focus_links_pkey P
 ALTER TABLE public.rebuild_focus_links ADD CONSTRAINT rebuild_focus_links_id_household_id_profile_id_key UNIQUE (id, household_id, profile_id);
 ALTER TABLE public.rebuild_focus_links ADD CONSTRAINT rebuild_focus_links_household_id_profile_id_local_id_key UNIQUE (household_id, profile_id, local_id);
 
--- Phase 3 — every table's constraints, indexes, triggers and policies.
+-- Phase 3 — constraints, indexes, triggers and policies.
 -- rebuild_focuses
 ALTER TABLE public.rebuild_focuses ADD CONSTRAINT rebuild_focuses_household_id_fkey FOREIGN KEY (household_id) REFERENCES public.households(id) ON DELETE CASCADE;
 ALTER TABLE public.rebuild_focuses ADD CONSTRAINT rebuild_focuses_profile_id_fkey FOREIGN KEY (profile_id) REFERENCES public.profiles(id) ON DELETE CASCADE;
@@ -236,7 +236,7 @@ CREATE POLICY rebuild_focus_links_update_own ON public.rebuild_focus_links
   FOR UPDATE TO authenticated
   USING ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id))
   WITH CHECK ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id));
--- <<< GENERATED f11-tables
+-- <<< GENERATED additive-tables
 
 -- Nothing relies on a default (Build 4 section 9, B4-P0-040). The stock default privileges hand every NEW public table to the client
 -- roles with every verb; strip them from both tables first, keep the trusted server role's full access, and then grant exactly the
@@ -244,9 +244,8 @@ CREATE POLICY rebuild_focus_links_update_own ON public.rebuild_focus_links
 REVOKE ALL ON TABLE public.rebuild_focuses, public.rebuild_focus_links FROM PUBLIC, anon, authenticated;
 GRANT ALL ON TABLE public.rebuild_focuses, public.rebuild_focus_links TO service_role;
 
--- >>> GENERATED f11-grants — supabase/tools/gen-foundation-sql.mjs from src/domain/sync/foundationSpecs.ts.
+-- >>> GENERATED additive-grants — supabase/tools/gen-foundation-sql.mjs from src/domain/sync/foundationSpecs.ts.
 -- >>> Do not edit by hand: edit the manifest and regenerate. A test fails on any difference.
--- Owner-private, client-written: SELECT, INSERT of the stated columns, UPDATE of the editable ones. No DELETE.
 GRANT SELECT ON public.rebuild_focuses TO authenticated;
 GRANT INSERT (household_id, local_id, origin_device_id, profile_id, title, note, state, producer, 
               source_artifact_id, confidence, scope, origin_created_at, origin_updated_at)
@@ -260,7 +259,7 @@ GRANT INSERT (household_id, local_id, origin_device_id, profile_id, focus_id, ta
   ON public.rebuild_focus_links TO authenticated;
 GRANT UPDATE (status, confidence, origin_updated_at)
   ON public.rebuild_focus_links TO authenticated;
--- <<< GENERATED f11-grants
+-- <<< GENERATED additive-grants
 
 -- ============================================================================
 -- 3. The change log may carry the two new tables

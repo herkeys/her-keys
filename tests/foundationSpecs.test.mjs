@@ -10,20 +10,24 @@ import { KIND_CLOUD } from '../src/domain/foundation/typedRef.ts';
 import {
   EXISTING_FACETS,
   FOUNDATION_KIND_NAMES,
+  F11_REBUILD_MIGRATION,
+  F13_PEOPLE_MIGRATION,
   FOUNDATION_SPECS,
-  LATER_MIGRATIONS,
   PROVENANCE_EXISTING,
+  SHIPPING_MIGRATION,
   columnsOfSpec,
+  migrationOf,
 } from '../src/domain/sync/foundationSpecs.ts';
 import { ALLOWED_OPS, CLOUD_TABLE, DEPENDENCY_RANK, SYNC_ENTITY_KINDS, UPDATABLE_COLUMNS } from '../src/domain/sync/syncTypes.ts';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = join(HERE, '..');
-const readMigration = (name) => readFileSync(join(REPO, 'supabase', 'migrations', name), 'utf8').replace(/\r\n/g, '\n');
-const MIGRATION = readMigration('20260919231500_build4_cloud_schema.sql');
-/** The migration file that creates a kind's table: Build 4, or the later additive migration its spec names (HK-FEATURE-11). */
-const migrationOf = (spec) => (spec.migration === undefined ? MIGRATION : readMigration(LATER_MIGRATIONS[spec.migration]));
-/** Every migration, in the order they apply, so a check can read the LATEST definition of an object a later file replaces. */
+const readMigration = (file) => readFileSync(join(REPO, 'supabase', 'migrations', file), 'utf8').replace(/\r\n/g, '\n');
+const MIGRATION = readMigration(SHIPPING_MIGRATION);
+/** The migration that carries a kind's generated DDL: the shipping one, or the additive one it names (HK-FEATURE-11, HK-FEATURE-13). */
+const migrationTextOf = (spec) => readMigration(migrationOf(spec));
+const SHIPPED_SPECS = FOUNDATION_SPECS.filter((s) => migrationOf(s) === SHIPPING_MIGRATION);
+/** Every migration, in the order they apply, so a check can read the LATEST definition of an object a later file replaces (HK-FEATURE-11). */
 const ALL_MIGRATIONS = readdirSync(join(REPO, 'supabase', 'migrations')).filter((f) => f.endsWith('.sql')).sort().map(readMigration);
 const latest = (marker) => [...ALL_MIGRATIONS].reverse().find((text) => text.includes(marker));
 
@@ -42,7 +46,7 @@ describe('the manifest agrees with the local schemas', () => {
     test(`${spec.kind}: every stored field is described, and nothing is described that is not stored`, () => {
       let inner = AppStateSchema.shape[spec.collection];
       assert.ok(inner, `AppState has no ${spec.collection}`);
-      if (inner.def?.type === 'default') inner = inner.def.innerType; // HK-FEATURE-11's collections default to [] for older saves
+      if (inner.def?.type === 'default') inner = inner.def.innerType; // an additive collection (HK-FEATURE-11, -13) defaults to [] for older saves
       if (inner.def?.type === 'nullable') inner = inner.def.innerType;
       if (inner.def?.type === 'array') inner = inner.def.element;
       const stored = new Set(Object.keys(inner.shape));
@@ -75,13 +79,14 @@ describe('the manifest agrees with the local schemas', () => {
 
 describe('the manifest agrees with the sync engine', () => {
   test('every foundation kind is a sync kind with a table, an identity and its operations', () => {
-    // Eighteen Build 4 foundation kinds, plus HK-FEATURE-10's `opportunity` and the two HK-FEATURE-11 (Me / Rebuild) kinds, each
-    // created by an additive migration of its own (the shipping migration's kind set never changes).
-    assert.equal(FOUNDATION_SPECS.length, 21);
-    assert.equal(FOUNDATION_SPECS.filter((s) => s.migration === undefined).length, 18, 'the Build 4 set is unchanged');
-    assert.deepEqual(FOUNDATION_SPECS.filter((s) => s.migration === 'f11').map((s) => s.kind), ['rebuildFocus', 'rebuildFocusLink']);
+    // Eighteen shipped with the foundation. Every later kind — HK-FEATURE-10's `opportunity`, HK-FEATURE-11's two, HK-FEATURE-13's
+    // two — is created by an additive migration of its own: the shipping migration's kind set never changes.
+    assert.equal(SHIPPED_SPECS.length, 18, 'the Build 4 set is unchanged');
+    assert.equal(FOUNDATION_SPECS.length, 23);
+    assert.deepEqual(FOUNDATION_SPECS.filter((s) => migrationOf(s) === F11_REBUILD_MIGRATION).map((s) => s.kind), ['rebuildFocus', 'rebuildFocusLink']);
+    assert.deepEqual(FOUNDATION_SPECS.filter((s) => migrationOf(s) === F13_PEOPLE_MIGRATION).map((s) => s.kind), ['personContext', 'personTaskLink']);
     assert.deepEqual([...FOUNDATION_SPECS.map((s) => s.kind)].sort(), [...FOUNDATION_KIND_NAMES].sort());
-    assert.equal(new Set(FOUNDATION_SPECS.map((s) => s.table)).size, 21, 'no two kinds share a table');
+    assert.equal(new Set(FOUNDATION_SPECS.map((s) => s.table)).size, 23, 'no two kinds share a table');
     for (const spec of FOUNDATION_SPECS) {
       assert.ok(SYNC_ENTITY_KINDS.includes(spec.kind));
       assert.equal(CLOUD_TABLE[spec.kind], spec.table);
@@ -106,8 +111,9 @@ describe('the manifest agrees with the sync engine', () => {
     }
   });
 
-  test('the migration\'s change log can carry every foundation table, and push can reach every client-written one', () => {
-    // The LATEST definitions: a later migration that re-creates the check or replaces sync_push must still carry every kind.
+  test('the LATEST change-log check and sync_push carry every foundation table: no later migration drops an earlier registration', () => {
+    // (HK-FEATURE-11) A later migration that re-creates the check or replaces sync_push must still carry every kind — otherwise the
+    // sibling feature whose migration applies LAST silently removes the others' tables from the change log and the push allow-list.
     const logText = latest('ADD CONSTRAINT change_log_entity_table_check');
     const logStart = logText.lastIndexOf('ADD CONSTRAINT change_log_entity_table_check');
     const changeLog = logText.slice(logStart, logText.indexOf(']));', logStart));
@@ -115,6 +121,19 @@ describe('the manifest agrees with the sync engine', () => {
     const pushStart = Math.max(pushText.lastIndexOf('CREATE FUNCTION public.sync_push('), pushText.lastIndexOf('CREATE OR REPLACE FUNCTION public.sync_push('));
     const push = pushText.slice(pushStart, pushText.indexOf('REVOKE ALL ON FUNCTION public.sync_push', pushStart));
     for (const spec of FOUNDATION_SPECS) {
+      assert.ok(changeLog.includes(`'${spec.table}'`), `${spec.table} is missing from the latest change_log_entity_table_check`);
+      if (spec.serverWritten) assert.ok(!push.includes(`'${spec.table}'`), `${spec.table} is server-written and must not be pushable`);
+      else assert.ok(push.includes(`'${spec.table}'`), `${spec.table} is missing from the latest sync_push allow-list`);
+    }
+  });
+
+  test('the migration\'s change log can carry every foundation table, and push can reach every client-written one', () => {
+    for (const spec of FOUNDATION_SPECS) {
+      // (HK-FEATURE-13) Each kind is registered in the migration that creates it (the additive one re-issues the check and sync_push whole).
+      const text = migrationTextOf(spec);
+      const from = text.indexOf('ADD CONSTRAINT change_log_entity_table_check');
+      const changeLog = text.slice(from, text.indexOf(']));', from));
+      const push = text.slice(text.indexOf('FUNCTION public.sync_push('), text.indexOf('REVOKE ALL ON FUNCTION public.sync_push'));
       assert.ok(changeLog.includes(`'${spec.table}'`), `${spec.table} is missing from change_log_entity_table_check`);
       if (spec.serverWritten) assert.ok(!push.includes(`'${spec.table}'`), `${spec.table} is server-written and must not be pushable`);
       else assert.ok(push.includes(`'${spec.table}'`), `${spec.table} is missing from the sync_push allow-list`);
@@ -190,11 +209,22 @@ describe('the generated SQL is the manifest, not a hand edit', () => {
       assert.equal(MIGRATION.split(`-- >>> GENERATED ${name}`).length - 1, 1, name);
       assert.equal(MIGRATION.split(`-- <<< GENERATED ${name}`).length - 1, 1, name);
     }
+    // An additive migration carries its own pair, and the shipping migration never carries an additive kind.
+    for (const file of new Set(FOUNDATION_SPECS.map(migrationOf).filter((f) => f !== SHIPPING_MIGRATION))) {
+      const text = readMigration(file);
+      for (const name of ['additive-tables', 'additive-grants']) {
+        assert.equal(text.split(`-- >>> GENERATED ${name}`).length - 1, 1, `${file}: ${name}`);
+        assert.equal(text.split(`-- <<< GENERATED ${name}`).length - 1, 1, `${file}: ${name}`);
+      }
+    }
+    for (const spec of FOUNDATION_SPECS.filter((s) => migrationOf(s) !== SHIPPING_MIGRATION)) {
+      assert.ok(!MIGRATION.includes(`CREATE TABLE public.${spec.table} (`), `${spec.table} must not be spliced into the shipping migration`);
+    }
   });
 
   test('every foundation table is created, secured and given a policy', () => {
     for (const spec of FOUNDATION_SPECS) {
-      const MIGRATION = migrationOf(spec); // the file that creates THIS table
+      const MIGRATION = migrationTextOf(spec); // the file that creates THIS table
       assert.ok(MIGRATION.includes(`CREATE TABLE public.${spec.table} (`), spec.table);
       assert.ok(MIGRATION.includes(`ALTER TABLE public.${spec.table} ENABLE ROW LEVEL SECURITY;`), spec.table);
       assert.ok(MIGRATION.includes(`CREATE POLICY ${spec.table}_select_own ON public.${spec.table}`), spec.table);

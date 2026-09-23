@@ -37,28 +37,37 @@ export type Field =
 /** What a `link` points at: another foundation/core kind by sync kind, or a household member (a child). */
 export type LinkTarget =
   | 'sourceArtifact' | 'interpretation' | 'externalReference' | 'observation' | 'authority' | 'intent' | 'decision'
-  | 'execution' | 'person' | 'responsibility' | 'goal' | 'system' | 'category' | 'member' | 'rebuildFocus';
+  | 'execution' | 'person' | 'responsibility' | 'goal' | 'system' | 'category' | 'member' | 'rebuildFocus' | 'personContext';
 
 /**
  * The synced kinds the manifest describes. A closed list, so `SyncEntityKind` stays a union of literals. The eighteen foundation
- * kinds, then HK-FEATURE-10's `opportunity` (Work / Career) and the two HK-FEATURE-11 (Me / Rebuild) kinds, which are owner-private
- * exactly like them and travel the same way.
+ * kinds, then HK-FEATURE-10's `opportunity` (Work / Career), the two HK-FEATURE-11 (Me / Rebuild) kinds and the two HK-FEATURE-13
+ * (People OS) kinds, which are owner-private exactly like them and travel the same way. Every kind after the eighteen has its DDL
+ * in an additive migration of its own (see `FoundationSpec.migration`).
  */
 export const FOUNDATION_KIND_NAMES = [
   'sourceArtifact', 'interpretation', 'externalReference', 'observation', 'authority', 'intent', 'decision', 'execution',
   'outcome', 'person', 'responsibility', 'dependency', 'recurrence', 'goal', 'systemStep', 'capacity', 'pattern', 'evidenceLink',
   'opportunity',
   'rebuildFocus', 'rebuildFocusLink',
+  'personContext', 'personTaskLink',
 ] as const;
 
 /**
- * Which migration file holds a kind's generated DDL. Absent = the Build 4 shipping migration. A later, additive migration gets its
- * own marker regions, so adding a kind never edits a shipped migration.
+ * The shipping migration the original eighteen kinds' DDL is generated into.
+ *
+ * Which migration file holds a kind's generated DDL has ONE mechanism since the F01-F13 integration. HK-FEATURE-11 keyed later
+ * migrations through a `LATER_MIGRATIONS` map and HK-FEATURE-13 named the file directly; the integration keeps HK-FEATURE-13's form,
+ * so a spec names its ADDITIVE migration file and the generator emits that kind between the file's own `additive-*` marker pair.
  */
-export const LATER_MIGRATIONS = {
-  f11: '20260922180000_f11_rebuild_focus.sql',
-} as const;
-export type LaterMigration = keyof typeof LATER_MIGRATIONS;
+export const SHIPPING_MIGRATION = '20260919231500_build4_cloud_schema.sql';
+/** HK-FEATURE-11 (Me / Rebuild): an ADDITIVE migration; the shipping migration is never regenerated for these kinds. */
+export const F11_REBUILD_MIGRATION = '20260922180000_f11_rebuild_focus.sql';
+/** HK-FEATURE-13 (People OS): an ADDITIVE migration; the shipping migration is never regenerated for these kinds. */
+export const F13_PEOPLE_MIGRATION = '20260922200000_f13_people_os.sql';
+
+/** The migration file that carries a kind's generated DDL. */
+export const migrationOf = (spec: Pick<FoundationSpec, 'migration'>): string => spec.migration ?? SHIPPING_MIGRATION;
 export type FoundationKind = (typeof FOUNDATION_KIND_NAMES)[number];
 
 export interface FoundationSpec {
@@ -95,8 +104,11 @@ export interface FoundationSpec {
    * reference graph from these fields and fails if any kind ranks at or below a kind it points at.
    */
   rank: number;
-  /** The later additive migration that creates this kind's table. Absent = the Build 4 shipping migration. */
-  migration?: LaterMigration;
+  /**
+   * The ADDITIVE migration this kind's DDL is generated into. Absent: the shipping migration. A kind added after the
+   * shipping migration was applied anywhere must never be spliced into it — that would not upgrade a populated database.
+   */
+  migration?: string;
 }
 
 // ------------------------------------------------------------------ columns ----
@@ -728,7 +740,7 @@ export const FOUNDATION_SPECS: readonly FoundationSpec[] = [
   // An area of her own life she chose to keep visible. Owner-private like every kind here. No score, no progress, no completion.
   {
     kind: 'rebuildFocus', collection: 'rebuildFocuses', table: 'rebuild_focuses', mutable: true, provenance: 'standard', profileOnDelete: 'cascade', rank: 2,
-    migration: 'f11',
+    migration: F11_REBUILD_MIGRATION,
     fields: [
       { local: 'title', col: 'title', type: 'text' },
       { local: 'note', col: 'note', type: 'text', nullable: true },
@@ -748,7 +760,7 @@ export const FOUNDATION_SPECS: readonly FoundationSpec[] = [
   // removes the link (CASCADE) rather than refusing with an error that would reveal it; unlinking is a status change.
   {
     kind: 'rebuildFocusLink', collection: 'rebuildFocusLinks', table: 'rebuild_focus_links', mutable: true, provenance: 'standard', profileOnDelete: 'cascade', rank: 3,
-    migration: 'f11',
+    migration: F11_REBUILD_MIGRATION,
     fields: [
       { local: 'focusId', col: 'focus_id', type: 'link', to: 'rebuildFocus' },
       { local: 'target', type: 'ref', prefix: 'target', kinds: ['task', 'goal', 'system', 'event'], required: true, onDelete: 'cascade' },
@@ -764,6 +776,61 @@ export const FOUNDATION_SPECS: readonly FoundationSpec[] = [
     indexes: [['live_link_uq', `ON public.rebuild_focus_links (household_id, profile_id, focus_id, target_type, COALESCE(target_task_id, target_goal_id, target_system_id, target_event_id)) WHERE status = 'active'`, true]],
     // A link may name only what its writer can see: a task/event/routine another member keeps private is "not there".
     triggers: [['target_visible', 'BEFORE', 'INSERT', 'private.rebuild_focus_link_target_visible()']],
+  },
+
+  // ----------------------------------------------------------- person context (HK-FEATURE-13, People OS)
+  {
+    // What SHE wants Her Keys to remember about one canonical person. Owner-private like every foundation row; exactly one real
+    // foreign key names the person — a CHILD member (the existing child-proving key, so the account holder, an adult, can never be
+    // named) or her own non-account person. One per owner and person, and the boundary is the OWNER's: another member of the
+    // household making her own context on the same child can never collide with, and so never learn of, this one.
+    kind: 'personContext', collection: 'personContexts', table: 'person_contexts', mutable: true, provenance: 'standard', profileOnDelete: 'cascade', rank: 3,
+    migration: F13_PEOPLE_MIGRATION,
+    fields: [
+      { local: 'childId', col: 'child_id', type: 'link', to: 'member', nullable: true },
+      { local: 'personId', col: 'person_id', type: 'link', to: 'person', nullable: true },
+      { local: 'relationshipName', col: 'relationship_name', type: 'text', nullable: true },
+      { local: 'organizationName', col: 'organization_name', type: 'text', nullable: true },
+      { local: 'contextNote', col: 'context_note', type: 'text', nullable: true },
+      { local: 'status', col: 'status', type: 'text' },
+    ],
+    // Which person it is about is fixed at insert: a context is never re-pointed at somebody else.
+    updatable: ['relationship_name', 'organization_name', 'context_note', 'status', 'origin_updated_at'],
+    checks: [
+      ['one_person_check', `(child_id IS NULL) <> (person_id IS NULL)`],
+      ['relationship_name_check', `relationship_name IS NULL OR (relationship_name = btrim(relationship_name) AND char_length(relationship_name) >= 1 AND char_length(relationship_name) <= 60 AND relationship_name !~ '[[:cntrl:]]')`],
+      ['organization_name_check', `organization_name IS NULL OR (organization_name = btrim(organization_name) AND char_length(organization_name) >= 1 AND char_length(organization_name) <= 80 AND organization_name !~ '[[:cntrl:]]')`],
+      // Line breaks and tabs are hers; any other control character is refused.
+      ['context_note_check', `context_note IS NULL OR (context_note = btrim(context_note) AND char_length(context_note) >= 1 AND char_length(context_note) <= 500 AND replace(replace(replace(context_note, chr(10), ''), chr(13), ''), chr(9), '') !~ '[[:cntrl:]]')`],
+      ['status_check', `status = ANY (ARRAY['active','archived'])`],
+      // What she tells Her Keys about a person is hers. An inference about a person is not a relationship fact.
+      ['stated_by_her_check', `producer = 'user-action'`],
+    ],
+    indexes: [
+      ['one_per_child_uq', `ON public.person_contexts (household_id, profile_id, child_id) WHERE child_id IS NOT NULL`, true],
+      ['one_per_person_uq', `ON public.person_contexts (household_id, profile_id, person_id) WHERE person_id IS NOT NULL`, true],
+    ],
+  },
+
+  // -------------------------------------------------------- person task link (HK-FEATURE-13, People OS)
+  {
+    // "This Task is a follow-up I created from this person context." Created once, with the Task, and never edited. The Task must be
+    // one of the caller's OWN private tasks, and that is checked BEFORE any key is consulted (`guard_follow_up_task`), so a link can
+    // neither expose private context through a household-visible Task nor be used to probe for somebody else's private Task.
+    kind: 'personTaskLink', collection: 'personTaskLinks', table: 'person_task_links', mutable: false, provenance: 'standard', profileOnDelete: 'cascade', rank: 4,
+    migration: F13_PEOPLE_MIGRATION,
+    fields: [
+      { local: 'contextId', col: 'context_id', type: 'link', to: 'personContext' },
+      { local: 'followUp', type: 'ref', prefix: 'follow_up', kinds: ['task'], required: true, onDelete: 'cascade' },
+      { local: 'relation', col: 'relation', type: 'text' },
+    ],
+    updatable: [],
+    checks: [
+      ['relation_check', `relation = 'follow_up'`],
+      ['stated_by_her_check', `producer = 'user-action'`],
+    ],
+    indexes: [['one_link_per_task_uq', `ON public.person_task_links (household_id, profile_id, follow_up_task_id)`, true]],
+    triggers: [['follow_up_task_guard', 'BEFORE', 'INSERT', `public.guard_follow_up_task()`]],
   },
 ];
 

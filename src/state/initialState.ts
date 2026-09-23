@@ -48,6 +48,8 @@ export function createEmptyState(timeZone: string): AppState {
     rebuildFocusLinks: [],
     lifeRecords: [],
     lifeRecordLinks: [],
+    personContexts: [],
+    personTaskLinks: [],
   };
 }
 
