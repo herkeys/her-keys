@@ -23,6 +23,16 @@ const BRIDGE = 'tests/hk-ir01/changeBridge.test.mjs';
 const COMPOSITION = 'tests/hk-ir01/syncComposition.test.mjs';
 const F05_MIGRATION = 'supabase/migrations/20260921190000_f05_add_child_after_binding.sql';
 const SQL_SUITE = { command: ['node', ['supabase/tests/run.mjs', '77']] };
+// The LIVE `public.sync_push` is the one the last migration declares. F10, F11, F12 and F13 each re-declare it (cumulatively, carrying
+// F05's child path), so a mutant on F05's own copy changes a function the chain has already replaced and proves nothing (HK13-D39).
+// Mutants on sync_push's body therefore target the last declaration; migration file names start with their version, so they sort in
+// chain order. (F05's `private.push_household_child` is declared once, so its mutants stay on F05's file.)
+const LIVE_SYNC_PUSH = (() => {
+  const dir = path.join(ROOT, 'supabase', 'migrations');
+  const declaring = fs.readdirSync(dir).filter((f) => f.endsWith('.sql')).sort()
+    .filter((f) => fs.readFileSync(path.join(dir, f), 'utf8').includes('CREATE OR REPLACE FUNCTION public.sync_push('));
+  return `supabase/migrations/${declaring[declaring.length - 1]}`;
+})();
 
 const MUTANTS = [
   // ---- CHILD IDENTITY -------------------------------------------------------------------------------------------------------
@@ -105,7 +115,7 @@ const MUTANTS = [
   { id: 'S-N4', guards: 'authority (SQL)', what: 'the function no longer checks that the caller OWNS the household: a member, or an unrelated account calling it, can add a child',
     file: F05_MIGRATION, from: '  IF v_house IS NULL OR NOT private.is_household_owner(v_house) THEN', to: '  IF v_house IS NULL THEN', ...SQL_SUITE },
   { id: 'S-N4b', guards: 'authority (SQL)', what: 'sync_push no longer checks household membership before the child is written',
-    file: F05_MIGRATION, from: '  IF NOT private.is_household_member(v_house) THEN', to: '  IF false THEN', ...SQL_SUITE },
+    file: LIVE_SYNC_PUSH, from: '  IF NOT private.is_household_member(v_house) THEN', to: '  IF false THEN', ...SQL_SUITE },
   { id: 'S-N5', guards: 'second device hydration', what: 'a second device applies children only while it holds none, so a newly created child never arrives',
     file: 'src/domain/sync/pullEngine.ts', from: "    if (row.member_type !== 'child') continue;", to: "    if (row.member_type !== 'child' || nextState.children.length > 0) continue;", tests: [COMPOSITION] },
   { id: 'S-N6', guards: 'lost acknowledgement', what: 'the pull does not adopt a child this device created, so a lost acknowledgement makes a duplicate child',
@@ -113,7 +123,7 @@ const MUTANTS = [
   { id: 'S-N7', guards: 'dependency order', what: 'a child ranks AFTER the work that names it, so a task is sent before its child has a cloud id',
     file: 'src/domain/sync/syncTypes.ts', from: '  member: 0,', to: '  member: 9,', tests: [BRIDGE, 'tests/foundationSpecs.test.mjs', COMPOSITION] },
   { id: 'S-N8', guards: 'no child mapped to the account holder (SQL)', what: 'the collision probe also matches the account holder\'s own member row, so a child can be reported as "already created" and mapped to the adult',
-    file: F05_MIGRATION, from: "         WHEN p_entity_table = 'household_members' THEN ' AND member_type = ''child'''", to: "         WHEN p_entity_table = 'household_members' THEN ''", ...SQL_SUITE },
+    file: LIVE_SYNC_PUSH, from: "         WHEN p_entity_table = 'household_members' THEN ' AND member_type = ''child'''", to: "         WHEN p_entity_table = 'household_members' THEN ''", ...SQL_SUITE },
   { id: 'S-N9', guards: 'child bound (SQL)', what: 'the 20-child bound is gone (200)',
     file: F05_MIGRATION, from: '  IF v_children >= 20 THEN', to: '  IF v_children >= 200 THEN', ...SQL_SUITE },
   { id: 'S-N11', guards: 'child name across the boundary', what: 'the name cleaner loses its backslash again: `/s+/` turns every letter s into a space ("Josie" -> "Jo ie")',

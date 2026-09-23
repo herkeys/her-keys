@@ -49,6 +49,8 @@ P5 low correctness · P6 UX polish · P7 maintainability · P8 performance · P9
 | HK13-D35 | P3 | F05 Kids, F03 Calendar, F01 Today × F07 | handoff editing | Kids' item editor and the Calendar's event form moved a co-parenting handoff without its recorded repeat: Co-Parent then showed "Repeats every week on Tuesday" beside a Wednesday handoff | FIXED `4199baa` |
 | HK13-D36 | P9 | platform (Build 4 identity) | navigation | The sign-in screen has no entry point in any build since it was added: no user can bind an account, so every cloud capability is reachable only in tests | DOCUMENTED (pre-existing); OD-HK13-02 |
 | HK13-D37 | P5 | F03 Calendar, F05 Kids × F07 | responsibility copy | One recorded responsibility, two voices: Calendar and Kids state what she recorded as a third party's act ("Alex accepted"); Co-Parent says "You recorded that Alex accepted this" | DOCUMENTED |
+| HK13-D38 | P6 | F10 | Opportunity form | The next action and interview fields took any length; past 200 characters the save was refused with "Try again", which could never work | FIXED (AUD13-09, trivial) |
+| HK13-D39 | P4 | F05 test-the-test × F10–F13 | mutation suite | Two F05 SQL mutants changed F05's copy of `sync_push`, which four later migrations replace: they SURVIVED on the integrated line, so two child-path guarantees were unguarded | FIXED (AUD13-09) |
 
 (Entries below are added as the audit proceeds.)
 
@@ -749,6 +751,47 @@ structural, verified in code:
 - **Why not repaired:** aligning the wording changes copy in two features, and one of them pins its words in a copy-truth test. It also
   changes F03's and F05's voice. That is not a trivial, local change, so it is left for the owner's copy pass.
 - **Status:** DOCUMENTED.
+
+## HK13-D38 — Two Work form fields took more than their record may hold (P6)
+
+- **How found:** Phase 12's "long but valid text" check. A scan of every `<TextField>` in `src/` and `app/` found 110 fields. Nine
+  declared no `maxLength`: two are in the development gallery, and five are Talk It Out's capture cards, which clip a corrected title
+  to 90 characters by design and say so (`revise.ts`). The remaining two are F10's "Next action" and "Interview" fields in
+  `src/features/work/OpportunityForm.tsx`.
+- **Reproduction:** open an opportunity, choose "Add a next action", type 201 characters, and press Add.
+- **Expected:** the field stops at 200 characters, the limit on the Task it creates, as every other title field in the app does.
+- **Actual:** the field accepted any length. `addTask` builds the Task, the store's validation refuses the state, and the form says
+  "Her Keys couldn't save that yet. Try again." Retrying can never succeed. Her text stays in the field, so nothing is lost silently.
+  The interview field behaves the same way, because it creates an Event, which is also limited to 200 characters.
+- **Root cause:** the two inline mini-forms were added without the `maxLength` the opportunity's own fields carry.
+- **Privacy / data-loss impact:** none. The save is refused and says so, though the message is wrong.
+- **Severity and why:** P6, UX polish. It needs an unusual 200+ character title to reach, and it misreports a permanent refusal as
+  a transient one.
+- **Repair (AUD13-09, trivial, local, negligible risk):** both fields now pass `maxLength={FIELD_LIMITS.titleLength}`. Nothing else
+  changes.
+- **Tests:** `tests/hk-f01f13/namesAtTheLimit.test.mjs`, "every field of the opportunity form, the next action and the interview
+  included, is bounded by the domain limit", which also asserts that no field of the form is unbounded. It fails without the repair.
+  Mutants D38-M1 and D38-M2 each remove one bound, and **2/2 are caught**.
+- **Status:** FIXED.
+
+## HK13-D39 — Two F05 SQL mutants changed a function the chain had already replaced (P4)
+
+- **How found:** Phase 14 ran every feature mutation suite on the integrated line. `f05-mutation-check.cjs` reported **36 caught,
+  2 SURVIVED**. The survivors were S-N4b (`sync_push` no longer checks household membership before a child is written) and S-N8 (the
+  child collision probe also matches the account holder's own member row).
+- **Root cause:** both mutants edit `supabase/migrations/20260921190000_f05_add_child_after_binding.sql`. At WAVE3_BASE that was the
+  last migration to declare `public.sync_push`. On the integrated line, F10, F11, F12 and F13 each re-declare it, carrying F05's child
+  path cumulatively (HK13-D03), so the live function is F13's. A mutant on F05's copy changes a function the chain has already
+  replaced. The guards held, but no mutant tested them. This is the same class of defect as HK13-D30.
+- **Not affected:** S-N9 and S-N10 edit `private.push_household_child`, which only F05 declares, so they were live and caught. The
+  other suites apply their SQL mutants after the chain (`HERKEYS_*_MUTANT_SQL`), so they always hit the live definition.
+- **Severity and why:** P4, an integration-specific test-infrastructure defect. Two privacy and correctness guarantees on the child
+  path went unguarded by test-the-test. The product code was right: once re-targeted, both mutants are caught.
+- **Repair (AUD13-09):** `LIVE_SYNC_PUSH` finds the last migration that declares `public.sync_push`; migration file names start with
+  their version, so they sort in chain order. S-N4b and S-N8 now target that file, and a future re-declaration moves them with it.
+- **Tests:** S-N4b is **caught** (2 failing) and S-N8 is **caught** (1 failing), both by `run.mjs 77`. The F05 suite is 38/38 at the
+  final gate.
+- **Status:** FIXED.
 
 ## Known shared privacy items — re-audited under the P0–P10 rubric (Phase 8)
 

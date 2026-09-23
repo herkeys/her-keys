@@ -319,6 +319,7 @@ const LATER_FEATURES = [
       ['src/domain/sync/pushEngine.ts', 'AUD13-03: an earlier day\'s One Move the cloud never saw, and the facts about it, stay on the device — sent, it would land as today\'s (HK13-D28)'],
       ['src/domain/sync/changeBridge.ts', 'AUD13-03: the queue top-up does not owe the cloud an earlier day\'s unsent One Move or a fact about one (HK13-D28)'],
       ['scripts-dev/ir01-mutation-check.cjs', 'AUD13-06: two IR01 mutants re-anchored after the integration moved the lines they guard (HK13-D30)'],
+      ['scripts-dev/f05-mutation-check.cjs', 'AUD13-09: two F05 SQL mutants target the LIVE sync_push (the last declaration), not F05\'s superseded copy (HK13-D39)'],
       ['supabase/tests/private-stack.mjs', 'INT13-01: the private stack builds the whole chain and names both stack databases (HK13-D06)'],
       ['supabase/tools/gen-foundation-sql.mjs', 'INT13-01: one additive-migration mechanism for F10, F11 and F13, and the dependencies widening (HK13-D05)'],
       ['src/domain/sync/foundationSpecs.ts', 'INT13-00/01: the union of four manifests, one migration field, REF_EXTENSIONS (HK13-D05)'],

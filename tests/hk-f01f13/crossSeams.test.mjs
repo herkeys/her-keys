@@ -139,12 +139,14 @@ describe('the integrated household', () => {
     }
   });
 
-  test('ONLY canonical Tasks reach Today, and each exactly once: no Person, Record, Focus or Opportunity becomes a Today item', () => {
+  test('ONLY canonical Tasks reach Today, and each exactly once: no Person, Record or Focus becomes a Today item, nor an undated Opportunity', () => {
     const { state, ids } = integratedWorld();
     const deadlines = deadlineIds(state);
     for (const id of [ids.moneyTask, ids.opportunityTask, ids.recordTask, ids.personTask]) assert.equal(deadlines.filter((d) => d === id).length, 1, `${id} once`);
+    // An opportunity is spoken of in Today only when SHE recorded a follow-up date or a deadline on it (F10 Addendum N/O; held by
+    // doctrineClosures.test.mjs). This one has neither, so nothing about it may appear.
     for (const item of attentionFor(state, MORNING)) {
-      assert.ok(['task', 'event', 'needsMe', 'responsibility', 'opportunity'].includes(item.about.kind), `attention about ${item.about.kind}`);
+      assert.ok(['task', 'event', 'needsMe', 'responsibility'].includes(item.about.kind), `attention about ${item.about.kind}`);
     }
     const text = todayText(state);
     for (const leak of ['Jordan Lee', 'Prefers texts', 'Rest without guilt', 'P-99887766', 'Maya\'s coach']) assert.equal(text.includes(leak), false, `Today says "${leak}"`);

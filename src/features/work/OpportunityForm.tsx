@@ -254,7 +254,7 @@ export function OpportunityForm({ opportunityId }: { opportunityId?: string }) {
           )}
           {addingAction ? (
             <View style={styles.inlineForm}>
-              <TextField label="Next action" value={actionTitle} onChangeText={setActionTitle} placeholder="Send the follow-up email" autoFocus />
+              <TextField label="Next action" value={actionTitle} onChangeText={setActionTitle} placeholder="Send the follow-up email" autoFocus maxLength={FIELD_LIMITS.titleLength} />
               <View style={styles.row}>
                 <Button label="Add" onPress={onAddAction} disabled={busy} style={styles.rowItem} />
                 <Button label="Cancel" variant="ghost" onPress={() => setAddingAction(false)} disabled={busy} style={styles.rowItem} />
@@ -272,7 +272,7 @@ export function OpportunityForm({ opportunityId }: { opportunityId?: string }) {
           )}
           {addingInterview ? (
             <View style={styles.inlineForm}>
-              <TextField label="Interview" value={interviewTitle} onChangeText={setInterviewTitle} placeholder="Phone screen with Priya" autoFocus />
+              <TextField label="Interview" value={interviewTitle} onChangeText={setInterviewTitle} placeholder="Phone screen with Priya" autoFocus maxLength={FIELD_LIMITS.titleLength} />
               <TextField label="Date (YYYY-MM-DD)" value={interviewDate} onChangeText={setInterviewDate} placeholder={followUpDate || 'YYYY-MM-DD'} maxLength={10} />
               <View style={styles.row}>
                 <View style={styles.rowItem}><TextField label="Start (HH:MM)" value={interviewStart} onChangeText={setInterviewStart} placeholder="09:00" maxLength={5} /></View>
