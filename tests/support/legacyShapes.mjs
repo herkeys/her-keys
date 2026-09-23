@@ -17,6 +17,8 @@ const TASK_FACETS = [
   'dueAt', 'earliestStartAt', 'latestFinishAt', 'splittable', 'minChunkMinutes', 'preferredTimeOfDay',
   'energyDemand', 'consequence', 'needsMePersonally', 'travelMinutesBefore', 'travelMinutesAfter',
   'preparationMinutes', 'value',
+  // `paymentMechanism` is Feature 09's: a legacy task never stated how it would be paid.
+  'paymentMechanism',
 ];
 
 /**

@@ -90,6 +90,11 @@ export function applyCloudRow(
           createdAt: instant(row.origin_created_at),
           updatedAt: instant(row.origin_updated_at),
           ...facetsFromRow('task', row),
+          // Hand-pulled like duration_source: not a generated facet (F09-M2). Placed AFTER
+          // facetsFromRow so it wins — facetsFromRow never actually sets this key at runtime
+          // (it is driven by EXISTING_FACETS, which this deliberately is not part of), but its
+          // declared type covers every commitment facet, so TS requires this ordering.
+          paymentMechanism: (strOrNull(row.payment_mechanism) as never) ?? null,
           provenance: provenanceFromRow(row, resolve),
           scope: str(row.scope) as never,
         }),

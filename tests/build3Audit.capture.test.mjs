@@ -126,7 +126,14 @@ describe('Build 3 audit — every open task is reachable (B3-AUD-004)', () => {
       // row guarded is unchanged — the Home screen is wired to its ROLE (never a name) and lists every open task in its category, not
       // just today's — and is now checked against Home's own module below.
       home: 'src/features/home/model/homeContext.ts',
-      money: 'src/features/money/MoneyOverview.tsx',
+      // HK-FEATURE-09 REWRITE (test disposition: REWRITTEN, not weakened, per docs/builds/HK_FEATURE_09_MONEY.md
+      // M3). Money Home replaced the generic MoneyOverview stub. The invariant this row guarded is unchanged —
+      // every open task in the money category stays reachable from the Money screen — but Money's own
+      // obligation/expected-income items (a `value` facet) are now listed with richer, domain-specific
+      // presentation; a generic task with no `value` (filed under Money without going through Money's own create
+      // flow) is listed in a distinct "Other open tasks" section built from the same `openTasksInCategory` every
+      // other screen uses. tests/money/projection.test.mjs ("otherOpenTasks") proves both halves of the union.
+      money: 'src/features/money/projection.ts',
       work: 'src/features/work/WorkOverview.tsx',
     };
     assert.deepEqual(Object.keys(screens).sort(), [...TASK_LIST_ROLES].sort());
@@ -143,6 +150,12 @@ describe('Build 3 audit — every open task is reachable (B3-AUD-004)', () => {
         assert.match(text, /categoryWithRole\(state, HOME_ROLE\)/, path);
         assert.match(text, /HOME_ROLE: SystemRole = 'home'/, path);
         assert.doesNotMatch(text, /\.name\s*(===|!==)/, 'Home never decides by a category name');
+        continue;
+      }
+      if (role === 'money') {
+        assert.match(text, /openTasksInCategory\(/, path);
+        assert.match(source('src/features/money/identity.ts'), /categoryWithRole\(state, 'money'\)/, 'Money is wired to its role, never a name');
+        assert.match(source('app/(app)/life/money.tsx'), /<MoneyOverview \/>/, 'the Life route renders Money Home');
         continue;
       }
       assert.match(text, new RegExp(`categoryIdForRole\\('${role}'\\)`), path);

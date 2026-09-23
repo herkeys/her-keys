@@ -41,6 +41,17 @@ export interface AttentionItem {
 
 const URGENCY_RANK: Record<AttentionUrgency, number> = { now: 0, today: 1, soon: 2 };
 
+/**
+ * F09-M4: an autopay obligation gets no routine pre-due "pay this" nudge (owner brief, PAYMENT
+ * MECHANISM). Once its due date has actually passed without an explicit resolution, it surfaces
+ * again like any other overdue task — worded by the consumer as "confirm cleared", never
+ * "autopay failed" (Her Keys has no evidence either way). This never suppresses the overdue case:
+ * "AUTOPAY NEVER auto-marks the obligation paid" cuts the other way, not toward silence.
+ */
+export function autopayPreDueSuppressed(dueDate: LocalDate, paymentMechanism: string | null, today: LocalDate): boolean {
+  return paymentMechanism === 'autopay' && dueDate >= today;
+}
+
 export function attentionFor(state: AppState, nowMs: number): AttentionItem[] {
   const today: LocalDate = logicalDateAt(nowMs, state.user.timezone);
   const items: AttentionItem[] = [];
@@ -48,6 +59,7 @@ export function attentionFor(state: AppState, nowMs: number): AttentionItem[] {
   // deadline — an open task due today or overdue is "now"; due within two days is "soon"
   for (const task of state.tasks) {
     if (task.status !== 'open' || task.dueDate === null) continue;
+    if (autopayPreDueSuppressed(task.dueDate, task.paymentMechanism, today)) continue;
     const ref: TypedRef = { kind: 'task', id: task.id };
     if (task.dueDate <= today) items.push({ reason: 'deadline', urgency: task.dueDate < today ? 'now' : 'today', about: ref });
     else if (Date.parse(`${task.dueDate}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`) <= 2 * 86_400_000) items.push({ reason: 'deadline', urgency: 'soon', about: ref });

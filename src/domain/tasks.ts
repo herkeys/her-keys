@@ -1,5 +1,5 @@
 import type { TransitionContext } from './context';
-import { emptyTaskFacets } from './foundation/commitment';
+import { emptyTaskFacets, type PaymentMechanism } from './foundation/commitment';
 import { DEFAULT_TASK_DURATION_MINUTES, type DurationSource } from './foundation/duration';
 import type { Money } from './foundation/money';
 import { provenanceFor, userProvenance, type Provenance } from './foundation/provenance';
@@ -32,6 +32,8 @@ export interface AddTaskInput {
   provenance?: Provenance;
   /** What it is worth, exactly. Unknown unless stated. */
   value?: Money | null;
+  /** How it would be paid, her own descriptive truth — never bank verification. Unknown unless stated. */
+  paymentMechanism?: PaymentMechanism | null;
 }
 
 export function addTask(state: AppState, ctx: TransitionContext, input: AddTaskInput): AppState {
@@ -54,6 +56,7 @@ export function addTask(state: AppState, ctx: TransitionContext, input: AddTaskI
     updatedAt: now,
     ...emptyTaskFacets(),
     value: input.value ?? null,
+    paymentMechanism: input.paymentMechanism ?? null,
     provenance: provenanceFor(state.origin, input.provenance ?? userProvenance()),
     scope: input.scope,
   };

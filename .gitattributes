@@ -8,3 +8,6 @@ supabase/migrations/20260921160000_f08_meal_slot_and_status.sql text eol=lf
 
 # Pin the additive HK-FEATURE-05 (child after binding) migration to LF for the same reason.
 supabase/migrations/20260921190000_f05_add_child_after_binding.sql text eol=lf
+
+# Pin the additive HK-FEATURE-09-MONEY (task payment_mechanism) migration to LF for the same reason.
+supabase/migrations/20260922180000_f09_task_payment_mechanism.sql text eol=lf
