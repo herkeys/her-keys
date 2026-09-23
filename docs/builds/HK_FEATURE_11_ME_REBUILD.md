@@ -706,7 +706,9 @@ mutation check                —                                       17 / 17 
 
 **App DELTA: +76 tests, +21 suites; failures unchanged (the same two F08-scan tests, now also listing F11's own additions).**
 No test disappeared. Added: `tests/rebuild/focus.model.test.mjs` (17), `focus.relationships.test.mjs` (15), `ui.test.mjs` (27),
-`sync.test.mjs` (11) = 70, plus the manifest test's per-kind tests for the two new kinds (+6 in `foundationSpecs.test.mjs`) = 76.
+`sync.test.mjs` (11) = 70, plus the generated per-kind tests for the two new kinds: 4 in `foundationSpecs.test.mjs` ("every stored
+field is described" and "ranks after everything it references", × 2) and 2 in `foundationRoundtrip.test.mjs` ("sends only columns the
+client may name on INSERT", × 2) = 76.
 Changed with their reasons: `foundationSpecs.test.mjs` (20 kinds; per-migration checks), `hk-ir01/changeBridge.test.mjs` (31/29 kinds),
 `tests/support/legacyShapes.mjs` and `richHousehold.mjs` (fixtures).
 
