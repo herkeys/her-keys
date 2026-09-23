@@ -31,6 +31,23 @@ export interface LocalHousehold {
   onboardingComplete: boolean;
 }
 
+/**
+ * Every collection whose rows are HER content. A household holding a row of any one of these is not empty: another account's sign-in on
+ * this device quarantines it (it is never bootstrapped over and uploaded as someone else's), and her own sign-in claims it.
+ *
+ * One list, not a chain of `||`, because the chain was edited by hand per feature and three features never added theirs: a household
+ * holding only a career opportunity (F10), a Focus (F11) or a person context (F13) read as EMPTY, so after an interrupted claim by one
+ * account a second account bootstrapped and the seed pushed the first account's private rows as its own (HK13-D09, F01-F13 integration
+ * audit). `tests/hk-f01f13/bindingContent.test.mjs` classifies every AppState root, so a new collection cannot be forgotten again.
+ * Life Admin's records (F12) do not travel IN the claim; like every foundation kind they sync after binding.
+ */
+export const CONTENT_COLLECTIONS = [
+  'events', 'tasks', 'systems', 'meals', 'needsMe', 'oneMoves', 'actions', 'children', 'migrationEvidence',
+  'sourceArtifacts', 'externalReferences', 'interpretations', 'observations', 'authorities', 'intents', 'decisions', 'executions',
+  'outcomes', 'people', 'responsibilities', 'dependencies', 'recurrences', 'goals', 'systemSteps', 'patterns', 'evidenceLinks',
+  'careerOpportunities', 'rebuildFocuses', 'rebuildFocusLinks', 'lifeRecords', 'lifeRecordLinks', 'personContexts', 'personTaskLinks',
+] as const satisfies ReadonlyArray<keyof AppState>;
+
 export function describeLocalHousehold(state: AppState): LocalHousehold {
   const starters = starterCategories(state.household.id);
   const categoriesChanged =
@@ -43,38 +60,9 @@ export function describeLocalHousehold(state: AppState): LocalHousehold {
       state.household.displayName !== null ||
       state.user.displayName !== null ||
       categoriesChanged ||
-      state.events.length > 0 ||
-      state.tasks.length > 0 ||
-      state.systems.length > 0 ||
-      state.meals.length > 0 ||
-      state.needsMe.length > 0 ||
-      state.oneMoves.length > 0 ||
-      state.actions.length > 0 ||
-      state.children.length > 0 ||
+      CONTENT_COLLECTIONS.some((collection) => state[collection].length > 0) ||
       state.discovery !== null ||
-      state.migrationEvidence.length > 0 ||
-      state.sourceArtifacts.length > 0 ||
-      state.externalReferences.length > 0 ||
-      state.interpretations.length > 0 ||
-      state.observations.length > 0 ||
-      state.authorities.length > 0 ||
-      state.intents.length > 0 ||
-      state.decisions.length > 0 ||
-      state.executions.length > 0 ||
-      state.outcomes.length > 0 ||
-      state.people.length > 0 ||
-      state.responsibilities.length > 0 ||
-      state.dependencies.length > 0 ||
-      state.recurrences.length > 0 ||
-      state.goals.length > 0 ||
-      state.systemSteps.length > 0 ||
       state.capacity !== null ||
-      state.patterns.length > 0 ||
-      state.evidenceLinks.length > 0 ||
-      // Life Admin (HK-FEATURE-12): a household holding only her private records is not empty, so another account's sign-in on
-      // this device quarantines it exactly as it would any other content. Records do not travel IN the claim; they sync afterwards.
-      state.lifeRecords.length > 0 ||
-      state.lifeRecordLinks.length > 0 ||
       state.onboarding.goalIds.length > 0 ||
       state.onboarding.strengthIds.length > 0 ||
       state.onboarding.struggleIds.length > 0,

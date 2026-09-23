@@ -617,7 +617,12 @@ export const AppStateSchema = z.strictObject({
   capacity: CapacityProfileSchema.nullable(),
   patterns: z.array(PatternSchema).max(2000),
   evidenceLinks: z.array(EvidenceLinkSchema).max(20_000),
-  careerOpportunities: z.array(CareerOpportunitySchema).max(1000),
+  /**
+   * Career opportunities she is tracking (HK-FEATURE-10). Owner-private. Absent from a household saved before Feature 10, which simply
+   * has none yet — hence the default, like every collection added after v4 shipped. Without it, a household stored by any earlier build
+   * failed validation and hydration replaced it with an empty one (HK13-D08, found by the F01-F13 integration audit).
+   */
+  careerOpportunities: z.array(CareerOpportunitySchema).max(1000).default([]),
   /**
    * Areas of her own life she chose to keep visible (HK-FEATURE-11). Owner-private. Absent from a household saved before Feature 11,
    * which simply has none yet — hence the default, exactly like the fields Feature 08 added.
