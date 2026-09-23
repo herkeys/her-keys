@@ -308,6 +308,48 @@ reported as such rather than assumed.
 line (the harness prints pass/fail counts only at the end of that section). The individual suite runs
 (57, 58) reported their own totals above.
 
+### 12.1 Resume attempt (Docker recovered; new finding — sibling-campaign contention)
+
+Docker's own outage resolved on its own (`docker ps` responsive again; `com.docker.service` remained
+`Stopped` but is evidently not required for the CLI/engine path this harness uses). `tsc --noEmit`
+reconfirmed clean. Two full unscoped `run.mjs` attempts were made:
+
+- **Attempt 1** and **Attempt 2** (full unscoped): migration quality + ENV A/B/B3/D/E passed with
+  **zero failures** both times (6 clean passes of that sequence total across this ledger's history).
+  Both attempts failed during ENV C setup with `database "b4_env_c" does not exist`.
+- **Individual-suite attempts** (00, 10, 20, 30, 40, 50), to narrow the exposure window: **00 and 20
+  passed cleanly** (17/17, 16/16); **10, 30, 40, 50 hit the same collision**, twice as a hard
+  `FATAL: terminating connection due to administrator command` mid-migration.
+
+**Root cause identified:** `git worktree list` shows **F09, F11, F12 and F13 are all active sibling
+campaigns** with real commits beyond `WAVE3_BASE` (`feature/09-money-os`, `feature/11-me-rebuild-os`,
+`feature/12-life-admin-documents`, `feature/13-people-os`), plus an `F13-entry` staging worktree. The
+competing `node supabase/tests/run.mjs [composition]` processes observed (several different PIDs over
+time, owner `jsmit`, real accumulated CPU time — not stuck) are consistent with one or more of those
+legitimate sibling builds validating against the same shared `supabase_db_Her_Keys` container and the
+same hardcoded `b4_env_*` database names this harness has always used. Windows process introspection
+(WMI `Win32_Process`) cannot expose another process's working directory, so the specific owning
+worktree could not be confirmed directly — but the processes could **not** be classified as
+stale/orphaned (the strict bar for that was not met: real sibling campaigns are demonstrably live).
+
+**Classification: DEFERRED-IN-RUN — SHARED BACKEND HARNESS CONTENTION**, not a PASS, not a FAIL, and
+not counted against F10. The 4 individual-suite collisions (10, 30, 40, 50) are the same classification
+— environmental, not product evidence.
+
+**Isolation check (per the F10 prompt's own preference order):** the harness supports
+`HERKEYS_LOCAL_DB_CONTAINER` to point at an entirely different container, but no F10-specific isolated
+Postgres/Supabase stack is currently provisioned, and standing one up is a heavier action than
+validation itself (new container, new ports, new local infra) — not an "already available" isolation
+mechanism for this moment. There is **no** database-name-level (prefix/suffix) isolation for
+`b4_env_a/b1/b2/c/d/e` anywhere in `run.mjs` — those names are hardcoded literals. No F10 source, test,
+or shared-harness-architecture change was made in response to this.
+
+**Preferred fallback (per directive):** do not compete for the shared `b4_env_*` databases; wait for a
+quiet window with no other `run.mjs` process active, then run the complete backend harness once,
+serialized, alone. This has not yet succeeded as of this entry. **Machine-wide rule recorded:** only one
+Her Keys campaign at a time should own the shared `b4_env_*`-based full backend harness; this should be
+carried into Wave 3/4 build-machine coordination (e.g., F09/F11/F12/F13's own sessions, if reachable).
+
 ## 13. Known debt / deferred (see `HK_FEATURE_10_MISSING_PRIMITIVES.md` for the full table)
 
 - Career Next surfaces Opportunities only; Goal has no UI anywhere in the app (F10-MP-04/-05).
