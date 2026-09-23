@@ -51,7 +51,7 @@ P5 low correctness · P6 UX polish · P7 maintainability · P8 performance · P9
 | HK13-D37 | P5 | F03 Calendar, F05 Kids × F07 | responsibility copy | One recorded responsibility, two voices: Calendar and Kids state what she recorded as a third party's act ("Alex accepted"); Co-Parent says "You recorded that Alex accepted this" | DOCUMENTED |
 | HK13-D38 | P6 | F10 | Opportunity form | The next action and interview fields took any length; past 200 characters the save was refused with "Try again", which could never work | FIXED `eb09888` (trivial) |
 | HK13-D39 | P4 | F05 test-the-test × F10–F13 | mutation suite | Two F05 SQL mutants changed F05's copy of `sync_push`, which four later migrations replace: they SURVIVED on the integrated line, so two child-path guarantees were unguarded | FIXED `eb09888` |
-| HK13-D40 | P4 | F09 × F01 | Money Home / Today copy | A past-due AUTOPAY bill was called "overdue" ("Overdue since …", "is 3 days overdue"): a claim that it is unpaid, which F09's doctrine forbids ("only 'confirm cleared'") | FIXED (AUD13-10) |
+| HK13-D40 | P4 | F09 × F01 | Money Home / Today copy | A past-due AUTOPAY bill was called "overdue" ("Overdue since …", "is 3 days overdue"): a claim that it is unpaid, which F09's doctrine forbids ("only 'confirm cleared'") | FIXED `143f923` |
 | HK13-D20 | P6 | F08, F07 × Life hub | task lists | Meals and Co-parenting tasks are listed twice: on their own screen and under the hub's "Other open tasks" | DOCUMENTED |
 | HK13-D21 | P5 | F12 | Life Admin edit sheet | Editing a record shows its reference number in full, without the Reveal the detail requires | DOCUMENTED |
 | HK13-D41 | P9 | F04 (Build 4 foundation) | Systems | A System is household-shared but its steps are owner-private: another adult would see the System without its steps | DOCUMENTED (pre-existing, latent) |
@@ -813,7 +813,7 @@ structural, verified in code:
   status for every mechanism. Today's attention view, where the comment placed the wording, words every past-due task the same way.
 - **Privacy / data-loss impact:** none. **Severity and why:** P4, copy that misstates system truth, the same class as the Life hub
   subtitle (HK13-D10). It asserts a payment state Her Keys cannot know, against an explicit owner rule, on two surfaces.
-- **Repair (AUD13-10):**
+- **Repair (AUD13-10 `143f923`):**
   - Money Home: a past-due autopay line reads "$50.00 · Due 2026-09-15 · Autopay · confirm it cleared" (`statusAutopayPastDue`).
   - Today: "“Phone plan” was due Sep 15 on autopay — Her Keys has no record showing whether it cleared."
   - A manual bill is unchanged: it is still overdue, because nothing pays it without her.
