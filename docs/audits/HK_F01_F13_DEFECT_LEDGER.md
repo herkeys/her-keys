@@ -37,8 +37,8 @@ P5 low correctness · P6 UX polish · P7 maintainability · P8 performance · P9
 | HK13-D24 | **P2** | F04–F07, F10 (foundation) | RLS / uniqueness | Four household-wide uniqueness rules on owner-private relationship tables tell a member that another member's private handoff, sequence, schedule or step exists | FIXED `45b5710` |
 | HK13-D25 | P9 | foundation | FK keys | A composite (task, household) key accepts a real private Task uuid from another member's own row: an oracle only for someone who already holds that uuid | DOCUMENTED |
 | HK13-D26 | P9 | foundation | local ids | A guessed local id of a private Task collides; production ids are not practically guessable | DOCUMENTED |
-| HK13-D27 | P4 | harness | populated upgrade | ENV D's "whole chain" skipped F08, so its final database was not the real chain's | FIXED (AUD13-03) |
-| HK13-D28 | **P2** | F01 × sync | One Move / push | A One Move decided offline lands in the cloud as the NEXT day's: every other device's Today shows the wrong move as done, and today's real decision is refused | FIXED (AUD13-03); OD-HK13-01 open |
+| HK13-D27 | P4 | harness | populated upgrade | ENV D's "whole chain" skipped F08, so its final database was not the real chain's | FIXED `51ec5c8` |
+| HK13-D28 | **P2** | F01 × sync | One Move / push | A One Move decided offline lands in the cloud as the NEXT day's: every other device's Today shows the wrong move as done, and today's real decision is refused | FIXED `51ec5c8`; OD-HK13-01 open |
 
 (Entries below are added as the audit proceeds.)
 
@@ -543,7 +543,7 @@ P5 low correctness · P6 UX polish · P7 maintainability · P8 performance · P9
   Severity: **P4** (the brief's "integration-specific test infrastructure defect").
 - **Repair (AUD13-03):** ENV D applies F08 in chain order, with a check that it loses and rewrites nothing. ENV F (new) starts from
   exactly `WAVE3_BASE_CHAIN` and applies `WAVE3_TO_F13_CHAIN` one migration at a time, so its order comes from the chain itself.
-- **Status:** FIXED (AUD13-03).
+- **Status:** FIXED `51ec5c8`.
 
 ## HK13-D28 — A One Move decided offline lands in the cloud as the NEXT day's (P2)
 
@@ -578,7 +578,7 @@ P5 low correctness · P6 UX polish · P7 maintainability · P8 performance · P9
   queue, sync status idle, every cloud fact about a move points at a move the cloud holds); the top-up rule in isolation; a synced
   move's late completion after midnight still lands on its own day. Test-the-test: D28-M1 (the push engine sends it again), D28-M2
   (the top-up owes it again), D28-M3 (facts about it are not kept with it), D28-M4 (a synced move is kept back too) — **4/4 caught**.
-- **Status:** FIXED (AUD13-03); OD-HK13-01 open for the owner.
+- **Status:** FIXED `51ec5c8`; OD-HK13-01 open for the owner.
 
 ## Known shared privacy items — re-audited under the P0–P10 rubric (Phase 8)
 
