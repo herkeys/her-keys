@@ -531,3 +531,149 @@ container and the same private-stack names. One ungated `run.mjs rebuild` of min
 running; both recreate `f08_stack` / `f08_postgrest`, so either run may have disturbed the other's journeys. Every later harness run of
 F11 was gated on no other harness process (`gated-harness.sh`, polling `Get-CimInstance Win32_Process`). Integration candidate
 `HK-INT-W3-HARNESS-ISOLATION`.
+
+Mini-gate after M5: `feature/11-me-rebuild-os` @ `246dad5`, working tree clean.
+
+---
+
+## F11-M6 — Hostile self-review + certification
+
+### Test-the-test (`scripts-dev/rebuild-mutation-check.cjs`, committed so an auditor can rerun it)
+
+Each mutant breaks ONE thing in real source (a patch that must match exactly once); CAUGHT only on a genuine assertion failure; the
+file is restored byte for byte; no mutant code was committed.
+
+| # | Guards | Mutant | Result |
+|---|---|---|---|
+| R1 | FOCUS IS NOT A TASK | creating a Focus also creates a Task | CAUGHT (2 failed) |
+| R2 | TASK COMPLETED ≠ FOCUS COMPLETED | completing a linked Task archives its Focus | CAUGHT (2) |
+| R3 | PAUSED ≠ FAILED | pausing a Focus cancels its open linked Tasks | CAUGHT (4) |
+| R4 | REBUILDFOCUS IS NOT A ONE MOVE | an active Focus joins the One Move pool | CAUGHT (2) |
+| R5 | same-household member cannot read a private Focus | Focus SELECT policy widened to the household (SQL, ENV C, suite 78) | see "SQL mutants" |
+| R6 | a link row never exposes a private Focus | link SELECT policy widened to the household (SQL) | see "SQL mutants" |
+| R7 | identity is the id | renaming replaces the Focus with a new id — the brief's child/person display-name mutant is NOT-APPLICABLE (F11 links no child or person); this is the same guarantee for what F11 does link | CAUGHT (2) |
+| R8 | no resurrection after hydration | a pulled Focus is always applied as active | CAUGHT (2) |
+| R9 | MISSED ROUTINE ≠ REGRESSION | a missed linked System becomes a Needs-attention item | CAUGHT (1) |
+| R10 | AFFORDANCE ≠ TASK (Addendum H) | opening "Add a next step" saves a placeholder Task | CAUGHT (1) |
+| R11 | inert target (Addendum O) | archived/completed/absent linked Tasks still count as open next actions | CAUGHT (3) |
+| R12 | no guilt signal (Addendum E) | a Focus with no step drives the verdict | CAUGHT (3) |
+| R13 | no suggestion engine (Addendum G) | a lighter version is invented when none was recorded | CAUGHT (1) |
+| R14 | the note never leaves its Focus (Addendum J) | the home card shows the note | CAUGHT (1) |
+| R15 | a refused row carries none of her words (Addendum J) | the transport keeps the failing row's values | CAUGHT (2) |
+| R16 | no inference through a link target | the link-target visibility trigger is dropped (SQL) | see "SQL mutants" |
+| R17 | the one stable order (Addendum K) | Focuses ordered by title | CAUGHT (2) |
+
+File mutants: **14 / 14 caught** (run at `0e37c9b`'s parent code; tree clean before and after).
+
+### Adversarial scenario map
+
+Statuses: PASS · SAFE-UNAVAILABLE · NOT-APPLICABLE · DEFERRED-IN-RUN · FAIL. Evidence files: M = `tests/rebuild/focus.model`, R =
+`focus.relationships`, U = `ui`, S = `sync` (all `.test.mjs`), 78 = `supabase/tests/78-f11-rebuild-focus.sql`, J = `journey-rebuild.mjs`,
+D = ENV D in `run.mjs`.
+
+| Scenario | Status | Evidence |
+|---|---|---|
+| one Focus only | PASS | M, U |
+| multiple active Focuses | PASS | M (order), U (home order) |
+| duplicate save | PASS | M (replayed id is one Focus; UI in-flight guard); D + 78 (`already_exists`, duplicate live link 23505) |
+| rename Focus | PASS | M, S, R7 |
+| pause / resume | PASS | M, S, U |
+| archive | PASS | M, U (confirmed), S, J |
+| archive then fresh-client hydration | PASS | S, J (second AND third fresh device), R8 |
+| Focus with no Task | PASS | M, U (quiet invitation, no attention) |
+| Focus with one open Task | PASS | R, U |
+| Focus with completed Task only | PASS | M (inert), U (Recent Progress) |
+| Focus linked to Goal | PASS (domain, schema, RLS, sync) / SAFE-UNAVAILABLE (user path: no Goal surface, MP-11-04) | R, U, 78, richHousehold round trip |
+| Focus linked to System | PASS | R, U (connect list, missed-routine invariance) |
+| Focus linked to Event | PASS | R, U (verdict names the next linked event) |
+| linked Task becomes overdue | PASS | U (Needs attention + verdict, own due date only) |
+| linked Task completed | PASS | M, R, U, R2 |
+| linked Goal changes | PASS | R (achieved/abandoned leave the Focus exactly as it was), U (reached = progress) |
+| linked System paused | NOT-APPLICABLE | `HouseholdSystem` has no pause state (MP-11-03); a missed/skipped System is covered (U, R9) |
+| Focus private, linked item household-visible | PASS | R, 78 (B sees the Task, nothing on it names a Focus), J |
+| offline create / edit / pause | PASS | S |
+| reconnect | PASS | S |
+| stale edit | PASS | S |
+| refused row | PASS | S (evidence without her words; nothing else blocked), R15 |
+| retry | PASS | S (offline → reconnect), D + 78 (`already_exists`) |
+| cross-household crafted relationship | PASS | 78 |
+| same-household unauthorized profile | PASS | 78, J |
+| account switch | PASS | S (A's unsent Focus never uploaded under B; B's screen shows nothing of A and not "empty") |
+| demo isolation | PASS | M (demo-seed), S (never queued or pushed) |
+| device (emulator) pass | DEFERRED-IN-RUN | see "Device evidence" |
+
+### Doctrine results
+
+| Doctrine | Result | Evidence |
+|---|---|---|
+| FOCUS IS NOT A TASK | PASS | M, R1 |
+| FOCUS IS NOT A GOAL | PASS | separate model with no measured outcome, no target date, no status machine; creating one creates no Goal (M); the form states the distinction as copy only (U) |
+| FOCUS IS NOT A SYSTEM | PASS | no recurrence, steps or runs; creating one creates no System (M) |
+| PAUSED DOES NOT MEAN FAILED | PASS | M, R3, 78 (no "failed" state exists) |
+| ARCHIVED DOES NOT MEAN FAILED | PASS | M (kept, resumable), S, J |
+| TASK COMPLETED DOES NOT MEAN FOCUS COMPLETED | PASS | M, R, R2 |
+| MISSED ROUTINE DOES NOT MEAN PERSONAL REGRESSION | PASS | U, R9 |
+| SUGGESTED MOVE DOES NOT BECOME A TASK WITHOUT ACCEPTANCE | PASS | no suggestion exists (Addendum G, R13); the only Task path is Save on text she wrote (U, R10) |
+| REBUILDFOCUS DOES NOT BECOME A ONE MOVE | PASS | R, R4 |
+| REBUILDFOCUS CONTRIBUTES ZERO INVENTED CAPACITY TIME | PASS | R (day projection identical with 12 Focuses) |
+| PRIVATE REBUILD TRUTH DOES NOT BECOME HOUSEHOLD-VISIBLE BY DEFAULT | PASS | `scope` pinned to `personal` (78 refuses `household`), 78, J, R5/R6 |
+| HER KEYS DOES NOT GENERATE A WELLBEING SCORE | PASS | no such field or computation (M rejects score/progress/streak fields), copy audit T |
+
+### Hostile self-review
+
+| Question | Answer |
+|---|---|
+| Did F11 create a second Task / Goal / routine / Calendar / Capacity system? | No. A next step is a canonical Task created by `addTask`; Goals, Systems, Events are only linked; nothing reads or writes capacity (R). |
+| Did we build therapy software, a wellness score, guilt timers? | No. No score, progress, streak, mood or inference field exists; no timer of any length; copy audit T passes; R12/R13 caught. |
+| Can a private Focus leak through links? | No: link rows are owner-pinned by a same-owner FK, owner-only RLS, owner-tagged change log; crafted FKs and target probes answer exactly like "not there" (78, J, R5/R6/R16). |
+| Can a linked Task rewrite Focus state? | No code path does; R2 caught. |
+| Can Focus archive destroy real Tasks/Goals/Systems/Events? | No (M, R, S, J, 78 cascade test). |
+| Can an offline Focus disappear? | No: durable locally before shown, survives relaunch, reaches the cloud on reconnect (M, S). |
+| Can stale sync overwrite newer Focus truth? | No: CAS on `revision` (S). |
+| Can archive fail to propagate? | No evidence of it: S and J (three devices). |
+| Can a suggestion become work without consent? | There are no suggestions; opening/typing writes nothing (U, R10). |
+| Does F11 require maintaining the same fact twice? | No: the next step is the Task itself; the note is never copied. |
+| Did we pre-build People / Documents, or absorb Work/Career or Money? | No: no person, document, career or money field or table. |
+| Defects found and repaired during self-review | (1) default table privileges on the two new tables (suite 78, first run) — fixed in the migration before commit; (2) the visibility trigger pre-empted the exactly-one CHECK — it now looks up only a named target; (3) a refused row's values could reach sync evidence — `redactRowValues`; (4) two devices linking the same item — pull ADOPT rule + domain invariant. |
+
+### Device evidence
+
+DEFERRED-IN-RUN. This app has no `react-native-web`, so the browser preview cannot render it. The Android emulator path needs Metro
+started from THIS worktree, but the preview tool only launches configurations from the main checkout's tracked
+`.claude/launch.json` (branch `feature/01-today-chief-of-staff`, another feature's working tree), and a junctioned `node_modules`
+makes Expo bundle another checkout's `app/` unless a real expo-router copy is staged. The UI is instead proven by rendering the real
+components (react-test-renderer) and driving their handlers against real state (U, S). An emulator smoke of Life → Me / Rebuild is
+an open item for the owner or the Wave 3 integration pass.
+
+### Integration candidates (for the Wave 3 integration campaign)
+
+| ID | Item | Current Owner | Needed Capability | Depends On | Target Integration | Blocking? | Notes |
+|---|---|---|---|---|---|---|---|
+| HK-INT-W3-F08-SCAN | F08 Meals boundary scan is not Wave-3 aware | F08 (tests/meals/boundary.test.mjs, scripts-dev/meals-boundary-scan.cjs) | scope the scan to F08's own contribution; stop enumerating `feature/0*` sibling branches | — | Wave 3 integration | No (pre-existing at WAVE3_BASE) | Fails at WAVE3_BASE because `feature/09-money-os` exists; will also report every Wave 3 migration/table/kind. F11 did not edit F08's gate. |
+| HK-INT-W3-SYNC-PUSH | `sync_push` replaced by several Wave 3 features | shared backend | ONE reconciled `sync_push` allow-list (and `change_log_entity_table_check` list) carrying every Wave 3 table | F09/F10/F12 migrations | Wave 3 integration | Yes, for merging a second schema-adding feature | F11's body = F05 + two names; a sibling doing the same will conflict textually. |
+| HK-INT-W3-MIGRATION-GATE | the harness pins the exact migration list and table count | shared harness (`run.mjs` quality + ENV A) | a list that grows per integrated feature | — | Wave 3 integration | Yes, textual conflict | F11 moved it to five migrations / 36 tables. |
+| HK-INT-W3-GENERATOR | per-migration generated regions | shared tool (`gen-foundation-sql.mjs`) | keep `LATER_MIGRATIONS` as the one way a feature adds a manifest kind | — | Wave 3 integration | No | Build 4 output byte-identical; `--check` covers every file. |
+| HK-INT-W3-HARNESS-ISOLATION | parallel sessions share fixed DB names and `f08_stack` | shared harness | per-run database/stack names, or a lock | — | Wave 3 integration | No (process discipline today) | Observed repeatedly during F11 (other sessions' `run.mjs`, `run-f12.mjs`, `run-f13.mjs`). |
+| HK-INT-W3-LIFE-ROW | Life hub rows added by several features | Life hub (`app/(app)/life/index.tsx`) | a registration list (HK-INT-WAVE2-LIFE-REGISTRATION) | F09/F10/F12 rows | Wave 3 integration | No | F11 adds one fixed row. |
+| HK-INT-W3-AVAILABILITY | a fourth copy of the "may this screen speak" gate | Co-Parent, Systems, Home, Me / Rebuild | one shared availability primitive | — | Wave 3 integration | No | Same rule in each; F11 followed the convention. |
+| HK-INT-W3-TALK-IT-OUT-FOCUS | "I miss painting" → proposed Focus | Talk It Out | a `rebuildFocus` proposed kind, via `addRebuildFocus` | MP-11-06 | Wave 3 integration | No | PENDING WAVE 3 INTEGRATION. |
+| HK-INT-W3-PAST-FOCUSES | viewing/restoring archived Focuses | none | a shared archive / past-items surface | MP-11-02 | Wave 3 integration | No | Archived Focuses are kept canonical, never purged. |
+| HK-INT-W3-GOAL-SURFACE | a user path to create/link Goals | none | a Goal surface | MP-11-04 | Wave 3 integration | No | The link is real end to end; only the UI entry is missing. |
+| HK-INT-W3-ME-NOW | a general "about me" classification | foundation | MP-11-01 | — | Wave 3 integration | No | V1 = explicit links only. |
+| HK-INT-W3-SERVER-DELETE | server-side hard deletion of a shared row is not reflected on devices | sync foundation | a removal semantic beyond `discovery` | — | foundation | No | A cascaded link tombstone is ignored on the device like every non-discovery tombstone; F11's reads treat an absent target as inert. |
+| HK-INT-W3-MONEY / WORK / PEOPLE / DOCS | a Focus relating to Money, Work/Career, People or Documents truth | F09 / F10 / F13 / F12 | typed link kinds to those domains' canonical rows | the sibling features | Wave 3 integration | No | F11 adds none of their fields; a Focus may only name them in its title/note today. PENDING — PEOPLE OS INTEGRATION. |
+
+### Engineering debt
+
+- Device (emulator) evidence not executed (above).
+- The F08 scan's two failing tests remain (pre-existing; HK-INT-W3-F08-SCAN).
+- The API-journey flake observed at ENTRY on this machine (not F11) — see exit accounting.
+- `FocusDetailBody` keeps rename/note drafts in component state; a remote rename arriving while the editor is open is not merged into
+  an open draft (Cancel restores the current title). Acceptable for V1; noted.
+
+### Shared Wave 3 privacy signal — restated for the final report
+
+AVAILABLE SHARED FOUNDATION PRIMITIVE: the `personal` owner-private scope (M0), now additionally exercised by a feature-added table
+pair generated through the manifest (F11), with a proven pattern for private relationship rows (same-owner FK, caller-run visibility
+trigger, cascade to shared targets, redacted refusal evidence). Suitable in principle for F09, F10 and F12; no sibling is claimed to
+use it.
