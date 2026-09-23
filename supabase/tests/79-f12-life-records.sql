@@ -199,8 +199,9 @@ BEGIN;
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claims = '{"sub":"22222222-2222-4222-8222-222222222222"}';
 SELECT CASE WHEN count(*) = 0 THEN 'PASS' ELSE 'FAIL' END || ' | F12 member: DENY the owner''s record by id' FROM public.life_records WHERE id = :'rec_a';
-SELECT CASE WHEN count(*) = 1 AND bool_and(profile_id = :'ub') THEN 'PASS' ELSE 'FAIL' END || ' | F12 member: sees exactly her own record, no count of anyone else''s' FROM public.life_records;
-SELECT CASE WHEN count(*) = 0 THEN 'PASS' ELSE 'FAIL' END || ' | F12 member: DENY every link (none are hers)' FROM public.life_record_task_links;
+SELECT CASE WHEN count(*) FILTER (WHERE profile_id IS DISTINCT FROM :'ub') = 0 AND count(*) FILTER (WHERE id = :'rec_b') = 1 THEN 'PASS' ELSE 'FAIL' END
+  || ' | F12 member: sees her own record and nothing of anyone else''s, no count' FROM public.life_records;
+SELECT CASE WHEN count(*) = 0 THEN 'PASS' ELSE 'FAIL' END || ' | F12 member: DENY every link (none are hers)' FROM public.life_record_task_links WHERE profile_id IS DISTINCT FROM :'ub';
 SELECT CASE WHEN count(*) = 0 THEN 'PASS' ELSE 'FAIL' END || ' | F12 member: DENY the owner''s linked personal Task' FROM public.tasks WHERE id = :'task_a';
 SELECT CASE WHEN herkeys_test.f12_rowcount(format('UPDATE public.life_records SET title = %L WHERE id = %L', 'B WAS HERE', :'rec_a')) IN (0, -1)
              AND herkeys_test.f12_rowcount(format('DELETE FROM public.life_records WHERE id = %L', :'rec_a')) IN (0, -1)
@@ -221,7 +222,8 @@ SELECT CASE WHEN position('SENTINEL' IN coalesce(herkeys_test.f12_refusal(herkey
             THEN 'PASS' ELSE 'FAIL' END || ' | F12 member: refusal payloads (message, DETAIL, HINT) carry no private value';
 SELECT CASE WHEN count(*) = 0 THEN 'PASS' ELSE 'FAIL' END || ' | F12 member: change_log shows no pointer for the owner''s record or link'
   FROM public.change_log WHERE entity_id IN (:'rec_a', :'link_a', :'task_a');
-SELECT CASE WHEN count(*) = 1 THEN 'PASS' ELSE 'FAIL' END || ' | F12 member: change_log shows Life Admin pointers for her OWN record only (no count of the owner''s)'
+SELECT CASE WHEN count(*) FILTER (WHERE owner_profile_id IS DISTINCT FROM :'ub') = 0 AND count(*) FILTER (WHERE entity_id = :'rec_b') = 1 THEN 'PASS' ELSE 'FAIL' END
+  || ' | F12 member: change_log shows Life Admin pointers for her OWN record only (no count of the owner''s)'
   FROM public.change_log WHERE entity_table IN ('life_records', 'life_record_task_links');
 SELECT CASE WHEN count(*) = 0 THEN 'PASS' ELSE 'FAIL' END || ' | F12 member: sync_pull from 0 (hydration) delivers nothing of the owner''s record, link or Task'
   FROM jsonb_array_elements(public.sync_pull('0'::xid8, :'hh_a') -> 'rows') r WHERE r ->> 'entity_id' IN (:'rec_a', :'link_a', :'task_a');

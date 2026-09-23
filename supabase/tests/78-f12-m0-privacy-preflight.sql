@@ -125,7 +125,8 @@ BEGIN;
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claims = '{"sub":"22222222-2222-4222-8222-222222222222"}';
 SELECT CASE WHEN count(*) = 0 THEN 'PASS' ELSE 'FAIL' END || ' | F12-M0 member: DENY the private parent record by id' FROM public.goals WHERE id = :'goal_a';
-SELECT CASE WHEN count(*) = 0 THEN 'PASS' ELSE 'FAIL' END || ' | F12-M0 member: DENY every private record in her household (no count to infer from)' FROM public.goals;
+SELECT CASE WHEN count(*) = 0 THEN 'PASS' ELSE 'FAIL' END || ' | F12-M0 member: DENY every private record in her household that is not hers (no count to infer from)'
+  FROM public.goals WHERE profile_id IS DISTINCT FROM :'ub';
 SELECT CASE WHEN count(*) = 0 THEN 'PASS' ELSE 'FAIL' END || ' | F12-M0 member: DENY the personal-scope Task by id' FROM public.tasks WHERE id = :'task_a';
 SELECT CASE WHEN count(*) = 0 THEN 'PASS' ELSE 'FAIL' END || ' | F12-M0 member: DENY the personal-scope Task by its local id' FROM public.tasks WHERE local_id = 'f12m0-task';
 SELECT CASE WHEN count(*) = 1 THEN 'PASS' ELSE 'FAIL' END || ' | F12-M0 member: ALLOW the household-visible Task (its own scope permits it)' FROM public.tasks WHERE id = :'task_hh';
@@ -134,12 +135,13 @@ SELECT CASE WHEN count(*) = 0 THEN 'PASS' ELSE 'FAIL' END || ' | F12-M0 member: 
   FROM public.dependencies WHERE from_task_id = :'task_hh' OR to_task_id = :'task_hh';
 SELECT CASE WHEN count(*) = 0 THEN 'PASS' ELSE 'FAIL' END || ' | F12-M0 member: change_log shows NO pointer for the private record, Task or links'
   FROM public.change_log WHERE entity_id IN (:'goal_a', :'task_a', :'link_a', :'link_hh');
-SELECT CASE WHEN count(*) = 0 THEN 'PASS' ELSE 'FAIL' END || ' | F12-M0 member: change_log shows NO pointer of the private kinds at all (no per-table count)'
-  FROM public.change_log WHERE entity_table IN ('goals', 'dependencies');
-SELECT CASE WHEN count(*) = 0 THEN 'PASS' ELSE 'FAIL' END || ' | F12-M0 member: sync_pull (hydration from 0) delivers NO pointer for the private record, Task or links'
+SELECT CASE WHEN count(*) = 0 THEN 'PASS' ELSE 'FAIL' END || ' | F12-M0 member: change_log shows NO pointer of the private kinds that is not her own (no per-table count)'
+  FROM public.change_log WHERE entity_table IN ('goals', 'dependencies') AND owner_profile_id IS DISTINCT FROM :'ub';
+SELECT CASE WHEN count(*) = 0 THEN 'PASS' ELSE 'FAIL' END || ' | F12-M0 member: sync_pull (hydration from 0) delivers NO pointer for the private record, Task or links, nor any private-kind pointer that is not hers'
   FROM jsonb_array_elements(public.sync_pull('0'::xid8, :'hh_a') -> 'rows') r
  WHERE r ->> 'entity_id' IN (:'goal_a', :'task_a', :'link_a', :'link_hh')
-    OR r ->> 'entity_table' IN ('goals', 'dependencies');
+    OR (r ->> 'entity_table' = 'goals' AND NOT EXISTS (SELECT 1 FROM public.goals g WHERE g.id = (r ->> 'entity_id')::uuid AND g.profile_id = :'ub'))
+    OR (r ->> 'entity_table' = 'dependencies' AND NOT EXISTS (SELECT 1 FROM public.dependencies d WHERE d.id = (r ->> 'entity_id')::uuid AND d.profile_id = :'ub'));
 SELECT CASE WHEN count(*) = 1 THEN 'PASS' ELSE 'FAIL' END || ' | F12-M0 member: sync_pull still delivers the household Task (the filter is scope, not a blanket refusal)'
   FROM jsonb_array_elements(public.sync_pull('0'::xid8, :'hh_a') -> 'rows') r
  WHERE r ->> 'entity_id' = :'task_hh';

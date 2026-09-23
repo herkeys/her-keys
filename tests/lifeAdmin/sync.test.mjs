@@ -68,6 +68,27 @@ describe('F12 create offline, then sync', () => {
     assert.equal(a.persisted().identity.sync.queue.length, 0);
   });
 
+  test('offline EDIT and offline ARCHIVE: both are durable and queued locally, and reach the cloud as updates of the same row once online', async () => {
+    const { cloud, a } = await boundDevice();
+    const id = await addRecord(a, { id: 'rec-1', title: 'Registration', referenceNumber: 'R-12345678' });
+    await a.settle();
+    cloud.state.offline = true;
+    await act(a, (s, ctx) => updateLifeRecord(s, ctx, id, { title: 'Car registration', referenceNumber: '' }));
+    await act(a, (s, ctx) => archiveLifeRecord(s, ctx, id));
+    await a.settle();
+    assert.equal(cloud.table(RECORDS)[0].title, 'Registration', 'nothing reached the cloud while offline');
+    const persisted = a.persisted();
+    assert.equal(persisted.state.lifeRecords[0].status, 'archived', 'the offline archive is durable on the device');
+    assert.deepEqual(persisted.identity.sync.queue.map((q) => `${q.kind}:${q.op}`), ['lifeRecord:update'], 'two offline changes coalesce into one pending update');
+
+    cloud.state.offline = false;
+    await a.syncRuntime.request('manual');
+    await a.settle();
+    const [row] = cloud.table(RECORDS);
+    assert.deepEqual([row.title, row.reference_number, row.status, cloud.table(RECORDS).length], ['Car registration', null, 'archived', 1]);
+    assert.equal(a.persisted().identity.sync.queue.length, 0);
+  });
+
   test('a lost acknowledgement settles on retry: still exactly one record in the cloud', async () => {
     const { cloud, a } = await boundDevice();
     cloud.state.loseNextAck = 1;

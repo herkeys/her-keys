@@ -41,7 +41,7 @@ export const CORE_SYNC_KINDS = [
   'discovery',
   'onboarding',
   'action',
-  // HK-FEATURE-12 Life Admin: two OWNER-PRIVATE kinds (profile_id, scope 'personal'), registered by hand like needsMe.
+  // HK-FEATURE-12 Life Admin: two OWNER-PRIVATE kinds (profile_id, personal scope), registered by hand like needsMe.
   'lifeRecord',
   'lifeRecordLink',
 ] as const;
