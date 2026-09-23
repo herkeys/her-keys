@@ -101,6 +101,9 @@ function RootNavigator() {
               <Stack.Protected guard={allow('task-editor')}>
                 <Stack.Screen name="task-editor" options={{ presentation: 'modal', headerShown: true, title: 'Task' }} />
               </Stack.Protected>
+              <Stack.Protected guard={allow('opportunity-editor')}>
+                <Stack.Screen name="opportunity-editor" options={{ presentation: 'modal', headerShown: true, title: 'Opportunity' }} />
+              </Stack.Protected>
               <Stack.Protected guard={allow('dev-tools')}>
                 <Stack.Screen name="dev-tools" options={{ headerShown: true, title: 'Internal tools' }} />
               </Stack.Protected>

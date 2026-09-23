@@ -120,6 +120,15 @@ SELECT pg_temp.exp('dependency: an unknown relation is refused', pg_temp.dep('d1
 SELECT pg_temp.exp('dependency: an edge into ANOTHER household is refused', pg_temp.dep('d11', 'requires', :'t1'::uuid, :'tc'::uuid), '23503%');
 SELECT pg_temp.exp('dependency: a cross-domain edge (task requires goal) is the same convention', herkeys_test.ins('dependencies', jsonb_build_object('household_id', :'hh_a', 'profile_id', :'ua', 'local_id', 'd12',
    'relation', 'part_of', 'from_type', 'task', 'from_task_id', :'t3'::uuid, 'to_type', 'goal', 'to_goal_id', :'g1'::uuid, 'status', 'active')), NULL);
+-- F10: a career opportunity's next action is this SAME mechanism, widened by one endpoint kind — never a second link table.
+SELECT herkeys_test.ins('career_opportunities', jsonb_build_object('household_id', :'hh_a', 'profile_id', :'ua', 'local_id', 'i-opp1', 'title', 'Senior Analyst role', 'opportunity_type', 'job', 'stage', 'exploring', 'stage_changed_at', now()));
+SELECT id AS opp1 FROM public.career_opportunities WHERE local_id = 'i-opp1' \gset
+SELECT pg_temp.exp('dependency (F10): a task part_of a career opportunity is accepted — the next action is an ordinary Task, not a field on the opportunity', herkeys_test.ins('dependencies', jsonb_build_object('household_id', :'hh_a', 'profile_id', :'ua', 'local_id', 'd13',
+   'relation', 'part_of', 'from_type', 'task', 'from_task_id', :'t2'::uuid, 'to_type', 'opportunity', 'to_opportunity_id', :'opp1'::uuid, 'status', 'active')), NULL);
+SELECT pg_temp.exp('dependency (F10): an opportunity cannot be part_of itself', herkeys_test.ins('dependencies', jsonb_build_object('household_id', :'hh_a', 'profile_id', :'ua', 'local_id', 'd14',
+   'relation', 'part_of', 'from_type', 'opportunity', 'from_opportunity_id', :'opp1'::uuid, 'to_type', 'opportunity', 'to_opportunity_id', :'opp1'::uuid, 'status', 'active')), '23514%not_self_check%');
+SELECT pg_temp.exp('dependency (F10): an edge into ANOTHER household''s opportunity is refused', herkeys_test.ins('dependencies', jsonb_build_object('household_id', :'hh_a', 'profile_id', :'ua', 'local_id', 'd15',
+   'relation', 'part_of', 'from_type', 'task', 'from_task_id', :'t3'::uuid, 'to_type', 'opportunity', 'to_opportunity_id', gen_random_uuid(), 'status', 'active')), '23503%');
 
 -- ============ 6. INTENTS, DECISIONS: one answer, a withdrawal needs an approval ================================================
 SELECT herkeys_test.ins('action_intents', jsonb_build_object('household_id', :'hh_a', 'profile_id', :'ua', 'local_id', 'i-1', 'category', 'internal_reminder', 'consequence', 'low', 'reversibility', 'reversible',
@@ -279,5 +288,27 @@ SELECT pg_temp.exp('evidence: a pattern stands on a real observation', herkeys_t
 SELECT pg_temp.exp('evidence: only patterns, One Moves and intents are explained', herkeys_test.ins('evidence_links', jsonb_build_object('household_id', :'hh_a', 'profile_id', :'ua', 'local_id', 'ev-2', 'for_type', 'task', 'for_task_id', :'t1'::uuid, 'support_type', 'task', 'support_task_id', :'t2'::uuid, 'code', 'x')), '23514%for_ref_check%');
 SELECT pg_temp.exp('evidence: a reason is an open token, format-checked (no prose, no chain of thought)', herkeys_test.ins('evidence_links', jsonb_build_object('household_id', :'hh_a', 'profile_id', :'ua', 'local_id', 'ev-3', 'for_type', 'pattern', 'for_pattern_id', :'pae'::uuid,
    'support_type', 'task', 'support_task_id', :'t1'::uuid, 'code', 'Because she always forgets on Tuesdays')), '23514%code_check%');
+
+-- ============ 15. CAREER OPPORTUNITY (F10): stage is user-controlled truth, and closed always says why =========================
+CREATE FUNCTION pg_temp.opp(p_local text, p_extra jsonb) RETURNS text LANGUAGE sql AS $f$
+  SELECT herkeys_test.ins('career_opportunities', jsonb_build_object('household_id', current_setting('t.hh')::uuid, 'profile_id', current_setting('t.ua')::uuid, 'local_id', p_local,
+    'title', 'Marketing Manager opening', 'opportunity_type', 'job', 'stage', 'exploring', 'stage_changed_at', now()) || p_extra);
+$f$;
+SELECT pg_temp.exp('opportunity: exploring, with no reason, is accepted', pg_temp.opp('op-1', '{}'::jsonb), NULL);
+SELECT pg_temp.exp('opportunity: a title is required, and not blank', pg_temp.opp('op-2', jsonb_build_object('title', '   ')), '23514%title_check%');
+SELECT pg_temp.exp('opportunity: the type vocabulary is closed', pg_temp.opp('op-3', jsonb_build_object('opportunity_type', 'side-hustle')), '23514%type_check%');
+SELECT pg_temp.exp('opportunity: the stage vocabulary is closed — DOCTRINE: applied is never silently treated as interviewing', pg_temp.opp('op-4', jsonb_build_object('stage', 'applied-ish')), '23514%stage_check%');
+SELECT pg_temp.exp('opportunity: DOCTRINE — closed requires a reason (no response is never upgraded to a rejection she never gave)', pg_temp.opp('op-5', jsonb_build_object('stage', 'closed')), '23514%closed_pairing_check%');
+SELECT pg_temp.exp('opportunity: a reason outside the vocabulary is refused', pg_temp.opp('op-6', jsonb_build_object('stage', 'closed', 'closed_reason', 'ghosted')), '23514%closed_reason_check%');
+SELECT pg_temp.exp('opportunity: closed with a real reason is accepted', pg_temp.opp('op-7', jsonb_build_object('stage', 'closed', 'closed_reason', 'no_further_response')), NULL);
+SELECT pg_temp.exp('opportunity: DOCTRINE — a reason may not be recorded on a stage other than closed (accepted is not accepted-and-closed)', pg_temp.opp('op-8', jsonb_build_object('stage', 'accepted', 'closed_reason', 'withdrawn')), '23514%closed_pairing_check%');
+SELECT pg_temp.exp('opportunity: DOCTRINE — an offer is not an acceptance; both are just recorded stages, no cascade between them', pg_temp.opp('op-9', jsonb_build_object('stage', 'offer')), NULL);
+SELECT pg_temp.exp('opportunity: multiple opportunities may independently be interviewing/offer/accepted — no exclusivity enforced', pg_temp.opp('op-10', jsonb_build_object('stage', 'accepted')), NULL);
+SELECT pg_temp.exp('opportunity: compensation is carried only as a free-text note — there is no structured amount column for it to occupy',
+  (SELECT CASE WHEN count(*) = 0 THEN NULL ELSE 'has a structured amount column' END FROM information_schema.columns
+   WHERE table_schema = 'public' AND table_name = 'career_opportunities' AND column_name ~* '(amount|salary|wage|rate|currency)'), NULL);
+SELECT pg_temp.exp('opportunity: it has no nextActionText or interview sub-record column — the action is always a canonical Task or Event',
+  (SELECT CASE WHEN count(*) = 0 THEN NULL ELSE 'has an action-shaped column' END FROM information_schema.columns
+   WHERE table_schema = 'public' AND table_name = 'career_opportunities' AND column_name ~* '(next_action|interview_at|interview_date|action_text)'), NULL);
 
 ROLLBACK;

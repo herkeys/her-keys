@@ -21,7 +21,7 @@ import { UnresolvedReferenceError, childRef, cloudRef, provenanceColumns, requir
 import type { MappedKind } from './syncTypes';
 
 /**
- * LOCAL <-> CLOUD, for the eighteen foundation kinds.
+ * LOCAL <-> CLOUD, for the nineteen foundation kinds.
  *
  * ONE interpreter of the manifest in `foundationSpecs.ts`, in both directions, so that a
  * field cannot be written to one column and read from another. It translates and never

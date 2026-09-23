@@ -30,7 +30,8 @@ import type { LoadEstimate } from '../../../types';
 export type TodayRoute =
   | { pathname: '/task-editor'; params?: { taskId?: string } }
   | { pathname: '/event-editor'; params?: { eventId?: string } }
-  | { pathname: '/life/needs-me' };
+  | { pathname: '/life/needs-me' }
+  | { pathname: '/opportunity-editor'; params?: { opportunityId?: string } };
 
 /** Where a row came from, read off the row's stored provenance — never guessed, never upgraded. */
 export interface SourceLine {

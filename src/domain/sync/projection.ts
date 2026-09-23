@@ -26,7 +26,7 @@ import { CLOUD_TABLE, mappingKey, type MappedKind, type Mapping, type SyncEntity
  * and sending them anyway would be asking to be refused.
  *
  * Every row states where it came from (`producer`, `source_artifact_id`,
- * `confidence`) and the commitment facets it can answer. The eighteen foundation
+ * `confidence`) and the commitment facets it can answer. The nineteen foundation
  * kinds are projected by `foundationProjection.ts`, from the manifest.
  */
 

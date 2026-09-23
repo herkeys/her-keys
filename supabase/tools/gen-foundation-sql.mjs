@@ -37,7 +37,7 @@ const LOCAL_ID_RE = `'^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$'::text`;
 const MAX_MONEY = '9007199254740991';
 
 /** Kinds whose cloud table is owner-private (carries profile_id), so a reference to one is same-household AND same-owner. */
-const OWNER_PRIVATE_KINDS = new Set(['needsMe', 'oneMove', 'goal', 'responsibility', 'observation', 'pattern', 'intent', 'person', 'interpretation']);
+const OWNER_PRIVATE_KINDS = new Set(['needsMe', 'oneMove', 'goal', 'responsibility', 'observation', 'pattern', 'intent', 'person', 'interpretation', 'opportunity']);
 
 /** What a `link` field points at. `member` is the household's child, proven structurally (NHR-01). */
 const LINK_TARGET = {

@@ -2,7 +2,7 @@ import type { IntentStage } from '../../../domain/authorization';
 import type { OutcomeKind } from '../../../domain/foundation/authorization';
 import type { ConfidenceLevel, ProvenanceSource } from '../../../domain/foundation/provenance';
 import type { ResponsibilityState } from '../../../domain/foundation/responsibility';
-import type { ContentRefKind } from '../../../domain/foundation/typedRef';
+import type { DependencyRefKind } from '../../../domain/foundation/structure';
 import type { LocalDate } from '../../../domain/logicalDay';
 import type { VisibilityScope } from '../../../domain/state';
 
@@ -105,7 +105,7 @@ export type AttentionReason = 'delegation_unanswered';
 // ---------------------------------------------------------------- references ---
 
 export interface RefView {
-  kind: ContentRefKind;
+  kind: DependencyRefKind;
   id: string;
   /** Null when the referenced row cannot be found. */
   label: string | null;

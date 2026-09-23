@@ -27,7 +27,7 @@ import type { SyncEntityKind } from './syncTypes';
  * scope-integrity failure is a real problem and hiding it would make it worse.
  *
  * The nine content kinds read their provenance and commitment facets back from
- * the columns that store them; the eighteen foundation kinds are applied by
+ * the columns that store them; the nineteen foundation kinds are applied by
  * `foundationProjection.ts`, from the manifest.
  */
 

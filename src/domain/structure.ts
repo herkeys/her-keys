@@ -5,12 +5,13 @@ import {
   findDependencyCycle,
   type CapacityProfile,
   type Dependency,
+  type DependencyRefKind,
   type DependencyRelation,
   type Goal,
   type RecurrenceRule,
   type SystemStep,
 } from './foundation/structure';
-import { refExists, refKey, type ContentRefKind, type TypedRef } from './foundation/typedRef';
+import { refExists, refKey, type TypedRef } from './foundation/typedRef';
 import { REQUIRED_TRANSITION_BUFFER_MINUTES } from '../features/daily-load/computeDailyLoad';
 import { addDays, daysBetween, parseLocalDate, formatLocalDate, toInstant, weekdayOf, type LocalDate } from './logicalDay';
 import { appendObservation } from './observations';
@@ -37,7 +38,7 @@ export type DependencyRefusal = 'missing_endpoint' | 'self' | 'cycle' | 'duplica
 export function addDependency(
   state: AppState,
   ctx: TransitionContext,
-  input: { relation: DependencyRelation; from: TypedRef<ContentRefKind>; to: TypedRef<ContentRefKind>; provenance?: Provenance }
+  input: { relation: DependencyRelation; from: TypedRef<DependencyRefKind>; to: TypedRef<DependencyRefKind>; provenance?: Provenance }
 ): { state: AppState; refusal: DependencyRefusal | null } {
   if (!refExists(state, input.from) || !refExists(state, input.to)) return { state, refusal: 'missing_endpoint' };
   if (refKey(input.from) === refKey(input.to)) return { state, refusal: 'self' };

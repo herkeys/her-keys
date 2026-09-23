@@ -1,5 +1,5 @@
 import { intentLifecycle } from '../../../domain/authorization';
-import type { ContentRefKind } from '../../../domain/foundation/typedRef';
+import type { DependencyRefKind } from '../../../domain/foundation/structure';
 import type { LocalDate } from '../../../domain/logicalDay';
 import type { AppState } from '../../../domain/state';
 import { actionsFor } from './actions';
@@ -13,7 +13,7 @@ export interface Clock {
   today: LocalDate;
 }
 
-function labelOf(state: AppState, kind: ContentRefKind, id: string): string | null {
+function labelOf(state: AppState, kind: DependencyRefKind, id: string): string | null {
   switch (kind) {
     case 'task': return state.tasks.find((row) => row.id === id)?.title ?? null;
     case 'event': return state.events.find((row) => row.id === id)?.title ?? null;
@@ -21,6 +21,7 @@ function labelOf(state: AppState, kind: ContentRefKind, id: string): string | nu
     case 'system': return state.systems.find((row) => row.id === id)?.name ?? null;
     case 'meal': return state.meals.find((row) => row.id === id)?.title ?? null;
     case 'goal': return state.goals.find((row) => row.id === id)?.title ?? null;
+    case 'opportunity': return state.careerOpportunities.find((row) => row.id === id)?.title ?? null;
   }
 }
 
@@ -32,7 +33,7 @@ function labelOf(state: AppState, kind: ContentRefKind, id: string): string | nu
  */
 function dependenciesOf(state: AppState, systemId: string): { needs: RefView[]; neededBy: RefView[] } {
   const live = state.dependencies.filter((edge) => edge.status === 'active' && edge.relation === 'requires');
-  const view = (ref: { kind: ContentRefKind; id: string }): RefView => ({ kind: ref.kind, id: ref.id, label: labelOf(state, ref.kind, ref.id) });
+  const view = (ref: { kind: DependencyRefKind; id: string }): RefView => ({ kind: ref.kind, id: ref.id, label: labelOf(state, ref.kind, ref.id) });
   // Codepoint order, not locale collation: this feeds committed evidence that must not vary by device.
   const cmp = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
   const byLabel = (a: RefView, b: RefView) => cmp(a.label ?? '￿', b.label ?? '￿') || cmp(a.id, b.id);

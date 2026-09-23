@@ -9,7 +9,7 @@ import { BACKFILL_COLLECTIONS, type BackfillCollection } from '../domain/state';
 export const V4_EMPTY_COLLECTIONS = [
   'sourceArtifacts', 'externalReferences', 'interpretations', 'observations', 'authorities', 'intents', 'decisions',
   'executions', 'outcomes', 'people', 'responsibilities', 'dependencies', 'recurrences', 'goals', 'systemSteps',
-  'patterns', 'evidenceLinks',
+  'patterns', 'evidenceLinks', 'careerOpportunities',
 ] as const;
 
 /**

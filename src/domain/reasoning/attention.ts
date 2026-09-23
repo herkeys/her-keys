@@ -28,6 +28,7 @@ export const ATTENTION_REASONS = [
   'external_source_changed',
   'needs_me',
   'capacity_overload',
+  'opportunity_follow_up',
 ] as const;
 export type AttentionReason = (typeof ATTENTION_REASONS)[number];
 
@@ -105,6 +106,20 @@ export function attentionFor(state: AppState, nowMs: number): AttentionItem[] {
   // needs her — captured, unclassified, still open
   for (const item of state.needsMe) {
     if (item.status === 'open') items.push({ reason: 'needs_me', urgency: item.dueDate !== null && item.dueDate <= today ? 'today' : 'soon', about: { kind: 'needsMe', id: item.id } });
+  }
+
+  // opportunity_follow_up — an explicit date SHE recorded (a follow-up, or an application/opportunity
+  // deadline) on a still-open opportunity. Never an inferred inactivity timer (F10 ADDENDUM N/O):
+  // without a date she gave, an opportunity produces no attention item at all. One item per
+  // opportunity even when both dates qualify — the earliest date decides urgency.
+  for (const opportunity of state.careerOpportunities) {
+    if (opportunity.stage === 'closed' || opportunity.archivedAt !== null) continue;
+    const dates = [opportunity.followUpDate, opportunity.applicationDeadline].filter((d): d is LocalDate => d !== null);
+    const earliest = dates.sort()[0];
+    if (earliest === undefined) continue;
+    const ref: TypedRef = { kind: 'opportunity', id: opportunity.id };
+    if (earliest <= today) items.push({ reason: 'opportunity_follow_up', urgency: earliest < today ? 'now' : 'today', about: ref });
+    else if (Date.parse(`${earliest}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`) <= 2 * 86_400_000) items.push({ reason: 'opportunity_follow_up', urgency: 'soon', about: ref });
   }
 
   return items.sort(

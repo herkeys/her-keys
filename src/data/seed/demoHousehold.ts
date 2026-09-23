@@ -1,5 +1,7 @@
 import { starterCategories } from '../../domain/categories';
 import { emptyEventFacets, emptyMealFacets, emptySystemFacets, emptyTaskFacets } from '../../domain/foundation/commitment';
+import type { CareerOpportunity } from '../../domain/foundation/opportunity';
+import type { Dependency } from '../../domain/foundation/structure';
 import { demoProvenance } from '../../domain/foundation/provenance';
 import { addDays, addYears, toInstant, zonedTimeToEpochMs, type LocalDate } from '../../domain/logicalDay';
 import { initialOnboarding } from '../../domain/onboarding';
@@ -117,6 +119,66 @@ export function materializeDemoState({ anchorDate, timeZone }: { anchorDate: Loc
     scope: 'child',
   }));
 
+  // One career opportunity, with its next action as an ordinary Task linked through the same
+  // Dependency mechanism a Goal's steps use (`relation: 'part_of'`) — never a second, opportunity-only
+  // task shape, and never household-visible: both rows stay owner-private, matching the opportunity's scope.
+  const opportunityTask: Task = {
+    id: 'task-opp-1',
+    title: 'Send follow-up email to Priya',
+    categoryId: category.work,
+    subjectMemberId: null,
+    durationMinutes: 10,
+    durationSource: 'user',
+    commitment: 'flexible',
+    dueDate: null,
+    plan: { kind: 'unplanned' },
+    notes: null,
+    status: 'open',
+    completedAt: null,
+    createdAt: null,
+    updatedAt: null,
+    ...emptyTaskFacets(),
+    provenance: demoProvenance(),
+    scope: 'professional',
+  };
+
+  const careerOpportunities: CareerOpportunity[] = [
+    {
+      id: 'opp-1',
+      title: 'Senior Analyst role at Brightline',
+      organizationName: 'Brightline Data',
+      opportunityType: 'job',
+      stage: 'applied',
+      closedReason: null,
+      sourceNote: 'Found through a LinkedIn post',
+      applicationDeadline: null,
+      followUpDate: addDays(anchorDate, 3),
+      contactName: 'Priya (recruiter)',
+      compensationNote: null,
+      notes: null,
+      createdAt: instantOn(-2, at(9)),
+      updatedAt: instantOn(-2, at(9)),
+      stageChangedAt: instantOn(-2, at(9)),
+      archivedAt: null,
+      provenance: demoProvenance(),
+      scope: 'personal',
+    },
+  ];
+
+  const opportunityDependencies: Dependency[] = [
+    {
+      id: 'dep-opp-1',
+      relation: 'part_of',
+      from: { kind: 'task', id: 'task-opp-1' },
+      to: { kind: 'opportunity', id: 'opp-1' },
+      status: 'active',
+      createdAt: instantOn(-2, at(9)),
+      updatedAt: instantOn(-2, at(9)),
+      provenance: demoProvenance(),
+      scope: 'personal',
+    },
+  ];
+
   const meals: MealPlanEntry[] = mealTemplates.map(({ dayOffset, ...meal }) => ({
     ...meal,
     date: addDays(anchorDate, dayOffset),
@@ -136,7 +198,7 @@ export function materializeDemoState({ anchorDate, timeZone }: { anchorDate: Loc
     children,
     categories: starterCategories(DEMO_HOUSEHOLD_ID, demoProvenance()),
     events,
-    tasks,
+    tasks: [...tasks, opportunityTask],
     systems: systems.map((system) => ({ ...system, ...emptySystemFacets(), provenance: demoProvenance() })),
     meals,
     onboarding: initialOnboarding(demoProvenance()),
@@ -157,12 +219,13 @@ export function materializeDemoState({ anchorDate, timeZone }: { anchorDate: Loc
     outcomes: [],
     people: [],
     responsibilities: [],
-    dependencies: [],
+    dependencies: opportunityDependencies,
     recurrences: [],
     goals: [],
     systemSteps: [],
     capacity: null,
     patterns: [],
     evidenceLinks: [],
+    careerOpportunities,
   };
 }
