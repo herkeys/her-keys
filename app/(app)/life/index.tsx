@@ -4,15 +4,27 @@ import { AppText, Overline, Screen, StatusList } from '../../../src/design/compo
 import { colors, spacing } from '../../../src/design/tokens';
 import { openTasksWithoutList } from '../../../src/domain/taskLists';
 import { NeedsMeQuickAdd } from '../../../src/features/life/NeedsMeQuickAdd';
+import { LIFE_HUB_COPY } from '../../../src/features/life/lifeHubCopy';
 import { REBUILD_COPY } from '../../../src/features/rebuild/copy';
 import { LIFE_ADMIN_COPY } from '../../../src/features/lifeAdmin/lifeAdminCopy';
 import { lifeAdminHubSummary } from '../../../src/features/lifeAdmin/lifeAdminView';
+import { peopleLifeTile } from '../../../src/features/people/lifeTile';
 import { useLifeStatus } from '../../../src/features/life/useLifeStatus';
 import { useLifeInbox } from '../../../src/features/talk-it-out/capture/CaptureContext';
 import { copy } from '../../../src/features/talk-it-out/capture/copy';
 import { inboxRowValue } from '../../../src/features/talk-it-out/capture/viewModel';
 import { useHouseholdState } from '../../../src/store/AppStateProvider';
 
+/**
+ * The Life hub (IA reconciled in the F01-F13 integration, INT13-02).
+ *
+ * Two lists, not one long one:
+ *   Where things stand — the household's areas, one row per category that has a Life screen (in the household's own order and names:
+ *     Kids, Home, Money, Meals, Work, Co-parenting), then the catch-alls: other open tasks, the Life Inbox and Needs Me.
+ *   Just for you — the three areas that are owner-private by construction: Me / Rebuild, Life Admin / Documents and People. Nothing in
+ *     them is shared with the household, and none of them reaches her day by itself; only a Task she makes from one does.
+ * Every row is a count or a date, never a name, a title, a note, a number or a place.
+ */
 export default function LifeHub() {
   const statuses = useLifeStatus();
   const inbox = useLifeInbox();
@@ -20,19 +32,20 @@ export default function LifeHub() {
   const openNeedsMe = state.needsMe.filter((item) => item.status === 'open');
   const otherOpenTasks = openTasksWithoutList(state, today).length;
   const activeFocuses = state.rebuildFocuses.filter((focus) => focus.state === 'active').length;
+  const people = peopleLifeTile(state, today);
 
   return (
     <Screen>
       <View style={styles.header}>
         <AppText variant="display">Life</AppText>
         <AppText variant="supporting" color={colors.textSecondary} style={styles.subtitle}>
-          Five areas, one picture. Everything here is what Her Keys reads when it looks at your day.
+          {LIFE_HUB_COPY.subtitle}
         </AppText>
       </View>
 
       <NeedsMeQuickAdd />
 
-      <Overline style={styles.sectionLabel}>Where things stand</Overline>
+      <Overline style={styles.sectionLabel}>{LIFE_HUB_COPY.householdSection}</Overline>
       <StatusList
         items={[
           ...statuses.map((s) => ({
@@ -67,6 +80,17 @@ export default function LifeHub() {
             value: openNeedsMe.length === 0 ? 'Nothing captured' : `${openNeedsMe.length} captured`,
             onPress: () => router.push('/life/needs-me'),
           },
+        ]}
+      />
+
+      <View style={styles.privateSection}>
+        <Overline style={styles.sectionLabelWithNote}>{LIFE_HUB_COPY.privateSection}</Overline>
+        <AppText variant="supporting" color={colors.textSecondary} style={styles.sectionNote}>
+          {LIFE_HUB_COPY.privateSectionNote}
+        </AppText>
+      </View>
+      <StatusList
+        items={[
           // Her own life as a person (HK-FEATURE-11). A count of what she chose to keep visible — never a score, never a nudge.
           {
             key: 'me-rebuild',
@@ -81,6 +105,14 @@ export default function LifeHub() {
             ...lifeAdminHubSummary(state, today),
             onPress: () => router.push('/life/admin'),
           },
+          // People (HK-FEATURE-13): the tile Feature 13 built for this hub (MP-13-08) — a count or a date, never a name or a note.
+          {
+            key: people.key,
+            label: people.label,
+            value: people.value,
+            needsAttention: people.needsAttention,
+            onPress: () => router.push(people.route),
+          },
         ]}
       />
     </Screen>
@@ -91,4 +123,7 @@ const styles = StyleSheet.create({
   header: { marginBottom: spacing.xxl },
   subtitle: { marginTop: spacing.sm },
   sectionLabel: { marginBottom: spacing.md },
+  privateSection: { marginTop: spacing.xxl },
+  sectionLabelWithNote: { marginBottom: spacing.xs },
+  sectionNote: { marginBottom: spacing.md },
 });

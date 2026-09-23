@@ -33,13 +33,22 @@ export interface LifeStatusInput {
   openTaskCounts: ReadonlyMap<string, number>;
 }
 
-/** The Life screens that exist, keyed by the role they specialize in — never by what a household calls the category. */
-const LIFE_SCREEN_ROUTES: Partial<Record<SystemRole, string>> = {
+/**
+ * The Life screens that exist, keyed by the role they specialize in — never by what a household calls the category.
+ *
+ * `coparenting` joined in the F01-F13 integration (HK13-D10): Feature 07's logistics screen had no entry point anywhere (its ledger left
+ * "register the route in the Life hub" to integration). A co-parenting record IS a record in the category whose role is `coparenting`
+ * (src/features/coparent/identity.ts), so the category's row — in the household's own order, under the household's own name, gone
+ * when the category is archived — is exactly the right entry. Its reading is the generic count of what is due and on today: no child,
+ * place or time reaches the hub.
+ */
+export const LIFE_SCREEN_ROUTES: Partial<Record<SystemRole, string>> = {
   kids: '/life/kids',
   home: '/life/home',
   money: '/life/money',
   meals: '/life/meals',
   work: '/life/work',
+  coparenting: '/life/coparent',
 };
 
 /**

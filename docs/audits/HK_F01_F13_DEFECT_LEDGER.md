@@ -21,9 +21,9 @@ P5 low correctness · P6 UX polish · P7 maintainability · P8 performance · P9
 | HK13-D05 | P4 | F11, F13 | generator / manifest | Two incompatible "additive migration" generator mechanisms | FIXED `85c585a` |
 | HK13-D06 | P4 | F12, F13 | backend harness | Private-stack override names diverged; F13's name guard rejected F12's prefixed stacks | FIXED `85c585a` |
 | HK13-D07 | P5 | F11, F12 | sync transport | Two parallel "Failing row contains" redactions; F11's regex missed an unclosed row tuple | FIXED `02fa959` (trivial, local) |
-| HK13-D08 | **P0** | F10 | local persistence | A household saved before F10 fails validation and is overwritten with an empty household on the first F10 launch | OPEN (reproduced) |
-| HK13-D09 | **P0** | F10, F11, F13 | account binding | `hasContent` ignores Work/Rebuild/People rows: after A's interrupted claim, B bootstraps and A's private rows are pushed as B's | OPEN (reproduced) |
-| HK13-D10 | P3 | F07, F13 | navigation / Life IA | Co-Parent (`/life/coparent`) and People (`/life/people`) have no entry point — reachable only by deep link | OPEN |
+| HK13-D08 | **P0** | F10 | local persistence | A household saved before F10 fails validation and is overwritten with an empty household on the first F10 launch | FIXED `d9dfa5c` |
+| HK13-D09 | **P0** | F10, F11, F13 | account binding | `hasContent` ignores Work/Rebuild/People rows: after A's interrupted claim, B bootstraps and A's private rows are pushed as B's | FIXED `d9dfa5c` |
+| HK13-D10 | P3 | F07, F13 | navigation / Life IA | Co-Parent (`/life/coparent`) and People (`/life/people`) have no entry point — reachable only by deep link | FIXED (INT13-02) |
 
 (Entries below are added as the audit proceeds.)
 
@@ -163,7 +163,11 @@ P5 low correctness · P6 UX polish · P7 maintainability · P8 performance · P9
 - **Severity:** P0 (data loss).
 - **Repair decision:** add `.default([])` to `careerOpportunities`, exactly the convention the other additions follow; add a test that
   a v4 envelope from before EVERY later root still decodes `valid`, derived from the schema so a future root cannot repeat this.
-- **Status:** OPEN — repair in AUD13-01.
+- **Repair (AUD13-01, `d9dfa5c`):** `careerOpportunities: z.array(...).max(1000).default([])`.
+- **Tests:** `tests/hk-f01f13/laterRoots.test.mjs` (4): every root added after WAVE3_BASE is a ZodDefault (derived from the
+  schema); a WAVE3_BASE-era household validates and decodes `valid`; the REAL store (production: quarantine off) hydrates it `ready`
+  with her tasks still on disk. Test-the-test: without the default, 4/4 fail.
+- **Status:** FIXED.
 
 ## HK13-D09 — Account binding ignores Work, Rebuild and People rows (P0)
 
@@ -183,7 +187,13 @@ P5 low correctness · P6 UX polish · P7 maintainability · P8 performance · P9
   household holding only these kinds) is narrow; the rubric grades the outcome.
 - **Repair decision:** `hasContent` covers every content collection, and a test enumerates `AppStateSchema`'s roots so any future
   collection must be classified (content or not) before the suite passes.
-- **Status:** OPEN — repair in AUD13-01.
+- **Repair (AUD13-01, `d9dfa5c`):** `hasContent` reads one exported `CONTENT_COLLECTIONS` list (all 33 content collections).
+- **Tests:** `tests/hk-f01f13/bindingContent.test.mjs` (8): every AppState root is classified (content collection, or an explicit
+  reasoned exception: origin, household, user, categories, onboarding, discovery, capacity, migrationLineage); each collection alone
+  counts; quarantine for B after A's receipt and claim (not bootstrap) for her own sign-in, for F10 and F11 households; and the REAL
+  account runtime end to end: B lands in `boundOther`, nothing renders, no bootstrap/claim call is made. Test-the-test: dropping
+  `rebuildFocuses` from the list fails 5/8, including the end-to-end test.
+- **Status:** FIXED.
 
 ## HK13-D10 — Co-Parent and People are reachable only by deep link (P3)
 
@@ -194,5 +204,13 @@ P5 low correctness · P6 UX polish · P7 maintainability · P8 performance · P9
   hub") and Wave 2 never did; F13 records MP-13-08 the same way.
 - **Expected:** every legitimate destination reachable from the shell; no route reachable only by a link.
 - **Severity:** P3 (feature route unreachable).
-- **Repair decision:** Phase 4 Life-hub reconciliation (INT13-02).
-- **Status:** OPEN.
+- **Repair (INT13-02):** Co-Parent joins the existing category route map (`LIFE_SCREEN_ROUTES.coparenting = '/life/coparent'`):
+  F07 identifies its records by the `coparenting` category, so the category row (household's order and name, gone when archived, a
+  generic count reading) is the entry. People gets the hub row F13 built for it (`peopleLifeTile`, count/date only), in a new "Just for
+  you" section with Me / Rebuild and Life Admin (the three owner-private areas). See the audit report, Phase 4.
+- **Tests:** `tests/hk-f01f13/lifeHub.test.mjs` (7): every Life screen is navigated to from code other than its own route file; the
+  hub reaches all twelve areas; the shell is exactly its five tabs; the Co-parenting row opens `/life/coparent` under the household's
+  own name, keeps category order, and disappears with the category; the hub copy claims nothing false. Test-the-test: the pre-fix hub
+  fails 4/7 with `['/life/coparent', '/life/people']` unreachable. `tests/people/ui.test.mjs`: F13's "hub untouched (registration
+  deferred)" test replaced by "the hub reaches People only through the count-only tile; Today/One Move/Life layout untouched".
+- **Status:** FIXED.

@@ -179,9 +179,14 @@ describe('PRIVATE CONTEXT DOES NOT BECOME VISIBLE ELSEWHERE — static', () => {
     }
   });
 
-  test('the Life hub, its layout and the Today/One Move code are untouched by F13 (registration is deferred to integration)', () => {
-    // Asserted by content markers rather than git so it holds in any checkout: none of these files mention People OS.
-    for (const file of ['app/(app)/life/index.tsx', 'app/(app)/life/_layout.tsx', 'src/features/life/lifeStatus.ts', 'src/domain/oneMove.ts', 'src/features/today/model/todayView.ts']) {
+  // Replaced in the F01-F13 integration (INT13-02). The Feature 13 branch asserted the hub did NOT mention People, because hub
+  // registration was deferred to integration (MP-13-08). Integration registered it, so the test now asserts what registration must be:
+  // the hub reaches People only through F13's own count-only tile, and Today / One Move / the Life layout still know nothing of People.
+  test('the Life hub reaches People only through the count-only tile; the Life layout and the Today/One Move code are untouched by People', () => {
+    const hub = read('app/(app)/life/index.tsx');
+    assert.match(hub, /peopleLifeTile\(state, today\)/, 'the hub row is the tile F13 built for it');
+    assert.equal(/personContexts|contextNote|relationshipName|organizationName|displayName/.test(hub), false, 'the hub reads no People detail directly');
+    for (const file of ['app/(app)/life/_layout.tsx', 'src/features/life/lifeStatus.ts', 'src/domain/oneMove.ts', 'src/features/today/model/todayView.ts']) {
       assert.equal(/HK-FEATURE-13|people\/|personContext/i.test(read(file)), false, file);
     }
   });
