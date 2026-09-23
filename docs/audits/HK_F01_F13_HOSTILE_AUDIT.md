@@ -448,3 +448,88 @@ running it against the pre-fix code; each ledger entry names which.
   - F13's missing primitives.
   - F02 OD-1 (raw-text retention) and OD-2 (high-stakes policy).
   - F03 OD-01 (defaulted duration), resolved as provenance by IR01 and D12.
+
+## 20. Final certification gate
+
+Run uncontested at **`43ab329`** (AUD13-12) on 2026-09-23, in the audit namespace (`f1313audit_*`, `f12_f1313audit`,
+`f13_f1313audit`). The commit that records these results changes `docs/audits/` only (`git diff --name-only 43ab329 HEAD`).
+
+| # | Gate | Evidence | Result |
+|---|---|---|---|
+| 1 | TypeScript | `tsc --noEmit -p .` | **clean**, 0 errors |
+| 2 | Complete application suite | `node --test --test-concurrency=1 "tests/**/*.test.mjs"` | **3322 / 3322** pass, 762 suites, 0 fail, 0 cancelled, 0 skipped (145 s) |
+| 3 | Complete backend harness | `run.mjs` via the gate wrapper (two quiet polls first; any other harness logged) | **1592 / 1592** checks, 0 FAIL lines, **0 contention events** (17:22:20 → 17:28:14). The Co-Parent journey is now included (HK13-D43, +33) |
+| 4 | All F01–F13 feature suites | inside 2 and 3: every feature's app folder; SQL suites 30, 57, 58, 77-f05, 77-meals, 78-f11, 78-f12, 79-f12, 79-f13, 81, 92; each feature's journey | pass (inside 2 and 3) |
+| 5 | Integrated journeys | `integratedJourney`, `integratedDevices`, `syncLifecycle` (app); sync-integration, composition, kids, home, rebuild, life-admin, people and co-parent journeys over real HTTP on the private stack (harness) | pass |
+| 6 | RLS / privacy | suite 81 (56 checks: A, B, C, anon, service) and every feature's RLS suite, in 3 | pass |
+| 7 | Fresh install | ENV A (empty apply of the whole chain), ENV B and B3 (interlock), the migration gate (every WAVE3_BASE file byte-pinned); `int13-fingerprint derive`: the upgrade path vs a fresh install, **0 differing facts** | pass |
+| 8 | Populated upgrade | ENV D (pre-IR01 → the whole chain), ENV E (pre-F08), ENV F (exactly WAVE3_BASE with every Wave 2 feature's rows → F09…INT13, one at a time) | pass |
+| 9 | Account switch | `accountSwitch` (A → B → A with every Wave 3/4 feature's private rows), `bindingContent`, `rebuild/sync`, People and Life Admin account tests | pass |
+| 10 | Mutation | feature suites (§13 table, re-run at `43ab329`); I1–I17 + I2b, I4b, I9b; DC-M1..M8 + D38-M1..M2; D40-M1..M2; D43-M1..M2 | see below |
+| 11 | Schema fingerprint | `int13-fingerprint derive` (writes nothing): shared default DB **MATCH** (3621 / `8bf3c7c6…`, read-only); no migration drifted from its pinned counts; OLD 3629 / `96f93f3d…`, **NEW 4371 / `17dccce9…` = the committed baseline** | pass |
+| 12 | Git boundary | see below | pass |
+
+**Mutation (gate 10), re-run at `43ab329`:**
+
+| Set | Caught |
+|---|---|
+| Today (F01) | 24 / 24 |
+| F05 Kids | 38 / 38 (HK13-D39 re-targeting holds) |
+| F06 Home | 47 / 47 |
+| F07 Co-Parent | 42 / 42 |
+| Meals (F08) | 20 / 20 |
+| Money (F09) | 6 / 6 |
+| F10 Work | 6 / 6 |
+| Rebuild (F11) | 17 / 17 |
+| Life Admin (F12) | 20 / 20 |
+| People (F13) | 22 / 22 |
+| IR01 | 35 / 35 |
+| Integration I1–I17, I2b, I4b, I9b | 20 / 20 |
+| Doctrine closures DC-M1..M8, D38-M1..M2 | 10 / 10 |
+| D40-M1..M2 | 2 / 2 |
+| D43-M1..M2 | 2 / 2 |
+| **Total** | **311 / 311** |
+
+Every mutated file was restored byte-for-byte (sha256), the tree was clean after every suite, and no mutant was committed.
+
+**Git boundary (gate 12):**
+- The branch is `integration/f01-f13-convergence`, clean, with WAVE3_BASE as an ancestor.
+- `main` is local = origin = `bab9773`, untouched, and HEAD is not in it.
+- `integration/wave2-f01-f08` is local = origin = `363e473`.
+- F09 through F13 are local = origin = `17580d4`, `8f2f7d4`, `03585f9`, `54da29c` and `3eb2ba0`, unchanged.
+- `app.json` is unchanged since WAVE3_BASE.
+- The stash is empty. The one stash write of this campaign was a path-limited push of the audit's own uncommitted HK13-D38 edit, to
+  show its test failing without the fix; it was popped seconds later and restored byte-for-byte.
+- Every one of the session's 918 shell commands was scanned: no `supabase db push`, `functions deploy`, `supabase link`,
+  `supabase db reset`, `git push` before the final one, force push, branch deletion, worktree removal or `reset --hard`, and no remote
+  Supabase tool call.
+- Staging and Production had **zero writes**. No migration or function was deployed, no live auth was exercised, and K Scan was not
+  touched.
+- Every worktree is intact. One more worktree now exists (`Her-Keys-EI01`); another session created it, and it was not touched.
+
+**EXIT (Phase 15):** TypeScript clean. The application suite is 3322 tests in 762 suites, 3322 passing, against ENTRY's 3177 tests
+in 710 suites with 3 failing: **+145 tests, +52 suites, 3 → 0 failures**. The backend is 1592 / 1592 against ENTRY's 1431 / 1431:
+**+161 checks**. No test was lost (§14).
+
+## 21. Verdict
+
+The CERTIFIED requirements, each met:
+- **Integration:** every F01–F13 feature is integrated, with the five Wave 3/4 heads merged as they stand on origin.
+- **Feature paths:** every required path is present and reachable. The exceptions are the internal dev tools and the Build 4 sign-in
+  screen, whose entry point is sequenced after this certification (OD-HK13-02).
+- **Defects:** all **26 P0–P4** items are FIXED and VERIFIED (P0 2, P1 4, P2 3, P3 5, P4 12).
+- **Tests:** no unexplained test failure.
+- **Backend and privacy:** fresh install, populated upgrade, the backend harness, RLS and privacy all pass.
+- **Devices and accounts:** multi-device and account-switch pass.
+- **Mutation:** 311 / 311 caught.
+- **Schema:** the fingerprint is explained migration by migration and equals a fresh install.
+- **Staging and Production:** zero writes.
+- **Remote durability:** verified with `git ls-remote` immediately after this commit was pushed with an ordinary push; recorded in
+  the campaign's final report.
+
+What remains is documented, not hidden:
+- 17 P5–P10 items (§18);
+- two owner decisions (§19);
+- the features' own pre-existing missing primitives (§19).
+
+**F01–F13 HOSTILE AUDIT: CERTIFIED — INTEGRATED ENGINEERING BASELINE**

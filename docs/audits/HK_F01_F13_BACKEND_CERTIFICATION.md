@@ -275,7 +275,7 @@ and lifecycle mutants (§3) are listed above.
 ## 10. Test counts
 
 ENTRY, measured at `7c5351a` after integration and before any audit repair: backend harness **1431/1431**. After AUD13-03 (`61e24a6`):
-**1559/1559**. EXIT is the final gate's uncontested full harness (§12). Every check added by this campaign is additive: ENV F
+**1559/1559**. EXIT, the final gate's uncontested full harness at `43ab329`, is **1592/1592** (§12). Every check added by this campaign is additive: ENV F
 (71), suite 81 (56), the migration gate and chain registrations, and the ENV D steps for F08/F09–F13/INT13. No backend check was
 removed or weakened.
 
@@ -295,3 +295,18 @@ removed or weakened.
 After AUD13-03 (`61e24a6`): **1559/1559** checks — ENV A 36, ENV B 11 (+B3), ENV C (every suite incl. 81), ENV D 66, ENV E 11, ENV F 71,
 authorization parity, client-payload integration and every journey over real HTTP on the private stack. No sibling harness ran
 during it (the gate logged zero contention events). The final gate's run is §12.
+
+## 12. Final gate: the backend items
+
+Run uncontested at **`43ab329`** on 2026-09-23 (the full gate is `HK_F01_F13_HOSTILE_AUDIT.md` §20).
+
+| Item | Result |
+|---|---|
+| Complete backend harness (`run.mjs`, audit namespace, gate wrapper) | **1592 / 1592** checks (17:22:20 → 17:28:14), 0 FAIL lines, **0 contention events**. Sections: ENV A, B, B3, D, E, F, C (every numbered suite, including 81), authorization parity, client payload → RPC, and every journey on the private stack, including Co-Parent (HK13-D43). |
+| EXIT vs ENTRY | 1431 / 1431 → **1592 / 1592** (net **+161**). Compared by check name against ENTRY's log (`scratchpad/harness-delta.cjs`), 163 checks are new: ENV F 71, ENV C 50 (suite 81 and the per-feature additions), the Co-Parent journey 33, ENV D 5, ENV A 1 and the harness preamble 3. Two ENTRY names changed without the check changing: ENV A's chain list gained "→ INT13", and the One Move check's label carries the run date. **No check was removed or weakened.** |
+| Fresh install | ENV A, B and B3; the migration gate; the upgrade path vs a fresh install: **0 differing facts** |
+| Populated upgrade | ENV D, E and F: pass |
+| RLS / privacy | suite 81 and every feature suite: pass |
+| Schema fingerprint | `int13-fingerprint derive`: shared default DB MATCH (3621 / `8bf3c7c6…`, read-only); no drift; **NEW 4371 / `17dccce9…`** = the committed baseline |
+| Backend mutants | F05's and every other suite's SQL mutants, I3, I5, I6, I7, I8, I2b, D43-M1..M2: all caught (311 / 311 mutants in total at the gate) |
+| Staging / Production | **zero writes, zero reads**; nothing deployed; no live auth |
