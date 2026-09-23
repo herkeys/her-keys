@@ -676,4 +676,84 @@ an open item for the owner or the Wave 3 integration pass.
 AVAILABLE SHARED FOUNDATION PRIMITIVE: the `personal` owner-private scope (M0), now additionally exercised by a feature-added table
 pair generated through the manifest (F11), with a proven pattern for private relationship rows (same-owner FK, caller-run visibility
 trigger, cascade to shared targets, redacted refusal evidence). Suitable in principle for F09, F10 and F12; no sibling is claimed to
-use it.
+use it. (Independent corroboration: the F12 session's own derivation of the WAVE3_BASE fingerprint is the same 3629 / `96f93f3d…`.)
+
+---
+
+## EXIT — certification
+
+### Two defects the certification runs found, both repaired
+
+1. The first complete full-harness run (1122 / 1124) found the ENV C interlock suite still pinning 34 application tables → updated to
+   36 with its reason (`fbc49a0`). Its other failure (F05 check 2b) was a collision: another session's full `run.mjs` started five
+   seconds after it; the rerun alone passed it.
+2. SQL mutant R16 (visibility trigger dropped) made suite 78 CRASH instead of fail (an accepted row → NULL → an unset psql variable) →
+   captured results now spell the accepted case (`1cb8299`); R16 then CAUGHT, and suite 78 is still 62 / 62.
+
+### Test accounting — ENTRY vs EXIT (raw runner output)
+
+```
+                              ENTRY (363e473)                         EXIT
+tsc --noEmit                  exit 0                                  exit 0 (173fa54; no src change after it)
+app tests                     2814 tests / 614 suites                 2890 tests / 635 suites          (173fa54)
+                              2812 pass / 2 fail                      2888 pass / 2 fail
+backend harness (full)        not cleanly reproducible here           1124 / 1124 checks passed        (fbc49a0; gated: no other
+                              (4 runs; API-journey flake; journeys                                      harness at start or finish)
+                              alone 240/240); recorded baseline 1028
+suite 78 at final HEAD        —                                       62 / 62                          (1cb8299)
+mutation check                —                                       17 / 17 caught                   (1cb8299; 14 file + 3 SQL)
+```
+
+**App DELTA: +76 tests, +21 suites; failures unchanged (the same two F08-scan tests, now also listing F11's own additions).**
+No test disappeared. Added: `tests/rebuild/focus.model.test.mjs` (17), `focus.relationships.test.mjs` (15), `ui.test.mjs` (27),
+`sync.test.mjs` (11) = 70, plus the manifest test's per-kind tests for the two new kinds (+6 in `foundationSpecs.test.mjs`) = 76.
+Changed with their reasons: `foundationSpecs.test.mjs` (20 kinds; per-migration checks), `hk-ir01/changeBridge.test.mjs` (31/29 kinds),
+`tests/support/legacyShapes.mjs` and `richHousehold.mjs` (fixtures).
+
+**Backend DELTA vs the recorded 1028: +96.** 98 checks name F11 (suite 78: 62 incl. catalog; journey-rebuild: 22; ENV A: 7; ENV D: 6;
+quality: 8, minus overlaps in the grep), of which 3 REPLACE a pre-existing count check whose number F11 legitimately moves (ENV A
+34 → 36 tables, 00-interlock 34 → 36, the migration list 4 → 5). The remaining one check of the delta is not individually attributed.
+
+The two failing app tests are `tests/meals/boundary.test.mjs` `[BV1..5]` and `[BM1..3]`, failing at WAVE3_BASE already (sibling branch
+`feature/09-money-os` exists). At exit the same scan additionally reports F11's own migration, schemas, tables, roots and files as
+"unexplained" — by design of a Meals-scoped scan (HK-INT-W3-F08-SCAN); it reports NO protected-path violation (the Life layout,
+`src/persistence/**`, `src/domain/foundation/**` and `tasks.ts` are untouched). F11 did not edit F08's gate.
+
+### F11 V1 completion floor (Addendum U)
+
+| # | Requirement | Status | Evidence |
+|---|---|---|---|
+| 1 | open Life → Me / Rebuild | PASS (code + component) / device DEFERRED-IN-RUN | Life hub row + `app/(app)/life/rebuild.tsx` (tsc), U |
+| 2 | a truthful calm empty state | PASS | U (Q), availability gate |
+| 3 | create a title-only RebuildFocus | PASS | M, U |
+| 4 | persist it | PASS | M (saved before shown) |
+| 5 | relaunch and recover it | PASS | M, R (real store + storage) |
+| 6 | rename without changing identity | PASS | M, S, R7 |
+| 7 | pause | PASS | M, S, U |
+| 8 | resume | PASS | M, U |
+| 9 | archive | PASS | M, U, S, J |
+| 10 | privacy through actual owner-private foundation semantics | PASS | M0, 78, J, R5/R6/R16 |
+| 11 | a canonical next-action Task from a Focus through the approved relationship architecture | PASS | R, U, 78, J |
+| 12 | that relationship preserved across relaunch | PASS | R |
+| 13 | sync / hydrate Focus + relationship through the established architecture | PASS | S, J, full harness |
+| 14 | reconstruct it on a fresh-client harness | PASS | S, J (fresh second and third devices) |
+| 15 | linked canonical truth independent of Focus lifecycle | PASS | M, R, 78, R2/R3 |
+| 16 | RLS / isolation and hostile mutation checks | PASS | 78 (62/62), J, 17/17 mutants |
+
+Conditional enhancements: Goal relationship — domain/schema/RLS/sync PASS, user path SAFE-UNAVAILABLE (MP-11-04); System and Event
+relationships — PASS; Recent Progress — PASS for Tasks and Goals, System runs SAFE-UNAVAILABLE (MP-11-03); general personal-domain
+projection ("Me Now") — PENDING-INTEGRATION (MP-11-01); Past Focuses — PENDING-INTEGRATION (MP-11-02).
+
+### Environment, staging, production, siblings
+
+- Staging: **zero writes.** Production: **zero writes.** No remote project was contacted by any tool; the only network writes are
+  `git push` of this branch.
+- The shared local default database was never migrated (the F11 fingerprint is derived); all migration work ran in disposable
+  databases and the private stack.
+- `feature/09-money-os`, `feature/10-work-career-os` and `main` were not modified; nothing from F09/F10 is imported.
+
+### Verdict
+
+**F11 ME / REBUILD OS: COMPLETE — READY FOR WAVE 3 INTEGRATION** — with the documented debt above (device evidence deferred; the
+pre-existing F08-scan tests; the integration candidates, of which HK-INT-W3-SYNC-PUSH and HK-INT-W3-MIGRATION-GATE are textual
+conflicts integration must resolve when a second schema-adding Wave 3 feature is merged).
