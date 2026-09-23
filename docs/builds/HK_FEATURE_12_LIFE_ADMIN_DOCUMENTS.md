@@ -555,3 +555,216 @@ genuine assertion failure (a crash or an unparseable run would be BROKEN, not ca
 
 Telemetry surfaces for mutant 12 (addendum O): home, Life hub, Today and verdict, logs and error evidence are tested; analytics and
 crash metadata are SAFE-UNAVAILABLE (no such module exists in the codebase to inspect); notifications and search NOT-APPLICABLE.
+
+M5 checkpoint (after commits): `feature/12-life-admin-documents` @ `805cca8` (M5a `f773587`, M5b `805cca8`), `git status --short` empty.
+
+---
+
+## F12-M6 — Hostile self-review + CORE certification
+
+### M6a — found and repaired during certification
+
+- **Suite self-containment (repair).** Running EVERY numbered ENV C suite with the F12 migration in `f12_env` (`run-f12.mjs --all`)
+  showed three M0 checks that assumed member B held no private goals/dependencies at all; earlier suites legitimately create B's own.
+  The harness rule is that a file may not depend on another file's rows, so each check now asserts the actual property ("nothing
+  that is not hers"); the same pattern was applied to two count checks in `79`. The three M0 mutants and LA6/LA7/LA7b were re-run
+  against the edited suites: all still CAUGHT (M0-a 5 checks, M0-b 2, M0-c 5; LA6 2, LA7 1, LA7b 8).
+- **Offline edit / offline archive coverage (added).** `sync.test.mjs` gained the case (two offline changes coalesce into one pending
+  update, the archive is durable on the device, and the single cloud row is updated once online): 13/13.
+- **Harness collisions (environmental, reported) → parallel-safe harness names (repair).** Three attempts at the full official
+  `run.mjs` collided with sibling sessions' runs over the fixed `b4_env_*` / `f08_stack` names: (1) F12's run started when none was
+  running and a sibling's `run.mjs composition` started during it — F12 stopped its own process only; (2) F12's wait guard had a
+  PowerShell unrolling bug (`(Others).Count` of one process is not 1) and started beside a live sibling run — stopped at once; (3) with
+  the guard fixed, F12 waited 420 s for a quiet moment, started alone, and a sibling run then dropped `b4_env_d` mid-run ("database
+  … does not exist … just been dropped"). The siblings' own runs may have been affected by (1) and (2) for a few minutes.
+  Repair: `run.mjs` names every database through `dbName()` with `HERKEYS_HARNESS_DB_PREFIX` (default `b4`, unchanged), and a
+  non-default prefix also gives the journeys' private stack its own names (`HK-INT-F12-HARNESS-PREFIX-01`). F12's certification run
+  is the complete, unmodified-in-content harness under prefix `f12h` (databases `f12h_env_*`, private stack `f12h_stack` /
+  `f12h_postgrest` on 54397/54398).
+- `run-f12.mjs --all` result: 759/761 — the only two failures (`61` "omitting the household is the same answer…", `77` "2b. sync_pull …
+  reports the new child") are sync_pull snapshot-barrier timing under a concurrent sibling harness in the same PostgreSQL cluster;
+  re-run alone, `61` is 21/21 and `77` is 95/95.
+
+### Hostile self-review
+
+| Question | Answer (evidence) |
+|---|---|
+| Did we build a file vault accidentally? | No. No file, blob, bucket, URL, signed URL or upload column or code path exists (migration columns; `screen.test` static scan: no network/telemetry in F12 files). `locationHint` is her own words. |
+| Did we build OCR? | No. Nothing reads document content; there is no document content. |
+| Did we build a second task system? | No. Work is only ever a canonical Task via `addTask`; there is no AdminTask/RenewalTask entity; the link is a typed relationship row, not work (`commands.test`, `today.test`). |
+| Did we build a second calendar? | No. No record date creates an Event; nothing is added to the Calendar day projection (`today.test`, `privacy.test` Calendar-day scan). Record↔Event is MP-12-04. |
+| Did we invent legal validity? | No. Copy audit refuses invalid/illegal/unusable/void/lapsed/penalty/urgent; the detail says Her Keys has not checked anything (`copyAudit.test`, `view.test`). |
+| Did an expiration date become a legal conclusion? | No. It is "Recorded expiration date passed (date)."; no stored status moves with time (LA1, LA14). |
+| Did a Task completion become fake renewal truth? | No. Completing the linked renewal Task leaves the record unchanged and still in review (LA3; `commands.test` "same object"). |
+| Can replacing a record destroy history? | Supersession is not built; the only retiring action (archive) keeps the record, its fields, links and Tasks (LA5); no delete grant, no delete path. |
+| Can two same-title records collapse? | No (LA4, LA11; duplicate titles are two rows everywhere). |
+| Can a private record leak through links? | No. Links are owner-only rows; a member sees none, gets no pointer, and cannot probe the owner's Task or record (79, journey, LA7, LA7b). |
+| Can sensitive identifiers appear on home/Today/logs? | No (`privacy.test`, LA12a-d; transport repair keeps refused-row values out of durable evidence). |
+| Can child rename break subject identity? | No. The subject is the canonical id; display resolves the current name every time (LA8; `view.test`). The foundation has no child rename; the rename is simulated in state. |
+| Can stale sync overwrite a newer record? | No. CAS on revision: B's stale edit becomes evidence, the newer archive stands (`sync.test`, journey). |
+| Can archive fail to propagate? | No (journey + sync: archived on a fresh device, after relaunch and another pull; LA9). |
+| Can an offline record disappear? | No. Records are durable locally before any network work; offline create/edit/archive are queued in the same envelope and reach the cloud later; a refused row stays local as evidence (`sync.test`). |
+| Can F12 expose Money state? | No. No amount, payment or income field; no F09 code imported (MP-12-06). |
+| Can F12 expose Work/Career state? | No. No career entity or workflow; no F10 code imported (MP-12-07). |
+| Did we pre-build People OS? | No. `issuerName` is free text; no contact identity (MP-12-09). |
+| Did we create a secret/password vault? | No. The form says what does not belong in the reference field; there is no secret-shaped field; the reference is masked and never logged (copy audit; `privacy.test`). No heuristic secret detection (addendum R). |
+| Does the user have to maintain the same fact twice? | No. A renewal Task is created FROM the record with the link fixed; its due date is one tap from the record's renew-by date (explicit, never automatic); a completed Task is not re-entered on the record. |
+
+Ordinary defects repaired during the build: the stored-field naming rule (`*Label` → `*Name`, M1); legacy-shape roots (M1); the
+refused-row values in durable sync evidence (M5, shared transport); suite self-containment (M6a). No doctrine-level defect was found.
+
+### Doctrine results
+
+| Doctrine | Result | Evidence |
+|---|---|---|
+| RECORD EXISTS DOES NOT MEAN VERIFIED | PASS | detail copy (`copyAudit.test`), no verification state in the model |
+| DATE PASSED DOES NOT MEAN LEGALLY INVALID | PASS | `view.test` (no legal words, status unchanged, still active), LA1 |
+| RENEWAL DUE DOES NOT MEAN RENEWED | PASS | `view.test` (completed renewal Task leaves the record in review), LA3 |
+| TASK COMPLETED DOES NOT MEAN RECORD UPDATED | PASS | `commands.test` (record is the same object after complete/archive of its Task) |
+| REPLACED DOES NOT MEAN OLD RECORD DELETED | PASS (archive; supersession not built) | `commands.test`, LA5; no delete grant (79) |
+| ARCHIVED DOES NOT MEAN DESTROYED | PASS | `commands.test`, `screen.test`, journey |
+| MATCHING TITLES DO NOT MEAN SAME RECORD | PASS | `commands.test`, `view.test`, LA4, LA11 |
+| LIFERECORD DOES NOT BECOME A TASK | PASS | `commands.test` (zero Tasks from any date), LA2 |
+| LIFERECORD DOES NOT BECOME A TODAY OBJECT | PASS | `today.test` (Today identical with and without records) |
+| CHILD DISPLAY NAME DOES NOT DEFINE SUBJECT IDENTITY | PASS | `commands.test`, `view.test`, LA8 |
+| PRIVATE ADMIN DATA DOES NOT BECOME HOUSEHOLD-VISIBLE BY DEFAULT | PASS | 78, 79, journey (same-household member hydrates nothing), LA6, LA7, LA16 |
+| F12 DOES NOT STORE SECRETS/PASSWORDS | PASS | model (no secret-shaped field), form guidance, masking, no logging |
+| F12 DOES NOT CLAIM TO POSSESS A FILE IT ONLY REFERENCES | PASS | detail copy "keeps these details, not the document itself" (`copyAudit.test`) |
+
+### Adversarial scenario status
+
+| Scenario | Status | Evidence |
+|---|---|---|
+| title-only record | PASS | commands, screen (real store) |
+| duplicate title | PASS | commands, view, LA4, LA11 |
+| rename | PASS | commands, sync, journey |
+| record with no dates | PASS | view |
+| expires today | PASS | view, LA14 |
+| expires yesterday | PASS | view |
+| renewBy today | PASS | view |
+| renewBy passed | PASS | view |
+| reviewOn today | PASS | view |
+| date-only timezone boundary | PASS | view (persisted profile timezone Auckland vs device New York, real store) |
+| record with child subject | PASS | commands, view, 79 (subject FK) |
+| child rename | PASS | commands, view (simulated: the foundation has no child rename) |
+| reference number masking | PASS | privacy, screen |
+| note privacy | PASS | privacy, journey |
+| locationHint privacy | PASS | privacy |
+| explicit replacement | NOT-APPLICABLE | supersession outside the CORE floor, not built (MP-12-18) |
+| same-title newer record without explicit replacement | PASS | commands (LA4) |
+| superseded record | NOT-APPLICABLE | not built |
+| archive | PASS | commands, screen, 79, journey |
+| archive then fresh-client hydration | PASS | sync, journey |
+| record with linked Task | PASS | commands, screen, sync, journey |
+| linked Task completed | PASS | commands, view |
+| linked Task archived | PASS | commands, view |
+| linked Task removed where lifecycle allows | PASS | 79 (server purge cascades the link away; tombstone reaches the owner only), commands/view (a missing Task is unavailable, never a crash; LA13) |
+| offline create | PASS | sync |
+| offline edit | PASS | sync |
+| offline archive | PASS | sync |
+| offline supersede | NOT-APPLICABLE | not built |
+| retry | PASS | sync (lost acknowledgement) |
+| refused row | PASS | sync (validation-failure evidence; values withheld) |
+| stale revision | PASS | sync, journey |
+| cross-household crafted ID | PASS | 78, 79 |
+| same-household unauthorized user | PASS | 78, 79, journey |
+| account switch | PASS | sync |
+| demo isolation | PASS | demo, sync |
+
+### Demo status
+
+Demo mode exists (`resolveDataMode`: demo in development, empty otherwise). F12 adds three fictional records (Sample Passport /
+Demo Registration / Example Policy, references `DEMO-0001`/`DEMO-0002`), `demo-seed` provenance. Proven: at most 5; forbidden-pattern
+scan (SSN, long digit runs, card groups, email, street address, phone, case number) with each pattern shown to catch its sample; demo
+state valid; a demo household never binds (`refuseDemo`), never queues or syncs (`sync` namespace null, zero cloud calls), and
+`demo-seed` is refused by every synced table's producer CHECK, F12's included (79).
+
+### Supersession (F12-STRETCH-01): NOT BUILT — FOLLOW-UP
+
+Supersession is outside the CORE completion floor (addendum AA). It was deliberately not started, so the certified core would not be
+destabilised by another migration change, fingerprint derivation and full harness run on a contended host. Recorded as
+`PENDING F12 FOLLOW-UP — EXPLICIT RECORD SUPERSESSION` (MP-12-18). The addendum AB design stands as the follow-up's contract:
+lifecycle stays `active | archived`; `newRecord.supersedesLifeRecordId = oldRecord.id` is the only stored fact and "superseded" is
+DERIVED; self-supersession and cycles refused (local integrity + a server trigger); chains allowed; at most one direct ACTIVE successor
+(a partial unique index); never inferred from title/reference/issuer/date; changing the chain is an explicit action; archive keeps the
+chain; nothing is deleted; linked Tasks untouched; older records stay correctable. It is additive to the F12 migration's table (one
+nullable owner-keyed self-FK), so it can be built without touching shared schema.
+
+
+### Final validation (M6)
+
+| Gate | Result | Where |
+|---|---|---|
+| TypeScript | `tsc --noEmit` exit 0 | at `32a6c78` |
+| F12 app tests | 85/85 (`tests/lifeAdmin/*.test.mjs`: commands 23, today 2, view 24, screen 9, privacy 5, copyAudit 6, demo 3, sync 13) | in the final suite |
+| Shared regressions | changeBridge 39/39 (inventory 31/29), syncComposition 54 (HA-001 timing: see below), persistence 14, migrationV3ToV4 54, legacyCatalogRemediation 11, claimPayload 22, appStore 27, designIndependence 3, syncEngine 35, foundationSpecs 49, foundationRoundtrip 22, foundationAcceptance3 15, meals/sync 16, coparent/syncComposition 6, systems/syncReorder 7 | targeted runs at M1/M5 + the final suite |
+| Complete application suite | 2899 tests, 638 suites, 2896 pass, 3 fail (the ENTRY classes, below) | `npm test` at `32a6c78` |
+| Complete backend harness | **1163/1163** (`HERKEYS_HARNESS_DB_PREFIX=f12h`, no other harness runner at start or finish; ~3.5 min) | `node supabase/tests/run.mjs` at the M6b code |
+| Sync validation | journey-life-admin 24/24 (inside the harness run and alone via `run-f12.mjs journey`); client sync 13/13 | |
+| RLS validation | 78 (M0) 36/36, 79 (F12 matrix) 59/59, plus every other ENV C suite (inside the harness run) | |
+| Fresh-install migration test | PASS — ENV A (F12 applies after the full shipped sequence; owner-private shape; guard SECURITY INVOKER; 36 tables; fail-closed assertion) | harness |
+| Populated-upgrade test | PASS — ENV D F12 step: 8/8 (nothing lost, nothing rewritten, change-log pointers intact, new tables empty, owner push created then already_exists, stranger refused, fail-closed passes) | harness |
+| Schema fingerprint | derived and pinned: OLD `96f93f3d46dcf5735e7a0b50996944bf`/3629 → NEW `60af45784ddd7373c7a56cd57c51b802`/3844, exact movement asserted | `supabase/tools/f12-fingerprint.mjs derive --write` |
+| Test-the-test | 20/20 F12 mutants + 3/3 M0 mutants CAUGHT (SQL mutants re-confirmed after the M6 suite edits) | `scripts-dev/life-admin-mutation-check.cjs` |
+
+### Test accounting
+
+| | ENTRY (`363e473`, clean) | EXIT (`32a6c78`) | DELTA |
+|---|---|---|---|
+| application tests | 2814 | 2899 | +85 (exactly the 85 F12 tests) |
+| application suites | 614 | 638 | +24 (exactly the 24 F12 suites) |
+| application passing | 2810 | 2896 | +86 |
+| application failing | 4 | 3 | −1 |
+| backend checks | 1028 (the brief's known baseline) | 1163 | +135 = ENV A 3 + migration quality 5 + ENV D 8 + suite 78 36 + suite 79 59 + Life Admin journey 24 |
+| backend passing | 1028 | 1163 | +135 |
+
+No test or check disappeared: the application delta equals F12's own files exactly, and 1163 − 135 = 1028. Two pre-existing checks
+were CHANGED, not removed, each with its reason: ENV A's table count and 00-interlock's (34 → 36 = the 34 of Build 4 and the 2 of F12),
+and the change-bridge inventory (29/27 → 31/29 kinds).
+
+EXIT failures, every one of an ENTRY class:
+
+| Test | Cause | Evidence |
+|---|---|---|
+| `tests/hk-ir01/syncComposition.test.mjs:842` HA-001 cost | timing budget under host contention (440 ms observed for the test; the budget is per-edit ms) | failed at ENTRY before any F12 code; alone at EXIT: 3/3 pass |
+| `tests/meals/boundary.test.mjs:19` [BV1..BV5] | F08's certification scan: at ENTRY the sibling-ancestry finding; at EXIT also every F12 migration/table/schema/root/kind/file (47 findings, each intentional and explained here) | `HK-INT-W3-MEALS-SCAN-01`; F12 did not edit another feature's gate |
+| `tests/meals/boundary.test.mjs:30` [BM1..BM3] | the sibling-ancestry finding (`feature/09-money-os` forks from the same base) | identical at ENTRY |
+
+### Scope confirmations
+
+- **Siblings:** no F09/F10/F11 branch or worktree was modified; no sibling code is imported (static: F12 imports only shared
+  foundation/store modules and `features/today` notices; `tests/lifeAdmin/sync.test.mjs` reuses `tests/meals/support/twoDevice.mjs`, a
+  test harness already on WAVE3_BASE). Only read-only commands ran in sibling worktrees.
+- **Staging: ZERO writes. Production: ZERO writes.** No remote database, project, function or migration command was run; every
+  database F12 created was local (`f12_env`, `f12_fp_*`, `f12_stack`, `f12h_*`), and the shared local default database was only read.
+- `HER_KEYS_PRODUCT.md` was not edited (contract changes are recorded here and in the register for the Wave 3 revision).
+- `app.json`, `package.json`, `package-lock.json`, `src/persistence/**`, `app/(app)/life/_layout.tsx`: unchanged.
+
+### Verdict
+
+F12 CORE completion floor (addendum AE), each item with its evidence:
+
+| # | Floor item | Result |
+|---|---|---|
+| 1 | open Life → Life Admin / Documents | PASS (route + hub row) |
+| 2 | truthful empty state | PASS (screen, gate) |
+| 3 | title-only owner-private LifeRecord | PASS |
+| 4 | optional metadata | PASS |
+| 5 | persist locally | PASS |
+| 6 | relaunch and recover | PASS (three store launches) |
+| 7 | edit and clear sensitive optional fields | PASS (local and cloud) |
+| 8 | rename without identity change | PASS |
+| 9 | canonical child identity where supported | PASS (child subject by id; the foundation has no child rename/archive) |
+| 10 | ONE owner-private canonical Task from the record | PASS (double-save still one) |
+| 11 | Task relationship survives relaunch | PASS |
+| 12 | archive without altering Task truth | PASS |
+| 13 | sync/hydrate through existing architecture | PASS |
+| 14 | record + link reconstructed on a fresh client | PASS (real HTTP) |
+| 15 | masking/privacy on every implemented projection | PASS (analytics/crash SAFE-UNAVAILABLE: no such module exists) |
+| 16 | same-household and cross-household RLS/isolation | PASS |
+| 17 | account-switch isolation | PASS |
+| 18 | hostile mutation tests | PASS (20/20 + 3/3) |
+
+Supersession: NOT BUILT — FOLLOW-UP (outside the CORE floor, MP-12-18).
+
+**F12 LIFE ADMIN / DOCUMENTS: COMPLETE — READY FOR WAVE 3 INTEGRATION**
