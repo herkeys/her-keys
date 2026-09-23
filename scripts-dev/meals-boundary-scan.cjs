@@ -10,9 +10,11 @@
  *   B  new durable domain types          expected: none; MealPlanEntry gains exactly `slot` and `status`
  *   C  new tables / durable collections  expected: none (no CREATE TABLE; the AppState root keys are unchanged)
  *   D  new sync kinds                    expected: none
- *   E  shared-file changes               every one mapped to a permitted reason; protected files untouched
+ *   E  shared-file changes               every one mapped to a permitted reason by who could have made it; protected files untouched
  *   F  a second Meals durable model      expected: none (Recipe, Ingredient, PantryItem, GroceryList, MealIdea, ...)
  *   G  sibling imports                   expected: none, by import scan and by git ancestry
+ *   H  the later-lane register is true   expected: no lane explains a change its own history did not make
+ * A-D subtract what a registered later lane (LATER_FEATURES) is authorized to add; E-H hold every lane to its own changes.
  * A finding is a FAILURE: it needs an owner checkpoint, not a workaround.
  */
 'use strict';
@@ -111,9 +113,161 @@ const SHARED = [
  * asks every Meals question of everything else. (Wave 3/4 integration: each feature adds its own entry; take the union.)
  */
 const INTEGRATION_CHECKPOINTS = ['363e473fdf053547a21a41a67b7f62bd9aa2bcdf'];
+/**
+ * The F01-F13 integration (HK13-D11 in docs/audits/HK_F01_F13_DEFECT_LEDGER.md) found this register holding only F13: F09-F12 never
+ * registered, so the integrated line failed the scan on other features' lanes. It registered them, and its own lane, and made the
+ * accounting exact rather than trusting (see check E and check H below):
+ *   - A change made on the Wave 2 line (BASE .. the checkpoint) is Meals-era: only a Meals-line reason (OWNED / SHARED) explains it,
+ *     and a PROTECTED file must not have changed there at all. A change made AFTER the checkpoint was made by a later lane or the
+ *     integration: only a later lane's reason explains it, so a Meals reason can no longer be misread as covering another feature's
+ *     change, and PROTECTED ("no Meals reason ever touches these") no longer fails a file only a later feature changed.
+ *   - A lane explains only what its own history changed: each `shared` entry is checked against the lane's branch (check H).
+ *   - A lane may add sync kinds (F12 registers two by hand in CORE_SYNC_KINDS), and a registered lane's branch, once merged, is the
+ *     integration line itself, not a sibling reaching HEAD.
+ * Each lane's lists are taken from `git diff <checkpoint> <branch>`; the integration lane lists the files it holds in a version no
+ * branch holds (a merge union, a reconciliation, or a repair). A later repair that touches another file must add it here.
+ */
 const LATER_FEATURES = [
   {
+    id: 'HK-FEATURE-09 (Money OS)',
+    branch: 'feature/09-money-os',
+    owned: [
+      /^src\/features\/money\//, /^tests\/money\//, /^docs\/builds\/HK_FEATURE_09_/, /^scripts-dev\/money-/,
+      /^supabase\/migrations\/20260922180000_f09_task_payment_mechanism\.sql$/,
+    ],
+    migrations: ['supabase/migrations/20260922180000_f09_task_payment_mechanism.sql'],
+    schemas: [],
+    rootCollections: [],
+    syncKinds: [],
+    shared: [
+      ['src/domain/foundation/commitment.ts', 'HK-FEATURE-09: a task gains the paymentMechanism facet (manual | autopay; null = never stated)'],
+      ['src/domain/tasks.ts', 'HK-FEATURE-09: the canonical addTask carries paymentMechanism'],
+      ['src/domain/reasoning/attention.ts', 'HK-FEATURE-09: an autopay obligation gets no routine pre-due nudge (never suppresses the overdue case)'],
+      ['src/domain/sync/apply.ts', 'HK-FEATURE-09: payment_mechanism is read back by hand, like duration_source'],
+      ['src/domain/sync/projection.ts', 'HK-FEATURE-09: payment_mechanism is sent by hand, like duration_source'],
+      ['src/domain/sync/syncTypes.ts', 'HK-FEATURE-09: payment_mechanism is an updatable task column'],
+      ['tests/build3Audit.capture.test.mjs', 'HK-FEATURE-09: the Money row of the reachability audit REWRITTEN for Money Home (same invariant: every open money task reachable)'],
+      ['tests/support/legacyShapes.mjs', 'HK-FEATURE-09: historical task fixtures carry no paymentMechanism'],
+      ['.gitattributes', 'HK-FEATURE-09: the LF pin of its migration'],
+    ],
+  },
+  {
+    id: 'HK-FEATURE-10 (Work / Career OS)',
+    branch: 'feature/10-work-career-os',
+    owned: [
+      /^src\/features\/work\//, /^tests\/work\//, /^docs\/builds\/HK_FEATURE_10_/, /^scripts-dev\/f10-/, /^app\/opportunity-editor\.tsx$/,
+      /^src\/domain\/opportunities\.ts$/, /^src\/domain\/foundation\/opportunity\.ts$/, /^src\/domain\/reasoning\/workCareer\.ts$/,
+      // F10's branch wrote its table into the shipping migration; the integration moved it into this additive migration (HK13-D01).
+      /^supabase\/migrations\/20260922181000_f10_career_opportunities\.sql$/,
+    ],
+    migrations: ['supabase/migrations/20260922181000_f10_career_opportunities.sql'],
+    schemas: ['CareerOpportunitySchema', 'DependencyRefSchema'],
+    rootCollections: ['careerOpportunities'],
+    syncKinds: [],
+    shared: [
+      ['app/_layout.tsx', 'HK-FEATURE-10: the opportunity editor is a guarded modal route, like the task and event editors'],
+      ['src/domain/routeAccess.ts', 'HK-FEATURE-10: route access for opportunity-editor'],
+      ['src/domain/foundation/structure.ts', 'HK-FEATURE-10: a Dependency endpoint may be an opportunity (DependencyRefSchema)'],
+      ['src/domain/foundation/typedRef.ts', 'HK-FEATURE-10: the opportunity typed-reference kind'],
+      ['src/domain/structure.ts', 'HK-FEATURE-10: dependency commands accept an opportunity endpoint'],
+      ['src/domain/state.ts', 'HK-FEATURE-10: the careerOpportunities root and its integrity checks'],
+      ['src/state/initialState.ts', 'HK-FEATURE-10: careerOpportunities starts empty'],
+      ['src/data/seed/demoHousehold.ts', 'HK-FEATURE-10: the fictional demo household carries opportunities'],
+      ['src/persistence/migrateV3ToV4.ts', 'HK-FEATURE-10: a v3 save migrates with careerOpportunities empty'],
+      ['src/domain/reasoning/attention.ts', 'HK-FEATURE-10: opportunity_follow_up attention, from a date she recorded'],
+      ['src/domain/sync/foundationSpecs.ts', 'HK-FEATURE-10: the opportunity kind in the foundation manifest'],
+      ['supabase/tools/gen-foundation-sql.mjs', 'HK-FEATURE-10: the generator emits the opportunity kind and the dependency endpoint columns'],
+      ['src/domain/sync/apply.ts', 'HK-FEATURE-10: the foundation-kind count in a comment'],
+      ['src/domain/sync/projection.ts', 'HK-FEATURE-10: the foundation-kind count in a comment'],
+      ['src/domain/sync/syncTypes.ts', 'HK-FEATURE-10: the foundation-kind count in a comment'],
+      ['src/domain/sync/foundationProjection.ts', 'HK-FEATURE-10: the foundation-kind count in a comment'],
+      ['src/features/systems/model/detail.ts', 'HK-FEATURE-10: a routine\'s detail names an opportunity endpoint of a dependency'],
+      ['src/features/systems/model/types.ts', 'HK-FEATURE-10: the same, typed'],
+      ['src/features/today/model/attentionView.ts', 'HK-FEATURE-10: Today words opportunity_follow_up attention'],
+      ['src/features/today/model/refs.ts', 'HK-FEATURE-10: Today opens the opportunity editor from that item'],
+      ['src/features/today/model/types.ts', 'HK-FEATURE-10: the opportunity-editor Today route'],
+      ['supabase/tests/57-foundation-rls.sql', 'HK-FEATURE-10: RLS checks for opportunity-ended dependencies'],
+      ['supabase/tests/58-foundation-integrity.sql', 'HK-FEATURE-10: integrity checks for opportunity-ended dependencies'],
+      ['supabase/tests/00-interlock.sql', 'HK-FEATURE-10: the application table count gains career_opportunities'],
+      ['supabase/tests/run.mjs', 'HK-FEATURE-10: the harness carries the opportunity table'],
+      ['tests/monetization.test.mjs', 'HK-FEATURE-10: the opportunity editor is one more never-paywalled root screen'],
+      ['tests/foundationSpecs.test.mjs', 'HK-FEATURE-10: manifest counts gain the opportunity kind'],
+      ['tests/hk-ir01/changeBridge.test.mjs', 'HK-FEATURE-10: the sync-kind inventory gains opportunity'],
+      ['tests/support/legacyShapes.mjs', 'HK-FEATURE-10: historical fixtures carry no careerOpportunities'],
+      ['tests/support/richHousehold.mjs', 'HK-FEATURE-10: one opportunity row'],
+    ],
+  },
+  {
+    id: 'HK-FEATURE-11 (Me / Rebuild OS)',
+    branch: 'feature/11-me-rebuild-os',
+    owned: [
+      /^src\/features\/rebuild\//, /^src\/domain\/rebuild\//, /^tests\/rebuild\//, /^docs\/builds\/HK_FEATURE_11_/, /^scripts-dev\/rebuild-/,
+      /^app\/\(app\)\/life\/rebuild\.tsx$/, /^supabase\/tests\/78-f11-/, /^supabase\/tests\/journey-rebuild\.mjs$/, /^supabase\/tools\/f11-fingerprint\.mjs$/,
+      /^supabase\/tools\/baselines\/(f11|wave3-base)-local-fingerprint\.json$/,
+      // Renamed from 20260922180000 by the integration: F09, F11 and F12 all claimed that version (HK13-D02).
+      /^supabase\/migrations\/20260922182000_f11_rebuild_focus\.sql$/,
+    ],
+    migrations: ['supabase/migrations/20260922182000_f11_rebuild_focus.sql'],
+    schemas: ['RebuildFocusSchema', 'RebuildFocusLinkSchema', 'FocusTargetSchema'],
+    rootCollections: ['rebuildFocuses', 'rebuildFocusLinks'],
+    syncKinds: [],
+    shared: [
+      ['app/(app)/life/index.tsx', 'HK-FEATURE-11: the Me / Rebuild row on the Life hub'],
+      ['src/domain/state.ts', 'HK-FEATURE-11: the rebuildFocuses and rebuildFocusLinks roots and their integrity checks'],
+      ['src/state/initialState.ts', 'HK-FEATURE-11: both roots start empty'],
+      ['src/data/seed/demoHousehold.ts', 'HK-FEATURE-11: the demo household\'s roots'],
+      ['src/domain/sync/foundationSpecs.ts', 'HK-FEATURE-11: the rebuildFocus and rebuildFocusLink kinds in the manifest'],
+      ['supabase/tools/gen-foundation-sql.mjs', 'HK-FEATURE-11: the generator emits the Rebuild kinds into their own migration'],
+      ['src/domain/sync/clash.ts', 'HK-FEATURE-11: two devices connecting the same item to the same Focus made one connection'],
+      ['src/platform/supabaseSyncTransport.ts', 'HK-FEATURE-11: a refused row\'s values never reach sync evidence; the live-link unique index is a domain invariant'],
+      ['supabase/tests/private-stack.mjs', 'HK-FEATURE-11: the private stack applies the Rebuild migration'],
+      ['supabase/tests/run.mjs', 'HK-FEATURE-11: the harness applies the Rebuild migration and runs its suite and journey'],
+      ['supabase/tests/00-interlock.sql', 'HK-FEATURE-11: the application table count gains the two Rebuild tables'],
+      ['tests/foundationSpecs.test.mjs', 'HK-FEATURE-11: manifest counts gain the two Rebuild kinds'],
+      ['tests/hk-ir01/changeBridge.test.mjs', 'HK-FEATURE-11: the sync-kind inventory gains the two Rebuild kinds'],
+      ['tests/support/legacyShapes.mjs', 'HK-FEATURE-11: historical fixtures carry no Rebuild roots'],
+      ['tests/support/richHousehold.mjs', 'HK-FEATURE-11: one Focus and one Focus link'],
+      ['.gitattributes', 'HK-FEATURE-11: the LF pin of its migration'],
+    ],
+  },
+  {
+    id: 'HK-FEATURE-12 (Life Admin / Documents)',
+    branch: 'feature/12-life-admin-documents',
+    owned: [
+      /^src\/features\/lifeAdmin\//, /^tests\/lifeAdmin\//, /^docs\/builds\/HK_FEATURE_12_/, /^scripts-dev\/life-admin-/, /^app\/\(app\)\/life\/admin\.tsx$/,
+      /^src\/domain\/lifeRecords\.ts$/, /^src\/data\/seed\/demoLifeRecords\.ts$/, /^supabase\/tests\/7[89]-f12-/, /^supabase\/tests\/journey-life-admin\.mjs$/,
+      /^supabase\/tests\/run-f12\.mjs$/, /^supabase\/tools\/f12-fingerprint\.mjs$/, /^supabase\/tools\/baselines\/f12-local-fingerprint\.json$/,
+      // Renamed from 20260922180000 by the integration (HK13-D02).
+      /^supabase\/migrations\/20260922183000_f12_life_records\.sql$/,
+    ],
+    migrations: ['supabase/migrations/20260922183000_f12_life_records.sql'],
+    schemas: ['LifeRecordSchema', 'LifeRecordTaskLinkSchema'],
+    rootCollections: ['lifeRecords', 'lifeRecordLinks'],
+    syncKinds: ['lifeRecord', 'lifeRecordLink'],
+    shared: [
+      ['app/(app)/life/index.tsx', 'HK-FEATURE-12: the Life Admin row on the Life hub (a count only)'],
+      ['src/domain/state.ts', 'HK-FEATURE-12: the lifeRecords and lifeRecordLinks roots and their integrity checks'],
+      ['src/state/initialState.ts', 'HK-FEATURE-12: both roots start empty'],
+      ['src/data/seed/demoHousehold.ts', 'HK-FEATURE-12: the demo household\'s records'],
+      ['src/domain/account/claim.ts', 'HK-FEATURE-12: a household holding only records is content, not empty'],
+      ['src/domain/sync/syncTypes.ts', 'HK-FEATURE-12: lifeRecord and lifeRecordLink registered by hand as core sync kinds'],
+      ['src/domain/sync/syncKinds.ts', 'HK-FEATURE-12: the two kinds\' collections'],
+      ['src/domain/sync/claimSeam.ts', 'HK-FEATURE-12: the claim seam finds the two kinds\' rows'],
+      ['src/domain/sync/apply.ts', 'HK-FEATURE-12: the two kinds are applied'],
+      ['src/domain/sync/projection.ts', 'HK-FEATURE-12: the two kinds are projected'],
+      ['src/platform/supabaseSyncTransport.ts', 'HK-FEATURE-12: a refused row\'s values never reach sync evidence'],
+      ['supabase/tests/private-stack.mjs', 'HK-FEATURE-12: the private stack applies the Life Admin migration'],
+      ['supabase/tests/run.mjs', 'HK-FEATURE-12: the harness applies the Life Admin migration and runs its suites and journey'],
+      ['supabase/tests/00-interlock.sql', 'HK-FEATURE-12: the application table count gains the two Life Admin tables'],
+      ['supabase/tools/README.md', 'HK-FEATURE-12: the prefixed harness and the F12 fingerprint tool'],
+      ['tests/hk-ir01/changeBridge.test.mjs', 'HK-FEATURE-12: the sync-kind inventory gains the two Life Admin kinds'],
+      ['tests/support/legacyShapes.mjs', 'HK-FEATURE-12: historical fixtures carry no Life Admin roots'],
+      ['.gitattributes', 'HK-FEATURE-12: the LF pin of its migration'],
+    ],
+  },
+  {
     id: 'HK-FEATURE-13 (People OS)',
+    branch: 'feature/13-people-os',
     owned: [
       /^src\/features\/people\//, /^src\/domain\/people\.ts$/, /^src\/domain\/foundation\/personContext\.ts$/, /^src\/data\/seed\/demoPeople\.ts$/,
       /^app\/\(app\)\/life\/(people|person|person-add|person-follow-up)\.tsx$/, /^tests\/people\//, /^docs\/builds\/HK_FEATURE_13_/,
@@ -123,6 +277,9 @@ const LATER_FEATURES = [
     migrations: ['supabase/migrations/20260922200000_f13_people_os.sql'],
     schemas: ['PersonContextSchema', 'PersonTaskLinkSchema'],
     rootCollections: ['personContexts', 'personTaskLinks'],
+    syncKinds: [],
+    // (Corrected by the integration: F13 also claimed supabase/tests/sync-integration.mjs and journey-composition.mjs, which its
+    // branch never changed — check H — and relied on Meals-line reasons for the five files it did change that are listed last.)
     shared: [
       ['src/domain/sync/foundationSpecs.ts', 'HK-FEATURE-13: two People kinds in the one foundation manifest, generated into their own additive migration'],
       ['supabase/tools/gen-foundation-sql.mjs', 'HK-FEATURE-13: the generator emits an additive migration\'s kinds there, never into the shipping migration'],
@@ -130,9 +287,51 @@ const LATER_FEATURES = [
       ['tests/foundationSpecs.test.mjs', 'HK-FEATURE-13: manifest counts 18 -> 20, each kind checked in its own migration'],
       ['tests/hk-ir01/changeBridge.test.mjs', 'HK-FEATURE-13: the sync kind inventory gains the two People kinds'],
       ['supabase/tests/run.mjs', 'HK-FEATURE-13: the harness applies the additive People migration'],
-      ['supabase/tests/sync-integration.mjs', 'HK-FEATURE-13: the multi-device journeys carry the People kinds'],
-      ['supabase/tests/journey-composition.mjs', 'HK-FEATURE-13: the composition journey stack carries the People migration'],
       ['supabase/tests/00-interlock.sql', 'HK-FEATURE-13: the application table count is 36 once the two People tables exist'],
+      ['supabase/tests/private-stack.mjs', 'HK-FEATURE-13: the private stack applies the People migration'],
+      ['scripts-dev/meals-boundary-scan.cjs', 'HK-FEATURE-13: registered its own lane in this register'],
+      ['src/domain/state.ts', 'HK-FEATURE-13: the personContexts and personTaskLinks roots and their integrity checks'],
+      ['src/data/seed/demoHousehold.ts', 'HK-FEATURE-13: the demo household\'s people context'],
+      ['tests/support/legacyShapes.mjs', 'HK-FEATURE-13: historical fixtures carry no People roots'],
+      ['tests/support/richHousehold.mjs', 'HK-FEATURE-13: one person context and one follow-up link'],
+      ['.gitattributes', 'HK-FEATURE-13: the LF pin of its migration'],
+    ],
+  },
+  {
+    id: 'HK-F01-F13 integration (INT13 / AUD13)',
+    branch: null,
+    owned: [
+      /^docs\/audits\/HK_F01_F13_/, /^tests\/hk-f01f13\//, /^tests\/migrationChain\.test\.mjs$/, /^supabase\/tests\/migration-chain\.mjs$/,
+      /^src\/features\/life\/lifeHubCopy\.ts$/, /^supabase\/tools\/int13-/, /^supabase\/tools\/baselines\/int13-/, /^supabase\/tests\/\d+-int13-/, /^scripts-dev\/int13-/,
+    ],
+    migrations: [],
+    schemas: [],
+    rootCollections: [],
+    syncKinds: [],
+    shared: [
+      ['supabase/tests/run.mjs', 'INT13-01: one migration chain for every mode, the migration gate, fresh install and the populated upgrade through F13 (HK13-D01..D04)'],
+      ['supabase/tests/private-stack.mjs', 'INT13-01: the private stack builds the whole chain and names both stack databases (HK13-D06)'],
+      ['supabase/tools/gen-foundation-sql.mjs', 'INT13-01: one additive-migration mechanism for F10, F11 and F13, and the dependencies widening (HK13-D05)'],
+      ['src/domain/sync/foundationSpecs.ts', 'INT13-00/01: the union of four manifests, one migration field, REF_EXTENSIONS (HK13-D05)'],
+      ['src/domain/sync/syncTypes.ts', 'INT13-00/01: the union of F09, F10 and F12; the renamed F12 migration in a comment'],
+      ['src/domain/sync/apply.ts', 'INT13-00: the union of F09, F10 and F12'],
+      ['src/domain/sync/projection.ts', 'INT13-00: the union of F09, F10 and F12'],
+      ['src/domain/reasoning/attention.ts', 'INT13-00: the union of F09 (autopay) and F10 (opportunity follow-up)'],
+      ['src/platform/supabaseSyncTransport.ts', 'INT13-00: one redaction implementation where F11 and F12 each wrote one (HK13-D07)'],
+      ['src/domain/state.ts', 'INT13-00: the union of four roots; AUD13-01: every later root defaults to [] so an older save loads (HK13-D08)'],
+      ['src/domain/account/claim.ts', 'AUD13-01: one CONTENT_COLLECTIONS list, so no later root reads as an empty household (HK13-D09)'],
+      ['src/state/initialState.ts', 'INT13-00: the union of four roots'],
+      ['src/data/seed/demoHousehold.ts', 'INT13-00: the union of four features\' demo rows'],
+      ['app/(app)/life/index.tsx', 'INT13-02: the reconciled Life hub: two sections, every area reachable, truthful copy (HK13-D10)'],
+      ['src/features/life/lifeStatus.ts', 'INT13-02: the co-parenting category row opens Feature 07\'s screen (HK13-D10)'],
+      ['supabase/tests/00-interlock.sql', 'INT13-00: the application table count is 41 with every feature\'s tables'],
+      ['tests/foundationSpecs.test.mjs', 'INT13-00/01: the union of four manifests\' counts; each kind in its own migration'],
+      ['tests/hk-ir01/changeBridge.test.mjs', 'INT13-00: the union of the sync-kind inventory'],
+      ['tests/support/legacyShapes.mjs', 'INT13-00: the union of the later roots stripped from historical fixtures'],
+      ['tests/support/richHousehold.mjs', 'INT13-00: the union of the later rows'],
+      ['.gitattributes', 'INT13-01: the LF pins follow the renamed and new additive migrations'],
+      ['scripts-dev/meals-boundary-scan.cjs', 'AUD13: registered F09-F12 and the integration, and made the accounting exact (HK13-D11)'],
+      ['tests/meals/boundary.test.mjs', 'AUD13: the routing guarantee asks who changed a routing file, not only whether (HK13-D11)'],
     ],
   },
 ];
@@ -152,9 +351,39 @@ const PROTECTED = [
 
 const FORBIDDEN_MODEL = /^(Recipe|Ingredient|PantryItem|Pantry|GroceryList|GroceryCatalogItem|GroceryItem|MealIdea|MealPreference|DietProfile|DietaryProfile|FavoriteMeal|FoodInventory|Inventory|ShoppingTrip|ShoppingOrder|ShoppingList|MealHistory|MealExecution|MealConsumption|MealTemplate|NutritionProfile|Nutrition|MealLog|EatenMeal)/i;
 
-function changedFiles() {
+const MEALS_LINE = 'HK-FEATURE-08 line (Meals, AUDIT-W2, STAGING-W2)';
+const MEALS_REASONS = new Map(SHARED);
+const OWN_LANE = 'its own lane';
+
+/** Every later lane that explains a change to `file`: it owns the path, or it lists the file with its reason. */
+const laterReasons = (file) =>
+  LATER_FEATURES.flatMap((feature) => [
+    ...(feature.owned.some((re) => re.test(file)) ? [{ lane: feature.id, reason: OWN_LANE }] : []),
+    ...feature.shared.filter(([shared]) => shared === file).map(([, reason]) => ({ lane: feature.id, reason })),
+  ]);
+
+/**
+ * Check E for one changed file. `early`: it changed on the Wave 2 line (BASE .. the checkpoint), which is Meals-era — only a
+ * Meals-line reason (OWNED / SHARED) explains that, and a PROTECTED file must not have changed there. `late`: its status since the
+ * checkpoint, or null — a change made by a later lane or the integration, which only a later lane's reason explains (a Meals reason
+ * there would be a misattribution). A file can be both, and then needs both.
+ */
+function account(file, status, early, late) {
+  const findings = [];
+  const later = late ? laterReasons(file) : [];
+  const summary = (reasons) => ({ lanes: reasons.map((r) => r.lane), reason: reasons.map((r) => r.reason).join(' | ') });
+  if (late && later.length === 0) findings.push(`E: changed after the integration checkpoint with no later lane's reason: ${late} ${file}`);
+  if (OWNED.some((re) => re.test(file))) return { findings, shared: null, mealsFile: late && later.length > 0 ? { file, ...summary(later) } : null };
+  if (early && PROTECTED.some((re) => re.test(file))) return { findings: [...findings, `E: PROTECTED file changed on the Wave 2 line: ${file}`], shared: null, mealsFile: null };
+  if (early && !MEALS_REASONS.has(file)) findings.push(`E: unexplained shared-file change on the Wave 2 line: ${status} ${file}`);
+  if (later.length > 0 && later.every((r) => r.reason === OWN_LANE)) return { findings, shared: null, mealsFile: null }; // a later lane's own file
+  const reasons = [...(early && MEALS_REASONS.has(file) ? [{ lane: MEALS_LINE, reason: MEALS_REASONS.get(file) }] : []), ...later];
+  return { findings, shared: reasons.length > 0 ? { file, status, ...summary(reasons) } : null, mealsFile: null };
+}
+
+function changedFiles(from = BASE) {
   const files = new Map();
-  for (const line of git('diff', '--name-status', BASE).split('\n')) {
+  for (const line of git('diff', '--name-status', from).split('\n')) {
     if (!line.trim()) continue;
     const parts = line.split('\t');
     files.set(parts[parts.length - 1], parts[0][0]);
@@ -185,11 +414,14 @@ function scan() {
   const findings = [];
   const facts = {};
   const changed = changedFiles();
-  const laterOwned = (file) => LATER_FEATURES.some((feature) => feature.owned.some((re) => re.test(file)));
-  const owned = (file) => OWNED.some((re) => re.test(file)) || laterOwned(file);
+  const CHECKPOINT = INTEGRATION_CHECKPOINTS[INTEGRATION_CHECKPOINTS.length - 1];
+  // Who could have made a change: the Wave 2 line (Meals era) between BASE and the checkpoint, a later lane after it. Both can hold.
+  const onWave2Line = new Set(git('diff', '--name-only', BASE, CHECKPOINT).split('\n').filter(Boolean));
+  const sinceCheckpoint = changedFiles(CHECKPOINT);
   const laterMigrations = new Set(LATER_FEATURES.flatMap((feature) => feature.migrations));
   const laterSchemas = new Set(LATER_FEATURES.flatMap((feature) => feature.schemas));
   const laterRoots = new Set(LATER_FEATURES.flatMap((feature) => feature.rootCollections));
+  const laterKinds = new Set(LATER_FEATURES.flatMap((feature) => feature.syncKinds));
   facts.laterFeatures = LATER_FEATURES.map((feature) => feature.id);
 
   // A. new migrations (a registered later feature's own migration is its lane, not Meals')
@@ -223,24 +455,22 @@ function scan() {
   facts.newRootCollections = rootDiff.added;
   if (rootDiff.added.length > 0 || rootDiff.removed.length > 0) findings.push(`C: AppState root keys changed: +[${rootDiff.added}] -[${rootDiff.removed}]`);
 
-  // D. new sync kinds
-  const kindDiff = diff(arrayItems(atBase('src/domain/sync/syncTypes.ts'), 'CORE_SYNC_KINDS') ?? new Set(), arrayItems(now('src/domain/sync/syncTypes.ts'), 'CORE_SYNC_KINDS') ?? new Set());
+  // D. new sync kinds (a registered later lane's own kinds are its lane)
+  const rawKindDiff = diff(arrayItems(atBase('src/domain/sync/syncTypes.ts'), 'CORE_SYNC_KINDS') ?? new Set(), arrayItems(now('src/domain/sync/syncTypes.ts'), 'CORE_SYNC_KINDS') ?? new Set());
+  const kindDiff = { added: rawKindDiff.added.filter((kind) => !laterKinds.has(kind)), removed: rawKindDiff.removed };
   facts.newSyncKinds = kindDiff.added;
   if (kindDiff.added.length > 0 || kindDiff.removed.length > 0) findings.push(`D: sync kinds changed: +[${kindDiff.added}] -[${kindDiff.removed}]`);
 
-  // E. shared-file changes and protected files
-  const shared = new Map([...LATER_FEATURES.flatMap((feature) => feature.shared), ...SHARED]);
+  // E. every change accounted for by who could have made it (see account() below).
   facts.sharedFileChanges = [];
+  facts.laterChangesToMealsFiles = [];
   for (const [file, status] of changed) {
-    if (owned(file)) continue;
-    if (PROTECTED.some((re) => re.test(file))) {
-      findings.push(`E: PROTECTED file changed: ${file}`);
-      continue;
-    }
-    const reason = shared.get(file);
-    if (reason === undefined) findings.push(`E: unexplained shared-file change: ${status} ${file}`);
-    else facts.sharedFileChanges.push({ file, status, reason });
+    const verdict = account(file, status, onWave2Line.has(file), sinceCheckpoint.get(file) ?? null);
+    findings.push(...verdict.findings);
+    if (verdict.shared) facts.sharedFileChanges.push(verdict.shared);
+    if (verdict.mealsFile) facts.laterChangesToMealsFiles.push(verdict.mealsFile);
   }
+  facts.mealsLine = MEALS_LINE;
 
   // F. a second durable Meals model, by declared name and by table name, in every new or changed source file
   const sourceFiles = [...changed].filter(([f]) => /^(src\/.*\.(ts|tsx)|supabase\/migrations\/.*\.sql)$/.test(f)).map(([f]) => f);
@@ -268,8 +498,11 @@ function scan() {
   facts.siblingImports = badImports;
   if (badImports.length > 0) findings.push(`G: imports outside the baseline features: ${badImports.join('; ')}`);
   const ancestry = [];
-  for (const branch of git('branch', '--list', 'feature/0*', 'validate/*', 'audit/hk-*').split('\n').map((b) => b.replace(/^[*+ ]+/, '').trim()).filter(Boolean)) {
-    if (branch === 'feature/08-meals-os') continue;
+  // `feature/*`, not `feature/0*`: a Feature 10+ branch reaching HEAD unregistered is exactly what this asks about. A registered later
+  // lane's branch is merged into this line on purpose, and everything it changed is accounted for above (checks A-E) and below (H).
+  const laneBranches = new Set(LATER_FEATURES.map((feature) => feature.branch).filter(Boolean));
+  for (const branch of git('branch', '--list', 'feature/*', 'validate/*', 'audit/hk-*').split('\n').map((b) => b.replace(/^[*+ ]+/, '').trim()).filter(Boolean)) {
+    if (branch === 'feature/08-meals-os' || laneBranches.has(branch)) continue;
     const tip = git('rev-parse', branch).trim();
     if (gitOk('merge-base', '--is-ancestor', tip, 'HEAD').ok) {
       // A tip at or below the baseline is the baseline's own history (IR01 forked from an audit tip); only history ABOVE it is a sibling.
@@ -285,8 +518,41 @@ function scan() {
   facts.siblingAncestry = ancestry;
   if (ancestry.length > 0) findings.push(`G: sibling history reaches HEAD: ${ancestry.join('; ')}`);
 
+  // H. the register is true. A lane may explain only what its own history changed, or a claim could hide another change behind it:
+  // every file a feature lane lists as shared must differ between the checkpoint and that lane's branch, and every file the
+  // integration lists must be held here in a version that neither the checkpoint nor any lane branch holds (the integration's own
+  // union, reconciliation or repair). A lane whose branch is not present locally is reported as unverified, not as a pass.
+  facts.unverifiedLanes = [];
+  const overclaims = [];
+  const present = LATER_FEATURES.filter((feature) => feature.branch && gitOk('rev-parse', '--verify', '--quiet', `${feature.branch}^{commit}`).ok);
+  for (const feature of LATER_FEATURES) {
+    if (feature.branch === null) continue;
+    if (!present.includes(feature)) {
+      facts.unverifiedLanes.push(feature.id);
+      continue;
+    }
+    const onBranch = new Set(git('diff', '--name-only', CHECKPOINT, feature.branch).split('\n').filter(Boolean));
+    for (const [file] of feature.shared) if (!onBranch.has(file)) overclaims.push(`${feature.id} claims ${file}, which ${feature.branch} never changed`);
+  }
+  const integrationFiles = LATER_FEATURES.filter((feature) => feature.branch === null).flatMap((feature) => feature.shared.map(([file]) => file));
+  if (integrationFiles.length > 0) {
+    const versions = (rev) => new Map(git('ls-tree', '-r', rev, '--', ...integrationFiles).split('\n').filter(Boolean).map((line) => [line.split('\t')[1], line.split(/\s+/)[2]]));
+    const held = [CHECKPOINT, ...present.map((feature) => feature.branch)].map((rev) => [rev, versions(rev)]);
+    const here = git('hash-object', '--', ...integrationFiles).split('\n').filter(Boolean);
+    integrationFiles.forEach((file, i) => {
+      const holder = held.find(([, map]) => map.get(file) === here[i]);
+      if (holder) overclaims.push(`the integration claims ${file}, but ${holder[0]} already holds this exact version`);
+    });
+  }
+  facts.laneOverclaims = overclaims;
+  if (overclaims.length > 0) findings.push(`H: a lane explains a change it did not make: ${overclaims.join('; ')}`);
+
   return { ok: findings.length === 0, base: BASE, findings, facts };
 }
+
+// Required (not run) by tests/meals/boundary.test.mjs, which holds account() to its rules on files the real tree does not exercise.
+module.exports = { account, LATER_FEATURES, MEALS_LINE };
+if (require.main !== module) return;
 
 const result = scan();
 if (process.argv.includes('--json')) {
@@ -300,6 +566,8 @@ if (process.argv.includes('--json')) {
   console.log(`  E shared-file changes      : ${result.facts.sharedFileChanges.length} files, each mapped to a permitted reason`);
   console.log('  F second Meals models      :', result.facts.secondModels.join(', ') || 'none');
   console.log('  G sibling imports/ancestry :', [...result.facts.siblingImports, ...result.facts.siblingAncestry].join(', ') || 'none');
+  console.log('  H lane register            :', result.facts.laneOverclaims.join(', ') || 'true',
+    result.facts.unverifiedLanes.length > 0 ? `| unverified (branch not present): ${result.facts.unverifiedLanes.join(', ')}` : '');
   console.log(result.ok ? '\nRESULT: PASS' : `\nRESULT: FAIL\n  ${result.findings.join('\n  ')}`);
 }
 process.exit(result.ok ? 0 : 1);

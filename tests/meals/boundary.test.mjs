@@ -9,6 +9,7 @@
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { describe, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
@@ -23,12 +24,22 @@ const walk = (dir) =>
   });
 const mealSources = walk('src/features/meals').filter((f) => /\.(ts|tsx)$/.test(f));
 
-describe('[BV] the semantic-boundary scan', () => {
-  const scan = () => {
-    const out = spawnSync(process.execPath, ['scripts-dev/meals-boundary-scan.cjs', '--json'], { cwd: ROOT, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
-    return { status: out.status, result: JSON.parse(out.stdout) };
-  };
+// The scan's baseline and the integration checkpoint every later lane branched from (see scripts-dev/meals-boundary-scan.cjs).
+const BASE = '38ab7f14d017146883a939339eb604607eff623b';
+const CHECKPOINT = '363e473fdf053547a21a41a67b7f62bd9aa2bcdf';
+const git = (...args) => execFileSync('git', args, { cwd: ROOT, encoding: 'utf8', maxBuffer: 256 * 1024 * 1024 });
 
+let scanned;
+/** The scan is a whole-tree git diff (seconds, not milliseconds): run once, read by every test below. */
+const scan = () => {
+  if (scanned === undefined) {
+    const out = spawnSync(process.execPath, ['scripts-dev/meals-boundary-scan.cjs', '--json'], { cwd: ROOT, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+    scanned = { status: out.status, result: JSON.parse(out.stdout) };
+  }
+  return scanned;
+};
+
+describe('[BV] the semantic-boundary scan', () => {
   test('[BV1] [BV2] [BV3] [BV4] [BV5] the scan passes: one migration, no new durable type, table, collection or sync kind, every shared-file change explained', () => {
     const { status, result } = scan();
     assert.deepEqual(result.findings, [], 'a finding needs an owner checkpoint, not a workaround');
@@ -50,6 +61,27 @@ describe('[BV] the semantic-boundary scan', () => {
         assert.equal(/features\/(kids|home|money|work|calendar|systems|talk-it-out|daily-load|one-move|onboarding|tasks)\b/.test(match[1]), false, `${file} imports ${match[1]}`);
       }
     }
+  });
+
+  test('[BV6] who could have made a change decides what explains it: the Wave 2 line needs a Meals-line reason, a later change a later lane\'s (HK13-D11)', () => {
+    const { account, MEALS_LINE } = createRequire(import.meta.url)('../../scripts-dev/meals-boundary-scan.cjs');
+    const F10 = 'HK-FEATURE-10 (Work / Career OS)';
+    // useHousehold.ts carries only a Meals-line reason. Changed on the Wave 2 line, that explains it; changed after the checkpoint,
+    // it does not — Meals was certified before any later lane branched, so a Meals reason there would be a misattribution.
+    assert.deepEqual(account('src/store/useHousehold.ts', 'M', true, null).findings, []);
+    assert.deepEqual(account('src/store/useHousehold.ts', 'M', true, null).shared.lanes, [MEALS_LINE]);
+    assert.match(account('src/store/useHousehold.ts', 'M', true, 'M').findings.join(), /changed after the integration checkpoint with no later lane's reason/);
+    // A PROTECTED file: changed on the Wave 2 line, it fails whatever a later lane says; changed only after it, the lane that did it explains it.
+    assert.match(account('app/_layout.tsx', 'M', true, 'M').findings.join(), /PROTECTED file changed on the Wave 2 line/);
+    assert.deepEqual(account('app/_layout.tsx', 'M', false, 'M').findings, []);
+    assert.deepEqual(account('app/_layout.tsx', 'M', false, 'M').shared.lanes, [F10]);
+    assert.match(account('src/domain/taskLists.ts', 'M', false, 'M').findings.join(), /no later lane's reason/, 'no lane explains taskLists.ts');
+    // A later lane's own file is its lane, not a shared change; one changed on the Wave 2 line still needs its Meals-line reason.
+    assert.deepEqual(account('src/features/work/WorkOverview.tsx', 'M', false, 'M'), { findings: [], shared: null, mealsFile: null });
+    assert.match(account('src/features/work/WorkOverview.tsx', 'M', true, 'M').findings.join(), /unexplained shared-file change on the Wave 2 line/);
+    // A Meals file changed after the checkpoint names who changed it, and a Meals file no lane explains is a finding.
+    assert.ok(account('supabase/tests/private-stack.mjs', 'M', true, 'M').mealsFile.lanes.includes('HK-F01-F13 integration (INT13 / AUD13)'));
+    assert.match(account('src/features/meals/MealsBody.tsx', 'M', true, 'M').findings.join(), /no later lane's reason/);
   });
 
   test('[CB1] [CD1] no dependency relation, recipe link or external reference is created by Meals code', () => {
@@ -113,10 +145,20 @@ describe('[BO] no network, no logging, no secrets in Meals code', () => {
 });
 
 describe('[BL] the route and the Life hub are used as they were', () => {
-  test('[BL1] [BL2] the routing, route access, root layout and Life layout are untouched, and the Meals route is the existing direct route', () => {
-    const changed = execFileSync('git', ['diff', '--name-only', '38ab7f14d017146883a939339eb604607eff623b'], { cwd: ROOT, encoding: 'utf8' }).split('\n');
+  test('[BL1] [BL2] Meals never changed the routing, route access, root layout or Life layout; any later change to one is a registered later lane\'s; the Meals route is the existing direct route', () => {
+    // Until the F01-F13 integration this asked only whether these files changed since BASE. On the integrated line Feature 10 adds
+    // the opportunity editor to the root layout and route access, and Feature 09 rewrites the Money row of the reachability audit —
+    // not Meals changes. So the guarantee is asked where Meals was built (the Wave 2 line, BASE .. CHECKPOINT), and a change after it
+    // must be explained by a later lane and never by a Meals-line reason (HK13-D11).
+    const onWave2Line = git('diff', '--name-only', BASE, CHECKPOINT).split('\n');
+    const sinceBase = git('diff', '--name-only', BASE).split('\n');
+    const { result } = scan();
     for (const untouched of ['src/domain/routeAccess.ts', 'app/_layout.tsx', 'app/(app)/life/_layout.tsx', 'src/domain/taskLists.ts', 'tests/build3Audit.capture.test.mjs']) {
-      assert.equal(changed.includes(untouched), false, untouched + ' was changed');
+      assert.equal(onWave2Line.includes(untouched), false, `${untouched} was changed on the Wave 2 line`);
+      if (!sinceBase.includes(untouched)) continue;
+      const change = result.facts.sharedFileChanges.find((c) => c.file === untouched);
+      assert.ok(change, `${untouched} changed after the checkpoint and the scan accounts for it`);
+      assert.ok(change.lanes.length > 0 && !change.lanes.includes(result.facts.mealsLine), `${untouched} is explained by ${change.lanes.join(', ')}`);
     }
     const route = read('app/(app)/life/meals.tsx');
     assert.match(route, /MealsOverview/);

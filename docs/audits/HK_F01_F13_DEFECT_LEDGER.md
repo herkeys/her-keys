@@ -23,7 +23,8 @@ P5 low correctness · P6 UX polish · P7 maintainability · P8 performance · P9
 | HK13-D07 | P5 | F11, F12 | sync transport | Two parallel "Failing row contains" redactions; F11's regex missed an unclosed row tuple | FIXED `02fa959` (trivial, local) |
 | HK13-D08 | **P0** | F10 | local persistence | A household saved before F10 fails validation and is overwritten with an empty household on the first F10 launch | FIXED `d9dfa5c` |
 | HK13-D09 | **P0** | F10, F11, F13 | account binding | `hasContent` ignores Work/Rebuild/People rows: after A's interrupted claim, B bootstraps and A's private rows are pushed as B's | FIXED `d9dfa5c` |
-| HK13-D10 | P3 | F07, F13 | navigation / Life IA | Co-Parent (`/life/coparent`) and People (`/life/people`) have no entry point — reachable only by deep link | FIXED (INT13-02) |
+| HK13-D10 | P3 | F07, F13 | navigation / Life IA | Co-Parent (`/life/coparent`) and People (`/life/people`) have no entry point — reachable only by deep link | FIXED `b681a4c` |
+| HK13-D11 | P4 | F09–F13 | exit gate (Meals boundary scan) | F09–F12 never registered their lanes: the integrated line fails the Meals exit gate, and the scan's attribution could not tell a Meals change from a later feature's | FIXED (AUD13-04) |
 
 (Entries below are added as the audit proceeds.)
 
@@ -213,4 +214,56 @@ P5 low correctness · P6 UX polish · P7 maintainability · P8 performance · P9
   own name, keeps category order, and disappears with the category; the hub copy claims nothing false. Test-the-test: the pre-fix hub
   fails 4/7 with `['/life/coparent', '/life/people']` unreachable. `tests/people/ui.test.mjs`: F13's "hub untouched (registration
   deferred)" test replaced by "the hub reaches People only through the count-only tile; Today/One Move/Life layout untouched".
-- **Status:** FIXED.
+- **Status:** FIXED `b681a4c`.
+
+## HK13-D11 — The Meals exit gate fails on the integrated line, and could not attribute a change (P4)
+
+- **Features / surface:** F09, F10, F11, F12 (unregistered), F13 (registered, with two false claims) · `scripts-dev/meals-boundary-scan.cjs`
+  (Feature 08's required exit gate) and `tests/meals/boundary.test.mjs` ([BV1], [BM1], [BL1] run it in the app suite).
+- **How found:** ENTRY app suite (§5 of the audit report): `tests/meals/boundary.test.mjs` failed 3 tests. The scan reported 126
+  findings: A (four extra migrations), B (seven schemas), C (five tables; five roots), D (`lifeRecord`, `lifeRecordLink`), E (120 files:
+  110 unexplained, 10 PROTECTED, e.g. `app/_layout.tsx`, `src/domain/routeAccess.ts`, `src/domain/tasks.ts`), G
+  (`feature/09-money-os` is an ancestor of HEAD).
+- **Root cause:** the scan diffs against a fixed pre-F08 base, so every later feature's work shows up as a Meals question. Its
+  `LATER_FEATURES` register exists for exactly this ("each feature adds its own entry; take the union"), but only F13 registered; F09–F12
+  were built on branches where the scan was not run against their own changes, or not at all. Registering them alone would not have
+  been an honest repair, because the scan had three structural blind spots once several features share the line:
+  1. **Misattribution.** Reasons were a `Map` with Meals reasons winning: `src/domain/sync/apply.ts`, changed by F09, F10 and F12, was
+     reported as "MealPlanEntry: apply reads the two columns". F12's change to `claim.ts` was "explained" by AUDIT-W2-05's regex fix.
+  2. **PROTECTED could not distinguish who.** It fails any change to, e.g., `app/_layout.tsx` — including F10's, which is not a Meals
+     change and is what the list exists to allow later features to make.
+  3. **No truth check.** A lane could claim any file. F13 claimed `supabase/tests/sync-integration.mjs` and
+     `journey-composition.mjs`, which its branch never changed — a claim like that hides a real change behind a false reason.
+  (Also: sync kinds could not be registered, and the ancestry check listed `feature/0*` only, so an unregistered Feature 10+ branch
+  reaching HEAD would never have been seen.)
+- **Severity:** P4 — a required exit gate red on the integrated line, and a gate whose green would not have meant what it says.
+- **Repair (AUD13-04):**
+  - Five lanes registered from their branches' own diffs (`git diff 363e473 <branch>`): F09, F10, F11, F12, plus the integration's own
+    lane (the files it holds in a version no branch holds — a merge union, a reconciliation or a repair — each with its reason). F13's
+    lane corrected (the two false claims removed; five files it did change, previously leaning on Meals reasons, added).
+  - **Exact accounting (check E, `account()`):** a change between BASE and the checkpoint is Meals-era and needs a Meals-line reason (a
+    PROTECTED file must not have changed there); a change after the checkpoint needs a later lane's reason, never a Meals one. A file
+    changed in both eras needs both. Each shared-file fact now lists every lane that explains it.
+  - **Check H (the register is true):** every file a feature lane lists must differ between the checkpoint and that lane's branch;
+    every file the integration lists must be held here in a version neither the checkpoint nor any lane branch holds. A lane whose
+    branch is absent is reported as unverified, not passed.
+  - Lane `syncKinds` subtracted in check D; ancestry lists `feature/*`, and skips registered lane branches.
+  - `[BL1]` now asks where Meals was built: the routing files never changed on the Wave 2 line, and any later change carries a later
+    lane's reason, never a Meals-line one.
+- **Tests:** `tests/meals/boundary.test.mjs` 10/10 (was 6/9): [BV1] findings `[]`; new [BV6] holds `account()` to its rules on inputs the
+  real tree does not exercise (a post-checkpoint change to a Meals-reason-only file fails; PROTECTED fails only for a Wave 2 change; a
+  later lane's own file changed on the Wave 2 line still needs a Meals reason). Test-the-test (each mutant applied to the working
+  tree, restored byte-for-byte by sha256, never committed; "test" = `tests/meals/boundary.test.mjs` run under the mutant):
+
+  | Mutant | Change | Result |
+  |---|---|---|
+  | D11-M1 | drop F10's `app/_layout.tsx` entry | CAUGHT — E finding; test fails 3 |
+  | D11-M2 | F09 falsely claims `src/domain/oneMove.ts` | CAUGHT — H finding |
+  | D11-M3 | F12 stops registering its two sync kinds | CAUGHT — D finding |
+  | D11-M4 | registered lane branches not exempt from ancestry | CAUGHT — G finding |
+  | D11-M5 | a Meals-line reason accepted after the checkpoint (the old misattribution) | CAUGHT — by [BV6] only (the real tree does not exercise it) |
+  | D11-M6 | planted post-checkpoint change to `src/store/useHousehold.ts` (Meals reason only) | CAUGHT — E finding; test fails 1 |
+  | D11-M7 | planted change to PROTECTED `src/domain/taskLists.ts` | CAUGHT — E finding |
+  | D11-M8 | the integration falsely claims `README.md` | CAUGHT — H finding |
+  | D11-M9 | PROTECTED fails on any change (the old rule) | CAUGHT — 11 findings; test fails 3 |
+- **Status:** FIXED (AUD13-04).
