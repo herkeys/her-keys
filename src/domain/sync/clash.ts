@@ -106,6 +106,16 @@ export function classify(state: AppState, kind: SyncEntityKind, row: Row, resolv
       return displace(active.find((d) => d.relation !== 'alternative_to' && onCycle.has(`${refKey(d.from)}>${refKey(d.to)}`) && isPending('dependency', d.id))?.id);
     }
 
+    // HK-FEATURE-11: one live link per (Focus, target). Two devices that each connected the same thing to the same Focus made ONE
+    // connection, so the local row is that relationship — adopted, never duplicated and never counted twice as a next step.
+    case 'rebuildFocusLink': {
+      if (String(row.status) !== 'active') return null;
+      const focus = resolve(strOrNull(row.focus_id));
+      const target = refOut(row, 'target', ['task', 'goal', 'system', 'event'], resolve);
+      if (focus === null || target === null) return null;
+      return adopt(state.rebuildFocusLinks.find((l) => l.status === 'active' && l.focusId === focus && sameRef(l.target, target))?.id);
+    }
+
     case 'externalReference':
       return adopt(
         state.externalReferences.find(

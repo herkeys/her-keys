@@ -36,6 +36,8 @@ const IR01 = join(REPO, 'supabase', 'migrations', '20260921120000_ir01_duration_
 const F08 = join(REPO, 'supabase', 'migrations', '20260921160000_f08_meal_slot_and_status.sql');
 // HK-FEATURE-05 closeout repair (OC-01): additive, follows F08 and never edits it.
 const F05 = join(REPO, 'supabase', 'migrations', '20260921190000_f05_add_child_after_binding.sql');
+// HK-FEATURE-11 (Me / Rebuild): additive, follows F05 and never edits it. rebuild_focuses and rebuild_focus_links.
+const F11 = join(REPO, 'supabase', 'migrations', '20260922180000_f11_rebuild_focus.sql');
 const AUTH_STUB = join(HERE, 'helpers', '00-auth-stub.sql');
 const TEST_HELPERS = join(HERE, 'helpers', '01-test-helpers.sql');
 const TEST_DEFAULTS = join(HERE, 'helpers', '05-test-defaults.sql');
@@ -71,6 +73,7 @@ const applyBuild4 = (db, opts = {}) => psqlFile(db, BUILD4, opts);
 const applyIr01 = (db, opts = {}) => psqlFile(db, IR01, opts);
 const applyF08 = (db, opts = {}) => psqlFile(db, F08, opts);
 const applyF05 = (db, opts = {}) => psqlFile(db, F05, opts);
+const applyF11 = (db, opts = {}) => psqlFile(db, F11, opts);
 
 function admin(sql) {
   return execFileSync(
@@ -111,6 +114,7 @@ function envA() {
   applyIr01('b4_env_a', { label: 'ENV A ir01' });
   applyF08('b4_env_a', { label: 'ENV A f08' });
   applyF05('b4_env_a', { label: 'ENV A f05' });
+  applyF11('b4_env_a', { label: 'ENV A f11' });
 
   check('ENV A: Build 4 migration applies on an empty surface', true);
   check('ENV A: the additive IR01 migration applies on top of it (fresh install)', true);
@@ -129,7 +133,21 @@ function envA() {
         scalar('b4_env_a', "select count(*) || '/' || string_agg(cmd, ',') from pg_policies where schemaname='public' and tablename='household_members';") === '1/SELECT');
   check('ENV A: tasks.duration_source is nullable text with no default (an unstated source is unknown)',
         scalar('b4_env_a', "select data_type || '/' || is_nullable || '/' || coalesce(column_default, 'none') from information_schema.columns where table_schema='public' and table_name='tasks' and column_name='duration_source';") === 'text/YES/none');
-  check('ENV A: 34 application tables', scalar('b4_env_a', "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r';") === '34');
+  // 34 through F05, plus HK-FEATURE-11's two (rebuild_focuses, rebuild_focus_links).
+  check('ENV A: 36 application tables (34 + the two HK-FEATURE-11 tables)', scalar('b4_env_a', "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r';") === '36');
+  check('ENV A: the additive F11 migration (Me / Rebuild) applies on top of all of them (fresh install)', true);
+  check('ENV A: the two F11 tables are owner-private: RLS on, owner-only SELECT/INSERT/UPDATE policies, NO DELETE policy',
+        scalar('b4_env_a', "select string_agg(tablename || ':' || cmd, ',' order by tablename, cmd) from pg_policies where schemaname='public' and tablename in ('rebuild_focuses','rebuild_focus_links');")
+          === 'rebuild_focus_links:INSERT,rebuild_focus_links:SELECT,rebuild_focus_links:UPDATE,rebuild_focuses:INSERT,rebuild_focuses:SELECT,rebuild_focuses:UPDATE'
+        && scalar('b4_env_a', "select count(*) from pg_policies where schemaname='public' and tablename in ('rebuild_focuses','rebuild_focus_links') and coalesce(qual, with_check) not like '%profile_id%';") === '0');
+  check('ENV A: no client role holds DELETE on either F11 table, and anon/PUBLIC hold nothing',
+        scalar('b4_env_a', "select count(*) from information_schema.role_table_grants where table_schema='public' and table_name in ('rebuild_focuses','rebuild_focus_links') and ((privilege_type = 'DELETE' and grantee = 'authenticated') or grantee in ('anon','PUBLIC'));") === '0');
+  check('ENV A: public.sync_push is STILL SECURITY INVOKER after the F11 replacement',
+        scalar('b4_env_a', "select (not prosecdef)::text from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname='sync_push';") === 'true');
+  check('ENV A: the F11 link-visibility trigger runs as the CALLER (not a definer) and no client role can call it directly',
+        scalar('b4_env_a', "select p.prosecdef::text || '/' || has_function_privilege('anon', p.oid, 'EXECUTE')::text || '/' || has_function_privilege('authenticated', p.oid, 'EXECUTE')::text from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='private' and p.proname='rebuild_focus_link_target_visible';") === 'false/false/false');
+  check('ENV A: no F11 column was added to any existing table (nothing named *focus* or *rebuild* outside the two new tables)',
+        scalar('b4_env_a', "select count(*) from information_schema.columns where table_schema='public' and table_name not in ('rebuild_focuses','rebuild_focus_links') and (column_name like '%focus%' or column_name like '%rebuild%');") === '0');
   // The test-only producer default (helpers/05) must never be in the shipped schema: a writer that does not say where a row came from is refused.
   check('ENV A: the shipped schema gives `producer` NO default on any of the nine synced content tables',
         scalar('b4_env_a', "select count(*) from information_schema.columns where table_schema='public' and column_name='producer' and column_default is not null;") === '0');
@@ -226,6 +244,7 @@ function envC(only) {
   applyIr01('b4_env_c', { label: 'ENV C ir01 (while empty)' });
   applyF08('b4_env_c', { label: 'ENV C f08 (while empty)' });
   applyF05('b4_env_c', { label: 'ENV C f05 (while empty)' });
+  applyF11('b4_env_c', { label: 'ENV C f11 (while empty)' });
   check('ENV C: migrated while empty, before any fixture exists', true);
   // Test-environment convenience ONLY: see the header of helpers/05-test-defaults.sql.
   psqlFile('b4_env_c', TEST_DEFAULTS, { label: 'ENV C test defaults' });
@@ -362,10 +381,26 @@ function migrationQuality() {
   // Exactly one Build 4 shipping migration in the tree.
   const migs = readdirSync(join(REPO, 'supabase', 'migrations')).filter((f) => f.endsWith('.sql'));
   const after = migs.filter((f) => f.split('_')[0] > '20260919230054');
-  check('quality: exactly ONE Build 4 shipping migration plus the ONE additive IR01 repair, the ONE additive F08 (meal slot/status) and the ONE additive F05 (child after binding) migration after the baseline',
-        after.length === 4 && after[0] === '20260919231500_build4_cloud_schema.sql' && after[1] === '20260921120000_ir01_duration_source_and_claim_v3.sql'
-        && after[2] === '20260921160000_f08_meal_slot_and_status.sql' && after[3] === '20260921190000_f05_add_child_after_binding.sql', after.join(', '));
-  check('quality: their timestamps sort strictly after the baseline, in order', after.every((f) => f.split('_')[0] > '20260919230054') && after[0] < after[1] && after[1] < after[2] && after[2] < after[3], after.join(' < '));
+  check('quality: exactly ONE Build 4 shipping migration plus the ONE additive IR01 repair, the ONE additive F08 (meal slot/status), the ONE additive F05 (child after binding) and the ONE additive F11 (Me / Rebuild) migration after the baseline',
+        after.length === 5 && after[0] === '20260919231500_build4_cloud_schema.sql' && after[1] === '20260921120000_ir01_duration_source_and_claim_v3.sql'
+        && after[2] === '20260921160000_f08_meal_slot_and_status.sql' && after[3] === '20260921190000_f05_add_child_after_binding.sql'
+        && after[4] === '20260922180000_f11_rebuild_focus.sql', after.join(', '));
+  check('quality: their timestamps sort strictly after the baseline, in order', after.every((f) => f.split('_')[0] > '20260919230054') && after[0] < after[1] && after[1] < after[2] && after[2] < after[3] && after[3] < after[4], after.join(' < '));
+  const f11Sql = readFileSync(F11, 'utf8');
+  const f11Code = f11Sql.replace(/\$fn\$[\s\S]*?\$fn\$/g, '').replace(/--.*$/gm, '');
+  check('quality: the F11 migration is additive - it drops only the one change_log check it re-creates, and deletes, truncates, updates or inserts no row',
+        (f11Code.match(/\bDROP\b[^;]*;/gi) ?? []).join(' ') === 'DROP CONSTRAINT change_log_entity_table_check;'
+        && !/(^|\n)\s*(TRUNCATE|DELETE FROM|UPDATE public\.|INSERT INTO)/i.test(f11Code));
+  check('quality: the F11 migration creates exactly two tables and touches exactly two functions (the new trigger function and the replaced sync_push)',
+        (f11Code.match(/CREATE TABLE public\.\w+/g) ?? []).join(',') === 'CREATE TABLE public.rebuild_focuses,CREATE TABLE public.rebuild_focus_links'
+        && (f11Sql.match(/^CREATE (OR REPLACE )?FUNCTION [\w.]+/gm) ?? []).map((s) => s.replace(/^CREATE (OR REPLACE )?FUNCTION /, '')).join(',') === 'private.rebuild_focus_link_target_visible,public.sync_push');
+  check('quality: the F11 migration alters no existing table except the change_log check (no column added to tasks, goals, systems, events, members or people)',
+        (f11Code.match(/ALTER TABLE public\.(\w+)/g) ?? []).every((s) => /public\.(rebuild_focuses|rebuild_focus_links|change_log)$/.test(s)));
+  check('quality: the F11 migration grants no DELETE and creates no DELETE policy (removal is a status, never a delete)',
+        !/\bGRANT\b[^;]*\bDELETE\b/i.test(f11Code) && !/FOR DELETE/i.test(f11Code));
+  check('quality: the F11 migration is pinned to LF, so its function digest is the same on every checkout', !f11Sql.includes(String.fromCharCode(13)));
+  check('quality: the F11 migration opens and closes its own transaction and ends with the fail-closed assertion',
+        /^\s*BEGIN;\s*$/m.test(f11Sql) && f11Sql.trim().endsWith('SELECT private.assert_app_schema_secured();\n\nCOMMIT;'));
   const ir01Sql = readFileSync(IR01, 'utf8');
   check('quality: the IR01 migration is additive - it drops no table, column or data and rewrites no row',
         !/(^|\n)\s*(DROP TABLE|DROP COLUMN|TRUNCATE|DELETE FROM|UPDATE public\.)/i.test(ir01Sql.replace(/\$fn\$[\s\S]*?\$fn\$/g, '').replace(/--.*$/gm, '')));
@@ -597,6 +632,29 @@ function envD() {
           COMMIT;`, { expectFailure: true, label: 'ENV D stranger add child' }).out.includes('not a member of household')
         && scalar(db, "select count(*) from public.household_members where local_id = 'child-evil';") === '0');
   check('ENV D: the fail-closed assertion still passes after F05', psql(db, 'SELECT private.assert_app_schema_secured();').ok);
+
+  // ---- The THIRD additive upgrade, on the same populated database: F11 (Me / Rebuild). Two new tables, one new trigger function,
+  // the change_log check re-created with two more names, sync_push replaced. It must lose nothing and rewrite nothing.
+  const preF11 = { census: census(), members: memberDigest(), tasks: digest(), log: scalar(db, 'select count(*) from public.change_log;') };
+  applyF11(db, { label: 'ENV D f11 upgrade' });
+  check('ENV D: the additive F11 migration applies to the populated, already-upgraded database (no interlock, no abort)', true);
+  check('ENV D: F11 lost nothing - every existing table keeps its row count', census() === preF11.census, `${preF11.census} -> ${census()}`);
+  check('ENV D: F11 rewrote no existing row (every member and task byte-identical) and wrote nothing to the change log',
+        memberDigest() === preF11.members && digest() === preF11.tasks && scalar(db, 'select count(*) from public.change_log;') === preF11.log);
+  const pushAs = (sub, table, row, device = 'd4000000-0000-4000-8000-0000000000d1') => scalar(db, `
+    BEGIN;
+    SET LOCAL ROLE authenticated;
+    SET LOCAL request.jwt.claims = '{"sub":"${sub}"}';
+    SELECT public.sync_push('${table}', '${device}'::uuid, '${JSON.stringify(row).replace(/'/g, "''")}'::jsonb) ->> 'status';
+    COMMIT;`).split('\n').map((line) => line.trim()).find((line) => ['created', 'already_exists', 'local_id_collision'].includes(line));
+  const focusRow = { household_id: uidHouse, profile_id: uid, local_id: 'focus-late', title: 'Make space for myself again', note: null, state: 'active',
+    producer: 'user-action', scope: 'personal', origin_created_at: '2026-09-22T12:00:00Z', origin_updated_at: '2026-09-22T12:00:00Z' };
+  check('ENV D: after F11 the owner of the populated household can push a Focus through the ordinary sync_push', pushAs(uid, 'rebuild_focuses', focusRow) === 'created');
+  check('ENV D: ...a retry from the same install answers already_exists and adds no second Focus',
+        pushAs(uid, 'rebuild_focuses', focusRow) === 'already_exists' && scalar(db, "select count(*) from public.rebuild_focuses where local_id = 'focus-late';") === '1');
+  check('ENV D: ...its change-log entry carries the owner, so only she pulls it',
+        scalar(db, `select count(*) from public.change_log where entity_table = 'rebuild_focuses' and owner_profile_id = '${uid}';`) === '1');
+  check('ENV D: the fail-closed assertion still passes after F11', psql(db, 'SELECT private.assert_app_schema_secured();').ok);
 }
 
 // ---------------------------------------------------------------- ENV E -----
@@ -749,7 +807,8 @@ try {
   }
   // The Kids journey runs against the local stack's default database, exactly as the composition journey does; it needs no ENV C.
   // Feature 08 (meals) already ran its own ENV C (suite 77), scoped to its own migration, above; it is not re-run here.
-  if (only !== 'kids' && only !== 'f08') envC(only);
+  // The Me / Rebuild journey (HK-FEATURE-11) needs no ENV C either; its RLS matrix is ENV C suite 78, run with the others.
+  if (only !== 'kids' && only !== 'f08' && only !== 'rebuild') envC(only);
   if (!only || only === 'parity') {
     const { authorizationParity } = await import(`file://${join(HERE, 'authorization-parity.mjs')}`);
     await authorizationParity(check, psql);
@@ -770,6 +829,12 @@ try {
     const { homeJourneys } = await import(`file://${join(HERE, 'journey-home.mjs')}`);
     await homeJourneys(check, psql);
   }
+  if (only === 'rebuild') {
+    // Always the private stack: the journey needs the F11 migration, and the shared default database is never migrated by it.
+    await startJourneyStack();
+    const { rebuildJourneys } = await import(`file://${join(HERE, 'journey-rebuild.mjs')}`);
+    await rebuildJourneys(check, psql);
+  }
   if (only === 'journeys' || !only) {
     await startJourneyStack();
     const { syncIntegration } = await import(`file://${join(HERE, 'sync-integration.mjs')}`);
@@ -780,6 +845,8 @@ try {
     await kidsJourneys(check, psql);
     const { homeJourneys } = await import(`file://${join(HERE, 'journey-home.mjs')}`);
     await homeJourneys(check, psql);
+    const { rebuildJourneys } = await import(`file://${join(HERE, 'journey-rebuild.mjs')}`);
+    await rebuildJourneys(check, psql);
   }
   if (privateStack) await privateStack.stop();
 } catch (err) {

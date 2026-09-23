@@ -1,0 +1,80 @@
+{
+  "tool": "herkeys-schema-fingerprint",
+  "toolVersion": 1,
+  "searchPath": "''",
+  "scope": [
+    "public",
+    "private"
+  ],
+  "label": "HK-FEATURE-11 (Me / Rebuild): WAVE3_BASE after the additive migration 20260922180000_f11_rebuild_focus.sql (rebuild_focuses, rebuild_focus_links, private.rebuild_focus_link_target_visible, change_log_entity_table_check re-created, sync_push replaced). DERIVED, not measured on the shared database: the F11 delta was measured on a scratch pair, every changed fact names an F11 object, and it was applied to wave3-base-local-fingerprint.json.",
+  "dimensions": {
+    "columns": {
+      "items": 755,
+      "digest": "a8457de33ba89813225fb8f2bf32790f"
+    },
+    "constraints": {
+      "items": 717,
+      "digest": "781dc50e910d2e068df48f751b3a1ebb"
+    },
+    "functions": {
+      "items": 29,
+      "digest": "006dcd6503f382ad73b23c126779686b"
+    },
+    "indexes": {
+      "items": 300,
+      "digest": "7ae4c7fcd5f629c4fcc133a364eba7df"
+    },
+    "info.event_triggers": {
+      "items": 7,
+      "digest": "460fef42355350673d98786b2395e9f7"
+    },
+    "info.extensions": {
+      "items": 6,
+      "digest": "7d12895eecbafc55a6fb3f91e7ce78b7"
+    },
+    "policies": {
+      "items": 91,
+      "digest": "4e805e043eec0bb6f01fdbfbb2afaff6"
+    },
+    "privileges.columns": {
+      "items": 764,
+      "digest": "5f564fe679aba6b97d8827c9bac527dd"
+    },
+    "privileges.default_acl": {
+      "items": 7,
+      "digest": "84cba4e765aaa559cf174135e54549ff"
+    },
+    "privileges.effective": {
+      "items": 326,
+      "digest": "7cbf1ef14c56f0a353297cafb9bf02c4"
+    },
+    "privileges.functions": {
+      "items": 56,
+      "digest": "53fbfeba69f108955284ae82bfa0edad"
+    },
+    "privileges.relations": {
+      "items": 621,
+      "digest": "75f18d85f0dec97dec99f90d7a84bd92"
+    },
+    "privileges.schemas": {
+      "items": 10,
+      "digest": "eda0330fda8cc1898fa30c327ab67768"
+    },
+    "relations": {
+      "items": 37,
+      "digest": "f18c98931a0dd4483fb59645958cba8a"
+    },
+    "schemas": {
+      "items": 2,
+      "digest": "0e57bd8fd092941a34193a365f9fd211"
+    },
+    "triggers": {
+      "items": 111,
+      "digest": "b48bd563b7c780037b323c5681a84047"
+    }
+  },
+  "gating": {
+    "items": 3826,
+    "digest": "ab23dba46c7b1353917cdbc786231327"
+  }
+}

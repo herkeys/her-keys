@@ -19,6 +19,7 @@ import { appendObservation } from '../../src/domain/observations.ts';
 import { captureNeedsMeItem } from '../../src/domain/needsMe.ts';
 import { resolveOneMoveForToday } from '../../src/domain/oneMove.ts';
 import { completeOnboarding, toggleOnboardingOption } from '../../src/domain/onboarding.ts';
+import { addNextStep, addRebuildFocus, linkToFocus } from '../../src/domain/rebuild/commands.ts';
 import { validateAppState } from '../../src/domain/state.ts';
 import { createEmptyState } from '../../src/state/initialState.ts';
 import { DAY, MORNING, TZ } from './fixtures.mjs';
@@ -30,6 +31,7 @@ export const USER = { producer: 'user-action', artifactId: null, confidence: nul
 export const CLIENT_WRITTEN = [
   'sourceArtifact', 'externalReference', 'interpretation', 'authority', 'intent', 'decision', 'observation', 'person',
   'responsibility', 'dependency', 'recurrence', 'goal', 'systemStep', 'capacity', 'pattern', 'evidenceLink',
+  'rebuildFocus', 'rebuildFocusLink',
 ];
 
 export function richHousehold({ withServerRows = false, withOneMove = true } = {}) {
@@ -118,6 +120,13 @@ export function richHousehold({ withServerRows = false, withOneMove = true } = {
   // A One Move's day is the SERVER's (it derives it from the account's timezone), so a household that is
   // going to be pushed to a live database leaves it out; the One Move journey covers it with today's date.
   if (withOneMove) s = resolveOneMoveForToday(s, at());
+
+  // ---- HK-FEATURE-11: a Focus she named, the next step she wrote for it (a private canonical Task), and her Goal connected to it.
+  // Added after One Move is decided, so the day's decision is exactly what it was.
+  s = addRebuildFocus(s, at(), { title: 'Make space for myself again', note: 'Saturday mornings used to be mine.' });
+  const focus = s.rebuildFocuses[0];
+  s = addNextStep(s, at(), { focusId: focus.id, title: 'Book the pottery class', categoryId: 'cat-wellbeing' });
+  s = linkToFocus(s, at(), { focusId: focus.id, target: { kind: 'goal', id: s.goals[0].id }, relation: 'supports' });
 
   if (withServerRows) {
     const intent = s.intents[0];
