@@ -47,6 +47,8 @@ P5 low correctness · P6 UX polish · P7 maintainability · P8 performance · P9
 | HK13-D18 | P5 | F01, F03-F07, F10, F11, F13, Life hub | cloud hydration | Only Meals, Money and Life Admin gate their empty states on a fresh device's first cloud download; every other surface could say "nothing" mid-download — unreachable today (see D34) | DOCUMENTED |
 | HK13-D34 | P9 | platform (Build 4 R7/R10) | second device | Adopting an existing cloud household on a second device is a recorded, unimplemented contract: the server refuses it (`superseded_by_cloud`); every multi-device proof binds device B with a test stand-in | DOCUMENTED (pre-existing) |
 | HK13-D35 | P3 | F05 Kids, F03 Calendar, F01 Today × F07 | handoff editing | Kids' item editor and the Calendar's event form moved a co-parenting handoff without its recorded repeat: Co-Parent then showed "Repeats every week on Tuesday" beside a Wednesday handoff | FIXED `4199baa` |
+| HK13-D36 | P9 | platform (Build 4 identity) | navigation | The sign-in screen has no entry point in any build since it was added: no user can bind an account, so every cloud capability is reachable only in tests | DOCUMENTED (pre-existing); OD-HK13-02 |
+| HK13-D37 | P5 | F03 Calendar, F05 Kids × F07 | responsibility copy | One recorded responsibility, two voices: Calendar and Kids state what she recorded as a third party's act ("Alex accepted"); Co-Parent says "You recorded that Alex accepted this" | DOCUMENTED |
 
 (Entries below are added as the audit proceeds.)
 
@@ -713,6 +715,40 @@ structural, verified in code:
   Calendar tap and the Kids tap open a handoff in Co-Parent and any other event in its editor. Test-the-test D35-M1..M6 (each guard, each
   entry point, the predicate) — **6/6 caught**.
 - **Status:** FIXED `4199baa`.
+
+## HK13-D36 — The sign-in screen has never had an entry point (P9, pre-existing; owner decision OD-HK13-02)
+
+- **How found:** Phase 12 route inventory (`scratchpad/route-inventory.cjs` over every route file and every navigation in `app/` and
+  `src/`). Every feature route is reachable — the five tabs, the Life hub's category rows (Kids, Home, Money, Meals, Work, Co-parent)
+  and private rows (Me/Rebuild, Life Admin, People), and every editor from its area — except `/sign-in` (and `/dev-tools`, internal by
+  design). No dead button in any product screen (the no-op buttons are the internal design gallery's), and no screen writes to the store
+  when a form opens (no effect writes; every create/update runs from a Save or an explicit action).
+- **What:** `app/sign-in.tsx` ("Signing in is offered, never demanded") arrived with Build 4's identity work (`4fca961`) and is guarded
+  `signedOut`, but no commit has ever linked to it. With no way to sign in, no user can bind an account on this build: sync, a second
+  device, account switching and everything the backend certification proves are reachable only in tests.
+- **Why not repaired here:** adding the entry point exposes Apple and Google sign-in, which the brief sequences AFTER this certification
+  ("Do not … start auth verification", "Do not test live auth"). Where it goes and when it ships is the owner's.
+- **OD-HK13-02 (owner):** add the sign-in entry point (e.g. an account row on the Life hub or a quiet line under Today's status) as part
+  of auth verification. Until then the product is a single-device, local-first app, which is also what its copy says.
+- **Status:** DOCUMENTED (pre-existing).
+
+## HK13-D37 — One recorded responsibility, two voices (P5)
+
+- **How found:** Phase 13 copy audit, which read each responsibility state's wording in every feature that shows one.
+- **What:** the same foundation responsibility state is described in two voices. The Calendar's `responsibilityLine`
+  (`src/features/calendar/copy.ts`) says "`${name}` accepted", "`${name}` completed it" and "`${name}` has seen it and hasn't accepted
+  yet". Kids' `coverageTag` (`src/features/kids/copy.ts`) says "Seen · not accepted" and "Said no". Co-Parent (`src/features/coparent/copy.ts`)
+  says "You recorded that `${name}` accepted this." A co-parenting handoff with a responsibility can therefore read "Alex accepted" on the
+  Calendar and "You recorded that Alex accepted this" in Co-Parent.
+- **Why it is not the brief's overclaim:** every state is the one she recorded. Nobody else acts in the app, and each surface ties each
+  word to exactly that state: acknowledged is never shown as accepted, and requested is never shown as completed.
+  `tests/kids/copyTruth.test.mjs` pins Kids' words to those states. `tests/calendarProjection.test.mjs` pins the state the Calendar's
+  line reads from, but not the words; the Phase 13 read found none wrong. The inconsistency is one of voice. F07 chose the stricter one
+  because a co-parent is outside the household and the record may matter later.
+- **Severity:** P5. This is low-grade correctness: the wording is inconsistent across features, but no state is misstated.
+- **Why not repaired:** aligning the wording changes copy in two features, and one of them pins its words in a copy-truth test. It also
+  changes F03's and F05's voice. That is not a trivial, local change, so it is left for the owner's copy pass.
+- **Status:** DOCUMENTED.
 
 ## Known shared privacy items — re-audited under the P0–P10 rubric (Phase 8)
 
