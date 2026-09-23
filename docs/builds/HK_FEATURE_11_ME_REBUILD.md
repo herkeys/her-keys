@@ -344,3 +344,76 @@ contract says across the canonical systems it touches. `tests/rebuild/focus.rela
 
 **Low-energy support**: no F11 energy model. The M4 home may show an existing `alternative_to` Task for a linked next step via the
 existing `alternativesTo()`; F11 never creates one.
+
+Mini-gate after M3: `feature/11-me-rebuild-os` @ `7115c6d`, working tree clean.
+
+---
+
+## F11-M4 — Me / Rebuild UI
+
+### Where it lives (Life, not a tab)
+
+- **Route** `app/(app)/life/rebuild.tsx` — one route; `mode` picks the view (home when absent, `new`, `focus`), `id` names the Focus,
+  `step=1` opens its next-step form. It sets its own header title (the Co-Parent pattern), so the PROTECTED Life stack layout
+  (`app/(app)/life/_layout.tsx`) is untouched. No new top-level tab; the Life hub is not redesigned.
+- **Life hub** `app/(app)/life/index.tsx` — ONE fixed row, "Me / Rebuild", value = number of ACTIVE Focuses ("Nothing named yet" /
+  "1 focus" / "n focuses"). A count of what she chose, never a score or a nudge.
+- **Feature** `src/features/rebuild/`: `copy.ts` (every sentence), `availability.ts` (the gate), `model.ts` (pure projection),
+  `RebuildHomeBody.tsx`, `FocusEditorBody.tsx`, `FocusDetailBody.tsx` (pure bodies), `RebuildScreen.tsx` (the only file that knows the
+  store and the router; every write is one of the canonical commands).
+
+### The home
+
+- **Gate first** (the Co-Parent / Systems rule, kept as its own copy like theirs): loading, an unreadable household and ANOTHER
+  ACCOUNT'S household show no Focus and never the empty state; a session that must not write shows read-only and disables every add.
+- **Zero active Focuses (Addendum Q)**: one calm question — "What's one part of your life you'd like to make more room for?" — with
+  "Add one Focus" and "Not now". No section headings are drawn. Paused Focuses, if any, stay reachable in a quiet list.
+- **Verdict** (factual, deterministic): a step due today or past its own date → "One personal step needs attention today." / "n …";
+  otherwise the next dated thing she connected (a step's due date or a linked calendar item) → "Next: {title}, {day}."; otherwise
+  "Nothing here needs attention today." It never says a Focus lacks a step (Addendum E), never praises, never warns.
+- **Current focuses** in the Addendum K order; each shows its open next steps (with an EXISTING lighter alternative when she recorded
+  one) or, when it has none, a quiet ghost button "Add a next step" — an invitation, not an alert, uncolored and uncounted.
+- **Needs attention**: only open next steps of ACTIVE Focuses whose own due date is today or past. Paused/archived contribute nothing
+  (Addendum M). Omitted when empty.
+- **Recent progress**: the latest three factual completions among linked items (completed Tasks, reached Goals), newest first, with no
+  time window (Addendum P). Omitted when empty.
+- **Paused**: a quiet list, below. **Archived**: not on this surface (PENDING-INTEGRATION — PAST FOCUSES VIEW, MP-11-02).
+
+### A Focus
+
+Title (rename in place), state line (Active / Paused — not shown as current / Archived), the note — shown ONLY here, on her own
+Focus — with add/edit/remove; next steps with Mark done (canonical `completeTask`) and Edit (the existing `/task-editor`); "Add a next
+step" opens an inline form (step text + "File it under" category chips, defaulting to the first active owner-private-scope category by
+the household's own order — a SCOPE, never a name); Connected items (Goal / Routine / Calendar) with Disconnect; "Connect something
+already here" (routines; upcoming calendar items, the next 20 — a list length, not a time policy); Pause / Resume; Archive behind a
+confirmation ("It stays saved, and it leaves this page. Its steps stay exactly as they are.").
+
+**AFFORDANCE ≠ TASK (Addendum H).** Opening the step form, arriving with it open from the home, and typing all write NOTHING; only
+Save runs `addNextStep`, once, with her text. Cancel writes nothing.
+
+**Focus vs Goal (Addendum R)**: the new-Focus form shows two plain lines ("Focus: an area you want to keep visible." / "Goal:
+something specific you're working toward."). Nothing classifies what she types.
+
+### Tests — `tests/rebuild/ui.test.mjs` (27 tests; 27/27)
+
+Projection: zero-Focus shape; E (no guilt signal, and no clock — a month later reads the same); verdict order; M (paused/archived
+contribute nothing); P (latest 3, newest first, two weeks old still counts; a reached linked Goal counts, an unlinked completion does
+not); MISSED ROUTINE ≠ REGRESSION (a missed and a skipped linked System leave home and detail deep-equal); G (an existing
+alternative is shown, none is invented); J (the note is in no home/verdict/attention/progress string and not copied to the Task); Me
+Now = explicit links only; K; default category by scope not name. Availability: loading / unrecovered / other account never render
+the empty question or a Focus title. Rendered: Q; H on the home (tapping only asks to open the form); read-only disables adds; R
+(distinction copy, blank refused, title-only accepted); H on the Focus (open → type → nothing; Save → exactly one personal Task with
+her words; Cancel → nothing); archive asks first and touches only the Focus; pause / resume / rename / mark-done each run exactly one
+command. **T — static copy audit**: every string and every sentence a copy function can form is free of the banned list (healing
+journey, better version of yourself, doing great, falling behind, wellness/wellbeing/self-care/personal-growth score, score, streak,
+proud, amazing, behind, neglect, should have, fail, journey, heal, therapy, self-care, mood, diagnos, %).
+
+### Test accounting (M4 checkpoint, measured before any M5 change)
+
+```
+tsc --noEmit                   -> exit 0
+full app suite (serial)        -> ℹ tests 2873  ℹ suites 630  ℹ pass 2871  ℹ fail 2   (the two pre-existing F08-scan tests)
+```
+
+Device evidence: this app has no `react-native-web`, so the browser preview cannot render it; an Android emulator pass is decided at
+M6 (see "Device evidence").

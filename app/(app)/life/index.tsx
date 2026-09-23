@@ -4,6 +4,7 @@ import { AppText, Overline, Screen, StatusList } from '../../../src/design/compo
 import { colors, spacing } from '../../../src/design/tokens';
 import { openTasksWithoutList } from '../../../src/domain/taskLists';
 import { NeedsMeQuickAdd } from '../../../src/features/life/NeedsMeQuickAdd';
+import { REBUILD_COPY } from '../../../src/features/rebuild/copy';
 import { useLifeStatus } from '../../../src/features/life/useLifeStatus';
 import { useLifeInbox } from '../../../src/features/talk-it-out/capture/CaptureContext';
 import { copy } from '../../../src/features/talk-it-out/capture/copy';
@@ -16,6 +17,7 @@ export default function LifeHub() {
   const { state, today } = useHouseholdState();
   const openNeedsMe = state.needsMe.filter((item) => item.status === 'open');
   const otherOpenTasks = openTasksWithoutList(state, today).length;
+  const activeFocuses = state.rebuildFocuses.filter((focus) => focus.state === 'active').length;
 
   return (
     <Screen>
@@ -62,6 +64,13 @@ export default function LifeHub() {
             label: 'Needs Me',
             value: openNeedsMe.length === 0 ? 'Nothing captured' : `${openNeedsMe.length} captured`,
             onPress: () => router.push('/life/needs-me'),
+          },
+          // Her own life as a person (HK-FEATURE-11). A count of what she chose to keep visible — never a score, never a nudge.
+          {
+            key: 'me-rebuild',
+            label: REBUILD_COPY.life.rowLabel,
+            value: REBUILD_COPY.life.rowValue(activeFocuses),
+            onPress: () => router.push('/life/rebuild'),
           },
         ]}
       />
