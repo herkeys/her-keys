@@ -107,14 +107,16 @@ SELECT CASE WHEN herkeys_test.ins('rebuild_focuses', jsonb_build_object('househo
 SELECT id AS focus_b FROM public.rebuild_focuses WHERE local_id = 'f11-focus-b' \gset
 
 -- Inference through a crafted foreign key: attaching a link to A's Focus answers EXACTLY as attaching it to no Focus at all.
-SELECT herkeys_test.ins('rebuild_focus_links', jsonb_build_object('household_id', :'hh_a', 'profile_id', :'ub', 'local_id', 'f11-craft-1', 'focus_id', :'focus_a', 'target_type', 'task', 'target_task_id', :'task_hh', 'relation', 'supports', 'status', 'active')) AS err_real_focus \gset
-SELECT herkeys_test.ins('rebuild_focus_links', jsonb_build_object('household_id', :'hh_a', 'profile_id', :'ub', 'local_id', 'f11-craft-2', 'focus_id', gen_random_uuid(), 'target_type', 'task', 'target_task_id', :'task_hh', 'relation', 'supports', 'status', 'active')) AS err_no_focus \gset
+-- `ins` answers NULL when a row goes IN; psql's \gset would then leave the variable unset and the next statement would crash instead
+-- of failing. The accepted case is therefore spelled out as 'ACCEPTED', so a broken protection is reported as a FAIL, never a crash.
+SELECT coalesce(herkeys_test.ins('rebuild_focus_links', jsonb_build_object('household_id', :'hh_a', 'profile_id', :'ub', 'local_id', 'f11-craft-1', 'focus_id', :'focus_a', 'target_type', 'task', 'target_task_id', :'task_hh', 'relation', 'supports', 'status', 'active')), 'ACCEPTED') AS err_real_focus \gset
+SELECT coalesce(herkeys_test.ins('rebuild_focus_links', jsonb_build_object('household_id', :'hh_a', 'profile_id', :'ub', 'local_id', 'f11-craft-2', 'focus_id', gen_random_uuid(), 'target_type', 'task', 'target_task_id', :'task_hh', 'relation', 'supports', 'status', 'active')), 'ACCEPTED') AS err_no_focus \gset
 SELECT CASE WHEN :'err_real_focus' LIKE '23503%' AND :'err_no_focus' LIKE '23503%'
                  AND regexp_replace(:'err_real_focus', '\([^)]*\)=\([^)]*\)', '(...)=(...)', 'g') = regexp_replace(:'err_no_focus', '\([^)]*\)=\([^)]*\)', '(...)=(...)', 'g')
             THEN 'PASS' ELSE 'FAIL' END || ' | f11 same-household B: a link naming A''s private Focus fails exactly like a link naming a Focus that does not exist (no inference)';
 -- Inference through a target: linking her own Focus to A's PRIVATE Task answers EXACTLY as linking it to a Task that does not exist.
-SELECT herkeys_test.ins('rebuild_focus_links', jsonb_build_object('household_id', :'hh_a', 'profile_id', :'ub', 'local_id', 'f11-craft-3', 'focus_id', :'focus_b', 'target_type', 'task', 'target_task_id', :'task_private', 'relation', 'next_action', 'status', 'active')) AS err_private_task \gset
-SELECT herkeys_test.ins('rebuild_focus_links', jsonb_build_object('household_id', :'hh_a', 'profile_id', :'ub', 'local_id', 'f11-craft-4', 'focus_id', :'focus_b', 'target_type', 'task', 'target_task_id', gen_random_uuid(), 'relation', 'next_action', 'status', 'active')) AS err_no_task \gset
+SELECT coalesce(herkeys_test.ins('rebuild_focus_links', jsonb_build_object('household_id', :'hh_a', 'profile_id', :'ub', 'local_id', 'f11-craft-3', 'focus_id', :'focus_b', 'target_type', 'task', 'target_task_id', :'task_private', 'relation', 'next_action', 'status', 'active')), 'ACCEPTED') AS err_private_task \gset
+SELECT coalesce(herkeys_test.ins('rebuild_focus_links', jsonb_build_object('household_id', :'hh_a', 'profile_id', :'ub', 'local_id', 'f11-craft-4', 'focus_id', :'focus_b', 'target_type', 'task', 'target_task_id', gen_random_uuid(), 'relation', 'next_action', 'status', 'active')), 'ACCEPTED') AS err_no_task \gset
 SELECT CASE WHEN :'err_private_task' LIKE '23503%' AND :'err_private_task' = :'err_no_task'
             THEN 'PASS' ELSE 'FAIL' END || ' | f11 same-household B: linking to A''s PRIVATE Task is refused with the very same answer as a Task that does not exist';
 SELECT CASE WHEN herkeys_test.ins('rebuild_focus_links', jsonb_build_object('household_id', :'hh_a', 'profile_id', :'ub', 'local_id', 'f11-craft-5', 'focus_id', :'focus_b', 'target_type', 'goal', 'target_goal_id', :'goal_a', 'relation', 'supports', 'status', 'active')) LIKE '23503%'
