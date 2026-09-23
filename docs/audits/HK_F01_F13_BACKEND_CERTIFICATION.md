@@ -106,3 +106,59 @@ seen, and an absent reference ignored).
 - **HK13-D27 (P4)** — ENV D's "whole chain" skipped F08. Fixed.
 - **HK13-D28 (P2)** — found while seeding ENV F: a One Move decided offline lands in the cloud as the next day's. Fixed on the client,
   inside HR-03 (see the ledger); **OD-HK13-01** records the server-side option for the owner.
+
+---
+
+## 2. Privacy / RLS attack (Phase 8)
+
+`supabase/tests/81-int13-privacy.sql` (ENV C, **56/56**) attacks the integrated database with synthetic identities: A (owner), B (a second
+adult of A's household), C (an unrelated household), anon and service. A holds sixteen private rows across twelve tables of every
+feature (opportunity, Focus and link, record and link, person, contexts and follow-up link, handoff, sequence, schedule, step).
+
+- **Catalog:** all seven Wave 3/4 tables have RLS; anon holds nothing on any of them; no client can hard-delete one; every owner-read
+  table that feeds the change log logs its owner; every uniqueness rule on an owner-private relationship table is per owner.
+- **Reads and writes:** B, C and anon read none of A's rows by table, by id, by `sync_pull` or through the change log (not the table,
+  not the id); none can write as A through a table or `sync_push`; service reads everything (the trusted boundary).
+- **Non-inference:** B's own rows naming A's private rows are refused exactly as naming a random uuid (masked-uuid equality).
+- **Finding:** HK13-D24 (P2) — four household-wide uniqueness rules answered for A's private row about a shared item; fixed by the
+  INT13 migration (per owner), proven on real pre-existing data by ENV F.
+- **Known shared items, re-audited under the rubric:** redaction, change-log visibility and relationship transport verified; the FK
+  existence residual (HK13-D25) and local-id guessability (HK13-D26) documented as P9 — see the ledger's re-audit table.
+
+## 3. Sync / local-first certification (Phase 9)
+
+**Every new F09–F13 canonical type, one lifecycle** (`tests/hk-f01f13/syncLifecycle.test.mjs`, **34/34**) through the real device
+composition: the F09 payment mechanism (a Money task), the F10 CareerOpportunity, the F11 RebuildFocus and RebuildFocusLink, the F12
+LifeRecord and LifeRecordLink, the F13 PersonContext and PersonTaskLink.
+
+| Proof | How |
+|---|---|
+| create / edit / archive offline, visible at once | the row is in state immediately; ONE queue item per row, however many offline edits |
+| relaunch | a new app over the same storage shows exactly what she left and still owes it to the cloud |
+| reconnect → push | exactly one cloud row, holding the latest truth; queue empty; nothing needs attention |
+| fresh device → reconstruction | a second install of the account rebuilds the row under the same id; relaunched and pulled again, unchanged (no resurrection) |
+| retry | every acknowledgement lost, then retried: still exactly one row |
+| stale edit (pull side) | B's newer edit stands; A's different edit is kept as a CAS conflict; A converges |
+| stale edit (push race) | another device writes WHILE this one's update is on the wire: the newer row stands, hers is evidence, the device converges |
+| refused row | kept on the device and as evidence; tried once, not every cycle; an unrelated row still reaches the cloud |
+
+**Sync registry reconciliation** (`tests/hk-f01f13/syncRegistry.test.mjs`, **8/8**): the integrated kind inventory is exactly Build 4 +
+IR01 + F05 + F09–F13; every kind is in every per-kind table; every kind a device creates is on the server's `sync_push` allow-list and
+the allow-list names nothing unknown (read from the LAST migration that declares it); every kind's table is in the change-log CHECK
+the chain leaves behind; every reference points down the dependency ranks; every pushable kind counts as claim content; only
+Discovery is tombstoned; every DOMAIN_INVARIANT is a real unique rule, a competing decision to the transport, and reconciled by the
+pull — except the two category rules (HK13-D29, P7, unreachable today, documented).
+
+**Test-the-test:** lifecycle mutants P9-M1..M4 — a stale update treated as sent, no coalescing, a refusal retried forever, an edit never
+queued — **4/4 caught**. P9-M1 first **survived**: a cycle pulls before it pushes, so a stale edit was always caught on the pull side and
+the push engine's own stale branch was never exercised. The matrix gained the push-race test, and P9-M1 is now caught five times.
+Registry mutants REG-M1..M6 — a dropped kind, a dropped `sync_push` table, a dropped invariant, an inverted rank, a dropped claim
+collection, a dropped change-log table — **6/6 caught**.
+
+**Phase 9 finding:** HK13-D28 (P2, fixed, see §1.5) is the one-day-late One Move; HK13-D29 (P7) is documented.
+
+## Full backend harness (uncontested, audit namespace)
+
+After AUD13-03 (`61e24a6`): **1559/1559** checks — ENV A 36, ENV B 11 (+B3), ENV C (every suite incl. 81), ENV D 66, ENV E 11, ENV F 71,
+authorization parity, client-payload integration and every journey over real HTTP on the private stack. No sibling harness ran
+during it (the gate logged zero contention events).

@@ -39,6 +39,7 @@ P5 low correctness · P6 UX polish · P7 maintainability · P8 performance · P9
 | HK13-D26 | P9 | foundation | local ids | A guessed local id of a private Task collides; production ids are not practically guessable | DOCUMENTED |
 | HK13-D27 | P4 | harness | populated upgrade | ENV D's "whole chain" skipped F08, so its final database was not the real chain's | FIXED `51ec5c8` |
 | HK13-D28 | **P2** | F01 × sync | One Move / push | A One Move decided offline lands in the cloud as the NEXT day's: every other device's Today shows the wrong move as done, and today's real decision is refused | FIXED `51ec5c8`; OD-HK13-01 open |
+| HK13-D29 | P7 | foundation × sync | categories / pull | Two category uniqueness rules are competing decisions on push but have no pull-side reconciliation; unreachable today (no user surface creates or reorders a category) | DOCUMENTED |
 
 (Entries below are added as the audit proceeds.)
 
@@ -579,6 +580,27 @@ P5 low correctness · P6 UX polish · P7 maintainability · P8 performance · P9
   move's late completion after midnight still lands on its own day. Test-the-test: D28-M1 (the push engine sends it again), D28-M2
   (the top-up owes it again), D28-M3 (facts about it are not kept with it), D28-M4 (a synced move is kept back too) — **4/4 caught**.
 - **Status:** FIXED `51ec5c8`; OD-HK13-01 open for the owner.
+
+## HK13-D29 — Two category uniqueness rules have no pull-side reconciliation (P7, documented)
+
+- **Feature / surface:** Build 4 categories (every feature files rows under one, and since HK13-D14 a category decides a new row's
+  visibility) · `src/platform/supabaseSyncTransport.ts` DOMAIN_INVARIANTS · `src/domain/sync/clash.ts`.
+- **How found:** Phase 9, the sync registry reconciliation (`tests/hk-f01f13/syncRegistry.test.mjs`): every DOMAIN_INVARIANT was
+  matched with the pull-side case that reconciles it. Two have none: `household_categories_household_id_sort_order_key` and
+  `household_categories_system_role_uq`.
+- **What it would do:** local state requires a unique category `sortOrder` and `systemRole`, and a new category takes `max + 1`. Two
+  installs each adding a category offline would both take the same order; the second push is refused as a competing decision (kept
+  as evidence), and the pull then brings the first one into a state that already holds that order — an invalid batch, which the
+  integrity gate refuses on every cycle (the HK13-D13 pattern: that install's sync would stop for good). `reorderCategories`
+  rewrites several orders at once, which per-row pushes cannot apply against a (household, order) unique key either.
+- **Reachability:** none in a user build. `addCategory` and `reorderCategories` are called only from `app/dev-tools.tsx`, whose route
+  is `internal`; starter categories are adopted, never created per device; a claim carries categories on the trusted path.
+- **Severity:** **P7** (architectural debt, latent). Not repaired: no user can reach it, and a repair means designing category
+  reconciliation — a product change, not a local fix.
+- **For whoever ships a category surface:** add a `category` clash case (a competing custom category is re-ordered, never
+  stacked) and a reorder the server applies atomically, before the surface ships. The registry test names this as the only
+  DOMAIN_INVARIANT without a clash case, so the gap cannot silently widen.
+- **Status:** DOCUMENTED.
 
 ## Known shared privacy items — re-audited under the P0–P10 rubric (Phase 8)
 
