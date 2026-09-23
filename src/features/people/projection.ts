@@ -1,5 +1,5 @@
 import type { PersonContext } from '../../domain/foundation/personContext';
-import type { LocalDate } from '../../domain/logicalDay';
+import { logicalDateAt, type LocalDate } from '../../domain/logicalDay';
 import { isCoParent } from '../../domain/people';
 import type { AppState, Task } from '../../domain/state';
 import { formatFollowUpDate, peopleCopy } from './copy';
@@ -195,6 +195,8 @@ export interface RecentItem {
   displayName: string;
   relationshipName: string | null;
   updatedAt: string;
+  /** The day it was last updated, in the HOUSEHOLD's timezone (not a UTC slice of the instant). */
+  updatedOn: LocalDate;
 }
 
 /** Addendum Y: the latest five ACTIVE contexts about live people, by `updatedAt` then id. Name, her label and the date — no note. */
@@ -205,7 +207,13 @@ export function recentlyUpdated(state: AppState, limit = 5): RecentItem[] {
     const source: PersonSource = context.childId !== null ? { kind: 'child', id: context.childId } : { kind: 'person', id: context.personId! };
     const row = rowOf(state, source);
     if (!row) continue;
-    items.push({ key: row.key, displayName: row.displayName, relationshipName: context.relationshipName, updatedAt: context.updatedAt });
+    items.push({
+      key: row.key,
+      displayName: row.displayName,
+      relationshipName: context.relationshipName,
+      updatedAt: context.updatedAt,
+      updatedOn: logicalDateAt(Date.parse(context.updatedAt), state.user.timezone),
+    });
   }
   items.sort((a, b) => (a.updatedAt !== b.updatedAt ? (a.updatedAt < b.updatedAt ? 1 : -1) : a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
   return items.slice(0, limit);

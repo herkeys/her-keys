@@ -177,6 +177,13 @@ describe('recently updated, Life tile, detail', () => {
     assert.equal(buildPeopleHome(w.state, DAY).recent.length, 0, 'omitted when there are no contexts');
   });
 
+  test('recently updated dates are the HOUSEHOLD\'s calendar day, not a UTC slice of the instant', () => {
+    const w = world({ coParent: false });
+    // 02:00 UTC on the 17th is still the evening of the 16th in New York.
+    const s = addExternalPerson(w.state, w.at(Date.UTC(2026, 8, 17, 2, 0)), { displayName: 'Late', relationshipName: 'Friend' }).state;
+    assert.equal(recentlyUpdated(s)[0].updatedOn, '2026-09-16');
+  });
+
   test('the Life tile is a count or a date — never a name, a label or a note', () => {
     const w = world();
     const opened = openPersonContext(w.state, w.at(), { kind: 'person', id: w.coParentId }, { relationshipName: 'LABEL-X', contextNote: 'NOTE-X' });

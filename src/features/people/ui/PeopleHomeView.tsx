@@ -83,7 +83,7 @@ export function PeopleHomeView({ view, showAllFollowUps, onOpenPerson, onAddPers
             items={view.recent.map((item) => ({
               key: `recent-${item.key}`,
               label: item.displayName,
-              value: [item.relationshipName, item.updatedAt.slice(0, 10)].filter(Boolean).join(' · '),
+              value: [item.relationshipName, peopleCopy.updatedOn(item.updatedOn)].filter(Boolean).join(' · '),
               onPress: () => onOpenPerson(item.key),
             }))}
           />
@@ -97,7 +97,7 @@ export function PeopleHomeView({ view, showAllFollowUps, onOpenPerson, onAddPers
             items={view.archived.map((item) => ({
               key: `archived-${item.key}-${item.what}`,
               label: item.displayName,
-              value: item.what === 'person' ? 'Archived' : 'Saved details archived',
+              value: item.what === 'person' ? peopleCopy.archivedWhat.person : peopleCopy.archivedWhat.context,
               onPress: () => onOpenPerson(item.key),
             }))}
           />

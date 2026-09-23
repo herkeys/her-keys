@@ -52,6 +52,17 @@ export const peopleCopy = {
 
   seeAll: (n: number) => `See all ${n}`,
 
+  /** "Updated Sep 20" — a calendar date in the household's own timezone. */
+  updatedOn: (date: LocalDate) => {
+    const { month, day } = parseLocalDate(date);
+    return `Updated ${MONTHS[month - 1]} ${day}`;
+  },
+
+  archivedWhat: {
+    person: 'Archived',
+    context: 'What you saved is archived',
+  },
+
   followUp: {
     due: (when: string) => `Follow-up due ${when}.`,
     overdue: (when: string) => `Follow-up was due ${when}.`,
