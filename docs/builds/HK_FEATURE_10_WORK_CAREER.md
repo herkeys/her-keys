@@ -11,7 +11,7 @@ conflict with the original prompt.
 | Worktree | `C:\Users\jsmit\Her-Keys-F10` |
 | WAVE3_BASE | `363e473fdf053547a21a41a67b7f62bd9aa2bcdf` (source: `integration/wave2-f01-f08`) |
 | Sibling (not modified) | `feature/09-money-os`, also at `363e473` at F10's start |
-| Status | **F10 WORK / CAREER OS: STOPPED — RESUMABLE** (§16) — M1–M6 code, tests and mutation-check complete and committed; the one unexecuted item is a full-suite ENV C backend re-run, blocked by this machine's Docker Desktop service stopping mid-run |
+| Status | **F10 WORK / CAREER OS: COMPLETE — READY FOR WAVE 3 INTEGRATION** (§17) — authoritative, uncontested full backend harness 1049/1049; final app suite 2849/2852 (3 known F08 sibling-scan false positives, unrelated to F10); final TypeScript clean |
 
 ---
 
@@ -204,14 +204,14 @@ No new sync code was written (§3.2). Local-first mutation paths (`addOpportunit
 `addOpportunityNextAction`, …) are pure `(state, ctx) => AppState` transitions through the same `store.commit`
 every other feature uses — immediate UI update, background persistence, no online round-trip required.
 
-## 9. Backend validation (M5, in progress)
+## 9. Backend validation (M5 — COMPLETE, see §12.2 for the authoritative final result)
 
 | Check | Result |
 |---|---|
 | `node supabase/tools/gen-foundation-sql.mjs --check` | up to date, before and after every manifest edit |
 | `supabase/tests/run.mjs 57` (foundation RLS) | **52/52 PASS** (clean, isolated rerun — see note below) |
 | `supabase/tests/run.mjs 58` (foundation integrity, incl. new §15 CareerOpportunity doctrine + widened-Dependency proofs) | **150/150 PASS**, including all 15 new F10 checks (3 dependency cross-domain proofs + 12 opportunity doctrine proofs) |
-| Full `supabase/tests/run.mjs` (ENV A/B/B3/D/E/C, all suites) | *(pending — will confirm the 35-table interlock, fresh-install and populated-upgrade paths — see §12)* |
+| Full `supabase/tests/run.mjs` (ENV A/B/B3/D/E/C, all suites) | **1049/1049 PASS**, authoritative and uncontested (§12.2) — confirms the 35-table interlock, fresh-install and populated-upgrade paths |
 
 A second hardcoded table count was found and fixed mid-run: `ENV A: 34 application tables` in `run.mjs`
 itself (a `pg_class`-count check distinct from the interlock-guard array already fixed) and the
@@ -261,6 +261,15 @@ are proven at a different layer instead, per the automated check's own output:
   `displayName` across every file this build touched — no matches). The identity guarantee this
   mutation would attack belongs to F05 and is covered by F05's own mutation check.
 
+**Not rerun during the §12.2 closeout, deliberately:** the only source change made while resolving the
+Docker/contention stop was one line in `20260921190000_f05_add_child_after_binding.sql` (the missing
+`sync_push` allow-list entry). `scripts-dev/f10-mutation-check.cjs` mutates only
+`src/domain/opportunities.ts`, `src/domain/state.ts` and `src/domain/foundation/opportunity.ts` — none
+of which changed — so its 6/6-caught result above remains valid evidence rather than assumed. This is
+not "converting indirect evidence into a fake mutation PASS": the mutation check's own inputs are
+unchanged, and the actual defect the migration fix addresses was independently and directly proven by
+the real `sync-integration.mjs` journey (F1/F2/F8, §12.2), not by mutation testing.
+
 ## 11. Application test suite
 
 | Point | tests | suites | pass | fail | notes |
@@ -270,8 +279,15 @@ are proven at a different layer instead, per the automated check's own output:
 | After M3 (UI + Today integration) | 2817 | 614 | 2813 | 4 | Two more of the same F08-scan false positive (now also naming `src/domain/routeAccess.ts` as a changed "PROTECTED" file — again, an accurate but not-applicable-to-F10 finding from a script scoped to F08's own diff). One real, required fix: `tests/monetization.test.mjs`'s exhaustive "every onboarding-guarded screen must close after completion" loop needed `opportunity-editor` added to its exclusion list, alongside `event-editor`/`task-editor` (same guard type: opens once the app itself is unlocked, is not an onboarding step). |
 | After M6 (mutation-check file added) | 2852 | 622 | 2848 | 4 | +35 tests / +8 suites is exactly `tests/work/opportunity.test.mjs` (added after the M3 count above). Of the 4 fails: 3 are the same pre-existing F08-scan limitation (one more assertion in that file now also names `tests/work/opportunity.test.mjs` and the mutation-check script as further "unexplained" shared-file/new-file changes — same root cause, not a new one); 1 is `tests/hk-ir01/syncComposition.test.mjs`'s "5,000-task household" performance budget test, which failed only under heavy concurrent load from this session's own parallel backend-harness/mutation-check runs (confirmed by re-running it fully isolated: **54/54 pass**, including that test, when nothing else was active — see §9's environmental note for the identical pattern). |
 
-**ENTRY = 2814 tests (2812 pass) / EXIT = 2852 tests (2848 pass).** No test disappeared without a named
-reason — every count change from ENTRY to EXIT is accounted for in the rows above.
+| Closeout — serialized, no backend harness running concurrently (per resume directive §7) | 2852 | 622 | 2849 | 3 | The syncComposition.test.mjs performance-budget test now PASSES on its own (no longer failing) — direct confirmation it was purely a concurrent-load artifact, not a regression. The remaining 3 fails are exactly the same `tests/meals/boundary.test.mjs` F08 sibling-boundary-scan limitation (lines 19, 30, 94) described at ENTRY — unchanged in nature, present before any F10 code existed. No F10 code was altered to manufacture this result. |
+
+**ENTRY = 2814 tests (2812 pass, 2 fail) / FINAL EXIT = 2852 tests (2849 pass, 3 fail).** The 3 residual
+fails are 100% attributable to F08's own pre-existing hostile-audit script (`scripts-dev/meals-boundary-scan.cjs`),
+which is scoped to F08's specific historical diff and is not adjusted for any subsequent sibling branch —
+confirmed present before any F10 change, unmodified by F10 (per the resume directive: F08 exit-gate
+infrastructure was not touched). This is documented, known integration debt for Wave 3 to address (the
+script's `BASE` constant and sibling-ancestry check need to become branch-relative, not F10's to fix). No
+test disappeared without a named reason.
 
 ## 12. Backend harness accounting
 
@@ -346,9 +362,55 @@ or shared-harness-architecture change was made in response to this.
 
 **Preferred fallback (per directive):** do not compete for the shared `b4_env_*` databases; wait for a
 quiet window with no other `run.mjs` process active, then run the complete backend harness once,
-serialized, alone. This has not yet succeeded as of this entry. **Machine-wide rule recorded:** only one
-Her Keys campaign at a time should own the shared `b4_env_*`-based full backend harness; this should be
-carried into Wave 3/4 build-machine coordination (e.g., F09/F11/F12/F13's own sessions, if reachable).
+serialized, alone. **Machine-wide rule recorded:** only one Her Keys campaign at a time should own the
+shared `b4_env_*`-based full backend harness; this should be carried into Wave 3/4 build-machine
+coordination.
+
+### 12.2 Quiet-window closeout: one genuine defect found and repaired, then an authoritative PASS
+
+F09, F11, F12 and F13 were confirmed complete/parked. A quiet window was established (two independent
+process checks ~25s apart, both showing zero `run.mjs`-matching processes; Docker and
+`supabase_db_Her_Keys` both confirmed responsive; zero active connections to any `b4_%` database) and
+held for the remainder of this section — reconfirmed at every ENV transition and immediately after
+completion.
+
+**First authoritative attempt: `1046/1049` — 3 genuine, deterministic F10 failures, uncontested.**
+Migration quality and ENV A/B/B3/D/E again passed with zero failures. ENV C proceeded past the earlier
+collision point into real suite and journey content, then failed in `sync-integration.mjs`'s multi-device
+journey:
+
+- `F1. one device pushed 40 rows across 21 kinds` — `career_opportunities is not a pushable entity table`
+- `F2. every client-written foundation table holds its row in the cloud` — `career_opportunities` missing
+- `F8. SECOND-DEVICE HYDRATION` — `dependency`, `opportunity` not identical (downstream of F1/F2)
+
+**Root cause (a genuine F10 gap, not environmental):** `supabase/migrations/20260921190000_f05_add_child_after_binding.sql`
+(HK-FEATURE-05's closeout repair) replaces `public.sync_push` wholesale (`CREATE OR REPLACE FUNCTION`,
+same signature, to route `household_members` inserts through `private.push_household_child`) and carries
+its **own copy** of the owner-column allow-list — a second, independent copy of the exact list already
+fixed in the baseline migration (§3.2). Because F05's migration applies *after* the baseline, its stale
+18-kind copy silently overwrote the fix. This was missed during M2 because the drift/regeneration
+tooling (`gen-foundation-sql.mjs`) only touches the baseline file's generated region — F05's own
+hand-copied function body is outside its reach, and no test asserted the two copies stay in sync.
+
+**Repair (narrow, one line, no test weakened):** added `'career_opportunities'` to
+`20260921190000_f05_add_child_after_binding.sql`'s copy of the same `CASE` array. Verified LF-only line
+endings preserved (`grep`-counted zero `\r`), matching the file's own pinned-LF requirement for a stable
+function-body digest.
+
+**Focused rerun** (`node supabase/tests/run.mjs journeys`, uncontested): **240/240**, including F1/F2/F8
+now reading `queued=0 evidence=[]`, `none missing`, `identical`.
+
+**Second full authoritative attempt (uncontested throughout — reverified at every ENV transition and
+immediately after completion): `1049/1049 checks passed`, exit code 0.** This is the complete,
+unscoped `supabase/tests/run.mjs`: migration quality, ENV A (fresh install), ENV B/B1/B2/B3 (interlock),
+ENV D (populated pre-IR01 upgrade), ENV E (populated pre-F08 upgrade), ENV C (all numbered suites 00–99,
+authorization-parity, client-payload-integration, and the sync-integration/composition/kids/home
+journeys against real local Supabase/PostgREST).
+
+**BACKEND ENTRY = 1049 checks (1046 pass, 3 fail — the `career_opportunities` push gap) / BACKEND EXIT =
+1049 checks, 1049 pass, 0 fail.** The 4 individual-suite collisions from §12.1 remain classified as
+`DEFERRED-IN-RUN — SHARED BACKEND HARNESS CONTENTION`, superseded by this clean authoritative run and
+excluded from the defect count.
 
 ## 13. Known debt / deferred (see `HK_FEATURE_10_MISSING_PRIMITIVES.md` for the full table)
 
@@ -368,12 +430,13 @@ carried into Wave 3/4 build-machine coordination (e.g., F09/F11/F12/F13's own se
 | M2 — canonical opportunity, commands, local persistence, sync manifest | `06848cf` | COMPLETE |
 | M3 — Work/Career projections + UI | `06848cf` | COMPLETE |
 | M4 — Calendar/Capacity/Today integration | `06848cf` | COMPLETE (scoped per ADDENDUM Q/S; see F10-MP-07) |
-| M5 — sync/backend/privacy | `06848cf` | Suites 57 (52/52) and 58 (150/150) verified; ENV A/B/B3/D/E verified (§12); ENV C's full numbered-suite pass UNEXECUTED — Docker stopped mid-run |
-| M6 — hostile self-review + certification | `06848cf` (docs pending a final commit) | Mutation check 6/6 CAUGHT (§10); hostile checklist COMPLETE (§15); verdict is STOPPED — RESUMABLE (§16), not COMPLETE, because §12's ENV C gap is genuinely unexecuted |
+| M5 — sync/backend/privacy | see §12.2 | COMPLETE — authoritative, uncontested full backend harness **1049/1049**, after repairing one genuine gap (F05's stale `sync_push` copy) found by that same uncontested run |
+| M6 — hostile self-review + certification | see §17 | COMPLETE — mutation check 6/6 CAUGHT (§10, still valid — unaffected code); hostile checklist COMPLETE (§15); final verdict **COMPLETE — READY FOR WAVE 3 INTEGRATION** (§17) |
 
-Mini-gate at `06848cf`: `git branch --show-current` → `feature/10-work-career-os`; `git rev-parse --short HEAD` → `06848cf`; `git status --short` → clean.
+Mini-gates: `06848cf` (M1–M5 code + M6 mutation/self-review), `2cadfa2` (M6 docs), `30b32b4` (contention
+finding), and the final closeout commit recorded in §17 with its exact SHA.
 
-## 15. Hostile self-review (pre-COMPLETE checklist)
+## 15. Hostile self-review (COMPLETE — all 17 answered clean)
 
 | Question | Answer |
 |---|---|
@@ -397,9 +460,13 @@ Mini-gate at `06848cf`: `git branch --show-current` → `feature/10-work-career-
 
 ---
 
-## 16. Resumable stop
+## 16. Resumable stop (historical — RESOLVED, see §17 for the final verdict)
 
-**F10 WORK / CAREER OS: STOPPED — RESUMABLE**
+This section is preserved unedited as the run record of the environmental stop it describes, per
+instruction not to rewrite history away. It was superseded by the quiet-window closeout in §12.2 and
+the final verdict in §17.
+
+**F10 WORK / CAREER OS: STOPPED — RESUMABLE** *(status at the time this section was written)*
 
 - **Last clean commit:** `06848cf` on `feature/10-work-career-os` ("F10 M1-M5: Work/Career OS —
   CareerOpportunity foundation, domain commands, UI, Today/Capacity integration, backend RLS").
@@ -426,3 +493,61 @@ Mini-gate at `06848cf`: `git branch --show-current` → `feature/10-work-career-
   count here. No source change is anticipated; this is a validation-only remaining step. No destructive
   action was taken or is needed — no database was left in a partial state (the harness drops and
   recreates its own scratch databases at the start of every run).
+
+---
+
+## 17. Final closeout and verdict
+
+### 17.1 What actually happened after the stop
+
+1. Docker's outage resolved on its own (`docker ps` responsive; `com.docker.service` stayed `Stopped`
+   but proved not required for the CLI/engine path this harness uses). `tsc --noEmit` reconfirmed clean.
+2. Two further full-harness attempts collided with **active sibling campaigns** (F09/F11/F12/F13, all
+   with real commits per `git worktree list`) repeatedly recreating the shared `b4_env_c` database —
+   classified `DEFERRED-IN-RUN — SHARED BACKEND HARNESS CONTENTION`, not counted against F10 (§12.1).
+3. Once F09/F11/F12/F13 were confirmed complete/parked, a genuinely quiet window was established (two
+   independent process checks ~25s apart, zero matching processes both times; Docker and Postgres
+   verified responsive; zero active `b4_%` connections) and held for the remainder of validation,
+   reverified at every ENV transition.
+4. The first uncontested full run (**1046/1049**) surfaced **one genuine, deterministic F10 defect**:
+   `sync_push`'s owner-column allow-list existed in **two places** — the baseline migration (fixed during
+   M2) and a second, independent copy inside F05's own closeout-repair migration (which replaces
+   `sync_push` wholesale and applies afterward, silently overwriting the fix). Repaired with a single-line
+   addition to F05's copy; no test was weakened; the fix was verified against a focused rerun of the
+   affected journey (`node supabase/tests/run.mjs journeys`, 240/240, F1/F2/F8 confirmed passing) before
+   the full harness was run again.
+5. The second uncontested full run passed **1049/1049**, exit code 0 — confirmed uncontested at every
+   stage and immediately after completion (zero foreign `run.mjs` processes at any checkpoint).
+6. Final `tsc --noEmit`: clean. Final complete application suite, serialized, no backend harness
+   concurrent: **2852 tests, 2849 pass, 3 fail** — the 3 are the same pre-existing F08 sibling-boundary-scan
+   false positive present since before any F10 code existed (§11); the performance-budget test that had
+   flaked under concurrent load in earlier passes now passes cleanly on its own, confirming it was never
+   a regression.
+7. `scripts-dev/f10-mutation-check.cjs` was not rerun: the only source touched during this closeout was
+   the one-line F05 migration fix, which the mutation check does not exercise. Its earlier 6/6-caught
+   result (§10) remains valid, unconverted evidence.
+
+### 17.2 Final git state
+
+- **Starting HEAD (this closeout):** `30b32b4`.
+- **Repairs committed:** the F05 `sync_push` one-line fix plus this ledger's closeout documentation.
+- `git status --short` reviewed before committing: only the intended migration fix and documentation
+  changes were present — no stray files, no accidental inclusion of scratch/log output.
+
+### 17.3 Sibling / environment confirmation
+
+- `feature/09-money-os`, `feature/11-me-rebuild-os`, `feature/12-life-admin-documents`,
+  `feature/13-people-os`: **untouched by this build** — F10 never checked out, read for editing, or
+  committed to any of their worktrees; only `git worktree list` (metadata) was consulted.
+- `integration/wave2-f01-f08` and `main`: **untouched** — F10 has made no commits to either.
+- **Staging: zero writes.** **Production: zero writes.** Every validation action in this entire build
+  targeted only the local `supabase_db_Her_Keys` Docker container's disposable `b4_env_*`/`b4_probe`/
+  `b4_fp_*` scratch databases, created and dropped by the harness itself; no Supabase CLI `--linked`
+  operation, `db push`, or remote project command was ever invoked.
+
+### 17.4 Final verdict
+
+**F10 WORK / CAREER OS: COMPLETE — READY FOR WAVE 3 INTEGRATION**
+
+No further action is taken past this point in this build: no Wave 3 integration, no modification to
+F09/F11/F12/F13, no merge.
