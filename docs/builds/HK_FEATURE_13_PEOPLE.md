@@ -490,4 +490,67 @@ rather than report FAIL — that check was wrapped and split (see M5).
 
 Repairs made during the build (all before any COMPLETE claim): default-privilege strip on the new tables (M5); stored field names vs the
 design-independence guard (D11); `toV3Shape` roots; the Meals boundary scan's lane register + integration checkpoint; three Phase A
-probe assumptions for shared ENV C; the interlock table count; household-local "updated" date.
+probe assumptions for shared ENV C; the interlock table count; household-local "updated" date; the three M5 test files registered in
+the Meals boundary lane (the scan caught them at the first EXIT run: `2903 tests, 2902 pass, 1 fail` at `d5a9d47` — repaired in `121088c`).
+
+### Adversarial scenario status
+
+| Scenario | Status | Evidence |
+|---|---|---|
+| empty People | PASS | projection › EMPTY; ui › EMPTY |
+| one canonical household person / one child projection | PASS | projection › ONE projection |
+| external person | PASS | domain; store; journeys P1 |
+| same-name distinct people; duplicate organization/name | PASS | domain › SAME NAME (2); projection › DUPLICATE NAMES; ui › DEMO |
+| rename | PASS | domain › RENAME; store; M2 |
+| archive PersonContext; archive then fresh-client hydration | PASS | domain; journeys P1/P2; sync › fresh device |
+| contextNote privacy | PASS | ui static + runtime; RLS; journeys P3/P4; M8–M8d |
+| relationshipLabel (stored `relationshipName`) edit | PASS | domain › LABEL (5); journeys P5 |
+| person with no Task / with one follow-up | PASS | projection › NEEDS FOLLOW-UP; today › 1 |
+| follow-up due / overdue / future / undated ordering | PASS | projection › ordering, VERDICT |
+| follow-up completed / linked Task archived / deleted (missing) | PASS | projection › LINK TARGET; domain › TASK COMPLETED; M10 |
+| cancel Add Follow-up; retry Add Follow-up | PASS | ui › OPEN then CANCEL; domain › RETRY; store › all-or-nothing; M9, R1 |
+| offline create / edit / archive; reconnect | PASS | journeys P1; sync › offline |
+| refused row | PASS | sync › REFUSED |
+| stale revision | PASS | journeys P5; sync › STALE; RLS › CAS |
+| same-household unauthorized read | PASS | RLS matrix; journeys P3/P4; M6/M7b |
+| foreign-household crafted person ID; foreign Task link | PASS | RLS › foreign household; M7 |
+| account switch | PASS | sync › ACCOUNT SWITCH |
+| demo isolation | PASS | sync › DEMO; ui › DEMO |
+| co-parent projected without duplication | PASS | projection; domain; M12 |
+| child rename without identity break | PASS (simulated) | doctrine › CHILD RENAMED — no Kids rename path exists (MP-13-02), so the rename is applied to state directly |
+| canonical target archived / vanished | PASS | projection › archived person, VANISHED; AF, AF2 |
+| adult co-member in People | SAFE-UNAVAILABLE | MP-13-01 |
+| search | SAFE-UNAVAILABLE | MP-13-10 |
+| Person↔Event, Person↔Child relation | NOT-APPLICABLE (V1) | MP-13-06/07 |
+| device pass (emulator / pixels) | DEFERRED-IN-RUN | not executed: the verification is the rendered-view contract tests, not pixels |
+
+### Doctrine results
+
+| Doctrine | Result | Evidence |
+|---|---|---|
+| PERSON IDENTITY IS NOT DISPLAY NAME | PASS | doctrine (static); domain; M1 |
+| SAME NAME DOES NOT MEAN SAME PERSON | PASS | domain; projection; ui › DEMO; M1 |
+| SAME EMAIL/PHONE DOES NOT AUTOMATICALLY MEAN SAME PERSON | PASS (structural) | doctrine: no contact field locally or in the cloud |
+| RELATIONSHIP LABEL DOES NOT DEFINE IDENTITY | PASS | doctrine; domain |
+| PERSON DOES NOT BECOME A TASK | PASS | doctrine |
+| PERSON DOES NOT BECOME A TODAY OBJECT | PASS | today › 1, 2, 4; M5 |
+| PERSON DOES NOT BECOME A ONE MOVE | PASS | today › 3; M5 |
+| NO FOLLOW-UP TASK DOES NOT MEAN RELATIONSHIP NEGLECT | PASS | projection › person alone; today › 1; M11 |
+| TASK COMPLETED DOES NOT MEAN RELATIONSHIP RESOLVED | PASS | domain; M4 |
+| ARCHIVED CONTEXT DOES NOT MEAN RELATIONSHIP ENDED | PASS | domain (restore, never duplicate); copy says only "archived" |
+| PRIVATE CONTEXT DOES NOT BECOME HOUSEHOLD-VISIBLE | PASS | RLS; journeys; M6/M7/M7b |
+| F13 DOES NOT DUPLICATE CHILD/MEMBER/CO-PARENT IDENTITY | PASS | domain; M3 |
+| F13 DOES NOT GENERATE RELATIONSHIP SCORES | PASS | doctrine |
+| F13 DOES NOT INFER SOCIAL HEALTH | PASS | doctrine; S2 (cloud refuses inferred contexts) |
+
+### Test accounting — EXIT
+
+| Gate | ENTRY (363e473, clean worktree) | EXIT (`121088c`) | DELTA |
+|---|---|---|---|
+| TypeScript | exit 0 | exit 0 | — |
+| Application tests | `tests 2814 · suites 614 · pass 2811 · fail 3` | `tests 2903 · suites 640 · pass 2903 · fail 0` | +89 tests, +26 suites; the 3 ENTRY failures are gone (timing test passed this run; the Meals boundary scan now honours the integration checkpoint) |
+
+No test disappeared: a title-by-title comparison of the two raw logs finds every ENTRY title at EXIT except (a) `29 kinds: 27 are pushed…`
+renamed by F13 to `31 kinds: 29 are pushed…` (same test, new count) and (b) three titles that FAILED at ENTRY and so were printed twice
+(body + failure summary) and pass once at EXIT. The +89: 83 in `tests/people/` (domain 29, projection 16, ui 14, doctrine 8, sync 7,
+store 5, today 4) + 6 per-kind manifest/round-trip tests the two new kinds generate.
