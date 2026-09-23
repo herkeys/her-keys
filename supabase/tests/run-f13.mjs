@@ -3,9 +3,9 @@
 //
 // Why a private database: `run.mjs` recreates fixed-name databases (b4_env_*) in the one local container every Her Keys worktree
 // shares, so two sessions running it at once destroy each other's run. This runner owns databases named `f13_*` and nothing else. It
-// builds one with the ENV C sequence (auth stub, test helpers, baseline, Build 4, IR01, F08, F05, then every F13 migration — files
-// named *_f13_*.sql — in timestamp order, migrated while EMPTY), then test defaults and the identity fixtures, and runs the numbered
-// suites asked for. It never touches the default `postgres` database and never drops a database it did not create.
+// builds one with the ENV C sequence (auth stub, test helpers, then the WHOLE migration chain from migration-chain.mjs, migrated while
+// EMPTY), then test defaults and the identity fixtures, and runs the numbered suites asked for. It never touches the default `postgres`
+// database and never drops a database it did not create. (Before the F01-F13 integration it applied WAVE3_BASE plus F13 only.)
 //
 //   node supabase/tests/run-f13.mjs              every numbered suite whose name contains "f13"
 //   node supabase/tests/run-f13.mjs 79           suites whose name starts with 79
@@ -18,12 +18,11 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { BASELINE, FULL_CHAIN, SHIPPING, WAVE3_BASE_CHAIN, migrationPath } from './migration-chain.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const REPO = join(HERE, '..', '..');
 const CONTAINER = process.env.HERKEYS_LOCAL_DB_CONTAINER ?? 'supabase_db_Her_Keys';
 const DB = process.env.HERKEYS_F13_DB ?? 'f13_env';
-const MIGRATIONS = join(REPO, 'supabase', 'migrations');
 
 if (!/^f13_[a-z0-9_]+$/.test(DB)) throw new Error(`refusing to use database "${DB}": this runner only owns databases named f13_*`);
 
@@ -40,15 +39,8 @@ function psql(sql, label) {
 }
 const scalar = (sql) => docker(['exec', '-i', CONTAINER, 'psql', '-v', 'ON_ERROR_STOP=1', '-U', 'postgres', '-d', DB, '-Atc', sql]).trim();
 
-/** The shipped WAVE3_BASE sequence, in the order run.mjs applies it. */
-export const SHIPPED = [
-  '20260919230054_build4_baseline.sql',
-  '20260919231500_build4_cloud_schema.sql',
-  '20260921120000_ir01_duration_source_and_claim_v3.sql',
-  '20260921160000_f08_meal_slot_and_status.sql',
-  '20260921190000_f05_add_child_after_binding.sql',
-];
-export const F13_MIGRATIONS = readdirSync(MIGRATIONS).filter((f) => /_f13_.*\.sql$/.test(f)).sort();
+/** The WAVE3_BASE sequence (what HERKEYS_F13_NO_MIGRATION=1 builds, for the Phase A probes against the base). */
+const WAVE3_BASE_SEQUENCE = [BASELINE, SHIPPING, ...WAVE3_BASE_CHAIN.map((m) => m.file)];
 
 const arg = process.argv[2];
 const matches = (f) => (arg === '--all' ? true : arg ? f.startsWith(arg) : f.includes('f13'));
@@ -95,9 +87,9 @@ admin(`DROP DATABASE IF EXISTS ${DB} WITH (FORCE);`);
 admin(`CREATE DATABASE ${DB};`);
 psql(readFileSync(join(HERE, 'helpers', '00-auth-stub.sql'), 'utf8'), 'auth stub');
 psql(readFileSync(join(HERE, 'helpers', '01-test-helpers.sql'), 'utf8'), 'test helpers');
-const sequence = [...SHIPPED, ...(withF13 ? F13_MIGRATIONS : [])];
-for (const file of sequence) psql(readFileSync(join(MIGRATIONS, file), 'utf8'), file);
-console.log(`${DB}: migrated while empty (${SHIPPED.length} shipped + ${withF13 ? F13_MIGRATIONS.length : 0} F13${withF13 && F13_MIGRATIONS.length ? `: ${F13_MIGRATIONS.join(', ')}` : ''})`);
+const sequence = withF13 ? FULL_CHAIN : WAVE3_BASE_SEQUENCE;
+for (const file of sequence) psql(readFileSync(migrationPath(file), 'utf8'), file);
+console.log(`${DB}: migrated while empty (${withF13 ? 'the whole chain' : 'WAVE3_BASE only'}: ${sequence.length} migrations, ending ${sequence.at(-1)})`);
 psql(readFileSync(join(HERE, 'helpers', '05-test-defaults.sql'), 'utf8'), 'test defaults');
 psql(`BEGIN;\n${readFileSync(join(HERE, 'helpers', '10-fixtures.sql'), 'utf8')}\nCOMMIT;`, 'fixtures');
 if (scalar('select count(*) from public.households;') !== '2') throw new Error('identity fixtures did not create two households');

@@ -20,9 +20,11 @@
 //   node supabase/tests/run.mjs 60         run one numbered ENV C file
 
 import { execFileSync, spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { ADDITIVE_CHAIN, BASELINE as BASELINE_FILE, SHIPPING, WAVE3_BASE_SHA256, additive, migrationPath } from './migration-chain.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = join(HERE, '..', '..');
@@ -38,20 +40,27 @@ if (DB_PREFIX !== 'b4') {
   process.env.HERKEYS_PRIVATE_REST_NAME = process.env.HERKEYS_PRIVATE_REST_NAME ?? `${DB_PREFIX}_postgrest`;
 }
 
-const BASELINE = join(REPO, 'supabase', 'migrations', '20260919230054_build4_baseline.sql');
-const BUILD4 = join(REPO, 'supabase', 'migrations', '20260919231500_build4_cloud_schema.sql');
+// Every migration file comes from ONE ordered chain (migration-chain.mjs), shared with the private stack and the feature runners.
+const BASELINE = migrationPath(BASELINE_FILE);
+const BUILD4 = migrationPath(SHIPPING);
 // HK-INTEGRATION-READINESS-01: additive, follows the shipping migration and never edits it.
-const IR01 = join(REPO, 'supabase', 'migrations', '20260921120000_ir01_duration_source_and_claim_v3.sql');
+const IR01 = migrationPath(additive('IR01').file);
 // HK-FEATURE-08-MEALS: additive, follows IR01 and never edits it. meal_plan_entries gains meal_slot and status.
-const F08 = join(REPO, 'supabase', 'migrations', '20260921160000_f08_meal_slot_and_status.sql');
+const F08 = migrationPath(additive('F08').file);
 // HK-FEATURE-05 closeout repair (OC-01): additive, follows F08 and never edits it.
-const F05 = join(REPO, 'supabase', 'migrations', '20260921190000_f05_add_child_after_binding.sql');
-// HK-FEATURE-11 (Me / Rebuild): additive, follows F05 and never edits it. rebuild_focuses and rebuild_focus_links.
-const F11 = join(REPO, 'supabase', 'migrations', '20260922180000_f11_rebuild_focus.sql');
-// HK-FEATURE-12 (Life Admin / Documents): additive, follows F05 and never edits it. Two owner-private tables.
-const F12 = join(REPO, 'supabase', 'migrations', '20260922180000_f12_life_records.sql');
-// HK-FEATURE-13 (People OS, a Wave 4 prebuild): additive, follows F05 and never edits it. Two owner-private tables.
-const F13 = join(REPO, 'supabase', 'migrations', '20260922200000_f13_people_os.sql');
+const F05 = migrationPath(additive('F05').file);
+// HK-FEATURE-09 (Money): additive, follows F05. tasks gains payment_mechanism. (Never registered here before the F01-F13 integration.)
+const F09 = migrationPath(additive('F09').file);
+// HK-FEATURE-10 (Work / Career): additive, follows F09. career_opportunities, and dependencies gains opportunity endpoints.
+const F10 = migrationPath(additive('F10').file);
+// HK-FEATURE-11 (Me / Rebuild): additive, follows F10. rebuild_focuses and rebuild_focus_links.
+const F11 = migrationPath(additive('F11').file);
+// HK-FEATURE-12 (Life Admin / Documents): additive, follows F11. Two owner-private tables.
+const F12 = migrationPath(additive('F12').file);
+// HK-FEATURE-13 (People OS): additive, follows F12. Two owner-private tables.
+const F13 = migrationPath(additive('F13').file);
+/** The seven tables Features 10-13 add. After the WHOLE chain, every one must still be pushable and loggable. */
+const FEATURE_TABLES = ['career_opportunities', 'rebuild_focuses', 'rebuild_focus_links', 'life_records', 'life_record_task_links', 'person_contexts', 'person_task_links'];
 const AUTH_STUB = join(HERE, 'helpers', '00-auth-stub.sql');
 const TEST_HELPERS = join(HERE, 'helpers', '01-test-helpers.sql');
 const TEST_DEFAULTS = join(HERE, 'helpers', '05-test-defaults.sql');
@@ -87,9 +96,29 @@ const applyBuild4 = (db, opts = {}) => psqlFile(db, BUILD4, opts);
 const applyIr01 = (db, opts = {}) => psqlFile(db, IR01, opts);
 const applyF08 = (db, opts = {}) => psqlFile(db, F08, opts);
 const applyF05 = (db, opts = {}) => psqlFile(db, F05, opts);
+const applyF09 = (db, opts = {}) => psqlFile(db, F09, opts);
+const applyF10 = (db, opts = {}) => psqlFile(db, F10, opts);
 const applyF11 = (db, opts = {}) => psqlFile(db, F11, opts);
 const applyF12 = (db, opts = {}) => psqlFile(db, F12, opts);
 const applyF13 = (db, opts = {}) => psqlFile(db, F13, opts);
+/** Every additive migration after the shipping one, in chain order: what a FRESH install applies after Build 4. */
+const applyAdditiveChain = (db, env) => {
+  for (const m of ADDITIVE_CHAIN) psqlFile(db, migrationPath(m.file), { label: `${env} ${m.label}` });
+};
+
+/**
+ * After the WHOLE chain: the LATEST sync_push still names every feature table and the LATEST change-log check still accepts every one.
+ * Each additive migration re-declares both; before the F01-F13 integration each re-declaration held only its own tables, so the
+ * migration applied last silently dropped every sibling's (INT13-01). Read from the live catalog, not from the files.
+ */
+function chainRegistrations(db, env) {
+  const push = scalar(db, "select pg_get_functiondef(p.oid) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname='sync_push';");
+  const log = scalar(db, "select pg_get_constraintdef(c.oid) from pg_constraint c where c.conname='change_log_entity_table_check';");
+  const missingPush = FEATURE_TABLES.filter((t) => !push.includes(`'${t}'`));
+  const missingLog = FEATURE_TABLES.filter((t) => !log.includes(`'${t}'`));
+  check(`${env}: after the whole chain, sync_push still names EVERY feature table (no later migration dropped an earlier one's)`, missingPush.length === 0, missingPush.join(', ') || 'all seven');
+  check(`${env}: ...and the change-log check still accepts every one`, missingLog.length === 0, missingLog.join(', ') || 'all seven');
+}
 
 function admin(sql) {
   return execFileSync(
@@ -127,14 +156,21 @@ function envA() {
   psqlFile(dbName('env_a'), TEST_HELPERS, { label: 'helpers' });
   psqlFile(dbName('env_a'), BASELINE, { label: 'ENV A baseline' });
   applyBuild4(dbName('env_a'), { label: 'ENV A build4' });
-  applyIr01(dbName('env_a'), { label: 'ENV A ir01' });
-  applyF08(dbName('env_a'), { label: 'ENV A f08' });
-  applyF05(dbName('env_a'), { label: 'ENV A f05' });
-  applyF11(dbName('env_a'), { label: 'ENV A f11' });
-  applyF12(dbName('env_a'), { label: 'ENV A f12' });
-  applyF13(dbName('env_a'), { label: 'ENV A f13' });
+  applyAdditiveChain(dbName('env_a'), 'ENV A');
 
   check('ENV A: Build 4 migration applies on an empty surface', true);
+  check(`ENV A: every additive migration of the chain applies in order on top of it (fresh install: ${ADDITIVE_CHAIN.map((m) => m.owner).join(' -> ')})`, true);
+  chainRegistrations(dbName('env_a'), 'ENV A');
+  check('ENV A: tasks.payment_mechanism (F09) is nullable text with no default, and its CHECK admits only manual/autopay',
+        scalar(dbName('env_a'), "select data_type || '/' || is_nullable || '/' || coalesce(column_default, 'none') from information_schema.columns where table_schema='public' and table_name='tasks' and column_name='payment_mechanism';") === 'text/YES/none'
+        && /manual.*autopay/.test(scalar(dbName('env_a'), "select pg_get_constraintdef(oid) from pg_constraint where conname='tasks_payment_mechanism_check';")));
+  check('ENV A: career_opportunities (F10) is owner-private: RLS on, owner-only SELECT/INSERT/UPDATE policies, no DELETE, anon/PUBLIC hold nothing',
+        scalar(dbName('env_a'), "select string_agg(cmd, ',' order by cmd) from pg_policies where schemaname='public' and tablename='career_opportunities';") === 'INSERT,SELECT,UPDATE'
+        && scalar(dbName('env_a'), "select count(*) from pg_policies where schemaname='public' and tablename='career_opportunities' and coalesce(qual, with_check) not like '%profile_id%';") === '0'
+        && scalar(dbName('env_a'), "select count(*) from information_schema.role_table_grants where table_schema='public' and table_name='career_opportunities' and ((privilege_type = 'DELETE' and grantee = 'authenticated') or grantee in ('anon','PUBLIC'));") === '0');
+  check('ENV A: dependencies (F10) gained exactly the two opportunity endpoints, each with a same-owner foreign key to career_opportunities',
+        scalar(dbName('env_a'), "select string_agg(column_name, ',' order by column_name) from information_schema.columns where table_schema='public' and table_name='dependencies' and column_name like '%opportunity%';") === 'from_opportunity_id,to_opportunity_id'
+        && scalar(dbName('env_a'), "select count(*) from pg_constraint where conrelid='public.dependencies'::regclass and contype='f' and confrelid='public.career_opportunities'::regclass and array_length(conkey, 1) = 3;") === '2');
   check('ENV A: the additive F12 migration (Life Admin records) applies on top of all of them (fresh install)', true);
   check('ENV A: the F12 tables are owner-private: RLS on, no delete policy, anon holds nothing, scope pinned to personal',
         scalar(dbName('env_a'), "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relname in ('life_records','life_record_task_links') and c.relrowsecurity;") === '2'
@@ -263,9 +299,10 @@ function envB3() {
   check('ENV B3: re-running the migration ABORTS when a foundation table holds a row', !again.ok);
   check('ENV B3: the abort names the foundation table', /public\.goals=1/.test(again.out), (again.out.match(/public\.goals=\d+/) ?? [''])[0]);
   check('ENV B3: no partial destructive state — the row survives', scalar(dbName('env_b3'), 'select count(*) from public.goals;') === '1');
-  // Build 4 alone. F10 generated career_opportunities INTO the shipping migration (35); INT13-01 moves it to its own migration.
-  check('ENV B3: ...and every one of the 35 tables is still there',
-        scalar(dbName('env_b3'), "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r';") === '35');
+  // Build 4 alone: its 34 tables. (Feature 10 had generated career_opportunities INTO the shipping migration; the F01-F13 integration
+  // moved it to its own additive migration, so the shipping migration is again exactly what Staging verified.)
+  check('ENV B3: ...and every one of the 34 tables is still there',
+        scalar(dbName('env_b3'), "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r';") === '34');
 }
 
 // ---------------------------------------------------------------- ENV C -----
@@ -276,13 +313,8 @@ function envC(only) {
   psqlFile(dbName('env_c'), TEST_HELPERS, { label: 'helpers' });
   psqlFile(dbName('env_c'), BASELINE, { label: 'ENV C baseline' });
   applyBuild4(dbName('env_c'), { label: 'ENV C build4 (while empty)' });
-  applyIr01(dbName('env_c'), { label: 'ENV C ir01 (while empty)' });
-  applyF08(dbName('env_c'), { label: 'ENV C f08 (while empty)' });
-  applyF05(dbName('env_c'), { label: 'ENV C f05 (while empty)' });
-  applyF11(dbName('env_c'), { label: 'ENV C f11 (while empty)' });
-  applyF12(dbName('env_c'), { label: 'ENV C f12 (while empty)' });
-  applyF13(dbName('env_c'), { label: 'ENV C f13 (while empty)' });
-  check('ENV C: migrated while empty, before any fixture exists', true);
+  applyAdditiveChain(dbName('env_c'), 'ENV C (while empty)');
+  check('ENV C: migrated while empty (Build 4 and the whole additive chain), before any fixture exists', true);
   // Test-environment convenience ONLY: see the header of helpers/05-test-defaults.sql.
   psqlFile(dbName('env_c'), TEST_DEFAULTS, { label: 'ENV C test defaults' });
 
@@ -385,17 +417,18 @@ function migrationQuality() {
   check('quality: the fail-closed assertion is the LAST statement before COMMIT',
         assertCall > 0 && sql.slice(assertCall + CALL.length).trim() === 'COMMIT;');
 
-  // The protected list must name all 35 tables plus auth.users.
+  // The protected list must name all 34 Build 4 tables plus auth.users. (The shipping migration is the Staging-verified file: tables a
+  // LATER additive migration creates are not in it, and Feature 10's edit that added one was reverted by the F01-F13 integration.)
   const guardBlock = sql.slice(guard, sql.indexOf('$interlock$;', guard));
   const protectedTables = [
     'profiles','households','household_members','household_categories','events','tasks',
     'household_systems','meal_plan_entries','onboarding_state','one_move_records',
     'needs_me_items','discovery_records','discovery_answers','action_records',
     'change_log','account_claims',
-    'source_artifacts','interpretations','external_references','behavior_observations','automation_authorities','action_intents','intent_decisions','action_executions','action_outcomes','household_people','responsibilities','dependencies','recurrence_rules','goals','system_steps','capacity_profiles','patterns','evidence_links','career_opportunities',
+    'source_artifacts','interpretations','external_references','behavior_observations','automation_authorities','action_intents','intent_decisions','action_executions','action_outcomes','household_people','responsibilities','dependencies','recurrence_rules','goals','system_steps','capacity_profiles','patterns','evidence_links',
   ];
   const missing = protectedTables.filter((t) => !guardBlock.includes(`'public.${t}'`));
-  check('quality: the guard enumerates all 35 application tables', missing.length === 0, missing.join(', ') || 'none missing');
+  check('quality: the guard enumerates all 34 application tables', missing.length === 0, missing.join(', ') || 'none missing');
   check('quality: the guard enumerates auth.users', guardBlock.includes("'auth.users'"));
 
   // Debris.
@@ -415,17 +448,41 @@ function migrationQuality() {
     check(`quality: the migration contains no ${label}`, !hit);
   }
 
-  // Exactly one Build 4 shipping migration in the tree.
-  const migs = readdirSync(join(REPO, 'supabase', 'migrations')).filter((f) => f.endsWith('.sql'));
-  const after = migs.filter((f) => f.split('_')[0] > '20260919230054');
-  // Integration assembly (INT13-00d): the union of every feature's migration, F09's included (F09 never registered its migration here).
-  // INT13-01 replaces this with one ordered chain whose versions are unique.
-  check('quality: exactly ONE Build 4 shipping migration plus the additive IR01, F08, F05, F09, F11, F12 and F13 migrations after the baseline',
-        after.length === 8 && after[0] === '20260919231500_build4_cloud_schema.sql' && after[1] === '20260921120000_ir01_duration_source_and_claim_v3.sql'
-        && after[2] === '20260921160000_f08_meal_slot_and_status.sql' && after[3] === '20260921190000_f05_add_child_after_binding.sql'
-        && after[4] === '20260922180000_f09_task_payment_mechanism.sql' && after[5] === '20260922180000_f11_rebuild_focus.sql'
-        && after[6] === '20260922180000_f12_life_records.sql' && after[7] === '20260922200000_f13_people_os.sql', after.join(', '));
-  check('quality: their timestamps sort strictly after the baseline, in order', after.every((f) => f.split('_')[0] > '20260919230054') && after.every((f, i) => i === 0 || after[i - 1] < f), after.join(' < '));
+  // The chain (HK-F01-F13 integration): the directory holds EXACTLY the registered chain, every version is unique and strictly
+  // increasing, and no migration that existed at WAVE3_BASE has changed by a single byte.
+  const migs = readdirSync(join(REPO, 'supabase', 'migrations')).filter((f) => f.endsWith('.sql')).sort();
+  const registered = [BASELINE_FILE, SHIPPING, ...ADDITIVE_CHAIN.map((m) => m.file)];
+  check('quality: the migrations directory holds exactly the registered chain - baseline, shipping, then every additive migration in order - and no unregistered file',
+        JSON.stringify(migs) === JSON.stringify(registered), migs.filter((f) => !registered.includes(f)).concat(registered.filter((f) => !migs.includes(f))).join(', ') || `${migs.length} files`);
+  const versions = migs.map((f) => f.split('_')[0]);
+  check('quality: every migration version is unique and strictly increasing (no two files claim one version)',
+        new Set(versions).size === versions.length && versions.every((v, i) => i === 0 || versions[i - 1] < v), versions.join(' < '));
+  const lfSha = (file) => createHash('sha256').update(readFileSync(migrationPath(file), 'utf8').replace(/\r\n/g, '\n')).digest('hex');
+  for (const [file, sha] of Object.entries(WAVE3_BASE_SHA256)) {
+    check(`quality: ${file} is byte-for-byte the file that existed at WAVE3_BASE (an applied migration is never edited)`, lfSha(file) === sha, lfSha(file).slice(0, 16));
+  }
+  const f09Sql = readFileSync(F09, 'utf8');
+  const f09Code = f09Sql.replace(/--.*$/gm, '');
+  check('quality: the F09 migration is additive - one nullable column and its CHECK on tasks, two column grants; it drops, rewrites and replaces nothing',
+        (f09Code.match(/ALTER TABLE public\.\w+ ADD (COLUMN|CONSTRAINT) \w+/g) ?? []).join(',') === 'ALTER TABLE public.tasks ADD COLUMN payment_mechanism,ALTER TABLE public.tasks ADD CONSTRAINT tasks_payment_mechanism_check'
+        && !/\b(DROP|TRUNCATE|DELETE FROM|UPDATE public\.|INSERT INTO|CREATE (OR REPLACE )?FUNCTION|CREATE TABLE|POLICY)\b/i.test(f09Code)
+        && (f09Code.match(/\bGRANT\b[^;]*;/g) ?? []).join(' ') === 'GRANT INSERT (payment_mechanism) ON public.tasks TO authenticated; GRANT UPDATE (payment_mechanism) ON public.tasks TO authenticated;');
+  check('quality: the F09 migration is pinned to LF and opens, closes and asserts like every additive migration',
+        !f09Sql.includes(String.fromCharCode(13)) && /^\s*BEGIN;\s*$/m.test(f09Sql) && f09Sql.trim().endsWith('SELECT private.assert_app_schema_secured();\n\nCOMMIT;'));
+  const f10Sql = readFileSync(F10, 'utf8');
+  const f10Code = f10Sql.replace(/\$fn\$[\s\S]*?\$fn\$/g, '').replace(/--.*$/gm, '');
+  check('quality: the F10 migration creates exactly one table and touches exactly one function (the replaced sync_push)',
+        (f10Code.match(/CREATE TABLE public\.\w+/g) ?? []).join(',') === 'CREATE TABLE public.career_opportunities'
+        && (f10Sql.match(/^CREATE (OR REPLACE )?FUNCTION [\w.]+/gm) ?? []).map((s) => s.replace(/^CREATE (OR REPLACE )?FUNCTION /, '')).join(',') === 'public.sync_push');
+  check('quality: the F10 migration alters only its own table, dependencies (the widening) and the change-log check, and drops only what it re-issues',
+        (f10Code.match(/ALTER TABLE public\.(\w+)/g) ?? []).every((s) => /public\.(career_opportunities|dependencies|change_log)$/.test(s))
+        && (f10Code.match(/DROP (CONSTRAINT|INDEX) [\w.]+/g) ?? []).sort().join(',')
+          === ['DROP CONSTRAINT change_log_entity_table_check', 'DROP CONSTRAINT dependencies_from_ref_check', 'DROP CONSTRAINT dependencies_not_self_check',
+               'DROP CONSTRAINT dependencies_to_ref_check', 'DROP INDEX public.dependencies_live_edge_uq'].join(',')
+        && !/(^|\n)\s*(DROP TABLE|DROP COLUMN|TRUNCATE|DELETE FROM|UPDATE public\.|INSERT INTO)/i.test(f10Code));
+  check('quality: the F10 migration grants no DELETE, creates no DELETE policy, is pinned to LF, and opens, closes and asserts',
+        !/\bGRANT\b[^;]*\bDELETE\b/i.test(f10Code) && !/FOR DELETE/i.test(f10Code) && !f10Sql.includes(String.fromCharCode(13))
+        && /^\s*BEGIN;\s*$/m.test(f10Sql) && f10Sql.trim().endsWith('SELECT private.assert_app_schema_secured();\n\nCOMMIT;'));
   const f11Sql = readFileSync(F11, 'utf8');
   const f11Code = f11Sql.replace(/\$fn\$[\s\S]*?\$fn\$/g, '').replace(/--.*$/gm, '');
   check('quality: the F11 migration is additive - it drops only the one change_log check it re-creates, and deletes, truncates, updates or inserts no row',
@@ -698,7 +755,59 @@ function envD() {
         && scalar(db, "select count(*) from public.household_members where local_id = 'child-evil';") === '0');
   check('ENV D: the fail-closed assertion still passes after F05', psql(db, 'SELECT private.assert_app_schema_secured();').ok);
 
-  // ---- The THIRD additive upgrade, on the same populated database: F11 (Me / Rebuild). Two new tables, one new trigger function,
+  // ---- The THIRD additive upgrade, on the same populated database: F09 (Money). tasks gains payment_mechanism, nullable, no default.
+  // Every existing task keeps every byte; the new column reads NULL - "never stated", never a guessed "manual".
+  const preF09 = { census: census(), members: memberDigest(), tasks: digest(), log: scalar(db, 'select count(*) from public.change_log;') };
+  applyF09(db, { label: 'ENV D f09 upgrade' });
+  check('ENV D: the additive F09 migration applies to the populated, already-upgraded database (no interlock, no abort)', true);
+  check('ENV D: F09 lost nothing and rewrote nothing (row counts, every member, every task byte-identical apart from the new column, no change-log write)',
+        census() === preF09.census && memberDigest() === preF09.members
+        && scalar(db, "SELECT md5(string_agg((to_jsonb(t) - 'payment_mechanism')::text, '|' ORDER BY t.id)) FROM public.tasks t;") === preF09.tasks
+        && scalar(db, 'select count(*) from public.change_log;') === preF09.log, `${preF09.census} -> ${census()}`);
+  check('ENV D: EVERY pre-existing task reads payment_mechanism as NULL (never stated), not as a guessed mechanism',
+        scalar(db, "SELECT count(*) FILTER (WHERE payment_mechanism IS NULL) = count(*) FROM public.tasks;") === 't');
+  check('ENV D: the fail-closed assertion still passes after F09', psql(db, 'SELECT private.assert_app_schema_secured();').ok);
+
+  // ---- The FOURTH additive upgrade: F10 (Work / Career). career_opportunities, and dependencies gains opportunity endpoints. An edge
+  // that already exists must keep every byte (its new endpoint columns read NULL) and stay valid under the re-issued rules.
+  psql(db, `INSERT INTO public.dependencies (household_id, local_id, profile_id, relation, from_type, from_task_id, to_type, to_task_id, status, producer, origin_created_at, origin_updated_at)
+    SELECT t1.household_id, 'dep-pre-f10', '${uid}', 'requires', 'task', t1.id, 'task', t2.id, 'active', 'user-action', now(), now()
+    FROM public.tasks t1 JOIN public.tasks t2 ON t2.household_id = t1.household_id AND t2.local_id = 'task-30'
+    WHERE t1.local_id = 'task-15' AND t1.household_id = '${uidHouse}';`, { label: 'ENV D pre-F10 edge' });
+  const edgeDigest = () => scalar(db, "SELECT md5(string_agg((to_jsonb(d) - 'from_opportunity_id' - 'to_opportunity_id')::text, '|' ORDER BY d.id)) FROM public.dependencies d;");
+  const preF10 = { census: census(), members: memberDigest(), tasks: digest(), edges: edgeDigest(), edgeCount: scalar(db, 'select count(*) from public.dependencies;') };
+  check('ENV D: before F10 the populated database holds a real dependency edge', preF10.edgeCount === '1', preF10.edgeCount);
+  applyF10(db, { label: 'ENV D f10 upgrade' });
+  check('ENV D: the additive F10 migration applies to the populated, already-upgraded database (no interlock, no abort)', true);
+  check('ENV D: F10 lost nothing and rewrote nothing (row counts; every member, task and dependency edge byte-identical apart from the two new endpoint columns)',
+        census() === preF10.census && memberDigest() === preF10.members && digest() === preF10.tasks && edgeDigest() === preF10.edges
+        && scalar(db, 'select count(*) from public.dependencies;') === preF10.edgeCount);
+  check('ENV D: the pre-existing edge names no opportunity (both new endpoints NULL) and still satisfies every re-issued rule',
+        scalar(db, "select count(*) from public.dependencies where local_id = 'dep-pre-f10' and from_opportunity_id is null and to_opportunity_id is null;") === '1'
+        && scalar(db, "select count(*) from pg_constraint where conrelid = 'public.dependencies'::regclass and not convalidated;") === '0');
+  const pushAs = (sub, table, row, device = 'd4000000-0000-4000-8000-0000000000d1') => scalar(db, `
+    BEGIN;
+    SET LOCAL ROLE authenticated;
+    SET LOCAL request.jwt.claims = '{"sub":"${sub}"}';
+    SELECT public.sync_push('${table}', '${device}'::uuid, '${JSON.stringify(row).replace(/'/g, "''")}'::jsonb) ->> 'status';
+    COMMIT;`).split('\n').map((line) => line.trim()).find((line) => ['created', 'already_exists', 'local_id_collision'].includes(line));
+  const opportunityRow = { household_id: uidHouse, profile_id: uid, local_id: 'opp-late', title: 'Senior analyst role', organization_name: null, opportunity_type: 'job',
+    stage: 'interested', closed_reason: null, stage_changed_at: '2026-09-22T12:00:00Z', archived_at: null, producer: 'user-action', scope: 'personal',
+    origin_created_at: '2026-09-22T12:00:00Z', origin_updated_at: '2026-09-22T12:00:00Z' };
+  check('ENV D: after F10 the owner of the populated household can push an opportunity through the ordinary sync_push', pushAs(uid, 'career_opportunities', opportunityRow) === 'created');
+  check('ENV D: ...a retry from the same install answers already_exists and adds no second opportunity',
+        pushAs(uid, 'career_opportunities', opportunityRow) === 'already_exists' && scalar(db, "select count(*) from public.career_opportunities where local_id = 'opp-late';") === '1');
+  const oppId = scalar(db, "select id from public.career_opportunities where local_id = 'opp-late';");
+  const nextActionId = scalar(db, `select id from public.tasks where household_id = '${uidHouse}' and local_id = 'task-30';`);
+  check('ENV D: ...a PRE-EXISTING task can be joined to it as its next action (task part_of opportunity) through the widened dependencies',
+        pushAs(uid, 'dependencies', { household_id: uidHouse, profile_id: uid, local_id: 'dep-opp-late', relation: 'part_of', from_type: 'task', from_task_id: nextActionId,
+          to_type: 'opportunity', to_opportunity_id: oppId, status: 'active', producer: 'user-action', scope: 'personal',
+          origin_created_at: '2026-09-22T12:00:00Z', origin_updated_at: '2026-09-22T12:00:00Z' }) === 'created');
+  check('ENV D: ...and the opportunity\'s change-log entry carries the owner, so only she pulls it',
+        scalar(db, `select count(*) from public.change_log where entity_table = 'career_opportunities' and owner_profile_id = '${uid}';`) === '1');
+  check('ENV D: the fail-closed assertion still passes after F10', psql(db, 'SELECT private.assert_app_schema_secured();').ok);
+
+  // ---- The FIFTH additive upgrade, on the same populated database: F11 (Me / Rebuild). Two new tables, one new trigger function,
   // the change_log check re-created with two more names, sync_push replaced. It must lose nothing and rewrite nothing.
   const preF11 = { census: census(), members: memberDigest(), tasks: digest(), log: scalar(db, 'select count(*) from public.change_log;') };
   applyF11(db, { label: 'ENV D f11 upgrade' });
@@ -706,12 +815,6 @@ function envD() {
   check('ENV D: F11 lost nothing - every existing table keeps its row count', census() === preF11.census, `${preF11.census} -> ${census()}`);
   check('ENV D: F11 rewrote no existing row (every member and task byte-identical) and wrote nothing to the change log',
         memberDigest() === preF11.members && digest() === preF11.tasks && scalar(db, 'select count(*) from public.change_log;') === preF11.log);
-  const pushAs = (sub, table, row, device = 'd4000000-0000-4000-8000-0000000000d1') => scalar(db, `
-    BEGIN;
-    SET LOCAL ROLE authenticated;
-    SET LOCAL request.jwt.claims = '{"sub":"${sub}"}';
-    SELECT public.sync_push('${table}', '${device}'::uuid, '${JSON.stringify(row).replace(/'/g, "''")}'::jsonb) ->> 'status';
-    COMMIT;`).split('\n').map((line) => line.trim()).find((line) => ['created', 'already_exists', 'local_id_collision'].includes(line));
   const focusRow = { household_id: uidHouse, profile_id: uid, local_id: 'focus-late', title: 'Make space for myself again', note: null, state: 'active',
     producer: 'user-action', scope: 'personal', origin_created_at: '2026-09-22T12:00:00Z', origin_updated_at: '2026-09-22T12:00:00Z' };
   check('ENV D: after F11 the owner of the populated household can push a Focus through the ordinary sync_push', pushAs(uid, 'rebuild_focuses', focusRow) === 'created');
@@ -721,7 +824,7 @@ function envD() {
         scalar(db, `select count(*) from public.change_log where entity_table = 'rebuild_focuses' and owner_profile_id = '${uid}';`) === '1');
   check('ENV D: the fail-closed assertion still passes after F11', psql(db, 'SELECT private.assert_app_schema_secured();').ok);
 
-  // ---- The FOURTH additive upgrade, on the same populated database: F12 (Life Admin records). Two new owner-private tables, one
+  // ---- The SIXTH additive upgrade, on the same populated database: F12 (Life Admin records). Two new owner-private tables, one
   // guard function, sync_push replaced; nothing that already exists may be lost or rewritten.
   const changeLogCount = () => scalar(db, 'select count(*) from public.change_log;');
   const preF12 = { census: census(), members: memberDigest(), tasks: digest(), log: changeLogCount() };
@@ -756,7 +859,7 @@ function envD() {
         && scalar(db, "select count(*) from public.life_records where local_id = 'evil';") === '0');
   check('ENV D: the fail-closed assertion still passes after F12', psql(db, 'SELECT private.assert_app_schema_secured();').ok);
 
-  // ---- The FIFTH additive upgrade, on the same populated database: F13 (People OS). Two new, empty, owner-private tables, a widened
+  // ---- The SEVENTH additive upgrade, on the same populated database: F13 (People OS). Two new, empty, owner-private tables, a widened
   // change-log CHECK and a replaced sync_push. It must lose nothing, rewrite nothing, and work at once on the household's existing rows.
   const preF13 = { census: census(), members: memberDigest(), tasks: digest(), people: scalar(db, "SELECT count(*) FROM public.household_people;") };
   applyF13(db, { label: 'ENV D f13 upgrade' });
@@ -787,6 +890,15 @@ function envD() {
             'follow_up_task_id',(select id from public.tasks where household_id='${uidHouse}' and local_id='task-15'),'relation','follow_up','producer','user-action','origin_created_at',now()));
           COMMIT;`, { expectFailure: true, label: 'ENV D f13 shared-task link' }).out.includes('a follow-up must be one of your own private tasks'));
   check('ENV D: the fail-closed assertion still passes after F13', psql(db, 'SELECT private.assert_app_schema_secured();').ok);
+
+  // ---- After the WHOLE chain (HK-F01-F13 integration, INT13-01): the sync_push and change-log check the LAST migration left behind
+  // must still carry every earlier feature's tables. Before the integration each migration re-declared both with only its own tables,
+  // so after F13 these pushes were refused as "not a pushable entity table".
+  chainRegistrations(db, 'ENV D');
+  check('ENV D: after the whole chain the owner can still push an opportunity (F10), a Focus (F11) and a Life Admin record (F12)',
+        pushAs(uid, 'career_opportunities', { ...opportunityRow, local_id: 'opp-after-chain' }) === 'created'
+        && pushAs(uid, 'rebuild_focuses', { ...focusRow, local_id: 'focus-after-chain' }) === 'created'
+        && pushRecord(uid, uidHouse, 'life-record-after-chain') === 'created');
 }
 
 // ---------------------------------------------------------------- ENV E -----

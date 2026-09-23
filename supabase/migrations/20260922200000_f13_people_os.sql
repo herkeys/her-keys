@@ -1,7 +1,8 @@
 -- HER KEYS — HK-FEATURE-13 PEOPLE OS: the owner-private person-context layer and its follow-up links
 -- (ADDITIVE; LOCAL VALIDATION ONLY. Owner-gated for any real environment. Never applied to Staging or Production by this build.)
 --
--- Follows 20260921190000_f05_add_child_after_binding.sql. No earlier migration is edited and their hashes are unchanged.
+-- Follows 20260922183000_f12_life_records.sql (originally 20260921190000_f05_add_child_after_binding.sql; see INTEGRATION NOTE).
+-- No earlier migration is edited and their hashes are unchanged.
 --
 -- WHAT PEOPLE OS NEEDS THAT THE FOUNDATION DID NOT HAVE. Who a person IS already has a canonical, owner-safe home: a child is a
 -- `household_members` row, and anybody who is not an account (the co-parent counterparty, a teacher, a neighbor) is an owner-private
@@ -27,6 +28,12 @@
 --
 -- The table DDL, keys, rules, triggers, policies and grants between the GENERATED markers come from src/domain/sync/foundationSpecs.ts
 -- through supabase/tools/gen-foundation-sql.mjs, exactly like the eighteen foundation tables; a test fails on any hand edit.
+--
+-- INTEGRATION NOTE (HK-F01-F13 integration, INT13-01). This migration now follows 20260922183000_f12_life_records.sql. Three feature migrations had claimed
+-- the one version 20260922180000, and each additive migration re-declared sync_push and change_log_entity_table_check as "the F05 /
+-- Build 4 list plus my own tables", so whichever applied LAST silently removed the others' tables. Both re-declarations here are
+-- therefore CUMULATIVE: they also carry HK-FEATURE-10's, HK-FEATURE-11's and HK-FEATURE-12's tables, so applying this file never drops a table an earlier
+-- migration made pushable or loggable. Nothing else in this file changed.
 --
 -- ROLLBACK ASSUMPTIONS (documented, not automated): drop the two tables, restore change_log_entity_table_check and sync_push from
 -- 20260921190000_f05_add_child_after_binding.sql, drop public.guard_follow_up_task. No other row is affected.
@@ -236,6 +243,8 @@ ALTER TABLE public.change_log
     'household_people'::text, 'responsibilities'::text, 'dependencies'::text,
     'recurrence_rules'::text, 'goals'::text, 'system_steps'::text,
     'capacity_profiles'::text, 'patterns'::text, 'evidence_links'::text,
+    -- HK-FEATURE-10, HK-FEATURE-11 and HK-FEATURE-12, from the earlier additive migrations
+    'career_opportunities'::text, 'rebuild_focuses'::text, 'rebuild_focus_links'::text, 'life_records'::text, 'life_record_task_links'::text,
     -- People OS (HK-FEATURE-13)
     'person_contexts'::text, 'person_task_links'::text
   ]));
@@ -302,6 +311,8 @@ BEGIN
                         'dependencies', 'recurrence_rules', 'goals',
                         'system_steps', 'capacity_profiles', 'patterns',
                         'evidence_links',
+                        -- (F10, F11, F12) from the earlier additive migrations: a replacement must keep every table an earlier one made pushable.
+                        'career_opportunities', 'rebuild_focuses', 'rebuild_focus_links', 'life_records', 'life_record_task_links',
                         -- (F13) People OS: both owner-private, keyed on (household, owner, local id) like every foundation table.
                         'person_contexts', 'person_task_links'
                         ]) THEN 'profile_id'

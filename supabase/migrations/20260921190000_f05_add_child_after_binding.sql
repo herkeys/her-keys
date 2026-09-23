@@ -173,7 +173,7 @@ BEGIN
                         'intent_decisions', 'household_people', 'responsibilities',
                         'dependencies', 'recurrence_rules', 'goals',
                         'system_steps', 'capacity_profiles', 'patterns',
-                        'evidence_links', 'career_opportunities'
+                        'evidence_links'
                         ]) THEN 'profile_id'
                  END;
   v_owner_private := v_owner_col IS NOT NULL;

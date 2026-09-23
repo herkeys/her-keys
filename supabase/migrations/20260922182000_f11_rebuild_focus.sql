@@ -1,7 +1,8 @@
 -- HER KEYS — HK-FEATURE-11 (Me / Rebuild OS): RebuildFocus and its links
 -- (additive; LOCAL VALIDATION ONLY, owner-gated for any real environment)
 --
--- Follows 20260921190000_f05_add_child_after_binding.sql. No earlier migration is edited and their hashes are unchanged.
+-- Follows 20260922181000_f10_career_opportunities.sql (originally 20260921190000_f05_add_child_after_binding.sql; see INTEGRATION NOTE).
+-- No earlier migration is edited and their hashes are unchanged.
 --
 -- WHAT IT ADDS
 --   public.rebuild_focuses       an area of her own life she chose to keep visible: title, optional note (<= 500), state
@@ -33,6 +34,12 @@
 --   * change_log_entity_table_check is re-created with the two new tables added; the list is otherwise identical.
 --   * public.sync_push is replaced (same signature, so its ACL is preserved) so the two new owner-private tables are pushable and key
 --     their collision probe on profile_id. Its body is the F05 body with only those two table names added.
+--
+-- INTEGRATION NOTE (HK-F01-F13 integration, INT13-01). This migration now follows 20260922181000_f10_career_opportunities.sql. Three feature migrations had claimed
+-- the one version 20260922180000, and each additive migration re-declared sync_push and change_log_entity_table_check as "the F05 /
+-- Build 4 list plus my own tables", so whichever applied LAST silently removed the others' tables. Both re-declarations here are
+-- therefore CUMULATIVE: they also carry HK-FEATURE-10's career_opportunities, so applying this file never drops a table an earlier
+-- migration made pushable or loggable. Nothing else in this file changed.
 --
 -- ROLLBACK ASSUMPTIONS (documented, not automated): drop the two tables and the function, restore the change_log check without them,
 -- and restore sync_push from 20260921190000_f05_add_child_after_binding.sql. Focuses written meanwhile are lost with the tables.
@@ -280,6 +287,8 @@ ALTER TABLE public.change_log
     'household_people'::text, 'responsibilities'::text, 'dependencies'::text,
     'recurrence_rules'::text, 'goals'::text, 'system_steps'::text,
     'capacity_profiles'::text, 'patterns'::text, 'evidence_links'::text,
+    -- HK-FEATURE-10 (Work / Career), from the earlier additive migration
+    'career_opportunities'::text,
     -- HK-FEATURE-11 (Me / Rebuild)
     'rebuild_focuses'::text, 'rebuild_focus_links'::text
   ]));
@@ -345,6 +354,8 @@ BEGIN
                         'dependencies', 'recurrence_rules', 'goals',
                         'system_steps', 'capacity_profiles', 'patterns',
                         'evidence_links',
+                        -- (F10) from the earlier additive migration: a replacement must keep every table an earlier one made pushable.
+                        'career_opportunities',
                         'rebuild_focuses', 'rebuild_focus_links'
                         ]) THEN 'profile_id'
                  END;

@@ -1,7 +1,7 @@
 // A PRIVATE local API stack for the sync journeys: its own scratch database and its own PostgREST container, so a schema change can be
 // proven over real HTTP without ever migrating the shared default database that other Her Keys sessions verify against.
 //
-//   database    f08_stack   built with the harness sequence: auth stub, baseline, Build 4, IR01, F08, F05
+//   database    f08_stack   built with the harness sequence: auth stub, then the WHOLE migration chain (migration-chain.mjs)
 //   PostgREST   f08_postgrest, the SAME image and settings as the running local stack, pointed at f08_stack, on a private host port
 //   proxy       strips the /rest/v1 prefix supabase-js adds, because a bare PostgREST serves from its root
 //
@@ -12,9 +12,9 @@ import { readFileSync } from 'node:fs';
 import http from 'node:http';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { FULL_CHAIN, migrationPath } from './migration-chain.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const REPO = join(HERE, '..', '..');
 const DB_CONTAINER = process.env.HERKEYS_LOCAL_DB_CONTAINER ?? 'supabase_db_Her_Keys';
 const REST_REFERENCE = process.env.HERKEYS_LOCAL_REST_CONTAINER ?? 'supabase_rest_Her_Keys';
 // Overridable (like the ports) so two sessions can each run a private stack without dropping each other's database or container.
@@ -36,23 +36,10 @@ const admin = (sql) => docker(['exec', '-i', DB_CONTAINER, 'psql', '-v', 'ON_ERR
 const applyFile = (db, file) => docker(['exec', '-i', DB_CONTAINER, 'psql', '-q', '-v', 'ON_ERROR_STOP=1', '-U', 'postgres', '-d', db, '-f', '-'], readFileSync(file, 'utf8'));
 const applySql = (db, sql) => docker(['exec', '-i', DB_CONTAINER, 'psql', '-q', '-v', 'ON_ERROR_STOP=1', '-U', 'postgres', '-d', db, '-f', '-'], sql);
 
-const SEQUENCE = [
-  join(HERE, 'helpers', '00-auth-stub.sql'),
-  join(REPO, 'supabase', 'migrations', '20260919230054_build4_baseline.sql'),
-  join(REPO, 'supabase', 'migrations', '20260919231500_build4_cloud_schema.sql'),
-  join(REPO, 'supabase', 'migrations', '20260921120000_ir01_duration_source_and_claim_v3.sql'),
-  join(REPO, 'supabase', 'migrations', '20260921160000_f08_meal_slot_and_status.sql'),
-  // HK-FEATURE-05 closeout repair (OC-01): the composition journey exercises a child added after binding (push_household_child),
-  // so the private stack needs it too, not only the shared default database.
-  join(REPO, 'supabase', 'migrations', '20260921190000_f05_add_child_after_binding.sql'),
-  // HK-FEATURE-11 (Me / Rebuild): the rebuild journey pushes and pulls Focuses and their links over real HTTP, and every journey's
-  // pull now meets the replaced sync_push, so the private stack carries it. The shared default database is still never migrated.
-  join(REPO, 'supabase', 'migrations', '20260922180000_f11_rebuild_focus.sql'),
-  // HK-FEATURE-12 (Life Admin): the owner-private record tables, so the journeys can prove them over real HTTP.
-  join(REPO, 'supabase', 'migrations', '20260922180000_f12_life_records.sql'),
-  // HK-FEATURE-13 (People OS): the journeys push person contexts and follow-up links (tests/support/richHousehold.mjs).
-  join(REPO, 'supabase', 'migrations', '20260922200000_f13_people_os.sql'),
-];
+// The WHOLE migration chain, from the one list every harness reads (migration-chain.mjs). Before the F01-F13 integration this was a
+// hand-kept copy: Feature 09's migration was missing from it, so a journey pushing a task with payment_mechanism met a schema without
+// that column. The shared default database is still never migrated.
+const SEQUENCE = [join(HERE, 'helpers', '00-auth-stub.sql'), ...FULL_CHAIN.map(migrationPath)];
 
 function buildDatabase() {
   admin(`DROP DATABASE IF EXISTS ${PRIVATE_DB} WITH (FORCE);`);

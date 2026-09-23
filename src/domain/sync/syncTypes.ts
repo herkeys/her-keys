@@ -198,7 +198,7 @@ export const UPDATABLE_COLUMNS: Record<SyncEntityKind, readonly string[]> = {
   discovery: merged(['deleted_at', 'local_id', 'topic_id'], 'discovery'),
   onboarding: merged(['completed_at', 'goal_ids', 'last_step', 'strength_ids', 'struggle_ids'], 'onboarding'),
   action: [],
-  // Exactly the migration's UPDATE grant on life_records (20260922180000_f12_life_records.sql).
+  // Exactly the migration's UPDATE grant on life_records (20260922183000_f12_life_records.sql).
   lifeRecord: ['archived_at', 'confidence', 'expires_on', 'issued_on', 'issuer_name', 'location_hint', 'note', 'origin_updated_at', 'record_kind',
                'reference_number', 'renew_by', 'review_on', 'status', 'subject_member_id', 'title', 'type_name'],
   lifeRecordLink: [],

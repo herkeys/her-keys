@@ -12,13 +12,17 @@ supabase/migrations/20260921190000_f05_add_child_after_binding.sql text eol=lf
 # Pin the additive HK-FEATURE-09-MONEY (task payment_mechanism) migration to LF for the same reason.
 supabase/migrations/20260922180000_f09_task_payment_mechanism.sql text eol=lf
 
+# Pin the additive HK-FEATURE-10 (Work / Career) migration to LF: it replaces sync_push, so the fingerprint depends on its bytes.
+# (Created by the F01-F13 integration from Feature 10's own manifest entry; see the file's header.)
+supabase/migrations/20260922181000_f10_career_opportunities.sql text eol=lf
+
 # Pin the additive HK-FEATURE-11 (Me / Rebuild) migration to LF: it replaces sync_push and adds a trigger function, so the
-# function-body digest in the schema fingerprint depends on its line endings.
-supabase/migrations/20260922180000_f11_rebuild_focus.sql text eol=lf
+# function-body digest in the schema fingerprint depends on its line endings. (Renumbered from 20260922180000 by the integration.)
+supabase/migrations/20260922182000_f11_rebuild_focus.sql text eol=lf
 
 # Pin the additive HK-FEATURE-12 (Life Admin / Documents) migration to LF: it replaces sync_push and adds a trigger function, so
-# the function-body digests in the schema fingerprint depend on its bytes.
-supabase/migrations/20260922180000_f12_life_records.sql text eol=lf
+# the function-body digests in the schema fingerprint depend on its bytes. (Renumbered from 20260922180000 by the integration.)
+supabase/migrations/20260922183000_f12_life_records.sql text eol=lf
 
 # Pin the additive HK-FEATURE-13 (People OS) migration to LF for the same reason (it replaces sync_push, so the fingerprint depends on it).
 supabase/migrations/20260922200000_f13_people_os.sql text eol=lf

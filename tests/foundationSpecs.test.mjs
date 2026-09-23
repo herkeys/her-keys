@@ -10,9 +10,11 @@ import { KIND_CLOUD } from '../src/domain/foundation/typedRef.ts';
 import {
   EXISTING_FACETS,
   FOUNDATION_KIND_NAMES,
+  F10_CAREER_MIGRATION,
   F11_REBUILD_MIGRATION,
   F13_PEOPLE_MIGRATION,
   FOUNDATION_SPECS,
+  REF_EXTENSIONS,
   PROVENANCE_EXISTING,
   SHIPPING_MIGRATION,
   columnsOfSpec,
@@ -83,6 +85,7 @@ describe('the manifest agrees with the sync engine', () => {
     // two — is created by an additive migration of its own: the shipping migration's kind set never changes.
     assert.equal(SHIPPED_SPECS.length, 18, 'the Build 4 set is unchanged');
     assert.equal(FOUNDATION_SPECS.length, 23);
+    assert.deepEqual(FOUNDATION_SPECS.filter((s) => migrationOf(s) === F10_CAREER_MIGRATION).map((s) => s.kind), ['opportunity']);
     assert.deepEqual(FOUNDATION_SPECS.filter((s) => migrationOf(s) === F11_REBUILD_MIGRATION).map((s) => s.kind), ['rebuildFocus', 'rebuildFocusLink']);
     assert.deepEqual(FOUNDATION_SPECS.filter((s) => migrationOf(s) === F13_PEOPLE_MIGRATION).map((s) => s.kind), ['personContext', 'personTaskLink']);
     assert.deepEqual([...FOUNDATION_SPECS.map((s) => s.kind)].sort(), [...FOUNDATION_KIND_NAMES].sort());
@@ -124,6 +127,29 @@ describe('the manifest agrees with the sync engine', () => {
       assert.ok(changeLog.includes(`'${spec.table}'`), `${spec.table} is missing from the latest change_log_entity_table_check`);
       if (spec.serverWritten) assert.ok(!push.includes(`'${spec.table}'`), `${spec.table} is server-written and must not be pushable`);
       else assert.ok(push.includes(`'${spec.table}'`), `${spec.table} is missing from the latest sync_push allow-list`);
+    }
+    // HK-FEATURE-12's two kinds are registered by hand (outside this manifest), so they are named here explicitly: they are exactly as
+    // exposed to a later migration's re-declaration as a manifest kind (HK-F01-F13 integration, INT13-01).
+    for (const kind of ['lifeRecord', 'lifeRecordLink']) {
+      assert.ok(changeLog.includes(`'${CLOUD_TABLE[kind]}'`), `${CLOUD_TABLE[kind]} is missing from the latest change_log_entity_table_check`);
+      assert.ok(push.includes(`'${CLOUD_TABLE[kind]}'`), `${CLOUD_TABLE[kind]} is missing from the latest sync_push allow-list`);
+    }
+  });
+
+  test('a widening of an existing table (a RefExtension) is emitted into its own additive migration, never into the table\'s creator', () => {
+    // HK-FEATURE-10 widened dependencies' endpoints; the shipping migration that created dependencies must not name the new kind at all.
+    for (const ext of REF_EXTENSIONS) {
+      const spec = FOUNDATION_SPECS.find((s) => s.kind === ext.kind);
+      const creator = migrationTextOf(spec);
+      const widener = readMigration(ext.migration);
+      assert.notEqual(ext.migration, migrationOf(spec), `${ext.kind}: the widening lives in a later migration than the table`);
+      for (const prefix of ext.prefixes) {
+        for (const kind of ext.added) {
+          const col = `${prefix}_${KIND_CLOUD[kind].column}`;
+          assert.ok(!creator.includes(col), `${col} leaked into ${migrationOf(spec)}`);
+          assert.ok(widener.includes(`ADD COLUMN ${col} uuid`) && widener.includes(`${spec.table}_${col}_fkey`), `${col} is not added by ${ext.migration}`);
+        }
+      }
     }
   });
 

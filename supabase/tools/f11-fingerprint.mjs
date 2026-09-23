@@ -40,7 +40,9 @@ const helper = (name) => join(REPO, 'supabase', 'tests', 'helpers', name);
 const HEAD = [helper('00-auth-stub.sql'), helper('01-test-helpers.sql'), migration('20260919230054_build4_baseline.sql'), migration('20260919231500_build4_cloud_schema.sql'), migration('20260921120000_ir01_duration_source_and_claim_v3.sql')];
 const F08 = migration('20260921160000_f08_meal_slot_and_status.sql');
 const F05 = migration('20260921190000_f05_add_child_after_binding.sql');
-const F11 = migration('20260922180000_f11_rebuild_focus.sql');
+// Renumbered to 20260922182000 by the F01-F13 integration (INT13-01). This tool derives the Feature 11 BRANCH-era fingerprint (WAVE3_BASE +
+// F11 alone); the integrated tree's fingerprint is derived by supabase/tools/int13-fingerprint.mjs.
+const F11 = migration('20260922182000_f11_rebuild_focus.sql');
 
 /** A changed fact is explainable only if it names one of F11's own objects, or one of the two existing objects F11 replaces. */
 const F11_OBJECT = /rebuild_focus|change_log_entity_table_check|sync_push/;

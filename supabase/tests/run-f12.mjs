@@ -3,9 +3,9 @@
 //
 // Why a private database: `run.mjs` recreates fixed-name databases (b4_env_*) in the one local container every Her Keys worktree
 // shares, so two sessions running it at once destroy each other's run. This runner builds `f12_env` with the SAME sequence as ENV C
-// (auth stub, helpers, baseline, Build 4, IR01, F08, F05, then any F12 migration, then test defaults and the identity fixtures,
-// migrated while empty) and runs only the numbered suites it is asked for. It never touches the default `postgres` database and
-// never drops a database it did not create.
+// (auth stub, helpers, then the WHOLE migration chain from migration-chain.mjs, then test defaults and the identity fixtures, migrated
+// while empty) and runs only the numbered suites it is asked for. It never touches the default `postgres` database and never drops a
+// database it did not create. (Before the F01-F13 integration it applied WAVE3_BASE plus the F12 migration only.)
 //
 //   node supabase/tests/run-f12.mjs            every numbered suite whose name contains "f12"
 //   node supabase/tests/run-f12.mjs 78         suites whose name starts with 78
@@ -17,12 +17,11 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { FULL_CHAIN, migrationPath } from './migration-chain.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const REPO = join(HERE, '..', '..');
 const CONTAINER = process.env.HERKEYS_LOCAL_DB_CONTAINER ?? 'supabase_db_Her_Keys';
 const DB = process.env.HERKEYS_F12_DB ?? 'f12_env';
-const MIGRATIONS = join(REPO, 'supabase', 'migrations');
 
 if (!/^f12_[a-z0-9_]+$/.test(DB)) throw new Error(`refusing to use database "${DB}": the F12 runner only owns databases named f12_*`);
 
@@ -38,15 +37,6 @@ function psql(sql, label) {
 }
 const scalar = (sql) => docker(['exec', '-i', CONTAINER, 'psql', '-v', 'ON_ERROR_STOP=1', '-U', 'postgres', '-d', DB, '-Atc', sql]).trim();
 
-// The shipped sequence, in order, then any F12 migration (named *_f12_*.sql) in timestamp order.
-const SHIPPED = [
-  '20260919230054_build4_baseline.sql',
-  '20260919231500_build4_cloud_schema.sql',
-  '20260921120000_ir01_duration_source_and_claim_v3.sql',
-  '20260921160000_f08_meal_slot_and_status.sql',
-  '20260921190000_f05_add_child_after_binding.sql',
-];
-const F12_MIGRATIONS = readdirSync(MIGRATIONS).filter((f) => /_f12_.*\.sql$/.test(f)).sort();
 
 const arg = process.argv[2];
 const matches = (f) => (arg === '--all' ? true : arg ? f.startsWith(arg) : f.includes('f12'));
@@ -95,8 +85,8 @@ admin(`DROP DATABASE IF EXISTS ${DB} WITH (FORCE);`);
 admin(`CREATE DATABASE ${DB};`);
 psql(readFileSync(join(HERE, 'helpers', '00-auth-stub.sql'), 'utf8'), 'auth stub');
 psql(readFileSync(join(HERE, 'helpers', '01-test-helpers.sql'), 'utf8'), 'test helpers');
-for (const file of [...SHIPPED, ...F12_MIGRATIONS]) psql(readFileSync(join(MIGRATIONS, file), 'utf8'), file);
-console.log(`${DB}: migrated while empty (${SHIPPED.length} shipped + ${F12_MIGRATIONS.length} F12: ${F12_MIGRATIONS.join(', ') || 'none'})`);
+for (const file of FULL_CHAIN) psql(readFileSync(migrationPath(file), 'utf8'), file);
+console.log(`${DB}: migrated while empty (the whole chain: ${FULL_CHAIN.length} migrations, ending ${FULL_CHAIN.at(-1)})`);
 psql(readFileSync(join(HERE, 'helpers', '05-test-defaults.sql'), 'utf8'), 'test defaults');
 psql(`BEGIN;\n${readFileSync(join(HERE, 'helpers', '10-fixtures.sql'), 'utf8')}\nCOMMIT;`, 'fixtures');
 if (scalar('select count(*) from public.households;') !== '2') throw new Error('identity fixtures did not create two households');

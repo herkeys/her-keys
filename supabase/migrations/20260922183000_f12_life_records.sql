@@ -1,6 +1,7 @@
 -- HER KEYS — HK-FEATURE-12 LIFE ADMIN / DOCUMENTS (additive; LOCAL VALIDATION ONLY, owner-gated for any real environment)
 --
--- Follows 20260921190000_f05_add_child_after_binding.sql. No earlier migration is edited and their hashes are unchanged.
+-- Follows 20260922182000_f11_rebuild_focus.sql (originally 20260921190000_f05_add_child_after_binding.sql; see INTEGRATION NOTE).
+-- No earlier migration is edited and their hashes are unchanged.
 --
 -- WHAT IT ADDS
 --   public.life_records             her durable administrative records (a passport, a lease, a policy): OWNER-PRIVATE.
@@ -25,6 +26,12 @@
 --
 -- sync_push is replaced (same signature, ACL preserved) with exactly one difference from the F05 version, marked (F12): the two
 -- tables join the owner-private list, so their collision probe keys on (household, OWNER, local_id).
+--
+-- INTEGRATION NOTE (HK-F01-F13 integration, INT13-01). This migration now follows 20260922182000_f11_rebuild_focus.sql. Three feature migrations had claimed
+-- the one version 20260922180000, and each additive migration re-declared sync_push and change_log_entity_table_check as "the F05 /
+-- Build 4 list plus my own tables", so whichever applied LAST silently removed the others' tables. Both re-declarations here are
+-- therefore CUMULATIVE: they also carry HK-FEATURE-10's and HK-FEATURE-11's tables, so applying this file never drops a table an earlier
+-- migration made pushable or loggable. Nothing else in this file changed.
 --
 -- ROLLBACK ASSUMPTIONS (documented, not automated): drop the two tables and private.guard_life_record_task_link, restore the F05
 -- sync_push body and the Build 4 change_log_entity_table_check list. Records written meanwhile are lost with the tables, so a
@@ -297,6 +304,8 @@ ALTER TABLE public.change_log
     'household_people'::text, 'responsibilities'::text, 'dependencies'::text,
     'recurrence_rules'::text, 'goals'::text, 'system_steps'::text,
     'capacity_profiles'::text, 'patterns'::text, 'evidence_links'::text,
+    -- HK-FEATURE-10 (Work / Career) and HK-FEATURE-11 (Me / Rebuild), from the earlier additive migrations
+    'career_opportunities'::text, 'rebuild_focuses'::text, 'rebuild_focus_links'::text,
     -- HK-FEATURE-12 Life Admin (owner-private)
     'life_records'::text, 'life_record_task_links'::text
   ]));
@@ -363,7 +372,10 @@ BEGIN
                         'intent_decisions', 'household_people', 'responsibilities',
                         'dependencies', 'recurrence_rules', 'goals',
                         'system_steps', 'capacity_profiles', 'patterns',
-                        'evidence_links', 'life_records', 'life_record_task_links'
+                        'evidence_links',
+                        -- (F10, F11) from the earlier additive migrations: a replacement must keep every table an earlier one made pushable.
+                        'career_opportunities', 'rebuild_focuses', 'rebuild_focus_links',
+                        'life_records', 'life_record_task_links'
                         ]) THEN 'profile_id'
                  END;
   v_owner_private := v_owner_col IS NOT NULL;

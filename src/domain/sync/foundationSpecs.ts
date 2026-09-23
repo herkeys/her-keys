@@ -61,8 +61,16 @@ export const FOUNDATION_KIND_NAMES = [
  * so a spec names its ADDITIVE migration file and the generator emits that kind between the file's own `additive-*` marker pair.
  */
 export const SHIPPING_MIGRATION = '20260919231500_build4_cloud_schema.sql';
-/** HK-FEATURE-11 (Me / Rebuild): an ADDITIVE migration; the shipping migration is never regenerated for these kinds. */
-export const F11_REBUILD_MIGRATION = '20260922180000_f11_rebuild_focus.sql';
+/**
+ * HK-FEATURE-10 (Work / Career): an ADDITIVE migration. Feature 10 first generated its table INTO the shipping migration; the F01-F13
+ * integration moved it here (INT13-01), because a database that already applied the shipping migration would never have received it.
+ */
+export const F10_CAREER_MIGRATION = '20260922181000_f10_career_opportunities.sql';
+/**
+ * HK-FEATURE-11 (Me / Rebuild): an ADDITIVE migration; the shipping migration is never regenerated for these kinds. (Renumbered from
+ * 20260922180000 by the F01-F13 integration: three feature migrations had claimed that one version.)
+ */
+export const F11_REBUILD_MIGRATION = '20260922182000_f11_rebuild_focus.sql';
 /** HK-FEATURE-13 (People OS): an ADDITIVE migration; the shipping migration is never regenerated for these kinds. */
 export const F13_PEOPLE_MIGRATION = '20260922200000_f13_people_os.sql';
 
@@ -203,6 +211,16 @@ const CONTENT6_R: readonly TypedRefKind[] = [...CONTENT6, 'responsibility'];
  * `CONTENT6`/`CONTENT6_R` they actually need, so their cloud tables gain no unused column.
  */
 const CONTENT6_OPP: readonly TypedRefKind[] = [...CONTENT6, 'opportunity'];
+
+/** One COALESCE over a typed reference's columns for the given kinds: how the dependency rules name "the endpoint". */
+const endpointOf = (prefix: string, kinds: readonly TypedRefKind[]): string =>
+  `COALESCE(${kinds.map((kind) => `${prefix}_${KIND_CLOUD[kind].column}`).join(', ')})`;
+/** A dependency may not join a row to itself. Computed from the endpoint kinds, so the rule and the columns cannot disagree. */
+const dependencyNotSelf = (kinds: readonly TypedRefKind[]): string =>
+  `NOT (from_type = to_type AND ${endpointOf('from', kinds)} = ${endpointOf('to', kinds)})`;
+/** At most one live edge per (relation, endpoint, endpoint). Computed from the endpoint kinds, like the rule above. */
+const dependencyLiveEdge = (kinds: readonly TypedRefKind[]): string =>
+  `ON public.dependencies (household_id, relation, from_type, ${endpointOf('from', kinds)}, to_type, ${endpointOf('to', kinds)}) WHERE status = 'active'`;
 
 const OPEN_CODE = `~ '^[a-z][a-z0-9_.-]{0,63}$'`;
 
@@ -557,9 +575,10 @@ export const FOUNDATION_SPECS: readonly FoundationSpec[] = [
     checks: [
       ['relation_check', `relation = ANY (ARRAY['requires','part_of','alternative_to'])`],
       ['status_check', `status = ANY (ARRAY['active','removed'])`],
-      ['not_self_check', `NOT (from_type = to_type AND COALESCE(from_task_id, from_event_id, from_needs_me_id, from_system_id, from_meal_id, from_goal_id, from_opportunity_id) = COALESCE(to_task_id, to_event_id, to_needs_me_id, to_system_id, to_meal_id, to_goal_id, to_opportunity_id))`],
+      // The endpoint set is today's (HK-FEATURE-10 added `opportunity`); `specAsCreated` gives the shipping migration its own text back.
+      ['not_self_check', dependencyNotSelf(CONTENT6_OPP)],
     ],
-    indexes: [['live_edge_uq', `ON public.dependencies (household_id, relation, from_type, COALESCE(from_task_id, from_event_id, from_needs_me_id, from_system_id, from_meal_id, from_goal_id, from_opportunity_id), to_type, COALESCE(to_task_id, to_event_id, to_needs_me_id, to_system_id, to_meal_id, to_goal_id, to_opportunity_id)) WHERE status = 'active'`, true]],
+    indexes: [['live_edge_uq', dependencyLiveEdge(CONTENT6_OPP), true]],
     triggers: [['forbid_cycle', 'BEFORE', 'INSERT OR UPDATE', `public.forbid_dependency_cycle()`]],
   },
 
@@ -700,6 +719,7 @@ export const FOUNDATION_SPECS: readonly FoundationSpec[] = [
   // carries no next-action text and no interview sub-record, and no structured compensation amount.
   {
     kind: 'opportunity', collection: 'careerOpportunities', table: 'career_opportunities', mutable: true, provenance: 'standard', profileOnDelete: 'cascade', rank: 2,
+    migration: F10_CAREER_MIGRATION,
     fields: [
       { local: 'title', col: 'title', type: 'text' },
       { local: 'organizationName', col: 'organization_name', type: 'text', nullable: true },
@@ -833,6 +853,55 @@ export const FOUNDATION_SPECS: readonly FoundationSpec[] = [
     triggers: [['follow_up_task_guard', 'BEFORE', 'INSERT', `public.guard_follow_up_task()`]],
   },
 ];
+
+/**
+ * A typed-reference kind that an ADDITIVE migration added to a table an EARLIER migration created (HK-F01-F13 integration, INT13-01).
+ *
+ * The manifest describes every table as it is NOW, because the sync engine projects and reads today's columns. When a later feature
+ * widens an existing table's typed reference, the widening belongs to that feature's own additive migration: the table's creating
+ * migration may already be applied to a populated database, so it is never regenerated. The generator emits the creating migration
+ * from `specAsCreated` (the spec with the widening taken back out) and emits the widening itself — the new columns, the re-issued
+ * reference checks, the new foreign keys and their indexes, the re-issued rules whose text names every endpoint, and the new
+ * columns' INSERT grant — into the additive migration named here.
+ */
+export interface RefExtension {
+  /** The ADDITIVE migration that makes the widening. */
+  migration: string;
+  kind: FoundationKind;
+  /** The typed-reference fields, by prefix, that gain the kinds. */
+  prefixes: readonly string[];
+  added: readonly TypedRefKind[];
+  /** The rules whose text names every endpoint, AS THE CREATING MIGRATION WROTE THEM (the spec itself holds today's text). */
+  createdChecks: ReadonlyArray<readonly [string, string]>;
+  createdIndexes: ReadonlyArray<readonly [string, string, boolean]>;
+}
+
+export const REF_EXTENSIONS: readonly RefExtension[] = [
+  {
+    // HK-FEATURE-10: a Task or an Event can be `part_of` a career opportunity, through the one Dependency edge a Goal's steps use.
+    migration: F10_CAREER_MIGRATION, kind: 'dependency', prefixes: ['from', 'to'], added: ['opportunity'],
+    createdChecks: [['not_self_check', dependencyNotSelf(CONTENT6)]],
+    createdIndexes: [['live_edge_uq', dependencyLiveEdge(CONTENT6), true]],
+  },
+];
+
+/** A spec exactly as the migration that CREATED its table created it: every later `RefExtension` taken back out. */
+export function specAsCreated(spec: FoundationSpec): FoundationSpec {
+  const extensions = REF_EXTENSIONS.filter((ext) => ext.kind === spec.kind);
+  if (extensions.length === 0) return spec;
+  const createdCheck = new Map(extensions.flatMap((ext) => ext.createdChecks.map(([name, body]) => [name, body] as const)));
+  const createdIndex = new Map(extensions.flatMap((ext) => ext.createdIndexes.map((row) => [row[0], row] as const)));
+  return {
+    ...spec,
+    fields: spec.fields.map((f) => {
+      if (f.type !== 'ref') return f;
+      const added = extensions.filter((ext) => ext.prefixes.includes(f.prefix)).flatMap((ext) => ext.added);
+      return added.length === 0 ? f : { ...f, kinds: f.kinds.filter((kind) => !added.includes(kind)) };
+    }),
+    checks: spec.checks?.map(([name, body]) => [name, createdCheck.get(name) ?? body] as const),
+    indexes: spec.indexes?.map((row) => createdIndex.get(row[0]) ?? row),
+  };
+}
 
 /** Sync kinds the manifest adds, in dependency order. */
 export const FOUNDATION_KINDS = FOUNDATION_SPECS.map((spec) => spec.kind);

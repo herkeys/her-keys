@@ -58,7 +58,7 @@ DECLARE
   total     bigint := 0;
   offenders text[] := ARRAY[]::text[];
   protected text[] := ARRAY[
-    -- All 35 Build 4 application tables, schema-qualified, enumerated explicitly.
+    -- All 34 Build 4 application tables, schema-qualified, enumerated explicitly.
     -- 14 inherited from the Phase 1 baseline:
     'public.profiles',
     'public.households',
@@ -77,7 +77,7 @@ DECLARE
     -- 2 introduced by this migration (absent on a first run; guarded by to_regclass):
     'public.change_log',
     'public.account_claims',
-    -- 19 foundation tables (B4-FOUNDATION-BUILDOUT-01; career_opportunities added by F10), absent on a first run and guarded by to_regclass:
+    -- 18 foundation tables (B4-FOUNDATION-BUILDOUT-01), absent on a first run and guarded by to_regclass:
     'public.source_artifacts',
     'public.interpretations',
     'public.external_references',
@@ -96,7 +96,6 @@ DECLARE
     'public.capacity_profiles',
     'public.patterns',
     'public.evidence_links',
-    'public.career_opportunities',
     -- and the identity table, which is the one that matters most:
     'auth.users'
   ];
@@ -185,7 +184,7 @@ BEGIN
     'public.household_systems','public.meal_plan_entries','public.onboarding_state',
     'public.one_move_records','public.needs_me_items','public.discovery_records',
     'public.discovery_answers','public.action_records','auth.users',
-    'public.source_artifacts','public.interpretations','public.external_references','public.behavior_observations','public.automation_authorities','public.action_intents','public.intent_decisions','public.action_executions','public.action_outcomes','public.household_people','public.responsibilities','public.dependencies','public.recurrence_rules','public.goals','public.system_steps','public.capacity_profiles','public.patterns','public.evidence_links','public.career_opportunities'
+    'public.source_artifacts','public.interpretations','public.external_references','public.behavior_observations','public.automation_authorities','public.action_intents','public.intent_decisions','public.action_executions','public.action_outcomes','public.household_people','public.responsibilities','public.dependencies','public.recurrence_rules','public.goals','public.system_steps','public.capacity_profiles','public.patterns','public.evidence_links'
   ] LOOP
     IF to_regclass(t) IS NULL THEN CONTINUE; END IF;
     EXECUTE format('SELECT count(*) FROM %s', t) INTO n;
@@ -888,9 +887,7 @@ ALTER TABLE public.change_log
     'intent_decisions'::text, 'action_executions'::text, 'action_outcomes'::text,
     'household_people'::text, 'responsibilities'::text, 'dependencies'::text,
     'recurrence_rules'::text, 'goals'::text, 'system_steps'::text,
-    'capacity_profiles'::text, 'patterns'::text, 'evidence_links'::text,
-    -- F10 Work/Career OS
-    'career_opportunities'::text
+    'capacity_profiles'::text, 'patterns'::text, 'evidence_links'::text
   ]));
 
 -- change_log_household_id_fkey is added in section 5, after households exists.
@@ -2627,38 +2624,36 @@ CREATE TABLE public.responsibilities (
 ALTER TABLE public.responsibilities ENABLE ROW LEVEL SECURITY;
 
 CREATE TABLE public.dependencies (
-  id                  uuid NOT NULL DEFAULT gen_random_uuid(),
-  household_id        uuid NOT NULL,
-  local_id            text NOT NULL,
-  origin_device_id    uuid,
-  profile_id          uuid NOT NULL,
-  relation            text NOT NULL,
-  from_type           text NOT NULL,
-  from_task_id        uuid,
-  from_event_id       uuid,
-  from_needs_me_id    uuid,
-  from_system_id      uuid,
-  from_meal_id        uuid,
-  from_goal_id        uuid,
-  from_opportunity_id uuid,
-  to_type             text NOT NULL,
-  to_task_id          uuid,
-  to_event_id         uuid,
-  to_needs_me_id      uuid,
-  to_system_id        uuid,
-  to_meal_id          uuid,
-  to_goal_id          uuid,
-  to_opportunity_id   uuid,
-  status              text NOT NULL,
-  producer            text NOT NULL,
-  source_artifact_id  uuid,
-  confidence          text,
-  scope               text NOT NULL DEFAULT 'personal',
-  origin_created_at   timestamptz NOT NULL,
-  origin_updated_at   timestamptz NOT NULL,
-  created_at          timestamptz NOT NULL DEFAULT now(),
-  updated_at          timestamptz NOT NULL DEFAULT now(),
-  revision            bigint NOT NULL DEFAULT 1
+  id                 uuid NOT NULL DEFAULT gen_random_uuid(),
+  household_id       uuid NOT NULL,
+  local_id           text NOT NULL,
+  origin_device_id   uuid,
+  profile_id         uuid NOT NULL,
+  relation           text NOT NULL,
+  from_type          text NOT NULL,
+  from_task_id       uuid,
+  from_event_id      uuid,
+  from_needs_me_id   uuid,
+  from_system_id     uuid,
+  from_meal_id       uuid,
+  from_goal_id       uuid,
+  to_type            text NOT NULL,
+  to_task_id         uuid,
+  to_event_id        uuid,
+  to_needs_me_id     uuid,
+  to_system_id       uuid,
+  to_meal_id         uuid,
+  to_goal_id         uuid,
+  status             text NOT NULL,
+  producer           text NOT NULL,
+  source_artifact_id uuid,
+  confidence         text,
+  scope              text NOT NULL DEFAULT 'personal',
+  origin_created_at  timestamptz NOT NULL,
+  origin_updated_at  timestamptz NOT NULL,
+  created_at         timestamptz NOT NULL DEFAULT now(),
+  updated_at         timestamptz NOT NULL DEFAULT now(),
+  revision           bigint NOT NULL DEFAULT 1
 );
 
 ALTER TABLE public.dependencies ENABLE ROW LEVEL SECURITY;
@@ -2830,38 +2825,6 @@ CREATE TABLE public.evidence_links (
 
 ALTER TABLE public.evidence_links ENABLE ROW LEVEL SECURITY;
 
-CREATE TABLE public.career_opportunities (
-  id                   uuid NOT NULL DEFAULT gen_random_uuid(),
-  household_id         uuid NOT NULL,
-  local_id             text NOT NULL,
-  origin_device_id     uuid,
-  profile_id           uuid NOT NULL,
-  title                text NOT NULL,
-  organization_name    text,
-  opportunity_type     text NOT NULL,
-  stage                text NOT NULL,
-  closed_reason        text,
-  source_note          text,
-  application_deadline date,
-  follow_up_date       date,
-  contact_name         text,
-  compensation_note    text,
-  notes                text,
-  stage_changed_at     timestamptz NOT NULL,
-  archived_at          timestamptz,
-  producer             text NOT NULL,
-  source_artifact_id   uuid,
-  confidence           text,
-  scope                text NOT NULL DEFAULT 'personal',
-  origin_created_at    timestamptz NOT NULL,
-  origin_updated_at    timestamptz NOT NULL,
-  created_at           timestamptz NOT NULL DEFAULT now(),
-  updated_at           timestamptz NOT NULL DEFAULT now(),
-  revision             bigint NOT NULL DEFAULT 1
-);
-
-ALTER TABLE public.career_opportunities ENABLE ROW LEVEL SECURITY;
-
 -- Phase 2 — the keys every reference depends on: on the new tables, and the composite keys on the tables that already existed.
 ALTER TABLE public.source_artifacts ADD CONSTRAINT source_artifacts_pkey PRIMARY KEY (id);
 ALTER TABLE public.source_artifacts ADD CONSTRAINT source_artifacts_id_household_id_profile_id_key UNIQUE (id, household_id, profile_id);
@@ -2917,9 +2880,6 @@ ALTER TABLE public.patterns ADD CONSTRAINT patterns_household_id_profile_id_loca
 ALTER TABLE public.evidence_links ADD CONSTRAINT evidence_links_pkey PRIMARY KEY (id);
 ALTER TABLE public.evidence_links ADD CONSTRAINT evidence_links_id_household_id_profile_id_key UNIQUE (id, household_id, profile_id);
 ALTER TABLE public.evidence_links ADD CONSTRAINT evidence_links_household_id_profile_id_local_id_key UNIQUE (household_id, profile_id, local_id);
-ALTER TABLE public.career_opportunities ADD CONSTRAINT career_opportunities_pkey PRIMARY KEY (id);
-ALTER TABLE public.career_opportunities ADD CONSTRAINT career_opportunities_id_household_id_profile_id_key UNIQUE (id, household_id, profile_id);
-ALTER TABLE public.career_opportunities ADD CONSTRAINT career_opportunities_household_id_profile_id_local_id_key UNIQUE (household_id, profile_id, local_id);
 ALTER TABLE public.tasks ADD CONSTRAINT tasks_id_household_id_key UNIQUE (id, household_id);
 ALTER TABLE public.events ADD CONSTRAINT events_id_household_id_key UNIQUE (id, household_id);
 ALTER TABLE public.household_systems ADD CONSTRAINT household_systems_id_household_id_key UNIQUE (id, household_id);
@@ -3616,14 +3576,13 @@ ALTER TABLE public.dependencies ADD CONSTRAINT dependencies_confidence_check CHE
 ALTER TABLE public.dependencies ADD CONSTRAINT dependencies_source_artifact_check CHECK (source_artifact_id IS NULL OR producer <> ALL (ARRAY['legacy-unknown','onboarding']));
 ALTER TABLE public.dependencies ADD CONSTRAINT dependencies_source_artifact_fkey FOREIGN KEY (source_artifact_id, household_id, profile_id)
     REFERENCES public.source_artifacts(id, household_id, profile_id) ON DELETE NO ACTION;
-ALTER TABLE public.dependencies ADD CONSTRAINT dependencies_from_ref_check CHECK ((from_type IS NULL OR from_type = ANY (ARRAY['task', 'event', 'needsMe', 'system', 'meal', 'goal', 'opportunity']))
+ALTER TABLE public.dependencies ADD CONSTRAINT dependencies_from_ref_check CHECK ((from_type IS NULL OR from_type = ANY (ARRAY['task', 'event', 'needsMe', 'system', 'meal', 'goal']))
     AND (COALESCE(from_type = 'task', false) = (from_task_id IS NOT NULL))
     AND (COALESCE(from_type = 'event', false) = (from_event_id IS NOT NULL))
     AND (COALESCE(from_type = 'needsMe', false) = (from_needs_me_id IS NOT NULL))
     AND (COALESCE(from_type = 'system', false) = (from_system_id IS NOT NULL))
     AND (COALESCE(from_type = 'meal', false) = (from_meal_id IS NOT NULL))
-    AND (COALESCE(from_type = 'goal', false) = (from_goal_id IS NOT NULL))
-    AND (COALESCE(from_type = 'opportunity', false) = (from_opportunity_id IS NOT NULL)));
+    AND (COALESCE(from_type = 'goal', false) = (from_goal_id IS NOT NULL)));
 ALTER TABLE public.dependencies ADD CONSTRAINT dependencies_from_task_id_fkey FOREIGN KEY (from_task_id, household_id)
     REFERENCES public.tasks(id, household_id) ON DELETE CASCADE;
 ALTER TABLE public.dependencies ADD CONSTRAINT dependencies_from_event_id_fkey FOREIGN KEY (from_event_id, household_id)
@@ -3636,16 +3595,13 @@ ALTER TABLE public.dependencies ADD CONSTRAINT dependencies_from_meal_id_fkey FO
     REFERENCES public.meal_plan_entries(id, household_id) ON DELETE CASCADE;
 ALTER TABLE public.dependencies ADD CONSTRAINT dependencies_from_goal_id_fkey FOREIGN KEY (from_goal_id, household_id, profile_id)
     REFERENCES public.goals(id, household_id, profile_id) ON DELETE CASCADE;
-ALTER TABLE public.dependencies ADD CONSTRAINT dependencies_from_opportunity_id_fkey FOREIGN KEY (from_opportunity_id, household_id, profile_id)
-    REFERENCES public.career_opportunities(id, household_id, profile_id) ON DELETE CASCADE;
-ALTER TABLE public.dependencies ADD CONSTRAINT dependencies_to_ref_check CHECK ((to_type IS NULL OR to_type = ANY (ARRAY['task', 'event', 'needsMe', 'system', 'meal', 'goal', 'opportunity']))
+ALTER TABLE public.dependencies ADD CONSTRAINT dependencies_to_ref_check CHECK ((to_type IS NULL OR to_type = ANY (ARRAY['task', 'event', 'needsMe', 'system', 'meal', 'goal']))
     AND (COALESCE(to_type = 'task', false) = (to_task_id IS NOT NULL))
     AND (COALESCE(to_type = 'event', false) = (to_event_id IS NOT NULL))
     AND (COALESCE(to_type = 'needsMe', false) = (to_needs_me_id IS NOT NULL))
     AND (COALESCE(to_type = 'system', false) = (to_system_id IS NOT NULL))
     AND (COALESCE(to_type = 'meal', false) = (to_meal_id IS NOT NULL))
-    AND (COALESCE(to_type = 'goal', false) = (to_goal_id IS NOT NULL))
-    AND (COALESCE(to_type = 'opportunity', false) = (to_opportunity_id IS NOT NULL)));
+    AND (COALESCE(to_type = 'goal', false) = (to_goal_id IS NOT NULL)));
 ALTER TABLE public.dependencies ADD CONSTRAINT dependencies_to_task_id_fkey FOREIGN KEY (to_task_id, household_id)
     REFERENCES public.tasks(id, household_id) ON DELETE CASCADE;
 ALTER TABLE public.dependencies ADD CONSTRAINT dependencies_to_event_id_fkey FOREIGN KEY (to_event_id, household_id)
@@ -3658,11 +3614,9 @@ ALTER TABLE public.dependencies ADD CONSTRAINT dependencies_to_meal_id_fkey FORE
     REFERENCES public.meal_plan_entries(id, household_id) ON DELETE CASCADE;
 ALTER TABLE public.dependencies ADD CONSTRAINT dependencies_to_goal_id_fkey FOREIGN KEY (to_goal_id, household_id, profile_id)
     REFERENCES public.goals(id, household_id, profile_id) ON DELETE CASCADE;
-ALTER TABLE public.dependencies ADD CONSTRAINT dependencies_to_opportunity_id_fkey FOREIGN KEY (to_opportunity_id, household_id, profile_id)
-    REFERENCES public.career_opportunities(id, household_id, profile_id) ON DELETE CASCADE;
 ALTER TABLE public.dependencies ADD CONSTRAINT dependencies_relation_check CHECK (relation = ANY (ARRAY['requires','part_of','alternative_to']));
 ALTER TABLE public.dependencies ADD CONSTRAINT dependencies_status_check CHECK (status = ANY (ARRAY['active','removed']));
-ALTER TABLE public.dependencies ADD CONSTRAINT dependencies_not_self_check CHECK (NOT (from_type = to_type AND COALESCE(from_task_id, from_event_id, from_needs_me_id, from_system_id, from_meal_id, from_goal_id, from_opportunity_id) = COALESCE(to_task_id, to_event_id, to_needs_me_id, to_system_id, to_meal_id, to_goal_id, to_opportunity_id)));
+ALTER TABLE public.dependencies ADD CONSTRAINT dependencies_not_self_check CHECK (NOT (from_type = to_type AND COALESCE(from_task_id, from_event_id, from_needs_me_id, from_system_id, from_meal_id, from_goal_id) = COALESCE(to_task_id, to_event_id, to_needs_me_id, to_system_id, to_meal_id, to_goal_id)));
 CREATE INDEX dependencies_owner_idx ON public.dependencies (household_id, profile_id);
 CREATE INDEX dependencies_from_task_id_fk_idx ON public.dependencies (from_task_id, household_id) WHERE from_task_id IS NOT NULL;
 CREATE INDEX dependencies_from_event_id_fk_idx ON public.dependencies (from_event_id, household_id) WHERE from_event_id IS NOT NULL;
@@ -3670,17 +3624,15 @@ CREATE INDEX dependencies_from_needs_me_id_fk_idx ON public.dependencies (from_n
 CREATE INDEX dependencies_from_system_id_fk_idx ON public.dependencies (from_system_id, household_id) WHERE from_system_id IS NOT NULL;
 CREATE INDEX dependencies_from_meal_id_fk_idx ON public.dependencies (from_meal_id, household_id) WHERE from_meal_id IS NOT NULL;
 CREATE INDEX dependencies_from_goal_id_fk_idx ON public.dependencies (from_goal_id, household_id) WHERE from_goal_id IS NOT NULL;
-CREATE INDEX dependencies_from_opportunity_id_fk_idx ON public.dependencies (from_opportunity_id, household_id) WHERE from_opportunity_id IS NOT NULL;
 CREATE INDEX dependencies_to_task_id_fk_idx ON public.dependencies (to_task_id, household_id) WHERE to_task_id IS NOT NULL;
 CREATE INDEX dependencies_to_event_id_fk_idx ON public.dependencies (to_event_id, household_id) WHERE to_event_id IS NOT NULL;
 CREATE INDEX dependencies_to_needs_me_id_fk_idx ON public.dependencies (to_needs_me_id, household_id) WHERE to_needs_me_id IS NOT NULL;
 CREATE INDEX dependencies_to_system_id_fk_idx ON public.dependencies (to_system_id, household_id) WHERE to_system_id IS NOT NULL;
 CREATE INDEX dependencies_to_meal_id_fk_idx ON public.dependencies (to_meal_id, household_id) WHERE to_meal_id IS NOT NULL;
 CREATE INDEX dependencies_to_goal_id_fk_idx ON public.dependencies (to_goal_id, household_id) WHERE to_goal_id IS NOT NULL;
-CREATE INDEX dependencies_to_opportunity_id_fk_idx ON public.dependencies (to_opportunity_id, household_id) WHERE to_opportunity_id IS NOT NULL;
 CREATE INDEX dependencies_source_artifact_id_fk_idx ON public.dependencies (source_artifact_id, household_id) WHERE source_artifact_id IS NOT NULL;
 CREATE UNIQUE INDEX dependencies_live_edge_uq
-  ON public.dependencies (household_id, relation, from_type, COALESCE(from_task_id, from_event_id, from_needs_me_id, from_system_id, from_meal_id, from_goal_id, from_opportunity_id), to_type, COALESCE(to_task_id, to_event_id, to_needs_me_id, to_system_id, to_meal_id, to_goal_id, to_opportunity_id)) WHERE status = 'active';
+  ON public.dependencies (household_id, relation, from_type, COALESCE(from_task_id, from_event_id, from_needs_me_id, from_system_id, from_meal_id, from_goal_id), to_type, COALESCE(to_task_id, to_event_id, to_needs_me_id, to_system_id, to_meal_id, to_goal_id)) WHERE status = 'active';
 CREATE TRIGGER dependencies_force_id BEFORE INSERT OR UPDATE ON public.dependencies
   FOR EACH ROW EXECUTE FUNCTION public.force_server_owned_id();
 CREATE TRIGGER dependencies_set_updated_at BEFORE UPDATE ON public.dependencies
@@ -4004,46 +3956,6 @@ CREATE POLICY evidence_links_select_own ON public.evidence_links
   USING ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id));
 CREATE POLICY evidence_links_insert_own ON public.evidence_links
   FOR INSERT TO authenticated
-  WITH CHECK ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id));
--- career_opportunities
-ALTER TABLE public.career_opportunities ADD CONSTRAINT career_opportunities_household_id_fkey FOREIGN KEY (household_id) REFERENCES public.households(id) ON DELETE CASCADE;
-ALTER TABLE public.career_opportunities ADD CONSTRAINT career_opportunities_profile_id_fkey FOREIGN KEY (profile_id) REFERENCES public.profiles(id) ON DELETE CASCADE;
-ALTER TABLE public.career_opportunities ADD CONSTRAINT career_opportunities_local_id_check CHECK (local_id ~ '^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$'::text);
-ALTER TABLE public.career_opportunities ADD CONSTRAINT career_opportunities_scope_check CHECK (scope = 'personal'::text);
-ALTER TABLE public.career_opportunities ADD CONSTRAINT career_opportunities_revision_check CHECK (revision > 0);
-ALTER TABLE public.career_opportunities ADD CONSTRAINT career_opportunities_producer_values_check CHECK (producer = ANY (ARRAY['onboarding', 'user-action', 'talk-it-out', 'system-derived', 'import-sync', 'ai-inference', 'automation', 'legacy-unknown']));
-ALTER TABLE public.career_opportunities ADD CONSTRAINT career_opportunities_confidence_check CHECK (((confidence IS NOT NULL) = (producer = ANY (ARRAY['ai-inference','import-sync'])))
-    AND (confidence IS NULL OR confidence = ANY (ARRAY['possible','likely','established'])));
-ALTER TABLE public.career_opportunities ADD CONSTRAINT career_opportunities_source_artifact_check CHECK (source_artifact_id IS NULL OR producer <> ALL (ARRAY['legacy-unknown','onboarding']));
-ALTER TABLE public.career_opportunities ADD CONSTRAINT career_opportunities_source_artifact_fkey FOREIGN KEY (source_artifact_id, household_id, profile_id)
-    REFERENCES public.source_artifacts(id, household_id, profile_id) ON DELETE NO ACTION;
-ALTER TABLE public.career_opportunities ADD CONSTRAINT career_opportunities_title_check CHECK (char_length(btrim(title)) >= 1 AND char_length(title) <= 200);
-ALTER TABLE public.career_opportunities ADD CONSTRAINT career_opportunities_org_check CHECK (organization_name IS NULL OR char_length(organization_name) <= 120);
-ALTER TABLE public.career_opportunities ADD CONSTRAINT career_opportunities_type_check CHECK (opportunity_type = ANY (ARRAY['job','freelance','contract','education_program','other']));
-ALTER TABLE public.career_opportunities ADD CONSTRAINT career_opportunities_stage_check CHECK (stage = ANY (ARRAY['exploring','interested','applied','interviewing','offer','accepted','closed']));
-ALTER TABLE public.career_opportunities ADD CONSTRAINT career_opportunities_closed_reason_check CHECK (closed_reason IS NULL OR closed_reason = ANY (ARRAY['withdrawn','declined_by_organization','offer_rescinded','no_further_response','other']));
-ALTER TABLE public.career_opportunities ADD CONSTRAINT career_opportunities_closed_pairing_check CHECK ((stage = 'closed') = (closed_reason IS NOT NULL));
-ALTER TABLE public.career_opportunities ADD CONSTRAINT career_opportunities_source_note_check CHECK (source_note IS NULL OR char_length(source_note) <= 300);
-ALTER TABLE public.career_opportunities ADD CONSTRAINT career_opportunities_contact_name_check CHECK (contact_name IS NULL OR char_length(contact_name) <= 120);
-ALTER TABLE public.career_opportunities ADD CONSTRAINT career_opportunities_compensation_note_check CHECK (compensation_note IS NULL OR char_length(compensation_note) <= 300);
-ALTER TABLE public.career_opportunities ADD CONSTRAINT career_opportunities_notes_check CHECK (notes IS NULL OR char_length(notes) <= 1000);
-CREATE INDEX career_opportunities_owner_idx ON public.career_opportunities (household_id, profile_id);
-CREATE INDEX career_opportunities_source_artifact_id_fk_idx ON public.career_opportunities (source_artifact_id, household_id) WHERE source_artifact_id IS NOT NULL;
-CREATE TRIGGER career_opportunities_force_id BEFORE INSERT OR UPDATE ON public.career_opportunities
-  FOR EACH ROW EXECUTE FUNCTION public.force_server_owned_id();
-CREATE TRIGGER career_opportunities_set_updated_at BEFORE UPDATE ON public.career_opportunities
-  FOR EACH ROW EXECUTE FUNCTION public.set_row_updated_at();
-CREATE TRIGGER career_opportunities_log_change AFTER INSERT OR UPDATE OR DELETE ON public.career_opportunities
-  FOR EACH ROW EXECUTE FUNCTION public.log_row_change('household_id', 'profile_id');
-CREATE POLICY career_opportunities_select_own ON public.career_opportunities
-  FOR SELECT TO authenticated
-  USING ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id));
-CREATE POLICY career_opportunities_insert_own ON public.career_opportunities
-  FOR INSERT TO authenticated
-  WITH CHECK ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id));
-CREATE POLICY career_opportunities_update_own ON public.career_opportunities
-  FOR UPDATE TO authenticated
-  USING ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id))
   WITH CHECK ((SELECT auth.uid()) = profile_id AND private.is_household_member(household_id));
 
 -- Phase 5 — constraints on the nine existing tables' new columns.
@@ -4392,9 +4304,9 @@ GRANT UPDATE (responsible_kind, responsible_person_id, responsible_child_id, sta
 GRANT SELECT ON public.dependencies TO authenticated;
 GRANT INSERT (household_id, local_id, origin_device_id, profile_id, relation, from_type, 
               from_task_id, from_event_id, from_needs_me_id, from_system_id, from_meal_id, 
-              from_goal_id, from_opportunity_id, to_type, to_task_id, to_event_id, to_needs_me_id, 
-              to_system_id, to_meal_id, to_goal_id, to_opportunity_id, status, producer, 
-              source_artifact_id, confidence, scope, origin_created_at, origin_updated_at)
+              from_goal_id, to_type, to_task_id, to_event_id, to_needs_me_id, to_system_id, 
+              to_meal_id, to_goal_id, status, producer, source_artifact_id, confidence, scope, 
+              origin_created_at, origin_updated_at)
   ON public.dependencies TO authenticated;
 GRANT UPDATE (status, confidence, origin_updated_at)
   ON public.dependencies TO authenticated;
@@ -4447,16 +4359,6 @@ GRANT INSERT (household_id, local_id, origin_device_id, profile_id, for_type, fo
               support_responsibility_id, support_observation_id, code, producer, source_artifact_id, 
               confidence, scope, origin_created_at)
   ON public.evidence_links TO authenticated;
-GRANT SELECT ON public.career_opportunities TO authenticated;
-GRANT INSERT (household_id, local_id, origin_device_id, profile_id, title, organization_name, 
-              opportunity_type, stage, closed_reason, source_note, application_deadline, 
-              follow_up_date, contact_name, compensation_note, notes, stage_changed_at, archived_at, 
-              producer, source_artifact_id, confidence, scope, origin_created_at, origin_updated_at)
-  ON public.career_opportunities TO authenticated;
-GRANT UPDATE (title, organization_name, opportunity_type, stage, closed_reason, source_note, 
-              application_deadline, follow_up_date, contact_name, compensation_note, notes, 
-              stage_changed_at, archived_at, confidence, origin_updated_at)
-  ON public.career_opportunities TO authenticated;
 
 -- Provenance and facets on the tables that already existed. A client states where a row came from when it creates it,
 -- and may afterwards move only its confidence. `producer` and `source_artifact_id` are fixed at insert.
@@ -5736,7 +5638,7 @@ BEGIN
                         'intent_decisions', 'household_people', 'responsibilities',
                         'dependencies', 'recurrence_rules', 'goals',
                         'system_steps', 'capacity_profiles', 'patterns',
-                        'evidence_links', 'career_opportunities'
+                        'evidence_links'
                         ]) THEN 'profile_id'
                  END;
   v_owner_private := v_owner_col IS NOT NULL;

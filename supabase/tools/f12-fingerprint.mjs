@@ -37,7 +37,9 @@ const helper = (name) => join(REPO, 'supabase', 'tests', 'helpers', name);
 const HEAD = [helper('00-auth-stub.sql'), helper('01-test-helpers.sql'), migration('20260919230054_build4_baseline.sql'), migration('20260919231500_build4_cloud_schema.sql'), migration('20260921120000_ir01_duration_source_and_claim_v3.sql')];
 const F08 = migration('20260921160000_f08_meal_slot_and_status.sql');
 const F05 = migration('20260921190000_f05_add_child_after_binding.sql');
-const F12 = migration('20260922180000_f12_life_records.sql');
+// Renumbered to 20260922183000 by the F01-F13 integration (INT13-01). This tool derives the Feature 12 BRANCH-era fingerprint (WAVE3_BASE +
+// F12 alone); the integrated tree's fingerprint is derived by supabase/tools/int13-fingerprint.mjs.
+const F12 = migration('20260922183000_f12_life_records.sql');
 
 /**
  * What each migration may move, measured once and pinned here: [added, removed] per dimension. Anything else moving is drift.

@@ -29,13 +29,14 @@ export const MIGRATION = join(REPO, 'supabase', 'migrations', '20260919231500_bu
 
 const specsModule = await import(pathToFileURL(join(REPO, 'src', 'domain', 'sync', 'foundationSpecs.ts')).href);
 const refModule = await import(pathToFileURL(join(REPO, 'src', 'domain', 'foundation', 'typedRef.ts')).href);
-const { FOUNDATION_SPECS: ALL_SPECS, EXISTING_FACETS, EXISTING_ROW_CHECKS, PROVENANCE_EXISTING, CLOUD_PRODUCERS, columnsOfSpec, migrationOf, SHIPPING_MIGRATION } = specsModule;
+const { FOUNDATION_SPECS: ALL_SPECS, EXISTING_FACETS, EXISTING_ROW_CHECKS, PROVENANCE_EXISTING, CLOUD_PRODUCERS, columnsOfSpec, migrationOf, SHIPPING_MIGRATION, REF_EXTENSIONS, specAsCreated } = specsModule;
 // The shipping migration carries only the kinds that were born with it. A kind added later names its own ADDITIVE migration
 // (`FoundationSpec.migration`) and is generated there, between its own marker pair — never spliced into a migration that may
 // already be applied to a populated database. (HK-FEATURE-11 and HK-FEATURE-13 each built a mechanism for this; the F01-F13
-// integration keeps this one, HK-FEATURE-13's, for every additive kind.)
-const FOUNDATION_SPECS = ALL_SPECS.filter((spec) => migrationOf(spec) === SHIPPING_MIGRATION);
-const ADDITIVE = [...new Set(ALL_SPECS.map((spec) => migrationOf(spec)).filter((file) => file !== SHIPPING_MIGRATION))];
+// integration keeps this one, HK-FEATURE-13's, for every additive kind.) Every table is emitted AS ITS CREATING MIGRATION CREATED IT
+// (`specAsCreated`); a later widening of an existing table (`REF_EXTENSIONS`, HK-FEATURE-10) is emitted into the migration that made it.
+const FOUNDATION_SPECS = ALL_SPECS.filter((spec) => migrationOf(spec) === SHIPPING_MIGRATION).map(specAsCreated);
+const ADDITIVE = [...new Set([...ALL_SPECS.map((spec) => migrationOf(spec)), ...REF_EXTENSIONS.map((ext) => ext.migration)].filter((file) => file !== SHIPPING_MIGRATION))];
 const { KIND_CLOUD } = refModule;
 
 const SQL_TYPE = { text: 'text', int: 'integer', bigint: 'bigint', bool: 'boolean', instant: 'timestamptz', date: 'date', smallints: 'smallint[]' };
@@ -115,20 +116,26 @@ function moneyChecks(table, prefix, nullable, noDirection) {
   return constraint(table, `${prefix}_money_check`, `CHECK (${parts.join('\n    AND ')})`);
 }
 
-function refChecks(table, f) {
+/** A typed reference's CHECK: the type names one of its kinds, and exactly the column that kind names is set. */
+function refCheck(table, f) {
   const typeCol = `${f.prefix}_type`;
   const parts = [`(${typeCol} IS NULL OR ${typeCol} = ANY (ARRAY[${q(f.kinds)}]))`];
   for (const kind of f.kinds) {
     parts.push(`(COALESCE(${typeCol} = '${kind}', false) = (${f.prefix}_${KIND_CLOUD[kind].column} IS NOT NULL))`);
   }
-  const out = [constraint(table, `${f.prefix}_ref_check`, `CHECK (${parts.join('\n    AND ')})`)];
-  for (const kind of f.kinds) {
-    const col = `${f.prefix}_${KIND_CLOUD[kind].column}`;
-    const ownerPrivate = OWNER_PRIVATE_KINDS.has(kind);
-    out.push(constraint(table, `${col}_fkey`,
-      `FOREIGN KEY ${fkCols(col, ownerPrivate)}\n    ${fkTail(KIND_CLOUD[kind].table, ownerPrivate, f.onDelete === 'cascade' ? 'CASCADE' : 'NO ACTION')}`));
-  }
-  return out;
+  return constraint(table, `${f.prefix}_ref_check`, `CHECK (${parts.join('\n    AND ')})`);
+}
+
+/** The real foreign key behind one kind of a typed reference. */
+function refFk(table, f, kind) {
+  const col = `${f.prefix}_${KIND_CLOUD[kind].column}`;
+  const ownerPrivate = OWNER_PRIVATE_KINDS.has(kind);
+  return constraint(table, `${col}_fkey`,
+    `FOREIGN KEY ${fkCols(col, ownerPrivate)}\n    ${fkTail(KIND_CLOUD[kind].table, ownerPrivate, f.onDelete === 'cascade' ? 'CASCADE' : 'NO ACTION')}`);
+}
+
+function refChecks(table, f) {
+  return [refCheck(table, f), ...f.kinds.map((kind) => refFk(table, f, kind))];
 }
 
 // ---------------------------------------------------------------- one table ----
@@ -341,8 +348,9 @@ export function generate() {
  * written out by hand in that migration, where it can be reviewed.
  */
 export function generateAdditive(file) {
-  const specs = ALL_SPECS.filter((spec) => migrationOf(spec) === file);
-  if (specs.length === 0) throw new Error(`no manifest kind names ${file}`);
+  const specs = ALL_SPECS.filter((spec) => migrationOf(spec) === file).map(specAsCreated);
+  const extensions = REF_EXTENSIONS.filter((ext) => ext.migration === file);
+  if (specs.length === 0 && extensions.length === 0) throw new Error(`no manifest kind or extension names ${file}`);
   const tables = [
     '-- Phase 1 — the tables.',
     ...specs.map(tableDdl),
@@ -351,9 +359,62 @@ export function generateAdditive(file) {
     '',
     '-- Phase 3 — constraints, indexes, triggers and policies.',
     ...specs.map((s) => `-- ${s.table}\n${tableRest(s)}`),
+    // Only a migration that widens an existing table has a Phase 4, so every other additive migration's region is unchanged.
+    ...(extensions.length > 0
+      ? ['', '-- Phase 4 — the existing tables this migration widens: a typed reference gains a kind (the rows already there keep theirs).',
+        ...extensions.map(extensionDdl)]
+      : []),
   ].join('\n');
-  const grants = specs.map(tableGrants).join('\n');
+  const grants = [...specs.map(tableGrants), ...extensions.map(extensionGrants)].join('\n');
   return { tables: banner('additive-tables', tables), grants: banner('additive-grants', grants) };
+}
+
+/** The columns a `RefExtension` adds, in field then kind order. */
+function extensionColumns(ext) {
+  const spec = specByKind.get(ext.kind);
+  return spec.fields
+    .filter((f) => f.type === 'ref' && ext.prefixes.includes(f.prefix))
+    .flatMap((f) => ext.added.map((kind) => ({ f, kind, col: `${f.prefix}_${KIND_CLOUD[kind].column}` })));
+}
+
+/**
+ * The widening of an EXISTING table (HK-F01-F13 integration): add the typed columns, re-issue the widened reference checks, add the
+ * new foreign keys and their indexes, and re-issue the rules whose text names every endpoint — all from TODAY's spec, so the result
+ * equals what `tableRest` would emit for a fresh table of today's shape.
+ */
+function extensionDdl(ext) {
+  const spec = specByKind.get(ext.kind);
+  const t = spec.table;
+  const added = extensionColumns(ext);
+  const out = [`-- ${t}`, `ALTER TABLE public.${t}\n  ${added.map(({ col }) => `ADD COLUMN ${col} uuid`).join(',\n  ')};`];
+  for (const f of spec.fields.filter((field) => field.type === 'ref' && ext.prefixes.includes(field.prefix))) {
+    out.push(`ALTER TABLE public.${t} DROP CONSTRAINT ${ident(`${t}_${f.prefix}_ref_check`)};`);
+    out.push(refCheck(t, f));
+    for (const kind of ext.added) out.push(refFk(t, f, kind));
+  }
+  for (const [suffix] of ext.createdChecks) {
+    const [, body] = spec.checks.find(([name]) => name === suffix);
+    out.push(`ALTER TABLE public.${t} DROP CONSTRAINT ${ident(`${t}_${suffix}`)};`);
+    out.push(constraint(t, suffix, `CHECK (${body})`));
+  }
+  for (const [suffix] of ext.createdIndexes) {
+    const [, tail, unique] = spec.indexes.find(([name]) => name === suffix);
+    out.push(`DROP INDEX public.${ident(`${t}_${suffix}`)};`);
+    out.push(`CREATE ${unique ? 'UNIQUE ' : ''}INDEX ${ident(`${t}_${suffix}`)}\n  ${tail};`);
+  }
+  for (const { col } of added) {
+    out.push(`CREATE INDEX ${ident(`${t}_${col}_fk_idx`)} ON public.${t} (${col}, household_id) WHERE ${col} IS NOT NULL;`);
+  }
+  return out.join('\n');
+}
+
+/** A widening's new columns are written at insert like the rest of the reference (no reference column is ever updatable). */
+function extensionGrants(ext) {
+  const spec = specByKind.get(ext.kind);
+  const cols = extensionColumns(ext).map(({ col }) => col);
+  const updatable = columnsOf(spec).filter((c) => c.update).map((c) => c.name);
+  if (cols.some((col) => updatable.includes(col))) throw new Error(`${spec.table}: a widened reference column is updatable; grant it here too`);
+  return `GRANT INSERT (${cols.join(', ')})\n  ON public.${spec.table} TO authenticated;`;
 }
 
 function region(text, name) {
