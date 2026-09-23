@@ -34,9 +34,11 @@ P5 low correctness · P6 UX polish · P7 maintainability · P8 performance · P9
 | HK13-D19 | P4 | F01 × F09 (× F03 editor) | One Move / task editor | One Move offers expected income ("I did it" records RECEIVED) and pre-due autopay bills; the generic editor completes a Money item with "Mark done" | FIXED `df89506` |
 | HK13-D22 | P4 | F08 exit gate | Meals boundary scan | Check D reads only CORE_SYNC_KINDS: a sync kind registered through the foundation manifest is invisible to the gate | FIXED `df89506` |
 | HK13-D23 | P5 | F01 hub × F09, F11 | Life hub copy | The Money row says "Nothing due this week" reading only today; Me / Rebuild says "Nothing named yet" while Focuses are paused | FIXED `df89506` (trivial) |
-| HK13-D24 | **P2** | F04–F07, F10 (foundation) | RLS / uniqueness | Four household-wide uniqueness rules on owner-private relationship tables tell a member that another member's private handoff, sequence, schedule or step exists | FIXED (AUD13-02b) |
+| HK13-D24 | **P2** | F04–F07, F10 (foundation) | RLS / uniqueness | Four household-wide uniqueness rules on owner-private relationship tables tell a member that another member's private handoff, sequence, schedule or step exists | FIXED `45b5710` |
 | HK13-D25 | P9 | foundation | FK keys | A composite (task, household) key accepts a real private Task uuid from another member's own row: an oracle only for someone who already holds that uuid | DOCUMENTED |
 | HK13-D26 | P9 | foundation | local ids | A guessed local id of a private Task collides; production ids are not practically guessable | DOCUMENTED |
+| HK13-D27 | P4 | harness | populated upgrade | ENV D's "whole chain" skipped F08, so its final database was not the real chain's | FIXED (AUD13-03) |
+| HK13-D28 | **P2** | F01 × sync | One Move / push | A One Move decided offline lands in the cloud as the NEXT day's: every other device's Today shows the wrong move as done, and today's real decision is refused | FIXED (AUD13-03); OD-HK13-01 open |
 
 (Entries below are added as the audit proceeds.)
 
@@ -526,7 +528,57 @@ P5 low correctness · P6 UX polish · P7 maintainability · P8 performance · P9
   "HK13-D24: … each owner-private uniqueness rule is PER OWNER"; run.mjs quality + ENV D step. Test-the-test: D24-M2 (the handoff rule
   household-wide again) CAUGHT 2 fail; D24-M3 (the step slot without the owner) CAUGHT 2 fail. (A first mutant that dropped the migration
   from the chain was "caught" only because run.mjs could not load — recorded as such, not counted.)
-- **Status:** FIXED (AUD13-02b).
+- **Status:** FIXED `45b5710`.
+
+## HK13-D27 — ENV D's "whole chain" skipped F08 (P4)
+
+- **Feature / surface:** the backend harness's populated-upgrade proof (`supabase/tests/run.mjs` ENV D).
+- **How found:** Phase 7, building the WAVE3_BASE-era populated upgrade (ENV F) beside it.
+- **Reproduction:** ENV D applies IR01, then F05, F09, F10, F11, F12, F13, INT13 — never F08 — yet ends with "after the WHOLE chain"
+  checks. Its final database was not the real chain's (no `meal_slot`/`status`).
+- **Root cause:** Feature 08 proved its migration in a separate ENV E and never added its step to ENV D; each later feature appended
+  its own step after F05. The integration unified the chain list (INT13-01) but not ENV D's hand-written step order.
+- **Impact:** a test-infrastructure defect, integration-specific: "populated upgrade through the whole chain" was claimed but not
+  proven for the chain's real order. No product impact found (ENV F now proves the real order over a much wider population).
+  Severity: **P4** (the brief's "integration-specific test infrastructure defect").
+- **Repair (AUD13-03):** ENV D applies F08 in chain order, with a check that it loses and rewrites nothing. ENV F (new) starts from
+  exactly `WAVE3_BASE_CHAIN` and applies `WAVE3_TO_F13_CHAIN` one migration at a time, so its order comes from the chain itself.
+- **Status:** FIXED (AUD13-03).
+
+## HK13-D28 — A One Move decided offline lands in the cloud as the NEXT day's (P2)
+
+- **Features / surface:** F01 Today / One Move over the Build 4 sync engine (push engine, queue top-up); every other device.
+- **How found:** Phase 7. Seeding the WAVE3_BASE-era population, three One Moves with decisions on three different days collided on
+  one logical day: the live path ignores `decided_at` for the day (HR-03, the shipping migration's `set_one_move_logical_day`
+  stamps `now()` in the account timezone; "historical days can only ever enter through claim"). The shared fake cloud never modelled
+  this, so no app test had ever pushed a One Move after its day.
+- **Reproduction (`tests/hk-f01f13/oneMoveDay.test.mjs`, fake cloud given the server's two real rules):** Monday, offline, she is
+  given her One Move and does it. Tuesday morning the device decides Tuesday's move, then reaches the cloud. Before the repair:
+  - the cloud holds Monday's completed move as **Tuesday's** One Move — every other device's Today says Tuesday's move is done, with
+    Monday's task;
+  - Tuesday's real decision is refused as a competing one (`domain-conflict`), and its observation and evidence become
+    `unresolvable-dependency`: three "needs your attention" entries from one ordinary offline day, and the sync status says so;
+  - this device and the cloud disagree about Tuesday for good.
+- **Root cause:** the push engine sent a NEW One Move row for a day that had passed. The server owns the day and stamps its today on
+  every new row, so the row could not land on its own day; nothing on the client knew that a past day cannot travel the live path.
+- **Impact:** "Today/One Move acting on the wrong object" and "incorrect date semantics that materially change action" (both P2 in
+  the brief): the wrong decision, on the wrong day, on every other device; her real decision for the day never reaches the cloud
+  (it is not destroyed: it stays on the device and in evidence, which is why this is not P1). Severity: **P2**.
+- **Repair (AUD13-03), inside HR-03 — no server change:** an earlier day's One Move that the cloud has never acknowledged is history
+  that stays on this device, and so is every fact about it (its observations, the evidence for it) — `src/domain/sync/keptLocal.ts`.
+  The push engine settles such an item without sending it and without evidence (`keptLocal`); the queue top-up
+  (`changeBridge.unsyncedRows`, given today by `topUpQueue`) no longer derives it as owed. A move the cloud already holds is never
+  kept back: an update cannot move its day (the server pins it), so a late completion still reaches its own day.
+- **What this does not do (owner decision, not taken):** carry an offline day's One Move to the cloud under its own day. The live path
+  cannot (HR-03 derives the day from the server clock, deliberately, so a device clock cannot write a wrong day); only a server
+  change — e.g. deriving a bounded past day from `decided_at` in the account timezone — could, and that alters an owner-approved
+  rule. Recorded as **OD-HK13-01** for the owner. Today the other devices do not see an offline day's One Move history; the task she
+  did still syncs as done.
+- **Tests:** `oneMoveDay.test.mjs` (4): the offline-overnight case end to end (cloud truth, Today on the device, no evidence, empty
+  queue, sync status idle, every cloud fact about a move points at a move the cloud holds); the top-up rule in isolation; a synced
+  move's late completion after midnight still lands on its own day. Test-the-test: D28-M1 (the push engine sends it again), D28-M2
+  (the top-up owes it again), D28-M3 (facts about it are not kept with it), D28-M4 (a synced move is kept back too) — **4/4 caught**.
+- **Status:** FIXED (AUD13-03); OD-HK13-01 open for the owner.
 
 ## Known shared privacy items — re-audited under the P0–P10 rubric (Phase 8)
 

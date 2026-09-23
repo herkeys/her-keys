@@ -1,5 +1,7 @@
 import { starterCategories } from '../categories';
+import type { LocalDate } from '../logicalDay';
 import type { AppState } from '../state';
+import { isKeptLocal, keptMoveIds, syncToday } from './keptLocal';
 import { enqueue } from './queue';
 import { PUSHABLE_KINDS, collectionRef, onboardingLocalId, rowOf, rowsOf } from './syncKinds';
 import {
@@ -65,17 +67,21 @@ export function changedRows(previous: AppState, next: AppState, namespace: SyncN
  * A row whose CREATE already ended as evidence (the server refused its content, RLS said no, a dependency can never resolve) is
  * not owed: it left the queue on purpose and is waiting for a decision, and deriving it as "owed" again would send the same
  * refused row on every trigger, forever, with a new piece of evidence each time.
+ *
+ * Nor is an earlier day's One Move the cloud never saw, or a fact about one (HK13-D28, keptLocal.ts): the live path cannot carry a
+ * past day, so it stays on this device. `today` says which day that is; without it nothing is kept back.
  */
-export function unsyncedRows(state: AppState, namespace: SyncNamespace, limit: number): RowIntent[] {
+export function unsyncedRows(state: AppState, namespace: SyncNamespace, limit: number, today?: LocalDate): RowIntent[] {
   const queued = new Set(namespace.queue.map((item) => mappingKey(item.kind, item.localId)));
   const decided = new Set(namespace.evidence.filter((e) => e.attemptedOp === 'create').map((e) => mappingKey(e.kind, e.localId)));
+  const kept = today === undefined ? new Set<string>() : keptMoveIds(state, namespace, today);
   const out: RowIntent[] = [];
   for (const kind of PUSHABLE_KINDS) {
     // Onboarding is created by the server for every account; it is adopted (mapped), never created.
     if (kind === 'onboarding') continue;
     for (const entry of rowsOf(state, kind, namespace)) {
       const key = mappingKey(kind, entry.id);
-      if (namespace.mappings[key] === undefined && !queued.has(key) && !decided.has(key)) {
+      if (namespace.mappings[key] === undefined && !queued.has(key) && !decided.has(key) && !isKeptLocal(kind, entry.id, entry.row, kept)) {
         out.push({ kind, localId: entry.id, op: 'upsert' });
         if (out.length >= limit) return out;
       }
@@ -133,7 +139,7 @@ export const isPristineOnboarding = (onboarding: AppState['onboarding']): boolea
 export function topUpQueue(state: AppState, namespace: SyncNamespace, at: string): QueueResult {
   const room = SEED_QUEUE_CEILING - namespace.queue.length;
   if (room <= 0) return { namespace, queued: 0, overflow: [] };
-  return queueIntents(namespace, unsyncedRows(state, namespace, room), at);
+  return queueIntents(namespace, unsyncedRows(state, namespace, room, syncToday(state, Date.parse(at))), at);
 }
 
 export interface SeedInput {

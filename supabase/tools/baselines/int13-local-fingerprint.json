@@ -1,0 +1,195 @@
+{
+  "tool": "herkeys-schema-fingerprint",
+  "toolVersion": 1,
+  "label": "HK-F01-F13 integration: local database after the WHOLE chain (WAVE3_BASE + F09, F10, F11, F12, F13 and the integration's own per-owner uniqueness migration). DERIVED, not measured on the shared database (supabase/tools/int13-fingerprint.mjs): each migration's delta was measured on a scratch database one step at a time and applied to the shared database's own rows after it matched the F05 baseline; the step database equals a fresh install of the whole chain fact for fact.",
+  "searchPath": "''",
+  "scope": [
+    "public",
+    "private"
+  ],
+  "wave3Base": {
+    "items": 3629,
+    "digest": "96f93f3d46dcf5735e7a0b50996944bf"
+  },
+  "perMigration": {
+    "F08": {
+      "file": "20260921160000_f08_meal_slot_and_status.sql",
+      "added": {
+        "columns": 2,
+        "constraints": 2,
+        "privileges.columns": 4
+      },
+      "removed": {}
+    },
+    "F09": {
+      "file": "20260922180000_f09_task_payment_mechanism.sql",
+      "added": {
+        "columns": 1,
+        "constraints": 1,
+        "privileges.columns": 2
+      },
+      "removed": {}
+    },
+    "F10": {
+      "file": "20260922181000_f10_career_opportunities.sql",
+      "added": {
+        "columns": 29,
+        "constraints": 28,
+        "functions": 1,
+        "indexes": 8,
+        "policies": 3,
+        "privileges.columns": 40,
+        "privileges.effective": 8,
+        "privileges.relations": 17,
+        "relations": 1,
+        "triggers": 3
+      },
+      "removed": {
+        "constraints": 4,
+        "functions": 1,
+        "indexes": 1
+      }
+    },
+    "F11": {
+      "file": "20260922182000_f11_rebuild_focus.sql",
+      "added": {
+        "columns": 39,
+        "constraints": 37,
+        "functions": 2,
+        "indexes": 16,
+        "policies": 6,
+        "privileges.columns": 39,
+        "privileges.effective": 16,
+        "privileges.functions": 1,
+        "privileges.relations": 34,
+        "relations": 2,
+        "triggers": 7
+      },
+      "removed": {
+        "constraints": 1,
+        "functions": 1
+      }
+    },
+    "F12": {
+      "file": "20260922183000_f12_life_records.sql",
+      "added": {
+        "columns": 45,
+        "constraints": 40,
+        "functions": 2,
+        "indexes": 13,
+        "policies": 5,
+        "privileges.columns": 52,
+        "privileges.effective": 16,
+        "privileges.functions": 1,
+        "privileges.relations": 34,
+        "relations": 2,
+        "triggers": 7
+      },
+      "removed": {
+        "constraints": 1,
+        "functions": 1
+      }
+    },
+    "F13": {
+      "file": "20260922200000_f13_people_os.sql",
+      "added": {
+        "columns": 36,
+        "constraints": 39,
+        "functions": 2,
+        "indexes": 17,
+        "policies": 5,
+        "privileges.columns": 34,
+        "privileges.effective": 17,
+        "privileges.functions": 2,
+        "privileges.relations": 34,
+        "relations": 2,
+        "triggers": 8
+      },
+      "removed": {
+        "constraints": 1,
+        "functions": 1
+      }
+    },
+    "INT13": {
+      "file": "20260922210000_int13_per_owner_uniqueness.sql",
+      "added": {
+        "constraints": 1,
+        "indexes": 4
+      },
+      "removed": {
+        "constraints": 1,
+        "indexes": 4
+      }
+    }
+  },
+  "dimensions": {
+    "columns": {
+      "items": 866,
+      "digest": "cb6fc621a1287dfcc1b6bfff8c07ddb7"
+    },
+    "constraints": {
+      "items": 819,
+      "digest": "b0cd9fde221453928b6f0e846a1c02f8"
+    },
+    "functions": {
+      "items": 31,
+      "digest": "eb0f6a991dd3a284cded7f305668ab24"
+    },
+    "indexes": {
+      "items": 337,
+      "digest": "dfd5a9af868d2b85b35ca30cade0d87c"
+    },
+    "info.event_triggers": {
+      "items": 7,
+      "digest": "460fef42355350673d98786b2395e9f7"
+    },
+    "info.extensions": {
+      "items": 6,
+      "digest": "7d12895eecbafc55a6fb3f91e7ce78b7"
+    },
+    "policies": {
+      "items": 104,
+      "digest": "2ed39feb49a7a9fa9021afda25e82a58"
+    },
+    "privileges.columns": {
+      "items": 892,
+      "digest": "4bb068b447c1dde8086c5874bb30e18e"
+    },
+    "privileges.default_acl": {
+      "items": 7,
+      "digest": "84cba4e765aaa559cf174135e54549ff"
+    },
+    "privileges.effective": {
+      "items": 367,
+      "digest": "c726400f8bdb4d34bc2ce1f82bede401"
+    },
+    "privileges.functions": {
+      "items": 59,
+      "digest": "8b9768f47de598a56e7a60d025b15767"
+    },
+    "privileges.relations": {
+      "items": 706,
+      "digest": "c104d2bd623f542739d831cf6596d28a"
+    },
+    "privileges.schemas": {
+      "items": 10,
+      "digest": "eda0330fda8cc1898fa30c327ab67768"
+    },
+    "relations": {
+      "items": 42,
+      "digest": "f45c310bb657ca4d9aaf603b58d4d8cd"
+    },
+    "schemas": {
+      "items": 2,
+      "digest": "0e57bd8fd092941a34193a365f9fd211"
+    },
+    "triggers": {
+      "items": 129,
+      "digest": "f9ca5346a59aaadddc05046206159971"
+    }
+  },
+  "gating": {
+    "items": 4371,
+    "digest": "17dccce9aa525b7c8b7b0f41d6f61185"
+  }
+}

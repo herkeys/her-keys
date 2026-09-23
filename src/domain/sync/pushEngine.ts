@@ -1,6 +1,8 @@
 import type { AppState } from '../state';
+import { isKeptLocal, keptMoveIds, syncToday } from './keptLocal';
 import { UnresolvedReferenceError, tableFor, toCloudRow, type ProjectionContext } from './projection';
 import { deferItem, moveToEvidence, scheduled, settle } from './queue';
+import { rowOf } from './syncKinds';
 import { isRetriable, type SyncTransport } from './transport';
 import { IDENTITY_COLUMN, mappingKey, updatablePatch, type Mapping, type QueueItem, type SyncNamespace } from './syncTypes';
 
@@ -26,6 +28,8 @@ export interface PushOutcome {
   pushed: number;
   conflicted: number;
   deferred: number;
+  /** One Moves of a day already past that the cloud never saw, and the facts about them: kept on this device (HK13-D28). */
+  keptLocal: number;
   /** Set when the session failed. The cycle stops rather than burning attempts. */
   paused: boolean;
 }
@@ -35,31 +39,36 @@ export async function pushPending(namespace: SyncNamespace, ctx: PushContext): P
   let pushed = 0;
   let conflicted = 0;
   let deferred = 0;
+  let keptLocal = 0;
+  // Earlier days' One Moves the cloud never saw. None can gain a mapping during the pass: none is ever sent.
+  const kept = keptMoveIds(ctx.state, namespace, syncToday(ctx.state, ctx.now()));
 
   for (const item of scheduled(namespace)) {
     // The queue is rebuilt as we go, so an item settled or moved to evidence by
     // an earlier step is not attempted again in the same pass.
     if (!current.queue.some((q) => q.id === item.id)) continue;
 
-    const result = await pushOne(current, item, ctx);
+    const result = await pushOne(current, item, ctx, kept);
     current = result.namespace;
     if (result.outcome === 'pushed') pushed += 1;
     if (result.outcome === 'conflicted') conflicted += 1;
     if (result.outcome === 'deferred') deferred += 1;
+    if (result.outcome === 'keptLocal') keptLocal += 1;
     if (result.outcome === 'paused') {
-      return { namespace: current, pushed, conflicted, deferred, paused: true };
+      return { namespace: current, pushed, conflicted, deferred, keptLocal, paused: true };
     }
   }
 
-  return { namespace: current, pushed, conflicted, deferred, paused: false };
+  return { namespace: current, pushed, conflicted, deferred, keptLocal, paused: false };
 }
 
-type OneOutcome = 'pushed' | 'conflicted' | 'deferred' | 'paused';
+type OneOutcome = 'pushed' | 'conflicted' | 'deferred' | 'keptLocal' | 'paused';
 
 async function pushOne(
   namespace: SyncNamespace,
   item: QueueItem,
-  ctx: PushContext
+  ctx: PushContext,
+  kept: ReadonlySet<string>
 ): Promise<{ namespace: SyncNamespace; outcome: OneOutcome }> {
   const at = new Date(ctx.now()).toISOString();
   const projection: ProjectionContext = {
@@ -67,6 +76,12 @@ async function pushOne(
     profileId: ctx.profileId,
     namespace,
   };
+
+  // An earlier day's One Move the cloud never saw, and every fact about it, stay on this device: sent now, the move would land as
+  // TODAY's (the server owns the day, HR-03). History, not a failure: it leaves the queue without evidence (keptLocal.ts).
+  if (isKeptLocal(item.kind, item.localId, rowOf(ctx.state, item.kind, item.localId, namespace), kept)) {
+    return { namespace: settle(namespace, item), outcome: 'keptLocal' };
+  }
 
   let row: Record<string, unknown>;
   try {

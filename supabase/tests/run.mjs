@@ -24,7 +24,7 @@ import { createHash } from 'node:crypto';
 import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { ADDITIVE_CHAIN, BASELINE as BASELINE_FILE, SHIPPING, WAVE3_BASE_SHA256, additive, migrationPath } from './migration-chain.mjs';
+import { ADDITIVE_CHAIN, BASELINE as BASELINE_FILE, SHIPPING, WAVE3_BASE_CHAIN, WAVE3_BASE_SHA256, WAVE3_TO_F13_CHAIN, additive, migrationPath } from './migration-chain.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = join(HERE, '..', '..');
@@ -67,6 +67,9 @@ const AUTH_STUB = join(HERE, 'helpers', '00-auth-stub.sql');
 const TEST_HELPERS = join(HERE, 'helpers', '01-test-helpers.sql');
 const TEST_DEFAULTS = join(HERE, 'helpers', '05-test-defaults.sql');
 const FIXTURES = join(HERE, 'helpers', '10-fixtures.sql');
+// ENV F: what Features 01-08 write into a WAVE3_BASE-era database, and what the later features then do with it.
+const WAVE3_POPULATION = join(HERE, 'helpers', '20-wave3-population.sql');
+const WAVE3_AFTER_CHAIN = join(HERE, 'helpers', '21-wave3-after-chain.sql');
 
 let failures = 0;
 const results = [];
@@ -735,6 +738,13 @@ function envD() {
   check('ENV D: no client role gained a privilege it should not have (anon has nothing on the new column)',
         scalar(db, "select count(*) from information_schema.column_privileges where table_schema='public' and table_name='tasks' and column_name='duration_source' and grantee in ('anon','PUBLIC');") === '0');
 
+  // ---- F08 (meal slot and status) comes next in the chain. ENV D once skipped it, so its "whole chain" was not the real one
+  // (HK13-D27); ENV E proves F08 over a household that holds meals, and here it only has to keep its place in the order.
+  const preF08 = { census: census(), tasks: digest() };
+  applyF08(db, { label: 'ENV D f08 upgrade' });
+  check('ENV D: F08 applies in chain order to the populated, already-upgraded database and loses or rewrites nothing',
+        census() === preF08.census && digest() === preF08.tasks, `${preF08.census} -> ${census()}`);
+
   // ---- The SECOND additive upgrade, on the same populated database: F05 (a child after binding). It adds one function and
   // replaces one; it must lose nothing, rewrite nothing, and leave every existing household exactly as it was.
   const memberDigest = () => scalar(db, "SELECT md5(string_agg(to_jsonb(m)::text, '|' ORDER BY m.id)) FROM public.household_members m;");
@@ -1002,6 +1012,183 @@ function envE() {
         scalar(db, "select count(*) from information_schema.column_privileges where table_schema='public' and table_name='meal_plan_entries' and column_name in ('meal_slot','status') and grantee in ('anon','PUBLIC');") === '0');
 }
 
+// ---------------------------------------------------------------- ENV F -----
+/**
+ * HK-F01-F13 integration (Phase 7): the upgrade of a POPULATED WAVE3_BASE-era database through every later migration.
+ *
+ * ENV D starts before IR01 with one household and a few tasks; ENV E covers F08 alone. ENV F starts where a real WAVE3_BASE-era
+ * database stands (exactly the WAVE3_BASE chain), holding what Features 01-08 write (helpers/20-wave3-population.sql: every scope,
+ * two adults and a child of one household, and an unrelated household), and applies F09, F10, F11, F12, F13 and INT13 ONE AT A
+ * TIME. After each, for every table that existed before the upgrade:
+ *   - no row is lost or added, and every row is byte-identical over the columns it had, so no owner, scope, status, revision,
+ *     timestamp or reference moved;
+ *   - every column the migration added reads NULL on every pre-existing row: nothing is guessed for old data;
+ *   - what A, B and C can each see is unchanged, table by table and row by row, and each one's pull from cursor zero is unchanged;
+ *   - the change log is untouched: the upgrade writes nothing a device would pull;
+ *   - no foreign key dangles and every one is validated; every table the migration created starts empty; the fail-closed
+ *     assertion passes.
+ * Then the later features work on the OLD rows (helpers/21-wave3-after-chain.sql), and B's ordinary handoff that INT13 unblocks is
+ * proven on real pre-existing data (refused before INT13, accepted after).
+ */
+function envF() {
+  console.log('\nENV F — additive upgrade of a POPULATED WAVE3_BASE-era database (Features 01-08 data) through F09, F10, F11, F12, F13 and INT13');
+  const db = dbName('env_f');
+  recreate(db);
+  psqlFile(db, AUTH_STUB, { label: 'ENV F auth stub' });
+  psqlFile(db, TEST_HELPERS, { label: 'ENV F helpers' });
+  psqlFile(db, BASELINE, { label: 'ENV F baseline' });
+  applyBuild4(db, { label: 'ENV F build4 (while empty)' });
+  for (const m of WAVE3_BASE_CHAIN) psqlFile(db, migrationPath(m.file), { label: `ENV F ${m.label} (while empty)` });
+  psql(db, `BEGIN;\n${readFileSync(FIXTURES, 'utf8')}\nCOMMIT;`, { label: 'ENV F fixtures' });
+  psqlFile(db, WAVE3_POPULATION, { label: 'ENV F Features 01-08 population' });
+
+  // Read-only probes in the harness's own schema (never an app schema). SECURITY INVOKER: each runs as its caller.
+  psql(db, `
+    CREATE FUNCTION herkeys_test.visible(p_tables text[]) RETURNS text LANGUAGE plpgsql AS $fn$
+    DECLARE t text; v text; acc text := '';
+    BEGIN
+      FOREACH t IN ARRAY p_tables LOOP
+        BEGIN
+          IF EXISTS (SELECT 1 FROM pg_attribute WHERE attrelid = ('public.' || quote_ident(t))::regclass AND attname = 'id' AND NOT attisdropped) THEN
+            EXECUTE format('SELECT count(*) || ''/'' || coalesce(md5(string_agg(id::text, '','' ORDER BY id::text)), ''-'') FROM public.%I', t) INTO v;
+          ELSE
+            EXECUTE format('SELECT count(*) || ''/'' || coalesce(md5(string_agg(to_jsonb(r)::text, '','' ORDER BY to_jsonb(r)::text)), ''-'') FROM public.%I r', t) INTO v;
+          END IF;
+        EXCEPTION WHEN insufficient_privilege THEN
+          v := 'denied';
+        END;
+        acc := acc || t || '=' || v || ';';
+      END LOOP;
+      RETURN acc;
+    END $fn$;
+    GRANT EXECUTE ON FUNCTION herkeys_test.visible(text[]) TO authenticated;
+    CREATE FUNCTION herkeys_test.dangling() RETURNS text LANGUAGE plpgsql AS $fn$
+    DECLARE r record; n bigint; acc text := '';
+    BEGIN
+      FOR r IN
+        SELECT c.conname, c.conrelid::regclass AS child, c.confrelid::regclass AS parent,
+               (SELECT string_agg(format('ch.%I', a.attname), ',' ORDER BY k.ord) FROM unnest(c.conkey) WITH ORDINALITY k(attnum, ord)
+                  JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = k.attnum) AS child_cols,
+               (SELECT string_agg(format('pa.%I', a.attname), ',' ORDER BY k.ord) FROM unnest(c.confkey) WITH ORDINALITY k(attnum, ord)
+                  JOIN pg_attribute a ON a.attrelid = c.confrelid AND a.attnum = k.attnum) AS parent_cols,
+               (SELECT string_agg(format('ch.%I IS NOT NULL', a.attname), ' AND ' ORDER BY k.ord) FROM unnest(c.conkey) WITH ORDINALITY k(attnum, ord)
+                  JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = k.attnum) AS present
+        FROM pg_constraint c
+        WHERE c.contype = 'f' AND c.connamespace = 'public'::regnamespace
+      LOOP
+        EXECUTE format('SELECT count(*) FROM %s ch WHERE %s AND NOT EXISTS (SELECT 1 FROM %s pa WHERE (%s) = (%s))',
+                       r.child, r.present, r.parent, r.child_cols, r.parent_cols) INTO n;
+        IF n > 0 THEN acc := acc || r.conname || '=' || n || ';'; END IF;
+      END LOOP;
+      RETURN coalesce(nullif(acc, ''), 'none');
+    END $fn$;`, { label: 'ENV F probes' });
+
+  const users = { A: '11111111-1111-4111-8111-111111111111', B: '22222222-2222-4222-8222-222222222222', C: '33333333-3333-4333-8333-333333333333' };
+  const household = Object.fromEntries(Object.entries(users).map(([k, uid]) => [k, scalar(db, `select household_id from public.household_members where profile_id = '${uid}';`)]));
+  const asUser = (uid, sql, end = 'COMMIT') => scalar(db, `BEGIN; SET LOCAL ROLE authenticated; SET LOCAL request.jwt.claims = '{"sub":"${uid}"}'; ${sql} ${end};`)
+    .split('\n').map((line) => line.trim());
+  const tablesNow = () => scalar(db, "select string_agg(relname, ',' order by relname) from pg_class where relnamespace = 'public'::regnamespace and relkind = 'r';").split(',');
+  const columnsNow = () => Object.fromEntries(scalar(db, "select table_name || ':' || string_agg(column_name, ',' order by column_name) from information_schema.columns where table_schema = 'public' group by table_name;")
+    .split('\n').map((line) => { const [t, cols] = line.split(':'); return [t, cols.split(',')]; }));
+  const count = (t, where = 'true') => Number(scalar(db, `select count(*) from public.${t} where ${where};`));
+  const tables = tablesNow();
+  const original = columnsNow();
+  const tableArray = `ARRAY[${tables.map((t) => `'${t}'`).join(', ')}]::text[]`;
+
+  /** Each pre-existing table: its row count and a digest of every row over the columns it had before the upgrade. */
+  const rowDigests = () => {
+    const now = columnsNow();
+    return scalar(db, `${tables.map((t) => {
+      const added = now[t].filter((c) => !original[t].includes(c));
+      const strip = added.length > 0 ? ` - ARRAY[${added.map((c) => `'${c}'`).join(', ')}]::text[]` : '';
+      return `SELECT '${t}=' || count(*) || ':' || coalesce(md5(string_agg(x, E'\\n' ORDER BY x)), '-') FROM (SELECT (to_jsonb(r)${strip})::text AS x FROM public.${t} r) s`;
+    }).join('\nUNION ALL\n')};`).split('\n').sort();
+  };
+  /** Every column an upgrade added to a pre-existing table, with how many pre-existing rows hold a value in it. */
+  const guessed = () => {
+    const now = columnsNow();
+    const probes = tables.flatMap((t) => now[t].filter((c) => !original[t].includes(c))
+      .map((c) => `SELECT '${t}.${c}=' || count(*) FILTER (WHERE r."${c}" IS NOT NULL) FROM public.${t} r`));
+    return probes.length === 0 ? [] : scalar(db, `${probes.join('\nUNION ALL\n')};`).split('\n');
+  };
+  const visibleAs = (who) => asUser(users[who], `SELECT 'VIS|' || herkeys_test.visible(${tableArray});`).find((line) => line.startsWith('VIS|'));
+  const pullAs = (who) => asUser(users[who], `SELECT 'PULL|' || jsonb_array_length(p -> 'rows') || '/' || md5((p -> 'rows')::text)
+    FROM (SELECT public.sync_pull('0'::xid8, '${household[who]}'::uuid) AS p) s;`).find((line) => line.startsWith('PULL|'));
+  const snapshot = () => ({
+    rows: rowDigests(),
+    visible: Object.fromEntries(Object.keys(users).map((who) => [who, visibleAs(who)])),
+    pulls: Object.fromEntries(Object.keys(users).map((who) => [who, pullAs(who)])),
+  });
+  /** B's own ordinary handoff of a household task A privately handed off BEFORE the upgrade. Rolled back: it proves, it keeps nothing. */
+  const handoffByB = () => asUser(users.B, `SELECT 'HANDOFF|' || coalesce(herkeys_test.ins('responsibilities', jsonb_build_object('household_id', '${household.B}'::uuid,
+      'profile_id', '${users.B}'::uuid, 'local_id', 'envf-b-handoff', 'about_type', 'task',
+      'about_task_id', (SELECT id FROM public.tasks WHERE household_id = '${household.B}'::uuid AND local_id = 'w3-task-household'),
+      'responsible_kind', 'self', 'state', 'owned', 'still_needs_me', true)), 'accepted');`, 'ROLLBACK').find((line) => line.startsWith('HANDOFF|'));
+
+  const featureTables = ['tasks', 'events', 'household_systems', 'system_steps', 'responsibilities', 'dependencies', 'recurrence_rules', 'meal_plan_entries',
+    'needs_me_items', 'one_move_records', 'behavior_observations', 'patterns', 'evidence_links', 'capacity_profiles', 'source_artifacts', 'interpretations',
+    'action_records', 'household_people', 'goals', 'change_log'];
+  const empty = featureTables.filter((t) => count(t) === 0);
+  check('ENV F: the WAVE3_BASE-era database is genuinely populated — every table Features 01-08 write holds rows', empty.length === 0,
+        empty.join(', ') || `${featureTables.length} tables, ${count('tasks')} tasks, ${count('change_log')} change-log entries`);
+  check('ENV F: ...with private rows of all three adults, child rows, edited rows (revision > 1) and completed rows',
+        scalar(db, "select count(distinct owner_profile_id) from public.tasks where owner_profile_id is not null;") === '3'
+        && count('tasks', "scope = 'child'") > 0 && count('tasks', 'revision > 1') > 1 && count('tasks', "status = 'completed'") > 1);
+
+  // The dangling-key probe must see an orphan when there is one, or its "none" below proves nothing (built and rolled back).
+  const selfCheck = scalar(db, `BEGIN;
+    CREATE TABLE public.f1313audit_probe_parent (id int PRIMARY KEY);
+    CREATE TABLE public.f1313audit_probe_child (parent_id int);
+    INSERT INTO public.f1313audit_probe_child VALUES (1), (NULL);
+    ALTER TABLE public.f1313audit_probe_child ADD CONSTRAINT f1313audit_probe_fk FOREIGN KEY (parent_id) REFERENCES public.f1313audit_probe_parent (id) NOT VALID;
+    SELECT 'PROBE|' || herkeys_test.dangling();
+    ROLLBACK;`).split('\n').map((line) => line.trim()).find((line) => line.startsWith('PROBE|'));
+  check('ENV F: the dangling-key probe sees an orphan when there is one (and ignores an absent reference)', selfCheck === 'PROBE|f1313audit_probe_fk=1;', selfCheck);
+
+  const base = snapshot();
+  const baseLog = base.rows.find((line) => line.startsWith('change_log='));
+  for (const m of WAVE3_TO_F13_CHAIN) {
+    if (m.owner === 'INT13') {
+      const refused = handoffByB();
+      check('ENV F INT13 (before): B\'s own handoff of a household task A privately handed off BEFORE the upgrade is refused by the household-wide rule — the HK13-D24 oracle, on real pre-existing data',
+            refused.startsWith('HANDOFF|23505') && refused.includes('responsibilities_one_live_owner_uq'), refused.slice(0, 120));
+    }
+    const before = new Set(tablesNow());
+    psqlFile(db, migrationPath(m.file), { label: `ENV F ${m.label} upgrade` });
+    const created = tablesNow().filter((t) => !before.has(t));
+    const now = snapshot();
+    const moved = now.rows.filter((line) => !base.rows.includes(line));
+    check(`ENV F ${m.owner}: applies to the populated database, and every pre-existing row is still there, byte-identical over the columns it had (no owner, scope, status, revision or timestamp moved)`,
+          moved.length === 0, moved.map((line) => line.split(':')[0]).join(', ') || `${tables.length} tables`);
+    const added = guessed();
+    const valued = added.filter((line) => !line.endsWith('=0'));
+    check(`ENV F ${m.owner}: every column added to an existing table reads NULL on every pre-existing row (nothing is guessed for old data)`,
+          valued.length === 0, valued.join(', ') || added.map((line) => line.split('=')[0]).join(', ') || 'no column added so far');
+    const sees = Object.keys(users).filter((who) => now.visible[who] !== base.visible[who]);
+    check(`ENV F ${m.owner}: what A, B and C can each see is unchanged, table by table and row by row`, sees.length === 0, sees.join(', '));
+    const pulls = Object.keys(users).filter((who) => now.pulls[who] !== base.pulls[who]);
+    check(`ENV F ${m.owner}: ...and each one's pull from cursor zero returns exactly the rows it did (a device sees no spurious change)`, pulls.length === 0,
+          pulls.join(', ') || Object.values(now.pulls).map((p) => p.split('/')[0].replace('PULL|', '')).join('/'));
+    check(`ENV F ${m.owner}: the change log is untouched (the upgrade writes nothing a device would pull)`, now.rows.find((line) => line.startsWith('change_log=')) === baseLog);
+    const dangling = scalar(db, 'SELECT herkeys_test.dangling();');
+    check(`ENV F ${m.owner}: no foreign key dangles (every reference on every row still finds its row)`, dangling === 'none', dangling);
+    check(`ENV F ${m.owner}: ...and every foreign key is validated (none was re-created NOT VALID)`,
+          scalar(db, "select count(*) from pg_constraint where contype = 'f' and connamespace = 'public'::regnamespace and not convalidated;") === '0');
+    const filled = created.filter((t) => count(t) !== 0);
+    check(`ENV F ${m.owner}: every table it created starts empty`, filled.length === 0, filled.join(', ') || created.join(', ') || 'none created');
+    check(`ENV F ${m.owner}: the fail-closed assertion passes`, psql(db, 'SELECT private.assert_app_schema_secured();').ok);
+  }
+  const accepted = handoffByB();
+  check('ENV F INT13: ...after the upgrade the same handoff is accepted — each owner holds her own handoff of a shared task', accepted === 'HANDOFF|accepted', accepted);
+
+  chainRegistrations(db, 'ENV F');
+  const out = psqlFile(db, WAVE3_AFTER_CHAIN, { label: 'ENV F after the chain' }).out;
+  for (const line of out.split('\n')) {
+    const m = line.match(/^\s*(PASS|FAIL)\s*\|\s*(.+?)\s*$/);
+    if (m) check(`ENV F: ${m[2]}`, m[1] === 'PASS');
+  }
+}
+
 // ------------------------------------------- LOCAL STACK SCHEMA CURRENCY ----
 /**
  * The sync journeys talk to the REAL local Supabase stack (real HTTP, real PostgREST), which serves the container's default
@@ -1081,7 +1268,15 @@ try {
     envB3();
     envD();
     envE();
+    envF();
   }
+  // HK-F01-F13 integration (Phase 7): the populated WAVE3_BASE-era upgrade on its own, and ENV D, which it complements.
+  if (only === 'upgrades') {
+    envD();
+    envE();
+    envF();
+  }
+  if (only === 'envf') envF();
   // The Kids journey runs against the local stack's default database, exactly as the composition journey does; it needs no ENV C.
   // Feature 08 (meals) already ran its own ENV C (suite 77), scoped to its own migration, above; it is not re-run here.
   if (only === 'people') {
@@ -1096,7 +1291,7 @@ try {
     await peopleJourneys(check, psql);
   }
   // The Me / Rebuild journey (HK-FEATURE-11) needs no ENV C either; its RLS matrix is ENV C suite 78, run with the others.
-  if (only !== 'kids' && only !== 'f08' && only !== 'rebuild' && only !== 'people') envC(only);
+  if (only !== 'kids' && only !== 'f08' && only !== 'rebuild' && only !== 'people' && only !== 'upgrades' && only !== 'envf') envC(only);
   if (!only || only === 'parity') {
     const { authorizationParity } = await import(`file://${join(HERE, 'authorization-parity.mjs')}`);
     await authorizationParity(check, psql, dbName('env_c'));

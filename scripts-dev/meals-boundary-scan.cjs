@@ -304,6 +304,8 @@ const LATER_FEATURES = [
       /^docs\/audits\/HK_F01_F13_/, /^tests\/hk-f01f13\//, /^tests\/migrationChain\.test\.mjs$/, /^supabase\/tests\/migration-chain\.mjs$/,
       /^src\/features\/life\/lifeHubCopy\.ts$/, /^supabase\/tools\/int13-/, /^supabase\/tools\/baselines\/int13-/, /^supabase\/tests\/\d+-int13-/, /^scripts-dev\/int13-/,
       /^supabase\/migrations\/20260922210000_int13_per_owner_uniqueness\.sql$/,
+      // AUD13-03: the rule that keeps an earlier day's unsent One Move on the device (HK13-D28), and ENV F's population (HK13-D27).
+      /^src\/domain\/sync\/keptLocal\.ts$/, /^supabase\/tests\/helpers\/2\d-wave3-/,
     ],
     // HK13-D24: the integration's own repair re-issues four existing uniqueness rules per owner; it creates no table, column or kind.
     migrations: ['supabase/migrations/20260922210000_int13_per_owner_uniqueness.sql'],
@@ -311,7 +313,9 @@ const LATER_FEATURES = [
     rootCollections: [],
     syncKinds: [],
     shared: [
-      ['supabase/tests/run.mjs', 'INT13-01: one migration chain for every mode, the migration gate, fresh install and the populated upgrade through F13 (HK13-D01..D04)'],
+      ['supabase/tests/run.mjs', 'INT13-01: one migration chain for every mode, the migration gate, fresh install and the populated upgrade through F13 (HK13-D01..D04); AUD13-03: ENV D applies F08 in chain order (HK13-D27) and ENV F upgrades a populated WAVE3_BASE-era database'],
+      ['src/domain/sync/pushEngine.ts', 'AUD13-03: an earlier day\'s One Move the cloud never saw, and the facts about it, stay on the device — sent, it would land as today\'s (HK13-D28)'],
+      ['src/domain/sync/changeBridge.ts', 'AUD13-03: the queue top-up does not owe the cloud an earlier day\'s unsent One Move or a fact about one (HK13-D28)'],
       ['supabase/tests/private-stack.mjs', 'INT13-01: the private stack builds the whole chain and names both stack databases (HK13-D06)'],
       ['supabase/tools/gen-foundation-sql.mjs', 'INT13-01: one additive-migration mechanism for F10, F11 and F13, and the dependencies widening (HK13-D05)'],
       ['src/domain/sync/foundationSpecs.ts', 'INT13-00/01: the union of four manifests, one migration field, REF_EXTENSIONS (HK13-D05)'],
