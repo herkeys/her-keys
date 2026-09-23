@@ -91,7 +91,8 @@ ROLLBACK;
 BEGIN;
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claims = '{"sub":"22222222-2222-4222-8222-222222222222"}';
-SELECT CASE WHEN (SELECT count(*) FROM public.household_people WHERE household_id = :'hh_a') = 0
+-- In the shared ENV C other suites commit rows B herself owns; "nothing of A's" is the property, so every count excludes B's own rows.
+SELECT CASE WHEN (SELECT count(*) FROM public.household_people WHERE household_id = :'hh_a' AND profile_id <> :'ub') = 0
             THEN 'PASS' ELSE 'FAIL' END || ' | M0B same-household: DENY — B reads zero of A''s private people (by household)';
 SELECT CASE WHEN (SELECT count(*) FROM public.household_people WHERE id = :'p0_person') = 0
             THEN 'PASS' ELSE 'FAIL' END || ' | M0B same-household: DENY — B reads zero rows even by the exact id';
@@ -99,7 +100,7 @@ SELECT CASE WHEN (SELECT count(*) FROM public.tasks WHERE id = :'p0_task') = 0
             THEN 'PASS' ELSE 'FAIL' END || ' | M0C same-household: DENY — B cannot read A''s private task by the exact id';
 SELECT CASE WHEN (SELECT count(*) FROM public.tasks WHERE household_id = :'hh_a') = :'b_tasks_before'::bigint
             THEN 'PASS' ELSE 'FAIL' END || ' | M0C same-household: B''s task count is unchanged by A''s private task (no count inference)';
-SELECT CASE WHEN (SELECT count(*) FROM public.responsibilities WHERE household_id = :'hh_a') = 0
+SELECT CASE WHEN (SELECT count(*) FROM public.responsibilities WHERE household_id = :'hh_a' AND profile_id <> :'ub') = 0
              AND (SELECT count(*) FROM public.responsibilities WHERE id = :'p0_link') = 0
             THEN 'PASS' ELSE 'FAIL' END || ' | M0D same-household: DENY — B reads zero private relationships (count and exact id)';
 WITH u AS (UPDATE public.household_people SET display_name = 'hijack' WHERE id = :'p0_person' RETURNING 1)
@@ -132,12 +133,13 @@ SELECT CASE WHEN (SELECT count(*) FROM public.change_log WHERE entity_id IN (:'p
 SELECT CASE WHEN (SELECT count(*) FROM public.change_log WHERE household_id = :'hh_a' AND owner_profile_id IS NULL) = :'b_log_before'::bigint
              AND (SELECT count(*) FROM public.change_log WHERE household_id = :'hh_a' AND owner_profile_id IS NOT NULL AND owner_profile_id <> :'ub') = 0
             THEN 'PASS' ELSE 'FAIL' END || ' | change log (same-household): B''s visible household entry COUNT is unchanged by A''s private writes, and B sees no entry owned by anyone but herself';
-SELECT CASE WHEN (SELECT count(*) FROM public.change_log WHERE household_id = :'hh_a' AND entity_table IN ('household_people', 'responsibilities')) = 0
-            THEN 'PASS' ELSE 'FAIL' END || ' | change log (same-household): B sees no household_people or responsibilities entry at all (not even the table name)';
+SELECT CASE WHEN (SELECT count(*) FROM public.change_log WHERE household_id = :'hh_a' AND entity_table IN ('household_people', 'responsibilities')
+                  AND owner_profile_id IS DISTINCT FROM :'ub') = 0
+            THEN 'PASS' ELSE 'FAIL' END || ' | change log (same-household): B sees no household_people or responsibilities entry but her own (not even the table name of A''s)';
+-- sync_pull is the change log read under B's RLS; the check above is the table-name half, this is the id half.
 SELECT CASE WHEN (SELECT count(*) FROM jsonb_array_elements(public.sync_pull('0'::xid8, :'hh_a') -> 'rows') r
-                  WHERE (r ->> 'entity_id')::uuid IN (:'p0_person', :'p0_task', :'p0_link')
-                     OR r ->> 'entity_table' IN ('household_people', 'responsibilities')) = 0
-            THEN 'PASS' ELSE 'FAIL' END || ' | sync_pull (same-household): DENY — B''s pull carries no id, table name or revision of A''s private rows';
+                  WHERE (r ->> 'entity_id')::uuid IN (:'p0_person', :'p0_task', :'p0_link')) = 0
+            THEN 'PASS' ELSE 'FAIL' END || ' | sync_pull (same-household): DENY — B''s pull carries no id or revision of A''s private rows';
 SELECT CASE WHEN herkeys_test.error_of(format($q$SELECT public.sync_push('responsibilities', gen_random_uuid(),
          jsonb_build_object('household_id', %L::uuid, 'profile_id', %L::uuid, 'local_id', 'f13-p0-push', 'about_type', 'task', 'about_task_id', %L::uuid,
                             'responsible_kind', 'self', 'state', 'owned', 'still_needs_me', true, 'producer', 'user-action',

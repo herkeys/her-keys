@@ -17,8 +17,10 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = join(HERE, '..', '..');
 const DB_CONTAINER = process.env.HERKEYS_LOCAL_DB_CONTAINER ?? 'supabase_db_Her_Keys';
 const REST_REFERENCE = process.env.HERKEYS_LOCAL_REST_CONTAINER ?? 'supabase_rest_Her_Keys';
-export const PRIVATE_DB = 'f08_stack';
-const REST_NAME = 'f08_postgrest';
+// Overridable so two sessions on one machine can each run a private stack (HK-FEATURE-13 uses f13_stack / f13_postgrest).
+export const PRIVATE_DB = process.env.HERKEYS_PRIVATE_STACK_DB ?? 'f08_stack';
+const REST_NAME = process.env.HERKEYS_PRIVATE_REST_NAME ?? 'f08_postgrest';
+if (!/^f\d\d_[a-z0-9_]+$/.test(PRIVATE_DB) || !/^f\d\d_[a-z0-9_]+$/.test(REST_NAME)) throw new Error('a private stack is named fNN_* and nothing else');
 const REST_PORT = Number(process.env.HERKEYS_PRIVATE_REST_PORT ?? 54391);
 const API_PORT = Number(process.env.HERKEYS_PRIVATE_API_PORT ?? 54392);
 const ENV = { ...process.env, MSYS_NO_PATHCONV: '1' };
@@ -37,6 +39,8 @@ const SEQUENCE = [
   // HK-FEATURE-05 closeout repair (OC-01): the composition journey exercises a child added after binding (push_household_child),
   // so the private stack needs it too, not only the shared default database.
   join(REPO, 'supabase', 'migrations', '20260921190000_f05_add_child_after_binding.sql'),
+  // HK-FEATURE-13 (People OS): the journeys push person contexts and follow-up links (tests/support/richHousehold.mjs).
+  join(REPO, 'supabase', 'migrations', '20260922200000_f13_people_os.sql'),
 ];
 
 function buildDatabase() {

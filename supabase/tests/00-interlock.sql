@@ -11,8 +11,9 @@
 \pset format unaligned
 \pset tuples_only on
 
-SELECT CASE WHEN count(*) = 34 THEN 'PASS' ELSE 'FAIL' END
-       || ' | 34 application tables exist after the migration (' || count(*)::text || ')'
+-- 34 through F05; HK-FEATURE-13 (People OS) adds person_contexts and person_task_links.
+SELECT CASE WHEN count(*) = 36 THEN 'PASS' ELSE 'FAIL' END
+       || ' | 36 application tables exist after the migration (' || count(*)::text || ')'
 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
 WHERE n.nspname = 'public' AND c.relkind = 'r';
 

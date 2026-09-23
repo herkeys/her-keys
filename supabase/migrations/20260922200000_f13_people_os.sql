@@ -417,8 +417,18 @@ REVOKE ALL ON FUNCTION public.sync_push(text, uuid, jsonb) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.sync_push(text, uuid, jsonb) TO authenticated;
 
 -- ============================================================================
--- 5. Grants (generated from the manifest)
+-- 5. Privileges: strip what the new tables inherited, then grant named columns
 -- ============================================================================
+--
+-- The baseline's stock ALTER DEFAULT PRIVILEGES hand anon, authenticated and service_role a FULL grant on every new public table
+-- (20260919231500_build4_cloud_schema.sql §9 explains and strips it for the tables that existed then). A table created by a later
+-- migration inherits it again, so it is stripped here for exactly the two new tables, the same way: nothing is relied on from a
+-- default, service_role keeps full access, and the client role gets only the named columns generated below — no DELETE, TRUNCATE,
+-- REFERENCES or TRIGGER, and no UPDATE at all on the immutable links.
+REVOKE ALL ON TABLE public.person_contexts   FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON TABLE public.person_task_links FROM PUBLIC, anon, authenticated;
+GRANT ALL ON TABLE public.person_contexts   TO service_role;
+GRANT ALL ON TABLE public.person_task_links TO service_role;
 
 -- >>> GENERATED additive-grants — supabase/tools/gen-foundation-sql.mjs from src/domain/sync/foundationSpecs.ts.
 -- >>> Do not edit by hand: edit the manifest and regenerate. A test fails on any difference.

@@ -58,6 +58,39 @@ let failures = 0;
 let passes = 0;
 let notes = 0;
 
+// --journeys: the People journeys over real HTTP on a PRIVATE stack (database f13_stack, container f13_postgrest, private ports), so
+// they never touch the fixed b4_env_* databases or the shared default database another session may be using.
+if (arg === '--journeys') {
+  process.env.HERKEYS_PRIVATE_STACK_DB ??= 'f13_stack';
+  process.env.HERKEYS_PRIVATE_REST_NAME ??= 'f13_postgrest';
+  process.env.HERKEYS_PRIVATE_REST_PORT ??= '54491';
+  process.env.HERKEYS_PRIVATE_API_PORT ??= '54492';
+  const { startPrivateStack } = await import(`file://${join(HERE, 'private-stack.mjs')}`);
+  const stack = await startPrivateStack();
+  process.env.HERKEYS_LOCAL_API_URL = stack.apiUrl;
+  process.env.HERKEYS_LOCAL_STACK_DB = stack.database;
+  const check = (name, ok, detail = '') => {
+    if (ok) passes += 1;
+    else failures += 1;
+    console.log(`  ${ok ? 'ok  ' : 'FAIL'}  ${name}${ok || !detail ? '' : ` — ${detail}`}`);
+  };
+  const stackPsql = (db, sql, { label = '' } = {}) => {
+    try {
+      return { ok: true, out: docker(['exec', '-i', CONTAINER, 'psql', '-v', 'ON_ERROR_STOP=1', '-U', 'postgres', '-d', db, '-f', '-'], sql) };
+    } catch (err) {
+      throw new Error(`${label} failed:\n${err.stdout ?? ''}${err.stderr ?? ''}`);
+    }
+  };
+  try {
+    const { peopleJourneys } = await import(`file://${join(HERE, 'journey-people.mjs')}`);
+    await peopleJourneys(check, stackPsql);
+  } finally {
+    await stack.stop();
+  }
+  console.log(`\nF13 journeys: ${passes} passed, ${failures} failed (${passes + failures} checks)`);
+  process.exit(failures === 0 ? 0 : 1);
+}
+
 admin(`DROP DATABASE IF EXISTS ${DB} WITH (FORCE);`);
 admin(`CREATE DATABASE ${DB};`);
 psql(readFileSync(join(HERE, 'helpers', '00-auth-stub.sql'), 'utf8'), 'auth stub');

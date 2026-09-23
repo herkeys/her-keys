@@ -180,10 +180,14 @@ ROLLBACK;
 BEGIN;
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claims = '{"sub":"22222222-2222-4222-8222-222222222222"}';
-SELECT CASE WHEN (public.sync_push('person_contexts', gen_random_uuid(), jsonb_build_object('household_id', :'hh_a'::uuid, 'profile_id', :'ub'::uuid,
-         'local_id', 'f13-rls-ctx-child', 'person_id', NULL, 'child_id', :'child_a'::uuid, 'status', 'active', 'producer', 'user-action', 'origin_created_at', now(), 'origin_updated_at', now()))
-         ->> 'status') IN ('created')
-            THEN 'PASS' ELSE 'FAIL' END || ' | sync_push (same-household): B reusing A''s context LOCAL id is keyed on B''s own boundary — no collision oracle';
+-- Wrapped, so a regression (a household-wide key that collides with A's context) reports as a FAIL instead of aborting the file.
+-- Two statements on purpose: a sub-select cannot see what a volatile function wrote in the SAME statement.
+SELECT coalesce(herkeys_test.error_of(format($q$SELECT public.sync_push('person_contexts', gen_random_uuid(), jsonb_build_object('household_id', %L::uuid, 'profile_id', %L::uuid,
+         'local_id', 'f13-rls-ctx-child', 'person_id', NULL, 'child_id', %L::uuid, 'status', 'active', 'producer', 'user-action', 'origin_created_at', now(), 'origin_updated_at', now()))$q$,
+         :'hh_a', :'ub', :'child_a')), 'none') AS b_push_error \gset
+SELECT CASE WHEN :'b_push_error' = 'none'
+             AND (SELECT count(*) FROM public.person_contexts WHERE local_id = 'f13-rls-ctx-child' AND profile_id = :'ub') = 1
+            THEN 'PASS' ELSE 'FAIL' END || ' | sync_push (same-household): B reusing A''s context LOCAL id — and the same child — creates HER OWN row on her own boundary: no collision, no oracle';
 ROLLBACK;
 
 -- The note never leaves through an error message either: every refusal B could provoke names ids and rules, never A's words.

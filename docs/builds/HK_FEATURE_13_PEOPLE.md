@@ -326,3 +326,96 @@ is the integration line, not a sibling. Wave 3/4 integration must take the union
 **Shared-file edits added at M4** (addendum AL): `src/data/seed/demoHousehold.ts` (demo cast from the F13-owned seed; append-only),
 `tests/support/legacyShapes.mjs` (two v4-additive roots stripped for v3 shapes), `scripts-dev/meals-boundary-scan.cjs` (lane register +
 integration checkpoint — every Wave 3/4 feature will need its own entry: expected merge conflict, take the union).
+
+Git at M4 close: `e6ef616`, clean.
+
+---
+
+## F13-M5 — backend / sync / RLS / fresh-client / account isolation
+
+**Defect found and repaired (by the new suite, before any COMPLETE claim).** The first run of `79-f13-people-rls.sql` failed 5 checks:
+the two new tables inherited the baseline's stock `ALTER DEFAULT PRIVILEGES` (a FULL grant to `authenticated`, including table-level
+UPDATE and DELETE). The shipping migration strips those in its §9 for the tables that existed then; an additive migration must do the
+same for its own. Repaired in the F13 migration (§5: `REVOKE ALL … FROM PUBLIC, anon, authenticated` on both tables, `GRANT ALL … TO
+service_role`, then the generated named-column grants). Re-run: 88/88. (A lesson for every later additive migration: IC-13-14.)
+
+**Backend suites (private `f13_env`, `node supabase/tests/run-f13.mjs`):** `79-f13-phase-a-probe.sql` (38) + `79-f13-people-rls.sql`
+(50) — raw: `F13 backend: 88 passed, 0 failed (88 checks, 3 notes, 2 suites)`.
+
+**RLS attack matrix (79-f13-people-rls.sql), every refusal asserted by SQLSTATE:**
+
+| Attack | Unauthenticated | Owner A | Same-household B | Unrelated household C |
+|---|---|---|---|---|
+| SELECT contexts / links | DENIED (42501) | ALLOWED | DENIED — 0 by household, by id, by the shared child; link COUNT 0 | DENIED |
+| INSERT context as A | — | ALLOWED | DENIED (42501) | DENIED (42501 in A's household) |
+| INSERT her OWN context on the shared child | — | — | ALLOWED, never collides with A's (per-owner uniqueness: no existence probe) | 23503 (household-proving key) |
+| crafted `person_id` = A's private person | — | — | 23503, IDENTICAL to a uuid naming nothing | — |
+| crafted link → A's private task | — | — | 42501 refusal word-for-word IDENTICAL to a nonexistent task (guard before any key) | 42501 (cross-household) |
+| crafted link hanging B's task on A's context | — | — | 23503, identical to a nonexistent context | — |
+| UPDATE | — | ALLOWED (CAS; stale revision matches 0 rows); target never re-pointable (42501) | 0 rows | — |
+| DELETE | — | DENIED (42501, no privilege) | DENIED | — |
+| link UPDATE / DELETE | — | DENIED (immutable) | — | — |
+| change log / sync_pull | DENIED | sees and pulls hers (or deferred behind the barrier) | no entry, no id, no table name, count unchanged | no entry of household A |
+| sync_push | — | — | as A: 42501; reusing A's local id: a fresh row of her own (`created`) | — |
+| contextNote leakage via any refusal B can provoke | — | — | none | — |
+| integrity by reason (owner) | — | 2nd context for same child (23505, even archived), two/zero targets (23514), self (23503 — adult can't be a child), AI producer (23514), 61-char label / 501-char note / untrimmed / multi-line / control char (23514), link to household task (42501), relation ≠ follow_up (23xxx), duplicate link (23505) | — | — |
+
+**Fresh install / populated upgrade / quality gates (`supabase/tests/run.mjs`, shared file):** ENV A applies F13 on top of the five
+(36 tables; `sync_push` still INVOKER; guard not EXECUTE-able; no table-level client INSERT/UPDATE/DELETE); ENV C migrates F13 while
+empty; migration-quality gates (additive, exactly two functions, LF, own transaction + fail-closed assertion, no DELETE grant); ENV D
+applies F13 as the THIRD additive upgrade of a POPULATED database: counts and every member/task byte-identical, both tables empty, the
+owner pushes a context about a PRE-EXISTING child (`created`, retry `already_exists`), a link onto a pre-existing household task is
+refused, fail-closed passes. New `people` mode: `node supabase/tests/run.mjs people`.
+
+**Real-HTTP journeys (`supabase/tests/journey-people.mjs`, run by `run-f13.mjs --journeys` on the PRIVATE stack `f13_stack` /
+`f13_postgrest`, ports 54491/54492; also added to `run.mjs`'s journeys):** raw `F13 journeys: 16 passed, 0 failed (16 checks)`.
+P1 offline create/edit/archive → nothing sent, intents durable → reconnect pushes through the ordinary engine with no evidence; the
+archived context ARRIVES archived (the offline archive is folded into the pending create: revision 1, never a live version); one
+`follow_up` link to a PRIVATE task owned by A. P2 fresh device of A rebuilds both contexts (archived stays archived), the person, the
+link re-pointed at the reconstructed task, the child context on the reconstructed child; valid state. P3 same-household B's fresh
+device hydrates the shared child and NONE of A's People. P4 B, stranger C and anon asking PostgREST directly: counts 0 / refused. P5 a
+stale edit never overwrites the newer one; the disagreement is recorded as evidence.
+
+**Composition tests (fake cloud, `tests/people/sync.test.mjs`) 6/6:** offline→reconnect; fresh device; refused context kept as
+evidence, not deleted, never retried, its link held as `unresolvable-dependency` while the private Task syncs; stale revision →
+`cas-conflict`, cloud keeps the newer value; ACCOUNT SWITCH A→B on one device → `boundOther` quarantine, zero requests on B's behalf,
+`canOpenScreen('(app)')` false (no People surface can render A's data to B), A's contexts preserved; DEMO → `authenticatedUnbound`,
+zero cloud calls, every demo context `demo-seed`.
+
+**Schema fingerprint (`scripts-dev/f13-fingerprint.mjs`, two private bare databases built identically from the on-disk files;
+`supabase/tools/baselines/f13-local-fingerprint.json`):**
+
+| | #GATING digest | facts |
+|---|---|---|
+| OLD (WAVE3_BASE: 5 migrations) | `d739ceb48aaccadfb6cb47bb65d34f06` | 3622 |
+| NEW (+ `20260922200000_f13_people_os.sql`) | `9a9153e389d576c87275bf96b97322ff` | 3816 |
+
+Changed dimensions (exactly the intended ones): columns 716→752 (+36), constraints 681→719 (+39 −1: the old change-log CHECK, replaced),
+functions 28→29 (+2 −1: `guard_follow_up_task` new; `sync_push` body replaced), indexes 284→301, policies 85→90, privileges.columns
+725→759, privileges.effective 310→327, privileges.functions 55→57, privileges.relations 587→621, relations 35→37, triggers 104→112.
+Unchanged: schemas, privileges.schemas, privileges.default_acl, info.*. (A bare database carries 7 fewer default-ACL facts than the
+Supabase default database; this pair is measured the same way, so the diff is exact. The shared default database was never migrated.)
+
+**First full `supabase/tests/run.mjs` on F13 (private stack `f13_stack`) — raw: `HARNESS ERROR: composition query failed` after these
+FAILs:** `34 application tables exist after the migration (36)` (the `00-interlock.sql` pin: F13 adds two tables → updated to 36, shared
+file); and three Phase A probe checks that assumed B owns NO rows — in the shared ENV C other suites (57/58) legitimately commit rows B
+owns, so the property is "nothing of A's": the three counts now exclude B's own rows (the table-name half of the pull check is the
+change-log check under the same RLS). Every F13 quality / ENV A / ENV D check passed.
+
+**The composition-journey error is ENVIRONMENTAL, measured, not assumed.** `run.mjs composition` sampled serially: F13 ×4 → 1 pass,
+3 failures each on a DIFFERENT check (OD-A reading device not yet bound; a post-bind task not yet pushed; a second device receiving 85 of
+450 tasks with the cursor advanced); clean WAVE3_BASE worktree ×4 → 2 passes, 2 harness errors (another session DROPPED `b4_env_c` under
+it), and on the next sample the SAME IR-D11 failure class at base (`0 tasks, ready, cursor 228481`). Mechanism: `sync_pull`'s barrier is
+`pg_snapshot_xmin` of the whole cluster, so any other session's open transaction in the shared container defers rows, and the journey
+settles each step once (`settle()` flushes timers a single time). Deferral is the designed at-least-once behaviour; the journey's
+single-pass assertions are load-sensitive. Recorded as ENGINEERING DEBT ED-13-01 (not an F13 defect). The authoritative exit run is taken
+in a quiet window.
+
+**Harness hardening at M5 (tests only):** the People RLS check that B's `sync_push` reusing A's local id on the same child creates HER
+OWN row was rewritten as two statements (a same-statement sub-select cannot see a volatile function's write) and wrapped, so a regression
+reports FAIL instead of aborting the file.
+
+**Shared-file edits added at M5:** `supabase/tests/run.mjs` (F13 constant/apply, ENV A/C/D, quality gates, `people` mode, People journeys
+in the full journeys run), `supabase/tests/private-stack.mjs` (F13 migration in the stack sequence; `HERKEYS_PRIVATE_STACK_DB` /
+`HERKEYS_PRIVATE_REST_NAME` overrides so parallel sessions can each have one — default names unchanged). Both will conflict textually
+with any sibling that also adds a migration to them (IC-13-11-style union).
