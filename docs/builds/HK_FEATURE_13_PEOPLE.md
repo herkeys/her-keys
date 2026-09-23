@@ -584,4 +584,13 @@ All F13 CORE floor items are PASS (see the scenario map, the doctrine table and 
 integrations, pre-existing-Task linking, Person→Event, People search, device contacts and communication logging are outside CORE by
 addendum AS and are recorded as integration candidates or missing primitives.
 
-**F13 PEOPLE OS: COMPLETE — READY FOR WAVE 4 INTEGRATION** (pending the durable push recorded below).
+**F13 PEOPLE OS: COMPLETE — READY FOR WAVE 4 INTEGRATION**
+
+### Remote durability
+
+`git push -u origin feature/13-people-os` (ordinary, non-force; a NEW branch — nothing existed remotely) → `git fetch origin` →
+`git ls-remote origin refs/heads/feature/13-people-os` = `569603fad845abf419e19767cff1cd79f4a46cd3` = local HEAD. This ledger entry is
+itself pushed the same way; the final HEAD is the commit that adds it (reported in the final report). Not merged. main, F09, F10, F11,
+F12 and W2I were not modified (sibling worktrees were only READ). Staging and Production: ZERO writes — no Supabase CLI `--linked`
+command, no remote project, no MCP database call was made; every database touched was a local `f13_*` / `b4_env_*` scratch database or
+the private `f13_stack`, and the shared default database was never migrated.
