@@ -25,7 +25,10 @@ P5 low correctness · P6 UX polish · P7 maintainability · P8 performance · P9
 | HK13-D09 | **P0** | F10, F11, F13 | account binding | `hasContent` ignores Work/Rebuild/People rows: after A's interrupted claim, B bootstraps and A's private rows are pushed as B's | FIXED `d9dfa5c` |
 | HK13-D10 | P3 | F07, F13 | navigation / Life IA | Co-Parent (`/life/coparent`) and People (`/life/people`) have no entry point — reachable only by deep link | FIXED `b681a4c` |
 | HK13-D11 | P4 | F09–F13 | exit gate (Meals boundary scan) | F09–F12 never registered their lanes: the integrated line fails the Meals exit gate, and the scan's attribution could not tell a Meals change from a later feature's | FIXED `bb53aeb` |
-| HK13-D12 | P4 | F01 × F03 (× F11, F12, F13) | One Move | The planning default duration makes any task "small": offered on an overloaded day as load-reducing, and quoted back as "It should take about 15 minutes" | FIXED (AUD13-04b) |
+| HK13-D12 | P4 | F01 × F03 (× F11, F12, F13) | One Move | The planning default duration makes any task "small": offered on an overloaded day as load-reducing, and quoted back as "It should take about 15 minutes" | FIXED `79900c7` |
+| HK13-D13 | **P1** | F13 (sync engine) | multi-device sync | Two devices of one account open a context for the same person offline: the second device's pull is refused by the integrity gate on EVERY cycle — its sync stops for good, for every feature | FIXED (AUD13-01b) |
+| HK13-D14 | **P2** | F01, F02, F03 × F07, F10, F11, F13 | generic editors / Talk It Out | A new task or event from the generic editors, a Needs Me promotion or an accepted Talk It Out capture is ALWAYS household-visible, whatever private category (Work, Wellbeing, Relationships, Co-parenting) she files it under | FIXED (AUD13-02a) |
+| HK13-D15 | P3 | F10 | Opportunity form | Moving an opportunity's stage away from Closed is silently not saved: the stale closed reason makes the domain refuse, and the form closes as if saved | FIXED (AUD13-03a) |
 
 (Entries below are added as the audit proceeds.)
 
@@ -298,4 +301,94 @@ P5 low correctness · P6 UX polish · P7 maintainability · P8 performance · P9
   Three existing fixtures passed a bare number as "her" duration; they now say `durationSource: 'user'` (the task form records exactly
   that when she touches the field) — the assertions are unchanged. Test-the-test: D12-M1 (raw duration decides "small") CAUGHT 3 fail;
   D12-M2 (default quoted) CAUGHT 3 fail; D12-M3 (`inferred` no longer known) CAUGHT 1 fail. All restored byte-for-byte.
-- **Status:** FIXED (AUD13-04b).
+- **Status:** FIXED `79900c7`.
+
+## HK13-D13 — One person, two devices: the second device's sync stops for good (P1)
+
+- **Features / surface:** F13 People OS (`person_contexts`, one per owner and child/person) × the shared sync engine
+  (`src/domain/sync/clash.ts`, `pullEngine.ts`, `src/platform/supabaseSyncTransport.ts`).
+- **How found:** the F11–F13 trace noticed `clash.ts` had F11's one-live-link rule but no rule for F13's one-context-per-person
+  indexes, and `DOMAIN_INVARIANTS` did not name them. Reproduced in `tests/hk-f01f13/integratedDevices.test.mjs` through the production
+  composition (two devices of one account over the shared in-memory cloud, the real unique index modelled with the real transport's
+  own classifier).
+- **Reproduction:** device A and device B (same account) both hold person P. Offline, each opens a context for P (A: "Met at the school
+  fair", B: "Prefers texts"). Online: A's context reaches the cloud; B's pull brings it, finds no rule for it, mints it BESIDE B's own —
+  and the integrity gate refuses the batch: `sync.integrity_refused: person:… has more than one person context`. The cursor never
+  moves, so every later cycle re-reads the same batch and is refused again; B's own queue never pushes. Observed: B never received A's
+  later edit, and nothing else either.
+- **Expected:** one context per person on every device; the cloud's stands; her other words are kept as evidence, never silently
+  replaced; sync keeps flowing.
+- **Root cause:** a domain uniqueness rule (the F13 unique indexes, mirrored by the local integrity check) with no pull-side clash rule —
+  exactly the case `clash.ts` exists for, missed when F13 was built alone (F11 added its equivalent; F13 did not).
+- **Privacy impact:** none. **Data-loss impact:** high — B's later edits in EVERY feature stay unsent for as long as the device lives,
+  and B never sees the household's changes again: silent, permanent divergence. P1: a release blocker reachable from an ordinary
+  offline edit on two devices.
+- **Repair (AUD13-01b):** `classify('personContext')` ADOPTS the local context for the same child/person: it becomes the cloud's (keeps
+  its local id, so every follow-up that names it keeps naming it); if its own words differed (compared generically over the
+  manifest's text fields — never copied or logged), the pull records `domain-conflict` evidence. The pull engine never adopts a local
+  row the cloud already knows under another id. Both indexes join `DOMAIN_INVARIANTS`, so a refused push is classified as a domain
+  conflict rather than a malformed row.
+- **Tests:** `tests/hk-f01f13/integratedDevices.test.mjs` (3): different words → one context on both devices, the cloud's words,
+  B's recorded as unresolved evidence, and a LATER edit on A still reaches B; identical words + a follow-up B saved against its own
+  context offline → the follow-up reaches the cloud attached to the one context, nothing recorded, A sees it; the same race over a
+  child's context. Pre-fix: the first test fails ("the cloud's context is what stands": B still held its own; B's events show
+  `sync.integrity_refused`). F13's own privacy guard ("nothing outside People OS reads a context note") passes: the clash rule names no
+  People field. Test-the-test: D13-M1 (no clash rule) CAUGHT 3/3 fail; D13-M2 (differing words replaced without evidence) CAUGHT 2
+  fail; D13-M3 (a child's context matched by person only) CAUGHT 1 fail; D13-M4 (identical words recorded as a conflict) CAUGHT 1
+  fail. All restored byte-for-byte.
+- **Status:** FIXED (AUD13-01b).
+
+## HK13-D15 — A stage correction away from Closed is silently not saved (P3)
+
+- **Feature / surface:** F10 Work / Career OS · `src/features/work/OpportunityForm.tsx` over `setOpportunityStage`.
+- **How found:** the F08–F10 trace; reproduced by rendering the real form under the real provider.
+- **Reproduction:** open a Closed opportunity (reason "No further response"), tap Applied, Save. The form keeps the old closed reason in
+  its own state and passes it with stage Applied; `setOpportunityStage` refuses (`unexpected_closed_reason`), the form ignores the
+  refusal and goes back. The opportunity is still Closed. Same for a NEW opportunity marked Closed + reason, then moved to Interviewing:
+  created at Exploring.
+- **Expected:** "stage moves only by explicit user action" — and an explicit action is never silently dropped. The domain's own doc says
+  the closed reason "is cleared the moment the stage is corrected away from closed".
+- **Root cause:** the form passed `closedReason` whatever the stage, and discarded the command's refusal.
+- **Privacy impact:** none. **Data-loss impact:** her stage correction is lost while the UI reports success (P3: a user action silently
+  not applied).
+- **Repair (AUD13-03a):** the form sends a closed reason only with Closed; a refused stage change writes nothing, keeps the form open
+  and says so ("Her Keys couldn't save that stage. Check it and try again.").
+- **Tests:** `tests/hk-f01f13/opportunityForm.test.mjs` (3): Closed → Applied is saved with no reason; new Closed+reason → Interviewing is
+  created at Interviewing; Applied → Closed again requires and keeps a reason. Test-the-test: D15-M1 (stale reason passed again)
+  CAUGHT 2 fail. D15-M2 (a refusal reported as saved) SURVIVED — documented: once the reason is cleared, no input the form can
+  produce reaches a refusal (it pre-validates Closed-without-reason, and opportunities have no delete path), so the retained
+  refusal guard is defence in depth on an unreachable path. (The first D15-M1 run hung: a failing form test skipped its unmount and
+  the provider's minute timer kept the process alive; the tests now always unmount, and the rerun failed cleanly.)
+- **Status:** FIXED (AUD13-03a).
+
+## HK13-D14 — New rows from the generic editors ignore their category's visibility (P2)
+
+- **Features / surface:** the generic Task editor (`src/features/tasks/TaskForm.tsx`: Today "Add a task", the Work screen's list,
+  Needs Me promotion), the Calendar event editor (`src/features/calendar/EventForm.tsx`), Talk It Out acceptance
+  (`src/domain/interpretations.ts` `acceptInterpretation`) — against the categories F07, F10, F11 and F13 file their private rows in.
+- **How found:** the F04–F07 trace (MP-07-14 "generic editors create rows as household — still true", integration candidate
+  HK-INT-COPARENT-EVENTSCOPE-01) and the F01–F03 trace (accepted captures are `child` or `household`); confirmed in code:
+  `scope: 'household' as const` (TaskForm), `scope: 'household'` (EventForm), `subjectMemberId ? 'child' : 'household'` (acceptance).
+- **Reproduction:** in Calendar, add "Therapy intake" in Wellbeing (declared `personal`); or from the Work screen add a task (Work is
+  declared `professional`); or accept a Talk It Out capture into Co-parenting. The row is stored `household`, pushed with no owner, and
+  `private.can_access_scoped_row` shows it to every member of the household — while a follow-up she makes in People, a next step in
+  Rebuild, an opportunity's next action or an F07 handoff in the same categories are hers alone.
+- **Expected:** "Same-household B must not learn … private Task exists … unless foundation semantics explicitly make the underlying
+  canonical object shared." A category carries the scope the household gave it, and every feature flow honours it.
+- **Root cause:** the generic editors predate the per-category scopes the later features rely on; F07 recorded the gap and left it to
+  integration.
+- **Privacy impact:** YES — exposure to same-household members of what she filed as private (title, times, notes, location of a
+  Wellbeing/Relationships/Co-parenting/Work item). Not cross-household. **Data-loss impact:** none.
+- **Severity reasoning:** P2 — a privacy exposure contrary to declared semantics, reachable from the most ordinary flows (Calendar
+  "Add event", Today "Add a task"); not P1 because it never crosses households and nothing is lost.
+- **Repair (AUD13-02a):** one rule, `scopeForNewRow(state, categoryId, subjectMemberId)` in `src/domain/categories.ts`: a private
+  category (`personal`, `professional`, `coparent-shared`) gives a new row that scope; a household category gives `household`, or
+  `child` about a child. Used by the task editor (new tasks and Needs Me promotions), the event editor and Talk It Out acceptance.
+  Scope stays fixed at creation — an edit never widens (or narrows) a row. Feature flows that choose their own scope are unchanged.
+- **Tests:** `tests/hk-f01f13/newRowScope.test.mjs` (8): the rule for all eight starter categories and for a child subject; an accepted
+  capture into each category; the REAL task and event editors (rendered under the real provider) save each category's scope; a Needs
+  Me promotion into Relationships is personal; moving a private task into Home keeps it private. Test-the-test: D14-M1 (task
+  editor writes household) CAUGHT 2 fail; D14-M2 (event editor) CAUGHT 1; D14-M3 (Talk It Out acceptance) CAUGHT 1; D14-M4 (a private
+  category no longer keeps a row private) CAUGHT 6; D14-M5 (a child row no longer child-scoped) CAUGHT 2. Full app suite after the
+  repair: 3233/3234, the one failure being the boundary scan before these files were registered (then 0).
+- **Status:** FIXED (AUD13-02a).

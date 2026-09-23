@@ -440,11 +440,30 @@ function applyOne(
   const encounter = ownRow ? null : (ctx.displacedBy?.(state, kind, '', row, resolverFor(namespace), isPending) ?? null);
 
   // The local row IS the same thing the cloud holds (the same document, the same external object, the same
-  // relationship). Nothing competes: it becomes the cloud's, keeps its local id, and whatever names it keeps
-  // naming it. What it was waiting to create has just been created.
-  if (encounter !== null && 'adopt' in encounter) {
+  // relationship, the same person's context). Nothing competes: it becomes the cloud's, keeps its local id, and
+  // whatever names it keeps naming it. What it was waiting to create has just been created. A local row the cloud
+  // already knows under ANOTHER id is never re-pointed (its own mapping would be lost and that row minted again);
+  // the uniqueness rules make that unreachable, and this makes it harmless.
+  if (encounter !== null && 'adopt' in encounter && namespace.mappings[mappingKey(kind, encounter.adopt)] === undefined) {
     const local = encounter.adopt;
-    const settled = { ...namespace, queue: namespace.queue.filter((q) => !(q.kind === kind && q.localId === local && q.op === 'create')) };
+    let settled: SyncNamespace = { ...namespace, queue: namespace.queue.filter((q) => !(q.kind === kind && q.localId === local && q.op === 'create')) };
+    if (encounter.differed === true) {
+      // Her words for the same thing lost to the cloud's: kept as evidence, never silently replaced (HK13-D13).
+      const at = new Date(ctx.now()).toISOString();
+      settled = recordEvidence(settled, {
+        id: `adopted:${kind}:${local}#${at}`,
+        evidence: 'domain-conflict',
+        kind,
+        localId: local,
+        cloudId,
+        attemptedOp: 'create',
+        baseRevision: null,
+        serverRevision,
+        detail: 'another device had already made this, and the cloud keeps one; what this device held for it was replaced by the cloud\'s',
+        recordedAt: at,
+        resolved: false,
+      });
+    }
     return {
       state: ctx.applyRow(state, kind, local, row, resolverFor(settled)),
       namespace: rememberMapping(settled, { kind, localId: local, cloudId, revision: serverRevision }),

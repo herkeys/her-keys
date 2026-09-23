@@ -1,3 +1,4 @@
+import { scopeForNewRow } from './categories';
 import type { TransitionContext } from './context';
 import { isUndecidedReadingTitle, type Interpretation, type InterpretationKind } from './foundation/interpretation';
 import type { Money } from './foundation/money';
@@ -213,7 +214,8 @@ export function acceptInterpretation(state: AppState, ctx: TransitionContext, id
   if (!canAccept(reading, input).ok || !reading) return state;
 
   const confirmed = promoteProvenance(reading.provenance, { corroborations: 0, userConfirmed: true });
-  const scope = input.scope ?? (reading.subjectMemberId ? 'child' : 'household');
+  // Filed under a private category, what she approved is hers alone; otherwise shared, or child-scoped about a child (HK13-D14).
+  const scope = input.scope ?? scopeForNewRow(state, input.categoryId ?? '', reading.subjectMemberId);
 
   let next: AppState;
   let created: { kind: ContentRefKind; id: string };

@@ -158,6 +158,9 @@ const DOMAIN_INVARIANTS = [
   'system_steps_system_position_key',
   // HK-FEATURE-11: two devices each connecting the same item to the same Focus.
   'rebuild_focus_links_live_link_uq',
+  // HK-FEATURE-13 (HK13-D13): two devices of one account each opening a context for the same child or person.
+  'person_contexts_one_per_child_uq',
+  'person_contexts_one_per_person_uq',
 ];
 
 /**

@@ -3,6 +3,7 @@ import { useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { AppText, Button, ChipToggle, Overline, Screen, TextField } from '../../design/components';
 import { colors, spacing } from '../../design/tokens';
+import { scopeForNewRow } from '../../domain/categories';
 import { addEvent, removeEvent, updateEvent } from '../../domain/events';
 import { epochMsOf, isLocalDate, logicalDateAt, toInstant, wallClockMinutesAt, zonedTimeToEpochMs } from '../../domain/logicalDay';
 import { FIELD_LIMITS } from '../../domain/state';
@@ -91,9 +92,9 @@ export function EventForm({ eventId }: { eventId?: string }) {
       travelMinutesAfter: after.minutes,
       preparationMinutes: prep.minutes,
     };
-    // An edit keeps the event's own visibility scope; only a new event gets one.
+    // An edit keeps the event's own visibility scope; only a new event gets one — its category's (HK13-D14).
     if (existing) return save((current, ctx) => updateEvent(current, ctx, existing.id, edits));
-    return save((current, ctx) => addEvent(current, ctx, { ...edits, scope: 'household' }));
+    return save((current, ctx) => addEvent(current, ctx, { ...edits, scope: scopeForNewRow(current, categoryId) }));
   };
 
   const onRemove = () => {

@@ -2,6 +2,7 @@ import type { AppState } from '../state';
 import { findDependencyCycle } from '../foundation/structure';
 import { KIND_CLOUD, refKey } from '../foundation/typedRef';
 import { strOrNull, type LocalIdResolver } from './applySupport';
+import { FOUNDATION_SPECS } from './foundationSpecs';
 import type { SyncEntityKind } from './syncTypes';
 
 /**
@@ -37,6 +38,17 @@ const sameRef = (a: { kind: string; id: string } | null, b: { kind: string; id: 
 
 const CONTENT = ['task', 'event', 'needsMe', 'system', 'meal', 'goal'] as const;
 
+/**
+ * Whether the local row's own stated words — every text field the manifest declares for its kind — differ from the incoming row's.
+ * Only ever compared, never copied, logged or returned: which words differed, and what they were, stay on the row itself.
+ */
+function wordsDiffer(kind: SyncEntityKind, local: object, row: Row): boolean {
+  const spec = FOUNDATION_SPECS.find((candidate) => candidate.kind === kind);
+  if (!spec) return false;
+  const fields = local as Record<string, unknown>;
+  return spec.fields.some((field) => field.type === 'text' && (fields[field.local] ?? null) !== strOrNull(row[field.col]));
+}
+
 /** Whether this device still holds unsent intent for a local row. Only unsent work can ever be displaced. */
 export type IsPending = (kind: SyncEntityKind, localId: string) => boolean;
 
@@ -47,9 +59,11 @@ export type IsPending = (kind: SyncEntityKind, localId: string) => boolean;
  *             same thing; the cloud's stands, and the local one is kept as conflict evidence.
  *   ADOPT     the local row IS the same thing — the same document by digest, the same external object by
  *             identity, the same relationship by its endpoints. Nothing competes; the two are one entity,
- *             so the local row simply becomes the cloud's. Rows that name it keep naming it.
+ *             so the local row simply becomes the cloud's. Rows that name it keep naming it. When the local
+ *             row held different WORDS for that one thing (`differed`), the cloud's stand and the
+ *             disagreement is recorded as conflict evidence, exactly as a lost edit race is.
  */
-export type Encounter = { displace: string } | { adopt: string };
+export type Encounter = { displace: string } | { adopt: string; differed?: boolean };
 
 const displace = (id: string | undefined | null): Encounter | null => (id ? { displace: id } : null);
 const adopt = (id: string | undefined | null): Encounter | null => (id ? { adopt: id } : null);
@@ -114,6 +128,18 @@ export function classify(state: AppState, kind: SyncEntityKind, row: Row, resolv
       const target = refOut(row, 'target', ['task', 'goal', 'system', 'event'], resolve);
       if (focus === null || target === null) return null;
       return adopt(state.rebuildFocusLinks.find((l) => l.status === 'active' && l.focusId === focus && sameRef(l.target, target))?.id);
+    }
+
+    // HK-FEATURE-13 (HK13-D13): one context per (owner, person), archived or not. Two devices of one account that each opened a context
+    // for the same person made ONE context, so the local row IS that context — adopted, and every follow-up that names it keeps naming
+    // it. Without this the pulled context was minted beside hers, the integrity gate refused the batch on every cycle, and the device's
+    // sync stopped for good. Her own words stand only if the cloud's say the same; otherwise the cloud's stand and hers are evidence.
+    case 'personContext': {
+      const child = resolve(strOrNull(row.child_id));
+      const person = resolve(strOrNull(row.person_id));
+      const local = (state.personContexts ?? []).find((c) => (child !== null && c.childId === child) || (person !== null && c.personId === person));
+      if (!local) return null;
+      return { adopt: local.id, differed: wordsDiffer(kind, local, row) };
     }
 
     case 'externalReference':

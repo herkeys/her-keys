@@ -3,6 +3,7 @@ import { useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { AppText, Button, ChipToggle, Overline, Screen, TextField } from '../../design/components';
 import { colors, spacing } from '../../design/tokens';
+import { scopeForNewRow } from '../../domain/categories';
 import { DEFAULT_TASK_DURATION_MINUTES, durationSourceForSave } from '../../domain/foundation/duration';
 import { isLocalDate } from '../../domain/logicalDay';
 import { promoteNeedsMeItem, promotionDefaults } from '../../domain/needsMe';
@@ -73,7 +74,8 @@ export function TaskForm({
     // Touched: hers. Untouched on a new task: the default she was shown. Untouched on an edit: whatever it already was.
     const durationSource = durationSourceForSave({ touched: durationTouched, existing });
     if (existing) return save((current, ctx) => updateTask(current, ctx, existing.id, { ...edits, durationSource }));
-    const input = { ...edits, durationSource, scope: 'household' as const };
+    // A new task takes its category's visibility: filed under a private category it is hers alone (HK13-D14).
+    const input = { ...edits, durationSource, scope: scopeForNewRow(state, categoryId) };
     if (promotion && needsMeId) return save((current, ctx) => promoteNeedsMeItem(current, ctx, needsMeId, input));
     return save((current, ctx) => addTask(current, ctx, input));
   };

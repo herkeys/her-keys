@@ -51,6 +51,23 @@ export function categoryWithRole(state: Pick<AppState, 'categories'>, role: Syst
   return state.categories.find((category) => category.systemRole === role) ?? null;
 }
 
+const PRIVATE_SCOPES: ReadonlySet<VisibilityScope> = new Set(['personal', 'professional', 'coparent-shared']);
+
+/**
+ * The visibility a NEW row gets when nothing more specific decides it: its category's (HK13-D14).
+ *
+ * A category carries the scope the household gave it, and the cloud enforces it (`private.can_access_scoped_row`: `personal`,
+ * `professional` and `coparent-shared` rows are hers alone). Filed under a private category — Work, Wellbeing, Relationships,
+ * Co-parenting — a new row is private to her; under a household category it is shared, and about a child it is child-scoped. The
+ * generic editors and an accepted Talk It Out capture used to write `household` whatever the category, so a Wellbeing appointment
+ * added from Calendar was visible to every member of the household. Scope is fixed when a row is created; an edit never changes it.
+ */
+export function scopeForNewRow(state: Pick<AppState, 'categories' | 'children'>, categoryId: string, subjectMemberId: string | null = null): VisibilityScope {
+  const declared = state.categories.find((category) => category.id === categoryId)?.scope ?? 'household';
+  if (PRIVATE_SCOPES.has(declared)) return declared;
+  return subjectMemberId !== null && state.children.some((child) => child.id === subjectMemberId) ? 'child' : 'household';
+}
+
 function normalizeName(name: string): string | null {
   const trimmed = name.trim();
   return trimmed.length > 0 && trimmed.length <= MAX_CATEGORY_NAME_LENGTH ? trimmed : null;

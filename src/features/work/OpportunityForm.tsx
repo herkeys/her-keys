@@ -24,7 +24,8 @@ import {
   setOpportunityStage,
   updateOpportunity,
 } from '../../domain/opportunities';
-import { FIELD_LIMITS } from '../../domain/state';
+import type { TransitionContext } from '../../domain/context';
+import { FIELD_LIMITS, type AppState } from '../../domain/state';
 import type { Transition } from '../../state/appStore';
 import { useAppStore, useHouseholdState } from '../../store/AppStateProvider';
 import { useHousehold } from '../../store/useHousehold';
@@ -129,20 +130,34 @@ export function OpportunityForm({ opportunityId }: { opportunityId?: string }) {
       notes: notes.trim() || null,
     };
 
+    // A closed reason belongs to Closed only (HK13-D15). The chip she picked earlier stays in this form's state when she moves the
+    // stage away again; passing it along made the domain refuse the whole stage change, and the form closed as if it had saved.
+    const reason = stage === 'closed' ? closedReason : null;
+    // A refused stage change is never reported as saved: nothing is written, the form stays open and says so.
+    let refused = false;
+    const withStage = (next: AppState, ctx: TransitionContext, id: string, current: AppState): AppState => {
+      const staged = setOpportunityStage(next, ctx, id, stage, reason);
+      if (staged.refusal === null) return staged.state;
+      refused = true;
+      return current;
+    };
+
     if (!existing) {
       const ok = await save((current, ctx) => {
         const next = addOpportunity(current, ctx, fields);
         const created = next.careerOpportunities[next.careerOpportunities.length - 1];
-        return stage === 'exploring' ? next : setOpportunityStage(next, ctx, created.id, stage, closedReason).state;
+        return stage === 'exploring' ? next : withStage(next, ctx, created.id, current);
       });
+      if (refused) return setError('Her Keys couldn’t save that stage. Check it and try again.');
       if (ok) router.back();
       return;
     }
 
     const ok = await save((current, ctx) => {
       const next = updateOpportunity(current, ctx, existing.id, fields);
-      return stage === existing.stage && closedReason === existing.closedReason ? next : setOpportunityStage(next, ctx, existing.id, stage, closedReason).state;
+      return stage === existing.stage && reason === existing.closedReason ? next : withStage(next, ctx, existing.id, current);
     });
+    if (refused) return setError('Her Keys couldn’t save that stage. Check it and try again.');
     if (ok) router.back();
   };
 
