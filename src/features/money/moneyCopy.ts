@@ -21,6 +21,7 @@ export const MONEY_COPY = {
   sectionNeedsAttention: 'Needs attention',
   sectionComingUp: 'Coming up',
   sectionExpectedIn: 'Expected in',
+  sectionLater: 'Later',
   sectionOutstandingReimbursements: 'Outstanding reimbursements',
   sectionRecentlyResolved: 'Recently resolved',
   sectionOtherOpenTasks: 'Other open tasks',

@@ -98,7 +98,8 @@ function describeCategory(category: HouseholdCategory, input: LifeStatusInput): 
     case 'home':
       return describeHome(tasks, inCategory(input.systems), input.openTaskCounts.get(category.id) ?? 0);
     case 'money':
-      return describeTasks(tasks, 'Nothing due this week');
+      // `tasks` is TODAY's slice: "this week" would deny a bill due tomorrow (HK13-D23). Money Home says what is coming.
+      return describeTasks(tasks, 'Nothing due today');
     case 'meals':
       return describeMeals(inCategory(input.upcomingMeals));
     case 'work':

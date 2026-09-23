@@ -29,6 +29,7 @@ import { FIELD_LIMITS, type AppState } from '../../domain/state';
 import type { Transition } from '../../state/appStore';
 import { useAppStore, useHouseholdState } from '../../store/AppStateProvider';
 import { useHousehold } from '../../store/useHousehold';
+import { CLOSED_REASON_LABEL, STAGE_LABEL } from './careerLists';
 
 const TIME_PATTERN = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
@@ -37,24 +38,6 @@ const TYPE_LABEL: Record<OpportunityType, string> = {
   freelance: 'Freelance',
   contract: 'Contract',
   education_program: 'Education',
-  other: 'Other',
-};
-
-const STAGE_LABEL: Record<OpportunityStage, string> = {
-  exploring: 'Exploring',
-  interested: 'Interested',
-  applied: 'Applied',
-  interviewing: 'Interviewing',
-  offer: 'Offer',
-  accepted: 'Accepted',
-  closed: 'Closed',
-};
-
-const CLOSED_REASON_LABEL: Record<OpportunityClosedReason, string> = {
-  withdrawn: 'I withdrew',
-  declined_by_organization: 'They declined',
-  offer_rescinded: 'Offer rescinded',
-  no_further_response: 'No further response',
   other: 'Other',
 };
 

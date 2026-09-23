@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { AppText, Button, InlineNotice, LoadingState, Overline, StatusList } from '../../design/components';
 import { colors, spacing } from '../../design/tokens';
@@ -48,11 +48,16 @@ const reimbursementLine = (r: ReimbursementProjection): string => {
  * hand-authored per state.
  */
 export function MoneyBody({ gate, view, today, onAddObligation, onAddIncome, onOpenItem, onOpenTask }: MoneyBodyProps) {
+  const [showAllAttention, setShowAllAttention] = useState(false);
   if (gate.state === 'loading') return <LoadingState label={MONEY_COPY.loading} />;
   if (gate.state === 'recovery') return <InlineNotice tone="attention" title={MONEY_COPY.recoveryTitle} body={MONEY_COPY.recoveryBody} />;
 
   const canAdd = gate.canWrite;
-  const hasAttention = view.needsAttention.length > 0 || view.outstandingReimbursements.length > 0;
+  // Only a reimbursement she marked done with no payment record asks for attention here; the rest wait in their own section. The
+  // section is drawn only when it has a row to show (it used to draw an empty header for a merely requested reimbursement).
+  const markedDone = view.outstandingReimbursements.filter((r) => r.interpretation === 'marked_done_no_payment_record');
+  const attentionItems = showAllAttention ? [...view.needsAttention, ...view.needsAttentionMore] : view.needsAttention;
+  const hasAttention = view.needsAttention.length > 0 || markedDone.length > 0;
 
   return (
     <View style={styles.root}>
@@ -71,12 +76,13 @@ export function MoneyBody({ gate, view, today, onAddObligation, onAddIncome, onO
         <Section title={MONEY_COPY.sectionNeedsAttention}>
           <StatusList
             items={[
-              ...view.needsAttention.map((item) => ({ key: item.taskId, label: item.title, value: itemLine(item), needsAttention: true, onPress: () => onOpenItem(item.taskId) })),
-              ...view.outstandingReimbursements
-                .filter((r) => r.interpretation === 'marked_done_no_payment_record')
-                .map((r) => ({ key: r.taskId, label: r.title, value: reimbursementLine(r), needsAttention: true })),
+              ...attentionItems.map((item) => ({ key: item.taskId, label: item.title, value: itemLine(item), needsAttention: true, onPress: () => onOpenItem(item.taskId) })),
+              ...markedDone.map((r) => ({ key: r.taskId, label: r.title, value: reimbursementLine(r), needsAttention: true })),
             ]}
           />
+          {view.needsAttentionMore.length > 0 && !showAllAttention ? (
+            <Button label={MONEY_COPY.showMore(view.needsAttentionMore.length)} variant="ghost" size="sm" onPress={() => setShowAllAttention(true)} />
+          ) : null}
         </Section>
       ) : null}
 
@@ -95,6 +101,12 @@ export function MoneyBody({ gate, view, today, onAddObligation, onAddIncome, onO
           <Empty text={MONEY_COPY.noExpectedIn} />
         )}
       </Section>
+
+      {view.later.length > 0 ? (
+        <Section title={MONEY_COPY.sectionLater}>
+          <StatusList items={view.later.map((item) => ({ key: item.taskId, label: item.title, value: itemLine(item), onPress: () => onOpenItem(item.taskId) }))} />
+        </Section>
+      ) : null}
 
       <Section title={MONEY_COPY.sectionOutstandingReimbursements}>
         {view.outstandingReimbursements.length > 0 ? (

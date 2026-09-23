@@ -3,7 +3,7 @@ import { useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { AppText, Button, ChipToggle, Overline, Screen, TextField } from '../../design/components';
 import { colors, spacing } from '../../design/tokens';
-import { scopeForNewRow } from '../../domain/categories';
+import { categoryWithRole, scopeForNewRow } from '../../domain/categories';
 import { DEFAULT_TASK_DURATION_MINUTES, durationSourceForSave } from '../../domain/foundation/duration';
 import { isLocalDate } from '../../domain/logicalDay';
 import { promoteNeedsMeItem, promotionDefaults } from '../../domain/needsMe';
@@ -83,6 +83,11 @@ export function TaskForm({
   const onComplete = () => {
     if (existing) void save((current, ctx) => completeTask(current, ctx, existing.id));
   };
+  // Completing one of Money's own items IS recording it paid or received (F09): the button says exactly that, never just "done"
+  // (HK13-D19 — "paid" is never claimed when only "done" was said).
+  const moneyDirection =
+    existing !== null && existing.value !== null && existing.categoryId === categoryWithRole(state, 'money')?.id ? existing.value.direction : null;
+  const completeLabel = moneyDirection === null ? 'Mark done' : moneyDirection === 'inflow' ? 'Mark received' : 'Mark paid';
 
   const onArchive = () => {
     if (existing) void save((current, ctx) => archiveTask(current, ctx, existing.id));
@@ -134,7 +139,7 @@ export function TaskForm({
       <Button label={existing ? 'Save changes' : 'Add task'} onPress={onSave} disabled={busy} style={styles.save} />
       {existing && existing.status === 'open' && (
         <>
-          <Button label="Mark done" variant="secondary" onPress={onComplete} disabled={busy} style={styles.save} />
+          <Button label={completeLabel} variant="secondary" onPress={onComplete} disabled={busy} style={styles.save} />
           <Button label="Remove task" variant="ghost" onPress={onArchive} disabled={busy} />
         </>
       )}

@@ -1,5 +1,6 @@
 import { demoOneMoves, findOneMove } from '../data/catalog/oneMoves';
 import type { OneMoveItem } from '../types';
+import { categoryWithRole } from './categories';
 import type { TransitionContext } from './context';
 import { provenanceFor, systemProvenance } from './foundation/provenance';
 import { loadTierForDay } from './loadTier';
@@ -11,6 +12,7 @@ import { appendObservation } from './observations';
 import { addEvidence } from './patterns';
 import { isOnboardingComplete } from './onboarding';
 import { projectStateDay } from './projectDay';
+import { autopayPreDueSuppressed } from './reasoning/attention';
 import type { AppState, NeedsMeItem, OneMoveRecord, Task } from './state';
 import { isBlocked } from './structure';
 import { completeTask } from './tasks';
@@ -161,9 +163,18 @@ function candidatePoolFor(state: AppState, date: LocalDate): OneMoveCandidate[] 
   if (state.origin === 'demo') return demoOneMoves.map((item) => ({ targetType: 'catalog', item }));
 
   const todaysTaskIds = new Set(projectStateDay(state, date).tasks.map((task) => task.id));
+  // Money (F09) owns what its items mean (HK13-D19). Expected income is not something she can do — "I did it" would record it
+  // RECEIVED — and an autopay bill gets no pre-due nudge, which offering it as the day's one move would be. Both stay on Today's list
+  // and on Money Home; neither is ever the One Move.
+  const moneyCategoryId = categoryWithRole(state, 'money')?.id ?? null;
+  const offerable = (task: Task): boolean => {
+    if (task.categoryId !== moneyCategoryId || task.value === null) return true;
+    if (task.value.direction === 'inflow') return false;
+    return task.dueDate === null || !autopayPreDueSuppressed(task.dueDate, task.paymentMechanism, date);
+  };
   // A blocked task cannot honestly be offered as the one thing to do: she cannot do it yet, whatever it's waiting on.
   const taskCandidates: OneMoveCandidate[] = state.tasks
-    .filter((task) => task.status === 'open' && todaysTaskIds.has(task.id) && !isBlocked(state, { kind: 'task', id: task.id }))
+    .filter((task) => task.status === 'open' && todaysTaskIds.has(task.id) && offerable(task) && !isBlocked(state, { kind: 'task', id: task.id }))
     .sort((a, b) => a.durationMinutes - b.durationMinutes || a.id.localeCompare(b.id))
     .map((task) => ({ targetType: 'task', item: taskAsOneMoveItem(task) }));
 

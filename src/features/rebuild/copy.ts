@@ -10,7 +10,9 @@ export const REBUILD_COPY = {
 
   life: {
     rowLabel: 'Me / Rebuild',
-    rowValue: (active: number) => (active === 0 ? 'Nothing named yet' : active === 1 ? '1 focus' : `${active} focuses`),
+    // A count of what she keeps visible. With none active, paused ones still exist: "Nothing named yet" would deny them (HK13-D23).
+    rowValue: (active: number, paused = 0) =>
+      active === 1 ? '1 focus' : active > 1 ? `${active} focuses` : paused === 0 ? 'Nothing named yet' : paused === 1 ? '1 paused' : `${paused} paused`,
   },
 
   availability: {

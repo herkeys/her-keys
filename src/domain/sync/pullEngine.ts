@@ -65,7 +65,7 @@ export interface PullContext {
     row: Record<string, unknown>,
     resolve: (cloudId: string | null | undefined) => string | null,
     isPending: (kind: SyncEntityKind, localId: string) => boolean
-  ) => { displace: string } | { adopt: string } | null;
+  ) => { displace: string } | { adopt: string; differed?: boolean } | null;
   /** Remove the local row `displacedBy` named. The engine has already kept her intent as conflict evidence. */
   dropLocal?: (state: AppState, kind: SyncEntityKind, localId: string) => AppState;
   /** Mint a local id that is free in this namespace (SD4-006 pull side). */
@@ -471,7 +471,8 @@ function applyOne(
     };
   }
 
-  const displaced = encounter === null ? null : encounter.displace;
+  // (An adoption refused above — the local row is already the cloud's under another id — displaces nothing: it simply is not one.)
+  const displaced = encounter !== null && 'displace' in encounter ? encounter.displace : null;
   let carried = namespace;
   if (displaced !== null) {
     state = ctx.dropLocal?.(state, kind, displaced) ?? state;

@@ -26,9 +26,14 @@ P5 low correctness · P6 UX polish · P7 maintainability · P8 performance · P9
 | HK13-D10 | P3 | F07, F13 | navigation / Life IA | Co-Parent (`/life/coparent`) and People (`/life/people`) have no entry point — reachable only by deep link | FIXED `b681a4c` |
 | HK13-D11 | P4 | F09–F13 | exit gate (Meals boundary scan) | F09–F12 never registered their lanes: the integrated line fails the Meals exit gate, and the scan's attribution could not tell a Meals change from a later feature's | FIXED `bb53aeb` |
 | HK13-D12 | P4 | F01 × F03 (× F11, F12, F13) | One Move | The planning default duration makes any task "small": offered on an overloaded day as load-reducing, and quoted back as "It should take about 15 minutes" | FIXED `79900c7` |
-| HK13-D13 | **P1** | F13 (sync engine) | multi-device sync | Two devices of one account open a context for the same person offline: the second device's pull is refused by the integrity gate on EVERY cycle — its sync stops for good, for every feature | FIXED (AUD13-01b) |
-| HK13-D14 | **P2** | F01, F02, F03 × F07, F10, F11, F13 | generic editors / Talk It Out | A new task or event from the generic editors, a Needs Me promotion or an accepted Talk It Out capture is ALWAYS household-visible, whatever private category (Work, Wellbeing, Relationships, Co-parenting) she files it under | FIXED (AUD13-02a) |
-| HK13-D15 | P3 | F10 | Opportunity form | Moving an opportunity's stage away from Closed is silently not saved: the stale closed reason makes the domain refuse, and the form closes as if saved | FIXED (AUD13-03a) |
+| HK13-D13 | **P1** | F13 (sync engine) | multi-device sync | Two devices of one account open a context for the same person offline: the second device's pull is refused by the integrity gate on EVERY cycle — its sync stops for good, for every feature | FIXED `9d0073d` |
+| HK13-D14 | **P2** | F01, F02, F03 × F07, F10, F11, F13 | generic editors / Talk It Out | A new task or event from the generic editors, a Needs Me promotion or an accepted Talk It Out capture is ALWAYS household-visible, whatever private category (Work, Wellbeing, Relationships, Co-parenting) she files it under | FIXED `9d0073d` |
+| HK13-D15 | P3 | F10 | Opportunity form | Moving an opportunity's stage away from Closed is silently not saved: the stale closed reason makes the domain refuse, and the form closes as if saved | FIXED `9d0073d` |
+| HK13-D16 | P3 | F10 | Work screen | A closed opportunity vanishes from the app exactly as an archived one does; "Restore from archive" is unreachable | FIXED (AUD13-03b) |
+| HK13-D17 | P3 | F09 | Money Home | Open Money tasks listed nowhere on Money Home: due after two weeks, past the first-glance bound, an autopay bill due today, an amount with no date | FIXED (AUD13-03b) |
+| HK13-D19 | P4 | F01 × F09 (× F03 editor) | One Move / task editor | One Move offers expected income ("I did it" records RECEIVED) and pre-due autopay bills; the generic editor completes a Money item with "Mark done" | FIXED (AUD13-04c) |
+| HK13-D22 | P4 | F08 exit gate | Meals boundary scan | Check D reads only CORE_SYNC_KINDS: a sync kind registered through the foundation manifest is invisible to the gate | FIXED (AUD13-04c) |
+| HK13-D23 | P5 | F01 hub × F09, F11 | Life hub copy | The Money row says "Nothing due this week" reading only today; Me / Rebuild says "Nothing named yet" while Focuses are paused | FIXED (AUD13-05a, trivial) |
 
 (Entries below are added as the audit proceeds.)
 
@@ -336,7 +341,7 @@ P5 low correctness · P6 UX polish · P7 maintainability · P8 performance · P9
   People field. Test-the-test: D13-M1 (no clash rule) CAUGHT 3/3 fail; D13-M2 (differing words replaced without evidence) CAUGHT 2
   fail; D13-M3 (a child's context matched by person only) CAUGHT 1 fail; D13-M4 (identical words recorded as a conflict) CAUGHT 1
   fail. All restored byte-for-byte.
-- **Status:** FIXED (AUD13-01b).
+- **Status:** FIXED `9d0073d`.
 
 ## HK13-D15 — A stage correction away from Closed is silently not saved (P3)
 
@@ -359,7 +364,7 @@ P5 low correctness · P6 UX polish · P7 maintainability · P8 performance · P9
   produce reaches a refusal (it pre-validates Closed-without-reason, and opportunities have no delete path), so the retained
   refusal guard is defence in depth on an unreachable path. (The first D15-M1 run hung: a failing form test skipped its unmount and
   the provider's minute timer kept the process alive; the tests now always unmount, and the rerun failed cleanly.)
-- **Status:** FIXED (AUD13-03a).
+- **Status:** FIXED `9d0073d`.
 
 ## HK13-D14 — New rows from the generic editors ignore their category's visibility (P2)
 
@@ -391,4 +396,95 @@ P5 low correctness · P6 UX polish · P7 maintainability · P8 performance · P9
   editor writes household) CAUGHT 2 fail; D14-M2 (event editor) CAUGHT 1; D14-M3 (Talk It Out acceptance) CAUGHT 1; D14-M4 (a private
   category no longer keeps a row private) CAUGHT 6; D14-M5 (a child row no longer child-scoped) CAUGHT 2. Full app suite after the
   repair: 3233/3234, the one failure being the boundary scan before these files were registered (then 0).
-- **Status:** FIXED (AUD13-02a).
+- **Status:** FIXED `9d0073d`.
+
+## HK13-D16 — Closed reads as gone: closed and archived opportunities are unreachable (P3)
+
+- **Feature / surface:** F10 Work / Career OS · `src/features/work/WorkOverview.tsx` (Career Next).
+- **How found:** the F08–F10 trace ("closed or archived opportunities can't be reached in the UI").
+- **Reproduction:** close an opportunity (reason "No further response") and leave the form: it is on no screen. Archive one: gone
+  too — and "Restore from archive", a button on the opportunity itself, can never be reached again.
+- **Expected:** "closed ≠ archived" (ADDENDUM J): closed is her recorded outcome and stays in view until SHE archives it; archived is
+  out of view but never gone.
+- **Root cause:** Career Next filtered `isOpportunityOpen(o) && o.archivedAt === null` and nothing listed the rest.
+- **Privacy impact:** none. **Data-loss impact:** effective — her records become unreachable (nothing is deleted). P3: feature records
+  unreachable.
+- **Repair (AUD13-03b):** `careerListsOf` (pure) puts every opportunity in exactly one list — open, closed (with her reason), archived —
+  and `CareerNext` renders them: Closed listed under its own heading, archived one tap away ("Show archived (N)"), every row opening
+  its opportunity (where Restore works). With nothing in play it says "Nothing in play right now." — never "No career opportunities
+  recorded yet." The stage and reason labels now live in one place (`careerLists.ts`) for the list and the form.
+- **Tests:** `tests/hk-f01f13/careerLists.test.mjs` (4): the partition; the rendered section (closed with reason, archived revealed,
+  every row opens the right opportunity); the "nothing in play" wording; Restore through the REAL form brings it back to Career Next
+  with its stage untouched. Test-the-test: D16-M1 (closed drops out) CAUGHT 2 fail; D16-M2 (no "Show archived") CAUGHT 1 fail.
+- **Status:** FIXED (AUD13-03b).
+
+## HK13-D17 — Money Home misses open Money tasks (P3)
+
+- **Feature / surface:** F09 Money OS · `src/features/money/projection.ts` (`buildMoneyHomeView`), `MoneyBody.tsx`.
+- **How found:** the F08–F10 trace ("a money task with an amount but no due date is listed nowhere"); widened by reading every
+  section's filter against the category's open tasks.
+- **Reproduction:** Money is a `TASK_LIST_ROLES` category, so the Life hub's "Other open tasks" deliberately skips its tasks and trusts
+  Money Home to list them. Money Home listed: due now (capped at 3), the next 14 days, and tasks with no amount. Listed NOWHERE on it:
+  (a) a bill or expected income due after 14 days; (b) the 4th+ item due now; (c) an autopay bill due TODAY (kept out of attention by
+  the pre-due rule, and out of "Coming up" by `due > today`); (d) a task carrying an amount but no date (a Talk It Out capture, or a date
+  cleared in the generic editor) — reachable from no screen at all.
+- **Expected:** `taskLists.ts`: "A category whose role has its own Life screen lists all of its open tasks there."
+- **Root cause:** windowed sections with no remainder; the build3 audit checks this screen only statically (it contains
+  `openTasksInCategory(`).
+- **Privacy impact:** none. **Data-loss impact:** effective for (d) — an open task she can never reach. P3.
+- **Repair (AUD13-03b):** every open Money item lands in exactly one section — Needs attention (first glance bounded, the rest behind
+  "Show N more"), Coming up / Expected in (everything else due by the horizon, including an autopay bill due today: due, not a
+  problem), and a new "Later" section; "Other open tasks" is every open task in the category that is not a dated Money item. Also
+  (P6, same place): "Needs attention" no longer draws an empty header when the only outstanding reimbursement is merely requested.
+- **Tests:** `tests/hk-f01f13/moneyReachability.test.mjs` (4): the sections partition the category's open tasks exactly (nothing
+  twice, nothing nowhere) over a household with every case; each item's section; rendered "Show N more" and "Later"; no empty header.
+  Test-the-test: D17-M1 (no Later) CAUGHT 3; D17-M2 (rest dropped past the cap) CAUGHT 3; D17-M3 (autopay due today falls out) CAUGHT
+  2; D17-M4 (amount without a date nowhere) CAUGHT 2; D17-M5 (empty header) CAUGHT 1.
+- **Status:** FIXED (AUD13-03b).
+
+## HK13-D19 — "Paid" and "received" said when only "done" was (P4)
+
+- **Features / surface:** F01 One Move (`src/domain/oneMove.ts` candidate pool) × F09 Money semantics; the generic task editor
+  (`src/features/tasks/TaskForm.tsx`).
+- **How found:** the F08–F10 trace ("One Move can pay a bill": it can choose autopay bills and expected income, and "I did it" marks them
+  Paid or Received).
+- **Reproduction:** expected income due today ("Tax refund") is offered as the day's One Move; "I did it" completes the Task, and Money
+  Home shows it RECEIVED. An autopay bill due today is offered — the very pre-due nudge F09 rules out. Completing a bill from Today's
+  generic editor says "Mark done"; Money then shows it PAID.
+- **Expected (doctrine):** reject "paid" when only done is known, and "received" when only expected is known.
+- **Root cause:** One Move's pool and the generic editor predate F09's meanings for a completed Money item.
+- **Privacy impact:** none. **Data-loss impact:** none; a false financial state recorded from an ambiguous action. P4.
+- **Repair (AUD13-04c):** One Move never offers expected income, nor an autopay bill that is not yet past due (the same
+  `autopayPreDueSuppressed` rule attention and Money Home use; past due, it may be — "confirm it cleared"). Manual bills and F07
+  follow-ups (where done is explicitly NOT paid) are unchanged. The generic editor's completion button says "Mark paid" for a bill and
+  "Mark received" for expected income — the words now say what completing records; any other task still says "Mark done".
+- **Tests:** `tests/hk-f01f13/moneyDoctrine.test.mjs` (4): expected income is never the One Move; autopay due today is not, past due is;
+  a manual bill and an F07 follow-up still can be; the rendered editor's button for a bill, expected income, a plain Money-category task
+  and an F07 follow-up. Test-the-test: D19-M1 (income offered) CAUGHT; D19-M2 (pre-due autopay offered) CAUGHT; D19-M3 ("Mark done"
+  for a Money item) CAUGHT — 1 fail each.
+- **Status:** FIXED (AUD13-04c).
+
+## HK13-D22 — The Meals gate cannot see a foundation-manifest sync kind (P4)
+
+- **Surface:** `scripts-dev/meals-boundary-scan.cjs` check D (a remainder of HK13-D11).
+- **How found:** the F08–F10 trace ("check D compares only CORE_SYNC_KINDS … 'D: none' does not mean no new sync kinds were added").
+- **Reproduction:** add a sync kind through `FOUNDATION_KIND_NAMES` (as F10, F11 and F13 did): check D reports "none".
+- **Root cause:** check D predates the foundation manifest as a second registration path.
+- **Severity reasoning:** P4 — the exit gate's promise ("no new sync kind") was false for the path three features used.
+- **Repair (AUD13-04c):** check D diffs the union of `CORE_SYNC_KINDS` and `FOUNDATION_KIND_NAMES`; F10, F11 and F13 register their
+  manifest kinds in their lanes; a new `laterSyncKinds` fact shows every lane kind the scan saw before subtracting it.
+- **Tests:** `[BV1]` asserts `laterSyncKinds` is exactly the seven F10–F13 kinds. Test-the-test: D22-M1 (check D core-only again)
+  CAUGHT; D22-M2 (F10 stops registering `opportunity`) CAUGHT.
+- **Status:** FIXED (AUD13-04c).
+
+## HK13-D23 — Two Life hub rows deny what exists (P5, trivial)
+
+- **Surface:** `src/features/life/lifeStatus.ts` (Money row); `src/features/rebuild/copy.ts` + `app/(app)/life/index.tsx` (Me / Rebuild).
+- **Found:** the F08–F10 trace ("'Nothing due this week' is inaccurate"); the F11–F13 trace ("'Nothing named yet' when all Focuses are
+  paused").
+- **Actual → repair (AUD13-05a):** the Money row reads only TODAY's slice yet said "Nothing due this week" beside a bill due tomorrow
+  → "Nothing due today". The Rebuild row counted only active Focuses and said "Nothing named yet" while paused ones exist → "N paused".
+- **Severity reasoning:** P5 (a false statement in a count row; nothing lost); repaired because each is one line, local and risk-free.
+- **Tests:** `tests/hk-f01f13/lifeHub.test.mjs` "HK13-D23: a row never denies what exists". Test-the-test: D23-M1 ("this week" again)
+  CAUGHT; D23-M2 (paused denied again) CAUGHT.
+- **Status:** FIXED (AUD13-05a).

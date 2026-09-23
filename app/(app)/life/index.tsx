@@ -32,6 +32,7 @@ export default function LifeHub() {
   const openNeedsMe = state.needsMe.filter((item) => item.status === 'open');
   const otherOpenTasks = openTasksWithoutList(state, today).length;
   const activeFocuses = state.rebuildFocuses.filter((focus) => focus.state === 'active').length;
+  const pausedFocuses = state.rebuildFocuses.filter((focus) => focus.state === 'paused').length;
   const people = peopleLifeTile(state, today);
 
   return (
@@ -95,7 +96,7 @@ export default function LifeHub() {
           {
             key: 'me-rebuild',
             label: REBUILD_COPY.life.rowLabel,
-            value: REBUILD_COPY.life.rowValue(activeFocuses),
+            value: REBUILD_COPY.life.rowValue(activeFocuses, pausedFocuses),
             onPress: () => router.push('/life/rebuild'),
           },
           // Life Admin / Documents (HK-FEATURE-12): a count only. No title, number, note, place, issuer or child name reaches the hub.

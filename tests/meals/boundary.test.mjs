@@ -48,6 +48,8 @@ describe('[BV] the semantic-boundary scan', () => {
     assert.deepEqual(result.facts.newDurableSchemas, []);
     assert.deepEqual(result.facts.mealPlanEntryFieldsAdded, ['slot', 'status'], 'MealPlanEntry gained exactly the two authorized fields');
     assert.deepEqual([result.facts.newTables, result.facts.newRootCollections, result.facts.newSyncKinds], [[], [], []]);
+    // The scan SEES every sync kind a later lane added — core and foundation-manifest alike — before subtracting it (HK13-D22).
+    assert.deepEqual([...result.facts.laterSyncKinds].sort(), ['lifeRecord', 'lifeRecordLink', 'opportunity', 'personContext', 'personTaskLink', 'rebuildFocus', 'rebuildFocusLink']);
     assert.deepEqual(result.facts.secondModels, []);
     assert.ok(result.facts.sharedFileChanges.every((c) => c.reason.length > 10));
   });

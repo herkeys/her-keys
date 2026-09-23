@@ -72,19 +72,22 @@ export function moneyItemsOf(state: AppState, today: LocalDate): MoneyItemView[]
 
 export interface MoneyHomeView {
   verdict: string;
+  /** Due now (due today or past due, minus autopay's pre-due suppression), most urgent first — the first glance, bounded. */
   needsAttention: MoneyItemView[];
+  /** The rest of what is due now, beyond the first glance: never dropped, one tap away ("Show N more"). */
+  needsAttentionMore: MoneyItemView[];
   comingUp: MoneyItemView[];
   expectedIn: MoneyItemView[];
+  /** Open items due after the two-week window, soonest first. */
+  later: MoneyItemView[];
   outstandingReimbursements: ReimbursementProjection[];
   recentlyResolved: { own: MoneyItemView[]; reimbursements: ReimbursementProjection[] };
   /**
-   * Open tasks filed in the money category that are NOT one of Money's own obligation/expected-
-   * income items (no `value` facet) — a generic task someone captured and categorized as Money
-   * without going through Money's own create flow. Money is a `TASK_LIST_ROLES` category
-   * (src/domain/taskLists.ts), so the Life hub's generic "Other open tasks" fallback deliberately
-   * excludes it, trusting THIS screen to list every open task in the category. Without this,
-   * such a task would be unreachable anywhere in the app (tests/build3Audit.capture.test.mjs,
-   * "every Life screen with a task list is wired to its role").
+   * Open tasks filed in the money category that are NOT one of Money's own dated obligation/expected-income items — a generic task
+   * (no `value` facet), or one that carries an amount but no date (a Talk It Out capture, or a date cleared in the generic editor).
+   * Money is a `TASK_LIST_ROLES` category (src/domain/taskLists.ts), so the Life hub's generic "Other open tasks" fallback
+   * deliberately excludes it, trusting THIS screen to list every open task in the category (HK13-D17: an amount with no date used to
+   * be listed nowhere). tests/build3Audit.capture.test.mjs, "every Life screen with a task list is wired to its role".
    */
   otherOpenTasks: OpenTaskEntry[];
 }
@@ -96,20 +99,29 @@ export function buildMoneyHomeView(state: AppState, householdId: string, clock: 
   const items = moneyItemsOf(state, today);
   const open = items.filter((i) => i.status === 'open');
 
-  // Needs attention: due today or overdue, minus the autopay pre-due suppression the shared
-  // Today pipeline also applies (src/domain/reasoning/attention.ts) — the SAME rule, so Money
-  // Home and Today never disagree about whether an item is attention-worthy yet.
-  const dueNow = open.filter((i) => !autopayPreDueSuppressed(i.dueDate, i.paymentMechanism, today) && i.dueDate <= today);
+  // EVERY open item lands in exactly one section (HK13-D17). Before, an item due after the two-week window, one past the first
+  // glance's bound, and an autopay bill due TODAY (suppressed from attention, but not "after today") were listed nowhere here — and
+  // the Life hub's "Other open tasks" deliberately skips a Money task, trusting this screen to list it.
+  //
+  // Needs attention: due today or overdue, minus the autopay pre-due suppression the shared Today pipeline also applies
+  // (src/domain/reasoning/attention.ts) — the SAME rule, so Money Home and Today never disagree about whether an item is
+  // attention-worthy yet. Most urgent first: past-due before due-today, oldest due date first. The first glance is bounded — never
+  // an endless overdue list — and the rest is one tap away.
+  const dueNow = open
+    .filter((i) => !autopayPreDueSuppressed(i.dueDate, i.paymentMechanism, today) && i.dueDate <= today)
+    .sort((a, b) => (a.pastDue === b.pastDue ? a.dueDate.localeCompare(b.dueDate) : a.pastDue ? -1 : 1));
   const reimbursementsOut = outstandingReimbursements(state, householdId, clock);
-  // Most urgent first: past-due before due-today, oldest due date first. Bounded — never an endless overdue list.
-  const needsAttention = [...dueNow]
-    .sort((a, b) => (a.pastDue === b.pastDue ? a.dueDate.localeCompare(b.dueDate) : a.pastDue ? -1 : 1))
-    .slice(0, NEEDS_ATTENTION_LIMIT);
+  const needsAttention = dueNow.slice(0, NEEDS_ATTENTION_LIMIT);
+  const needsAttentionMore = dueNow.slice(NEEDS_ATTENTION_LIMIT);
 
+  // Coming up / expected in: everything else due by the horizon — including an autopay bill due today, which is due, not a problem.
   const horizon = addDays(today, COMING_UP_WINDOW_DAYS);
-  const upcoming = open.filter((i) => i.dueDate > today && i.dueDate <= horizon).sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+  const dueNowIds = new Set(dueNow.map((i) => i.taskId));
+  const byDue = (a: MoneyItemView, b: MoneyItemView) => a.dueDate.localeCompare(b.dueDate) || a.taskId.localeCompare(b.taskId);
+  const upcoming = open.filter((i) => !dueNowIds.has(i.taskId) && i.dueDate <= horizon).sort(byDue);
   const comingUp = upcoming.filter((i) => i.direction === 'outflow');
   const expectedIn = upcoming.filter((i) => i.direction === 'inflow');
+  const later = open.filter((i) => i.dueDate > horizon).sort(byDue);
 
   const resolvedHorizon = addDays(today, -RECENTLY_RESOLVED_WINDOW_DAYS);
   const recentlyResolvedOwn = items
@@ -128,13 +140,16 @@ export function buildMoneyHomeView(state: AppState, householdId: string, clock: 
   const verdict = verdictSentence(attentionCount, dueNow.length + reimbursementsOut.length > NEEDS_ATTENTION_LIMIT, soonestOpen);
 
   const categoryId = moneyCategoryId(state);
-  const otherOpenTasks = categoryId === null ? [] : openTasksInCategory(state, categoryId, today).filter((entry) => entry.task.value === null);
+  // Not one of the dated Money items above: no amount, or an amount with no date.
+  const otherOpenTasks = categoryId === null ? [] : openTasksInCategory(state, categoryId, today).filter((entry) => entry.task.value === null || entry.task.dueDate === null);
 
   return {
     verdict,
     needsAttention,
+    needsAttentionMore,
     comingUp,
     expectedIn,
+    later,
     outstandingReimbursements: reimbursementsOut,
     recentlyResolved: { own: recentlyResolvedOwn, reimbursements: recentlyResolvedReimb },
     otherOpenTasks,

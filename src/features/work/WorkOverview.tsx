@@ -1,8 +1,7 @@
 import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
-import { AppText, Button, Overline, StatusList } from '../../design/components';
+import { AppText, Overline, StatusList } from '../../design/components';
 import { colors, spacing } from '../../design/tokens';
-import { isOpportunityOpen } from '../../domain/foundation/opportunity';
 import { hasOpenNextAction } from '../../domain/opportunities';
 import { workCareerVerdict } from '../../domain/reasoning/workCareer';
 import { CategoryTaskList } from '../life/CategoryTaskList';
@@ -10,16 +9,8 @@ import { useSchedule } from '../../store/ScheduleContext';
 import { useHousehold } from '../../store/useHousehold';
 import { useHouseholdState } from '../../store/AppStateProvider';
 import { formatTime } from '../daily-load/computeDailyLoad';
-
-const STAGE_LABEL: Record<string, string> = {
-  exploring: 'Exploring',
-  interested: 'Interested',
-  applied: 'Applied',
-  interviewing: 'Interviewing',
-  offer: 'Offer',
-  accepted: 'Accepted',
-  closed: 'Closed',
-};
+import { CareerNext } from './CareerNext';
+import { careerListsOf } from './careerLists';
 
 /**
  * WORK / CAREER — one destination, two layers (F10). Work Now stays a thin projection over the
@@ -34,11 +25,7 @@ export function WorkOverview() {
   const nowMs = Date.now();
   const workCategoryId = categoryIdForRole('work');
   const workEvents = events.filter((e) => e.categoryId === workCategoryId);
-
-  const openOpportunities = state.careerOpportunities
-    .filter((o) => isOpportunityOpen(o) && o.archivedAt === null)
-    .sort((a, b) => a.stageChangedAt.localeCompare(b.stageChangedAt))
-    .reverse();
+  const openOpportunity = (opportunityId: string) => router.push({ pathname: '/opportunity-editor', params: { opportunityId } });
 
   return (
     <View>
@@ -65,28 +52,11 @@ export function WorkOverview() {
       <Overline style={styles.labelSpaced}>On your list</Overline>
       <CategoryTaskList categoryId={workCategoryId} emptyLabel="Nothing work-related on your list." />
 
-      <Overline style={styles.labelSpaced}>Career next</Overline>
-      {openOpportunities.length > 0 ? (
-        <StatusList
-          items={openOpportunities.map((o) => ({
-            key: o.id,
-            label: o.title,
-            value: STAGE_LABEL[o.stage] ?? o.stage,
-            needsAttention: !hasOpenNextAction(state, o.id),
-            onPress: () => router.push({ pathname: '/opportunity-editor', params: { opportunityId: o.id } }),
-          }))}
-        />
-      ) : (
-        <AppText variant="body" color={colors.textSecondary}>
-          No career opportunities recorded yet.
-        </AppText>
-      )}
-      <Button
-        label="Add an opportunity"
-        variant="ghost"
-        size="sm"
-        onPress={() => router.push('/opportunity-editor')}
-        style={styles.addButton}
+      <CareerNext
+        lists={careerListsOf(state.careerOpportunities)}
+        hasNextAction={(id) => hasOpenNextAction(state, id)}
+        onOpen={openOpportunity}
+        onAdd={() => router.push('/opportunity-editor')}
       />
 
       <AppText variant="caption" color={colors.textTertiary} style={styles.note}>
@@ -100,6 +70,5 @@ const styles = StyleSheet.create({
   verdict: { marginBottom: spacing.xl },
   label: { marginBottom: spacing.md },
   labelSpaced: { marginTop: spacing.xxl, marginBottom: spacing.md },
-  addButton: { marginTop: spacing.md, alignSelf: 'flex-start' },
   note: { marginTop: spacing.xl },
 });

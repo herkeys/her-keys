@@ -163,7 +163,7 @@ const LATER_FEATURES = [
     migrations: ['supabase/migrations/20260922181000_f10_career_opportunities.sql'],
     schemas: ['CareerOpportunitySchema', 'DependencyRefSchema'],
     rootCollections: ['careerOpportunities'],
-    syncKinds: [],
+    syncKinds: ['opportunity'],
     shared: [
       ['app/_layout.tsx', 'HK-FEATURE-10: the opportunity editor is a guarded modal route, like the task and event editors'],
       ['src/domain/routeAccess.ts', 'HK-FEATURE-10: route access for opportunity-editor'],
@@ -210,7 +210,7 @@ const LATER_FEATURES = [
     migrations: ['supabase/migrations/20260922182000_f11_rebuild_focus.sql'],
     schemas: ['RebuildFocusSchema', 'RebuildFocusLinkSchema', 'FocusTargetSchema'],
     rootCollections: ['rebuildFocuses', 'rebuildFocusLinks'],
-    syncKinds: [],
+    syncKinds: ['rebuildFocus', 'rebuildFocusLink'],
     shared: [
       ['app/(app)/life/index.tsx', 'HK-FEATURE-11: the Me / Rebuild row on the Life hub'],
       ['src/domain/state.ts', 'HK-FEATURE-11: the rebuildFocuses and rebuildFocusLinks roots and their integrity checks'],
@@ -277,7 +277,7 @@ const LATER_FEATURES = [
     migrations: ['supabase/migrations/20260922200000_f13_people_os.sql'],
     schemas: ['PersonContextSchema', 'PersonTaskLinkSchema'],
     rootCollections: ['personContexts', 'personTaskLinks'],
-    syncKinds: [],
+    syncKinds: ['personContext', 'personTaskLink'],
     // (Corrected by the integration: F13 also claimed supabase/tests/sync-integration.mjs and journey-composition.mjs, which its
     // branch never changed — check H — and relied on Meals-line reasons for the five files it did change that are listed last.)
     shared: [
@@ -322,14 +322,14 @@ const LATER_FEATURES = [
       ['src/domain/sync/pullEngine.ts', 'AUD13-01b: an adoption whose words differed is recorded as evidence; adopt never re-points a mapped row (HK13-D13)'],
       ['src/domain/categories.ts', 'AUD13-02a: scopeForNewRow — a new row takes its category\'s visibility (HK13-D14)'],
       ['src/domain/interpretations.ts', 'AUD13-02a: an accepted Talk It Out capture takes its category\'s visibility (HK13-D14)'],
-      ['src/features/tasks/TaskForm.tsx', 'AUD13-02a: a new task (and a Needs Me promotion) takes its category\'s visibility (HK13-D14)'],
+      ['src/features/tasks/TaskForm.tsx', 'AUD13-02a: a new task (and a Needs Me promotion) takes its category\'s visibility (HK13-D14); AUD13-04c: completing a Money item says "Mark paid" / "Mark received" (HK13-D19)'],
       ['src/features/calendar/EventForm.tsx', 'AUD13-02a: a new event takes its category\'s visibility (HK13-D14)'],
       ['src/domain/state.ts', 'INT13-00: the union of four roots; AUD13-01: every later root defaults to [] so an older save loads (HK13-D08)'],
       ['src/domain/account/claim.ts', 'AUD13-01: one CONTENT_COLLECTIONS list, so no later root reads as an empty household (HK13-D09)'],
       ['src/state/initialState.ts', 'INT13-00: the union of four roots'],
       ['src/data/seed/demoHousehold.ts', 'INT13-00: the union of four features\' demo rows'],
-      ['app/(app)/life/index.tsx', 'INT13-02: the reconciled Life hub: two sections, every area reachable, truthful copy (HK13-D10)'],
-      ['src/features/life/lifeStatus.ts', 'INT13-02: the co-parenting category row opens Feature 07\'s screen (HK13-D10)'],
+      ['app/(app)/life/index.tsx', 'INT13-02: the reconciled Life hub: two sections, every area reachable, truthful copy (HK13-D10); AUD13-05a: paused Focuses are named (HK13-D23)'],
+      ['src/features/life/lifeStatus.ts', 'INT13-02: the co-parenting category row opens Feature 07\'s screen (HK13-D10); AUD13-05a: the Money row says only what today\'s slice shows (HK13-D23)'],
       ['supabase/tests/00-interlock.sql', 'INT13-00: the application table count is 41 with every feature\'s tables'],
       ['tests/foundationSpecs.test.mjs', 'INT13-00/01: the union of four manifests\' counts; each kind in its own migration'],
       ['tests/hk-ir01/changeBridge.test.mjs', 'INT13-00: the union of the sync-kind inventory'],
@@ -338,7 +338,7 @@ const LATER_FEATURES = [
       ['.gitattributes', 'INT13-01: the LF pins follow the renamed and new additive migrations'],
       ['scripts-dev/meals-boundary-scan.cjs', 'AUD13: registered F09-F12 and the integration, and made the accounting exact (HK13-D11)'],
       ['tests/meals/boundary.test.mjs', 'AUD13: the routing guarantee asks who changed a routing file, not only whether (HK13-D11)'],
-      ['src/domain/oneMove.ts', 'AUD13-04b: only a duration she gave makes a task "small" or is quoted back as an estimate (HK13-D12)'],
+      ['src/domain/oneMove.ts', 'AUD13-04b: only a duration she gave makes a task "small" or is quoted back as an estimate (HK13-D12); AUD13-04c: expected income and a pre-due autopay bill are never the One Move (HK13-D19)'],
       ['tests/oneMove.test.mjs', 'AUD13-04b: HK13-D12 coverage; a duration a test treats as hers now says it is hers (`user`)'],
       ['tests/today/components.test.mjs', 'AUD13-04b: HK13-D12 — the card quotes her own (`user`) duration'],
       ['tests/today/scenarios2.test.mjs', 'AUD13-04b: HK13-D12 — "Why this?" quotes her own duration, and nothing for the planning default'],
@@ -465,10 +465,17 @@ function scan() {
   facts.newRootCollections = rootDiff.added;
   if (rootDiff.added.length > 0 || rootDiff.removed.length > 0) findings.push(`C: AppState root keys changed: +[${rootDiff.added}] -[${rootDiff.removed}]`);
 
-  // D. new sync kinds (a registered later lane's own kinds are its lane)
-  const rawKindDiff = diff(arrayItems(atBase('src/domain/sync/syncTypes.ts'), 'CORE_SYNC_KINDS') ?? new Set(), arrayItems(now('src/domain/sync/syncTypes.ts'), 'CORE_SYNC_KINDS') ?? new Set());
+  // D. new sync kinds (a registered later lane's own kinds are its lane). A kind registered through the foundation manifest is a sync
+  // kind exactly as a core one is; reading only CORE_SYNC_KINDS left every manifest kind invisible here (HK13-D22).
+  const syncKindsIn = (read) => new Set([
+    ...(arrayItems(read('src/domain/sync/syncTypes.ts'), 'CORE_SYNC_KINDS') ?? []),
+    ...(arrayItems(read('src/domain/sync/foundationSpecs.ts'), 'FOUNDATION_KIND_NAMES') ?? []),
+  ]);
+  const rawKindDiff = diff(syncKindsIn(atBase), syncKindsIn(now));
   const kindDiff = { added: rawKindDiff.added.filter((kind) => !laterKinds.has(kind)), removed: rawKindDiff.removed };
   facts.newSyncKinds = kindDiff.added;
+  // What the registered lanes added, as seen here: proof the scan sees every sync kind, manifest ones included.
+  facts.laterSyncKinds = rawKindDiff.added.filter((kind) => laterKinds.has(kind));
   if (kindDiff.added.length > 0 || kindDiff.removed.length > 0) findings.push(`D: sync kinds changed: +[${kindDiff.added}] -[${kindDiff.removed}]`);
 
   // E. every change accounted for by who could have made it (see account() below).

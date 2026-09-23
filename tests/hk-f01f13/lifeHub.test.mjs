@@ -15,6 +15,7 @@ import { starterCategories } from '../../src/domain/categories.ts';
 import { LIFE_HUB_COPY } from '../../src/features/life/lifeHubCopy.ts';
 import { LIFE_SCREEN_ROUTES, deriveLifeStatus, shownOnLife } from '../../src/features/life/lifeStatus.ts';
 import { peopleLifeTile } from '../../src/features/people/lifeTile.ts';
+import { REBUILD_COPY } from '../../src/features/rebuild/copy.ts';
 import { createEmptyState } from '../../src/state/initialState.ts';
 
 const REPO = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -107,5 +108,17 @@ describe('the hub\'s copy says only what the system does', () => {
   test('the private section says the truth: private to her, and only a task she makes reaches her day', () => {
     assert.match(LIFE_HUB_COPY.privateSectionNote, /Private to you/);
     assert.match(LIFE_HUB_COPY.privateSectionNote, /Only the tasks you make here reach your day/);
+  });
+
+  test('HK13-D23: a row never denies what exists — the Money row reads today\'s slice, and paused Focuses are still named', () => {
+    const categories = starterCategories('household-1');
+    const money = shownOnLife(deriveLifeStatus({ categories, events: [], tasks: [], systems: [], upcomingMeals: [], openTaskCounts: new Map() }))
+      .find((r) => r.systemRole === 'money');
+    assert.equal(money.value, 'Nothing due today', 'not "this week": the row only ever sees today');
+    assert.equal(REBUILD_COPY.life.rowValue(0, 0), 'Nothing named yet');
+    assert.equal(REBUILD_COPY.life.rowValue(0, 2), '2 paused', 'paused Focuses exist; nothing is denied');
+    assert.equal(REBUILD_COPY.life.rowValue(0, 1), '1 paused');
+    assert.equal(REBUILD_COPY.life.rowValue(1, 3), '1 focus');
+    assert.match(read(`${LIFE_DIR}/index.tsx`), /REBUILD_COPY\.life\.rowValue\(activeFocuses, pausedFocuses\)/, 'the hub passes both counts');
   });
 });
