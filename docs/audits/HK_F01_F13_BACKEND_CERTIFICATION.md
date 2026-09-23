@@ -191,6 +191,9 @@ own command:
   rebuildFocuses, rebuildFocusLinks, lifeRecords, lifeRecordLinks, personContexts and personTaskLinks.
 - **Unrelated account C:** C is quarantined on the device, and sees nothing on its own device.
 
+Every feature's real-database journey runs over real HTTP, PostgREST and RLS on the private stack with the whole chain in the full
+harness: composition, sync-integration, kids, home, rebuild, life-admin, people and co-parent. F07's journey joined them in AUD13-12;
+before that, it only ever ran against the shared database, which lacks every later migration (HK13-D43).
 `integratedDevices.test.mjs` covers the same person opened as a context on two devices of one account while offline (HK13-D13):
 one context survives on both devices, the other is kept as evidence, and sync keeps flowing. A child gets the same race.
 `syncLifecycle.test.mjs` covers each new type's offline, relaunch, reconnect, fresh-device, retry, stale-edit and refusal paths (§3).
@@ -265,6 +268,7 @@ and lifecycle mutants (§3) are listed above.
 | I3, I5 | F11 Focus and F13 context read policies widened to the household | caught by suite 81 ("same-household B: DENY — reads zero of A's private rows in all twelve private tables") |
 | I6, I7, I8 | a feature migration dropped from the chain; a change-log table dropped; a `sync_push` case dropped | caught (`migrationChain`, `syncRegistry`) |
 | I2b | the generator manifest loses F10's dependency widening | caught (`gen-foundation-sql --check`, `foundationSpecs`) |
+| D43-M1, D43-M2 | the full run drops the Co-Parent journey; the journey queries the shared database again | caught (`harnessRegistry`) |
 | F05 S-N4b, S-N8 (SQL) | membership check and child collision probe in the LIVE `sync_push` | caught after HK13-D39 |
 | F05 S-N9, S-N10; Rebuild R16 and its SQL mutants; Life Admin LA6, LA7, LA7b; People M6, M7, M7b, S1, S2; Meals SQL mutants | each feature's own database guarantees, applied after the whole chain | all caught |
 

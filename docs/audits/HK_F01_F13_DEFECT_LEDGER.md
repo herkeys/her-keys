@@ -56,7 +56,7 @@ P5 low correctness · P6 UX polish · P7 maintainability · P8 performance · P9
 | HK13-D21 | P5 | F12 | Life Admin edit sheet | Editing a record shows its reference number in full, without the Reveal the detail requires | DOCUMENTED |
 | HK13-D41 | P9 | F04 (Build 4 foundation) | Systems | A System is household-shared but its steps are owner-private: another adult would see the System without its steps | DOCUMENTED (pre-existing, latent) |
 | HK13-D42 | P9 | F05 | Kids | "Add child" is offered to any member; the server lets only the household owner add one (42501), so a non-owner's child would stay on the device | DOCUMENTED (pre-existing, latent) |
-| HK13-D43 | P4 | F07 × backend harness | real-database journey | Feature 07's journey ran only through its own runner, against the shared default database (nothing after F05): the integrated chain never met it | FIXED (AUD13-12) |
+| HK13-D43 | P4 | F07 × backend harness | real-database journey | Feature 07's journey ran only through its own runner, against the shared default database (nothing after F05): the integrated chain never met it | FIXED `0241887` |
 
 (Entries below are added as the audit proceeds.)
 
@@ -889,7 +889,7 @@ structural, verified in code:
   F07's.
 - **Severity and why:** P4, an integration-specific test-infrastructure defect. A feature's real-database evidence did not cover the
   integrated line. The product was fine: run on the whole chain, the journey passes 35/35.
-- **Repair (AUD13-12):**
+- **Repair (AUD13-12 `0241887`):**
   - The journey reads the stack database it is given (`STACK_DB`, as the Kids journey does).
   - `run.mjs` runs it in the full run and adds a `coparent` mode, both on the private stack.
   - `run-coparent.mjs` is unchanged and still runs it alone against the default database.

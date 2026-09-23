@@ -166,7 +166,7 @@ held by `tests/hk-f01f13/doctrineClosures.test.mjs` (9 tests) and `namesAtTheLim
 | **F04 Systems** | Canonical System; lifecycle; steps are a blueprint, not a checklist (`systems/*`). Focus links never mutate a System (`rebuild/focus.relationships`). People and Life Admin create no System, step, recurrence or Event (`doctrineClosures`, DC-M8). | D24 (per-owner step slot) | D41 (steps owner-private, latent) |
 | **F05 Kids** | Child identity is the id, never the name. Add child (`kids/children`, suite 77). A cloud rename keeps identity (`syncComposition`). Subject rules (suite 30). RLS (77, journey-kids). Kids stays the only child model (`kids/boundaries`). F12 and F13 read the child by id (`crossSeams`, `lifeAdmin/commands`, 79-f13). No dangling projection (`kids/projection` AL). | D35, D39 (mutants on dead `sync_push` code) | D42 (Add child for non-owners, latent) |
 | **F06 Home** | Home tasks each appear once; visits and the "marked done / condition not verified" truth (`hk-f06/*`). Local-first through restart and offline (`homeMutations` L, M). Home keeps its workflow. People and Life Admin grow none (`doctrineClosures`). | — | — |
-| **F07 Co-Parent** | Assigned ≠ acknowledged ≠ accepted ≠ covered; request; decline and return; handoffs (`coparent/*`). Done ≠ paid (`coparent/money`, `crossSeams`). People cannot edit the co-parent (`people/domain`, `crossSeams`). Money only projects F07's truth (`money/reimbursements`). A holder archived from People reads "holder unavailable" (a deliberate state, guarded by K-M10). | D10 (entry point), D24, D35 | D37 |
+| **F07 Co-Parent** | Assigned ≠ acknowledged ≠ accepted ≠ covered; request; decline and return; handoffs (`coparent/*`). Done ≠ paid (`coparent/money`, `crossSeams`). People cannot edit the co-parent (`people/domain`, `crossSeams`). Money only projects F07's truth (`money/reimbursements`). A holder archived from People reads "holder unavailable" (a deliberate state, guarded by K-M10). | D10 (entry point), D24, D35, D43 (its journey on the integrated chain) | D37 |
 | **F08 Meals** | Planning, status and slot, and "nothing defaults to dinner" (`meals/*`, suite 77-meals). Meals leaves every other collection untouched (`lifeIntegration` AO1). The boundary gate registers every later lane and attributes each change to its lane (D11, D22; `boundary.test.mjs` 10/10). | D11, D22 | D20 (duplicate listing) |
 | **F09 Money** | Integer minor units, USD only, explicit direction, payment mechanism (`money/*`, suite 58). Expected ≠ received; done ≠ paid; no pre-due autopay nudge (`money/projection`, `moneyDoctrine`). Money Home lists every open Money task exactly once (`moneyReachability`). F07 mapping. Today, One Move and Calendar integration (`crossSeams`). Recurring only by her explicit copy, never on "paid". One amount, never split. An edit or a copy never widens visibility. No bank, provider or network call (`doctrineClosures`, DC-M4, DC-M5). V1 scope is `household` by the documented F09 decision. | D17, D19, D23, D40 | — |
 | **F10 Work** | Stage vocabulary; stages move only by explicit action; closed reason; closed ≠ archived (`work/opportunity`, `careerLists`, `opportunityForm`). Next action is a Task and an interview is an Event, through the generic typed Dependency (`crossSeams`; I2 caught). No money field (`work/opportunity`). No automatic advancement (I12 caught). Stored fields pinned: no ATS, CRM, amount, time or duration (`doctrineClosures`). No capacity effect from the opportunity itself (`doctrineClosures`). | D01, D08, D09, D15, D16, D38 | — |
@@ -319,7 +319,7 @@ code:
 - **Mutant sets, all caught:**
   - Migration and harness: ENVF 8/8.
   - Repairs by number: D11 9/9 (the Meals gate), D12 3/3, D13, D14 5/5, D16, D17, D19, D22 and D23 (14/14 in `df89506`), D24 2/2,
-    D28 4/4, D35 6/6, D38 2/2, D39 2/2, D40 2/2.
+    D28 4/4, D35 6/6, D38 2/2, D39 2/2, D40 2/2, D43 2/2.
   - Sync: P9 4/4, REG 6/6.
   - Doctrine closures: DC 8/8.
   - D30: the two IR01 mutants were re-anchored and are caught.
@@ -335,7 +335,7 @@ code:
 | Backend harness | 1431/1431 | see §20 |
 
 **Nothing silently disappeared.** Every test name at ENTRY was compared with the final head, reading git objects only
-(`scratchpad/test-names-diff.cjs`). No test file was removed. Test files went from 176 to 195: +19, all in `tests/hk-f01f13/`.
+(`scratchpad/test-names-diff.cjs`). No test file was removed. Test files went from 176 to 196: +20, all in `tests/hk-f01f13/`.
 Exactly two ENTRY test names no longer exist; both were deliberately replaced, and they are the brief's "old/new names and reason":
 1. `tests/meals/boundary.test.mjs`
    - **OLD:** "[BL1] [BL2] the routing, route access, root layout and Life layout are untouched, and the Meals route is the existing
@@ -414,7 +414,7 @@ attacked. "Today" and "Calendar" say how it reaches them. "Cross-feature" is wha
 
 ## 18. Defect ledger summary (Phase 17)
 
-`HK_F01_F13_DEFECT_LEDGER.md` holds 42 items, HK13-D01 to D42, each with how it was found, expected, actual, root cause, privacy and
+`HK_F01_F13_DEFECT_LEDGER.md` holds 43 items, HK13-D01 to D43, each with how it was found, expected, actual, root cause, privacy and
 data-loss impact, severity reasoning, the repair decision, the commit and the tests.
 
 | Severity | Items | Status |
@@ -423,7 +423,7 @@ data-loss impact, severity reasoning, the repair decision, the commit and the te
 | P1 | D01, D02, D03, D13 | 4 FIXED |
 | P2 | D14, D24, D28 | 3 FIXED |
 | P3 | D10, D15, D16, D17, D35 | 5 FIXED |
-| P4 | D04, D05, D06, D11, D12, D19, D22, D27, D30, D39, D40 | 11 FIXED |
+| P4 | D04, D05, D06, D11, D12, D19, D22, D27, D30, D39, D40, D43 | 12 FIXED |
 | P5 | D07, D23 fixed; D18, D21, D37 documented | 2 FIXED, 3 DOCUMENTED |
 | P6 | D31, D38 fixed; D20, D32, D33 documented | 2 FIXED, 3 DOCUMENTED |
 | P7 | D29 | DOCUMENTED |
