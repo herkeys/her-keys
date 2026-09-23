@@ -20,8 +20,15 @@ import {
 import { liveLinksOf, openNextActions, orderedFocuses } from '../../src/domain/rebuild/read.ts';
 import { addTask } from '../../src/domain/tasks.ts';
 import { redactRowValues } from '../../src/platform/supabaseSyncTransport.ts';
-import { ACCOUNT_A, accountCloudFor, bindAsNewDevice, makeDevice, mutate, withheldMove } from '../support/accountDevice.mjs';
+import { createMemoryStorage } from '../../src/persistence/storageAdapter.ts';
+import { rebuildAvailabilityOf } from '../../src/features/rebuild/availability.ts';
+import { REBUILD_COPY } from '../../src/features/rebuild/copy.ts';
+import { buildRebuildHome } from '../../src/features/rebuild/model.ts';
+import { RebuildHomeBody } from '../../src/features/rebuild/RebuildHomeBody.tsx';
+import React from 'react';
+import { ACCOUNT_A, ACCOUNT_B, NOW, accountCloudFor, bindAsNewDevice, makeDevice, mutate, withheldMove } from '../support/accountDevice.mjs';
 import { createFakeCloud } from '../support/fakeCloud.mjs';
+import { render } from '../support/render.tsx';
 
 const TITLE = 'Make space for myself again';
 const NOTE = 'Saturday mornings used to be mine.';
@@ -196,6 +203,52 @@ describe('[F11-M5] offline, stale and refused', () => {
     assert.equal(redactRowValues('Failing row contains (1f0c…, a private note, active).'), 'Failing row contains (redacted).');
     assert.equal(redactRowValues('Key (focus_id)=(abc) is not present in table "rebuild_focuses".'), 'Key (focus_id)=(abc) is not present in table "rebuild_focuses".');
     assert.equal(redactRowValues(null), null);
+  });
+});
+
+describe('[F11-M5] account switch and demo isolation', () => {
+  test('A names a Focus (unsent), signs out; B signs in on the same device: nothing of A is uploaded under B, and the screen shows B nothing of A', async () => {
+    const cloud = createFakeCloud();
+    const cloudA = accountCloudFor(cloud, ACCOUNT_A);
+    const storage = createMemoryStorage({});
+    const a = await makeDevice({ cloud, accountId: ACCOUNT_A, accountCloud: cloudA, storage });
+    await mutate(a, (state) => ({ ...state, oneMoves: [withheldMove] }));
+    await a.signIn();
+    cloud.state.offline = true;
+    await mutate(a, (s, c) => setRebuildFocusNote(addRebuildFocus(s, c, { id: 'focus-a-private', title: TITLE }), c, 'focus-a-private', NOTE));
+    await mutate(a, focusStep('focus-a-private', 'A private step', 'task-a-private'));
+    await a.settle();
+    cloud.state.offline = false;
+    await a.accountRuntime.signOut();
+    const callsBefore = cloud.calls.length;
+
+    const cloudB = accountCloudFor(cloud, ACCOUNT_B);
+    const b = await makeDevice({ cloud, accountId: ACCOUNT_B, accountCloud: cloudB, storage });
+    const account = await b.signIn();
+    assert.equal(account.kind, 'boundOther');
+    await b.settle();
+    assert.equal(cloud.calls.length, callsBefore, 'nothing was sent under B');
+    assert.equal(cloud.table('rebuild_focuses').length + cloud.table('rebuild_focus_links').length, 0, 'no Focus or link reached any cloud');
+
+    const gate = rebuildAvailabilityOf(b.store.getSnapshot(), account);
+    assert.equal(gate.kind, 'other_account');
+    const view = gate.kind === 'ready' ? buildRebuildHome(b.store.getSnapshot().state, '2026-09-21', NOW) : null;
+    const r = await render(React.createElement(RebuildHomeBody, { gate, view, onAddFocus() {}, onNotNow() {}, onOpenFocus() {}, onAddNextStep() {} }));
+    const shown = r.root.findAllByType('Text').map((n) => [].concat(n.props.children ?? []).join('')).join('\n');
+    assert.equal(shown.includes(TITLE) || shown.includes(NOTE) || shown.includes('A private step'), false, 'no Focus, note or step of A is rendered for B');
+    assert.equal(shown.includes(REBUILD_COPY.home.emptyTitle), false, 'and B is not told her Rebuild space is empty either');
+  });
+
+  test('a DEMO household: its Focus is demo-seed and never queues, pushes or claims', async () => {
+    const cloud = createFakeCloud();
+    const accountCloud = accountCloudFor(cloud, ACCOUNT_A);
+    const d = await makeDevice({ cloud, accountId: ACCOUNT_A, accountCloud, mode: 'demo' });
+    await mutate(d, (s, c) => addRebuildFocus(s, c, { id: 'focus-demo', title: 'A demo area' }));
+    await d.settle();
+    const focus = d.store.getSnapshot().state.rebuildFocuses.find((f) => f.id === 'focus-demo');
+    assert.equal(focus.provenance.producer, 'demo-seed');
+    assert.equal(cloud.table('rebuild_focuses').length, 0);
+    assert.equal(cloud.calls.filter((call) => call.table === 'rebuild_focuses').length, 0, 'never even attempted');
   });
 });
 
