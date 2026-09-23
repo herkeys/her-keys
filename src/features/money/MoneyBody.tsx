@@ -20,6 +20,8 @@ export interface MoneyBodyProps {
 }
 
 const itemLine = (item: MoneyItemView): string => {
+  // Past due on autopay: the doctrine's "confirm cleared", never "overdue" (HK13-D40).
+  if (item.direction === 'outflow' && item.pastDue && item.paymentMechanism === 'autopay') return `${item.decimal} · ${MONEY_COPY.statusAutopayPastDue(item.dueDate)}`;
   const mechanism = item.direction === 'outflow' && item.paymentMechanism ? ` · ${MECHANISM_LABEL[item.paymentMechanism]}` : '';
   const status =
     item.direction === 'outflow' ? MONEY_COPY.statusOpenObligation(item.dueDate, item.pastDue) : MONEY_COPY.statusOpenIncome(item.dueDate, item.pastDue);

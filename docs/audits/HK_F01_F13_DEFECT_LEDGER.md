@@ -49,8 +49,13 @@ P5 low correctness · P6 UX polish · P7 maintainability · P8 performance · P9
 | HK13-D35 | P3 | F05 Kids, F03 Calendar, F01 Today × F07 | handoff editing | Kids' item editor and the Calendar's event form moved a co-parenting handoff without its recorded repeat: Co-Parent then showed "Repeats every week on Tuesday" beside a Wednesday handoff | FIXED `4199baa` |
 | HK13-D36 | P9 | platform (Build 4 identity) | navigation | The sign-in screen has no entry point in any build since it was added: no user can bind an account, so every cloud capability is reachable only in tests | DOCUMENTED (pre-existing); OD-HK13-02 |
 | HK13-D37 | P5 | F03 Calendar, F05 Kids × F07 | responsibility copy | One recorded responsibility, two voices: Calendar and Kids state what she recorded as a third party's act ("Alex accepted"); Co-Parent says "You recorded that Alex accepted this" | DOCUMENTED |
-| HK13-D38 | P6 | F10 | Opportunity form | The next action and interview fields took any length; past 200 characters the save was refused with "Try again", which could never work | FIXED (AUD13-09, trivial) |
-| HK13-D39 | P4 | F05 test-the-test × F10–F13 | mutation suite | Two F05 SQL mutants changed F05's copy of `sync_push`, which four later migrations replace: they SURVIVED on the integrated line, so two child-path guarantees were unguarded | FIXED (AUD13-09) |
+| HK13-D38 | P6 | F10 | Opportunity form | The next action and interview fields took any length; past 200 characters the save was refused with "Try again", which could never work | FIXED `eb09888` (trivial) |
+| HK13-D39 | P4 | F05 test-the-test × F10–F13 | mutation suite | Two F05 SQL mutants changed F05's copy of `sync_push`, which four later migrations replace: they SURVIVED on the integrated line, so two child-path guarantees were unguarded | FIXED `eb09888` |
+| HK13-D40 | P4 | F09 × F01 | Money Home / Today copy | A past-due AUTOPAY bill was called "overdue" ("Overdue since …", "is 3 days overdue"): a claim that it is unpaid, which F09's doctrine forbids ("only 'confirm cleared'") | FIXED (AUD13-10) |
+| HK13-D20 | P6 | F08, F07 × Life hub | task lists | Meals and Co-parenting tasks are listed twice: on their own screen and under the hub's "Other open tasks" | DOCUMENTED |
+| HK13-D21 | P5 | F12 | Life Admin edit sheet | Editing a record shows its reference number in full, without the Reveal the detail requires | DOCUMENTED |
+| HK13-D41 | P9 | F04 (Build 4 foundation) | Systems | A System is household-shared but its steps are owner-private: another adult would see the System without its steps | DOCUMENTED (pre-existing, latent) |
+| HK13-D42 | P9 | F05 | Kids | "Add child" is offered to any member; the server lets only the household owner add one (42501), so a non-owner's child would stay on the device | DOCUMENTED (pre-existing, latent) |
 
 (Entries below are added as the audit proceeds.)
 
@@ -767,7 +772,7 @@ structural, verified in code:
 - **Privacy / data-loss impact:** none. The save is refused and says so, though the message is wrong.
 - **Severity and why:** P6, UX polish. It needs an unusual 200+ character title to reach, and it misreports a permanent refusal as
   a transient one.
-- **Repair (AUD13-09, trivial, local, negligible risk):** both fields now pass `maxLength={FIELD_LIMITS.titleLength}`. Nothing else
+- **Repair (AUD13-09 `eb09888`, trivial, local, negligible risk):** both fields now pass `maxLength={FIELD_LIMITS.titleLength}`. Nothing else
   changes.
 - **Tests:** `tests/hk-f01f13/namesAtTheLimit.test.mjs`, "every field of the opportunity form, the next action and the interview
   included, is bounded by the domain limit", which also asserts that no field of the form is unbounded. It fails without the repair.
@@ -787,11 +792,85 @@ structural, verified in code:
   other suites apply their SQL mutants after the chain (`HERKEYS_*_MUTANT_SQL`), so they always hit the live definition.
 - **Severity and why:** P4, an integration-specific test-infrastructure defect. Two privacy and correctness guarantees on the child
   path went unguarded by test-the-test. The product code was right: once re-targeted, both mutants are caught.
-- **Repair (AUD13-09):** `LIVE_SYNC_PUSH` finds the last migration that declares `public.sync_push`; migration file names start with
+- **Repair (AUD13-09 `eb09888`):** `LIVE_SYNC_PUSH` finds the last migration that declares `public.sync_push`; migration file names start with
   their version, so they sort in chain order. S-N4b and S-N8 now target that file, and a future re-declaration moves them with it.
 - **Tests:** S-N4b is **caught** (2 failing) and S-N8 is **caught** (1 failing), both by `run.mjs 77`. The F05 suite is 38/38 at the
   final gate.
 - **Status:** FIXED.
+
+## HK13-D40 — A past-due autopay bill was called "overdue" (P4)
+
+- **How found:** closing the Phase 5 candidates. `MONEY_COPY.autopayConfirmCleared` ("Her Keys has no record showing whether this
+  cleared.") was defined but used by nothing. The comment on `autopayPreDueSuppressed` (`src/domain/reasoning/attention.ts`) promises
+  that a past-due autopay bill is "worded by the consumer as 'confirm cleared', never 'autopay failed'". Neither consumer did so.
+- **Reproduction:** an autopay bill due yesterday that she has not marked paid. Money Home lists it as "$50.00 · Overdue since
+  2026-09-15 · Autopay", and Today says "“Phone plan” is 1 day overdue."
+- **Expected (F09's owner doctrine, `moneyCopy.ts`):** "an autopay obligation is never told 'failed' or 'cleared' — only 'confirm
+  cleared', since Her Keys has no evidence either way". A past-due autopay bill still surfaces, because it may need her, but
+  "overdue" claims it is unpaid.
+- **Actual:** "overdue" on both surfaces, every month, for every autopay bill she had not marked paid by its due date.
+- **Root cause:** F09 built the suppression rule (no pre-due nudge) and the copy, but its line formatter used the generic obligation
+  status for every mechanism. Today's attention view, where the comment placed the wording, words every past-due task the same way.
+- **Privacy / data-loss impact:** none. **Severity and why:** P4, copy that misstates system truth, the same class as the Life hub
+  subtitle (HK13-D10). It asserts a payment state Her Keys cannot know, against an explicit owner rule, on two surfaces.
+- **Repair (AUD13-10):**
+  - Money Home: a past-due autopay line reads "$50.00 · Due 2026-09-15 · Autopay · confirm it cleared" (`statusAutopayPastDue`).
+  - Today: "“Phone plan” was due Sep 15 on autopay — Her Keys has no record showing whether it cleared."
+  - A manual bill is unchanged: it is still overdue, because nothing pays it without her.
+  - Nothing else is changed: the suppression rule, the One Move rule (HK13-D19) and the verdict line ("N money items need attention").
+- **Tests:** `tests/hk-f01f13/moneyDoctrine.test.mjs`, "HK13-D40 — a past-due autopay bill is never called overdue", covers Today's
+  statement (and that a manual bill is still overdue) and Money Home's rendered line. Mutants D40-M1 (Money Home) and D40-M2 (Today)
+  are **2/2 caught**. The Today and Money suites pass (309/309).
+- **Status:** FIXED.
+
+## HK13-D20 — Meals and Co-parenting tasks are listed twice (P6)
+
+- **How found:** Phase 5, from the Life hub's reachability model (`src/domain/taskLists.ts`).
+- **What:** `TASK_LIST_ROLES` is Kids, Home, Money and Work: those screens list every open task in their category, so the hub's
+  "Other open tasks" leaves those tasks out. Meals (`mealsView.ts`) and Co-Parent (`coparent/projection.ts`) also list their
+  category's tasks, but they are not task-list roles, so the same tasks appear again under "Other open tasks".
+- **Why not repaired:** the Meals list is capped at `TASK_LIMIT = 30` with no "show more". Adding Meals to `TASK_LIST_ROLES` would make
+  the 31st open meal task reachable from nowhere, which is the defect class HK13-D17 repaired for Money. Listing a task twice is
+  harmless: every task stays reachable, and completing it from either place is the same canonical Task. The right repair (a reveal on
+  Meals' list, then the role) is a Meals and hub design change for the owner.
+- **Severity and why:** P6. It is a duplicate listing and UX polish; nothing is wrong or unreachable.
+- **Status:** DOCUMENTED.
+
+## HK13-D21 — Editing a record shows its reference number in full (P5)
+
+- **How found:** Phase 5, F12's "masked references / reveal ephemeral" check.
+- **What:** F12's design makes the record detail the one surface with the reference number, masked until she presses Reveal, with
+  Reveal kept in component state only. The edit sheet (`RecordSheet`, opened from the detail) pre-fills every field, the reference
+  included, in plain text (`LifeAdminContainer.tsx` `valuesOf`). Pressing Edit to fix a title therefore shows the full reference
+  without her asking.
+- **Why it is P5 and not a privacy boundary:** it is her own record, on her own device, on the record's own edit sheet. Nothing
+  crosses an account, the home, the hub, Today, a log or durable evidence (`privacy.test.mjs`), and it is not stored anywhere new. It
+  is a display-doctrine inconsistency, a shoulder-surfing nuance.
+- **Why not repaired:** masking an editable field properly needs a Reveal control inside the sheet. A blind `secureTextEntry` field
+  would stop her seeing what she types into a reference number, so the fix is not trivial. It is F12 UI design for the owner.
+- **Status:** DOCUMENTED.
+
+## HK13-D41 — A shared System's steps are owner-private (P9, pre-existing, latent)
+
+- **What:** `household_systems` is household-visible, but `system_steps` is read only by the member who wrote the step
+  (`system_steps_select_own`, the Build 4 foundation rule that every foundation kind is owner-private, ADR-005/-023). In a household
+  with a second adult, that adult would see the System (for example "Sunday reset") and none of its steps.
+- **Reachability: none in a user build.** No build has a path for a second member: no invitation flow, HK13-D34 and HK13-D36.
+  F04's own build notes do not mention this, so it is recorded here.
+- **Severity and why:** P9. It is a future product decision (shared steps, or steps scoped with their System) that belongs to the
+  multi-member work. It is not an integration defect, and the integration changed nothing about it.
+- **Status:** DOCUMENTED.
+
+## HK13-D42 — "Add child" is offered to a member who cannot add one (P9, pre-existing, latent)
+
+- **What:** `canAddChild` (`src/features/kids/mutations.ts`) checks only that the device is not quarantined. The server lets only
+  the household's owner add a child after binding (`private.push_household_child`; suite 77: "a second MEMBER of the household (not
+  the owner) is refused with 42501"). A non-owner adult would add a child locally and see the push refused. The child would stay on
+  her device and appear as sync attention.
+- **Reachability: none in a user build**, for the same reason as HK13-D41.
+- **Severity and why:** P9. It is latent, and the server is the authority. The fix is to gate the button on the household role once
+  a second member can exist.
+- **Status:** DOCUMENTED.
 
 ## Known shared privacy items — re-audited under the P0–P10 rubric (Phase 8)
 

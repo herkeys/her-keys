@@ -67,6 +67,8 @@ export const MONEY_COPY = {
 
   // status lines
   statusOpenObligation: (dueDate: string, pastDue: boolean) => (pastDue ? `Overdue since ${dueDate}` : `Due ${dueDate}`),
+  // A past-due AUTOPAY bill is not "overdue": the payment may well have gone out, and Her Keys has no record either way (HK13-D40).
+  statusAutopayPastDue: (dueDate: string) => `Due ${dueDate} · Autopay · confirm it cleared`,
   statusOpenIncome: (dueDate: string, pastDue: boolean) => (pastDue ? `Expected since ${dueDate}, not yet received` : `Expected ${dueDate}`),
   statusResolvedObligation: 'Paid',
   statusResolvedIncome: 'Received',

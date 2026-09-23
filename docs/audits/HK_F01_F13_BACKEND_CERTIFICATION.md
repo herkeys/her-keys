@@ -157,8 +157,137 @@ collection, a dropped change-log table — **6/6 caught**.
 
 **Phase 9 finding:** HK13-D28 (P2, fixed, see §1.5) is the one-day-late One Move; HK13-D29 (P7) is documented.
 
+## 4. Account / household isolation (Phase 10)
+
+`tests/hk-f01f13/accountSwitch.test.mjs` runs the real device composition: the store, account runtime, sync runtime and binding. Account
+A holds private rows of every Wave 3/4 feature at once: a Focus and its next step, a record with a reference number and its renewal
+Task, a person context and its follow-up Task, an opportunity, and a bill with a payment mechanism. Some rows are already synced and
+some are still pending. A signs out, and B signs in on the SAME device.
+
+| Proven | How |
+|---|---|
+| A's rows are not visible to B | the binding decision is `quarantine`, so the state is `boundOther`; B can open no app or onboarding screen, only `account-conflict` |
+| A's cached projections are not visible | no route renders account data for `boundOther` (`canRenderAccountData` is false), so no cached screen of A's is reachable |
+| A's rows are not uploaded as B | not one request is made on B's behalf (the fake cloud's call count is unchanged), and no sync runs for B |
+| A's change pointers are not consumed as B | A's queue and cursor are byte-for-byte what they were |
+| B's data does not overwrite A | nothing of B's lands on the device; the quarantine keeps every one of A's rows, and nothing was deleted to make room |
+| A comes back and truth reconstructs | A is `accountBound` again; every row of every feature, including the pending edit, is there, reaches the cloud once, in A's household, as A's own row |
+
+The real `sync_pull` answers for one household and RLS hides every other household's rows, so the test narrows the in-memory cloud's
+pull in the same way. Same-household privacy against real PostgreSQL is suite 81's job (§2). Test-the-test: I9 lets `boundOther` open
+every screen, and I9b makes the binding decision resume the other account's household instead of quarantining it. **Both are caught.**
+The binding decision also counts every Wave 3/4 collection as content (HK13-D09, `bindingContent.test.mjs`), so a household holding
+only Wave 3/4 rows can never be claimed by the next account.
+
+## 5. Multi-device integrated journey (Phase 11)
+
+`tests/hk-f01f13/integratedJourney.test.mjs` runs the brief's 21 steps through the production composition, each through its feature's
+own command:
+- **Create:** a child and a context about the child, a task, an event, a System, a Home item, a co-parent handoff, a meal, a bill, an
+  opportunity and its next action, a Focus, a record, a person context and a follow-up.
+- **Offline:** go offline, edit several records, and archive six feature-owned records.
+- **Reconnect:** a fresh device of the same account must hold every synced collection row for row. That is 17 collections: children,
+  tasks, events, systems, systemSteps, recurrences, responsibilities, people, meals, careerOpportunities, dependencies,
+  rebuildFocuses, rebuildFocusLinks, lifeRecords, lifeRecordLinks, personContexts and personTaskLinks.
+- **Unrelated account C:** C is quarantined on the device, and sees nothing on its own device.
+
+`integratedDevices.test.mjs` covers the same person opened as a context on two devices of one account while offline (HK13-D13):
+one context survives on both devices, the other is kept as evidence, and sync keeps flowing. A child gets the same race.
+`syncLifecycle.test.mjs` covers each new type's offline, relaunch, reconnect, fresh-device, retry, stale-edit and refusal paths (§3).
+
+## 6. Inventory after the whole chain
+
+| Object | After WAVE3_BASE | After F01–F13 | Where it comes from |
+|---|---|---|---|
+| Application tables (`public`) | 34 | **41** | + `career_opportunities` (F10), `rebuild_focuses`, `rebuild_focus_links` (F11), `life_records`, `life_record_task_links` (F12), `person_contexts`, `person_task_links` (F13) |
+| Relations (tables and views, `public`+`private`) | 35 | 42 | the seven tables above |
+| Columns | 716 | 866 | F09 1, F10 29, F11 39, F12 45, F13 36 (§1.2; F08's 2 are already in WAVE3_BASE) |
+| Constraints (CHECK, FK, UNIQUE, PK) | 681 | 819 | per migration in §1.2; INT13 re-issues four uniqueness rules per owner |
+| Indexes | 284 | 337 | |
+| Triggers | 104 | 129 | the new tables' own: F10 3, F11 7, F12 7, F13 8 |
+| Functions | 28 | 31 | `private.rebuild_focus_link_target_visible()` (F11), `private.guard_life_record_task_link()` (F12), `public.guard_follow_up_task()` (F13); `sync_push` is replaced, not added |
+| RLS policies | 85 | 104 | F10 3, F11 6, F12 5, F13 5 |
+| Column grants | 725 | 892 | |
+| Relation grants | 587 | 706 | |
+| Function grants | 55 | 59 | |
+| Effective privileges | 310 | 367 | |
+| **Gating fingerprint** | 3629 / `96f93f3d…` | **4371 / `17dccce9…`** | `supabase/tools/int13-fingerprint.mjs`, re-derived at the final gate (§12) |
+
+Every new table has RLS enabled, is owner-read (`profile_id = auth.uid()` and household membership), and gives anon nothing. No
+client can hard-delete from any of them (suite 81's catalog check): archiving is the only retirement. Every one feeds the change log with its owner, and every one is
+in the `assert_app_schema_secured` sweep (ENV F runs it after every migration).
+
+## 7. Sync surface
+
+| Surface | After F01–F13 | Proof |
+|---|---|---|
+| Sync kinds | **36**. Core: member, category, event, task, system, meal, needsMe, oneMove, discovery, onboarding, action, and F12's lifeRecord and lifeRecordLink. Build 4 foundation: sourceArtifact, interpretation, externalReference, observation, authority, intent, decision, execution, outcome, person, responsibility, dependency, recurrence, goal, systemStep, capacity, pattern, evidenceLink. F10: opportunity. F11: rebuildFocus, rebuildFocusLink. F13: personContext, personTaskLink | `syncRegistry.test.mjs` pins the inventory and checks every per-kind table |
+| Change-log tables | the Build 4 list plus `career_opportunities`, `rebuild_focuses`, `rebuild_focus_links`, `life_records`, `life_record_task_links`, `person_contexts`, `person_task_links` | the CHECK the chain leaves behind is parsed by `syncRegistry`; `int13-fingerprint` fails if a re-declaration drops a table (the CHECK may only grow); I7 is caught |
+| `sync_push` | replaced by F10, F11, F12 and F13, each cumulatively; the last (F13's) names every pushable table | `chainRegistrations` (ENV A, D, F); `syncRegistry` reads the allow-list from the last declaring migration; I8 is caught; F05's child path is guarded on the live declaration (HK13-D39) |
+| `sync_pull` | one household per call; the change log carries each private row to its owner only | suite 81: no change-log entry and no `sync_pull` id of A's private rows reaches B; ENV F: each user's pull from cursor zero is unchanged by every migration |
+| Server-stamped One Move day (HR-03) | `logical_day` from `now()`; an offline decision from an earlier day stays on the device (HK13-D28) | `oneMoveDay.test.mjs`; OD-HK13-01 records the server-side option for the owner |
+
+## 8. Attack matrix
+
+Actors: A (owner), B (a second adult of A's household), C (an unrelated household), anon, service. Every cell is a check in
+`supabase/tests/81-int13-privacy.sql` (56 checks) unless noted.
+
+| Attack | B | C | anon | service |
+|---|---|---|---|---|
+| Read A's private rows by table (sixteen rows in twelve tables) | DENY (0 rows) | DENY | DENY | sees all (trusted boundary) |
+| Read by id / count | DENY (reads none) | DENY | DENY | — |
+| Change-log entry of A's private rows | none, not even the table or the id | none at all | — | — |
+| `sync_pull` | carries no id of A's | — | — | — |
+| UPDATE A's rows | DENY | — | no grant (catalog) | — |
+| INSERT a row owned by A (table or `sync_push`) | DENY | DENY (even as herself, into A's household) | DENY | — |
+| Hard DELETE | no client grant on any Wave 3/4 table (catalog) | same | same | — |
+| Relationship probe: B's own row names A's private Focus, record, person, context or task | refused exactly like a random uuid (F10, F11, F12, F13 ×2 probes) | — | — | — |
+| Uniqueness oracle on a shared item | per owner since INT13; four rules probed, and each still holds for one owner | — | — | — |
+| Crafted local id equal to A's | makes B's own row, reveals nothing | — | — | — |
+| Content leak through a readable row (Task title, pull) | none carries A's secrets | — | — | — |
+| Refused-row evidence | client-side redaction of `Failing row contains (…)` (`supabaseSyncTransport.ts`); I17 restores the raw text and is caught | | | |
+| Owner-private uniqueness, per-owner migration on real pre-existing data | ENV F handoff probe: 23505 before INT13, accepted after | | | |
+
+The feature suites attack their own tables too: 78-f11 (F11), 79-f12 (F12), 79-f13 (F13), 57/58 (F10's endpoints), 77-f05 (the child
+path), 77-meals (F08). Suite 81 is the one that holds every Wave 3/4 table in ONE database at once.
+
+## 9. Backend test-the-test
+
+Every mutant was restored byte-for-byte (sha256) and never committed. The Phase 7 migration mutants (§1.4) and the Phase 9 registry
+and lifecycle mutants (§3) are listed above.
+
+| Set | What it breaks | Result |
+|---|---|---|
+| ENVF-M1..M7b | populated-upgrade guarantees | 8/8 caught |
+| D24-M2/M3 | per-owner uniqueness | 2/2 caught |
+| REG-M1..M6 | the sync registry and allow-lists | 6/6 caught |
+| P9-M1..M4 | the sync lifecycle | 4/4 caught |
+| I3, I5 | F11 Focus and F13 context read policies widened to the household | caught by suite 81 ("same-household B: DENY — reads zero of A's private rows in all twelve private tables") |
+| I6, I7, I8 | a feature migration dropped from the chain; a change-log table dropped; a `sync_push` case dropped | caught (`migrationChain`, `syncRegistry`) |
+| I2b | the generator manifest loses F10's dependency widening | caught (`gen-foundation-sql --check`, `foundationSpecs`) |
+| F05 S-N4b, S-N8 (SQL) | membership check and child collision probe in the LIVE `sync_push` | caught after HK13-D39 |
+| F05 S-N9, S-N10; Rebuild R16 and its SQL mutants; Life Admin LA6, LA7, LA7b; People M6, M7, M7b, S1, S2; Meals SQL mutants | each feature's own database guarantees, applied after the whole chain | all caught |
+
+## 10. Test counts
+
+ENTRY, measured at `7c5351a` after integration and before any audit repair: backend harness **1431/1431**. After AUD13-03 (`61e24a6`):
+**1559/1559**. EXIT is the final gate's uncontested full harness (§12). Every check added by this campaign is additive: ENV F
+(71), suite 81 (56), the migration gate and chain registrations, and the ENV D steps for F08/F09–F13/INT13. No backend check was
+removed or weakened.
+
+## 11. Known P5–P10 backend debt
+
+| ID | Sev | Debt | Why it is not repaired here |
+|---|---|---|---|
+| HK13-D25 | P9 | A composite `(task, household)` key accepts a real private Task uuid from B's own row | usable only by someone who already holds a server-generated UUIDv4 that no read path gives B |
+| HK13-D26 | P9 | A guessed local id of a private Task collides | production ids are not practically guessable |
+| HK13-D29 | P7 | Two category uniqueness rules have no pull-side reconciliation | unreachable today: no surface creates or reorders a category |
+| HK13-D34 | P9 | A second device cannot adopt an existing cloud household (`superseded_by_cloud`) | a recorded Build 4 contract, not built; every multi-device proof binds device B with a test stand-in |
+| HK13-D36 | P9 | The sign-in screen has no entry point | live auth is sequenced after this certification (OD-HK13-02) |
+| OD-HK13-01 | — | A server-side option for an offline One Move's day | the client repair (HK13-D28) is complete; the server option is the owner's decision |
+
 ## Full backend harness (uncontested, audit namespace)
 
 After AUD13-03 (`61e24a6`): **1559/1559** checks — ENV A 36, ENV B 11 (+B3), ENV C (every suite incl. 81), ENV D 66, ENV E 11, ENV F 71,
 authorization parity, client-payload integration and every journey over real HTTP on the private stack. No sibling harness ran
-during it (the gate logged zero contention events).
+during it (the gate logged zero contention events). The final gate's run is §12.

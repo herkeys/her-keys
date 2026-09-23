@@ -15,8 +15,13 @@ import { oneMoveForDay, resolveOneMoveForToday } from '../../src/domain/oneMove.
 import { addTask } from '../../src/domain/tasks.ts';
 import { createMoneyFollowUp } from '../../src/features/coparent/mutations.ts';
 import { createExpectedIncome, createObligation } from '../../src/features/money/mutations.ts';
+import { projectStateDay } from '../../src/domain/projectDay.ts';
+import { attentionFor } from '../../src/domain/reasoning/attention.ts';
+import { buildMoneyHomeView } from '../../src/features/money/projection.ts';
+import { attentionView } from '../../src/features/today/model/attentionView.ts';
 import { createEmptyState } from '../../src/state/initialState.ts';
-import { DAY, TZ, ctx } from '../support/fixtures.mjs';
+import { DAY, MORNING, TZ, ctx } from '../support/fixtures.mjs';
+import { render } from '../support/render.tsx';
 import { harness, launch } from '../support/fixtures.mjs';
 
 await import('../today/support/stub-expo-router.mjs');
@@ -24,6 +29,7 @@ await import('../today/support/stub-appstate.mjs');
 const { router } = await import('../today/support/expo-router-stub.mjs');
 const { AppStateProvider } = await import('../../src/store/AppStateProvider.tsx');
 const { TaskForm } = await import('../../src/features/tasks/TaskForm.tsx');
+const { MoneyBody } = await import('../../src/features/money/MoneyBody.tsx');
 router.back ??= (...args) => router.calls.push(['back', ...args]);
 
 const PREVIOUS_DAY = '2026-09-15';
@@ -108,5 +114,39 @@ describe('the generic task editor says what completing a Money item records', ()
       'Mark done',
       'an F07 follow-up is done, never paid'
     );
+  });
+});
+
+describe('HK13-D40 — a past-due autopay bill is never called overdue', () => {
+  // F09's doctrine: an autopay obligation is never told "failed" or "cleared" — only "confirm cleared", since Her Keys has no record
+  // of whether the autopay went out. Past its due date it surfaces again (it may need her), but "overdue" would claim it is unpaid.
+  function household() {
+    const c = ctx();
+    let s = onboarded(c);
+    const auto = createObligation(s, c, money({ title: 'Phone plan', paymentMechanism: 'autopay', dueDate: PREVIOUS_DAY }));
+    s = auto.state;
+    const manual = createObligation(s, c, money({ title: 'Water bill', paymentMechanism: 'manual', dueDate: PREVIOUS_DAY }));
+    return { state: manual.state, auto: auto.id, manual: manual.id };
+  }
+
+  test('Today: it was due on autopay and Her Keys has no record of whether it cleared; a manual bill is still overdue', () => {
+    const { state, auto, manual } = household();
+    const rows = attentionView(state, MORNING, DAY, projectStateDay(state, DAY), attentionFor(state, MORNING), { delegated: [], unacknowledged: [] }).rows;
+    const autoRow = rows.find((r) => r.key === `task:${auto}`);
+    assert.ok(autoRow, 'the past-due autopay bill still surfaces: it may need her');
+    assert.match(autoRow.statement, /^“Phone plan” was due .+ on autopay — Her Keys has no record showing whether it cleared\.$/);
+    assert.doesNotMatch(autoRow.statement, /overdue|failed|missed|late|unpaid/i);
+    assert.equal(rows.find((r) => r.key === `task:${manual}`).statement, '“Water bill” is 1 day overdue.', 'a manual bill she has not marked paid is overdue');
+  });
+
+  test('Money Home: "confirm it cleared", never "Overdue since"', async () => {
+    const { state } = household();
+    const view = buildMoneyHomeView(state, state.household.id, { nowMs: MORNING });
+    const r = await render(<MoneyBody gate={{ state: 'ready', canWrite: true }} view={view} today={DAY} onAddObligation={() => {}} onAddIncome={() => {}} onOpenItem={() => {}} onOpenTask={() => {}} />);
+    const labels = r.root.findAllByType('Pressable').map((p) => String(p.props.accessibilityLabel ?? ''));
+    const auto = labels.find((l) => l.startsWith('Phone plan:'));
+    assert.match(auto, /Due 2026-09-15 · Autopay · confirm it cleared$/);
+    assert.doesNotMatch(auto, /Overdue/);
+    assert.match(labels.find((l) => l.startsWith('Water bill:')), /Overdue since 2026-09-15 · Manual$/);
   });
 });

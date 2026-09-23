@@ -181,7 +181,12 @@ function rowFor(state: AppState, item: AttentionItem, about: TypedRef, nowMs: nu
     case 'risk': {
       const task = state.tasks.find((t) => t.id === about.id);
       if (!task || task.status !== 'open' || task.dueDate === null) return null;
-      const clause = dueClause(task.dueDate, today);
+      // A past-due AUTOPAY bill may well have been paid by the autopay; Her Keys has no record either way, so Today never calls it
+      // "overdue" — Money's "confirm cleared" (HK13-D40).
+      const autopayPastDue = task.paymentMechanism === 'autopay' && task.value?.direction === 'outflow' && task.dueDate < today;
+      const clause = autopayPastDue
+        ? `was due ${relativeDay(task.dueDate, today)} on autopay — Her Keys has no record showing whether it cleared`
+        : dueClause(task.dueDate, today);
       const cost = item.reason === 'risk' && task.consequence !== null ? ` If it slips, the cost is ${task.consequence}.` : '';
       return { key: `task:${task.id}`, reason: item.reason, ...common, statement: `“${task.title}” ${clause}.${cost}`, needsMe: needsMePersonally(state, about, nowMs), actions: open };
     }
