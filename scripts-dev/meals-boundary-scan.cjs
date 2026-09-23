@@ -118,6 +118,7 @@ const LATER_FEATURES = [
       /^src\/features\/people\//, /^src\/domain\/people\.ts$/, /^src\/domain\/foundation\/personContext\.ts$/, /^src\/data\/seed\/demoPeople\.ts$/,
       /^app\/\(app\)\/life\/(people|person|person-add|person-follow-up)\.tsx$/, /^tests\/people\//, /^docs\/builds\/HK_FEATURE_13_/,
       /^supabase\/tests\/79-f13-/, /^supabase\/tests\/run-f13\.mjs$/, /^supabase\/migrations\/20260922200000_f13_people_os\.sql$/, /^scripts-dev\/f13-/,
+      /^supabase\/tests\/journey-people\.mjs$/, /^supabase\/tools\/baselines\/f13-local-fingerprint\.json$/,
     ],
     migrations: ['supabase/migrations/20260922200000_f13_people_os.sql'],
     schemas: ['PersonContextSchema', 'PersonTaskLinkSchema'],
@@ -131,6 +132,7 @@ const LATER_FEATURES = [
       ['supabase/tests/run.mjs', 'HK-FEATURE-13: the harness applies the additive People migration'],
       ['supabase/tests/sync-integration.mjs', 'HK-FEATURE-13: the multi-device journeys carry the People kinds'],
       ['supabase/tests/journey-composition.mjs', 'HK-FEATURE-13: the composition journey stack carries the People migration'],
+      ['supabase/tests/00-interlock.sql', 'HK-FEATURE-13: the application table count is 36 once the two People tables exist'],
     ],
   },
 ];

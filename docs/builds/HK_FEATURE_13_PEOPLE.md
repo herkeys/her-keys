@@ -418,4 +418,76 @@ reports FAIL instead of aborting the file.
 **Shared-file edits added at M5:** `supabase/tests/run.mjs` (F13 constant/apply, ENV A/C/D, quality gates, `people` mode, People journeys
 in the full journeys run), `supabase/tests/private-stack.mjs` (F13 migration in the stack sequence; `HERKEYS_PRIVATE_STACK_DB` /
 `HERKEYS_PRIVATE_REST_NAME` overrides so parallel sessions can each have one — default names unchanged). Both will conflict textually
-with any sibling that also adds a migration to them (IC-13-11-style union).
+with any sibling that also adds a migration to them (IC-13-11-style union). Also `supabase/tests/00-interlock.sql` (table count 34→36).
+
+Git at M5 close: `ef5328b`, clean. Follow-up commit `d5a9d47`: "Recently updated" shows the HOUSEHOLD-local day (not a UTC slice;
+test pins 02:00 UTC on the 17th → the 16th in New York) and the Archived labels moved into `copy.ts`.
+
+---
+
+## F13-M6 — hostile self-review + certification
+
+### Test-the-test (controlled temporary mutants; never committed)
+
+`node scripts-dev/f13-mutation-check.cjs` at `d5a9d47`, clean tree before and after (byte-for-byte restore verified per file). Source
+mutants are judged by the named People test files; SQL mutants are applied to the private `f13_env` after the fixtures and judged by
+`run-f13.mjs 79`. Raw: **`22/22 mutants caught`, exit 0.**
+
+| # | Required mutant | Defect made real | Verdict |
+|---|---|---|---|
+| M1 | IDENTITY | two same-name people collapse into one identity | CAUGHT (3 failing) |
+| M2 | DISPLAY NAME | rename creates a new identity (old archived), splitting links/context | CAUGHT (2) |
+| M3 | HOUSEHOLD DUPLICATION | a context on an existing CHILD, chosen by canonical id, creates a second non-account person for her | CAUGHT (8) |
+| M4 | TASK COUPLING | completing a linked Task archives the PersonContext | CAUGHT (2) |
+| M5 | TODAY | a PersonContext itself becomes the day's One Move | CAUGHT (2) |
+| M6 | PRIVACY (SQL) | same-household member can read another adult's private contexts | CAUGHT (1) |
+| M7 | LINK INFERENCE (SQL) | the follow-up guard is gone: a link can name another owner's private (or a shared) task | CAUGHT (3) |
+| M7b | LINK INFERENCE (SQL) | same-household member can read and COUNT another adult's links | CAUGHT (1) |
+| M8 | NOTE LEAK — People list | the note becomes the list's secondary line | CAUGHT (3) |
+| M8b | NOTE LEAK — log/error | integrity messages (the text that reaches logs/errors) carry label and note | CAUGHT (1) |
+| M8c | NOTE LEAK — Life hub | the Life tile shows a note | CAUGHT (1) |
+| M8d | NOTE LEAK — Today | the note is copied into the follow-up Task title and reaches Today | CAUGHT (3) |
+| — | NOTE LEAK — search snippet | NOT-APPLICABLE: no search exists (MP-13-10); the static guard forbids any People read of the note outside the detail path | — |
+| M9 | FOLLOW-UP | opening Add Follow-up creates a Task before save | CAUGHT (1) |
+| M10 | LINK TARGET | a completed/archived Task keeps counting as Needs Follow-up | CAUGHT (1) |
+| M11 | SOCIAL INFERENCE | a person with no follow-up generates an automatic "reach out" item | CAUGHT (10) |
+| M12 | CO-PARENT | generic People editing may rename/archive the F07 co-parent | CAUGHT (3) |
+| AF | CANONICAL TARGET ARCHIVE — count | an archived/vanished target keeps counting as active context | CAUGHT (2) |
+| AF2 | CANONICAL TARGET ARCHIVE — crash | a vanished child crashes the projection | CAUGHT (1) |
+| R1 | extra: RETRY | a retried save creates a second Task | CAUGHT (8) |
+| O1 | extra: ONE CONTEXT PER PERSON | opening a person with an archived context creates a second one | CAUGHT (1) |
+| S1 | extra: EXISTENCE ORACLE (SQL) | one-context-per-person made household-wide (another member's context collides and is revealed) | CAUGHT (3) |
+| S2 | extra: NO SOCIAL INFERENCE in the cloud (SQL) | an AI-inferred context is accepted | CAUGHT (1) |
+
+Test-the-test findings that improved the TESTS (before the final run): AF2 was first an equivalent mutant (its crash sat behind a guard
+that already skips vanished targets) and was moved into the guard; S1 first made the People suite ABORT on an unwrapped `sync_push`
+rather than report FAIL — that check was wrapped and split (see M5).
+
+### Hostile self-review
+
+| Question | Answer (evidence) |
+|---|---|
+| Did we duplicate existing person identity? | No. External = `household_people`; no LifePerson table; a context names a child or a person by real FK (M3, domain › PERSON CONTEXT). |
+| A second child/member/co-parent record? | No. Contexts reference; the co-parent is F07's row, read-only here (M12). |
+| Accidentally build a CRM? | No pipeline, stage, deal, score, contact field, import or outreach. Doctrine › no scores; copy safety. |
+| A communication log? | No lastContacted, count, streak or activity table; doctrine › SOCIAL HEALTH (static). |
+| Social guilt timers? | No: Needs Follow-up is ONLY open linked Tasks (M11; projection › person alone). |
+| Rank humans? | No: name order; work is ranked (projection › ORDER). |
+| Infer relationship quality? | No: only her words; `producer = 'user-action'` CHECK in the cloud (S2). |
+| Can same-name people collapse? | No (M1). |
+| Can rename break identity? | No (M2; store relaunch). |
+| Can private context leak through Task links? | No: links owner-private, guard before key, per-owner uniqueness (M6/M7/M7b/S1; RLS matrix; journeys P3/P4). |
+| Can contextNote leak into another surface? | No: one read path + static guards + runtime checks (M8–M8d). |
+| Can a Task completion rewrite person truth? | No (M4). |
+| Can People override Co-Parent workflow? | No: responsibilities/handoffs untouched; co-parent identity read-only (M12). |
+| Can People become a second Task system? | No: follow-ups are canonical `addTask` Tasks; no People task entity; no command but Add Follow-up creates a Task (doctrine). |
+| Can an offline PersonContext disappear? | No: durable queue in the same envelope; journeys P1; sync › offline. |
+| Can stale sync overwrite newer context? | No: CAS; journeys P5; sync › STALE REVISION. |
+| Can archive fail to propagate? | No: journeys P1/P2; RLS › owner transport (revisioned upsert); no resurrection on a fresh device. |
+| Can account switching leave private People state behind? | Per the foundation's account model (B4-P0-035), A's household is PRESERVED in quarantine on the device and never rendered or uploaded for B (sync › ACCOUNT SWITCH: zero requests, `canOpenScreen('(app)')` false). No People search cache or derived store exists to leak. |
+| Prematurely modify Money / Work / Rebuild / Life Admin? | No: `git diff 363e473 -- src/features/money src/features/work …` is empty; nothing imported from F09–F12. |
+| Same human fact in multiple places? | No: name only on the identity, her label/org/note only on the context, the canonical enum left at `other`. |
+
+Repairs made during the build (all before any COMPLETE claim): default-privilege strip on the new tables (M5); stored field names vs the
+design-independence guard (D11); `toV3Shape` roots; the Meals boundary scan's lane register + integration checkpoint; three Phase A
+probe assumptions for shared ENV C; the interlock table count; household-local "updated" date.
