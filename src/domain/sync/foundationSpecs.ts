@@ -37,14 +37,28 @@ export type Field =
 /** What a `link` points at: another foundation/core kind by sync kind, or a household member (a child). */
 export type LinkTarget =
   | 'sourceArtifact' | 'interpretation' | 'externalReference' | 'observation' | 'authority' | 'intent' | 'decision'
-  | 'execution' | 'person' | 'responsibility' | 'goal' | 'system' | 'category' | 'member';
+  | 'execution' | 'person' | 'responsibility' | 'goal' | 'system' | 'category' | 'member' | 'rebuildFocus';
 
-/** The synced kinds the foundation adds. A closed list, so `SyncEntityKind` stays a union of literals. */
+/**
+ * The synced kinds the manifest describes. A closed list, so `SyncEntityKind` stays a union of literals. The eighteen foundation
+ * kinds, then HK-FEATURE-10's `opportunity` (Work / Career) and the two HK-FEATURE-11 (Me / Rebuild) kinds, which are owner-private
+ * exactly like them and travel the same way.
+ */
 export const FOUNDATION_KIND_NAMES = [
   'sourceArtifact', 'interpretation', 'externalReference', 'observation', 'authority', 'intent', 'decision', 'execution',
   'outcome', 'person', 'responsibility', 'dependency', 'recurrence', 'goal', 'systemStep', 'capacity', 'pattern', 'evidenceLink',
   'opportunity',
+  'rebuildFocus', 'rebuildFocusLink',
 ] as const;
+
+/**
+ * Which migration file holds a kind's generated DDL. Absent = the Build 4 shipping migration. A later, additive migration gets its
+ * own marker regions, so adding a kind never edits a shipped migration.
+ */
+export const LATER_MIGRATIONS = {
+  f11: '20260922180000_f11_rebuild_focus.sql',
+} as const;
+export type LaterMigration = keyof typeof LATER_MIGRATIONS;
 export type FoundationKind = (typeof FOUNDATION_KIND_NAMES)[number];
 
 export interface FoundationSpec {
@@ -81,6 +95,8 @@ export interface FoundationSpec {
    * reference graph from these fields and fails if any kind ranks at or below a kind it points at.
    */
   rank: number;
+  /** The later additive migration that creates this kind's table. Absent = the Build 4 shipping migration. */
+  migration?: LaterMigration;
 }
 
 // ------------------------------------------------------------------ columns ----
@@ -706,6 +722,48 @@ export const FOUNDATION_SPECS: readonly FoundationSpec[] = [
       ['compensation_note_check', `compensation_note IS NULL OR char_length(compensation_note) <= 300`],
       ['notes_check', `notes IS NULL OR char_length(notes) <= 1000`],
     ],
+  },
+
+  // ------------------------------------------------ HK-FEATURE-11: rebuild focus
+  // An area of her own life she chose to keep visible. Owner-private like every kind here. No score, no progress, no completion.
+  {
+    kind: 'rebuildFocus', collection: 'rebuildFocuses', table: 'rebuild_focuses', mutable: true, provenance: 'standard', profileOnDelete: 'cascade', rank: 2,
+    migration: 'f11',
+    fields: [
+      { local: 'title', col: 'title', type: 'text' },
+      { local: 'note', col: 'note', type: 'text', nullable: true },
+      { local: 'state', col: 'state', type: 'text' },
+    ],
+    updatable: ['title', 'note', 'state', 'confidence', 'origin_updated_at'],
+    checks: [
+      ['title_check', `char_length(title) >= 1 AND char_length(title) <= 200 AND title = btrim(title)`],
+      ['note_check', `note IS NULL OR (char_length(note) >= 1 AND char_length(note) <= 500 AND note = btrim(note))`],
+      ['state_check', `state = ANY (ARRAY['active','paused','archived'])`],
+    ],
+  },
+
+  // ------------------------------------------- HK-FEATURE-11: rebuild focus link
+  // A Focus's connection to a canonical Task/Goal/System/Event, by typed reference (ADR-005): exactly one real FK is set. It belongs
+  // to its Focus's owner (the same-owner composite FK on focus_id), so it is exactly as private as the Focus. A deleted shared target
+  // removes the link (CASCADE) rather than refusing with an error that would reveal it; unlinking is a status change.
+  {
+    kind: 'rebuildFocusLink', collection: 'rebuildFocusLinks', table: 'rebuild_focus_links', mutable: true, provenance: 'standard', profileOnDelete: 'cascade', rank: 3,
+    migration: 'f11',
+    fields: [
+      { local: 'focusId', col: 'focus_id', type: 'link', to: 'rebuildFocus' },
+      { local: 'target', type: 'ref', prefix: 'target', kinds: ['task', 'goal', 'system', 'event'], required: true, onDelete: 'cascade' },
+      { local: 'relation', col: 'relation', type: 'text' },
+      { local: 'status', col: 'status', type: 'text' },
+    ],
+    updatable: ['status', 'confidence', 'origin_updated_at'],
+    checks: [
+      ['relation_check', `relation = ANY (ARRAY['next_action','supports'])`],
+      ['next_action_task_check', `relation <> 'next_action' OR target_type = 'task'`],
+      ['status_check', `status = ANY (ARRAY['active','removed'])`],
+    ],
+    indexes: [['live_link_uq', `ON public.rebuild_focus_links (household_id, profile_id, focus_id, target_type, COALESCE(target_task_id, target_goal_id, target_system_id, target_event_id)) WHERE status = 'active'`, true]],
+    // A link may name only what its writer can see: a task/event/routine another member keeps private is "not there".
+    triggers: [['target_visible', 'BEFORE', 'INSERT', 'private.rebuild_focus_link_target_visible()']],
   },
 ];
 

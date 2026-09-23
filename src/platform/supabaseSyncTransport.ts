@@ -121,7 +121,7 @@ export function createSupabaseSyncTransport(client: SupabaseClient): SyncTranspo
  */
 function failureFrom(error: PostgrestError): TransportFailure {
   const code = error.code ?? null;
-  const detail = [error.message, error.details].filter(Boolean).join(' | ').slice(0, 400);
+  const detail = [error.message, redactRowValues(error.details)].filter(Boolean).join(' | ').slice(0, 400);
 
   if (!code) return { kind: 'failure', failure: 'unreachable', detail, code };
   if (code === '42501' || code === 'PGRST301' || code === '28000') {
@@ -156,7 +156,19 @@ const DOMAIN_INVARIANTS = [
   'external_references_identity_key',
   'source_artifacts_digest_uq',
   'system_steps_system_position_key',
+  // HK-FEATURE-11: two devices each connecting the same item to the same Focus.
+  'rebuild_focus_links_live_link_uq',
 ];
+
+/**
+ * A refused row's VALUES never become evidence (HK-FEATURE-11, Addendum J). PostgreSQL's detail for a CHECK or NOT NULL violation is
+ * "Failing row contains (…every column…)", which would copy a private title or note into the device's sync evidence. The constraint
+ * name — in the message — is what explains the refusal; the row's own values are dropped. Key/constraint names are kept.
+ */
+export function redactRowValues(details: string | null | undefined): string | null {
+  if (details === null || details === undefined) return null;
+  return details.replace(/Failing row contains \([\s\S]*\)\.?/, 'Failing row contains (redacted).');
+}
 
 function isDomainInvariant(detail: string): boolean {
   return DOMAIN_INVARIANTS.some((name) => detail.includes(name));

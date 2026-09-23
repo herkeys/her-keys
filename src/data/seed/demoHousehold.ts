@@ -227,5 +227,7 @@ export function materializeDemoState({ anchorDate, timeZone }: { anchorDate: Loc
     patterns: [],
     evidenceLinks: [],
     careerOpportunities,
+    rebuildFocuses: [],
+    rebuildFocusLinks: [],
   };
 }

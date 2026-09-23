@@ -26,6 +26,7 @@ import {
 } from './foundation/structure';
 import { refExists } from './foundation/typedRef';
 import { isValidTimeZone } from './logicalDay';
+import { RebuildFocusLinkSchema, RebuildFocusSchema } from './rebuild/schema';
 import {
   Id,
   InstantSchema,
@@ -529,6 +530,13 @@ export const AppStateSchema = z.strictObject({
   patterns: z.array(PatternSchema).max(2000),
   evidenceLinks: z.array(EvidenceLinkSchema).max(20_000),
   careerOpportunities: z.array(CareerOpportunitySchema).max(1000),
+  /**
+   * Areas of her own life she chose to keep visible (HK-FEATURE-11). Owner-private. Absent from a household saved before Feature 11,
+   * which simply has none yet — hence the default, exactly like the fields Feature 08 added.
+   */
+  rebuildFocuses: z.array(RebuildFocusSchema).max(200).default([]),
+  /** Each Focus's connections to canonical Tasks, Goals, Systems and Events. Owner-private, like the Focus. */
+  rebuildFocusLinks: z.array(RebuildFocusLinkSchema).max(5000).default([]),
 });
 
 export type Household = z.infer<typeof HouseholdSchema>;
@@ -642,6 +650,8 @@ export function findIntegrityProblems(state: AppState): string[] {
   requireUnique('pattern id', state.patterns.map((row) => row.id));
   requireUnique('evidence link id', state.evidenceLinks.map((row) => row.id));
   requireUnique('career opportunity id', state.careerOpportunities.map((row) => row.id));
+  requireUnique('rebuild focus id', state.rebuildFocuses.map((row) => row.id));
+  requireUnique('rebuild focus link id', state.rebuildFocusLinks.map((row) => row.id));
 
   for (const category of state.categories) {
     if (category.householdId !== state.household.id) {
@@ -903,6 +913,19 @@ export function findIntegrityProblems(state: AppState): string[] {
     if (link.for.kind !== 'oneMove') requireRef('evidence link', link.id, link.for);
     requireRef('evidence link', link.id, link.support);
     void patternIds;
+  }
+
+  // ---- Me / Rebuild (HK-FEATURE-11): a link belongs to an existing Focus and names an existing canonical row, once while live.
+  const focusIds = new Set(state.rebuildFocuses.map((row) => row.id));
+  const liveFocusLinks = new Set<string>();
+  for (const link of state.rebuildFocusLinks) {
+    requireIn('rebuild focus link', link.id, 'rebuild focus', focusIds, link.focusId);
+    requireRef('rebuild focus link', link.id, link.target);
+    if (link.status === 'active') {
+      const key = `${link.focusId}|${link.target.kind}:${link.target.id}`;
+      if (liveFocusLinks.has(key)) problems.push(`rebuild focus ${link.focusId} is linked to ${link.target.kind}:${link.target.id} twice`);
+      liveFocusLinks.add(key);
+    }
   }
 
   // ---- external identity.

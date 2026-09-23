@@ -37,6 +37,9 @@ const SEQUENCE = [
   // HK-FEATURE-05 closeout repair (OC-01): the composition journey exercises a child added after binding (push_household_child),
   // so the private stack needs it too, not only the shared default database.
   join(REPO, 'supabase', 'migrations', '20260921190000_f05_add_child_after_binding.sql'),
+  // HK-FEATURE-11 (Me / Rebuild): the rebuild journey pushes and pulls Focuses and their links over real HTTP, and every journey's
+  // pull now meets the replaced sync_push, so the private stack carries it. The shared default database is still never migrated.
+  join(REPO, 'supabase', 'migrations', '20260922180000_f11_rebuild_focus.sql'),
 ];
 
 function buildDatabase() {
