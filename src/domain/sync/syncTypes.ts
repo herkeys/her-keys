@@ -41,6 +41,9 @@ export const CORE_SYNC_KINDS = [
   'discovery',
   'onboarding',
   'action',
+  // HK-FEATURE-12 Life Admin: two OWNER-PRIVATE kinds (profile_id, personal scope), registered by hand like needsMe.
+  'lifeRecord',
+  'lifeRecordLink',
 ] as const;
 export type CoreSyncKind = (typeof CORE_SYNC_KINDS)[number];
 
@@ -82,6 +85,8 @@ export const CLOUD_TABLE: Record<SyncEntityKind, string> = {
   discovery: 'discovery_records',
   onboarding: 'onboarding_state',
   action: 'action_records',
+  lifeRecord: 'life_records',
+  lifeRecordLink: 'life_record_task_links',
 };
 
 /**
@@ -105,6 +110,8 @@ export const IDENTITY_COLUMN: Record<SyncEntityKind, string> = {
   discovery: 'id',
   onboarding: 'profile_id',
   action: 'id',
+  lifeRecord: 'id',
+  lifeRecordLink: 'id',
 };
 
 /**
@@ -137,6 +144,9 @@ export const ALLOWED_OPS: Record<SyncEntityKind, readonly SyncOp[]> = {
   discovery: ['create', 'update', 'tombstone'],
   onboarding: ['create', 'update'],
   action: ['create'],
+  lifeRecord: ['create', 'update'],
+  // A link is written once, with its Task, and never edited: the cloud grants it no UPDATE.
+  lifeRecordLink: ['create'],
 };
 
 /**
@@ -188,6 +198,10 @@ export const UPDATABLE_COLUMNS: Record<SyncEntityKind, readonly string[]> = {
   discovery: merged(['deleted_at', 'local_id', 'topic_id'], 'discovery'),
   onboarding: merged(['completed_at', 'goal_ids', 'last_step', 'strength_ids', 'struggle_ids'], 'onboarding'),
   action: [],
+  // Exactly the migration's UPDATE grant on life_records (20260922180000_f12_life_records.sql).
+  lifeRecord: ['archived_at', 'confidence', 'expires_on', 'issued_on', 'issuer_name', 'location_hint', 'note', 'origin_updated_at', 'record_kind',
+               'reference_number', 'renew_by', 'review_on', 'status', 'subject_member_id', 'title', 'type_name'],
+  lifeRecordLink: [],
 };
 
 /** The row an UPDATE may carry: the projected row, narrowed to the grant. */
@@ -225,6 +239,9 @@ export const DEPENDENCY_RANK: Record<SyncEntityKind, number> = {
   onboarding: 2,
   oneMove: 4,
   action: 5,
+  // A record names a child (0) and an artifact; a link names a record and a Task (both 2), so it goes after them.
+  lifeRecord: 2,
+  lifeRecordLink: 3,
 };
 
 // ---------------------------------------------------------------- bounds ----

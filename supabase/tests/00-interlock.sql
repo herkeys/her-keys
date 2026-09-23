@@ -11,10 +11,10 @@
 \pset format unaligned
 \pset tuples_only on
 
--- 34 from Build 4 (IR01, F08, F05 and F09 add none), plus HK-FEATURE-10's career_opportunities and HK-FEATURE-11's two:
--- rebuild_focuses and rebuild_focus_links.
-SELECT CASE WHEN count(*) = 37 THEN 'PASS' ELSE 'FAIL' END
-       || ' | 37 application tables exist after the migrations (34 + the HK-FEATURE-10 table + the two HK-FEATURE-11 tables) (' || count(*)::text || ')'
+-- 34 from Build 4 (IR01, F08, F05 and F09 add none), plus HK-FEATURE-10's career_opportunities, HK-FEATURE-11's two
+-- (rebuild_focuses, rebuild_focus_links) and HK-FEATURE-12's two owner-private Life Admin tables.
+SELECT CASE WHEN count(*) = 39 THEN 'PASS' ELSE 'FAIL' END
+       || ' | 39 application tables exist after the migrations (34 + 1 HK-FEATURE-10 + 2 HK-FEATURE-11 + 2 HK-FEATURE-12) (' || count(*)::text || ')'
 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
 WHERE n.nspname = 'public' AND c.relkind = 'r';
 

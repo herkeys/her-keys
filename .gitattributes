@@ -15,3 +15,7 @@ supabase/migrations/20260922180000_f09_task_payment_mechanism.sql text eol=lf
 # Pin the additive HK-FEATURE-11 (Me / Rebuild) migration to LF: it replaces sync_push and adds a trigger function, so the
 # function-body digest in the schema fingerprint depends on its line endings.
 supabase/migrations/20260922180000_f11_rebuild_focus.sql text eol=lf
+
+# Pin the additive HK-FEATURE-12 (Life Admin / Documents) migration to LF: it replaces sync_push and adds a trigger function, so
+# the function-body digests in the schema fingerprint depend on its bytes.
+supabase/migrations/20260922180000_f12_life_records.sql text eol=lf

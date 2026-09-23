@@ -295,6 +295,57 @@ export function toCloudRow(state: AppState, ctx: ProjectionContext, kind: SyncEn
       };
     }
 
+    case 'lifeRecord': {
+      // HK-FEATURE-12. Owner-private: the owner is the bound account, stamped here, never read from the row. The subject is a CHILD
+      // by her cloud id (a record about a child who has no cloud identity yet waits for her, like a task does).
+      const row = require_(state.lifeRecords.find((r) => r.id === localId), kind, localId);
+      const subject = childRef(ctx, row.subjectMemberId);
+      if (row.subjectMemberId !== null && subject === null) {
+        throw new UnresolvedReferenceError(kind, localId, `child member ${row.subjectMemberId}`);
+      }
+      return {
+        ...base,
+        profile_id: ctx.profileId,
+        title: row.title,
+        record_kind: row.kind,
+        type_name: row.typeName,
+        issuer_name: row.issuerName,
+        reference_number: row.referenceNumber,
+        issued_on: row.issuedOn,
+        expires_on: row.expiresOn,
+        renew_by: row.renewBy,
+        review_on: row.reviewOn,
+        location_hint: row.locationHint,
+        note: row.note,
+        subject_member_id: subject,
+        status: row.status,
+        archived_at: row.archivedAt,
+        scope: 'personal',
+        origin_created_at: row.createdAt,
+        origin_updated_at: row.updatedAt,
+        ...provenanceColumns(ctx, kind, localId, row.provenance),
+      };
+    }
+
+    case 'lifeRecordLink': {
+      // Both ends travel as cloud uuids. The record and the Task are pushed first (rank), so an unmapped end is a scheduling fact.
+      const row = require_(state.lifeRecordLinks.find((l) => l.id === localId), kind, localId);
+      const record = cloudRef(ctx, 'lifeRecord', row.lifeRecordId);
+      if (record === null) throw new UnresolvedReferenceError(kind, localId, `life record ${row.lifeRecordId}`);
+      const task = cloudRef(ctx, 'task', row.taskId);
+      if (task === null) throw new UnresolvedReferenceError(kind, localId, `task ${row.taskId}`);
+      return {
+        ...base,
+        profile_id: ctx.profileId,
+        life_record_id: record,
+        task_id: task,
+        relation: row.relation,
+        scope: 'personal',
+        origin_created_at: row.createdAt,
+        ...provenanceColumns(ctx, kind, localId, row.provenance),
+      };
+    }
+
     default:
       throw new UnresolvedReferenceError(kind, localId, `a projection for ${kind}, which does not exist`);
   }

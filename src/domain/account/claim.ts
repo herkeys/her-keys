@@ -71,6 +71,10 @@ export function describeLocalHousehold(state: AppState): LocalHousehold {
       state.capacity !== null ||
       state.patterns.length > 0 ||
       state.evidenceLinks.length > 0 ||
+      // Life Admin (HK-FEATURE-12): a household holding only her private records is not empty, so another account's sign-in on
+      // this device quarantines it exactly as it would any other content. Records do not travel IN the claim; they sync afterwards.
+      state.lifeRecords.length > 0 ||
+      state.lifeRecordLinks.length > 0 ||
       state.onboarding.goalIds.length > 0 ||
       state.onboarding.strengthIds.length > 0 ||
       state.onboarding.struggleIds.length > 0,

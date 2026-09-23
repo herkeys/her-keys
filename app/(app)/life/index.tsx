@@ -5,6 +5,8 @@ import { colors, spacing } from '../../../src/design/tokens';
 import { openTasksWithoutList } from '../../../src/domain/taskLists';
 import { NeedsMeQuickAdd } from '../../../src/features/life/NeedsMeQuickAdd';
 import { REBUILD_COPY } from '../../../src/features/rebuild/copy';
+import { LIFE_ADMIN_COPY } from '../../../src/features/lifeAdmin/lifeAdminCopy';
+import { lifeAdminHubSummary } from '../../../src/features/lifeAdmin/lifeAdminView';
 import { useLifeStatus } from '../../../src/features/life/useLifeStatus';
 import { useLifeInbox } from '../../../src/features/talk-it-out/capture/CaptureContext';
 import { copy } from '../../../src/features/talk-it-out/capture/copy';
@@ -71,6 +73,13 @@ export default function LifeHub() {
             label: REBUILD_COPY.life.rowLabel,
             value: REBUILD_COPY.life.rowValue(activeFocuses),
             onPress: () => router.push('/life/rebuild'),
+          },
+          // Life Admin / Documents (HK-FEATURE-12): a count only. No title, number, note, place, issuer or child name reaches the hub.
+          {
+            key: 'life-admin',
+            label: LIFE_ADMIN_COPY.hubLabel,
+            ...lifeAdminHubSummary(state, today),
+            onPress: () => router.push('/life/admin'),
           },
         ]}
       />

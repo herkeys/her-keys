@@ -46,6 +46,8 @@ export function createEmptyState(timeZone: string): AppState {
     careerOpportunities: [],
     rebuildFocuses: [],
     rebuildFocusLinks: [],
+    lifeRecords: [],
+    lifeRecordLinks: [],
   };
 }
 

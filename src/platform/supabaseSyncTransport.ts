@@ -119,7 +119,7 @@ export function createSupabaseSyncTransport(client: SupabaseClient): SyncTranspo
  * devices, not a validation error, and treating it as one would hide a real
  * disagreement behind a generic failure.
  */
-function failureFrom(error: PostgrestError): TransportFailure {
+export function failureFrom(error: Pick<PostgrestError, 'code' | 'message' | 'details'>): TransportFailure {
   const code = error.code ?? null;
   const detail = [error.message, redactRowValues(error.details)].filter(Boolean).join(' | ').slice(0, 400);
 
@@ -161,13 +161,19 @@ const DOMAIN_INVARIANTS = [
 ];
 
 /**
- * A refused row's VALUES never become evidence (HK-FEATURE-11, Addendum J). PostgreSQL's detail for a CHECK or NOT NULL violation is
- * "Failing row contains (…every column…)", which would copy a private title or note into the device's sync evidence. The constraint
- * name — in the message — is what explains the refusal; the row's own values are dropped. Key/constraint names are kept.
+ * A refused row's VALUES never become evidence. PostgreSQL answers a CHECK or NOT NULL refusal with the WHOLE refused row in its
+ * DETAIL ("Failing row contains (...every column...)"). That row is her content — a task note, a Focus note, a Life Admin reference
+ * number, a location hint — and this detail becomes DURABLE sync evidence, so everything from that phrase on is withheld and only the
+ * fact of the refusal is kept. The message still names the constraint, which is all a person resolving it, or the classifier above,
+ * needs; a key detail that carries only ids ("Key (household_id, local_id)=(...) already exists.") is kept as it is.
+ *
+ * HK-FEATURE-11 (Addendum J) and HK-FEATURE-12 closed this leak independently. The F01-F13 integration keeps ONE implementation:
+ * F11's exported, null-safe name with F12's cut-to-the-end rule, which also withholds a row tuple that is not closed by a parenthesis.
  */
 export function redactRowValues(details: string | null | undefined): string | null {
   if (details === null || details === undefined) return null;
-  return details.replace(/Failing row contains \([\s\S]*\)\.?/, 'Failing row contains (redacted).');
+  const at = details.indexOf('Failing row contains');
+  return at < 0 ? details : `${details.slice(0, at)}Failing row contains (values withheld)`;
 }
 
 function isDomainInvariant(detail: string): boolean {

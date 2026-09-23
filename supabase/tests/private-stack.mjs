@@ -17,8 +17,9 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = join(HERE, '..', '..');
 const DB_CONTAINER = process.env.HERKEYS_LOCAL_DB_CONTAINER ?? 'supabase_db_Her_Keys';
 const REST_REFERENCE = process.env.HERKEYS_LOCAL_REST_CONTAINER ?? 'supabase_rest_Her_Keys';
-export const PRIVATE_DB = 'f08_stack';
-const REST_NAME = 'f08_postgrest';
+// Overridable (like the ports) so two sessions can each run a private stack without dropping each other's database or container.
+export const PRIVATE_DB = process.env.HERKEYS_PRIVATE_DB ?? 'f08_stack';
+const REST_NAME = process.env.HERKEYS_PRIVATE_REST_NAME ?? 'f08_postgrest';
 const REST_PORT = Number(process.env.HERKEYS_PRIVATE_REST_PORT ?? 54391);
 const API_PORT = Number(process.env.HERKEYS_PRIVATE_API_PORT ?? 54392);
 const ENV = { ...process.env, MSYS_NO_PATHCONV: '1' };
@@ -40,6 +41,8 @@ const SEQUENCE = [
   // HK-FEATURE-11 (Me / Rebuild): the rebuild journey pushes and pulls Focuses and their links over real HTTP, and every journey's
   // pull now meets the replaced sync_push, so the private stack carries it. The shared default database is still never migrated.
   join(REPO, 'supabase', 'migrations', '20260922180000_f11_rebuild_focus.sql'),
+  // HK-FEATURE-12 (Life Admin): the owner-private record tables, so the journeys can prove them over real HTTP.
+  join(REPO, 'supabase', 'migrations', '20260922180000_f12_life_records.sql'),
 ];
 
 function buildDatabase() {

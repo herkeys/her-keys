@@ -95,7 +95,8 @@ const MUTANTS = [
     tests: [T('ui')] },
   { id: 'R15', guards: 'a refused row carries none of her words (Addendum J)', what: 'the transport keeps the failing row values',
     file: 'src/platform/supabaseSyncTransport.ts',
-    from: "  return details.replace(/Failing row contains \\([\\s\\S]*\\)\\.?/, 'Failing row contains (redacted).');",
+    // Since the F01-F13 integration the transport has ONE redaction implementation (F11's name, F12's rule).
+    from: "  return at < 0 ? details : `${details.slice(0, at)}Failing row contains (values withheld)`;",
     to: '  return details;',
     tests: [T('sync')] },
   { id: 'R16', kind: 'sql', guards: 'no inference through a link target', what: 'the link-target visibility trigger is dropped',

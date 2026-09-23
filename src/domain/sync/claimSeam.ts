@@ -32,6 +32,8 @@ export function kindOfLocalId(state: AppState, localId: string): MappedKind | nu
   if (state.oneMoves.some((row) => row.id === localId)) return 'oneMove';
   if (state.discovery?.id === localId) return 'discovery';
   if (state.actions.some((row) => row.id === localId)) return 'action';
+  if (state.lifeRecords.some((row) => row.id === localId)) return 'lifeRecord';
+  if (state.lifeRecordLinks.some((row) => row.id === localId)) return 'lifeRecordLink';
   // The foundation kinds (a claim carries the source artifacts its rows were derived from).
   for (const spec of FOUNDATION_SPECS) {
     if (foundationLocalRow(state, spec.kind, localId) !== undefined) return spec.kind;

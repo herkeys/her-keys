@@ -200,7 +200,8 @@ describe('[F11-M5] offline, stale and refused', () => {
   });
 
   test('the transport keeps the constraint name and drops a failing row\'s values', () => {
-    assert.equal(redactRowValues('Failing row contains (1f0c…, a private note, active).'), 'Failing row contains (redacted).');
+    // One implementation since the F01-F13 integration (F11 and F12 each wrote one): the wording is F12's.
+    assert.equal(redactRowValues('Failing row contains (1f0c…, a private note, active).'), 'Failing row contains (values withheld)');
     assert.equal(redactRowValues('Key (focus_id)=(abc) is not present in table "rebuild_focuses".'), 'Key (focus_id)=(abc) is not present in table "rebuild_focuses".');
     assert.equal(redactRowValues(null), null);
   });

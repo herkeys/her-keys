@@ -116,6 +116,16 @@ from a `superseded_by` pointer, as the "before" side of the reconciliation. Veri
 Two captures are only comparable when both apply the shipping migration in its authoritative form — the working-tree file, CRLF on this machine — because
 function bodies hash their line endings.
 
+## Feature branch baseline (HK-FEATURE-12 Life Admin / Documents, Wave 3, NOT integrated)
+
+`baselines/f12-local-fingerprint.json`: 3,844 facts, gating digest `60af45784ddd7373c7a56cd57c51b802`, for WAVE3_BASE (IR01 + F08 + F05,
+derived `96f93f3d46dcf5735e7a0b50996944bf`, 3,629 facts — no committed baseline existed for the integrated Wave 2 schema) plus the additive
+migration `20260922180000_f12_life_records.sql`. DERIVED by `f12-fingerprint.mjs derive --write`, which never migrates the shared database: it
+requires that database to match the F05 baseline below, measures the F08 and F12 deltas on scratch databases, and pins F12's exact movement
+(added: columns 45, constraints 40, functions 2, indexes 13, policies 5, privileges.columns 52, privileges.effective 16, privileges.functions 1,
+privileges.relations 34, relations 2, triggers 7; removed: the replaced `change_log_entity_table_check` and the replaced `sync_push` body).
+It is a FEATURE-BRANCH artifact: the Wave 3 integration re-derives the integrated baseline once F09-F12 are merged. Local only.
+
 ## Current baseline (HK-FEATURE-05 closeout repair, OC-01)
 
 `baselines/f05-local-fingerprint.json` is the CURRENT approved local baseline: 3,621 facts, gating digest `8bf3c7c6367c06b79128eb83147fd17e`.

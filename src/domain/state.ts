@@ -299,6 +299,93 @@ export const NeedsMeItemSchema = z.strictObject({
   scope: z.literal('personal'),
 });
 
+/**
+ * LIFE ADMIN / DOCUMENTS (HK-FEATURE-12). A LifeRecord is durable administrative context she wants Her Keys to remember: a
+ * passport, a lease, a policy, a registration. It MEANS only that. It does not mean the document was verified, that an issuer
+ * confirms it, that Her Keys holds the file, that a date is legally controlling, or that anything was renewed — and it is never a
+ * Task. It is OWNER-PRIVATE by construction (`scope: 'personal'`, pinned), like the other owner-private kinds.
+ *
+ * `kind` is a small, broad taxonomy on purpose; what the thing specifically is ("Passport", "Lease") is her own `typeName`.
+ * Dates are calendar dates, never instants: `expiresOn` is a RECORDED expiration date, `renewBy` a date by which renewal action is
+ * expected, `reviewOn` a date she chose to look again. They are different facts and nothing relates them (a `renewBy` after
+ * `expiresOn` is preserved as entered). Whether a date has passed is derived, never stored: there is no `expired` status.
+ * `status` is `active` or `archived`; archiving hides a record from active surfaces and destroys nothing.
+ * `subjectMemberId` names a CHILD by canonical id, never by name, exactly like a System's subject.
+ * `referenceNumber`, `locationHint` and `note` are sensitive: shown only on the record's own detail (the reference masked until she
+ * reveals it), never on the home, the Life hub, Today, a verdict, a log or an error. They are private context, not secrets: no
+ * password, PIN, card number, SSN or credential belongs here.
+ */
+export const LIFE_RECORD_KINDS = ['document', 'credential', 'policy', 'registration', 'reference', 'other'] as const;
+export type LifeRecordKind = (typeof LIFE_RECORD_KINDS)[number];
+
+export const LIFE_RECORD_STATUSES = ['active', 'archived'] as const;
+export type LifeRecordStatus = (typeof LIFE_RECORD_STATUSES)[number];
+
+/** Stored bounds, mirrored by CHECKs in the cloud. Counted in UTF-16 units, which is never fewer than the cloud's characters. */
+export const LIFE_RECORD_LIMITS = {
+  title: FIELD_LIMITS.titleLength,
+  typeName: 60,
+  issuerName: 120,
+  referenceNumber: 64,
+  locationHint: 120,
+  note: 500,
+} as const;
+
+/** Records are retired by status, never deleted, so the count only grows; the action refuses at the cap. */
+export const LIFE_RECORD_CAPACITY = 2000;
+export const LIFE_RECORD_LINK_CAPACITY = 5000;
+
+/** Why she created a Task from a record. A label for her, not a workflow: nothing reads it to decide anything. */
+export const LIFE_RECORD_LINK_RELATIONS = ['renewal', 'follow_up', 'next_step'] as const;
+export type LifeRecordLinkRelation = (typeof LIFE_RECORD_LINK_RELATIONS)[number];
+
+/** Optional single-purpose text: absent is `null`, never an empty string. */
+const OptionalText = (max: number) => NonBlank(max).nullable();
+
+export const LifeRecordSchema = z
+  .strictObject({
+    id: Id,
+    title: NonBlank(LIFE_RECORD_LIMITS.title),
+    kind: z.enum(LIFE_RECORD_KINDS),
+    typeName: OptionalText(LIFE_RECORD_LIMITS.typeName),
+    issuerName: OptionalText(LIFE_RECORD_LIMITS.issuerName),
+    referenceNumber: OptionalText(LIFE_RECORD_LIMITS.referenceNumber),
+    issuedOn: LocalDateSchema.nullable(),
+    expiresOn: LocalDateSchema.nullable(),
+    renewBy: LocalDateSchema.nullable(),
+    reviewOn: LocalDateSchema.nullable(),
+    locationHint: OptionalText(LIFE_RECORD_LIMITS.locationHint),
+    note: OptionalText(LIFE_RECORD_LIMITS.note),
+    subjectMemberId: Id.nullable(),
+    status: z.enum(LIFE_RECORD_STATUSES),
+    archivedAt: InstantSchema.nullable(),
+    createdAt: InstantSchema,
+    updatedAt: InstantSchema,
+    provenance: ProvenanceSchema,
+    scope: z.literal('personal'),
+  })
+  .superRefine((record, ctx) => {
+    if ((record.status === 'archived') !== (record.archivedAt !== null)) {
+      ctx.addIssue({ code: 'custom', message: 'archivedAt must be set exactly when archived', path: ['archivedAt'] });
+    }
+  });
+
+/**
+ * A Task she created FROM a record, and nothing else: "this Task is the work she chose to track for this record". The link is
+ * owner-private like the record, and the Task it names is an ordinary canonical Task of hers with `personal` scope, so a private
+ * record is never tied to work another member can see. A link is written once, with the Task, in the same transition; completing
+ * or archiving the Task changes nothing about the record or the link.
+ */
+export const LifeRecordTaskLinkSchema = z.strictObject({
+  id: Id,
+  lifeRecordId: Id,
+  taskId: Id,
+  relation: z.enum(LIFE_RECORD_LINK_RELATIONS),
+  createdAt: InstantSchema,
+  provenance: ProvenanceSchema,
+  scope: z.literal('personal'),
+});
+
 /** Structured Talk It Out state only: which topic, and which scripted answer to which question. Never her words. */
 export const DiscoveryRecordSchema = z.strictObject({
   id: Id,
@@ -537,6 +624,12 @@ export const AppStateSchema = z.strictObject({
   rebuildFocuses: z.array(RebuildFocusSchema).max(200).default([]),
   /** Each Focus's connections to canonical Tasks, Goals, Systems and Events. Owner-private, like the Focus. */
   rebuildFocusLinks: z.array(RebuildFocusLinkSchema).max(5000).default([]),
+  /**
+   * Life Admin / Documents (HK-FEATURE-12): her owner-private records, and the Tasks she created from them. Absent in a v4 blob
+   * written before they existed, which reads as "no records yet" — the truth for that household — so no schema version moves.
+   */
+  lifeRecords: z.array(LifeRecordSchema).max(LIFE_RECORD_CAPACITY).default([]),
+  lifeRecordLinks: z.array(LifeRecordTaskLinkSchema).max(LIFE_RECORD_LINK_CAPACITY).default([]),
 });
 
 export type Household = z.infer<typeof HouseholdSchema>;
@@ -552,6 +645,8 @@ export type Onboarding = z.infer<typeof OnboardingSchema>;
 export type OneMoveRecord = z.infer<typeof OneMoveRecordSchema>;
 export type NeedsMeItem = z.infer<typeof NeedsMeItemSchema>;
 export type DiscoveryRecord = z.infer<typeof DiscoveryRecordSchema>;
+export type LifeRecord = z.infer<typeof LifeRecordSchema>;
+export type LifeRecordTaskLink = z.infer<typeof LifeRecordTaskLinkSchema>;
 export type MoveTaskAction = z.infer<typeof MoveTaskActionSchema>;
 export type KeepPlanAction = z.infer<typeof KeepPlanActionSchema>;
 export type MoveEventAction = z.infer<typeof MoveEventActionSchema>;
@@ -652,6 +747,10 @@ export function findIntegrityProblems(state: AppState): string[] {
   requireUnique('career opportunity id', state.careerOpportunities.map((row) => row.id));
   requireUnique('rebuild focus id', state.rebuildFocuses.map((row) => row.id));
   requireUnique('rebuild focus link id', state.rebuildFocusLinks.map((row) => row.id));
+  requireUnique('life record id', state.lifeRecords.map((row) => row.id));
+  requireUnique('life record link id', state.lifeRecordLinks.map((row) => row.id));
+  // A Task is tied to a record once. Duplicate TITLES are fine: identity is the id, never the words.
+  requireUnique('life record task link', state.lifeRecordLinks.map((row) => `${row.lifeRecordId}|${row.taskId}`));
 
   for (const category of state.categories) {
     if (category.householdId !== state.household.id) {
@@ -780,7 +879,25 @@ export function findIntegrityProblems(state: AppState): string[] {
   for (const row of state.patterns) checkArtifact('pattern', row);
   for (const row of state.evidenceLinks) checkArtifact('evidence link', row);
   for (const row of state.careerOpportunities) checkArtifact('career opportunity', row);
+  for (const row of state.lifeRecords) checkArtifact('life record', row);
+  for (const row of state.lifeRecordLinks) checkArtifact('life record link', row);
   if (state.capacity !== null) checkArtifact('capacity', { id: 'capacity', provenance: state.capacity.provenance });
+
+  // ---- Life Admin: a record's subject is a CHILD (the cloud's composite FK requires it); a link names a real record and a real
+  // Task of hers that is itself owner-private, so a private record is never tied to work another member can see.
+  const lifeRecordIds = new Set(state.lifeRecords.map((row) => row.id));
+  for (const record of state.lifeRecords) {
+    if (record.subjectMemberId !== null && !childIds.has(record.subjectMemberId)) {
+      problems.push(`life record ${record.id} references missing child ${record.subjectMemberId}`);
+    }
+  }
+  const tasksById = new Map(state.tasks.map((task) => [task.id, task]));
+  for (const link of state.lifeRecordLinks) {
+    if (!lifeRecordIds.has(link.lifeRecordId)) problems.push(`life record link ${link.id} references missing life record ${link.lifeRecordId}`);
+    const task = tasksById.get(link.taskId);
+    if (task === undefined) problems.push(`life record link ${link.id} references missing task ${link.taskId}`);
+    else if (task.scope !== 'personal') problems.push(`life record link ${link.id} names a task that is not owner-private`);
+  }
 
   const referenceIds = new Set(state.externalReferences.map((ref) => ref.id));
 

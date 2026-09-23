@@ -45,14 +45,17 @@ export const V4_ROW_ADDITIONS = {
 export const UNKNOWN_FACET = (key) => (key === 'automationMode' ? 'manual' : key === 'slot' ? 'unspecified' : key === 'status' ? 'active' : null);
 
 /**
- * Roots v4 introduced. `careerOpportunities` is Feature 10's (Work / Career) and the last two are Feature 11's (Me / Rebuild):
- * each was added to the v4 shape later rather than with a new envelope version, so no earlier version ever stored them either.
+ * Roots v4 introduced. `careerOpportunities` is Feature 10's (Work / Career), the next two are Feature 11's (Me / Rebuild) and the
+ * last two Feature 12's (Life Admin): each was added to the v4 shape later rather than with a new envelope version, so no earlier
+ * version ever stored them either.
  */
 export const V4_ROOTS = [
   'migrationLineage', 'sourceArtifacts', 'externalReferences', 'interpretations', 'observations', 'authorities',
   'intents', 'decisions', 'executions', 'outcomes', 'people', 'responsibilities', 'dependencies', 'recurrences',
   'goals', 'systemSteps', 'capacity', 'patterns', 'evidenceLinks', 'careerOpportunities',
   'rebuildFocuses', 'rebuildFocusLinks',
+  // HK-FEATURE-12 (Life Admin): roots no v3 blob ever had. They default to [] when a v4 blob without them is read.
+  'lifeRecords', 'lifeRecordLinks',
 ];
 
 const without = (row, keys) => {
