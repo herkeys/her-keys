@@ -24,7 +24,8 @@ P5 low correctness · P6 UX polish · P7 maintainability · P8 performance · P9
 | HK13-D08 | **P0** | F10 | local persistence | A household saved before F10 fails validation and is overwritten with an empty household on the first F10 launch | FIXED `d9dfa5c` |
 | HK13-D09 | **P0** | F10, F11, F13 | account binding | `hasContent` ignores Work/Rebuild/People rows: after A's interrupted claim, B bootstraps and A's private rows are pushed as B's | FIXED `d9dfa5c` |
 | HK13-D10 | P3 | F07, F13 | navigation / Life IA | Co-Parent (`/life/coparent`) and People (`/life/people`) have no entry point — reachable only by deep link | FIXED `b681a4c` |
-| HK13-D11 | P4 | F09–F13 | exit gate (Meals boundary scan) | F09–F12 never registered their lanes: the integrated line fails the Meals exit gate, and the scan's attribution could not tell a Meals change from a later feature's | FIXED (AUD13-04) |
+| HK13-D11 | P4 | F09–F13 | exit gate (Meals boundary scan) | F09–F12 never registered their lanes: the integrated line fails the Meals exit gate, and the scan's attribution could not tell a Meals change from a later feature's | FIXED `bb53aeb` |
+| HK13-D12 | P4 | F01 × F03 (× F11, F12, F13) | One Move | The planning default duration makes any task "small": offered on an overloaded day as load-reducing, and quoted back as "It should take about 15 minutes" | FIXED (AUD13-04b) |
 
 (Entries below are added as the audit proceeds.)
 
@@ -266,4 +267,35 @@ P5 low correctness · P6 UX polish · P7 maintainability · P8 performance · P9
   | D11-M7 | planted change to PROTECTED `src/domain/taskLists.ts` | CAUGHT — E finding |
   | D11-M8 | the integration falsely claims `README.md` | CAUGHT — H finding |
   | D11-M9 | PROTECTED fails on any change (the old rule) | CAUGHT — 11 findings; test fails 3 |
-- **Status:** FIXED (AUD13-04).
+- **Status:** FIXED `bb53aeb`.
+
+## HK13-D12 — The planning default makes any task "small" to One Move (P4)
+
+- **Features / surface:** F01 One Move (`src/domain/oneMove.ts` `taskAsOneMoveItem`) × F03 duration provenance (HA-010,
+  `src/domain/foundation/duration.ts`); exposure widened by F11, F12 and F13, whose follow-up / next-step / record Tasks are all saved
+  without a duration.
+- **How found:** Phase 6 — the new cross-seam test "Person → private follow-up Task → Today → One Move" (`tests/hk-f01f13/crossSeams
+  .test.mjs`) got `effect: 'reduces_load', estimatedMinutes: 15` for a follow-up she gave no duration; the F01–F03 trace had flagged the
+  same line.
+- **Reproduction:** on a day Daily Load judges overloaded, add one task due today without a duration (every F11/F12/F13 flow, Talk It
+  Out acceptances, a quick capture). `resolveOneMoveForToday` offers it, because the planning default (15) passes `<= 15 → reduces_load`,
+  and "Why this?" says "It should take about 15 minutes."
+- **Expected:** HA-010: "DEFAULT != USER-PROVIDED … Anything else is an estimate or an unknown and must be worded as one"; an unknown
+  size is not evidence that a task is small (One Move already treats a Needs Me item of unknown size as `adds_work`).
+- **Actual:** One Move read `durationMinutes` and ignored `durationSource`: a default, or a number of unrecorded origin, made a task
+  "small" and was quoted back as her estimate.
+- **Root cause:** One Move predates HA-010; the IR01 repair moved Kids and Home onto `durationKnowledgeOf` but not One Move.
+- **Privacy impact:** none. **Data-loss impact:** none. Wrong recommendation on overloaded days and an unsupported claim in her words.
+- **Severity reasoning:** P4 — a medium correctness/doctrine defect on the product's central recommendation ("Understanding ≠
+  certainty"), reachable from every feature that creates Tasks without a duration; not P3 because the day's decision is still a real
+  Task of hers and nothing is lost.
+- **Repair (AUD13-04b):** a task's duration counts only when it is `user` or `inferred` (she gave it, or approved Her Keys' reading of
+  it): then `<= 15` may be `reduces_load` and the number is quoted. A default or unrecorded duration is `adds_work` with no estimate, the
+  same conservative treatment as a Needs Me item. Ordering (smallest first) is unchanged.
+- **Tests:** `tests/oneMove.test.mjs` +2 ("a task saved without a duration never claims one", "on an overloaded day, a task whose size
+  is only the planning default is withheld"), and the overloaded-day "small real task" test now runs for `user` and `inferred`;
+  `tests/today/scenarios2.test.mjs` "Why this?" quotes her 30 minutes and nothing for the default; `tests/hk-f01f13/crossSeams.test.mjs`.
+  Three existing fixtures passed a bare number as "her" duration; they now say `durationSource: 'user'` (the task form records exactly
+  that when she touches the field) — the assertions are unchanged. Test-the-test: D12-M1 (raw duration decides "small") CAUGHT 3 fail;
+  D12-M2 (default quoted) CAUGHT 3 fail; D12-M3 (`inferred` no longer known) CAUGHT 1 fail. All restored byte-for-byte.
+- **Status:** FIXED (AUD13-04b).

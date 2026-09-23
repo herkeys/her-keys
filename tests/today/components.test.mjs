@@ -228,7 +228,8 @@ describe('OneMoveCard — the lifecycle, and “why” that opens in stages', ()
 
   const selectedView = (opts = {}) => {
     let s = household();
-    s = tk(s, { title: 'File the insurance claim', minutes: 30, due: DAY, plan: { kind: 'unplanned' }, category: 'cat-money', ...opts });
+    // Her own 30 minutes (`user`): only a duration she gave is ever quoted back as "about 30 minutes" (HA-010, HK13-D12).
+    s = tk(s, { title: 'File the insurance claim', minutes: 30, durationSource: 'user', due: DAY, plan: { kind: 'unplanned' }, category: 'cat-money', ...opts });
     s = facet(s, 'File the insurance claim', { consequence: 'high' });
     return view(withMove(valid(s)), nyMs(9)).oneMove;
   };

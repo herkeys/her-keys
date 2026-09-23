@@ -116,7 +116,9 @@ describe('One Move on real household data', () => {
   test('a small open task on today\'s radar is offered, using its own real duration as the estimate', () => {
     const context = ctx();
     let state = onboardedEmpty(context);
-    state = addTask(state, context, { title: 'Return library books', categoryId: 'cat-home', durationMinutes: 10, dueDate: DAY, scope: 'household' });
+    // She typed the 10 (the task form records `user` when she touches the field). A bare number of unrecorded origin is NOT her
+    // estimate (HA-010) — see "a task saved without a duration" below (HK13-D12).
+    state = addTask(state, context, { title: 'Return library books', categoryId: 'cat-home', durationMinutes: 10, durationSource: 'user', dueDate: DAY, scope: 'household' });
 
     const after = resolveOneMoveForToday(state, ctx());
     const view = oneMoveForDay(after, DAY);
@@ -180,16 +182,41 @@ describe('One Move on real household data', () => {
     assert.equal(view.move.estimatedMinutes, undefined);
   });
 
+  test('a task saved without a duration never claims one: the planning default, or a number of unrecorded origin, is not her estimate (HK13-D12)', () => {
+    for (const input of [{}, { durationMinutes: 10 }, { durationMinutes: 10, durationSource: 'default' }]) {
+      const context = ctx();
+      let state = onboardedEmpty(context);
+      state = addTask(state, context, { title: 'Call the school', categoryId: 'cat-home', dueDate: DAY, scope: 'household', ...input });
+      const view = oneMoveForDay(resolveOneMoveForToday(state, ctx()), DAY);
+      assert.equal(view.status, 'selected', JSON.stringify(input));
+      assert.equal(view.move.estimatedMinutes, undefined, JSON.stringify(input));
+      assert.equal(view.move.effect, 'adds_work', `an unknown size is never "small": ${JSON.stringify(input)}`);
+    }
+  });
+
   test('on an overloaded day, a small (<=15 minute) real task is still offered — it does not add meaningful work', () => {
     const context = ctx();
     let state = onboardedEmpty(context);
     state = addEvent(state, context, { title: 'Pickup', categoryId: 'cat-kids', startsAt: at(15), endsAt: at(15, 15), commitment: 'fixed', scope: 'household' });
     state = addEvent(state, context, { title: 'Soccer', categoryId: 'cat-kids', startsAt: at(15, 20), endsAt: at(16, 30), commitment: 'fixed', scope: 'household' });
-    state = addTask(state, context, { title: 'Quick call', categoryId: 'cat-home', durationMinutes: 10, dueDate: DAY, scope: 'household' });
+    // "Real" = she gave the 10 (`user`), or approved Her Keys' reading of it (`inferred`).
+    for (const durationSource of ['user', 'inferred']) {
+      const withTask = addTask(state, context, { title: 'Quick call', categoryId: 'cat-home', durationMinutes: 10, durationSource, dueDate: DAY, scope: 'household' });
+      assert.equal(loadTierForDay(withTask, DAY), 'overloaded');
+      const after = resolveOneMoveForToday(withTask, ctx());
+      assert.equal(oneMoveForDay(after, DAY).status, 'selected', durationSource);
+    }
+  });
 
+  test('on an overloaded day, a task whose size is only the planning default is withheld, never offered as "small" (HK13-D12)', () => {
+    const context = ctx();
+    let state = onboardedEmpty(context);
+    state = addEvent(state, context, { title: 'Pickup', categoryId: 'cat-kids', startsAt: at(15), endsAt: at(15, 15), commitment: 'fixed', scope: 'household' });
+    state = addEvent(state, context, { title: 'Soccer', categoryId: 'cat-kids', startsAt: at(15, 20), endsAt: at(16, 30), commitment: 'fixed', scope: 'household' });
+    state = addTask(state, context, { title: 'Quick call', categoryId: 'cat-home', dueDate: DAY, scope: 'household' });
+    assert.equal(state.tasks.at(-1).durationSource, 'default');
     assert.equal(loadTierForDay(state, DAY), 'overloaded');
-    const after = resolveOneMoveForToday(state, ctx());
-    assert.equal(oneMoveForDay(after, DAY).status, 'selected');
+    assert.equal(oneMoveForDay(resolveOneMoveForToday(state, ctx()), DAY).status, 'withheld');
   });
 
   test('on an overloaded day, a larger task or a Needs Me item (unknown size) is withheld — "no additional move today"', () => {

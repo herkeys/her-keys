@@ -6,6 +6,7 @@ import { loadTierForDay } from './loadTier';
 import { toInstant, type LocalDate } from './logicalDay';
 import { resolveNeedsMeItem } from './needsMe';
 import { consequenceRank } from './foundation/authorization';
+import { durationKnowledgeOf } from './foundation/duration';
 import { appendObservation } from './observations';
 import { addEvidence } from './patterns';
 import { isOnboardingComplete } from './onboarding';
@@ -24,8 +25,9 @@ import { completeTask } from './tasks';
  * Demo households read from a hardcoded catalog (there is no real household
  * behind the fiction to read facts from). Real/empty households read from
  * her own open tasks and Needs Me items instead — nothing is fabricated: a
- * task's estimate is its own `durationMinutes`, and a Needs Me item, having
- * no reliable size, never claims one.
+ * task's estimate is its own `durationMinutes` when she gave it (never the
+ * planning default), and a Needs Me item, having no reliable size, never
+ * claims one.
  */
 
 export type OneMoveView =
@@ -50,14 +52,21 @@ export function oneMoveRecordId(date: LocalDate): string {
   return `onemove-${date}`;
 }
 
-/** A task's own duration is its estimate; nothing here guesses at one. Small (<=15 min) tasks are the only ones ever offered on an overloaded day. */
+/**
+ * A task's duration is its estimate only when she gave it, or approved Her Keys' reading of it (HA-010). The planning default and a
+ * number of unrecorded origin say nothing about the task's size (HK13-D12): they never make a task "small" — small (<=15 min) tasks are
+ * the only ones ever offered on an overloaded day — and are never quoted back to her as how long it will take. An unknown size is
+ * treated like a Needs Me item's: conservatively, as adding work.
+ */
 function taskAsOneMoveItem(task: Task): OneMoveItem {
+  const knowledge = durationKnowledgeOf(task);
+  const known = knowledge === 'user-provided' || knowledge === 'inferred-estimate';
   return {
     id: task.id,
     observation: 'Already on your list.',
     action: task.title,
-    effect: task.durationMinutes <= 15 ? 'reduces_load' : 'adds_work',
-    estimatedMinutes: task.durationMinutes,
+    effect: known && task.durationMinutes <= 15 ? 'reduces_load' : 'adds_work',
+    ...(known ? { estimatedMinutes: task.durationMinutes } : {}),
   };
 }
 

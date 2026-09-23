@@ -332,6 +332,10 @@ const LATER_FEATURES = [
       ['.gitattributes', 'INT13-01: the LF pins follow the renamed and new additive migrations'],
       ['scripts-dev/meals-boundary-scan.cjs', 'AUD13: registered F09-F12 and the integration, and made the accounting exact (HK13-D11)'],
       ['tests/meals/boundary.test.mjs', 'AUD13: the routing guarantee asks who changed a routing file, not only whether (HK13-D11)'],
+      ['src/domain/oneMove.ts', 'AUD13-04b: only a duration she gave makes a task "small" or is quoted back as an estimate (HK13-D12)'],
+      ['tests/oneMove.test.mjs', 'AUD13-04b: HK13-D12 coverage; a duration a test treats as hers now says it is hers (`user`)'],
+      ['tests/today/components.test.mjs', 'AUD13-04b: HK13-D12 — the card quotes her own (`user`) duration'],
+      ['tests/today/scenarios2.test.mjs', 'AUD13-04b: HK13-D12 — "Why this?" quotes her own duration, and nothing for the planning default'],
     ],
   },
 ];

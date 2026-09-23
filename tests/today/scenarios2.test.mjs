@@ -50,10 +50,14 @@ describe('Scenario F — One Move: the established machinery chooses, Today only
   });
 
   test('“Why this?” is the recorded evidence, each reason re-checked against the row', () => {
-    const only = withMove(valid(facet(tk(household(), { title: 'File the insurance claim', minutes: 30, due: DAY, plan: { kind: 'unplanned' }, category: 'cat-money' }), 'File the insurance claim', { consequence: 'high' })));
+    // Her own 30 minutes (`user`); the same task with only the planning default is quoted no duration at all (HA-010, HK13-D12).
+    const build = (durationSource) =>
+      withMove(valid(facet(tk(household(), { title: 'File the insurance claim', minutes: 30, durationSource, due: DAY, plan: { kind: 'unplanned' }, category: 'cat-money' }), 'File the insurance claim', { consequence: 'high' })));
+    const only = build('user');
     const { why } = view(only, nyMs(9)).oneMove;
     assert.equal(why.basis, 'recorded_evidence');
     assert.deepEqual(why.reasons, ['It’s already on your list for today.', 'It’s due today.', 'If this slips, the cost is high.', 'It should take about 30 minutes.']);
+    assert.deepEqual(view(build('default'), nyMs(9)).oneMove.why.reasons, ['It’s already on your list for today.', 'It’s due today.', 'If this slips, the cost is high.']);
     assert.deepEqual(why.evidence.map((e) => [e.code, e.label, e.aboutTitle]), [
       ['todays_radar', 'On today’s list', 'File the insurance claim'],
       ['deadline', 'Deadline', 'File the insurance claim'],
