@@ -558,7 +558,8 @@ export const FOUNDATION_SPECS: readonly FoundationSpec[] = [
       ['completed_only_check', `(state = 'completed') = (completed_at IS NOT NULL)`],
       ['returned_only_check', `(state = 'returned') = (returned_at IS NOT NULL)`],
     ],
-    // One live owner per thing: a second live handoff of the same item is refused by the database.
+    // One live owner per thing: a second live handoff of the same item is refused by the database. AS CREATED by the shipping migration;
+    // TODAY the rule is per owner (profile_id after household_id): see PER_OWNER_UNIQUENESS (HK13-D24).
     indexes: [['one_live_owner_uq', `ON public.responsibilities (household_id, COALESCE(about_task_id, about_event_id, about_needs_me_id, about_system_id, about_meal_id, about_goal_id)) WHERE state IN ('owned','requested','acknowledged','accepted')`, true]],
   },
 
@@ -578,6 +579,7 @@ export const FOUNDATION_SPECS: readonly FoundationSpec[] = [
       // The endpoint set is today's (HK-FEATURE-10 added `opportunity`); `specAsCreated` gives the shipping migration its own text back.
       ['not_self_check', dependencyNotSelf(CONTENT6_OPP)],
     ],
+    // As F10's widening left it; TODAY per owner (PER_OWNER_UNIQUENESS, HK13-D24).
     indexes: [['live_edge_uq', dependencyLiveEdge(CONTENT6_OPP), true]],
     triggers: [['forbid_cycle', 'BEFORE', 'INSERT OR UPDATE', `public.forbid_dependency_cycle()`]],
   },
@@ -613,6 +615,7 @@ export const FOUNDATION_SPECS: readonly FoundationSpec[] = [
       ['count_check', `occurrence_count IS NULL OR (occurrence_count >= 1 AND occurrence_count <= 10000)`],
       ['status_check', `status = ANY (ARRAY['active','paused','ended'])`],
     ],
+    // AS CREATED; TODAY per owner (PER_OWNER_UNIQUENESS, HK13-D24).
     indexes: [['one_active_rule_uq', `ON public.recurrence_rules (household_id, COALESCE(about_task_id, about_event_id, about_system_id, about_meal_id)) WHERE status = 'active'`, true]],
   },
 
@@ -644,6 +647,7 @@ export const FOUNDATION_SPECS: readonly FoundationSpec[] = [
       { local: 'effortMinutes', col: 'effort_minutes', type: 'int', nullable: true },
     ],
     updatable: ['position', 'title', 'effort_minutes', 'confidence', 'origin_updated_at'],
+    // AS CREATED; TODAY per owner, (system_id, profile_id, position) (PER_OWNER_UNIQUENESS, HK13-D24).
     uniques: [['system_position_key', `(system_id, position)`]],
     checks: [
       ['position_check', `position >= 0 AND position <= 999`],
@@ -883,6 +887,22 @@ export const REF_EXTENSIONS: readonly RefExtension[] = [
     createdChecks: [['not_self_check', dependencyNotSelf(CONTENT6)]],
     createdIndexes: [['live_edge_uq', dependencyLiveEdge(CONTENT6), true]],
   },
+];
+
+/**
+ * Uniqueness rules a LATER migration re-issued PER OWNER (HK13-D24, `20260922210000_int13_per_owner_uniqueness.sql`, hand-written).
+ *
+ * Each of these tables is owner-private, yet its rule spanned the household: a member's ordinary action on a SHARED item was refused
+ * exactly when another member privately held a row there — a relationship inference leak. The specs above keep each rule AS the
+ * earlier migrations wrote it, so the generated shipping and F10 regions never change; this is the rule the database enforces TODAY
+ * (the same columns, with `profile_id` after the household). A device only ever holds its own owner's rows of these tables, so the
+ * pull's clash rules (`clash.ts`) and the client's DOMAIN_INVARIANTS (index names unchanged) already see exactly this per-owner rule.
+ */
+export const PER_OWNER_UNIQUENESS: ReadonlyArray<{ kind: FoundationKind; name: string; columns: string }> = [
+  { kind: 'responsibility', name: 'responsibilities_one_live_owner_uq', columns: 'household_id, profile_id, about' },
+  { kind: 'dependency', name: 'dependencies_live_edge_uq', columns: 'household_id, profile_id, relation, from, to' },
+  { kind: 'recurrence', name: 'recurrence_rules_one_active_rule_uq', columns: 'household_id, profile_id, about' },
+  { kind: 'systemStep', name: 'system_steps_system_position_key', columns: 'system_id, profile_id, position' },
 ];
 
 /** A spec exactly as the migration that CREATED its table created it: every later `RefExtension` taken back out. */

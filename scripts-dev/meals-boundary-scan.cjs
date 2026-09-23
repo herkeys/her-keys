@@ -303,8 +303,10 @@ const LATER_FEATURES = [
     owned: [
       /^docs\/audits\/HK_F01_F13_/, /^tests\/hk-f01f13\//, /^tests\/migrationChain\.test\.mjs$/, /^supabase\/tests\/migration-chain\.mjs$/,
       /^src\/features\/life\/lifeHubCopy\.ts$/, /^supabase\/tools\/int13-/, /^supabase\/tools\/baselines\/int13-/, /^supabase\/tests\/\d+-int13-/, /^scripts-dev\/int13-/,
+      /^supabase\/migrations\/20260922210000_int13_per_owner_uniqueness\.sql$/,
     ],
-    migrations: [],
+    // HK13-D24: the integration's own repair re-issues four existing uniqueness rules per owner; it creates no table, column or kind.
+    migrations: ['supabase/migrations/20260922210000_int13_per_owner_uniqueness.sql'],
     schemas: [],
     rootCollections: [],
     syncKinds: [],

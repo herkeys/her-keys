@@ -29,6 +29,8 @@ export const ADDITIVE_CHAIN = [
   { file: '20260922182000_f11_rebuild_focus.sql', owner: 'F11', label: 'f11' },
   { file: '20260922183000_f12_life_records.sql', owner: 'F12', label: 'f12' },
   { file: '20260922200000_f13_people_os.sql', owner: 'F13', label: 'f13' },
+  // The F01-F13 integration's own repair (HK13-D24): four owner-private uniqueness rules become per owner.
+  { file: '20260922210000_int13_per_owner_uniqueness.sql', owner: 'INT13', label: 'int13' },
 ];
 
 /** WAVE3_BASE (363e473) ended at F05: the chain a WAVE3_BASE-era database was built with, and the populated-upgrade starting point. */

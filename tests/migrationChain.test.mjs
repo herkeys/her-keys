@@ -102,6 +102,24 @@ describe('a re-declaration never drops an earlier registration', () => {
     assert.deepEqual(FEATURE_TABLES.filter((t) => !lastPush.includes(t)), []);
   });
 
+  test('HK13-D24: after the whole chain, each owner-private uniqueness rule is PER OWNER (its last definition names profile_id)', () => {
+    const lastDefinition = (name) => {
+      let last = null;
+      for (const file of FULL_CHAIN) {
+        const code = lf(file).replace(/--.*$/gm, '');
+        const index = [...code.matchAll(new RegExp(`CREATE UNIQUE INDEX ${name}\\s+ON public\\.\\w+ \\(([^;]*?)\\)(?: WHERE[^;]*)?;`, 'g'))].at(-1);
+        const constraint = [...code.matchAll(new RegExp(`ADD CONSTRAINT ${name} UNIQUE \\(([^)]*)\\)`, 'g'))].at(-1);
+        if (index || constraint) last = { file, columns: (index ?? constraint)[1] };
+      }
+      return last;
+    };
+    for (const name of ['responsibilities_one_live_owner_uq', 'dependencies_live_edge_uq', 'recurrence_rules_one_active_rule_uq', 'system_steps_system_position_key']) {
+      const last = lastDefinition(name);
+      assert.ok(last, `${name} is defined somewhere in the chain`);
+      assert.match(last.columns, /\bprofile_id\b/, `${name}, last defined in ${last.file}: (${last.columns}) spans the household`);
+    }
+  });
+
   test('each feature migration registers its own tables in the SAME file that creates them (so every prefix of the chain works)', () => {
     for (const { file } of ADDITIVE_CHAIN) {
       const sql = lf(file);

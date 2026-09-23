@@ -59,6 +59,8 @@ const F11 = migrationPath(additive('F11').file);
 const F12 = migrationPath(additive('F12').file);
 // HK-FEATURE-13 (People OS): additive, follows F12. Two owner-private tables.
 const F13 = migrationPath(additive('F13').file);
+// The F01-F13 integration's own repair (HK13-D24): additive, follows F13. Four owner-private uniqueness rules become per owner.
+const INT13 = migrationPath(additive('INT13').file);
 /** The seven tables Features 10-13 add. After the WHOLE chain, every one must still be pushable and loggable. */
 const FEATURE_TABLES = ['career_opportunities', 'rebuild_focuses', 'rebuild_focus_links', 'life_records', 'life_record_task_links', 'person_contexts', 'person_task_links'];
 const AUTH_STUB = join(HERE, 'helpers', '00-auth-stub.sql');
@@ -101,6 +103,7 @@ const applyF10 = (db, opts = {}) => psqlFile(db, F10, opts);
 const applyF11 = (db, opts = {}) => psqlFile(db, F11, opts);
 const applyF12 = (db, opts = {}) => psqlFile(db, F12, opts);
 const applyF13 = (db, opts = {}) => psqlFile(db, F13, opts);
+const applyInt13 = (db, opts = {}) => psqlFile(db, INT13, opts);
 /** Every additive migration after the shipping one, in chain order: what a FRESH install applies after Build 4. */
 const applyAdditiveChain = (db, env) => {
   for (const m of ADDITIVE_CHAIN) psqlFile(db, migrationPath(m.file), { label: `${env} ${m.label}` });
@@ -523,6 +526,17 @@ function migrationQuality() {
   check('quality: the F13 migration is pinned to LF, so its function digest is the same on every checkout', !f13Sql.includes(String.fromCharCode(13)));
   check('quality: the F13 migration opens and closes its own transaction and ends with the fail-closed assertion',
         /^\s*BEGIN;\s*$/m.test(f13Sql) && f13Sql.trim().endsWith('SELECT private.assert_app_schema_secured();\n\nCOMMIT;'));
+  // The integration's own migration (HK13-D24): it may only re-issue the four owner-private uniqueness rules, each under its own name.
+  const int13Sql = readFileSync(INT13, 'utf8');
+  const int13Code = int13Sql.replace(/--.*$/gm, '');
+  const REISSUED = ['responsibilities_one_live_owner_uq', 'dependencies_live_edge_uq', 'recurrence_rules_one_active_rule_uq', 'system_steps_system_position_key'];
+  check('quality: the INT13 migration re-issues exactly the four owner-private uniqueness rules, each under its SAME name and each with the owner added',
+        (int13Code.match(/DROP (INDEX public\.|CONSTRAINT )(\w+)/g) ?? []).map((s) => s.replace(/^DROP (INDEX public\.|CONSTRAINT )/, '')).sort().join(',') === [...REISSUED].sort().join(',')
+        && REISSUED.every((name) => new RegExp(`(CREATE UNIQUE INDEX ${name}\\s+ON public\\.\\w+ \\(household_id, profile_id,|ADD CONSTRAINT ${name} UNIQUE \\(system_id, profile_id, position\\))`).test(int13Code)));
+  check('quality: the INT13 migration touches no row, table, column, function, policy or grant',
+        !/(^|\n)\s*(TRUNCATE|DELETE FROM|UPDATE public\.|INSERT INTO|CREATE TABLE|DROP TABLE|ADD COLUMN|DROP COLUMN|CREATE (OR REPLACE )?FUNCTION|CREATE POLICY|DROP POLICY|GRANT|REVOKE)\b/i.test(int13Code));
+  check('quality: the INT13 migration is pinned to LF and opens, closes and asserts like every additive migration',
+        !int13Sql.includes(String.fromCharCode(13)) && /^\s*BEGIN;\s*$/m.test(int13Sql) && int13Sql.trim().endsWith('SELECT private.assert_app_schema_secured();\n\nCOMMIT;'));
   const ir01Sql = readFileSync(IR01, 'utf8');
   check('quality: the IR01 migration is additive - it drops no table, column or data and rewrites no row',
         !/(^|\n)\s*(DROP TABLE|DROP COLUMN|TRUNCATE|DELETE FROM|UPDATE public\.)/i.test(ir01Sql.replace(/\$fn\$[\s\S]*?\$fn\$/g, '').replace(/--.*$/gm, '')));
@@ -890,6 +904,25 @@ function envD() {
             'follow_up_task_id',(select id from public.tasks where household_id='${uidHouse}' and local_id='task-15'),'relation','follow_up','producer','user-action','origin_created_at',now()));
           COMMIT;`, { expectFailure: true, label: 'ENV D f13 shared-task link' }).out.includes('a follow-up must be one of your own private tasks'));
   check('ENV D: the fail-closed assertion still passes after F13', psql(db, 'SELECT private.assert_app_schema_secured();').ok);
+
+  // ---- The EIGHTH additive upgrade (HK-F01-F13 integration, HK13-D24): four owner-private uniqueness rules become per owner. It must
+  // lose nothing and rewrite nothing — least of all the handoffs, edges, schedules and steps those rules govern.
+  const relations = () => scalar(db, `SELECT md5(concat_ws('#',
+      (SELECT string_agg(to_jsonb(r)::text, '|' ORDER BY r.id) FROM public.responsibilities r),
+      (SELECT string_agg(to_jsonb(d)::text, '|' ORDER BY d.id) FROM public.dependencies d),
+      (SELECT string_agg(to_jsonb(u)::text, '|' ORDER BY u.id) FROM public.recurrence_rules u),
+      (SELECT string_agg(to_jsonb(s)::text, '|' ORDER BY s.id) FROM public.system_steps s)));`);
+  const preInt13 = { census: census(), members: memberDigest(), tasks: digest(), relations: relations(),
+    dependencies: scalar(db, 'SELECT count(*) FROM public.dependencies;') };
+  applyInt13(db, { label: 'ENV D int13 upgrade' });
+  check('ENV D: the INT13 migration applies to the populated, already-upgraded database (no interlock, no abort)', true);
+  check('ENV D: INT13 lost nothing and rewrote nothing (row counts, members, tasks, and every handoff, edge, schedule and step byte-identical)',
+        census() === preInt13.census && memberDigest() === preInt13.members && digest() === preInt13.tasks && relations() === preInt13.relations
+        && scalar(db, 'SELECT count(*) FROM public.dependencies;') === preInt13.dependencies && Number(preInt13.dependencies) > 0, `${preInt13.dependencies} dependencies`);
+  check('ENV D: after INT13 all four owner-private uniqueness rules are per owner, under their own names',
+        scalar(db, `SELECT count(*) FROM pg_indexes WHERE schemaname = 'public' AND indexname IN ('responsibilities_one_live_owner_uq', 'dependencies_live_edge_uq',
+          'recurrence_rules_one_active_rule_uq', 'system_steps_system_position_key') AND indexdef LIKE '%profile_id%';`) === '4');
+  check('ENV D: the fail-closed assertion still passes after INT13', psql(db, 'SELECT private.assert_app_schema_secured();').ok);
 
   // ---- After the WHOLE chain (HK-F01-F13 integration, INT13-01): the sync_push and change-log check the LAST migration left behind
   // must still carry every earlier feature's tables. Before the integration each migration re-declared both with only its own tables,

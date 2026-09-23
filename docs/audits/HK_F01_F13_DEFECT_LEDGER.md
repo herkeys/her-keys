@@ -29,11 +29,14 @@ P5 low correctness · P6 UX polish · P7 maintainability · P8 performance · P9
 | HK13-D13 | **P1** | F13 (sync engine) | multi-device sync | Two devices of one account open a context for the same person offline: the second device's pull is refused by the integrity gate on EVERY cycle — its sync stops for good, for every feature | FIXED `9d0073d` |
 | HK13-D14 | **P2** | F01, F02, F03 × F07, F10, F11, F13 | generic editors / Talk It Out | A new task or event from the generic editors, a Needs Me promotion or an accepted Talk It Out capture is ALWAYS household-visible, whatever private category (Work, Wellbeing, Relationships, Co-parenting) she files it under | FIXED `9d0073d` |
 | HK13-D15 | P3 | F10 | Opportunity form | Moving an opportunity's stage away from Closed is silently not saved: the stale closed reason makes the domain refuse, and the form closes as if saved | FIXED `9d0073d` |
-| HK13-D16 | P3 | F10 | Work screen | A closed opportunity vanishes from the app exactly as an archived one does; "Restore from archive" is unreachable | FIXED (AUD13-03b) |
-| HK13-D17 | P3 | F09 | Money Home | Open Money tasks listed nowhere on Money Home: due after two weeks, past the first-glance bound, an autopay bill due today, an amount with no date | FIXED (AUD13-03b) |
-| HK13-D19 | P4 | F01 × F09 (× F03 editor) | One Move / task editor | One Move offers expected income ("I did it" records RECEIVED) and pre-due autopay bills; the generic editor completes a Money item with "Mark done" | FIXED (AUD13-04c) |
-| HK13-D22 | P4 | F08 exit gate | Meals boundary scan | Check D reads only CORE_SYNC_KINDS: a sync kind registered through the foundation manifest is invisible to the gate | FIXED (AUD13-04c) |
-| HK13-D23 | P5 | F01 hub × F09, F11 | Life hub copy | The Money row says "Nothing due this week" reading only today; Me / Rebuild says "Nothing named yet" while Focuses are paused | FIXED (AUD13-05a, trivial) |
+| HK13-D16 | P3 | F10 | Work screen | A closed opportunity vanishes from the app exactly as an archived one does; "Restore from archive" is unreachable | FIXED `df89506` |
+| HK13-D17 | P3 | F09 | Money Home | Open Money tasks listed nowhere on Money Home: due after two weeks, past the first-glance bound, an autopay bill due today, an amount with no date | FIXED `df89506` |
+| HK13-D19 | P4 | F01 × F09 (× F03 editor) | One Move / task editor | One Move offers expected income ("I did it" records RECEIVED) and pre-due autopay bills; the generic editor completes a Money item with "Mark done" | FIXED `df89506` |
+| HK13-D22 | P4 | F08 exit gate | Meals boundary scan | Check D reads only CORE_SYNC_KINDS: a sync kind registered through the foundation manifest is invisible to the gate | FIXED `df89506` |
+| HK13-D23 | P5 | F01 hub × F09, F11 | Life hub copy | The Money row says "Nothing due this week" reading only today; Me / Rebuild says "Nothing named yet" while Focuses are paused | FIXED `df89506` (trivial) |
+| HK13-D24 | **P2** | F04–F07, F10 (foundation) | RLS / uniqueness | Four household-wide uniqueness rules on owner-private relationship tables tell a member that another member's private handoff, sequence, schedule or step exists | FIXED (AUD13-02b) |
+| HK13-D25 | P9 | foundation | FK keys | A composite (task, household) key accepts a real private Task uuid from another member's own row: an oracle only for someone who already holds that uuid | DOCUMENTED |
+| HK13-D26 | P9 | foundation | local ids | A guessed local id of a private Task collides; production ids are not practically guessable | DOCUMENTED |
 
 (Entries below are added as the audit proceeds.)
 
@@ -416,7 +419,7 @@ P5 low correctness · P6 UX polish · P7 maintainability · P8 performance · P9
 - **Tests:** `tests/hk-f01f13/careerLists.test.mjs` (4): the partition; the rendered section (closed with reason, archived revealed,
   every row opens the right opportunity); the "nothing in play" wording; Restore through the REAL form brings it back to Career Next
   with its stage untouched. Test-the-test: D16-M1 (closed drops out) CAUGHT 2 fail; D16-M2 (no "Show archived") CAUGHT 1 fail.
-- **Status:** FIXED (AUD13-03b).
+- **Status:** FIXED `df89506`.
 
 ## HK13-D17 — Money Home misses open Money tasks (P3)
 
@@ -440,7 +443,7 @@ P5 low correctness · P6 UX polish · P7 maintainability · P8 performance · P9
   twice, nothing nowhere) over a household with every case; each item's section; rendered "Show N more" and "Later"; no empty header.
   Test-the-test: D17-M1 (no Later) CAUGHT 3; D17-M2 (rest dropped past the cap) CAUGHT 3; D17-M3 (autopay due today falls out) CAUGHT
   2; D17-M4 (amount without a date nowhere) CAUGHT 2; D17-M5 (empty header) CAUGHT 1.
-- **Status:** FIXED (AUD13-03b).
+- **Status:** FIXED `df89506`.
 
 ## HK13-D19 — "Paid" and "received" said when only "done" was (P4)
 
@@ -462,7 +465,7 @@ P5 low correctness · P6 UX polish · P7 maintainability · P8 performance · P9
   a manual bill and an F07 follow-up still can be; the rendered editor's button for a bill, expected income, a plain Money-category task
   and an F07 follow-up. Test-the-test: D19-M1 (income offered) CAUGHT; D19-M2 (pre-due autopay offered) CAUGHT; D19-M3 ("Mark done"
   for a Money item) CAUGHT — 1 fail each.
-- **Status:** FIXED (AUD13-04c).
+- **Status:** FIXED `df89506`.
 
 ## HK13-D22 — The Meals gate cannot see a foundation-manifest sync kind (P4)
 
@@ -475,7 +478,7 @@ P5 low correctness · P6 UX polish · P7 maintainability · P8 performance · P9
   manifest kinds in their lanes; a new `laterSyncKinds` fact shows every lane kind the scan saw before subtracting it.
 - **Tests:** `[BV1]` asserts `laterSyncKinds` is exactly the seven F10–F13 kinds. Test-the-test: D22-M1 (check D core-only again)
   CAUGHT; D22-M2 (F10 stops registering `opportunity`) CAUGHT.
-- **Status:** FIXED (AUD13-04c).
+- **Status:** FIXED `df89506`.
 
 ## HK13-D23 — Two Life hub rows deny what exists (P5, trivial)
 
@@ -487,4 +490,53 @@ P5 low correctness · P6 UX polish · P7 maintainability · P8 performance · P9
 - **Severity reasoning:** P5 (a false statement in a count row; nothing lost); repaired because each is one line, local and risk-free.
 - **Tests:** `tests/hk-f01f13/lifeHub.test.mjs` "HK13-D23: a row never denies what exists". Test-the-test: D23-M1 ("this week" again)
   CAUGHT; D23-M2 (paused denied again) CAUGHT.
-- **Status:** FIXED (AUD13-05a).
+- **Status:** FIXED `df89506`.
+
+## HK13-D24 — Household-wide uniqueness on owner-private relationship tables: a relationship inference leak (P2)
+
+- **Features / surface:** the Build 4 foundation tables every feature's private relationships use — `responsibilities` (F05, F06, F07,
+  F04 handoffs), `dependencies` (F04, F05, F07, F10), `recurrence_rules` (F04, F06, F07), `system_steps` (F04) — re-audited as the
+  brief's "responsibility uniqueness oracle" (documented by F13's phase-A probe as pre-existing and accepted; NOT accepted here).
+- **How found:** Phase 8, the integrated privacy attack (`supabase/tests/81-int13-privacy.sql`): a catalog sweep of every unique rule
+  on an owner-private relationship table, then a behavioural probe for each rule it named.
+- **Reproduction (pre-fix run, 51/56):** A privately hands off household Task T1, privately sequences T1 → T2, privately schedules T3,
+  and privately adds a first step to the household System S. B — who can see T1..T4 and S, and so holds their ids — then records her
+  OWN handoff of T1, her own "T1 requires T2", her own schedule for T3 and her own first step on S. Each is refused with `23505`
+  exactly when A holds the private row (the same actions on untouched items are accepted): B learns A's private handoff / sequence /
+  schedule / step exists, and cannot record her own.
+- **Expected:** "Same-household B must not learn: private row exists, private relationship exists…" (Phase 8, non-inference).
+- **Root cause:** four uniqueness rules (`responsibilities_one_live_owner_uq`, `dependencies_live_edge_uq`,
+  `recurrence_rules_one_active_rule_uq`, `system_steps_system_position_key`) span the household on tables whose rows are read and
+  written per owner. The index is checked without RLS, so it answers for rows the caller cannot see.
+- **Privacy impact:** existence of another member's private relationship about a shared item (no content). **Data-loss impact:** B's own
+  legitimate row is refused and held as evidence on her device. Severity: **P2** — the brief's definition names "relationship inference
+  leak" as P2.
+- **Repair (AUD13-02b):** a hand-written additive migration, `supabase/migrations/20260922210000_int13_per_owner_uniqueness.sql`, drops and
+  re-creates each rule under its SAME name (DOMAIN_INVARIANTS and the pull's clash rules key on the names) with `profile_id` after the
+  household. The product rule still holds per owner (she cannot hold two live handoffs of one item, etc.), which is also each device's
+  whole view. Loosening only: no existing row can violate it, and no row is touched (ENV D applies it to a populated database and
+  proves every handoff, edge, schedule and step byte-identical). The manifest keeps each rule as the earlier migrations wrote it (so
+  the generated shipping and F10 regions do not move) and records today's rule in `PER_OWNER_UNIQUENESS`. Registered in the chain,
+  the LF pins, the migration gate (a quality check that it re-issues exactly these four, each with the owner, and touches nothing
+  else) and the Meals gate (the integration's lane).
+- **Product-decision note:** whether a household's shared item should have ONE household-visible holder (MP-K-13, an open owner
+  decision) is untouched: today handoffs are owner-private, and per-owner uniqueness is the rule consistent with that. If the owner
+  later makes handoffs household-visible, a household-wide rule can return WITH shared visibility (then it is not an oracle).
+- **Tests:** `81-int13-privacy.sql` (56/56 after; 51/56 before, the five failures being exactly these); `tests/migrationChain.test.mjs`
+  "HK13-D24: … each owner-private uniqueness rule is PER OWNER"; run.mjs quality + ENV D step. Test-the-test: D24-M2 (the handoff rule
+  household-wide again) CAUGHT 2 fail; D24-M3 (the step slot without the owner) CAUGHT 2 fail. (A first mutant that dropped the migration
+  from the chain was "caught" only because run.mjs could not load — recorded as such, not counted.)
+- **Status:** FIXED (AUD13-02b).
+
+## Known shared privacy items — re-audited under the P0–P10 rubric (Phase 8)
+
+The brief: "These are NOT automatically accepted debt merely because F12/F13 documented them. Apply the P0–P10 rubric NOW."
+
+| Item | Re-audit (integrated DB, `81-int13-privacy.sql` + F13 phase-A probe) | Classification |
+|---|---|---|
+| Responsibility uniqueness oracle | REAL, and wider than recorded: four owner-private rules answered for another member's private row about a SHARED item | **P2 → FIXED (HK13-D24)** |
+| FK existence oracle | B's own row naming A's private Task, person, opportunity or Focus is refused EXACTLY like naming a random uuid (five integrated probes: F10, F11, F12, F13 ×2). The one residual (F13 phase-A NOTE): a composite `(task, household)` key accepts a real private Task uuid from B's own handoff — usable only by someone who already holds that server-generated UUIDv4, which no read path, change-log entry or pull ever gives B (all proven) | HK13-D25 **P9** — documented; infeasible without a leaked uuid |
+| Task local-id guessability | A guessed local id of A's private Task collides (scoped tables key local ids per household). Production ids are `task-<ms>-<counter><4 random base-36>` (≈1.7M × every candidate millisecond); F13 follow-ups use 24–48 random characters. Owner-private tables key local ids per OWNER: B reusing A's context's local id makes her own row (proven) | HK13-D26 **P9** — documented; not practically guessable |
+| Refused-row evidence redaction | One redaction for every refused row's DETAIL (HK13-D07); PostgreSQL still returns the row values, so the client-side redaction is load-bearing and tested (`tests/rebuild/sync.test.mjs`, `tests/lifeAdmin/sync.test.mjs`, transport tests) | Verified — no defect |
+| Private change-log visibility | Every owner-read table that feeds the change log logs its owner (catalog sweep, all tables); B sees no entry — not the table, not the id — of any of A's sixteen private rows; `sync_pull` carries none | Verified — no defect |
+| Owner-private relationship transport | Every link table refuses a foreign parent or target before any key is consulted and answers like "nothing"; B cannot write as A through a table or through `sync_push`; C and anon read and write nothing | Verified — no defect |
