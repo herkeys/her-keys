@@ -3,8 +3,10 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { AppText, Button, EmptyState, InlineNotice, Overline, StatusList } from '../../design/components';
 import { color, spacing } from '../../design/tokens';
 import { StyleSheet, View } from 'react-native';
+import { isCoparentingHandoff } from '../../domain/handoffs';
 import { logicalDateAt } from '../../domain/logicalDay';
 import { useAppStore, useHouseholdState, useStoreSnapshot } from '../../store/AppStateProvider';
+import { HandoffKeptHere } from '../life/HandoffKeptHere';
 import { needsAttention, openTaskLabel } from '../life/openTaskLabel';
 import { unlinkedKidsTasks } from './unlinked';
 import { HUB, NOTICE, childError, editNotice, eventError, handoffMessage, taskError } from './copy';
@@ -127,7 +129,12 @@ export function ChildDetailScreen() {
     <ChildDetailView
       detail={detail}
       today={detail.today}
-      onOpenItem={(ref) => openItem(kid, ref)}
+      onOpenItem={(ref) =>
+        // A co-parenting handoff is Co-Parent's: it opens there, where moving it also moves its repeat (HK13-D35).
+        ref.kind === 'event' && isCoparentingHandoff(state, ref.id)
+          ? router.push({ pathname: '/life/coparent', params: { mode: 'handoff', id: ref.id } })
+          : openItem(kid, ref)
+      }
       onAddTask={() => router.push({ pathname: '/life/child-item', params: { childId: kid, kind: 'task' } })}
       onAddEvent={() => router.push({ pathname: '/life/child-item', params: { childId: kid, kind: 'event' } })}
       onAddPlanStep={(parent) => router.push({ pathname: '/life/child-item', params: { childId: kid, kind: 'task', partOf: `${parent.kind}:${parent.id}` } })}
@@ -146,6 +153,16 @@ const asRef = (raw: string | undefined): KidsRef | null => {
 type Step = (state: AppState, ctx: TransitionContext) => { state: AppState; outcome: HandoffOutcome | ResponseOutcome };
 
 export function ItemEditorScreen() {
+  const params = useLocalSearchParams<{ kind?: string | string[]; id?: string | string[] }>();
+  const { state } = useHouseholdState();
+  const id = first(params.id);
+  // A co-parenting handoff is edited in Co-Parent, where moving it moves the repeat she recorded (HK13-D35); this editor would move
+  // the event and leave the pattern behind, so it never opens one.
+  if (first(params.kind) === 'event' && id !== undefined && isCoparentingHandoff(state, id)) return <HandoffKeptHere eventId={id} />;
+  return <ItemEditorBody />;
+}
+
+function ItemEditorBody() {
   const params = useLocalSearchParams<{ childId?: string | string[]; kind?: string | string[]; id?: string | string[]; partOf?: string | string[] }>();
   const kind: 'task' | 'event' = first(params.kind) === 'event' ? 'event' : 'task';
   const id = first(params.id);

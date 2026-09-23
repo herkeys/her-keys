@@ -25,7 +25,7 @@ export function FollowUpFormView({ displayName, busy, message, onSave, onCancel 
       <AppText variant="screenTitle" accessibilityRole="header" style={styles.heading}>
         {`${peopleCopy.followUp.add} — ${displayName}`}
       </AppText>
-      {message ? <InlineNotice tone="info" title={message} body="" style={styles.notice} /> : null}
+      {message ? <InlineNotice tone="waiting" title={message} body="" style={styles.notice} /> : null}
       <TextField label={peopleCopy.followUp.titleLabel} placeholder={peopleCopy.followUp.titleHint} value={title} onChangeText={setTitle} maxLength={200} autoFocus />
       <TextField label={peopleCopy.followUp.dueLabel} placeholder="YYYY-MM-DD" value={dueDate} onChangeText={setDueDate} maxLength={10} />
       <AppText variant="supporting" color={colors.textSecondary} style={styles.private}>

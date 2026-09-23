@@ -1,6 +1,7 @@
 import { carriesConfidence, isUserStated, type Provenance } from '../../../domain/foundation/provenance';
 import type { TypedRef } from '../../../domain/foundation/typedRef';
 import { wallClockMinutesAt, epochMsOf } from '../../../domain/logicalDay';
+import { isCoparentingHandoff } from '../../../domain/handoffs';
 import type { AppState } from '../../../domain/state';
 import { formatTime } from '../../daily-load/computeDailyLoad';
 import type { SourceLine, TodayRoute } from './types';
@@ -23,6 +24,9 @@ export function sourceOf(row: { provenance: Provenance }): SourceLine {
 
 export const taskRoute = (taskId: string): TodayRoute => ({ pathname: '/task-editor', params: { taskId } });
 export const eventRoute = (eventId: string): TodayRoute => ({ pathname: '/event-editor', params: { eventId } });
+/** Where an event opens: its editor, or — for a co-parenting handoff — Co-Parent, where moving it moves its repeat (HK13-D35). */
+export const eventRouteFor = (state: Pick<AppState, 'categories' | 'events'>, eventId: string): TodayRoute =>
+  isCoparentingHandoff(state, eventId) ? { pathname: '/life/coparent', params: { mode: 'handoff', id: eventId } } : eventRoute(eventId);
 export const needsMeRoute = (): TodayRoute => ({ pathname: '/life/needs-me' });
 export const opportunityRoute = (opportunityId: string): TodayRoute => ({ pathname: '/opportunity-editor', params: { opportunityId } });
 
@@ -42,7 +46,7 @@ export function describeRef(state: AppState, ref: TypedRef): RefInfo {
     }
     case 'event': {
       const row = state.events.find((e) => e.id === ref.id);
-      return { ref, title: row?.title ?? null, route: row ? eventRoute(row.id) : null, source: row ? sourceOf(row) : null };
+      return { ref, title: row?.title ?? null, route: row ? eventRouteFor(state, row.id) : null, source: row ? sourceOf(row) : null };
     }
     case 'needsMe': {
       const row = state.needsMe.find((n) => n.id === ref.id);

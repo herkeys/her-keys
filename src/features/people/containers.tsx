@@ -110,7 +110,7 @@ export function PersonScreen() {
 }
 
 function PeopleHomeRedirectNotice() {
-  return <InlineNotice tone="info" title={peopleCopy.refusal.not_found} />;
+  return <InlineNotice tone="waiting" title={peopleCopy.refusal.not_found} />;
 }
 
 export function AddPersonScreen() {

@@ -3,6 +3,7 @@ import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { AppText, Button, Screen, Tag } from '../../design/components';
 import { spacing } from '../../design/tokens';
+import { isCoparentingHandoff } from '../../domain/handoffs';
 import { undoableMove } from '../../domain/dailyLoadDecisions';
 import type { AppState } from '../../domain/state';
 import { useAppStore, useStoreSnapshot } from '../../store/AppStateProvider';
@@ -76,7 +77,9 @@ function ReadyCalendar({ state, today, degraded }: { state: AppState; today: str
   }, [state, today]);
 
   const onOpenItem = (ref: ItemRef) => {
-    if (ref.kind === 'event') router.push({ pathname: '/event-editor', params: { eventId: ref.id } });
+    // A co-parenting handoff is Co-Parent's: it opens there, where moving it also moves its repeat (HK13-D35).
+    if (ref.kind === 'event' && isCoparentingHandoff(state, ref.id)) router.push({ pathname: '/life/coparent', params: { mode: 'handoff', id: ref.id } });
+    else if (ref.kind === 'event') router.push({ pathname: '/event-editor', params: { eventId: ref.id } });
     else router.push({ pathname: '/task-editor', params: { taskId: ref.id } });
   };
 

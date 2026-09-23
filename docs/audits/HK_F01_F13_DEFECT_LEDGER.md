@@ -40,6 +40,13 @@ P5 low correctness · P6 UX polish · P7 maintainability · P8 performance · P9
 | HK13-D27 | P4 | harness | populated upgrade | ENV D's "whole chain" skipped F08, so its final database was not the real chain's | FIXED `51ec5c8` |
 | HK13-D28 | **P2** | F01 × sync | One Move / push | A One Move decided offline lands in the cloud as the NEXT day's: every other device's Today shows the wrong move as done, and today's real decision is refused | FIXED `51ec5c8`; OD-HK13-01 open |
 | HK13-D29 | P7 | foundation × sync | categories / pull | Two category uniqueness rules are competing decisions on push but have no pull-side reconciliation; unreachable today (no user surface creates or reorders a category) | DOCUMENTED |
+| HK13-D30 | P4 | IR01 test-the-test | mutation suite | Two IR01 mutants no longer applied on the integrated line, so two HA guarantees were unguarded by test-the-test | FIXED (AUD13-06) |
+| HK13-D31 | P6 | F13 | People UI | Save failures and refusals are shown in plum, the colour the owner reserved for what Her Keys noticed | FIXED (AUD13-06) (trivial) |
+| HK13-D32 | P6 | design system (F03-F13) | InlineNotice | The notice's DEFAULT tone is plum, so archived and informational notices across features are plum — recurring chrome, against owner decision 2 | DOCUMENTED |
+| HK13-D33 | P6 | F10, F11, F12, F13 | destination styling | Structural inconsistencies between the Wave 3/4 destinations (duplicated titles, a hand-built list, heading rhythm, verdict size, empty states, add prominence) | DOCUMENTED |
+| HK13-D18 | P5 | F01, F03-F07, F10, F11, F13, Life hub | cloud hydration | Only Meals, Money and Life Admin gate their empty states on a fresh device's first cloud download; every other surface could say "nothing" mid-download — unreachable today (see D34) | DOCUMENTED |
+| HK13-D34 | P9 | platform (Build 4 R7/R10) | second device | Adopting an existing cloud household on a second device is a recorded, unimplemented contract: the server refuses it (`superseded_by_cloud`); every multi-device proof binds device B with a test stand-in | DOCUMENTED (pre-existing) |
+| HK13-D35 | P3 | F05 Kids, F03 Calendar, F01 Today × F07 | handoff editing | Kids' item editor and the Calendar's event form moved a co-parenting handoff without its recorded repeat: Co-Parent then showed "Repeats every week on Tuesday" beside a Wednesday handoff | FIXED (AUD13-07) |
 
 (Entries below are added as the audit proceeds.)
 
@@ -601,6 +608,111 @@ P5 low correctness · P6 UX polish · P7 maintainability · P8 performance · P9
   stacked) and a reorder the server applies atomically, before the surface ships. The registry test names this as the only
   DOMAIN_INVARIANT without a clash case, so the gap cannot silently widen.
 - **Status:** DOCUMENTED.
+
+## HK13-D30 — Two IR01 mutants no longer applied on the integrated line (P4)
+
+- **Surface:** `scripts-dev/ir01-mutation-check.cjs` (the HK-INTEGRATION-READINESS-01 test-the-test suite).
+- **How found:** Phase 14, running every feature's own mutation suite on the integrated branch. A dry run reported "2 mutation(s) did
+  not apply" (the script collects, but never printed, which).
+- **What:** M14 (HA-001 / IR-D12: a refused create must never be re-derived as owed) anchored on the `unsyncedRows` condition, which
+  this audit's own HK13-D28 repair extended — 0 matches. M27 (HA-011: a pulled System keeps its child subject) anchored on a
+  `subjectMemberId` mapping line that F12's LifeRecord apply duplicated — 2 matches. Neither guarantee was exercised by its mutant.
+- **Severity:** **P4** — the brief's "integration-specific test infrastructure defect": the guards stayed green because their mutants
+  silently did not run.
+- **Repair (AUD13-06):** both re-anchored to their exact guarantee (M14 removes only the evidence check; M27 is named by the
+  System case's own comment). Dry run: every IR01 mutation applies exactly once; M14 **caught** (4 failing), M27 **caught** (9 failing).
+- **Status:** FIXED (AUD13-06).
+
+## HK13-D31, D32, D33 — the Paper-and-Ink guard (Phase 12)
+
+A token-level sweep of every Wave 3/4 feature and the Life hub found **no** raw colour, radius, font size or weight outside the
+theme (`src/design/tokens.ts`), no sage/spa, pastel-dashboard or fintech drift (Money has no charts, KPI numbers or coloured deltas;
+amounts are unsigned and uncoloured), no rounded-everything, and no accent used as a large fill. What it found is semantic and
+structural, verified in code:
+
+- **HK13-D31 (P6, FIXED as trivial):** People shows save failures and refusals ("That could not be saved on this device…", "This
+  person is no longer in Her Keys.") in `InlineNotice tone="info"` — plum, the owner's reserved "Her Keys noticed" colour
+  (`docs/design-system/owner-decisions.md` decision 2). Money and Life Admin use the umber `waiting` tone for the same role. The four
+  notices now use `waiting` (`PersonDetailView`, `AddPersonView`, `FollowUpFormView`, `containers`). `tests/hk-f01f13/designGuard.test.mjs`
+  holds it for Money, Work, Rebuild, Life Admin and People: an outcome notice must name a tone, never the AI one (proven to fail on
+  a reverted notice).
+- **HK13-D32 (P6, DOCUMENTED):** the root cause is systemic — `InlineNotice`'s default tone is `info` (plum), so "archived" and other
+  informational notices are plum across Kids, Meals, Systems, Calendar, Co-Parent, Life Admin and People. That makes plum recurring
+  chrome, which decision 2 rules out. The fix is a neutral notice tone in the design system — a design-system change, not an
+  integration repair; recorded for the owner / design system.
+- **HK13-D33 (P6, DOCUMENTED):** structural inconsistencies between destinations, none a token violation: People repeats its native
+  title in a 31pt display heading (Co-Parent's hub and the Life Inbox set that precedent in Wave 2); People's "Everyone" rows are
+  hand-built (accessible buttons, but no hairline and no pressed feedback) where the same screen's other lists use `StatusList`;
+  Work's two layers ("Work now", "Career next") use the same eyebrow as their sub-sections; the verdict line is `sectionTitle` in
+  Money, Life Admin and People but `screenTitle` in Rebuild and `bodyStrong` in Work; the first-run empty states of Rebuild, Life
+  Admin and People differ (`EmptyState` supports one link-style action); the "add" action's prominence differs by feature (possibly
+  deliberate for People and Rebuild); a Rebuild Focus card is tappable only on its title; Life Admin's detail sheet can stack six
+  pill buttons; Work uses legacy type aliases (`caption`, `bodySm`) that render identically. The brief forbids a redesign, so these
+  are recorded, not changed.
+
+## HK13-D18 — Cloud-hydration gating exists on three surfaces of fourteen (P5, latent)
+
+- **How found:** Phase 12 ("No screen claims 'No data' before hydration finishes"), a survey of every screen's empty states and their
+  gates, verified in code.
+- **Local hydration: sound.** `app/_layout.tsx` renders nothing until the store is settled, and every route guard refuses before it
+  (`routeAccess.ts`). No screen can speak before the device's own saved household has loaded.
+- **Cloud hydration of a freshly bound device:** only the Meals, Money and Life Admin screens gate their words on the sync namespace's
+  `hydration` (`mealsGate`, `moneyGate`, `lifeAdminGate` — "Getting … ready…"). Today, Calendar, Systems, Kids, Home, Co-Parent, Work,
+  Me/Rebuild, People, Needs Me, Other tasks, the Life Inbox and ALL eleven Life hub rows (Meals, Money and Life Admin's rows too) would
+  say "nothing …" while such a device was still pulling its household. The three gated screens also have no end state if sync never
+  starts, and no surface says that data is still arriving.
+- **Reachability: none in a user build.** A device only ever binds through a claim or a new-account bootstrap, both of which mark the
+  namespace `ready` (`claimSeam.namespaceFromClaim`); `namespaceForNewDevice` (the only producer of `unhydrated`) has no production
+  caller; a second device of an existing household is refused by the server (`superseded_by_cloud`) — HK13-D34. Recovery mode is
+  unreachable here too: a recovered household is a fresh one, onboarding is incomplete, and no app screen opens.
+- **Severity:** **P5** (latent correctness). **Before R7/R10 ships**, one gate should hold every app surface until the namespace is
+  hydrated (as the root layout already does for the local store), with a visible "still arriving" state and an end state.
+- **Status:** DOCUMENTED.
+
+## HK13-D34 — A second device cannot adopt an existing household: a recorded, unimplemented contract (P9, pre-existing)
+
+- **What:** Build 4's R7/R10 ("hydrate from cloud, then Today" on a second device) is recorded as **not implemented**
+  (`docs/builds/HK_INTEGRATION_READINESS_01_BACKEND.md` §4). `bootstrap_account` answers an account that already owns a household with
+  `superseded_by_cloud`, which the app records as an honest refusal. A second ADULT of a household likewise has no client path
+  (`household_members` is privileged infrastructure, B4-P0-019).
+- **Consequence for this certification:** every "fresh device" and "second device" proof — the Phase 9 lifecycle, Phase 11 journey,
+  the real-HTTP journeys, and HK13-D13/D28 — binds device B with a stand-in (`tests/support/accountDevice.mjs` `bindAsNewDevice`, the
+  Meals harness's `secondDevice`) that builds the identity exactly as that step will leave it. What they prove (sync, reconstruction,
+  isolation) holds for that step; the step itself is not in the product yet. Same-household member privacy is proven at the server
+  (RLS, suite 81) as defence in depth for a capability that ships later.
+- **Not an F01–F13 defect:** it predates the campaign and no F01–F13 feature claims it. Recorded so no one reads the multi-device
+  evidence as covering a shipped capability.
+- **Status:** DOCUMENTED (pre-existing, owner roadmap).
+
+## HK13-D35 — Two generic editors moved a co-parenting handoff and left its repeat behind (P3)
+
+- **Features / surface:** F07 Co-Parent handoffs (canonical `CalendarEvent`s in the co-parenting category, each weekly or monthly one
+  carrying one schedule `RecurrenceRule`) × F05 Kids' item editor × F03 Calendar's generic event form (reached from the Calendar and
+  from Today).
+- **How found:** Phase 12, following the candidate "Kids edits an F07 handoff without re-anchoring its recurrence" to its end in code.
+- **Reproduction (`tests/hk-f01f13/handoffOwnership.test.mjs`, first test):** a weekly handoff on Thursday 15:00, moved to Friday 16:00.
+  In Co-Parent (`editHandoff`) the rule moves with it (weekday, anchor date, time of day). In Kids (`editChildEvent`) — and in the
+  Calendar's form (`updateEvent`) — only the event moves: the rule still says Thursday. Co-Parent's detail then reads "Repeats every week
+  on Thursday. This is the pattern you recorded." beside a handoff recorded on Friday, and the Calendar's repeat line says the same.
+- **Root cause:** a handoff is F07's row, and F07 decided that moving the handoff moves the pattern. Two other editors could edit the
+  same row with no knowledge of that decision. F07's own integration contract said so (HK-INT-COPARENT-KIDS-01: "Kids must not rebuild
+  the transition layer; it may link into `life/coparent`"); nothing enforced it.
+- **Severity:** **P3** — the brief's "incorrect cross-feature projection": the same move gives two different truths depending on the
+  screen, and afterwards two features state a pattern the handoff no longer follows. No data is lost; she can correct it in Co-Parent.
+- **Repair (AUD13-07), ownership rather than a second copy of F07's rules:** one read-only predicate, `isCoparentingHandoff`
+  (`src/domain/handoffs.ts`, F07's own test: the co-parenting category). The Calendar tap, Today's event routes (`eventRouteFor`) and
+  Kids' child view open a handoff in Co-Parent (`/life/coparent?mode=handoff`). The two generic editors, reached any other way (a deep
+  link, an older route), render `HandoffKeptHere` (Life, `src/features/life/HandoffKeptHere.tsx`) instead of a form: "This handoff is
+  kept in Co-parent logistics — Change its time or repeat there, so the pattern you recorded moves with it", and hand over to
+  Co-Parent's editor with `router.replace`. Placement respects each feature's boundary test: Kids may import only Life (F05), Calendar's
+  own files import nothing that mutates beyond their pinned set (F03) — hence the separate read-only module.
+- **Not changed:** F07's own editor and every rule it writes; any non-handoff event (the Calendar and Kids editors are unchanged for
+  them, proven).
+- **Tests:** `handoffOwnership.test.mjs` (7): the rule the guard protects; which events are handoffs; Today's routes; the Calendar form
+  and the Kids editor render no field for a handoff and hand over to Co-Parent (and render their forms for any other event); the
+  Calendar tap and the Kids tap open a handoff in Co-Parent and any other event in its editor. Test-the-test D35-M1..M6 (each guard, each
+  entry point, the predicate) — **6/6 caught**.
+- **Status:** FIXED (AUD13-07).
 
 ## Known shared privacy items — re-audited under the P0–P10 rubric (Phase 8)
 

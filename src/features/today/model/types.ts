@@ -31,7 +31,9 @@ export type TodayRoute =
   | { pathname: '/task-editor'; params?: { taskId?: string } }
   | { pathname: '/event-editor'; params?: { eventId?: string } }
   | { pathname: '/life/needs-me' }
-  | { pathname: '/opportunity-editor'; params?: { opportunityId?: string } };
+  | { pathname: '/opportunity-editor'; params?: { opportunityId?: string } }
+  /** A co-parenting handoff opens in Co-Parent, never the generic event editor (HK13-D35). */
+  | { pathname: '/life/coparent'; params: { mode: 'handoff'; id: string } };
 
 /** Where a row came from, read off the row's stored provenance — never guessed, never upgraded. */
 export interface SourceLine {

@@ -11,3 +11,13 @@ export const LIFE_HUB_COPY = {
   privateSection: 'Just for you',
   privateSectionNote: 'Private to you. Only the tasks you make here reach your day.',
 } as const;
+
+/**
+ * What a generic editor says when it is opened for a co-parenting handoff (HK13-D35): the handoff is changed in Co-parent logistics,
+ * where moving it moves the repeat she recorded with it. Life says it because Life is what links one area to another.
+ */
+export const HANDOFF_KEPT_COPY = {
+  title: 'This handoff is kept in Co-parent logistics',
+  body: 'Change its time or repeat there, so the pattern you recorded moves with it.',
+  open: 'Open in Co-parent logistics',
+} as const;

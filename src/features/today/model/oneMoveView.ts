@@ -6,7 +6,7 @@ import type { DayView } from '../../../domain/projectDay';
 import type { AppState, OneMoveRecord, OneMoveTargetType } from '../../../domain/state';
 import type { OneMoveItem } from '../../../types';
 import { relativeDay } from '../formatDay';
-import { describeRef, eventRoute, needsMeRoute, sourceOf, taskRoute } from './refs';
+import { describeRef, eventRouteFor, needsMeRoute, sourceOf, taskRoute } from './refs';
 import { dependentsOf, requirementsOf, speakable } from './requirements';
 import type { OneMoveCompletion, OneMoveSection, OneMoveWhy, SourceLine, TodayRoute } from './types';
 
@@ -30,7 +30,7 @@ import type { OneMoveCompletion, OneMoveSection, OneMoveWhy, SourceLine, TodayRo
  */
 
 interface Affordance {
-  open: (id: string) => TodayRoute | null;
+  open: (id: string, state: AppState) => TodayRoute | null;
   completion: OneMoveCompletion;
 }
 
@@ -44,7 +44,7 @@ const AFFORDANCE: Record<OneMoveTargetType, Affordance> = {
   catalog: { open: () => null, completion: 'records_only' },
   task: { open: (id) => taskRoute(id), completion: 'completes_task' },
   needsMe: { open: () => needsMeRoute(), completion: 'resolves_needs_me' },
-  event: { open: (id) => eventRoute(id), completion: 'records_only' },
+  event: { open: (id, state) => eventRouteFor(state, id), completion: 'records_only' },
   system: { open: () => null, completion: 'records_only' },
   responsibility: { open: () => null, completion: 'records_only' },
 };
@@ -80,7 +80,7 @@ export function oneMoveSection(state: AppState, today: LocalDate, day: DayView):
   const targetType = record?.targetType ?? null;
   const targetId = record?.targetId ?? null;
   const affordance = targetType !== null ? AFFORDANCE[targetType] : null;
-  const open = affordance !== null && targetId !== null ? affordance.open(targetId) : null;
+  const open = affordance !== null && targetId !== null ? affordance.open(targetId, state) : null;
 
   const base = {
     action: move?.action ?? null,

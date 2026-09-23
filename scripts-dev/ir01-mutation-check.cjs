@@ -45,7 +45,8 @@ const MUTANTS = [
   { id: 'M13', guards: 'HA-001 / IR-D5', what: 'a batch never completes hydration (the device stays unhydrated forever)',
     file: 'src/domain/sync/pullEngine.ts', from: "cursor: batch.nextCursor, hydration: 'ready' } };", to: 'cursor: batch.nextCursor, hydration: namespace.hydration } };', tests: PULL },
   { id: 'M14', guards: 'HA-001 / IR-D12', what: 'the top-up re-queues a row whose create already ended as evidence (retry loop)',
-    file: 'src/domain/sync/changeBridge.ts', from: ' && !decided.has(key)) {', to: ') {', tests: [...COMPOSITION, `${T}changeBridge.test.mjs`] },
+    // Re-anchored by the F01-F13 integration (HK13-D30): HK13-D28 added a second condition to this line; only the evidence check goes.
+    file: 'src/domain/sync/changeBridge.ts', from: ' && !decided.has(key) && !isKeptLocal(', to: ' && !isKeptLocal(', tests: [...COMPOSITION, `${T}changeBridge.test.mjs`] },
 
   // ---- HA-009: a removed prerequisite is not a completed prerequisite ---------------------------------------------------
   { id: 'M15', guards: 'HA-009', what: 'a REMOVED event reads as satisfied again (the audited defect)',
@@ -82,7 +83,8 @@ const MUTANTS = [
     file: 'src/domain/sync/projection.ts', from: '        category_id: category,\n        subject_member_id: subject,\n        scope: row.scope,\n        ...provenanceColumns(ctx, kind, localId, row.provenance),\n        ...facetColumns(\'system\', row),',
     to: '        category_id: category,\n        subject_member_id: null,\n        scope: row.scope,\n        ...provenanceColumns(ctx, kind, localId, row.provenance),\n        ...facetColumns(\'system\', row),', tests: [`${T}systemSubject.test.mjs`, ...COMPOSITION] },
   { id: 'M27', guards: 'HA-011', what: 'applying a pulled System drops its subject',
-    file: 'src/domain/sync/apply.ts', from: "subjectMemberId: strOrNull(row.subject_member_id) === null ? null : (resolve(row.subject_member_id as string) ?? str(row.subject_member_id)),", to: 'subjectMemberId: null,', tests: [`${T}systemSubject.test.mjs`, ...COMPOSITION] },
+    // Re-anchored by the F01-F13 integration (HK13-D30): F12's LifeRecord apply added the same line, so the System's is named by its comment.
+    file: 'src/domain/sync/apply.ts', from: "into a household one without saying so.\n          subjectMemberId: strOrNull(row.subject_member_id) === null ? null : (resolve(row.subject_member_id as string) ?? str(row.subject_member_id)),", to: "into a household one without saying so.\n          subjectMemberId: null,", tests: [`${T}systemSubject.test.mjs`, ...COMPOSITION] },
   { id: 'M28', guards: 'HA-011', what: 'a child-scoped System with no child is accepted',
     file: 'src/domain/state.ts', from: "if (system.scope === 'child' && system.subjectMemberId === null) {", to: 'if (false) {', tests: [`${T}systemSubject.test.mjs`] },
   { id: 'M29', guards: 'HA-011', what: 'the adult account user is accepted as a System\'s subject',

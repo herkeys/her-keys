@@ -32,7 +32,7 @@ export function AddPersonView({ busy, message, onSubmit }: AddPersonViewProps) {
       <AppText variant="screenTitle" accessibilityRole="header" style={styles.heading}>
         {peopleCopy.add.title}
       </AppText>
-      {message ? <InlineNotice tone="info" title={message} body="" style={styles.notice} /> : null}
+      {message ? <InlineNotice tone="waiting" title={message} body="" style={styles.notice} /> : null}
       <TextField label={peopleCopy.add.nameLabel} value={displayName} onChangeText={setName} maxLength={PEOPLE_LIMITS.displayName} autoFocus />
       <TextField label={peopleCopy.detail.relationshipName} placeholder={peopleCopy.detail.relationshipHint} value={relationshipName} onChangeText={setLabel} maxLength={PEOPLE_LIMITS.relationshipName} />
       <TextField label={peopleCopy.detail.organizationName} value={organizationName} onChangeText={setOrganization} maxLength={PEOPLE_LIMITS.organizationName} />

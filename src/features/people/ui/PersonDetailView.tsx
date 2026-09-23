@@ -54,7 +54,7 @@ export function PersonDetailView(props: PersonDetailViewProps) {
         ) : null}
       </View>
 
-      {message ? <InlineNotice tone="info" title={message} body="" style={styles.notice} /> : null}
+      {message ? <InlineNotice tone="waiting" title={message} body="" style={styles.notice} /> : null}
       {archivedPerson ? <InlineNotice tone="info" title={peopleCopy.detail.archivedPerson} body="" style={styles.notice} /> : null}
       {context?.status === 'archived' ? <InlineNotice tone="info" title={peopleCopy.detail.archivedContext} body="" style={styles.notice} /> : null}
 

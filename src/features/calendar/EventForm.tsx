@@ -5,11 +5,13 @@ import { AppText, Button, ChipToggle, Overline, Screen, TextField } from '../../
 import { colors, spacing } from '../../design/tokens';
 import { scopeForNewRow } from '../../domain/categories';
 import { addEvent, removeEvent, updateEvent } from '../../domain/events';
+import { isCoparentingHandoff } from '../../domain/handoffs';
 import { epochMsOf, isLocalDate, logicalDateAt, toInstant, wallClockMinutesAt, zonedTimeToEpochMs } from '../../domain/logicalDay';
 import { FIELD_LIMITS } from '../../domain/state';
 import type { Transition } from '../../state/appStore';
 import { useAppStore, useHouseholdState } from '../../store/AppStateProvider';
 import { useHousehold } from '../../store/useHousehold';
+import { HandoffKeptHere } from '../life/HandoffKeptHere';
 
 const TIME_PATTERN = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
@@ -32,6 +34,20 @@ function parseOptionalMinutes(value: string): { ok: true; minutes: number | null
 }
 
 export function EventForm({ eventId }: { eventId?: string }) {
+  const { state } = useHouseholdState();
+  // A co-parenting handoff is edited in Co-Parent, where moving it moves the repeat she recorded (HK13-D35). This form would move
+  // the event and leave the pattern behind, so it never opens one.
+  if (eventId && isCoparentingHandoff(state, eventId)) {
+    return (
+      <Screen>
+        <HandoffKeptHere eventId={eventId} />
+      </Screen>
+    );
+  }
+  return <EventFormBody eventId={eventId} />;
+}
+
+function EventFormBody({ eventId }: { eventId?: string }) {
   const store = useAppStore();
   const { state, today } = useHouseholdState();
   const { categories } = useHousehold();

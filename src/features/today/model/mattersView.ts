@@ -6,7 +6,7 @@ import type { AppState } from '../../../domain/state';
 import { isBlocked } from '../../../domain/structure';
 import type { CalendarEventItem, TaskItem } from '../../../types';
 import { formatTime } from '../../daily-load/computeDailyLoad';
-import { eventRoute, sourceOf, taskRoute } from './refs';
+import { eventRouteFor, sourceOf, taskRoute } from './refs';
 import type { MatterItem, MatterReason, MattersSection } from './types';
 
 /**
@@ -83,7 +83,7 @@ function matterItem(state: AppState, c: { reason: MatterReason; event?: Calendar
       dueToday: false,
       isNext: next !== null && next.id === c.event.id,
       source: source && source.uncertain ? source : null,
-      route: eventRoute(c.event.id),
+      route: eventRouteFor(state, c.event.id),
     };
   }
   const task = c.task as TaskItem;
