@@ -315,7 +315,8 @@ const LATER_FEATURES = [
     rootCollections: [],
     syncKinds: [],
     shared: [
-      ['supabase/tests/run.mjs', 'INT13-01: one migration chain for every mode, the migration gate, fresh install and the populated upgrade through F13 (HK13-D01..D04); AUD13-03: ENV D applies F08 in chain order (HK13-D27) and ENV F upgrades a populated WAVE3_BASE-era database'],
+      ['supabase/tests/run.mjs', 'INT13-01: one migration chain for every mode, the migration gate, fresh install and the populated upgrade through F13 (HK13-D01..D04); AUD13-03: ENV D applies F08 in chain order (HK13-D27) and ENV F upgrades a populated WAVE3_BASE-era database; AUD13-12: the Co-Parent journey runs with every other journey on the whole chain (HK13-D43)'],
+      ['supabase/tests/journey-coparent.mjs', 'AUD13-12: the Co-Parent journey reads the stack database it is given (the private stack under run.mjs), as the Kids journey does (HK13-D43)'],
       ['src/domain/sync/pushEngine.ts', 'AUD13-03: an earlier day\'s One Move the cloud never saw, and the facts about it, stay on the device — sent, it would land as today\'s (HK13-D28)'],
       ['src/domain/sync/changeBridge.ts', 'AUD13-03: the queue top-up does not owe the cloud an earlier day\'s unsent One Move or a fact about one (HK13-D28)'],
       ['scripts-dev/ir01-mutation-check.cjs', 'AUD13-06: two IR01 mutants re-anchored after the integration moved the lines they guard (HK13-D30)'],

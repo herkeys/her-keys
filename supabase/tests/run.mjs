@@ -1291,7 +1291,7 @@ try {
     await peopleJourneys(check, psql);
   }
   // The Me / Rebuild journey (HK-FEATURE-11) needs no ENV C either; its RLS matrix is ENV C suite 78, run with the others.
-  if (only !== 'kids' && only !== 'f08' && only !== 'rebuild' && only !== 'people' && only !== 'upgrades' && only !== 'envf') envC(only);
+  if (only !== 'kids' && only !== 'f08' && only !== 'rebuild' && only !== 'people' && only !== 'upgrades' && only !== 'envf' && only !== 'coparent') envC(only);
   if (!only || only === 'parity') {
     const { authorizationParity } = await import(`file://${join(HERE, 'authorization-parity.mjs')}`);
     await authorizationParity(check, psql, dbName('env_c'));
@@ -1318,6 +1318,13 @@ try {
     const { rebuildJourneys } = await import(`file://${join(HERE, 'journey-rebuild.mjs')}`);
     await rebuildJourneys(check, psql);
   }
+  if (only === 'coparent') {
+    // Always the private stack: Feature 07's journey against the WHOLE chain (HK13-D43). run-coparent.mjs, its original runner, still
+    // runs it alone against the shared default database, which lacks every migration after F05.
+    await startJourneyStack();
+    const { coparentJourneys } = await import(`file://${join(HERE, 'journey-coparent.mjs')}`);
+    await coparentJourneys(check, psql);
+  }
   if (only === 'journeys' || !only) {
     await startJourneyStack();
     const { syncIntegration } = await import(`file://${join(HERE, 'sync-integration.mjs')}`);
@@ -1336,6 +1343,10 @@ try {
     // HK-FEATURE-13 (People OS).
     const { peopleJourneys } = await import(`file://${join(HERE, 'journey-people.mjs')}`);
     await peopleJourneys(check, psql);
+    // HK-FEATURE-07 (Co-Parent Logistics): its journey used to run only through run-coparent.mjs against the shared default database,
+    // so it never met a later migration; here it runs with every other journey on the whole chain (HK13-D43).
+    const { coparentJourneys } = await import(`file://${join(HERE, 'journey-coparent.mjs')}`);
+    await coparentJourneys(check, psql);
   }
   if (privateStack) await privateStack.stop();
 } catch (err) {

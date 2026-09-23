@@ -56,6 +56,7 @@ P5 low correctness · P6 UX polish · P7 maintainability · P8 performance · P9
 | HK13-D21 | P5 | F12 | Life Admin edit sheet | Editing a record shows its reference number in full, without the Reveal the detail requires | DOCUMENTED |
 | HK13-D41 | P9 | F04 (Build 4 foundation) | Systems | A System is household-shared but its steps are owner-private: another adult would see the System without its steps | DOCUMENTED (pre-existing, latent) |
 | HK13-D42 | P9 | F05 | Kids | "Add child" is offered to any member; the server lets only the household owner add one (42501), so a non-owner's child would stay on the device | DOCUMENTED (pre-existing, latent) |
+| HK13-D43 | P4 | F07 × backend harness | real-database journey | Feature 07's journey ran only through its own runner, against the shared default database (nothing after F05): the integrated chain never met it | FIXED (AUD13-12) |
 
 (Entries below are added as the audit proceeds.)
 
@@ -871,6 +872,32 @@ structural, verified in code:
 - **Severity and why:** P9. It is latent, and the server is the authority. The fix is to gate the button on the household role once
   a second member can exist.
 - **Status:** DOCUMENTED.
+
+## HK13-D43 — Feature 07's real-database journey never ran on the integrated chain (P4)
+
+- **How found:** the final gate's item 4 ("all F01–F13 feature-specific suites"). It listed every journey file against the journeys the
+  full harness runs. `supabase/tests/journey-coparent.mjs` is imported only by `run-coparent.mjs`, which runs it against the
+  container's shared default database. That database carries IR01 and F05 and nothing later, and the audit must not write to it or
+  migrate it. The Kids, Home, Rebuild, Life Admin and People journeys all run in `run.mjs` on the private stack that carries the whole
+  chain; Co-Parent's did not.
+- **Expected:** every feature's real-database journey runs, over real HTTP and PostgREST and RLS, against the integrated schema in
+  the full uncontested harness.
+- **Actual:** F07's journey (claim, handoffs, requests, `coparent-shared` RLS, a stranger's and a member's attacks, account switch)
+  never ran against F09–F13 or INT13. The 1559-check harness never included it, so no gate could see it.
+- **Root cause:** F07 added its own runner beside `run.mjs`, calling it a shared file that feature did not edit, and pointed its
+  journey at `'postgres'` by name. Wave 2's integration taught the Kids and Home journeys to read `HERKEYS_LOCAL_STACK_DB`, but not
+  F07's.
+- **Severity and why:** P4, an integration-specific test-infrastructure defect. A feature's real-database evidence did not cover the
+  integrated line. The product was fine: run on the whole chain, the journey passes 35/35.
+- **Repair (AUD13-12):**
+  - The journey reads the stack database it is given (`STACK_DB`, as the Kids journey does).
+  - `run.mjs` runs it in the full run and adds a `coparent` mode, both on the private stack.
+  - `run-coparent.mjs` is unchanged and still runs it alone against the default database.
+- **Tests:** `tests/hk-f01f13/harnessRegistry.test.mjs` requires every `supabase/tests/journey-*.mjs` to be imported by the full
+  run's journeys block, on the private stack, and no journey to query the shared database by name. D43-M1 drops the journey from the
+  full run and D43-M2 points it back at `'postgres'`: **2/2 caught**. `run.mjs coparent`: 35/35. The full harness at the final gate
+  includes it.
+- **Status:** FIXED.
 
 ## Known shared privacy items — re-audited under the P0–P10 rubric (Phase 8)
 

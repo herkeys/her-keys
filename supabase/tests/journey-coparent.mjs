@@ -12,6 +12,9 @@ const USER = { producer: 'user-action', artifactId: null, confidence: null };
 const WITHHELD_MOVE = { id: `onemove-${TODAY}`, forDate: TODAY, targetId: null, targetType: 'task', status: 'withheld', decidedAt: '2026-09-16T13:00:00.000Z', completedAt: null, provenance: USER, scope: 'personal' };
 
 const API_URL = process.env.HERKEYS_LOCAL_API_URL ?? 'http://127.0.0.1:54321';
+// The database the journey runs against: the private stack's scratch database when run.mjs started one (the integrated run, with the
+// WHOLE migration chain), or the shared default database when run-coparent.mjs runs it on its own. As journey-kids.mjs (HK13-D43).
+const STACK_DB = process.env.HERKEYS_LOCAL_STACK_DB ?? 'postgres';
 const ANON_KEY =
   process.env.HERKEYS_LOCAL_ANON_KEY ??
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0';
@@ -23,7 +26,8 @@ const ANON_KEY =
  * runtime, Supabase account client and sync transport; only storage/keychain are in memory and the provider is scripted. Feature 07
  * adds NO sync code and NO schema: every write below is a canonical mutation that the store's change observer queues like any other.
  *
- * Additive and local only: it creates fresh random users/households in the container's default database and drops nothing.
+ * Additive and local only: it creates fresh random users/households in the stack's database (run.mjs: the private stack's scratch
+ * database; run-coparent.mjs: the container's default database) and drops nothing.
  */
 export async function coparentJourneys(check, psql) {
   console.log('\n  Feature 07 co-parent logistics — real local Supabase');
@@ -38,7 +42,7 @@ export async function coparentJourneys(check, psql) {
   const Q = crypto.randomUUID(); // a legitimate second adult member of the same household
   const R = crypto.randomUUID(); // an unrelated authenticated account
   psql(
-    'postgres',
+    STACK_DB,
     `INSERT INTO auth.users (id, email, aud, role) VALUES
        ('${P}','cp-${P}@local.test','authenticated','authenticated'),
        ('${Q}','cp-${Q}@local.test','authenticated','authenticated'),
@@ -47,7 +51,7 @@ export async function coparentJourneys(check, psql) {
     { label: 'coparent fixture users' }
   );
   const sql = (text) => {
-    const out = psql('postgres', `\\pset format unaligned\n\\pset tuples_only on\n${text}`, { label: 'coparent query' }).out;
+    const out = psql(STACK_DB, `\\pset format unaligned\n\\pset tuples_only on\n${text}`, { label: 'coparent query' }).out;
     return out.split('\n').map((line) => line.trim()).filter((line) => line !== '' && !/^Output format|^Tuples only/.test(line)).join('|');
   };
 
