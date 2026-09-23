@@ -550,7 +550,38 @@ the Meals boundary lane (the scan caught them at the first EXIT run: `2903 tests
 | TypeScript | exit 0 | exit 0 | — |
 | Application tests | `tests 2814 · suites 614 · pass 2811 · fail 3` | `tests 2903 · suites 640 · pass 2903 · fail 0` | +89 tests, +26 suites; the 3 ENTRY failures are gone (timing test passed this run; the Meals boundary scan now honours the integration checkpoint) |
 
+| Backend checks (`node supabase/tests/run.mjs`, quiet window, no other harness running) | `1028/1028 checks passed` (clean WAVE3_BASE worktree) | `1147/1147 checks passed` at `e03ae4e` (private journey stack `f13_stack`) | +119 = 88 F13 suites in ENV C (38 Phase A + 50 People RLS) + 3 ENV A + 5 migration-quality + 7 ENV D populated-upgrade + 16 People journeys; the interlock count check and the migration-list check were UPDATED (34→36 tables; 4→5 migrations), not removed |
+| Mutation (test-the-test) | — | `22/22 mutants caught` at `d5a9d47`; `git diff d5a9d47 HEAD -- src app supabase/migrations tests` is EMPTY (only the boundary-scan register and this ledger changed since) | — |
+
 No test disappeared: a title-by-title comparison of the two raw logs finds every ENTRY title at EXIT except (a) `29 kinds: 27 are pushed…`
 renamed by F13 to `31 kinds: 29 are pushed…` (same test, new count) and (b) three titles that FAILED at ENTRY and so were printed twice
 (body + failure summary) and pass once at EXIT. The +89: 83 in `tests/people/` (domain 29, projection 16, ui 14, doctrine 8, sync 7,
 store 5, today 4) + 6 per-kind manifest/round-trip tests the two new kinds generate.
+
+### Engineering debt (recorded, not hidden)
+
+| ID | Debt | Why it is not fixed here |
+|---|---|---|
+| ED-13-01 | `journey-composition.mjs` single-pass assertions are load-sensitive: the cluster-wide `sync_pull` barrier (any other session's open transaction) defers rows and `settle()` flushes once. Reproduced at WAVE3_BASE (IR-D11 `0 tasks, ready`). | Pre-existing shared test design; the fix (settle until quiescent / pull until the cursor passes a marker) belongs to integration test infrastructure. The authoritative EXIT run passed 1147/1147 in a quiet window. |
+| ED-13-02 | Life hub People row not registered (the hub is one hand-written list). | Addendum AM: deferred to integration (MP-13-08); `peopleLifeTile` is ready to wire. |
+| ED-13-03 | No device/pixel pass (emulator). | Views are verified by rendered-contract tests; a device pass is DEFERRED-IN-RUN. |
+| ED-13-04 | Other scoped tables' local ids remain guessable and `responsibilities_one_live_owner_uq` is household-wide (existence probes needing a known id). | Shared foundation (MP-13-05); F13's own rows are closed against both. |
+| ED-13-05 | `supabase/tests/private-stack.mjs` still defaults to the fixed `f08_stack` / `f08_postgrest` names. | Overridable now; changing the default would change other sessions' behaviour. |
+| ED-13-06 | A People-created person carries the canonical `relationship = 'other'`. | The enum is required and closed (MP-13-12); F13 does not choose a category for her. |
+| ED-13-07 | Permanent person/context delete is not offered. | PENDING PRODUCT DECISION (MP-13-09); archive is the V1 removal. |
+
+### Product-contract changes to carry into the consolidated product spec (not edited here)
+
+People lives under Life (`/life/people…`); canonical identities are children (`household_members`) and non-account people
+(`household_people`, incl. the co-parent — read-only in People); owner-private PersonContext (short label, organization, private note,
+active/archived; one per person); follow-ups are ordinary owner-private Tasks linked `follow_up`, created only from a person's detail;
+Needs Follow-up = open linked Tasks only; the current user is never a People row; no search, contacts, messaging, scores, reminders or
+inference in V1.
+
+### Certification
+
+All F13 CORE floor items are PASS (see the scenario map, the doctrine table and the M5 RLS matrix); central Life hub registration, sibling
+integrations, pre-existing-Task linking, Person→Event, People search, device contacts and communication logging are outside CORE by
+addendum AS and are recorded as integration candidates or missing primitives.
+
+**F13 PEOPLE OS: COMPLETE — READY FOR WAVE 4 INTEGRATION** (pending the durable push recorded below).
