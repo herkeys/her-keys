@@ -27,6 +27,16 @@ import { fileURLToPath } from 'node:url';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = join(HERE, '..', '..');
 const CONTAINER = process.env.HERKEYS_LOCAL_DB_CONTAINER ?? 'supabase_db_Her_Keys';
+// Harness database names. They are fixed per container, so two sessions running this harness at once drop each other's
+// databases mid-run. HERKEYS_HARNESS_DB_PREFIX (default b4: the names are unchanged) gives a parallel session names of its own;
+// with a non-default prefix the journeys' private API stack takes its own names too (HK-FEATURE-12).
+const DB_PREFIX = process.env.HERKEYS_HARNESS_DB_PREFIX ?? 'b4';
+if (!/^[a-z][a-z0-9]{0,11}$/.test(DB_PREFIX)) throw new Error(`HERKEYS_HARNESS_DB_PREFIX must be a short lowercase name, got ${DB_PREFIX}`);
+const dbName = (name) => `${DB_PREFIX}_${name}`;
+if (DB_PREFIX !== 'b4') {
+  process.env.HERKEYS_PRIVATE_DB = process.env.HERKEYS_PRIVATE_DB ?? `${DB_PREFIX}_stack`;
+  process.env.HERKEYS_PRIVATE_REST_NAME = process.env.HERKEYS_PRIVATE_REST_NAME ?? `${DB_PREFIX}_postgrest`;
+}
 
 const BASELINE = join(REPO, 'supabase', 'migrations', '20260919230054_build4_baseline.sql');
 const BUILD4 = join(REPO, 'supabase', 'migrations', '20260919231500_build4_cloud_schema.sql');
@@ -106,66 +116,66 @@ function scalar(db, sql) {
 // ---------------------------------------------------------------- ENV A -----
 function envA() {
   console.log('\nENV A — empty apply');
-  recreate('b4_env_a');
-  psqlFile('b4_env_a', AUTH_STUB, { label: 'ENV A auth stub' });
-  psqlFile('b4_env_a', TEST_HELPERS, { label: 'helpers' });
-  psqlFile('b4_env_a', BASELINE, { label: 'ENV A baseline' });
-  applyBuild4('b4_env_a', { label: 'ENV A build4' });
-  applyIr01('b4_env_a', { label: 'ENV A ir01' });
-  applyF08('b4_env_a', { label: 'ENV A f08' });
-  applyF05('b4_env_a', { label: 'ENV A f05' });
-  applyF12('b4_env_a', { label: 'ENV A f12' });
+  recreate(dbName('env_a'));
+  psqlFile(dbName('env_a'), AUTH_STUB, { label: 'ENV A auth stub' });
+  psqlFile(dbName('env_a'), TEST_HELPERS, { label: 'helpers' });
+  psqlFile(dbName('env_a'), BASELINE, { label: 'ENV A baseline' });
+  applyBuild4(dbName('env_a'), { label: 'ENV A build4' });
+  applyIr01(dbName('env_a'), { label: 'ENV A ir01' });
+  applyF08(dbName('env_a'), { label: 'ENV A f08' });
+  applyF05(dbName('env_a'), { label: 'ENV A f05' });
+  applyF12(dbName('env_a'), { label: 'ENV A f12' });
 
   check('ENV A: Build 4 migration applies on an empty surface', true);
   check('ENV A: the additive F12 migration (Life Admin records) applies on top of all of them (fresh install)', true);
   check('ENV A: the F12 tables are owner-private: RLS on, no delete policy, anon holds nothing, scope pinned to personal',
-        scalar('b4_env_a', "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relname in ('life_records','life_record_task_links') and c.relrowsecurity;") === '2'
-        && scalar('b4_env_a', "select count(*) from pg_policies where schemaname='public' and tablename in ('life_records','life_record_task_links') and cmd='DELETE';") === '0'
-        && scalar('b4_env_a', "select count(*) from information_schema.role_table_grants where table_schema='public' and table_name in ('life_records','life_record_task_links') and grantee in ('anon','PUBLIC');") === '0'
-        && scalar('b4_env_a', "select count(*) from pg_constraint where conname in ('life_records_scope_check','life_record_task_links_scope_check');") === '2');
+        scalar(dbName('env_a'), "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relname in ('life_records','life_record_task_links') and c.relrowsecurity;") === '2'
+        && scalar(dbName('env_a'), "select count(*) from pg_policies where schemaname='public' and tablename in ('life_records','life_record_task_links') and cmd='DELETE';") === '0'
+        && scalar(dbName('env_a'), "select count(*) from information_schema.role_table_grants where table_schema='public' and table_name in ('life_records','life_record_task_links') and grantee in ('anon','PUBLIC');") === '0'
+        && scalar(dbName('env_a'), "select count(*) from pg_constraint where conname in ('life_records_scope_check','life_record_task_links_scope_check');") === '2');
   check('ENV A: the F12 link guard runs as the CALLER (SECURITY INVOKER), pinned to an empty search_path, not executable by anon',
-        scalar('b4_env_a', "select (not p.prosecdef)::text || '/' || coalesce(array_to_string(p.proconfig, ','), 'none') || '/' || has_function_privilege('anon', p.oid, 'EXECUTE')::text from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='private' and p.proname='guard_life_record_task_link';") === 'true/search_path=""/false');
+        scalar(dbName('env_a'), "select (not p.prosecdef)::text || '/' || coalesce(array_to_string(p.proconfig, ','), 'none') || '/' || has_function_privilege('anon', p.oid, 'EXECUTE')::text from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='private' and p.proname='guard_life_record_task_link';") === 'true/search_path=""/false');
   check('ENV A: the additive IR01 migration applies on top of it (fresh install)', true);
   check('ENV A: the additive F08 migration applies on top of IR01 (fresh install)', true);
   check('ENV A: meal_plan_entries.meal_slot and .status are text NOT NULL defaulting to unspecified and active (a legacy row is a live plan with no stated slot)',
-        scalar('b4_env_a', "select string_agg(column_name || '=' || data_type || '/' || is_nullable || '/' || column_default, ';' order by column_name) from information_schema.columns where table_schema='public' and table_name='meal_plan_entries' and column_name in ('meal_slot','status');") === "meal_slot=text/NO/'unspecified'::text;status=text/NO/'active'::text");
+        scalar(dbName('env_a'), "select string_agg(column_name || '=' || data_type || '/' || is_nullable || '/' || column_default, ';' order by column_name) from information_schema.columns where table_schema='public' and table_name='meal_plan_entries' and column_name in ('meal_slot','status');") === "meal_slot=text/NO/'unspecified'::text;status=text/NO/'active'::text");
   check('ENV A: the additive F05 migration (a child after binding) applies on top of both (fresh install)', true);
   check('ENV A: private.push_household_child is SECURITY DEFINER, pinned to an empty search_path, and NOT executable by anon or PUBLIC',
-        scalar('b4_env_a', "select p.prosecdef::text || '/' || coalesce(array_to_string(p.proconfig, ','), 'none') || '/' || has_function_privilege('anon', p.oid, 'EXECUTE')::text || '/' || has_function_privilege('authenticated', p.oid, 'EXECUTE')::text from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='private' and p.proname='push_household_child';") === 'true/search_path=""/false/true');
+        scalar(dbName('env_a'), "select p.prosecdef::text || '/' || coalesce(array_to_string(p.proconfig, ','), 'none') || '/' || has_function_privilege('anon', p.oid, 'EXECUTE')::text || '/' || has_function_privilege('authenticated', p.oid, 'EXECUTE')::text from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='private' and p.proname='push_household_child';") === 'true/search_path=""/false/true');
   check('ENV A: public.sync_push is STILL SECURITY INVOKER after the F05 replacement (every other table is still written as the caller)',
-        scalar('b4_env_a', "select (not prosecdef)::text from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname='sync_push';") === 'true');
+        scalar(dbName('env_a'), "select (not prosecdef)::text from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname='sync_push';") === 'true');
   check('ENV A: household_members gained NO client write grant (a child is written only through the function)',
-        scalar('b4_env_a', "select count(*) from information_schema.role_table_grants where table_schema='public' and table_name='household_members' and grantee='authenticated' and privilege_type <> 'SELECT';") === '0'
-        && scalar('b4_env_a', "select count(*) from information_schema.column_privileges where table_schema='public' and table_name='household_members' and grantee='authenticated' and privilege_type in ('INSERT','UPDATE');") === '0');
+        scalar(dbName('env_a'), "select count(*) from information_schema.role_table_grants where table_schema='public' and table_name='household_members' and grantee='authenticated' and privilege_type <> 'SELECT';") === '0'
+        && scalar(dbName('env_a'), "select count(*) from information_schema.column_privileges where table_schema='public' and table_name='household_members' and grantee='authenticated' and privilege_type in ('INSERT','UPDATE');") === '0');
   check('ENV A: household_members gained NO write policy (still exactly one policy, the SELECT one)',
-        scalar('b4_env_a', "select count(*) || '/' || string_agg(cmd, ',') from pg_policies where schemaname='public' and tablename='household_members';") === '1/SELECT');
+        scalar(dbName('env_a'), "select count(*) || '/' || string_agg(cmd, ',') from pg_policies where schemaname='public' and tablename='household_members';") === '1/SELECT');
   check('ENV A: tasks.duration_source is nullable text with no default (an unstated source is unknown)',
-        scalar('b4_env_a', "select data_type || '/' || is_nullable || '/' || coalesce(column_default, 'none') from information_schema.columns where table_schema='public' and table_name='tasks' and column_name='duration_source';") === 'text/YES/none');
-  check('ENV A: 36 application tables (the 34 of Build 4 and the 2 of F12)', scalar('b4_env_a', "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r';") === '36');
+        scalar(dbName('env_a'), "select data_type || '/' || is_nullable || '/' || coalesce(column_default, 'none') from information_schema.columns where table_schema='public' and table_name='tasks' and column_name='duration_source';") === 'text/YES/none');
+  check('ENV A: 36 application tables (the 34 of Build 4 and the 2 of F12)', scalar(dbName('env_a'), "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r';") === '36');
   // The test-only producer default (helpers/05) must never be in the shipped schema: a writer that does not say where a row came from is refused.
   check('ENV A: the shipped schema gives `producer` NO default on any of the nine synced content tables',
-        scalar('b4_env_a', "select count(*) from information_schema.columns where table_schema='public' and column_name='producer' and column_default is not null;") === '0');
+        scalar(dbName('env_a'), "select count(*) from information_schema.columns where table_schema='public' and column_name='producer' and column_default is not null;") === '0');
   check('ENV A: all nine synced content tables carry `producer`, NOT NULL',
-        scalar('b4_env_a', "select count(*) from information_schema.columns where table_schema='public' and column_name='producer' and is_nullable='NO' and table_name in ('household_categories','events','tasks','household_systems','meal_plan_entries','needs_me_items','one_move_records','discovery_records','onboarding_state');") === '9');
-  check('ENV A: RLS enabled on every public table', scalar('b4_env_a', "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r' and not c.relrowsecurity;") === '0');
-  check('ENV A: fail-closed assertion passes', psql('b4_env_a', 'SELECT private.assert_app_schema_secured();').ok);
+        scalar(dbName('env_a'), "select count(*) from information_schema.columns where table_schema='public' and column_name='producer' and is_nullable='NO' and table_name in ('household_categories','events','tasks','household_systems','meal_plan_entries','needs_me_items','one_move_records','discovery_records','onboarding_state');") === '9');
+  check('ENV A: RLS enabled on every public table', scalar(dbName('env_a'), "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r' and not c.relrowsecurity;") === '0');
+  check('ENV A: fail-closed assertion passes', psql(dbName('env_a'), 'SELECT private.assert_app_schema_secured();').ok);
 
   // HR-04 atomicity, proven rather than assumed: inject a failure after the
   // restructuring and require a complete rollback. The migration supplies its
   // own BEGIN/COMMIT, so this exercises the real guarantee.
-  recreate('b4_env_a_tx');
-  psqlFile('b4_env_a_tx', AUTH_STUB, { label: 'ENV A(tx) auth stub' });
-  psqlFile('b4_env_a_tx', TEST_HELPERS, { label: 'helpers' });
-  psqlFile('b4_env_a_tx', BASELINE, { label: 'ENV A(tx) baseline' });
+  recreate(dbName('env_a_tx'));
+  psqlFile(dbName('env_a_tx'), AUTH_STUB, { label: 'ENV A(tx) auth stub' });
+  psqlFile(dbName('env_a_tx'), TEST_HELPERS, { label: 'helpers' });
+  psqlFile(dbName('env_a_tx'), BASELINE, { label: 'ENV A(tx) baseline' });
 
   // One line, no newline escapes: the migration contains exactly one COMMIT.
   const poisoned = readFileSync(BUILD4, 'utf8').replace('COMMIT;', 'SELECT 1/0; COMMIT;');
-  const failed = psql('b4_env_a_tx', poisoned, { expectFailure: true, label: 'ENV A(tx) poisoned build4' });
+  const failed = psql(dbName('env_a_tx'), poisoned, { expectFailure: true, label: 'ENV A(tx) poisoned build4' });
   check('ENV A: a failure late in the migration aborts it', !failed.ok && /division by zero/.test(failed.out));
   check('ENV A: the failed migration rolled back COMPLETELY — 14 baseline tables intact',
-        scalar('b4_env_a_tx', "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r';") === '14');
+        scalar(dbName('env_a_tx'), "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r';") === '14');
   check('ENV A: the failed migration left no partial uuid re-keying',
-        scalar('b4_env_a_tx', "select data_type from information_schema.columns where table_schema='public' and table_name='households' and column_name='id';") === 'text');
+        scalar(dbName('env_a_tx'), "select data_type from information_schema.columns where table_schema='public' and table_name='households' and column_name='id';") === 'text');
 }
 
 // ---------------------------------------------------------------- ENV B -----
@@ -173,29 +183,29 @@ function envB() {
   console.log('\nENV B — zero-data interlock attack');
 
   // B1: a protected application table holds a row.
-  recreate('b4_env_b1');
-  psqlFile('b4_env_b1', AUTH_STUB, { label: 'ENV B1 auth stub' });
-  psqlFile('b4_env_b1', TEST_HELPERS, { label: 'helpers' });
-  psqlFile('b4_env_b1', BASELINE, { label: 'ENV B1 baseline' });
-  psql('b4_env_b1', "INSERT INTO public.households (id) VALUES ('household-1');", { label: 'ENV B1 seed' });
+  recreate(dbName('env_b1'));
+  psqlFile(dbName('env_b1'), AUTH_STUB, { label: 'ENV B1 auth stub' });
+  psqlFile(dbName('env_b1'), TEST_HELPERS, { label: 'helpers' });
+  psqlFile(dbName('env_b1'), BASELINE, { label: 'ENV B1 baseline' });
+  psql(dbName('env_b1'), "INSERT INTO public.households (id) VALUES ('household-1');", { label: 'ENV B1 seed' });
 
-  const b1 = applyBuild4('b4_env_b1', { expectFailure: true, label: 'ENV B1 build4' });
+  const b1 = applyBuild4(dbName('env_b1'), { expectFailure: true, label: 'ENV B1 build4' });
   check('ENV B1: migration ABORTS when a protected table holds a row', !b1.ok);
   check('ENV B1: abort names the offending relation', /public\.households=1/.test(b1.out), (b1.out.match(/public\.\w+=\d+/) ?? [''])[0]);
-  check('ENV B1: no partial destructive state — the seeded row survives', scalar('b4_env_b1', 'select count(*) from public.households;') === '1');
-  check('ENV B1: no partial destructive state — id is still text', scalar('b4_env_b1', "select data_type from information_schema.columns where table_schema='public' and table_name='households' and column_name='id';") === 'text');
+  check('ENV B1: no partial destructive state — the seeded row survives', scalar(dbName('env_b1'), 'select count(*) from public.households;') === '1');
+  check('ENV B1: no partial destructive state — id is still text', scalar(dbName('env_b1'), "select data_type from information_schema.columns where table_schema='public' and table_name='households' and column_name='id';") === 'text');
 
   // B2: auth.users holds a row.
-  recreate('b4_env_b2');
-  psqlFile('b4_env_b2', AUTH_STUB, { label: 'ENV B2 auth stub' });
-  psqlFile('b4_env_b2', TEST_HELPERS, { label: 'helpers' });
-  psqlFile('b4_env_b2', BASELINE, { label: 'ENV B2 baseline' });
-  psql('b4_env_b2', "INSERT INTO auth.users (id) VALUES ('99999999-9999-4999-8999-999999999999');", { label: 'ENV B2 seed' });
+  recreate(dbName('env_b2'));
+  psqlFile(dbName('env_b2'), AUTH_STUB, { label: 'ENV B2 auth stub' });
+  psqlFile(dbName('env_b2'), TEST_HELPERS, { label: 'helpers' });
+  psqlFile(dbName('env_b2'), BASELINE, { label: 'ENV B2 baseline' });
+  psql(dbName('env_b2'), "INSERT INTO auth.users (id) VALUES ('99999999-9999-4999-8999-999999999999');", { label: 'ENV B2 seed' });
 
-  const b2 = applyBuild4('b4_env_b2', { expectFailure: true, label: 'ENV B2 build4' });
+  const b2 = applyBuild4(dbName('env_b2'), { expectFailure: true, label: 'ENV B2 build4' });
   check('ENV B2: migration ABORTS when auth.users holds a row', !b2.ok);
   check('ENV B2: abort names auth.users', /auth\.users=1/.test(b2.out), (b2.out.match(/auth\.users=\d+/) ?? [''])[0]);
-  check('ENV B2: no partial destructive state — 14 baseline tables intact', scalar('b4_env_b2', "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r';") === '14');
+  check('ENV B2: no partial destructive state — 14 baseline tables intact', scalar(dbName('env_b2'), "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r';") === '14');
 }
 
 // B3: the interlock over a FOUNDATION table. The eighteen new tables cannot hold a row on a first run, but a
@@ -203,13 +213,13 @@ function envB() {
 // real data, exactly like a row in `tasks`.
 function envB3() {
   console.log('\nENV B3 — interlock re-run over a populated foundation table');
-  recreate('b4_env_b3');
-  psqlFile('b4_env_b3', AUTH_STUB, { label: 'ENV B3 auth stub' });
-  psqlFile('b4_env_b3', TEST_HELPERS, { label: 'helpers' });
-  psqlFile('b4_env_b3', BASELINE, { label: 'ENV B3 baseline' });
-  applyBuild4('b4_env_b3', { label: 'ENV B3 build4 (while empty)' });
+  recreate(dbName('env_b3'));
+  psqlFile(dbName('env_b3'), AUTH_STUB, { label: 'ENV B3 auth stub' });
+  psqlFile(dbName('env_b3'), TEST_HELPERS, { label: 'helpers' });
+  psqlFile(dbName('env_b3'), BASELINE, { label: 'ENV B3 baseline' });
+  applyBuild4(dbName('env_b3'), { label: 'ENV B3 build4 (while empty)' });
   const uid = 'b3b3b3b3-b3b3-4b3b-8b3b-b3b3b3b3b3b3';
-  psql('b4_env_b3', `
+  psql(dbName('env_b3'), `
     BEGIN;
     INSERT INTO auth.users (id, email) VALUES ('${uid}', 'b3@local.test');
     SET LOCAL ROLE authenticated;
@@ -219,34 +229,34 @@ function envB3() {
     SELECT herkeys_test.ins('goals', jsonb_build_object('household_id', (SELECT household_id FROM public.household_members WHERE profile_id = '${uid}'),
       'profile_id', '${uid}', 'local_id', 'g-b3', 'title', 'A real goal', 'status', 'active'));
     COMMIT;`, { label: 'ENV B3 seed' });
-  const again = applyBuild4('b4_env_b3', { expectFailure: true, label: 'ENV B3 re-apply' });
+  const again = applyBuild4(dbName('env_b3'), { expectFailure: true, label: 'ENV B3 re-apply' });
   check('ENV B3: re-running the migration ABORTS when a foundation table holds a row', !again.ok);
   check('ENV B3: the abort names the foundation table', /public\.goals=1/.test(again.out), (again.out.match(/public\.goals=\d+/) ?? [''])[0]);
-  check('ENV B3: no partial destructive state — the row survives', scalar('b4_env_b3', 'select count(*) from public.goals;') === '1');
+  check('ENV B3: no partial destructive state — the row survives', scalar(dbName('env_b3'), 'select count(*) from public.goals;') === '1');
   check('ENV B3: ...and every one of the 34 tables is still there',
-        scalar('b4_env_b3', "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r';") === '34');
+        scalar(dbName('env_b3'), "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r';") === '34');
 }
 
 // ---------------------------------------------------------------- ENV C -----
 function envC(only) {
   console.log('\nENV C — post-apply security environment');
-  recreate('b4_env_c');
-  psqlFile('b4_env_c', AUTH_STUB, { label: 'ENV C auth stub' });
-  psqlFile('b4_env_c', TEST_HELPERS, { label: 'helpers' });
-  psqlFile('b4_env_c', BASELINE, { label: 'ENV C baseline' });
-  applyBuild4('b4_env_c', { label: 'ENV C build4 (while empty)' });
-  applyIr01('b4_env_c', { label: 'ENV C ir01 (while empty)' });
-  applyF08('b4_env_c', { label: 'ENV C f08 (while empty)' });
-  applyF05('b4_env_c', { label: 'ENV C f05 (while empty)' });
-  applyF12('b4_env_c', { label: 'ENV C f12 (while empty)' });
+  recreate(dbName('env_c'));
+  psqlFile(dbName('env_c'), AUTH_STUB, { label: 'ENV C auth stub' });
+  psqlFile(dbName('env_c'), TEST_HELPERS, { label: 'helpers' });
+  psqlFile(dbName('env_c'), BASELINE, { label: 'ENV C baseline' });
+  applyBuild4(dbName('env_c'), { label: 'ENV C build4 (while empty)' });
+  applyIr01(dbName('env_c'), { label: 'ENV C ir01 (while empty)' });
+  applyF08(dbName('env_c'), { label: 'ENV C f08 (while empty)' });
+  applyF05(dbName('env_c'), { label: 'ENV C f05 (while empty)' });
+  applyF12(dbName('env_c'), { label: 'ENV C f12 (while empty)' });
   check('ENV C: migrated while empty, before any fixture exists', true);
   // Test-environment convenience ONLY: see the header of helpers/05-test-defaults.sql.
-  psqlFile('b4_env_c', TEST_DEFAULTS, { label: 'ENV C test defaults' });
+  psqlFile(dbName('env_c'), TEST_DEFAULTS, { label: 'ENV C test defaults' });
 
-  psql('b4_env_c', `BEGIN;\n${readFileSync(FIXTURES, 'utf8')}\nCOMMIT;`, { label: 'ENV C fixtures' });
-  check('ENV C: identity fixtures created', scalar('b4_env_c', 'select count(*) from public.households;') === '2');
+  psql(dbName('env_c'), `BEGIN;\n${readFileSync(FIXTURES, 'utf8')}\nCOMMIT;`, { label: 'ENV C fixtures' });
+  check('ENV C: identity fixtures created', scalar(dbName('env_c'), 'select count(*) from public.households;') === '2');
   // Test-the-test only: scripts-dev/meals-mutation-check.cjs breaks ONE policy here and requires the suites to notice. Never set in a real run.
-  if (process.env.HERKEYS_MUTANT_SQL) psql('b4_env_c', process.env.HERKEYS_MUTANT_SQL, { label: 'ENV C mutant' });
+  if (process.env.HERKEYS_MUTANT_SQL) psql(dbName('env_c'), process.env.HERKEYS_MUTANT_SQL, { label: 'ENV C mutant' });
 
   const files = readdirSync(HERE)
     .filter((f) => /^\d\d-.*\.sql$/.test(f))
@@ -257,7 +267,7 @@ function envC(only) {
 
   for (const file of files) {
     console.log(`\n  ${file}`);
-    const out = psqlFile('b4_env_c', join(HERE, file), { label: file }).out;
+    const out = psqlFile(dbName('env_c'), join(HERE, file), { label: file }).out;
     for (const line of out.split('\n')) {
       const m = line.match(/^\s*(PASS|FAIL)\s*\|\s*(.+?)\s*$/);
       if (m) check(m[2], m[1] === 'PASS');
@@ -272,8 +282,8 @@ function envC(only) {
 function cursorBarrier() {
   console.log('');
   console.log('  cursor snapshot barrier (two concurrent sessions)');
-  const hh = scalar('b4_env_c', "select household_id from public.household_members where role='owner' and profile_id='11111111-1111-4111-8111-111111111111'");
-  const cat = scalar('b4_env_c', `select id from public.household_categories where household_id='${hh}' and local_id='cat-kids'`);
+  const hh = scalar(dbName('env_c'), "select household_id from public.household_members where role='owner' and profile_id='11111111-1111-4111-8111-111111111111'");
+  const cat = scalar(dbName('env_c'), `select id from public.household_categories where household_id='${hh}' and local_id='cat-kids'`);
 
   // A real second session opens a transaction, writes, holds it open for a few
   // seconds, then commits by itself. It is self-contained on purpose: this
@@ -285,22 +295,22 @@ VALUES ('${hh}','task-inflight','In flight','${cat}',10,'flexible','unplanned','
 SELECT pg_sleep(8);
 COMMIT;
 `;
-  const holder = spawn('docker', ['exec', '-i', CONTAINER, 'psql', '-v', 'ON_ERROR_STOP=1', '-U', 'postgres', '-d', 'b4_env_c', '-Atq', '-f', '-'],
+  const holder = spawn('docker', ['exec', '-i', CONTAINER, 'psql', '-v', 'ON_ERROR_STOP=1', '-U', 'postgres', '-d', dbName('env_c'), '-Atq', '-f', '-'],
                        { stdio: ['pipe', 'ignore', 'ignore'] });
   holder.stdin.end(sql);
 
-  const xidOf = () => scalar('b4_env_c',
-    "select coalesce(max(backend_xid::text),'') from pg_stat_activity where datname='b4_env_c' and backend_xid is not null and pid <> pg_backend_pid()");
+  const xidOf = () => scalar(dbName('env_c'),
+    `select coalesce(max(backend_xid::text),'') from pg_stat_activity where datname='${dbName('env_c')}' and backend_xid is not null and pid <> pg_backend_pid()`);
 
   let inflightXid = '';
   const started = Date.now();
   while (!inflightXid && Date.now() - started < 30000) inflightXid = xidOf();
   check('cursor: a concurrent session holds an uncommitted write open', Boolean(inflightXid), `xid=${inflightXid}`);
 
-  const visibleWhileOpen = scalar('b4_env_c', "select count(*) from public.change_log cl join public.tasks t on t.id=cl.entity_id where t.local_id='task-inflight'");
+  const visibleWhileOpen = scalar(dbName('env_c'), "select count(*) from public.change_log cl join public.tasks t on t.id=cl.entity_id where t.local_id='task-inflight'");
   check('cursor: an uncommitted write is NOT visible to a pull', visibleWhileOpen === '0');
 
-  const barrier = scalar('b4_env_c', 'select pg_snapshot_xmin(pg_current_snapshot())::text');
+  const barrier = scalar(dbName('env_c'), 'select pg_snapshot_xmin(pg_current_snapshot())::text');
   check('cursor: the barrier does NOT advance past the in-flight transaction',
         BigInt(barrier) <= BigInt(inflightXid), `barrier=${barrier} <= inflight=${inflightXid}`);
 
@@ -308,10 +318,10 @@ COMMIT;
   const waited = Date.now();
   while (xidOf() && Date.now() - waited < 30000) { /* poll */ }
 
-  const visibleAfter = scalar('b4_env_c', "select count(*) from public.change_log cl join public.tasks t on t.id=cl.entity_id where t.local_id='task-inflight'");
+  const visibleAfter = scalar(dbName('env_c'), "select count(*) from public.change_log cl join public.tasks t on t.id=cl.entity_id where t.local_id='task-inflight'");
   check('cursor: once committed, the previously in-flight write IS delivered - nothing was skipped', visibleAfter === '1');
 
-  const barrierAfter = scalar('b4_env_c', 'select pg_snapshot_xmin(pg_current_snapshot())::text');
+  const barrierAfter = scalar(dbName('env_c'), 'select pg_snapshot_xmin(pg_current_snapshot())::text');
   check('cursor: the barrier advances only after the transaction settles',
         BigInt(barrierAfter) > BigInt(inflightXid), `barrier=${barrierAfter} > inflight=${inflightXid}`);
 }
@@ -464,11 +474,11 @@ async function clientPayloadIntegration() {
     `tasks=${payload.tasks.length} needsMe=${payload.needsMeItems.length} categories=${payload.categories.length} children=${payload.childMembers.length}`);
 
   const uid = '5c000000-0000-4000-8000-00000000000c';
-  psql('b4_env_c', `INSERT INTO auth.users (id, email) VALUES ('${uid}','client@local.test') ON CONFLICT (id) DO NOTHING;`,
+  psql(dbName('env_c'), `INSERT INTO auth.users (id, email) VALUES ('${uid}','client@local.test') ON CONFLICT (id) DO NOTHING;`,
     { label: 'client fixture user' });
 
   const literal = JSON.stringify(payload).replace(/'/g, "''");
-  const status = scalar('b4_env_c', `
+  const status = scalar(dbName('env_c'), `
     BEGIN;
     SET LOCAL ROLE authenticated;
     SET LOCAL request.jwt.claims = '{"sub":"${uid}"}';
@@ -476,7 +486,7 @@ async function clientPayloadIntegration() {
     COMMIT;`).split('\n').map((line) => line.trim()).find((line) => line === 'complete' || line === 'rejected');
   check('client: the real RPC accepts the payload the real client builds', status === 'complete', `status=${status}`);
 
-  const shape = scalar('b4_env_c', `
+  const shape = scalar(dbName('env_c'), `
     SELECT (SELECT count(*) FROM public.tasks t JOIN public.household_members m ON m.household_id=t.household_id AND m.profile_id='${uid}' AND m.role='owner')
         || '/' || (SELECT count(*) FROM public.needs_me_items WHERE profile_id='${uid}')
         || '/' || (SELECT count(*) FROM public.one_move_records WHERE profile_id='${uid}')
@@ -484,18 +494,18 @@ async function clientPayloadIntegration() {
         || '/' || (SELECT count(*) FROM public.one_move_records WHERE profile_id='${uid}' AND target_needs_me_id IS NOT NULL);`);
   check('client: both historical targets resolved to cloud uuids', shape === '1/1/2/1/1', `tasks/needsMe/moves/taskTargets/needsMeTargets = ${shape}`);
 
-  const preserved = scalar('b4_env_c', `
+  const preserved = scalar(dbName('env_c'), `
     SELECT t.status || '|' || t.subject_member_type || '|' || (t.completed_at = '2026-09-18T18:00:00Z'::timestamptz)::text
     FROM public.tasks t JOIN public.household_members m ON m.household_id=t.household_id AND m.profile_id='${uid}' AND m.role='owner';`);
   check('client: the completed child-scoped target arrives completed, typed by the server', preserved === 'completed|child|true', preserved);
 
-  const kids = scalar('b4_env_c', `
+  const kids = scalar(dbName('env_c'), `
     SELECT count(*) || '/' || count(*) FILTER (WHERE m.local_id = 'child-2')
     FROM public.household_members m JOIN public.household_members o ON o.household_id = m.household_id AND o.profile_id = '${uid}' AND o.role = 'owner'
     WHERE m.member_type = 'child';`);
   check('client: the child NO closure names was claimed too (version 3)', kids === '2/1', kids);
 
-  const source = scalar('b4_env_c', `
+  const source = scalar(dbName('env_c'), `
     SELECT t.duration_source || '|' || t.duration_minutes FROM public.tasks t JOIN public.household_members m ON m.household_id=t.household_id AND m.profile_id='${uid}' AND m.role='owner';`);
   check('client: a default duration arrives as a DEFAULT, not as something she said', source === 'default|15', source);
 }
@@ -510,7 +520,7 @@ async function clientPayloadIntegration() {
  */
 function envD() {
   console.log('\nENV D — additive upgrade of a POPULATED pre-IR01 database');
-  const db = 'b4_env_d';
+  const db = dbName('env_d');
   recreate(db);
   psqlFile(db, AUTH_STUB, { label: 'ENV D auth stub' });
   psqlFile(db, TEST_HELPERS, { label: 'helpers' });
@@ -670,7 +680,7 @@ function envD() {
  */
 function envE() {
   console.log('\nENV E — additive upgrade of a POPULATED pre-F08 database (meal plans)');
-  const db = 'b4_env_e';
+  const db = dbName('env_e');
   recreate(db);
   psqlFile(db, AUTH_STUB, { label: 'ENV E auth stub' });
   psqlFile(db, TEST_HELPERS, { label: 'helpers' });
@@ -788,7 +798,7 @@ console.log(`Her Keys local backend harness — container ${CONTAINER} (LOCAL ON
 // Ad-hoc databases from a manual investigation are dropped here, so a probe
 // can never be mistaken later for unexplained local state. Durable evidence
 // belongs in this directory, not in a leftover database.
-for (const stray of ['b4_probe', 'b4_fp_pre', 'b4_fp_post', 'b4_env_b3']) {
+for (const stray of [dbName('probe'), dbName('fp_pre'), dbName('fp_post'), dbName('env_b3')]) {
   admin(`DROP DATABASE IF EXISTS ${stray} WITH (FORCE);`);
 }
 
@@ -814,7 +824,7 @@ try {
   if (only !== 'kids' && only !== 'f08') envC(only);
   if (!only || only === 'parity') {
     const { authorizationParity } = await import(`file://${join(HERE, 'authorization-parity.mjs')}`);
-    await authorizationParity(check, psql);
+    await authorizationParity(check, psql, dbName('env_c'));
   }
   if (!only) await clientPayloadIntegration();
   if (only === 'composition') {

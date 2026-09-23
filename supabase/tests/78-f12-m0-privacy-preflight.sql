@@ -53,6 +53,29 @@ EXCEPTION WHEN OTHERS THEN
   RETURN -1;
 END;
 $fn$;
+
+-- sync_pull hands out only what committed below the CLUSTER-WIDE snapshot barrier (SD4-012); other sessions' transactions in the same
+-- container can hold it back, so a single pull can legitimately return before a just-committed row. This pulls (a new statement, so a
+-- new snapshot, each time) until every id in p_want is delivered or p_seconds pass, and returns that delivery. A NEGATIVE check is
+-- asserted on a delivery that already contains a positive control the caller may see, so "nothing private" is never vacuous.
+CREATE OR REPLACE FUNCTION herkeys_test.f12_pull_until(p_house uuid, p_want text[], p_seconds numeric)
+  RETURNS jsonb
+  LANGUAGE plpgsql
+AS $fn$
+DECLARE
+  v_rows jsonb;
+  v_until timestamptz := clock_timestamp() + make_interval(secs => p_seconds);
+BEGIN
+  LOOP
+    v_rows := public.sync_pull('0'::xid8, p_house) -> 'rows';
+    EXIT WHEN (SELECT bool_and(EXISTS (SELECT 1 FROM jsonb_array_elements(v_rows) r WHERE r ->> 'entity_id' = w)) FROM unnest(p_want) w)
+           OR clock_timestamp() >= v_until;
+    PERFORM pg_sleep(0.25);
+  END LOOP;
+  RETURN v_rows;
+END;
+$fn$;
+GRANT EXECUTE ON FUNCTION herkeys_test.f12_pull_until(uuid, text[], numeric) TO authenticated;
 GRANT EXECUTE ON FUNCTION herkeys_test.f12_rowcount(text) TO anon, authenticated;
 
 SELECT hm.household_id AS hh_a FROM public.household_members hm WHERE hm.profile_id = :'ua' AND hm.role = 'owner' \gset
@@ -112,7 +135,7 @@ SELECT CASE WHEN count(*) = 2 THEN 'PASS' ELSE 'FAIL' END || ' | F12-M0 owner: A
 SELECT CASE WHEN count(DISTINCT entity_id) = 4 THEN 'PASS' ELSE 'FAIL' END || ' | F12-M0 owner: her change log carries a pointer for the record, the Task and both links'
   FROM public.change_log WHERE entity_id IN (:'goal_a', :'task_a', :'link_a', :'link_hh');
 SELECT CASE WHEN count(DISTINCT r ->> 'entity_id') = 4 THEN 'PASS' ELSE 'FAIL' END || ' | F12-M0 owner: sync_pull from cursor 0 (hydration) delivers the record, the Task and both links'
-  FROM jsonb_array_elements(public.sync_pull('0'::xid8, :'hh_a') -> 'rows') r
+  FROM jsonb_array_elements(herkeys_test.f12_pull_until(:'hh_a', ARRAY[:'goal_a', :'task_a', :'link_a', :'link_hh'], 30)) r
  WHERE r ->> 'entity_id' IN (:'goal_a', :'task_a', :'link_a', :'link_hh');
 SELECT CASE WHEN count(*) = 4 THEN 'PASS' ELSE 'FAIL' END || ' | F12-M0 owner: every change pointer for her private rows is stamped with HER profile (the key the log policy filters on)'
   FROM public.change_log WHERE entity_id IN (:'goal_a', :'task_a', :'link_a', :'link_hh') AND owner_profile_id = :'ua';
@@ -138,12 +161,12 @@ SELECT CASE WHEN count(*) = 0 THEN 'PASS' ELSE 'FAIL' END || ' | F12-M0 member: 
 SELECT CASE WHEN count(*) = 0 THEN 'PASS' ELSE 'FAIL' END || ' | F12-M0 member: change_log shows NO pointer of the private kinds that is not her own (no per-table count)'
   FROM public.change_log WHERE entity_table IN ('goals', 'dependencies') AND owner_profile_id IS DISTINCT FROM :'ub';
 SELECT CASE WHEN count(*) = 0 THEN 'PASS' ELSE 'FAIL' END || ' | F12-M0 member: sync_pull (hydration from 0) delivers NO pointer for the private record, Task or links, nor any private-kind pointer that is not hers'
-  FROM jsonb_array_elements(public.sync_pull('0'::xid8, :'hh_a') -> 'rows') r
+  FROM jsonb_array_elements(herkeys_test.f12_pull_until(:'hh_a', ARRAY[:'task_hh'], 30)) r
  WHERE r ->> 'entity_id' IN (:'goal_a', :'task_a', :'link_a', :'link_hh')
     OR (r ->> 'entity_table' = 'goals' AND NOT EXISTS (SELECT 1 FROM public.goals g WHERE g.id = (r ->> 'entity_id')::uuid AND g.profile_id = :'ub'))
     OR (r ->> 'entity_table' = 'dependencies' AND NOT EXISTS (SELECT 1 FROM public.dependencies d WHERE d.id = (r ->> 'entity_id')::uuid AND d.profile_id = :'ub'));
 SELECT CASE WHEN count(*) = 1 THEN 'PASS' ELSE 'FAIL' END || ' | F12-M0 member: sync_pull still delivers the household Task (the filter is scope, not a blanket refusal)'
-  FROM jsonb_array_elements(public.sync_pull('0'::xid8, :'hh_a') -> 'rows') r
+  FROM jsonb_array_elements(herkeys_test.f12_pull_until(:'hh_a', ARRAY[:'task_hh'], 30)) r
  WHERE r ->> 'entity_id' = :'task_hh';
 -- Writes. Zero rows touched is the same answer an absent id gets.
 SELECT CASE WHEN herkeys_test.f12_rowcount(format('UPDATE public.goals SET title = %L WHERE id = %L', 'B WAS HERE', :'goal_a')) IN (0, -1) THEN 'PASS' ELSE 'FAIL' END
@@ -260,6 +283,10 @@ UPDATE public.dependencies SET status = 'removed' WHERE id = :'link_hh';
 COMMIT;
 RESET ROLE;
 DELETE FROM public.dependencies WHERE id = :'link_a';
+-- A control committed AFTER the lifecycle changes, visible to the member: once her pull holds it, the barrier has passed them too.
+INSERT INTO public.tasks (household_id, local_id, owner_profile_id, title, category_id, duration_minutes, commitment, plan_kind, status, scope, producer)
+VALUES (:'hh_a', 'f12m0-control', NULL, 'M0 CONTROL', :'cat_a', 5, 'flexible', 'unplanned', 'open', 'household', 'user-action');
+SELECT id AS task_ctl FROM public.tasks WHERE household_id = :'hh_a' AND local_id = 'f12m0-control' \gset
 
 BEGIN;
 SET LOCAL ROLE authenticated;
@@ -273,9 +300,10 @@ SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claims = '{"sub":"22222222-2222-4222-8222-222222222222"}';
 SELECT CASE WHEN count(*) = 0 THEN 'PASS' ELSE 'FAIL' END || ' | F12-M0 member: no pointer for the rename, the removal or the purge tombstone'
   FROM public.change_log WHERE entity_id IN (:'goal_a', :'link_a', :'link_hh');
-SELECT CASE WHEN count(*) = 0 THEN 'PASS' ELSE 'FAIL' END || ' | F12-M0 member: sync_pull after the lifecycle changes still carries nothing private'
-  FROM jsonb_array_elements(public.sync_pull('0'::xid8, :'hh_a') -> 'rows') r
- WHERE r ->> 'entity_id' IN (:'goal_a', :'task_a', :'link_a', :'link_hh');
+SELECT CASE WHEN count(*) FILTER (WHERE r ->> 'entity_id' IN (:'goal_a', :'task_a', :'link_a', :'link_hh')) = 0
+             AND count(*) FILTER (WHERE r ->> 'entity_id' = :'task_ctl') >= 1
+            THEN 'PASS' ELSE 'FAIL' END || ' | F12-M0 member: sync_pull after the lifecycle changes (delivered past a later control) still carries nothing private'
+  FROM jsonb_array_elements(herkeys_test.f12_pull_until(:'hh_a', ARRAY[:'task_ctl'], 30)) r;
 ROLLBACK;
 
 -- Cleanup of this file's own rows, so the file stays self-contained when the whole ENV C suite runs.
