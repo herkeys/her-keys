@@ -40,13 +40,13 @@ P5 low correctness · P6 UX polish · P7 maintainability · P8 performance · P9
 | HK13-D27 | P4 | harness | populated upgrade | ENV D's "whole chain" skipped F08, so its final database was not the real chain's | FIXED `51ec5c8` |
 | HK13-D28 | **P2** | F01 × sync | One Move / push | A One Move decided offline lands in the cloud as the NEXT day's: every other device's Today shows the wrong move as done, and today's real decision is refused | FIXED `51ec5c8`; OD-HK13-01 open |
 | HK13-D29 | P7 | foundation × sync | categories / pull | Two category uniqueness rules are competing decisions on push but have no pull-side reconciliation; unreachable today (no user surface creates or reorders a category) | DOCUMENTED |
-| HK13-D30 | P4 | IR01 test-the-test | mutation suite | Two IR01 mutants no longer applied on the integrated line, so two HA guarantees were unguarded by test-the-test | FIXED (AUD13-06) |
-| HK13-D31 | P6 | F13 | People UI | Save failures and refusals are shown in plum, the colour the owner reserved for what Her Keys noticed | FIXED (AUD13-06) (trivial) |
+| HK13-D30 | P4 | IR01 test-the-test | mutation suite | Two IR01 mutants no longer applied on the integrated line, so two HA guarantees were unguarded by test-the-test | FIXED `4199baa` |
+| HK13-D31 | P6 | F13 | People UI | Save failures and refusals are shown in plum, the colour the owner reserved for what Her Keys noticed | FIXED `4199baa` (trivial) |
 | HK13-D32 | P6 | design system (F03-F13) | InlineNotice | The notice's DEFAULT tone is plum, so archived and informational notices across features are plum — recurring chrome, against owner decision 2 | DOCUMENTED |
 | HK13-D33 | P6 | F10, F11, F12, F13 | destination styling | Structural inconsistencies between the Wave 3/4 destinations (duplicated titles, a hand-built list, heading rhythm, verdict size, empty states, add prominence) | DOCUMENTED |
 | HK13-D18 | P5 | F01, F03-F07, F10, F11, F13, Life hub | cloud hydration | Only Meals, Money and Life Admin gate their empty states on a fresh device's first cloud download; every other surface could say "nothing" mid-download — unreachable today (see D34) | DOCUMENTED |
 | HK13-D34 | P9 | platform (Build 4 R7/R10) | second device | Adopting an existing cloud household on a second device is a recorded, unimplemented contract: the server refuses it (`superseded_by_cloud`); every multi-device proof binds device B with a test stand-in | DOCUMENTED (pre-existing) |
-| HK13-D35 | P3 | F05 Kids, F03 Calendar, F01 Today × F07 | handoff editing | Kids' item editor and the Calendar's event form moved a co-parenting handoff without its recorded repeat: Co-Parent then showed "Repeats every week on Tuesday" beside a Wednesday handoff | FIXED (AUD13-07) |
+| HK13-D35 | P3 | F05 Kids, F03 Calendar, F01 Today × F07 | handoff editing | Kids' item editor and the Calendar's event form moved a co-parenting handoff without its recorded repeat: Co-Parent then showed "Repeats every week on Tuesday" beside a Wednesday handoff | FIXED `4199baa` |
 
 (Entries below are added as the audit proceeds.)
 
@@ -621,7 +621,7 @@ P5 low correctness · P6 UX polish · P7 maintainability · P8 performance · P9
   silently did not run.
 - **Repair (AUD13-06):** both re-anchored to their exact guarantee (M14 removes only the evidence check; M27 is named by the
   System case's own comment). Dry run: every IR01 mutation applies exactly once; M14 **caught** (4 failing), M27 **caught** (9 failing).
-- **Status:** FIXED (AUD13-06).
+- **Status:** FIXED `4199baa`.
 
 ## HK13-D31, D32, D33 — the Paper-and-Ink guard (Phase 12)
 
@@ -712,7 +712,7 @@ structural, verified in code:
   and the Kids editor render no field for a handoff and hand over to Co-Parent (and render their forms for any other event); the
   Calendar tap and the Kids tap open a handoff in Co-Parent and any other event in its editor. Test-the-test D35-M1..M6 (each guard, each
   entry point, the predicate) — **6/6 caught**.
-- **Status:** FIXED (AUD13-07).
+- **Status:** FIXED `4199baa`.
 
 ## Known shared privacy items — re-audited under the P0–P10 rubric (Phase 8)
 
