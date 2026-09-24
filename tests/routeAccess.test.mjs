@@ -43,6 +43,17 @@ describe('Route access', () => {
     }
   });
 
+  test('a degraded bound account can reach sign-in for reauthentication while local app access stays available', () => {
+    const degraded = {
+      kind: 'authDegraded',
+      accountId: '11111111-1111-4111-8111-111111111111',
+      householdId: '33333333-3333-4333-8333-333333333333',
+      reason: 'refreshFailed',
+    };
+    assert.equal(canOpenScreen('sign-in', access(finished, 'ready', false, degraded)), true);
+    assert.equal(canOpenScreen('(app)', access(finished, 'ready', false, degraded)), true);
+  });
+
   test('a link cannot skip past an onboarding choice', () => {
     let state = demoState();
     const step = (screen) => canOpenScreen(screen, access(state.onboarding));

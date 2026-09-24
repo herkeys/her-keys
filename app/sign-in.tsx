@@ -39,17 +39,19 @@ export default function SignIn() {
   }, []);
 
   const failed = state.kind === 'authError' ? state.detail : null;
+  const reconnecting = state.kind === 'authDegraded';
 
   return (
     <Screen scroll={false}>
       <View style={styles.body}>
-        <Overline>Your account</Overline>
+        <Overline>{reconnecting ? 'Reconnect' : 'Your account'}</Overline>
         <AppText variant="hero" style={styles.title}>
-          Keep your life{'\n'}on every device.
+          {reconnecting ? <>Your life is here.{'\n'}Reconnect the cloud.</> : <>Keep your life{'\n'}on every device.</>}
         </AppText>
         <AppText variant="title" color={colors.textSecondary} style={styles.lede}>
-          Everything you have built here stays exactly as it is. Signing in gives it somewhere safe to live, so a new
-          phone is not a fresh start.
+          {reconnecting
+            ? 'Nothing on this device was removed. Sign in again to reconnect this same account and resume syncing.'
+            : 'Everything you have built here stays exactly as it is. Signing in gives it somewhere safe to live, so a new phone is not a fresh start.'}
         </AppText>
       </View>
 

@@ -13,7 +13,7 @@ import type { Onboarding, OnboardingStep } from './state';
 
 export type HydrationStatus = 'unhydrated' | 'hydrating' | 'ready' | 'recovery';
 
-type Guard = 'onboarding' | 'app' | 'internal' | 'signedOut' | 'quarantined' | { onboardingStep: OnboardingStep };
+type Guard = 'onboarding' | 'app' | 'internal' | 'signedOutOrDegraded' | 'quarantined' | { onboardingStep: OnboardingStep };
 
 export const ROOT_SCREEN_GUARDS = {
   index: 'onboarding',
@@ -31,7 +31,7 @@ export const ROOT_SCREEN_GUARDS = {
   'dev-tools': 'internal',
   /** Development design gallery — same internal-build gate as dev-tools. */
   gallery: 'internal',
-  'sign-in': 'signedOut',
+  'sign-in': 'signedOutOrDegraded',
   /** The one screen a device holding another account's household may open. */
   'account-conflict': 'quarantined',
 } as const satisfies Record<string, Guard>;
@@ -68,7 +68,7 @@ export function canOpenScreen(screen: RootScreen, input: RouteAccessInput): bool
   // about to change, so nothing opens until it settles.
   if (account.kind === 'authenticating') return false;
 
-  if (guard === 'signedOut') return !canRenderAccountData(account);
+  if (guard === 'signedOutOrDegraded') return account.kind === 'authDegraded' || !canRenderAccountData(account);
 
   const complete = isOnboardingComplete(input.onboarding);
   if (guard === 'app') return complete;
