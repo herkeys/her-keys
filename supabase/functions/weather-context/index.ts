@@ -1,6 +1,6 @@
 import { importPKCS8, SignJWT } from 'npm:jose@6.1.0';
 import { AuthError, requireUser } from '../_shared/supabaseAdmin.ts';
-import { json, options, safeMessage } from '../_shared/http.ts';
+import { json, options } from '../_shared/http.ts';
 
 type Body = {
   latitude?: unknown;
@@ -153,6 +153,7 @@ Deno.serve(async (req) => {
     return json({ status: 'ready', weather: normalizeWeather(await response.json()) });
   } catch (error) {
     if (error instanceof AuthError) return json({ error: 'unauthorized' }, 401);
-    return json({ status: 'unavailable', reason: 'weatherkit_internal_error', detail: safeMessage(error) }, 500);
+    console.error('[weather-context] internal error', error instanceof Error ? error.name : 'unknown');
+    return json({ status: 'unavailable', reason: 'weatherkit_internal_error' }, 500);
   }
 });
