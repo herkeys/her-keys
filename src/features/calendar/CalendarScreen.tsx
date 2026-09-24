@@ -148,7 +148,7 @@ function ReadyCalendar({ state, today, degraded }: { state: AppState; today: str
         onStep={(direction) => dispatch({ type: 'step', days: week ? direction * 7 : direction })}
         onToday={() => dispatch({ type: 'goToday' })}
       />
-      <GoogleCalendarPanel selectedDate={selectedDate} timezone={state.user.timezone} />
+      <GoogleCalendarPanel selectedDate={selectedDate} timezone={state.user.timezone} showEvents={!week} />
       {preview !== null && validity !== null ? (
         <PreviewPanel
           preview={preview}
