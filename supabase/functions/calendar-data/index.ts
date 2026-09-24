@@ -1,6 +1,6 @@
 import { AuthError, adminClient, requireUser } from '../_shared/supabaseAdmin.ts';
 import { decryptSecret } from '../_shared/crypto.ts';
-import { json, options, safeMessage } from '../_shared/http.ts';
+import { json, options } from '../_shared/http.ts';
 
 type Connection = {
   id: string;
@@ -250,6 +250,7 @@ Deno.serve(async (req) => {
   } catch (error) {
     if (error instanceof AuthError) return json({ error: 'unauthorized' }, 401);
     if (error instanceof ReauthError) return json({ status: 'ready', connection: { connected: false, state: 'reauth_required' } }, 409);
-    return json({ status: 'unavailable', reason: 'calendar_data_internal_error', detail: safeMessage(error) }, 500);
+    console.error('[calendar-data] internal error', error instanceof Error ? error.name : 'unknown');
+    return json({ status: 'unavailable', reason: 'calendar_data_internal_error' }, 500);
   }
 });
