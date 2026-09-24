@@ -8,7 +8,9 @@ import { useLocalNotifications } from '../../store/LocalNotificationProvider';
  * permission; app launch never does.
  */
 export function TomorrowReminderCard() {
-  const { enabled, permission, busy, nextPlan, error, enable, disable, openSettings } = useLocalNotifications();
+  const { ready, enabled, permission, busy, nextPlan, error, enable, disable, openSettings } = useLocalNotifications();
+
+  if (!ready) return null;
 
   // Do not advertise a reminder on a day where Her Keys has nothing to say.
   // Once enabled, keep a small control visible so she can always turn it off.
