@@ -24,6 +24,13 @@ describe('External Intelligence scaffold architecture', () => {
     assert.match(weather, /forecastHourly/);
   });
 
+  test('Weather UI preserves provider attribution supplied by WeatherKit', () => {
+    const card = read('src/features/today/WeatherContextCard.tsx');
+    assert.match(card, /providerLogo/);
+    assert.match(card, /attributionURL|sourceUrl/);
+    assert.match(card, /Weather sources/);
+  });
+
   test('Google Calendar requests exactly the two approved read-only scopes', () => {
     const oauth = read('supabase/functions/calendar-oauth/index.ts');
     const scopes = [...oauth.matchAll(/https:\/\/www\.googleapis\.com\/auth\/calendar[^'\s]*/g)].map((match) => match[0]);
