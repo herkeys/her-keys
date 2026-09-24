@@ -1,4 +1,3 @@
-import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { addDays, toInstant, zonedTimeToEpochMs } from '../../domain/logicalDay';
@@ -7,6 +6,8 @@ import { useAccount } from '../../store/AccountProvider';
 import { externalIntelligenceClient } from '../../store/accountRuntimeInstance';
 
 type Availability = 'checking' | 'dormant' | 'disconnected' | 'connected' | 'reauth_required' | 'error';
+
+const HER_KEYS_CALENDAR_REDIRECT_URI = 'herkeys://calendar-connected';
 
 export interface GoogleCalendarBridge {
   availability: Availability;
@@ -117,8 +118,7 @@ export function useGoogleCalendarBridge(selectedDate: string, timezone: string):
       }
 
       WebBrowser.maybeCompleteAuthSession();
-      const appRedirect = AuthSession.makeRedirectUri({ scheme: 'herkeys', path: 'calendar-connected' });
-      const browser = await WebBrowser.openAuthSessionAsync(result.value.authorizationUrl, appRedirect);
+      const browser = await WebBrowser.openAuthSessionAsync(result.value.authorizationUrl, HER_KEYS_CALENDAR_REDIRECT_URI);
       if (browser.type === 'success') await refresh();
     } catch (cause) {
       setAvailability('error');
