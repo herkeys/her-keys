@@ -8,6 +8,9 @@ function readSecretKey(): string {
     const parsed = JSON.parse(modern) as Record<string, string>;
     if (parsed.default) return parsed.default;
   }
+  const localModern = Deno.env.get('SUPABASE_SECRET_KEY');
+  if (localModern) return localModern;
+
   const legacy = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
   if (legacy) return legacy;
   throw new Error('Supabase server secret key is unavailable');
