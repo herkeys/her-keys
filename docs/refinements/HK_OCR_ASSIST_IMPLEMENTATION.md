@@ -1,14 +1,20 @@
 # HK OCR ASSIST — Implementation Report
 
 **Verdict: `OCR ASSIST: LOCALLY VALIDATED — DEVICE CERTIFICATION PENDING`**
+**Two-fix closeout verdict: `OCR TWO-FIX CLOSEOUT: COMPLETE`** — see the addendum at the end of
+this report for the Android-permission-inventory correction and the `expo-ocr-kit` exact-version
+pin; §5 and §12 above it were corrected in place, everything else in the body below is unchanged
+from the original implementation pass.
 
 This environment is a Linux cloud container with no Android SDK, no emulator/device, and no
 Xcode/macOS. Every native-runtime claim below is therefore `NOT_EXECUTED —
 ENVIRONMENTAL LIMITATION` on both platforms; nothing here claims Android device proof. What
-*is* executed, and is real: `npm ci`, `tsc --noEmit`, the full Node test suite (including 60 new
-OCR tests), a mutation-testing harness that patches real source and proves 9 of the guarantees
-fail when broken, and a static architecture guard (with its own test-the-test) that proves the
-feature cannot reach the network, cloud storage, or an `ai-inference` provenance.
+*is* executed, and is real: `npm ci`, `tsc --noEmit`, the full Node test suite (64 OCR-specific
+tests after the closeout), a mutation-testing harness that patches real source and proves 9 of the
+guarantees fail when broken, and a static architecture guard (with its own test-the-test) that
+proves the feature cannot reach the network, cloud storage, or an `ai-inference` provenance — and,
+since the closeout, that reads the real installed `expo-image-picker` Android manifest to keep the
+permission inventory honest.
 
 ---
 
@@ -71,7 +77,10 @@ Captured **before any OCR change**, on the freshly created worktree at the exact
 
 ## 5. Exact package version
 
-`"expo-ocr-kit": "^0.1.4"` in `package.json`; `0.1.4` resolved in `package-lock.json`.
+**`"expo-ocr-kit": "0.1.4"`** (exact pin, no `^` range) in `package.json`; `0.1.4` resolved in
+`package-lock.json`. Originally recorded as `"^0.1.4"`; pinned exact in the two-fix closeout (see
+the addendum at the end of this report) so a future compatible-semver install cannot silently
+change its native implementation before deliberate re-validation.
 
 ## 6. Compatibility evidence
 
@@ -186,6 +195,10 @@ confirms this — see §3's clean baseline and the full diff stat in §37).
      "expo-router": "~57.0.22",
 ```
 
+(`expo-ocr-kit`'s `^0.1.4` range shown above is the diff from the original commit; it was pinned
+exact to `"0.1.4"` in the two-fix closeout — see the addendum at the end of this report and the
+corrected §5.)
+
 **`package-lock.json`** — exactly 5 new `node_modules/*` entries: `expo-file-system`,
 `expo-image-loader` (transitive dependency of the picker/manipulator pair),
 `expo-image-manipulator`, `expo-image-picker`, `expo-ocr-kit`. No existing package's resolved
@@ -195,20 +208,64 @@ package` on the last call (the incremental deltas across the three install comma
 +4 for the official Expo trio, +1 for `expo-ocr-kit`), same 13 pre-existing moderate advisories,
 zero new ones introduced by these 5 packages.
 
-## 12. Merged Android manifest inventory
+## 12. Android permission inventory — INSPECTION ONLY, not a merged manifest
+
+**Corrected in the two-fix closeout** (see the addendum at the end of this report): an earlier
+version of this section implied `CAMERA` was the only Android permission this feature's
+dependency stack contributes. That was wrong. `expo-image-picker`'s own
+`android/src/main/AndroidManifest.xml`, read directly from the installed `~57.0.20` package, was
+re-inspected and declares three `<uses-permission>` entries, not one:
+
+```xml
+<uses-permission android:name="android.permission.CAMERA" />
+<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+```
 
 **Not executed as a real Gradle/`expo prebuild` merge** — this container has Java 21 and Gradle on
 `PATH` but no Android SDK, no `ANDROID_HOME`, no platform tools, so `expo prebuild --platform
-android` (attempted; confirmed no SDK) cannot produce a real merged manifest. What follows is
-**inspection of each package's declared native config**, read directly from the installed
-packages' own Gradle files and Expo config plugins — real source, not guesswork, but not a
-compiled merge:
+android` (attempted; confirmed no SDK) cannot produce a real merged manifest. Everything below is
+**inspection of the real, installed package's own declared native config** — read directly from
+its shipped `AndroidManifest.xml`, its Gradle file, and Expo's config-plugin source — real source,
+not guesswork, but **not a compiled merge**, and labeled `INSPECTION ONLY` throughout. A real
+merged-manifest result is Android-native follow-up work (§31).
 
-| Permission | Source | Why present | Needed? | Recommendation |
+| Permission | Source | Purpose | Status | Recommendation |
 |---|---|---|---|---|
-| `android.permission.CAMERA` | `expo-image-picker`'s native AndroidManifest (bundled with the library; the JS config plugin does not add it directly — see below) | `launchCameraAsync` opens the system camera | **Needed** — the feature offers "Take photo" | Keep |
-| `android.permission.RECORD_AUDIO` | `expo-image-picker`'s JS config plugin, `withAndroidImagePickerPermissions`, **adds this by default** unless `microphonePermission: false` is passed | The plugin assumes video capture may be wanted; this feature never records video or audio | Not needed | **Explicitly blocked** in `app.json` via `"microphonePermission": false` (confirmed in the plugin source: passing `false` runs `withBlockedPermissions` to strip it, not merely omit adding it) |
-| `com.google.mlkit:text-recognition`'s own manifest entries (none beyond what ML Kit's bundled-model artifact itself declares; no `INTERNET`, no Play-Services-model-download permissions, since the bundled variant does not use Play Services delivery) | `expo-ocr-kit`'s native Gradle dependency | On-device recognition | Needed for recognition | Keep (this is the whole point of choosing the bundled artifact — see §15) |
+| `android.permission.CAMERA` | `expo-image-picker`'s own `AndroidManifest.xml` (declared directly by the package; not added by its JS config plugin) | Camera capture | Required for the current "Take photo" feature | **KEEP** |
+| `android.permission.READ_EXTERNAL_STORAGE` | `expo-image-picker`'s own `AndroidManifest.xml`, `android:maxSdkVersion="32"` | Legacy permission the package contributes for pre-Photo-Picker Android behavior (API ≤ 32) | Present in the installed package; not requested or used by this feature's own code, and not suppressed | **DO NOT remove during this closeout without real Android validation** — see below |
+| `android.permission.WRITE_EXTERNAL_STORAGE` | `expo-image-picker`'s own `AndroidManifest.xml`, `android:maxSdkVersion="32"` | Same as above (legacy, capped at API 32) | Same as above | **DO NOT remove during this closeout without real Android validation** |
+| `android.permission.RECORD_AUDIO` | Not declared by the package's manifest itself — contributed by `expo-image-picker`'s JS config plugin (`withAndroidImagePickerPermissions`), which **adds it by default** unless `microphonePermission: false` is passed | The plugin assumes video capture may be wanted; this feature never records video or audio | Not needed | **KEEP BLOCKED** — `app.json` sets `"microphonePermission": false`, confirmed in the plugin's own source to run `withBlockedPermissions` (an explicit strip, not merely an omission) |
+| `com.google.mlkit:text-recognition`'s own manifest entries | `expo-ocr-kit`'s native Gradle dependency | On-device recognition | No `INTERNET` permission, no Play-Services-model-download permission — the bundled variant does not use Play Services delivery | **KEEP** (the whole point of choosing the bundled artifact — §15) |
+
+Why `READ_EXTERNAL_STORAGE`/`WRITE_EXTERNAL_STORAGE` are recorded rather than suppressed: their
+`maxSdkVersion="32"` cap means the OS itself already ignores them on Android 13+ (API 33+), where
+the modern Photo Picker/scoped-storage model applies regardless of what the manifest declares.
+Nothing in this feature's own code requests or depends on them (capture and library selection both
+go through `expo-image-picker`'s modern, permissionless-picker code paths — §10). Blocking them
+outright (the way `microphonePermission: false` blocks `RECORD_AUDIO`) was considered and
+**deliberately not done in this closeout**: this environment has no Android SDK/emulator to verify
+that stripping them does not regress picker behavior on any Android ≤ 32 device or emulator this
+project still intends to support. That verification belongs to real Android-native validation
+(§31), not to a documentation-and-version-pin closeout. Recorded honestly instead of hidden.
+
+`expo-image-picker`'s manifest also declares a disabled, non-exported
+`com.google.android.gms.metadata.ModuleDependencies` `<service>` (a Play Store metadata hint for
+installing the Android Photo Picker module on older OS versions — it requests no permission and
+performs no runtime behavior), two non-exported cropper activities (`com.canhub.cropper.CropImageActivity`,
+`expo.modules.imagepicker.ExpoCropImageActivity`, used only if `allowsEditing` is ever set — this
+feature never sets it), a `FileProvider` for handing a picked image to that cropper, and two
+`<queries>` entries (package-visibility declarations for the camera/video-capture intents on
+Android 11+, not permissions). None of these change the permission inventory above.
+
+A new, permanent, **`INSPECTION ONLY`**-labeled automated check
+(`tests/lifeAdmin/ocrArchitectureGuard.test.mjs`) now reads this exact manifest file and this
+project's own `app.json` on every test run and asserts: `CAMERA` and the two `maxSdkVersion="32"`
+storage permissions are present; `RECORD_AUDIO`, any location permission, any contacts permission,
+and any foreground/background-service permission are absent from the package's own manifest; and
+`app.json` explicitly sets `microphonePermission: false` and `photosPermission: false` without
+inventing a nonexistent storage-permission-blocking option. This replaces any prior source-level
+claim that `CAMERA` was the only permission this stack contributes.
 
 **Deliberately excluded from `app.json`'s plugins array, and why** (read directly from each
 package's `app.plugin.js`, verbatim source quoted in the git history of this change):
@@ -233,10 +290,13 @@ package's `app.plugin.js`, verbatim source quoted in the git history of this cha
   module autolinks without it. Left out.
 - **`expo-image-manipulator`** — ships no `app.plugin.js` at all; nothing to register.
 
-Net effect: the only Android permission this feature adds beyond what was already in the app is
-`CAMERA` (needed, and explained above), with `RECORD_AUDIO` explicitly blocked and the broad
-storage/`INTERNET` grant avoided entirely by a deliberate choice not to register two plugins that
-would have added them for no reason this feature needs.
+Net effect, corrected: this feature's dependency stack contributes `CAMERA`,
+`READ_EXTERNAL_STORAGE` (maxSdk 32), and `WRITE_EXTERNAL_STORAGE` (maxSdk 32) — all three declared
+directly by `expo-image-picker`'s own manifest, not by a config plugin this project chose to
+register. `RECORD_AUDIO` is explicitly blocked (not merely avoided by omission), and the broader
+`INTERNET`/unrestricted-storage grant that `expo-file-system`'s plugin would have added is avoided
+entirely by the deliberate choice not to register it (§12's plugin-exclusion list above still
+holds; only the permission table itself was wrong).
 
 **Google Play Services / ML Kit inventory** (as required, reported separately): `com.google.mlkit:text-recognition:16.0.1` (bundled variant — no `com.google.android.gms:*` artifact, no Play Services dependency, no Firebase). **Google Play Services was not previously present in this project and is not introduced by this change** (the bundled ML Kit artifact does not require it). Approximate size impact: §16.
 
@@ -534,7 +594,10 @@ directly, §29 evidence command in §3/§27's methodology). **F12 EXISTING TESTS
 
 New OCR-specific tests added (all in new files, none touching an existing one): 22
 (`ocrExtract.test.mjs`) + 6 (`ocrCopy.test.mjs`) + 13 (`ocrReview.test.mjs`) + 4
-(`ocrIntegration.test.mjs`) + 15 (`ocrArchitectureGuard.test.mjs`) = **60** new tests, all passing.
+(`ocrIntegration.test.mjs`) + 15 (`ocrArchitectureGuard.test.mjs`) = **60** new tests, all passing
+at this report's original writing. The two-fix closeout (addendum, below) added 4 more permission-
+inspection cases to `ocrArchitectureGuard.test.mjs`, bringing the OCR-specific total to **64**; F12
+remained **98 → 98** with zero existing tests modified through both passes.
 
 ## 30. Platform verification table
 
@@ -633,8 +696,10 @@ Production exists from this session.
 
 - Worktree: `/home/user/her-keys-ocr-assist`, branch `refinement/ocr-assist`, based on
   `origin/refinement/weather-calendar-scaffold` @ `6b0efa49501a3ad3f4a5af70f9d88bbab8ea74a1`.
-- One commit on top of that SHA (see `git log -1` for its hash), containing exactly the 16 files
-  in §11/§37's diff stat.
+- Three commits on top of that SHA (see `git log --oneline` on this branch): the original OCR
+  Assist implementation, its implementation report, and the two-fix closeout below — containing
+  exactly the 16 files in §11/§37's diff stat, plus the 3 files in the closeout addendum's diff
+  stat.
 - `git status --short`: clean, after every mutation-testing run restored its patch and every
   temporary file this session created was removed.
 - Not merged. Not force-pushed. No other worktree, branch (`main`,
@@ -643,6 +708,76 @@ Production exists from this session.
 - Pushed as a new branch (`refinement/ocr-assist`), per the user's explicit choice recorded in
   §1, rather than force-pushing the harness-assigned `claude/quirky-cerf-0uz94y` branch (which
   points at unrelated history).
+
+---
+
+## Addendum: two-fix closeout
+
+Applied on top of reviewed HEAD `528a78a2f167a3704171cb7294e105255f43ed64` (verified, before
+editing, to be both this branch's actual local/remote HEAD and to have zero uncommitted diff — no
+other commits had landed on PR #3 in the meantime).
+
+**Fix 1 — Android permission inventory corrected.** §12 was rewritten: the earlier report implied
+`CAMERA` was the only Android permission this feature's stack contributes. Re-inspection of the
+installed `expo-image-picker@~57.0.20` package's own `android/src/main/AndroidManifest.xml`
+confirmed it also declares `READ_EXTERNAL_STORAGE` and `WRITE_EXTERNAL_STORAGE`, both capped at
+`android:maxSdkVersion="32"`. Both are now recorded honestly (source: the package's own manifest;
+status: legacy, not requested by this feature's own code, not suppressed) rather than omitted or
+silently blocked — this closeout deliberately did **not** add a blocking rule for either, since
+verifying that is safe requires real Android-version/device validation this environment cannot
+perform (§31). `RECORD_AUDIO` remains confirmed blocked via `microphonePermission: false`. A new,
+permanent, `INSPECTION ONLY`-labeled test (`ocrArchitectureGuard.test.mjs`, 4 new cases) reads the
+real installed manifest and this project's real `app.json` on every run, so this claim cannot
+silently drift out of date again; it does not fabricate a merged-manifest result — this
+environment has no Android SDK to produce one.
+
+**Fix 2 — `expo-ocr-kit` pinned exact.** `package.json`'s `"expo-ocr-kit": "^0.1.4"` became
+`"expo-ocr-kit": "0.1.4"`. `npm install` reconciled the lockfile (only the root dependency's
+version-spec string changed — the resolved package was already `0.1.4`, so no other lockfile
+content changed); `npm ci` afterward confirmed a clean install. Re-inspected post-pin:
+`node_modules/expo-ocr-kit/package.json` version `0.1.4`; Android Gradle dependency unchanged —
+`implementation("com.google.mlkit:text-recognition:16.0.1")` (still the bundled artifact, not
+`com.google.android.gms:play-services-mlkit-text-recognition`); iOS podspec unchanged — depends
+only on `ExpoModulesCore` (Apple Vision, no Firebase, no first-use model download). Source
+inspection only, not device proof — labeled accordingly, consistent with the rest of this report.
+
+**Unchanged, as instructed:** U.S. `MM/DD/YYYY` date-candidate parsing (`ocrExtract.ts`'s
+`matchSlashDates`) — not touched; no dual US/international candidate was added; no existing OCR
+date test was modified to address international ambiguity. Date-candidate UX, provenance, the F12
+save path, candidate extraction (beyond nothing — no change was needed to make these two fixes
+compile), OCR review UX, accessibility behavior, image sanitization, temp cleanup, background
+behavior, masking, issuer extraction, reference extraction, Weather, Calendar, Notifications,
+authentication, and Supabase are all untouched (verified by `git diff` against both the prior
+reviewed HEAD and the source SHA — see §29 and the confirmations below).
+
+**Verification, run for real:**
+
+- `npm install` (lockfile reconciliation) → `up to date, audited 592 packages` (same package count
+  as before the pin — no unrelated package added, removed, or re-resolved).
+- `npm ci` → clean; `node -e "require('./package.json').dependencies['expo-ocr-kit']"` → `0.1.4`;
+  the lockfile's root `dependencies['expo-ocr-kit']` → `0.1.4`; `node_modules/expo-ocr-kit`'s own
+  `package.json` version → `0.1.4`.
+- `npm run typecheck` → the same 7 pre-existing errors, all in
+  `GoogleCalendarPanel.tsx`/`TomorrowReminderCard.tsx`/`WeatherContextCard.tsx` — **0 new errors**.
+- `npm test` → `# tests 3417 / # pass 3410 / # fail 7` (was 3413/3406/7 before this closeout; +4
+  tests, all newly passing, from the permission-inspection addition to
+  `ocrArchitectureGuard.test.mjs`) — **the same 7 pre-existing baseline failures, 0 new** (`tests/hk-f01f13/syncRegistry.test.mjs`, `tests/meals/boundary.test.mjs`, `tests/migrationChain.test.mjs`, `tests/today/guarantees.test.mjs`, `tests/calendarValidation.test.mjs`, `tests/accountRuntime.test.mjs`, `tests/hk-f01f13/handoffOwnership.test.mjs` — classified `PRE-EXISTING — UNCHANGED`, not repaired, not reclassified as OCR failures).
+- Targeted OCR tests (`tests/lifeAdmin/ocr*.test.mjs`, all 5 files): 64/64 passing (60 from the
+  original implementation + 4 new permission-inspection cases).
+- `node scripts-dev/ocr-assist-mutation-check.cjs` → `9 / 9 mutants caught`, identical results to
+  the original report; `git status --short` empty afterward (byte-for-byte restore verified by the
+  script's own SHA-256 check, which did not fire).
+- F12 (`tests/lifeAdmin/{commands,copyAudit,demo,privacy,screen,sync,today,view}.test.mjs`): `git
+  diff` against reviewed HEAD `528a78a` — empty. **Zero existing F12 tests changed.**
+- `supabase/**`: `git diff` against reviewed HEAD — empty.
+- Weather/Calendar/notification files (the same list checked in §28): `git diff` against reviewed
+  HEAD — empty.
+
+**Files changed in this closeout:** `package.json`, `package-lock.json`,
+`tests/lifeAdmin/ocrArchitectureGuard.test.mjs` (+52 lines), `docs/refinements/HK_OCR_ASSIST_IMPLEMENTATION.md`
+(this addendum and the corrected §5/§12). No other file touched.
+
+**Verdict: `OCR TWO-FIX CLOSEOUT: COMPLETE`**
 
 ---
 
