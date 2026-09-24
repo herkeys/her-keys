@@ -16,6 +16,7 @@ import { PreviewPanel, type PreviewNotice } from './ui/ActionPanels';
 import { CalendarDayView, type DayActions } from './ui/CalendarDayView';
 import { CalendarDegradedNotice } from './ui/CalendarStates';
 import { CalendarGate } from './ui/CalendarGate';
+import { GoogleCalendarPanel } from './GoogleCalendarPanel';
 import { DayNavigator, ViewSwitch } from './ui/DayHeader';
 import { WeekOverview } from './ui/WeekOverview';
 
@@ -147,6 +148,7 @@ function ReadyCalendar({ state, today, degraded }: { state: AppState; today: str
         onStep={(direction) => dispatch({ type: 'step', days: week ? direction * 7 : direction })}
         onToday={() => dispatch({ type: 'goToday' })}
       />
+      <GoogleCalendarPanel selectedDate={selectedDate} timezone={state.user.timezone} />
       {preview !== null && validity !== null ? (
         <PreviewPanel
           preview={preview}
