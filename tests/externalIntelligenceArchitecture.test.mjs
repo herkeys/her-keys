@@ -33,6 +33,7 @@ describe('External Intelligence scaffold architecture', () => {
       'https://www.googleapis.com/auth/calendar.events.readonly',
     ].sort());
     assert.doesNotMatch(oauth, /auth\/calendar['"]/);
+    assert.doesNotMatch(oauth, /include_granted_scopes/);
   });
 
   test('Google refresh-token and client-secret material never enters public app env', () => {
