@@ -1,4 +1,4 @@
-import { StyleSheet, View } from 'react-native';
+import { Alert, StyleSheet, View } from 'react-native';
 import { AppText, Button, Card, Overline, Tag } from '../../design/components';
 import { color, spacing } from '../../design/tokens';
 import type { ExternalCalendarEvent } from '../../external/types';
@@ -86,7 +86,22 @@ export function GoogleCalendarPanel({
 
         <View style={styles.actions}>
           <Button label="Refresh" variant="ghost" size="sm" disabled={bridge.busy} onPress={() => void bridge.refresh()} />
-          <Button label="Disconnect" variant="ghost" size="sm" disabled={bridge.busy} onPress={() => void bridge.disconnect()} />
+          <Button
+            label="Disconnect"
+            variant="ghost"
+            size="sm"
+            disabled={bridge.busy}
+            onPress={() =>
+              Alert.alert(
+                'Disconnect Google Calendar?',
+                'Her Keys will remove its stored Calendar connection and ask Google to revoke the app’s OAuth access. Your Google Calendar events will not be changed.',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  { text: 'Disconnect', style: 'destructive', onPress: () => void bridge.disconnect() },
+                ],
+              )
+            }
+          />
         </View>
       </Card>
 
