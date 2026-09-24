@@ -31,10 +31,18 @@ const AI_INFERENCE_PROVENANCE = /inferenceProvenance\s*\(|['"]ai-inference['"]/;
 /** The two commands that actually write a LifeRecord. The native-boundary files must never be able to reach them. */
 const LIFE_RECORD_MUTATION_IMPORT = /from\s+['"][^'"]*domain\/lifeRecords['"]/;
 
+/**
+ * Raw OCR text must never be written anywhere: no file-content write and no key-value / database store. The adapter's ONLY file use is
+ * moving the picked image into a temp file and removing it (`File#move` / `delete`); nothing here writes text, so any of these is a
+ * violation. (The persistence-LAYER import above does not cover these — a write through a storage API needs no such import.)
+ */
+const RAW_TEXT_PERSISTENCE = /writeAsStringAsync|\bwriteAsync\b|\.write\s*\(|\bAsyncStorage\b|async-storage|\bSecureStore\b|expo-secure-store|\blocalStorage\b|\bsessionStorage\b|\bMMKV\b|expo-sqlite|\bIndexedDB\b/;
+
 function violationsIn(source) {
   const out = [];
   if (NETWORK_OR_CLOUD.test(source)) out.push('network/cloud surface');
   if (PERSISTENCE_OR_SYNC_IMPORT.test(source)) out.push('persistence/sync/appStore import');
+  if (RAW_TEXT_PERSISTENCE.test(source)) out.push('raw text persistence');
   if (AI_INFERENCE_PROVENANCE.test(source)) out.push('ai-inference provenance');
   return out;
 }
@@ -54,6 +62,18 @@ describe('architecture guard: test-the-test (a synthetic violation must be caugh
   });
   test('an import of the canonical store is caught', () => {
     assert.deepEqual(violationsIn("import type { AppStore } from '../../state/appStore';"), ['persistence/sync/appStore import']);
+  });
+  test('writing recognized text to a file is caught', () => {
+    assert.deepEqual(violationsIn("import * as FS from 'expo-file-system'; await FS.writeAsStringAsync('file:///raw.txt', recognizedText);"), ['raw text persistence']);
+    assert.deepEqual(violationsIn("const out = new File(dir, 'raw.txt'); out.write(recognizedText);"), ['raw text persistence']);
+  });
+  test('writing recognized text to a key-value or database store is caught', () => {
+    assert.deepEqual(violationsIn("import AsyncStorage from '@react-native-async-storage/async-storage'; await AsyncStorage.setItem('raw', text);"), ['raw text persistence']);
+    assert.deepEqual(violationsIn("import * as SecureStore from 'expo-secure-store'; await SecureStore.setItemAsync('raw', text);"), ['raw text persistence']);
+    assert.deepEqual(violationsIn("localStorage.setItem('raw', text);"), ['raw text persistence']);
+  });
+  test('moving the picked image to a temp file is NOT flagged (that is the adapter\'s only file use)', () => {
+    assert.deepEqual(violationsIn("const destination = new File(tempDirectory(), tempFileName()); await new File(saved.uri).move(destination);"), []);
   });
   test('inferenceProvenance(...) is caught', () => {
     assert.deepEqual(violationsIn("addLifeRecord(state, ctx, { ...fields, provenance: inferenceProvenance('possible') });"), ['ai-inference provenance']);
@@ -77,6 +97,10 @@ describe('architecture guard: the real OCR source, as shipped', () => {
 
   test('no OCR file imports persistence, sync, or the canonical store', () => {
     for (const name of OCR_FILES) assert.deepEqual(violationsIn(sourceOf(name)).filter((v) => v === 'persistence/sync/appStore import'), [], name);
+  });
+
+  test('no OCR file writes recognized text to a file, a key-value store or a database', () => {
+    for (const name of OCR_FILES) assert.deepEqual(violationsIn(sourceOf(name)).filter((v) => v === 'raw text persistence'), [], name);
   });
 
   test('no OCR file ever constructs or names an ai-inference provenance', () => {
