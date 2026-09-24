@@ -10,6 +10,7 @@ import type { SyncTransport } from '../domain/sync/transport';
 import { identifyRevenueCatAccount } from '../monetization/revenueCatClient';
 import { createAppleProvider } from '../platform/appleProvider';
 import { createGoogleProvider } from '../platform/googleProvider';
+import { createExternalIntelligenceClient, UNCONFIGURED_EXTERNAL_INTELLIGENCE } from '../platform/externalIntelligenceClient';
 import { createDeviceSecureStorage } from '../platform/secureStore';
 import { createSupabaseAccountClient, createSupabaseClient } from '../platform/supabaseCloud';
 import { createSupabaseSessionClient } from '../platform/supabaseSessionClient';
@@ -54,6 +55,13 @@ const unconfiguredCloud: CloudAccountClient = {
 };
 
 export const accountsAvailable = client !== null && providerClient !== null;
+
+/**
+ * External providers share the authenticated data client so they inherit the
+ * same actor/session boundary as sync. No second Supabase session is created.
+ */
+export const externalIntelligenceClient =
+  client === null ? UNCONFIGURED_EXTERNAL_INTELLIGENCE : createExternalIntelligenceClient(client);
 
 const adapters: AuthProviderAdapter[] = providerClient === null ? [] : [createAppleProvider(providerClient), createGoogleProvider(providerClient)];
 
