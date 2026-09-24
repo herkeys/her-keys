@@ -24,6 +24,7 @@ import { harness, launch } from '../support/fixtures.mjs';
 await import('./support/stub-expo-router.mjs');
 const { logicalDateAt } = await import('../../src/domain/logicalDay.ts');
 await import('../today/support/stub-appstate.mjs');
+await import('./support/stub-external-adapters.mjs'); // after stub-appstate: it builds on that react-native variant
 const { router } = await import('./support/expo-router-stub.mjs');
 const { AppStateProvider } = await import('../../src/store/AppStateProvider.tsx');
 const { EventForm } = await import('../../src/features/calendar/EventForm.tsx');
