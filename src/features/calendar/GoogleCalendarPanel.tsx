@@ -4,8 +4,16 @@ import { color, spacing } from '../../design/tokens';
 import type { ExternalCalendarEvent } from '../../external/types';
 import { useGoogleCalendarBridge } from './useGoogleCalendarBridge';
 
-export function GoogleCalendarPanel({ selectedDate, timezone }: { selectedDate: string; timezone: string }) {
-  const bridge = useGoogleCalendarBridge(selectedDate, timezone);
+export function GoogleCalendarPanel({
+  selectedDate,
+  timezone,
+  showEvents,
+}: {
+  selectedDate: string;
+  timezone: string;
+  showEvents: boolean;
+}) {
+  const bridge = useGoogleCalendarBridge(selectedDate, timezone, showEvents);
 
   if (bridge.availability === 'checking' || bridge.availability === 'dormant') return null;
 
@@ -82,12 +90,18 @@ export function GoogleCalendarPanel({ selectedDate, timezone }: { selectedDate: 
         </View>
       </Card>
 
-      {bridge.events.length > 0 ? <ExternalEvents events={bridge.events} /> : null}
+      {!showEvents ? (
+        <AppText variant="supporting" color={color.text.secondary}>
+          Google events are shown in Day view and stay separate from Her Keys planning.
+        </AppText>
+      ) : bridge.events.length > 0 ? (
+        <ExternalEvents events={bridge.events} timezone={timezone} />
+      ) : null}
     </View>
   );
 }
 
-function ExternalEvents({ events }: { events: ExternalCalendarEvent[] }) {
+function ExternalEvents({ events, timezone }: { events: ExternalCalendarEvent[]; timezone: string }) {
   return (
     <Card tone="surface">
       <View style={styles.row}>
@@ -99,7 +113,7 @@ function ExternalEvents({ events }: { events: ExternalCalendarEvent[] }) {
           <View key={`${event.sourceCalendarId}:${event.sourceEventId}`} style={styles.event}>
             <AppText variant="body">{event.title}</AppText>
             <AppText variant="supporting" color={color.text.secondary}>
-              {eventTime(event)} · {event.sourceCalendarSummary}
+              {eventTime(event, timezone)} · {event.sourceCalendarSummary}
             </AppText>
             {event.location ? (
               <AppText variant="supporting" color={color.text.tertiary}>{event.location}</AppText>
@@ -111,13 +125,13 @@ function ExternalEvents({ events }: { events: ExternalCalendarEvent[] }) {
   );
 }
 
-function eventTime(event: ExternalCalendarEvent): string {
+function eventTime(event: ExternalCalendarEvent, timezone: string): string {
   if (event.startDate) return 'All day';
   if (!event.startsAt) return 'Time unavailable';
   const date = new Date(event.startsAt);
   return Number.isNaN(date.getTime())
     ? 'Time unavailable'
-    : new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' }).format(date);
+    : new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit', timeZone: timezone }).format(date);
 }
 
 const styles = StyleSheet.create({
