@@ -68,6 +68,7 @@ describe('[BV] the semantic-boundary scan', () => {
   test('[BV6] who could have made a change decides what explains it: the Wave 2 line needs a Meals-line reason, a later change a later lane\'s (HK13-D11)', () => {
     const { account, MEALS_LINE } = createRequire(import.meta.url)('../../scripts-dev/meals-boundary-scan.cjs');
     const F10 = 'HK-FEATURE-10 (Work / Career OS)';
+    const REFINEMENTS = 'HK-PROTOTYPE-REFINEMENTS (FR01 / Notifications / External Intelligence)';
     // useHousehold.ts carries only a Meals-line reason. Changed on the Wave 2 line, that explains it; changed after the checkpoint,
     // it does not — Meals was certified before any later lane branched, so a Meals reason there would be a misattribution.
     assert.deepEqual(account('src/store/useHousehold.ts', 'M', true, null).findings, []);
@@ -76,7 +77,9 @@ describe('[BV] the semantic-boundary scan', () => {
     // A PROTECTED file: changed on the Wave 2 line, it fails whatever a later lane says; changed only after it, the lane that did it explains it.
     assert.match(account('app/_layout.tsx', 'M', true, 'M').findings.join(), /PROTECTED file changed on the Wave 2 line/);
     assert.deepEqual(account('app/_layout.tsx', 'M', false, 'M').findings, []);
-    assert.deepEqual(account('app/_layout.tsx', 'M', false, 'M').shared.lanes, [F10]);
+    // Every registered later lane that changed it explains it: Feature 10 (its route) and the post-certification refinements (the
+    // device-local notification controller mount, d557f7c) — the accounting names them all, in registry order.
+    assert.deepEqual(account('app/_layout.tsx', 'M', false, 'M').shared.lanes, [F10, REFINEMENTS]);
     assert.match(account('src/domain/taskLists.ts', 'M', false, 'M').findings.join(), /no later lane's reason/, 'no lane explains taskLists.ts');
     // A later lane's own file is its lane, not a shared change; one changed on the Wave 2 line still needs its Meals-line reason.
     assert.deepEqual(account('src/features/work/WorkOverview.tsx', 'M', false, 'M'), { findings: [], shared: null, mealsFile: null });
