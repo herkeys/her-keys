@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
   card: { marginBottom: spacing.xxl },
   title: { marginTop: spacing.sm },
   body: { marginTop: spacing.sm },
-  providerLogo: { width: 104, height: 28 },
+  providerLogo: { width: 104, aspectRatio: 104 / 28 },
   footer: {
     marginTop: spacing.md,
     flexDirection: 'row',
