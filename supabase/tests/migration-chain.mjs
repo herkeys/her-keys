@@ -31,11 +31,13 @@ export const ADDITIVE_CHAIN = [
   { file: '20260922200000_f13_people_os.sql', owner: 'F13', label: 'f13' },
   // The F01-F13 integration's own repair (HK13-D24): four owner-private uniqueness rules become per owner.
   { file: '20260922210000_int13_per_owner_uniqueness.sql', owner: 'INT13', label: 'int13' },
+  // Post-certification environment convergence: function-body alignment only, no table/data/policy/grant changes.
+  { file: '20260924183000_env_function_alignment.sql', owner: 'ENV_ALIGN', label: 'env-align' },
 ];
 
 /** WAVE3_BASE (363e473) ended at F05: the chain a WAVE3_BASE-era database was built with, and the populated-upgrade starting point. */
 export const WAVE3_BASE_CHAIN = ADDITIVE_CHAIN.slice(0, ADDITIVE_CHAIN.findIndex((m) => m.owner === 'F05') + 1);
-/** What the F01-F13 integration adds on top of WAVE3_BASE, in order. */
+/** What the F01-F13 integration and governed post-certification convergence add on top of WAVE3_BASE, in order. */
 export const WAVE3_TO_F13_CHAIN = ADDITIVE_CHAIN.slice(WAVE3_BASE_CHAIN.length);
 
 /** The owner of an additive migration, by file. */
