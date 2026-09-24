@@ -102,6 +102,12 @@ The function accepts the .p8 text either with real line breaks or literal `\n` s
 
 There is no native WeatherKit framework dependency in this implementation. Her Keys calls WeatherKit REST from the server, so this scaffold does not require the mobile app to possess the WeatherKit private key.
 
+## Public-release WeatherKit legal gate
+
+Before a public build exposes WeatherKit data, review the then-current Apple Developer Program License Agreement and WeatherKit attribution requirements. Her Keys' Terms/EULA must include Apple's required real-time-weather guidance notice in the wording Apple requires at release time. Do not copy an old notice from this runbook; verify the current agreement when preparing the release.
+
+Her Keys must not present this Weather context as emergency or life-saving guidance.
+
 ## Prototype Weather location
 
 Weather is intentionally not tied to device location yet. To activate the prototype Today card, set an explicit, non-secret location anchor in the app build environment:
@@ -249,6 +255,7 @@ After Staging activation:
 - Confirm precipitation wording contains no percentage.
 - Confirm Apple Weather attribution is visible.
 - Confirm the Weather source link opens when provided by WeatherKit.
+- Confirm the Apple Weather/provider attribution mark is visibly rendered when the provider supplies it.
 - Confirm no Weather rows/tables are written to Postgres.
 - Background/foreground the app and confirm refresh is non-blocking.
 
