@@ -30,7 +30,15 @@
       "expo-status-bar",
       "expo-apple-authentication",
       "expo-secure-store",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": false,
+          "cameraPermission": "Her Keys uses the camera to photograph a document for on-device text recognition. The photo is processed on this device and is never uploaded.",
+          "microphonePermission": false
+        }
+      ]
     ],
     "extra": {
       "router": {},
