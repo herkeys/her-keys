@@ -22,6 +22,7 @@ import { TodayStateNotice } from './TodayStateNotice';
 import { PersistenceNotice } from './PersistenceNotice';
 import { SyncNotice } from './SyncNotice';
 import { TomorrowReminderCard } from './TomorrowReminderCard';
+import { WeatherContextCard } from './WeatherContextCard';
 
 /**
  * The Today screen body: one projection, rendered in the order the projection composed.
@@ -54,6 +55,7 @@ export function TodayBriefing({ view }: { view: TodayView }) {
         <SyncNotice />
       </TodayHeader>
       {view.load ? <LoadMeter load={view.load} note={view.capacityNote} /> : null}
+      <WeatherContextCard />
       {view.composition.map(({ key }) => {
         const section = renderSection(key, view, complete, actions);
         return section ? (
