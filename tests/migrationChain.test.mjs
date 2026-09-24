@@ -18,6 +18,7 @@ import {
   ADDITIVE_CHAIN,
   FULL_CHAIN,
   MIGRATIONS_DIR,
+  POST_CERT_CHAIN,
   WAVE3_BASE_CHAIN,
   WAVE3_BASE_SHA256,
   WAVE3_TO_F13_CHAIN,
@@ -69,6 +70,21 @@ describe('the migration chain', () => {
       assert.match(sql, /^\s*BEGIN;\s*$/m, file);
       assert.ok(sql.trim().endsWith('SELECT private.assert_app_schema_secured();\n\nCOMMIT;'), `${file} does not end with the fail-closed assertion`);
     }
+  });
+});
+
+describe('post-certification migration governance', () => {
+  test('the environment-alignment migration stays registered, additive, and function-only at the schema level', () => {
+    assert.deepEqual(POST_CERT_CHAIN.map((m) => [m.owner, m.file]), [
+      ['ENV_ALIGN', '20260924183000_env_function_alignment.sql'],
+    ]);
+    const sql = lf(POST_CERT_CHAIN[0].file);
+    const executable = sql.replace(/--.*$/gm, '');
+    const topLevel = executable.replace(/\$fn\$[\s\S]*?\$fn\$/g, () => '$fn$ BODY $fn$');
+    assert.match(sql, /^\s*BEGIN;\s*$/m);
+    assert.ok(sql.trim().endsWith('COMMIT;'));
+    assert.match(topLevel, /CREATE OR REPLACE FUNCTION/);
+    assert.doesNotMatch(topLevel, /\b(?:CREATE|ALTER|DROP)\s+TABLE\b|\bTRUNCATE\b|\bCREATE\s+(?:UNIQUE\s+)?INDEX\b|\bADD\s+CONSTRAINT\b|\bGRANT\b|\bREVOKE\b/i);
   });
 });
 

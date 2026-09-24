@@ -71,6 +71,7 @@ function runtimeFor({
   cloud,
   secureInitial = {},
   secureOptions = {},
+  sessionClient,
   saveFails = false,
   now = NOW,
 } = {}) {
@@ -95,6 +96,7 @@ function runtimeFor({
 
   const runtime = createAccountRuntime({
     sessions: createSecureSessionStore(secureStorage),
+    sessionClient,
     providers: createProviderRegistry([createScriptedProvider('apple', { results: providerResults })]),
     cloud: cloud ?? defaultCloud,
     identity: {
@@ -363,7 +365,17 @@ describe('restore, degrade, quarantine and switching', () => {
       receipt: null,
       quarantine: null,
     };
-    const h = runtimeFor({ identity, secureInitial: { [SECURE_SESSION_KEY]: JSON.stringify(sessionFor(ACCOUNT_A, { expiresAt: NOW - 1 })) } });
+    const h = runtimeFor({
+      identity,
+      secureInitial: { [SECURE_SESSION_KEY]: JSON.stringify(sessionFor(ACCOUNT_A, { expiresAt: NOW - 1 })) },
+      sessionClient: {
+        async activate() { return { kind: 'invalid', detail: 'refresh token expired' }; },
+        async signOut() { return { kind: 'ok' }; },
+        startAutoRefresh() {},
+        stopAutoRefresh() {},
+        subscribe() { return () => undefined; },
+      },
+    });
     const state = await h.runtime.restore();
     assert.equal(state.kind, 'authDegraded');
     assert.equal(state.reason, 'expired');

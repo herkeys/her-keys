@@ -4,28 +4,29 @@ import { AppText, Button, Card, Overline } from '../../design/components';
 import { color, spacing } from '../../design/tokens';
 import { weatherAnchorConfig } from '../../config/externalIntelligence';
 import type { WeatherSnapshot } from '../../external/types';
-import { useAccount } from '../../store/AccountProvider';
+import { useOptionalAccount } from '../../store/AccountProvider';
 import { useHouseholdState } from '../../store/AppStateProvider';
 import { externalIntelligenceClient } from '../../store/accountRuntimeInstance';
 
 export function WeatherContextCard() {
-  const account = useAccount();
+  const account = useOptionalAccount();
   const { state } = useHouseholdState();
   const [weather, setWeather] = useState<WeatherSnapshot | null>(null);
 
   useEffect(() => {
-    if (account.state.kind !== 'accountBound' || weatherAnchorConfig === null) {
+    if (account?.state.kind !== 'accountBound' || weatherAnchorConfig === null) {
       setWeather(null);
       return;
     }
 
+    const anchor = weatherAnchorConfig;
     let live = true;
     const load = async () => {
       const result = await externalIntelligenceClient.weather({
-        latitude: weatherAnchorConfig.latitude,
-        longitude: weatherAnchorConfig.longitude,
+        latitude: anchor.latitude,
+        longitude: anchor.longitude,
         timezone: state.user.timezone,
-        countryCode: weatherAnchorConfig.countryCode,
+        countryCode: anchor.countryCode,
         language: 'en-US',
       });
       if (live) setWeather(result.kind === 'ready' ? result.value : null);
@@ -42,7 +43,7 @@ export function WeatherContextCard() {
       subscription.remove();
       clearInterval(timer);
     };
-  }, [account.state.kind, state.user.timezone]);
+  }, [account?.state.kind, state.user.timezone]);
 
   if (weather === null) return null;
 
@@ -80,7 +81,7 @@ export function WeatherContextCard() {
             style={styles.providerLogo}
           />
         ) : (
-          <AppText variant="supporting" color={color.text.tertiary}>
+          <AppText variant="supporting" color={color.text.muted}>
             Forecast from {weather.attribution.providerName}
           </AppText>
         )}
@@ -114,7 +115,7 @@ const styles = StyleSheet.create({
   card: { marginBottom: spacing.xxl },
   title: { marginTop: spacing.sm },
   body: { marginTop: spacing.sm },
-  providerLogo: { width: 104, height: 28 },
+  providerLogo: { width: 104, aspectRatio: 104 / 28 },
   footer: {
     marginTop: spacing.md,
     flexDirection: 'row',

@@ -29,3 +29,6 @@ supabase/migrations/20260922200000_f13_people_os.sql text eol=lf
 
 # Pin the F01-F13 integration's own additive migration (HK13-D24, per-owner uniqueness) to LF so its hash is identical on every checkout.
 supabase/migrations/20260922210000_int13_per_owner_uniqueness.sql text eol=lf
+
+# Pin the governed environment function-alignment migration to LF: it replaces function bodies, so cross-platform bytes must stay stable.
+supabase/migrations/20260924183000_env_function_alignment.sql text eol=lf

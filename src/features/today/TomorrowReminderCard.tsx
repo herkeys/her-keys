@@ -40,7 +40,7 @@ export function TomorrowReminderCard() {
         <AppText variant="body" color={color.text.secondary} style={styles.body}>
           Her Keys will give you one quiet evening heads-up when tomorrow has something worth reviewing. Names and private details stay inside the app.
         </AppText>
-        {error ? <AppText variant="bodySm" color={color.text.tertiary} style={styles.note}>The reminder could not be updated just now.</AppText> : null}
+        {error ? <AppText variant="bodySm" color={color.text.muted} style={styles.note}>The reminder could not be updated just now.</AppText> : null}
         <View style={styles.actions}>
           <Button label="Turn off" variant="ghost" size="sm" disabled={busy} onPress={() => void disable()} />
         </View>
@@ -55,7 +55,7 @@ export function TomorrowReminderCard() {
       <AppText variant="body" color={color.text.secondary} style={styles.body}>
         Her Keys can give you one quiet evening reminder when tomorrow has something worth reviewing. Your lock screen only gets a general heads-up—not names or private details.
       </AppText>
-      {error ? <AppText variant="bodySm" color={color.text.tertiary} style={styles.note}>Notifications aren’t available just now.</AppText> : null}
+      {error ? <AppText variant="bodySm" color={color.text.muted} style={styles.note}>Notifications aren’t available just now.</AppText> : null}
       <View style={styles.actions}>
         <Button label="Turn on" variant="secondary" size="sm" disabled={busy} onPress={() => void enable()} />
       </View>

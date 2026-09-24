@@ -131,7 +131,7 @@ function ExternalEvents({ events, timezone }: { events: ExternalCalendarEvent[];
               {eventTime(event, timezone)} · {event.sourceCalendarSummary}
             </AppText>
             {event.location ? (
-              <AppText variant="supporting" color={color.text.tertiary}>{event.location}</AppText>
+              <AppText variant="supporting" color={color.text.muted}>{event.location}</AppText>
             ) : null}
           </View>
         ))}

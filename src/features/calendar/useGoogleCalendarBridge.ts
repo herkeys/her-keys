@@ -2,7 +2,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { addDays, toInstant, zonedTimeToEpochMs } from '../../domain/logicalDay';
 import type { ExternalCalendar, ExternalCalendarEvent } from '../../external/types';
-import { useAccount } from '../../store/AccountProvider';
+import { useOptionalAccount } from '../../store/AccountProvider';
 import { externalIntelligenceClient } from '../../store/accountRuntimeInstance';
 
 type Availability = 'checking' | 'dormant' | 'disconnected' | 'connected' | 'reauth_required' | 'error';
@@ -23,7 +23,7 @@ export interface GoogleCalendarBridge {
 }
 
 export function useGoogleCalendarBridge(selectedDate: string, timezone: string, loadEvents: boolean): GoogleCalendarBridge {
-  const account = useAccount();
+  const account = useOptionalAccount();
   const [availability, setAvailability] = useState<Availability>('checking');
   const [calendars, setCalendars] = useState<ExternalCalendar[]>([]);
   const [selectedCalendarIds, setSelectedCalendarIds] = useState<string[]>([]);
@@ -67,7 +67,7 @@ export function useGoogleCalendarBridge(selectedDate: string, timezone: string, 
   }, [range.timeMin, range.timeMax, loadEvents]);
 
   const refresh = useCallback(async () => {
-    if (account.state.kind !== 'accountBound') {
+    if (account?.state.kind !== 'accountBound') {
       setAvailability('dormant');
       setCalendars([]);
       setEvents([]);
@@ -97,7 +97,7 @@ export function useGoogleCalendarBridge(selectedDate: string, timezone: string, 
     }
 
     await loadConnected();
-  }, [account.state.kind, loadConnected]);
+  }, [account?.state.kind, loadConnected]);
 
   useEffect(() => {
     let live = true;
@@ -113,7 +113,7 @@ export function useGoogleCalendarBridge(selectedDate: string, timezone: string, 
   }, [refresh]);
 
   const connect = useCallback(async () => {
-    if (busy || account.state.kind !== 'accountBound') return;
+    if (busy || account?.state.kind !== 'accountBound') return;
     setBusy(true);
     setError(null);
     try {
@@ -133,7 +133,7 @@ export function useGoogleCalendarBridge(selectedDate: string, timezone: string, 
     } finally {
       setBusy(false);
     }
-  }, [busy, account.state.kind, refresh]);
+  }, [busy, account?.state.kind, refresh]);
 
   const disconnect = useCallback(async () => {
     if (busy) return;

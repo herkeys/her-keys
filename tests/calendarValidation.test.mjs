@@ -14,10 +14,25 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const CAL = join(ROOT, 'src', 'features', 'calendar');
 const walk = (dir) => readdirSync(dir).flatMap((name) => (statSync(join(dir, name)).isDirectory() ? walk(join(dir, name)) : /\.(ts|tsx)$/.test(name) ? [join(dir, name)] : []));
 const code = (source) => source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
-/** Feature 03's own files. `EventForm.tsx` is inherited and deliberately untouched. */
-const own = () => walk(CAL).filter((f) => !f.endsWith('EventForm.tsx'));
+/**
+ * Feature 03's own files. `EventForm.tsx` is inherited and deliberately untouched.
+ * External Intelligence is a later refinement with its own architecture guard.
+ */
+const REFINEMENT_ADAPTERS = new Set(['GoogleCalendarPanel.tsx', 'useGoogleCalendarBridge.ts']);
+const own = () => walk(CAL).filter((f) => {
+  if (f.endsWith('EventForm.tsx')) return false;
+  return !REFINEMENT_ADAPTERS.has(relative(CAL, f).split(sep).join('/'));
+});
 const model = () => walk(join(CAL, 'model'));
 const read = (file) => code(readFileSync(file, 'utf8'));
+
+describe('External Intelligence refinement boundary', () => {
+  test('the historical Feature 03 scan excludes only the named provider adapters, each covered by the refinement architecture guard', () => {
+    assert.deepEqual([...REFINEMENT_ADAPTERS].sort(), ['GoogleCalendarPanel.tsx', 'useGoogleCalendarBridge.ts']);
+    const guard = readFileSync(join(ROOT, 'tests', 'externalIntelligenceArchitecture.test.mjs'), 'utf8');
+    for (const file of REFINEMENT_ADAPTERS) assert.ok(guard.includes(file), `${file} is named by the external-intelligence guard`);
+  });
+});
 
 describe('no threshold, score or product number invented in Calendar', () => {
   test('the model contains no capacity threshold literal: 45, 23, 22, the 06:00-22:00 window, or a percentage', () => {
