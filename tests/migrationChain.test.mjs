@@ -79,10 +79,11 @@ describe('post-certification migration governance', () => {
       ['ENV_ALIGN', '20260924183000_env_function_alignment.sql'],
     ]);
     const sql = lf(POST_CERT_CHAIN[0].file);
+    const executable = sql.replace(/--.*$/gm, '');
     assert.match(sql, /^\s*BEGIN;\s*$/m);
     assert.ok(sql.trim().endsWith('COMMIT;'));
-    assert.match(sql, /CREATE OR REPLACE FUNCTION/);
-    assert.doesNotMatch(sql, /\b(?:CREATE|ALTER|DROP)\s+TABLE\b|\bTRUNCATE\b|\bCREATE\s+(?:UNIQUE\s+)?INDEX\b|\bADD\s+CONSTRAINT\b|\bGRANT\b|\bREVOKE\b/i);
+    assert.match(executable, /CREATE OR REPLACE FUNCTION/);
+    assert.doesNotMatch(executable, /\b(?:CREATE|ALTER|DROP)\s+TABLE\b|\bTRUNCATE\b|\bCREATE\s+(?:UNIQUE\s+)?INDEX\b|\bADD\s+CONSTRAINT\b|\bGRANT\b|\bREVOKE\b/i);
   });
 });
 
