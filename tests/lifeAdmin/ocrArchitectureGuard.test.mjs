@@ -104,3 +104,55 @@ describe('architecture guard: the real OCR source, as shipped', () => {
     assert.match(screenTest, /readdirSync\(dir\)/);
   });
 });
+
+/**
+ * INSPECTION ONLY — these checks read the real, installed `expo-image-picker` package's own
+ * AndroidManifest.xml and this project's own `app.json`. That is NOT the same thing as a real
+ * merged manifest (which needs `expo prebuild` + the Android Gradle plugin, neither of which this
+ * environment has — no Android SDK is installed here). It proves what one package declares and
+ * what this project configures, not what a real build produces after manifest merging. Real
+ * merged-manifest verification is required Android-native follow-up work, not something this
+ * guard can stand in for.
+ */
+const IMAGE_PICKER_MANIFEST = fileURLToPath(new URL('../../node_modules/expo-image-picker/android/src/main/AndroidManifest.xml', import.meta.url));
+const APP_JSON = fileURLToPath(new URL('../../app.json', import.meta.url));
+
+describe('Android permission inventory — INSPECTION ONLY (installed-package manifest, not a merged build)', () => {
+  test('expo-image-picker\'s own AndroidManifest.xml declares exactly CAMERA plus the two Android<=32 storage permissions, nothing more sensitive', () => {
+    const manifest = readFileSync(IMAGE_PICKER_MANIFEST, 'utf8');
+    assert.match(manifest, /<uses-permission android:name="android\.permission\.CAMERA"\s*\/>/, 'CAMERA is declared (needed for Take photo)');
+    assert.match(
+      manifest,
+      /<uses-permission android:name="android\.permission\.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="32"\s*\/>/,
+      'WRITE_EXTERNAL_STORAGE is declared, capped at maxSdkVersion 32 (a legacy permission this package contributes for older Android picker behavior)'
+    );
+    assert.match(
+      manifest,
+      /<uses-permission android:name="android\.permission\.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32"\s*\/>/,
+      'READ_EXTERNAL_STORAGE is declared, capped at maxSdkVersion 32 (same as above)'
+    );
+  });
+
+  test('expo-image-picker\'s own manifest never declares audio, location, contacts, or a background-service permission', () => {
+    const manifest = readFileSync(IMAGE_PICKER_MANIFEST, 'utf8');
+    assert.equal(/RECORD_AUDIO/.test(manifest), false, 'no microphone permission is declared by the package itself');
+    assert.equal(/ACCESS_(FINE|COARSE|BACKGROUND)_LOCATION/.test(manifest), false, 'no location permission');
+    assert.equal(/(READ|WRITE)_CONTACTS/.test(manifest), false, 'no contacts permission');
+    assert.equal(/FOREGROUND_SERVICE/.test(manifest), false, 'no background/foreground-service permission');
+  });
+
+  test('this project\'s own app.json explicitly blocks the microphone permission the expo-image-picker config plugin would otherwise add', () => {
+    const appJson = JSON.parse(readFileSync(APP_JSON, 'utf8'));
+    const entry = appJson.expo.plugins.find((p) => Array.isArray(p) && p[0] === 'expo-image-picker');
+    assert.ok(entry, 'expo-image-picker is registered with options, not just as a bare string');
+    assert.equal(entry[1].microphonePermission, false, 'microphonePermission is explicitly false — RECORD_AUDIO is blocked, not merely unmentioned');
+    assert.equal(entry[1].photosPermission, false, 'photosPermission is explicitly false — no photo-library-wide permission is requested');
+  });
+
+  test('no storage-permission suppression was added: this feature records READ/WRITE_EXTERNAL_STORAGE honestly rather than blocking them', () => {
+    const appJson = JSON.parse(readFileSync(APP_JSON, 'utf8'));
+    const entry = appJson.expo.plugins.find((p) => Array.isArray(p) && p[0] === 'expo-image-picker');
+    const keys = Object.keys(entry[1]);
+    assert.equal(keys.some((k) => /storage/i.test(k)), false, `no storage-related option exists in this config (${keys.join(', ')}) — expo-image-picker offers none, and this feature does not pretend otherwise`);
+  });
+});
