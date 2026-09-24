@@ -135,6 +135,10 @@ Use a Google OAuth **Web application** client for the Calendar server flow. A de
 
 The Calendar connection is deliberately separate from Her Keys identity authentication.
 
+## Google verification gate
+
+Google classifies some user-data scopes as sensitive or restricted. Before a public production launch, check the Google Cloud Consent Screen for the exact scopes Her Keys uses and complete any verification Google requires for a production app. Testing status/test-user access is not a substitute for production verification.
+
 ## Required consent scopes
 
 Verify that the OAuth consent configuration includes only the two intended Calendar scopes for this refinement:
@@ -272,6 +276,7 @@ After Staging activation:
 - Confirm Her Keys canonical Calendar remains unchanged.
 - Revoke Google Calendar access externally and confirm Her Keys transitions to reconnect/reauth rather than corrupting Calendar state.
 - Disconnect inside Her Keys and confirm the provider token is revoked and the server connection row is removed.
+- Remember that Google's OAuth token revocation is project-wide for OAuth 2.0 grants. Today, Her Keys' Google API authorization is Calendar-only; before adding another Google API integration under the same Cloud project, revisit this disconnect boundary or isolate that integration in another project. Google ID-token sharing used for sign-in is a separate grant.
 
 ### Privacy / account isolation
 
