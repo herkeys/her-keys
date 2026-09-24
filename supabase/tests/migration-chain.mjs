@@ -37,8 +37,11 @@ export const ADDITIVE_CHAIN = [
 
 /** WAVE3_BASE (363e473) ended at F05: the chain a WAVE3_BASE-era database was built with, and the populated-upgrade starting point. */
 export const WAVE3_BASE_CHAIN = ADDITIVE_CHAIN.slice(0, ADDITIVE_CHAIN.findIndex((m) => m.owner === 'F05') + 1);
-/** What the F01-F13 integration and governed post-certification convergence add on top of WAVE3_BASE, in order. */
-export const WAVE3_TO_F13_CHAIN = ADDITIVE_CHAIN.slice(WAVE3_BASE_CHAIN.length);
+/** What the F01-F13 integration adds on top of WAVE3_BASE, through INT13, in order. */
+const POST_CERT_START = ADDITIVE_CHAIN.findIndex((m) => m.owner === 'ENV_ALIGN');
+export const WAVE3_TO_F13_CHAIN = ADDITIVE_CHAIN.slice(WAVE3_BASE_CHAIN.length, POST_CERT_START);
+/** Governed migrations after the F01-F13 certification point. They are still part of FULL_CHAIN. */
+export const POST_CERT_CHAIN = ADDITIVE_CHAIN.slice(POST_CERT_START);
 
 /** The owner of an additive migration, by file. */
 export const additive = (owner) => {
