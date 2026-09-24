@@ -24,7 +24,14 @@ function appRedirect(status: string, detail?: string): Response {
   const target = new URL(Deno.env.get('HERKEYS_CALENDAR_APP_REDIRECT_URI') ?? 'herkeys://calendar-connected');
   target.searchParams.set('status', status);
   if (detail) target.searchParams.set('detail', detail.slice(0, 120));
-  return Response.redirect(target.toString(), 302);
+  return new Response(null, {
+    status: 302,
+    headers: {
+      Location: target.toString(),
+      'Cache-Control': 'no-store',
+      Pragma: 'no-cache',
+    },
+  });
 }
 
 async function begin(req: Request): Promise<Response> {
@@ -39,6 +46,9 @@ async function begin(req: Request): Promise<Response> {
 
   const admin = adminClient();
   await admin.from('calendar_oauth_states').delete().lt('expires_at', new Date().toISOString());
+  // One outstanding consent attempt per Her Keys account. This keeps an
+  // authenticated caller from accumulating unbounded state rows.
+  await admin.from('calendar_oauth_states').delete().eq('user_id', user.id);
   const { error } = await admin.from('calendar_oauth_states').insert({
     state_hash: await sha256Base64Url(state),
     user_id: user.id,
