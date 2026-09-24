@@ -412,3 +412,17 @@ enabled = true
 # declarative_schema_path = "./database"
 # JSON string passed through to pg-delta SQL formatting.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":80,\"commaStyle\":\"trailing\"}"
+
+
+# External Intelligence Wave 1 scaffolds.
+# Weather and Calendar data calls are user-authenticated. The OAuth callback
+# comes directly from Google, so calendar-oauth validates its own state/user
+# boundary in code instead of relying on the platform JWT precheck.
+[functions.weather-context]
+verify_jwt = true
+
+[functions.calendar-data]
+verify_jwt = true
+
+[functions.calendar-oauth]
+verify_jwt = false
