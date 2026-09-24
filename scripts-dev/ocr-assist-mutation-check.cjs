@@ -69,7 +69,9 @@ const sha = (buffer) => crypto.createHash('sha256').update(buffer).digest('hex')
 const imports = ['register-ts.mjs', 'register-jsx.mjs'].flatMap((f) => ['--import', pathToFileURL(path.join(ROOT, 'tests', 'support', f)).href]);
 
 function runTests(files) {
-  const run = spawnSync(process.execPath, [...imports, '--test', '--test-concurrency=1', ...files], { cwd: ROOT, encoding: 'utf8', maxBuffer: 256 * 1024 * 1024, timeout: 900000 });
+  // The counts below are read from TAP (`# pass N`). Node's DEFAULT reporter changed across versions (Node 24 prints `ℹ pass N`), which
+  // made every mutant read as BROKEN, so ask for the reporter this parser understands rather than relying on the default.
+  const run = spawnSync(process.execPath, [...imports, '--test', '--test-reporter=tap', '--test-concurrency=1', ...files], { cwd: ROOT, encoding: 'utf8', maxBuffer: 256 * 1024 * 1024, timeout: 900000 });
   const out = `${run.stdout ?? ''}${run.stderr ?? ''}`;
   const pass = Number((out.match(/# pass (\d+)/) ?? [])[1]);
   const fail = Number((out.match(/# fail (\d+)/) ?? [])[1]);
