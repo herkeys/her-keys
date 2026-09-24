@@ -22,7 +22,7 @@ export interface GoogleCalendarBridge {
   refresh(): Promise<void>;
 }
 
-export function useGoogleCalendarBridge(selectedDate: string, timezone: string): GoogleCalendarBridge {
+export function useGoogleCalendarBridge(selectedDate: string, timezone: string, loadEvents: boolean): GoogleCalendarBridge {
   const account = useAccount();
   const [availability, setAvailability] = useState<Availability>('checking');
   const [calendars, setCalendars] = useState<ExternalCalendar[]>([]);
@@ -47,6 +47,13 @@ export function useGoogleCalendarBridge(selectedDate: string, timezone: string):
     setCalendars(calendarResult.value.calendars);
     setSelectedCalendarIds(calendarResult.value.selectedCalendarIds);
 
+    if (!loadEvents) {
+      setEvents([]);
+      setAvailability('connected');
+      setError(null);
+      return;
+    }
+
     const eventResult = await externalIntelligenceClient.calendarEvents(range.timeMin, range.timeMax);
     if (eventResult.kind === 'ready') {
       setEvents(eventResult.value.events);
@@ -57,7 +64,7 @@ export function useGoogleCalendarBridge(selectedDate: string, timezone: string):
       setAvailability(eventResult.kind === 'unauthorized' ? 'dormant' : 'error');
       setError(eventResult.kind === 'unavailable' ? eventResult.reason : null);
     }
-  }, [range.timeMin, range.timeMax]);
+  }, [range.timeMin, range.timeMax, loadEvents]);
 
   const refresh = useCallback(async () => {
     if (account.state.kind !== 'accountBound') {
