@@ -18,6 +18,8 @@ export interface TomorrowPreview {
   date: LocalDate;
   fixedCommitmentCount: number;
   dueTaskCount: number;
+  /** Count only. Notification surfaces may say an overlap exists without exposing titles. */
+  overlapCount: number;
   tightTransition: { beforeTitle: string; afterTitle: string; bufferMinutes: number } | null;
   /** Factual, never manufactured — a genuinely light tomorrow says so plainly. */
   headline: string;
@@ -30,6 +32,7 @@ export function tomorrowPreview(state: AppState, ctx: TransitionContext): Tomorr
   const issues = assessDailyLoadIssues(day.events, day.tasks, assessment);
 
   const fixedCommitmentCount = day.events.filter((event) => event.commitment === 'fixed').length;
+  const overlapCount = issues.overlaps.length;
   // Due exactly tomorrow. Tomorrow's projection also carries everything already
   // overdue (and today's still-open items, overdue by then); those aren't "due tomorrow".
   const dueTaskCount = day.tasks.filter((task) => task.dueToday && task.daysOverdue === 0).length;
@@ -43,7 +46,7 @@ export function tomorrowPreview(state: AppState, ctx: TransitionContext): Tomorr
         }
       : null;
 
-  return { date, fixedCommitmentCount, dueTaskCount, tightTransition, headline: describeTomorrow({ fixedCommitmentCount, dueTaskCount, tightTransition, issues }) };
+  return { date, fixedCommitmentCount, dueTaskCount, overlapCount, tightTransition, headline: describeTomorrow({ fixedCommitmentCount, dueTaskCount, tightTransition, issues }) };
 }
 
 function describeTomorrow(input: {

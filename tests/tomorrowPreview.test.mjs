@@ -19,6 +19,7 @@ describe('Tomorrow Preview', () => {
   test('a genuinely light tomorrow says so plainly, not "reasonable" or manufactured concern', () => {
     const preview = tomorrowPreview(empty(), ctx());
     assert.equal(preview.fixedCommitmentCount, 0);
+    assert.equal(preview.overlapCount, 0);
     assert.equal(preview.tightTransition, null);
     assert.match(preview.headline, /nothing fixed/i);
   });
@@ -73,6 +74,7 @@ describe('Tomorrow Preview', () => {
     state = addEvent(state, context, { title: 'Parent-teacher conference', categoryId: 'cat-kids', startsAt: atNext(10, 30), endsAt: atNext(11, 30), commitment: 'fixed', scope: 'household' });
 
     const preview = tomorrowPreview(state, ctx());
+    assert.equal(preview.overlapCount, 1);
     assert.match(preview.headline, /overlap/);
   });
 
