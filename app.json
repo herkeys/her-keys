@@ -30,6 +30,7 @@
       "expo-status-bar",
       "expo-apple-authentication",
       "expo-secure-store",
+      "expo-notifications",
       "expo-web-browser"
     ],
     "extra": {
