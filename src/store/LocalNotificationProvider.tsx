@@ -27,6 +27,8 @@ import { useStoreSnapshot } from './AppStateProvider';
 const PREFERENCE_KEY = 'herkeys.localNotifications.v1';
 
 interface LocalNotificationValue {
+  /** Device preference/permission have been read; no permission prompt is implied. */
+  ready: boolean;
   /** Device-local preference. Effective delivery also requires OS permission. */
   enabled: boolean;
   permission: LocalNotificationPermission;
@@ -161,6 +163,7 @@ export function LocalNotificationProvider({ children }: { children: ReactNode })
 
   const value = useMemo<LocalNotificationValue>(
     () => ({
+      ready: preferenceReady,
       enabled,
       permission,
       busy,
@@ -170,7 +173,7 @@ export function LocalNotificationProvider({ children }: { children: ReactNode })
       disable,
       openSettings: () => Linking.openSettings(),
     }),
-    [enabled, permission, busy, nextPlan, error, enable, disable]
+    [preferenceReady, enabled, permission, busy, nextPlan, error, enable, disable]
   );
 
   return <Context.Provider value={value}>{children}</Context.Provider>;
