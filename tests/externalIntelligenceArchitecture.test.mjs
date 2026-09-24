@@ -76,6 +76,12 @@ describe('External Intelligence scaffold architecture', () => {
     assert.match(read('supabase/.gitignore'), /functions\/\.env/);
   });
 
+  test('Expo typecheck does not compile the Deno Edge Function tree', () => {
+    const tsconfig = JSON.parse(read('tsconfig.json'));
+    assert.ok(Array.isArray(tsconfig.exclude));
+    assert.ok(tsconfig.exclude.includes('supabase/functions'));
+  });
+
   test('service-only Calendar tables are not directly granted to app roles', () => {
     const blueprint = read('supabase/blueprints/external_calendar_connections.sql');
 
