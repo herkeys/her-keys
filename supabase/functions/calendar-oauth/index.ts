@@ -1,6 +1,6 @@
 import { AuthError, adminClient, requireUser } from '../_shared/supabaseAdmin.ts';
 import { encryptSecret, randomUrlSafe, sha256Base64Url } from '../_shared/crypto.ts';
-import { json, options, safeMessage } from '../_shared/http.ts';
+import { json, options } from '../_shared/http.ts';
 
 const SCOPES = [
   'https://www.googleapis.com/auth/calendar.calendarlist.readonly',
@@ -168,6 +168,7 @@ Deno.serve(async (req) => {
   } catch (error) {
     if (error instanceof AuthError) return json({ error: 'unauthorized' }, 401);
     if (req.method === 'GET') return appRedirect('error', 'internal_error');
-    return json({ status: 'unavailable', reason: 'calendar_oauth_internal_error', detail: safeMessage(error) }, 500);
+    console.error('[calendar-oauth] internal error', error instanceof Error ? error.name : 'unknown');
+    return json({ status: 'unavailable', reason: 'calendar_oauth_internal_error' }, 500);
   }
 });
