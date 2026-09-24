@@ -9,6 +9,7 @@ import { AppStateProvider, useStoreSnapshot } from '../src/store/AppStateProvide
 import { appStore, internalTools } from '../src/store/appStoreInstance';
 import { OnboardingProvider } from '../src/store/OnboardingContext';
 import { OneMoveProvider } from '../src/store/OneMoveContext';
+import { LocalNotificationProvider } from '../src/store/LocalNotificationProvider';
 import { ScheduleProvider } from '../src/store/ScheduleContext';
 import { TalkItOutProvider } from '../src/store/TalkItOutContext';
 
@@ -24,9 +25,11 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <RevenueCatProvider>
         <AppStateProvider store={appStore}>
-          <AccountProvider>
-            <RootNavigator />
-          </AccountProvider>
+          <LocalNotificationProvider>
+            <AccountProvider>
+              <RootNavigator />
+            </AccountProvider>
+          </LocalNotificationProvider>
         </AppStateProvider>
       </RevenueCatProvider>
     </SafeAreaProvider>
