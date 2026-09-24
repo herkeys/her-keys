@@ -57,7 +57,7 @@ describe('[P9-REG] sync registry reconciliation', () => {
 
   test('PUSHABLE: every kind a device creates is on the server\'s sync_push allow-list, and the allow-list names nothing the client does not know', () => {
     const push = lastDeclaring('FUNCTION public.sync_push');
-    assert.equal(push.file, '20260922200000_f13_people_os.sql', 'the chain\'s last sync_push is F13\'s');
+    assert.equal(push.file, '20260924183000_env_function_alignment.sql', 'the governed environment-alignment migration holds the live sync_push body');
     const region = push.text.slice(push.text.indexOf('v_owner_col := CASE'), push.text.indexOf('is not a pushable entity table'));
     const columns = new Set(['actor_profile_id', 'profile_id']);
     const allowed = new Set(quoted(region).filter((name) => !columns.has(name)));
