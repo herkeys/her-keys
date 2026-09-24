@@ -12,6 +12,7 @@ import { createAppleProvider } from '../platform/appleProvider';
 import { createGoogleProvider } from '../platform/googleProvider';
 import { createDeviceSecureStorage } from '../platform/secureStore';
 import { createSupabaseAccountClient, createSupabaseClient } from '../platform/supabaseCloud';
+import { createSupabaseSessionClient } from '../platform/supabaseSessionClient';
 import { createSupabaseSyncTransport } from '../platform/supabaseSyncTransport';
 import { appStore, changeObserver } from './appStoreInstance';
 import { composeAccountApp } from './composeAccountApp';
@@ -30,7 +31,13 @@ import { composeAccountApp } from './composeAccountApp';
  * `composeAccountApp`. This file only supplies the platform pieces.
  */
 
+// Provider authentication is intentionally isolated from the data transport
+// client. A Google/Apple account is verified against the bound Her Keys actor
+// before its session can ever be installed on the client that reaches data.
 const client = createSupabaseClient();
+const providerClient = createSupabaseClient();
+const sessions = createSecureSessionStore(createDeviceSecureStorage());
+const sessionClient = client === null ? undefined : createSupabaseSessionClient(client);
 
 /**
  * With no Supabase project configured, every cloud call is an honest refusal
@@ -46,9 +53,9 @@ const unconfiguredCloud: CloudAccountClient = {
   },
 };
 
-export const accountsAvailable = client !== null;
+export const accountsAvailable = client !== null && providerClient !== null;
 
-const adapters: AuthProviderAdapter[] = client === null ? [] : [createAppleProvider(client), createGoogleProvider(client)];
+const adapters: AuthProviderAdapter[] = providerClient === null ? [] : [createAppleProvider(providerClient), createGoogleProvider(providerClient)];
 
 /** Which providers this device can actually offer. Asked, not assumed. */
 export const accountProviders = createProviderRegistry(adapters);
@@ -72,7 +79,8 @@ const app = composeAccountApp({
   store: appStore,
   observer: changeObserver,
   account: {
-    sessions: createSecureSessionStore(createDeviceSecureStorage()),
+    sessions,
+    sessionClient,
     providers: accountProviders,
     cloud: client === null ? unconfiguredCloud : createSupabaseAccountClient(client),
     timezone: deviceTimeZone,

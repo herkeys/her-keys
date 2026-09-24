@@ -124,8 +124,15 @@ export function failureFrom(error: Pick<PostgrestError, 'code' | 'message' | 'de
   const detail = [error.message, redactRowValues(error.details)].filter(Boolean).join(' | ').slice(0, 400);
 
   if (!code) return { kind: 'failure', failure: 'unreachable', detail, code };
-  if (code === '42501' || code === 'PGRST301' || code === '28000') {
-    return { kind: 'failure', failure: code === '28000' ? 'unauthorized' : 'forbidden', detail, code };
+  if (code === 'PGRST301' || code === 'PGRST303' || code === '28000') {
+    return { kind: 'failure', failure: 'unauthorized', detail, code };
+  }
+  if (code === '42501') {
+    // Anonymous access to the authenticated-only sync RPC is credential state,
+    // not evidence against her row. Genuine RLS/permission refusals remain
+    // forbidden so they do not become infinite auth retries.
+    const anonymousSyncRpc = /permission denied for function\s+(sync_push|sync_pull)/i.test(detail);
+    return { kind: 'failure', failure: anonymousSyncRpc ? 'unauthorized' : 'forbidden', detail, code };
   }
   if (code === '23505') {
     return { kind: 'failure', failure: isDomainInvariant(detail) ? 'domainConflict' : 'validation', detail, code };

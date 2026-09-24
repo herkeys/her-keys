@@ -163,11 +163,16 @@ export function accountReducer(state: AccountState, event: AccountEvent): Accoun
         : state;
 
     case 'sessionRecovered':
-      // Only the SAME account may resume a degraded session. A different
-      // account signing in is a switch, not a recovery.
-      return state.kind === 'authDegraded' && event.session.accountId === state.accountId
-        ? { kind: 'accountBound', session: event.session, householdId: state.householdId }
-        : state;
+      // Only the SAME account may accept a recovered/rotated credential.
+      if (state.kind === 'authDegraded') {
+        return event.session.accountId === state.accountId
+          ? { kind: 'accountBound', session: event.session, householdId: state.householdId }
+          : state;
+      }
+      if ('session' in state && state.session.accountId === event.session.accountId) {
+        return { ...state, session: event.session };
+      }
+      return state;
 
     case 'signedOut':
       return { kind: 'unauthenticated' };

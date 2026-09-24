@@ -33,6 +33,8 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   const [busy, setBusy] = useState(false);
   const hydrated = snapshot.state !== null;
 
+  useEffect(() => accountRuntime.subscribe(setState), []);
+
   useEffect(() => {
     // The runtime reads household state, so it cannot run before hydration.
     if (!hydrated || !accountsAvailable) return;
@@ -56,11 +58,23 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   }, [hydrated]);
 
   useEffect(() => {
-    // Coming back to the app is when a second device's changes should arrive. No polling: this is the event.
+    if (!accountsAvailable) return;
+
+    // Supabase recommends explicit foreground ownership for React Native auth
+    // refresh. Rotated credentials are persisted by AccountRuntime, not by
+    // Supabase storage.
+    accountRuntime.setSessionRefreshActive(AppState.currentState === 'active');
+
     const subscription = AppState.addEventListener('change', (next) => {
-      if (next === 'active') void syncRuntime.request('foreground');
+      const active = next === 'active';
+      accountRuntime.setSessionRefreshActive(active);
+      if (active) void syncRuntime.request('foreground');
     });
-    return () => subscription.remove();
+
+    return () => {
+      accountRuntime.setSessionRefreshActive(false);
+      subscription.remove();
+    };
   }, []);
 
   const run = useCallback(async (work: () => Promise<AccountState>) => {

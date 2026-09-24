@@ -27,6 +27,7 @@ import type { CloudAccountClient } from './cloudClient';
 import { toAccountId, type AccountId, type AccountSession, type AuthProvider } from './identity';
 import type { ProviderRegistry } from './provider';
 import type { SecureSessionStore } from './secureSession';
+import { NOOP_ACCOUNT_SESSION_CLIENT, type AccountSessionClient } from './sessionClient';
 import { namespaceFromClaim } from '../sync/claimSeam';
 
 /**
@@ -49,6 +50,8 @@ import { namespaceFromClaim } from '../sync/claimSeam';
 
 export interface AccountRuntimeOptions {
   sessions: SecureSessionStore;
+  /** Supabase's in-memory session lifecycle. SecureSessionStore stays the only durable home. */
+  sessionClient?: AccountSessionClient;
   providers: ProviderRegistry;
   cloud: CloudAccountClient;
   /** Reads and writes the household blob's identity block. */
@@ -81,20 +84,28 @@ export interface AccountRuntime {
   /** What the device would do for the signed-in account, without doing it. */
   plannedBinding(): BindingDecision | null;
   lastClaimOutcome(): ClaimOutcome | null;
+  /** Observe runtime transitions, including background token degradation/recovery. */
+  subscribe(listener: (state: AccountState) => void): () => void;
+  /** React Native foreground ownership for Supabase auto refresh. */
+  setSessionRefreshActive(active: boolean): void;
 }
 
 export function createAccountRuntime(options: AccountRuntimeOptions): AccountRuntime {
   let state: AccountState = INITIAL_ACCOUNT_STATE;
   let lastOutcome: ClaimOutcome | null = null;
+  const sessionClient = options.sessionClient ?? NOOP_ACCOUNT_SESSION_CLIENT;
+  const listeners = new Set<(state: AccountState) => void>();
 
-  const apply = (event: AccountEvent): AccountState => {
-    const next = accountReducer(state, event);
+  const replaceState = (next: AccountState): AccountState => {
     if (next !== state) {
       state = next;
       options.onStateChange?.(state);
+      for (const listener of listeners) listener(state);
     }
     return state;
   };
+
+  const apply = (event: AccountEvent): AccountState => replaceState(accountReducer(state, event));
 
   const report = (type: string, detail?: string) => options.report?.({ type, detail });
 
@@ -115,9 +126,47 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
   const bindingFor = (session: AccountSession): BindingDecision =>
     decideBinding(describeLocalHousehold(options.localState()), options.identity.current(), session.accountId);
 
+  // Serialize refresh persistence so an older rotated pair can never finish its
+  // SecureStore write after a newer one.
+  let refreshPersistence = Promise.resolve();
+  sessionClient.subscribe((event) => {
+    if (event.type === 'signedOut') {
+      if (state.kind !== 'accountBound') return;
+      replaceState(accountReducer(state, { type: 'sessionDegraded', reason: 'refreshFailed' }));
+      refreshPersistence = refreshPersistence
+        .then(() => options.sessions.clear())
+        .catch((error) => report('account.session_clear_failed', error instanceof Error ? error.message : String(error)));
+      return;
+    }
+
+    const current = accountIdOf(state);
+    if (current === null || current !== event.session.accountId) {
+      report('account.refresh_wrong_actor');
+      return;
+    }
+
+    refreshPersistence = refreshPersistence
+      .then(async () => {
+        await options.sessions.write(event.session);
+        apply({ type: 'sessionRecovered', session: event.session });
+      })
+      .catch((error) => {
+        report('account.refresh_store_failed', error instanceof Error ? error.message : String(error));
+        apply({ type: 'sessionDegraded', reason: 'refreshFailed' });
+      });
+  });
+
   return {
     getState: () => state,
     lastClaimOutcome: () => lastOutcome,
+    subscribe(listener) {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+    setSessionRefreshActive(active) {
+      if (active) sessionClient.startAutoRefresh();
+      else sessionClient.stopAutoRefresh();
+    },
 
     plannedBinding() {
       const accountId = sessionOf(state)?.accountId ?? null;
@@ -138,13 +187,12 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
         if (bound !== null) {
           const accountId = toAccountId(bound.accountId);
           if (accountId !== null) {
-            state = {
+            replaceState({
               kind: 'authDegraded',
               accountId,
               householdId: bound.householdId,
               reason: 'refreshFailed',
-            };
-            options.onStateChange?.(state);
+            });
             report('account.degraded', loaded.detail);
             return state;
           }
@@ -157,48 +205,134 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
         return apply({ type: 'signedOut' });
       }
 
-      await identify(loaded.session.accountId);
-      apply({ type: 'sessionEstablished', session: loaded.session });
+      const bound = options.identity.current().binding;
 
-      if (loaded.expired) {
-        // Expired is not signed out. She keeps working locally; only cloud
-        // writes stop, and a refresh can pick the same account back up.
-        const bound = options.identity.current().binding;
+      // A credential for another account may describe a real sign-in, but it
+      // is never installed in the data-transport client for this household.
+      if (bound !== null && bound.accountId !== loaded.session.accountId) {
+        await identify(loaded.session.accountId);
+        apply({ type: 'sessionEstablished', session: loaded.session });
+        return this.resolveBinding();
+      }
+
+      // Install/refresh BEFORE resolveBinding can produce accountBound. Since
+      // accountBound is what starts sync, no launch can race an anonymous RPC.
+      const activated = await sessionClient.activate(loaded.session);
+      if (activated.kind !== 'active') {
+        report('account.session_restore_failed', activated.detail);
         if (bound !== null && bound.accountId === loaded.session.accountId) {
-          state = {
+          if (activated.kind === 'invalid') {
+            try {
+              await options.sessions.clear();
+            } catch (error) {
+              report('account.session_clear_failed', error instanceof Error ? error.message : String(error));
+            }
+          }
+          replaceState({
             kind: 'authDegraded',
             accountId: loaded.session.accountId,
             householdId: bound.householdId,
-            reason: 'expired',
-          };
-          options.onStateChange?.(state);
+            reason: activated.kind === 'unreachable' ? 'offline' : loaded.expired ? 'expired' : 'refreshFailed',
+          });
           return state;
         }
-        return state;
+
+        if (activated.kind === 'invalid') {
+          try {
+            await options.sessions.clear();
+          } catch {
+            // Nothing account-bound exists here; signed out remains the safest state.
+          }
+        }
+        return apply({ type: 'signedOut' });
       }
 
+      try {
+        // setSession may have rotated an expired pair. Durable first, bound second.
+        await options.sessions.write(activated.session);
+      } catch (error) {
+        report('account.session_store_failed', error instanceof Error ? error.message : String(error));
+        await sessionClient.signOut();
+        if (bound !== null && bound.accountId === activated.session.accountId) {
+          replaceState({
+            kind: 'authDegraded',
+            accountId: activated.session.accountId,
+            householdId: bound.householdId,
+            reason: 'refreshFailed',
+          });
+          return state;
+        }
+        return apply({ type: 'signedOut' });
+      }
+
+      await identify(activated.session.accountId);
+      apply({ type: 'sessionEstablished', session: activated.session });
       return this.resolveBinding();
     },
 
     async signIn(provider) {
-      apply({ type: 'authStarted' });
+      const degraded = state.kind === 'authDegraded' ? state : null;
+      if (degraded === null) {
+        if (state.kind !== 'unauthenticated' && state.kind !== 'authError') return state;
+        apply({ type: 'authStarted' });
+      }
+
       const result = await options.providers.signIn(provider);
 
       switch (result.kind) {
         case 'cancelled':
-          return apply({ type: 'authCancelled' });
+          return degraded === null ? apply({ type: 'authCancelled' }) : state;
         case 'unavailable':
         case 'configurationError':
+          if (degraded !== null) {
+            report('account.reauth_failed', result.detail);
+            return state;
+          }
           return apply({ type: 'authFailed', detail: result.detail, recoverable: false });
         case 'providerError':
+          if (degraded !== null) {
+            report('account.reauth_failed', result.detail);
+            return state;
+          }
           return apply({ type: 'authFailed', detail: result.detail, recoverable: true });
         case 'success':
           break;
       }
 
-      await options.sessions.write(result.session);
-      await identify(result.session.accountId);
-      apply({ type: 'sessionEstablished', session: result.session });
+      if (degraded !== null && result.session.accountId !== degraded.accountId) {
+        report('account.reauth_wrong_actor');
+        return state;
+      }
+
+      // Signing in as B on a device bound to A is a real account conflict, but
+      // B must never become the transport credential for A.
+      if (degraded === null && bindingFor(result.session).mode === 'quarantine') {
+        await options.sessions.write(result.session);
+        await identify(result.session.accountId);
+        apply({ type: 'sessionEstablished', session: result.session });
+        return this.resolveBinding();
+      }
+
+      const activated = await sessionClient.activate(result.session);
+      if (activated.kind !== 'active') {
+        report('account.session_activate_failed', activated.detail);
+        if (degraded !== null) return state;
+        return apply({ type: 'authFailed', detail: activated.detail, recoverable: activated.kind === 'unreachable' });
+      }
+
+      try {
+        await options.sessions.write(activated.session);
+      } catch (error) {
+        await sessionClient.signOut();
+        report('account.session_store_failed', error instanceof Error ? error.message : String(error));
+        if (degraded !== null) return state;
+        return apply({ type: 'authFailed', detail: 'could not safely store the account session', recoverable: true });
+      }
+
+      await identify(activated.session.accountId);
+      if (degraded !== null) return apply({ type: 'sessionRecovered', session: activated.session });
+
+      apply({ type: 'sessionEstablished', session: activated.session });
       return this.resolveBinding();
     },
 
@@ -344,11 +478,22 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
     },
 
     async signOut() {
+      // Stop sync before the client credential is ended.
+      if (state.kind === 'accountBound') apply({ type: 'sessionDegraded', reason: 'refreshFailed' });
+
+      const ended = await sessionClient.signOut();
+      if (ended.kind === 'error') {
+        report('account.sign_out_client_failed', ended.detail);
+        return state;
+      }
+
       try {
         await options.sessions.clear();
       } catch (error) {
         report('account.sign_out_store_failed', error instanceof Error ? error.message : String(error));
+        return state;
       }
+
       await identify(null);
       // The binding stays. Signing out is not leaving the account, and the next
       // sign-in of the same account must resume rather than claim again.
@@ -368,6 +513,11 @@ async function safeSave(
     report('account.identity_save_failed', error instanceof Error ? error.message : String(error));
     return false;
   }
+}
+
+function accountIdOf(state: AccountState): AccountId | null {
+  if (state.kind === 'authDegraded') return state.accountId;
+  return sessionOf(state)?.accountId ?? null;
 }
 
 function sessionOf(state: AccountState): AccountSession | null {
