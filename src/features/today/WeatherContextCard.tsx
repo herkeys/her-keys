@@ -19,13 +19,14 @@ export function WeatherContextCard() {
       return;
     }
 
+    const anchor = weatherAnchorConfig;
     let live = true;
     const load = async () => {
       const result = await externalIntelligenceClient.weather({
-        latitude: weatherAnchorConfig.latitude,
-        longitude: weatherAnchorConfig.longitude,
+        latitude: anchor.latitude,
+        longitude: anchor.longitude,
         timezone: state.user.timezone,
-        countryCode: weatherAnchorConfig.countryCode,
+        countryCode: anchor.countryCode,
         language: 'en-US',
       });
       if (live) setWeather(result.kind === 'ready' ? result.value : null);
@@ -80,7 +81,7 @@ export function WeatherContextCard() {
             style={styles.providerLogo}
           />
         ) : (
-          <AppText variant="supporting" color={color.text.tertiary}>
+          <AppText variant="supporting" color={color.text.muted}>
             Forecast from {weather.attribution.providerName}
           </AppText>
         )}
