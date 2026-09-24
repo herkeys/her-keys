@@ -54,7 +54,6 @@ async function begin(req: Request): Promise<Response> {
   url.searchParams.set('response_type', 'code');
   url.searchParams.set('scope', SCOPES.join(' '));
   url.searchParams.set('access_type', 'offline');
-  url.searchParams.set('include_granted_scopes', 'true');
   url.searchParams.set('prompt', 'consent');
   url.searchParams.set('state', state);
   url.searchParams.set('code_challenge', challenge);
