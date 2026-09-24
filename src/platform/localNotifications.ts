@@ -95,8 +95,6 @@ export async function reconcileHerKeysLocalReminder(
   permission: LocalNotificationPermission,
   plan: LocalReminderPlan | null
 ): Promise<void> {
-  await ensureLocalReminderChannel();
-
   const scheduled = await Notifications.getAllScheduledNotificationsAsync();
   const ours = scheduled.filter((request) => isHerKeysReminderData(request.content.data));
 
@@ -104,6 +102,11 @@ export async function reconcileHerKeysLocalReminder(
     await Promise.all(ours.map((request) => Notifications.cancelScheduledNotificationAsync(request.identifier)));
     return;
   }
+
+  // The channel is not created at first launch. The explicit Turn on action
+  // creates it before requesting Android permission; this is only the recovery
+  // path for an already-enabled device.
+  await ensureLocalReminderChannel();
 
   const matches = ours.filter((request) => reminderDataMatchesPlan(request.content.data, plan));
   if (matches.length === 1 && ours.length === 1) return;
