@@ -408,6 +408,7 @@ const LATER_FEATURES = [
       ['supabase/.gitignore', 'External Intelligence refinement: keep local Edge Function secrets out of source control'],
       ['supabase/config.toml', 'External Intelligence refinement: declare explicit JWT boundaries for dormant Edge Functions'],
       ['supabase/tests/migration-chain.mjs', 'Environment convergence: register the governed function-alignment migration in the canonical chain'],
+      ['tests/migrationChain.test.mjs', 'Environment convergence: validate the post-certification function-alignment segment separately from feature migrations'],
       ['tests/accountRuntime.test.mjs', 'FR01 regression: expired-session test now exercises an explicit failed refresh rather than pre-FR01 behavior'],
       ['tests/calendarValidation.test.mjs', 'External Intelligence refinement: preserve the historical Feature 03 scan around the new provider adapter boundary'],
       ['tests/hk-f01f13/syncRegistry.test.mjs', 'Environment convergence: registry validation reads the aligned live sync_push body'],
