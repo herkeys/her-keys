@@ -367,7 +367,7 @@ const LATER_FEATURES = [
   },
   {
     id: 'HK-PROTOTYPE-REFINEMENTS (FR01 / Notifications / External Intelligence)',
-    branch: 'refinement/weather-calendar-scaffold',
+    branch: null,
     owned: [
       /^docs\/refinements\//,
       /^src\/config\/externalIntelligence\.ts$/,
