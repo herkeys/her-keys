@@ -125,7 +125,7 @@ Do not infer or silently store a device location. Later, the same provider bound
 
 # C. Google Calendar credential activation
 
-Use a Google OAuth **Web application** client for the Calendar server flow. It may be a dedicated client or an existing compatible Her Keys Web OAuth client, but it must have the correct authorized redirect URI.
+Use a Google OAuth **Web application** client for the Calendar server flow. A dedicated Calendar client is preferred so this authorization can never inherit broader scopes from another Her Keys Google workflow. An existing compatible client may be used only if its grant history and redirect configuration are understood.
 
 The Calendar connection is deliberately separate from Her Keys identity authentication.
 
@@ -138,7 +138,7 @@ https://www.googleapis.com/auth/calendar.calendarlist.readonly
 https://www.googleapis.com/auth/calendar.events.readonly
 ```
 
-Do not add Calendar write/edit scopes.
+Do not add Calendar write/edit scopes. The scaffold intentionally does not request incremental/inherited grants.
 
 ## Authorized Google redirect URIs
 
