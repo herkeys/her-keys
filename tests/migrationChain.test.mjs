@@ -80,7 +80,12 @@ describe('post-certification migration governance', () => {
     ]);
     const sql = lf(POST_CERT_CHAIN[0].file);
     const executable = sql.replace(/--.*$/gm, '');
-    const topLevel = executable.replace(/\$fn\$[\s\S]*?\$fn\$/g, '$fn$ BODY $fn  });
+    const topLevel = executable.replace(/\$fn\$[\s\S]*?\$fn\$/g, () => '$fn$ BODY $fn$');
+    assert.match(sql, /^\s*BEGIN;\s*$/m);
+    assert.ok(sql.trim().endsWith('COMMIT;'));
+    assert.match(topLevel, /CREATE OR REPLACE FUNCTION/);
+    assert.doesNotMatch(topLevel, /\b(?:CREATE|ALTER|DROP)\s+TABLE\b|\bTRUNCATE\b|\bCREATE\s+(?:UNIQUE\s+)?INDEX\b|\bADD\s+CONSTRAINT\b|\bGRANT\b|\bREVOKE\b/i);
+  });
 });
 
 describe('a re-declaration never drops an earlier registration', () => {
