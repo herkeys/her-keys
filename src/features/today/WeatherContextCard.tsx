@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { AppState as NativeAppState, Linking, StyleSheet, View } from 'react-native';
+import { AppState as NativeAppState, Image, Linking, StyleSheet, View } from 'react-native';
 import { AppText, Button, Card, Overline } from '../../design/components';
 import { color, spacing } from '../../design/tokens';
 import { weatherAnchorConfig } from '../../config/externalIntelligence';
@@ -72,11 +72,20 @@ export function WeatherContextCard() {
         </AppText>
       ) : null}
       <View style={styles.footer}>
-        <AppText variant="supporting" color={color.text.tertiary}>
-          Forecast from {weather.attribution.providerName}
-        </AppText>
+        {weather.attribution.providerLogo ? (
+          <Image
+            source={{ uri: weather.attribution.providerLogo }}
+            resizeMode="contain"
+            accessibilityLabel={weather.attribution.providerName}
+            style={styles.providerLogo}
+          />
+        ) : (
+          <AppText variant="supporting" color={color.text.tertiary}>
+            Forecast from {weather.attribution.providerName}
+          </AppText>
+        )}
         {sourceUrl ? (
-          <Button label="Weather source" variant="ghost" size="sm" onPress={() => void Linking.openURL(sourceUrl)} />
+          <Button label="Weather sources" variant="ghost" size="sm" onPress={() => void Linking.openURL(sourceUrl)} />
         ) : null}
       </View>
     </Card>
@@ -105,6 +114,7 @@ const styles = StyleSheet.create({
   card: { marginBottom: spacing.xxl },
   title: { marginTop: spacing.sm },
   body: { marginTop: spacing.sm },
+  providerLogo: { width: 104, height: 28 },
   footer: {
     marginTop: spacing.md,
     flexDirection: 'row',
