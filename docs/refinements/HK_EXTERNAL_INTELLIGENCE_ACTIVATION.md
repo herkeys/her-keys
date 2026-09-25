@@ -13,10 +13,12 @@ This document is the activation checklist for External Intelligence Refinement W
 - Current + hourly + daily forecast normalization
 - Today surface with Weather attribution
 - Temporary/in-memory app use only; no weather database
-- No location permission dependency
+- Located by the user's **current device location only** — foreground permission, requested from a Weather action, approximate location is sufficient (see "Weather location" below)
+- No fixed city, no fallback city, no stored home-weather coordinate
 - No WeatherKit secret or private key in the app bundle
 - No percentage-based precipitation copy
-- Dormant when provider credentials or the prototype location anchor are absent
+- Unavailable (not an error) when the user has not shared location, location services are off, or provider credentials are absent
+- `weather-context` is already deployed and ACTIVE (JWT verification on) in both Staging (`fhhudicklmpofuzkxeqe`) and Production (`npykvnxnehlsdlbumzwk`); the deployed code is identical between them
 
 ### Google Calendar
 
@@ -42,7 +44,7 @@ Use this order in each environment:
 2. Add server-side provider secrets.
 3. Configure provider-side redirect/identifier settings.
 4. Deploy the Edge Functions.
-5. Add the non-secret prototype Weather anchor to the app environment.
+5. (Weather needs no app-environment configuration: it uses the device's location, once the user allows it.)
 6. Run the repository gates.
 7. Test on a development build.
 8. Only after Staging proof, repeat the environment-specific activation in Production.
@@ -108,24 +110,40 @@ Before a public build exposes WeatherKit data, review the then-current Apple Dev
 
 Her Keys must not present this Weather context as emergency or life-saving guidance.
 
-## Prototype Weather location
+## Weather location
 
-Weather is intentionally not tied to device location yet. To activate the prototype Today card, set an explicit, non-secret location anchor in the app build environment:
+The product decision: **Weather uses the user's current device location only.** The former build-time fixed-location variables and their config module were removed; there is no replacement variable, no fixed or fallback city, and no stored home-weather coordinate. If location is unavailable, Weather is unavailable.
 
 ```text
-EXPO_PUBLIC_WEATHER_ANCHOR_LATITUDE
-EXPO_PUBLIC_WEATHER_ANCHOR_LONGITUDE
-EXPO_PUBLIC_WEATHER_ANCHOR_COUNTRY_CODE
-EXPO_PUBLIC_WEATHER_ANCHOR_LABEL
+Today → Local Weather → "Use my location" → foreground permission
+      → current/recent device location → weather-context → Apple WeatherKit → "Weather · Near you"
 ```
 
-Example meaning only:
+- **Foreground only.** Her Keys requests When-In-Use (iOS) / foreground (Android) location through `expo-location`, and only from a Weather action on the Today card. Nothing is requested at launch, on refresh, or on a timer.
+- **Approximate is enough.** Position is requested at low accuracy and rounded to about 1 km before use. iOS Reduced accuracy and Android approximate-only both work. Her Keys does not require precise location.
+- **No background location, no tracking.** No Always authorization, no background modes, no Android foreground-service location, no watchers or subscriptions, no geofencing, no reverse geocoding. A single last-known-or-current fix is taken per refresh.
+- **No persistence.** The coordinate exists in memory for one authenticated `weather-context` request and is then discarded. It is never written to Postgres, household state, AsyncStorage/SecureStore, the sync queue, analytics, logs, notifications, Life Admin, or any profile.
+- **Timezone** stays the household/user timezone; the coordinate only chooses the forecast location. No country code is sent (nothing is reverse-geocoded).
+- **Auth boundary unchanged.** Only an account-bound, authenticated user's app calls `weather-context`, which still requires a valid user JWT. WeatherKit credentials remain server-side secrets.
+- **The one provider path** is Her Keys → Supabase `weather-context` → Apple WeatherKit REST. No other location, maps, geocoding or weather provider exists.
 
-- latitude / longitude: a user-approved city/home-area anchor
-- country code: `US`
-- label: `Home`
+Permission behavior on the Weather card:
 
-Do not infer or silently store a device location. Later, the same provider boundary can take a user-approved home area or an explicit trip/event destination.
+| State | What she sees |
+|---|---|
+| Not yet asked | A calm optional card with **Use my location**. Nothing is prompted until she taps. |
+| Granted | **Weather · Near you** with condition, temperature, high/low, precipitation wording, Apple Weather attribution and the Weather sources link. |
+| Denied, OS will ask again | Weather stays off (not an error) with an explicit **Use my location** retry. |
+| Denied, cannot ask again | **Open Settings**. Her Keys never re-prompts. |
+| Location services off / no fix | Nothing (or, right after she tapped, a quiet "not available right now" with **Try again**). Today is unaffected. |
+| Provider failure | Nothing. Today is unaffected; no stale or invented forecast is shown. |
+
+### Native permission surface (declared in `app.json`, verified with `expo config --type introspect`)
+
+- **iOS:** `NSLocationWhenInUseUsageDescription` only ("Her Keys uses your approximate location while you're using the app to show local weather and location-aware planning."). No `NSLocationAlways…` strings, no `NSMotionUsageDescription`, no `UIBackgroundModes` location.
+- **Android:** `ACCESS_COARSE_LOCATION` only. `ACCESS_FINE_LOCATION` is blocked through `android.blockedPermissions`; `ACCESS_BACKGROUND_LOCATION` and `FOREGROUND_SERVICE_LOCATION` are absent. `expo-location` accepts coarse-only permission as sufficient for a foreground fix.
+
+`tests/weather/architecture.test.mjs` holds these guarantees in source and resolves the real Expo config on every run.
 
 ---
 
@@ -236,7 +254,7 @@ Hosted secrets belong in the Supabase project’s Edge Function Secrets, not in 
 
 Before activation, the expected behavior is:
 
-- Weather card does not appear.
+- Weather card does not appear (or shows only the optional **Use my location** entry point when the user has not shared location).
 - Google Calendar connection UI does not appear if the Calendar functions report provider configuration unavailable.
 - Canonical Her Keys Calendar continues working normally.
 - No external provider request can alter Tasks, Events, Capacity, One Move, or household state.
@@ -254,7 +272,10 @@ After Staging activation:
 
 - Sign in to a real Her Keys account.
 - Confirm Today loads normally when WeatherKit is unreachable.
-- Confirm Weather appears only when the explicit anchor is present.
+- On a development build, confirm no location prompt appears at launch, and that Today shows **Use my location** first.
+- Tap **Use my location**, allow While Using (choose Approximate/Reduced accuracy where the OS offers it), and confirm **Weather · Near you** appears.
+- Deny once and confirm Weather simply stays off, then confirm a permanent denial offers **Open Settings** and never re-prompts.
+- Confirm no Always/background location permission is offered, on either platform.
 - Confirm current condition and high/low render.
 - Confirm precipitation wording contains no percentage.
 - Confirm Apple Weather attribution is visible.
@@ -321,9 +342,8 @@ These are **not** required to activate this scaffold:
 - creating/updating/deleting Google events
 - Outlook Calendar
 - remote push notifications
-- native device location permission
-- background location
-- persistent Weather history
+- background location or any continuous location tracking (foreground device location for Weather is built; see "Weather location")
+- persistent Weather history, or any stored location
 - weather alerts
 - importing Google events into canonical Her Keys `Event` rows
 - counting Google events in Capacity
@@ -334,7 +354,7 @@ Those require separate product/truth decisions. The scaffold deliberately stops 
 
 ## Activation definition
 
-Weather is **activated** when WeatherKit server secrets + an explicit app weather anchor are present and `weather-context` is deployed.
+Weather is **activated** when WeatherKit server secrets are present, `weather-context` is deployed (already true in Staging and Production), and a signed-in user chooses to share her device location.
 
 Google Calendar is **activated** when the service-only migration exists, Google OAuth redirect/client credentials + encryption secret are present, the two Calendar functions are deployed, and a user explicitly connects Google Calendar.
 
