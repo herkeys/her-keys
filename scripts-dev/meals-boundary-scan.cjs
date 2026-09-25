@@ -370,6 +370,7 @@ const LATER_FEATURES = [
     branch: null,
     owned: [
       /^docs\/refinements\//,
+      /^scripts-dev\/ocr-assist-mutation-check\.cjs$/,
       /^src\/config\/externalIntelligence\.ts$/,
       /^src\/domain\/account\/sessionClient\.ts$/,
       /^src\/external\//,
@@ -390,11 +391,12 @@ const LATER_FEATURES = [
     shared: [
       ['.env.example', 'Prototype refinements: document backend intent, provider IDs and the dormant weather anchor without secrets'],
       ['.gitattributes', 'Prototype refinements: pin the governed function-alignment migration to LF'],
+      ['app.json', 'OCR Assist refinement: register the expo-image-picker plugin (camera only; photos and microphone permissions declined) for on-device document capture'],
       ['app/_layout.tsx', 'Notifications refinement: mount the device-local notification controller without changing household truth'],
       ['app/sign-in.tsx', 'FR01: expose the existing sign-in route as a safe reconnect path for auth-degraded accounts'],
       ['eas.json', 'FR01 environment guard: declare production backend intent for candidate profiles without embedding credentials'],
-      ['package.json', 'Notifications refinement: add the SDK-57 local notifications native dependency'],
-      ['package-lock.json', 'Notifications refinement: lock the SDK-57 local notifications dependency graph'],
+      ['package.json', 'Notifications refinement: add the SDK-57 local notifications native dependency; OCR Assist refinement: add the exact expo-ocr-kit 0.1.4 pin and the image picker, manipulator and file-system dependencies'],
+      ['package-lock.json', 'Notifications refinement: lock the SDK-57 local notifications dependency graph; OCR Assist refinement: lock the on-device OCR and image dependencies'],
       ['src/config/supabase.ts', 'FR01 environment guard: fail closed when a declared Her Keys environment points at the wrong Supabase project'],
       ['src/domain/account/accountRuntime.ts', 'FR01: install and refresh the transport session before accountBound can start sync'],
       ['src/domain/account/authState.ts', 'FR01: same-actor session recovery rotates credentials without changing household identity'],

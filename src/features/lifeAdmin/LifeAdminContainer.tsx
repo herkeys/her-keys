@@ -1,5 +1,7 @@
-import { useMemo, useState } from 'react';
-import { View } from 'react-native';
+import { lazy, Suspense, useMemo, useState } from 'react';
+import { StyleSheet, View } from 'react-native';
+import { Button } from '../../design/components';
+import { spacing } from '../../design/tokens';
 import {
   addLifeRecord,
   addLifeRecordTask,
@@ -20,9 +22,15 @@ import { LifeAdminBody } from './LifeAdminBody';
 import { LIFE_ADMIN_COPY as COPY } from './lifeAdminCopy';
 import { lifeAdminGate, type LifeAdminGateInput } from './lifeAdminGate';
 import { buildLifeAdminView, buildRecordDetail } from './lifeAdminView';
+import { OCR_COPY } from './ocrCopy';
 import { RecordDetailSheet } from './RecordDetailSheet';
 import { EMPTY_RECORD_VALUES, RecordSheet, type RecordSheetValues } from './RecordSheet';
 import { RecordTaskSheet, type RecordTaskSheetValues } from './RecordTaskSheet';
+
+// Loaded only the first time the scan sheet actually renders (never in the plain manual-entry paths above). `ScanEntryPoint`
+// is the one component that reaches the native camera/photo-picker/OCR modules; deferring the import keeps those native
+// modules out of every render that never opens it, in the running app and in the test harness alike.
+const ScanEntryPoint = lazy(() => import('./ScanEntryPoint').then((m) => ({ default: m.ScanEntryPoint })));
 
 /**
  * The Life Admin / Documents screen. It reads the projection and writes through the canonical store and the LifeRecord commands,
@@ -31,10 +39,13 @@ import { RecordTaskSheet, type RecordTaskSheetValues } from './RecordTaskSheet';
  */
 
 type SheetState =
-  | { kind: 'create'; draftId: string }
+  // `initialOverride` pre-fills the Add-record form from an OCR scan she has already assigned/confirmed on the review screen;
+  // it is undefined for the plain "Add record" path, which behaves exactly as before.
+  | { kind: 'create'; draftId: string; initialOverride?: Partial<RecordSheetValues> }
   | { kind: 'edit'; recordId: string; expected: LifeRecordSnapshot }
   | { kind: 'detail'; recordId: string }
-  | { kind: 'task'; recordId: string; relation: LifeRecordLinkRelation; taskId: string; linkId: string };
+  | { kind: 'task'; recordId: string; relation: LifeRecordLinkRelation; taskId: string; linkId: string }
+  | { kind: 'scan' };
 
 const valuesOf = (record: LifeRecord): RecordSheetValues => ({
   title: record.title,
@@ -243,8 +254,36 @@ export function LifeAdminContainer({ state, today, gateInput, store, onOpenTask,
         }}
       />
 
+      {gate.canWrite ? (
+        <View style={styles.scanRow}>
+          <Button label={OCR_COPY.scanEntry} variant="secondary" onPress={() => { setFlash(null); open({ kind: 'scan' }); }} accessibilityHint={OCR_COPY.scanEntryHint} />
+        </View>
+      ) : null}
+
+      {sheet?.kind === 'scan' ? (
+        <Suspense fallback={null}>
+          <ScanEntryPoint
+            visible
+            onUseValues={(values) => open({ kind: 'create', draftId: newLifeAdminDraftId('life-record'), initialOverride: values })}
+            onManualEntry={() => open({ kind: 'create', draftId: newLifeAdminDraftId('life-record') })}
+            onClose={() => open(null)}
+          />
+        </Suspense>
+      ) : null}
+
       {sheet?.kind === 'create' ? (
-        <RecordSheet key={sheet.draftId} visible mode="create" initial={EMPTY_RECORD_VALUES} childOptions={childOptions} notice={notice} busy={busy} canWrite={gate.canWrite} onSubmit={submitRecord} onClose={() => open(null)} />
+        <RecordSheet
+          key={sheet.draftId}
+          visible
+          mode="create"
+          initial={sheet.initialOverride ? { ...EMPTY_RECORD_VALUES, ...sheet.initialOverride } : EMPTY_RECORD_VALUES}
+          childOptions={childOptions}
+          notice={notice}
+          busy={busy}
+          canWrite={gate.canWrite}
+          onSubmit={submitRecord}
+          onClose={() => open(null)}
+        />
       ) : null}
 
       {sheet?.kind === 'edit' && editing !== null ? (
@@ -302,3 +341,5 @@ export function LifeAdminContainer({ state, today, gateInput, store, onOpenTask,
     </View>
   );
 }
+
+const styles = StyleSheet.create({ scanRow: { marginTop: spacing.md } });
