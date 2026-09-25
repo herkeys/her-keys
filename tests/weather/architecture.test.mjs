@@ -188,10 +188,11 @@ describe('the app.json permission intent', () => {
   });
 
   test('every earlier plugin and identifier is preserved', () => {
-    assert.deepEqual(
-      app.plugins.slice(0, 6).map((entry) => (Array.isArray(entry) ? entry[0] : entry)),
-      ['expo-router', 'expo-status-bar', 'expo-apple-authentication', 'expo-secure-store', 'expo-web-browser', 'expo-image-picker'],
-    );
+    // Order-independent: later refinements (e.g. expo-notifications) may register more plugins; none of these may go missing.
+    const registered = app.plugins.map((entry) => (Array.isArray(entry) ? entry[0] : entry));
+    for (const name of ['expo-router', 'expo-status-bar', 'expo-apple-authentication', 'expo-secure-store', 'expo-web-browser', 'expo-image-picker', 'expo-location']) {
+      assert.ok(registered.includes(name), `${name} is still registered`);
+    }
     const picker = app.plugins.find((entry) => Array.isArray(entry) && entry[0] === 'expo-image-picker')[1];
     assert.equal(picker.photosPermission, false);
     assert.equal(picker.microphonePermission, false);
