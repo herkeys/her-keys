@@ -11,6 +11,12 @@ import type { AccountSession } from '../domain/account/identity';
  * own copy in AsyncStorage would quietly create a second one, in the very place
  * B4-P0-013 says a token may not be (`herkeys.appState` sits in the same
  * store). The app hands the client a session when it has one instead.
+ *
+ * `flowType: 'pkce'` is for Google identity OAuth (googleIdentityOAuth.ts): the
+ * redirect carries a single-use code, never a token, and the code verifier sits
+ * in this client's in-memory storage — `persistSession: false` means supabase-js
+ * never touches AsyncStorage or localStorage for it. Apple's id-token sign-in
+ * and `setSession` are unaffected by the flow type.
  */
 export function createSupabaseClient(): SupabaseClient | null {
   if (!isSupabaseConfigured()) return null;
@@ -19,6 +25,7 @@ export function createSupabaseClient(): SupabaseClient | null {
       persistSession: false,
       autoRefreshToken: false,
       detectSessionInUrl: false,
+      flowType: 'pkce',
     },
   });
 }

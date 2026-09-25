@@ -24,7 +24,7 @@ export default function SignIn() {
   useEffect(() => {
     let live = true;
     // Availability is asked of the adapters, not assumed from the platform: a
-    // build with no Google client id should not show a button that cannot work.
+    // build with no Supabase project should not show a button that cannot work.
     accountProviders
       .available()
       .then((offered) => {

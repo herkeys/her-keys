@@ -92,7 +92,8 @@ describe('Route access', () => {
 
   test('every root route is in the guard table, and the root layout wraps each one in its own guard', () => {
     const fileRoutes = [
-      ...readdirSync('app').filter((name) => name.endsWith('.tsx') && !name.startsWith('_')).map((name) => name.replace(/\.tsx$/, '')),
+      // `_layout` and Expo Router's `+` special files (e.g. `+native-intent`) are not routes.
+      ...readdirSync('app').filter((name) => name.endsWith('.tsx') && !name.startsWith('_') && !name.startsWith('+')).map((name) => name.replace(/\.tsx$/, '')),
       ...readdirSync('app').filter((name) => /^\(.+\)$/.test(name)),
       ...readdirSync('app/onboarding').map((name) => `onboarding/${name.replace(/\.tsx$/, '')}`),
     ];
