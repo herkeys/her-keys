@@ -54,10 +54,3 @@ export function assertBackendMatchesUrl(config: SupabaseConfig = supabaseConfig)
     throw new Error(`Her Keys ${config.backend} build is pointed at the wrong Supabase project`);
   }
 }
-
-/** Google's OAuth client ids, per platform. Absent means "do not offer Google". */
-export const googleAuthConfig = {
-  iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
-  androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
-  webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
-};

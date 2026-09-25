@@ -11,7 +11,7 @@ import { identifyRevenueCatAccount } from '../monetization/revenueCatClient';
 import { createAppleProvider } from '../platform/appleProvider';
 import { createGoogleProvider } from '../platform/googleProvider';
 import { createExternalIntelligenceClient, UNCONFIGURED_EXTERNAL_INTELLIGENCE } from '../platform/externalIntelligenceClient';
-import { createDeviceSecureStorage } from '../platform/secureStore';
+import { createDeviceSecureStorage, secureStorageAvailable } from '../platform/secureStore';
 import { createSupabaseAccountClient, createSupabaseClient } from '../platform/supabaseCloud';
 import { createSupabaseSessionClient } from '../platform/supabaseSessionClient';
 import { createSupabaseSyncTransport } from '../platform/supabaseSyncTransport';
@@ -63,7 +63,13 @@ export const accountsAvailable = client !== null && providerClient !== null;
 export const externalIntelligenceClient =
   client === null ? UNCONFIGURED_EXTERNAL_INTELLIGENCE : createExternalIntelligenceClient(client);
 
-const adapters: AuthProviderAdapter[] = providerClient === null ? [] : [createAppleProvider(providerClient), createGoogleProvider(providerClient)];
+// Google identity is one Supabase OAuth path on iOS and Android. It is only
+// registered where the durable secure credential store exists; web has none, so
+// web is isolated here rather than inside the provider.
+const adapters: AuthProviderAdapter[] =
+  providerClient === null
+    ? []
+    : [createAppleProvider(providerClient), ...(secureStorageAvailable ? [createGoogleProvider(providerClient)] : [])];
 
 /** Which providers this device can actually offer. Asked, not assumed. */
 export const accountProviders = createProviderRegistry(adapters);
