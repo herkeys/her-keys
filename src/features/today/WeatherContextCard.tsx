@@ -1,51 +1,169 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState as NativeAppState, Image, Linking, StyleSheet, View } from 'react-native';
 import { AppText, Button, Card, Overline } from '../../design/components';
 import { color, spacing } from '../../design/tokens';
-import { weatherAnchorConfig } from '../../config/externalIntelligence';
 import type { WeatherSnapshot } from '../../external/types';
+import {
+  openLocationSettings,
+  readWeatherLocation,
+  requestWeatherLocation,
+  type WeatherLocationResult,
+} from '../../platform/deviceLocation';
 import { useOptionalAccount } from '../../store/AccountProvider';
 import { useHouseholdState } from '../../store/AppStateProvider';
 import { externalIntelligenceClient } from '../../store/accountRuntimeInstance';
 
+/**
+ * Weather is optional and device-located: no permission, no Weather. `checking` and `unavailable` render nothing (Today carries on);
+ * the other three states are the calm, explicit ways she can turn Weather on.
+ */
+type LocationAccess =
+  | 'checking'
+  | 'ready'
+  | 'permission-required'
+  | 'denied-can-ask'
+  | 'denied-blocked'
+  | 'unavailable'
+  | 'unavailable-after-request';
+
+function accessFor(location: WeatherLocationResult, askedNow: boolean): LocationAccess {
+  switch (location.kind) {
+    case 'ready':
+      return 'ready';
+    case 'permission-required':
+      return 'permission-required';
+    case 'permission-denied':
+      return location.canAskAgain ? 'denied-can-ask' : 'denied-blocked';
+    case 'unavailable':
+      return askedNow ? 'unavailable-after-request' : 'unavailable';
+  }
+}
+
 export function WeatherContextCard() {
   const account = useOptionalAccount();
   const { state } = useHouseholdState();
+  const timezone = state.user.timezone;
+  const bound = account?.state.kind === 'accountBound';
   const [weather, setWeather] = useState<WeatherSnapshot | null>(null);
+  const [access, setAccess] = useState<LocationAccess>('checking');
+  // Newest request wins; bumped on cleanup so a late answer for a stale effect is dropped.
+  const sequence = useRef(0);
+  // While the system prompt is up, the app goes inactive/active — that must not start a competing silent read.
+  const promptOpen = useRef(false);
+
+  /**
+   * One location read → one Weather request. The coordinates live only in this closure: they are never put in state, storage,
+   * a log or the sync path. `askedNow` is true only for the button press; every other caller is silent and can never prompt.
+   */
+  const refresh = useCallback(
+    async (askedNow: boolean) => {
+      if (!askedNow && promptOpen.current) return;
+      const mine = ++sequence.current;
+      if (askedNow) promptOpen.current = true;
+      try {
+        const location = askedNow ? await requestWeatherLocation() : await readWeatherLocation();
+        if (mine !== sequence.current) return;
+        if (location.kind !== 'ready') {
+          setWeather(null);
+          setAccess(accessFor(location, askedNow));
+          return;
+        }
+        setAccess('ready');
+        const result = await externalIntelligenceClient.weather({
+          latitude: location.latitude,
+          longitude: location.longitude,
+          timezone,
+          language: 'en-US',
+        });
+        if (mine !== sequence.current) return;
+        setWeather(result.kind === 'ready' ? result.value : null);
+      } finally {
+        if (askedNow) promptOpen.current = false;
+      }
+    },
+    [timezone],
+  );
 
   useEffect(() => {
-    if (account?.state.kind !== 'accountBound' || weatherAnchorConfig === null) {
+    if (!bound) {
       setWeather(null);
+      setAccess('checking');
       return;
     }
 
-    const anchor = weatherAnchorConfig;
-    let live = true;
-    const load = async () => {
-      const result = await externalIntelligenceClient.weather({
-        latitude: anchor.latitude,
-        longitude: anchor.longitude,
-        timezone: state.user.timezone,
-        countryCode: anchor.countryCode,
-        language: 'en-US',
-      });
-      if (live) setWeather(result.kind === 'ready' ? result.value : null);
-    };
-
-    void load();
+    void refresh(false);
     const subscription = NativeAppState.addEventListener('change', (next) => {
-      if (next === 'active') void load();
+      if (next === 'active') void refresh(false);
     });
-    const timer = setInterval(load, 30 * 60_000);
+    const timer = setInterval(() => void refresh(false), 30 * 60_000);
 
     return () => {
-      live = false;
+      sequence.current += 1;
       subscription.remove();
       clearInterval(timer);
     };
-  }, [account?.state.kind, state.user.timezone]);
+  }, [bound, refresh]);
 
-  if (weather === null) return null;
+  if (!bound) return null;
+
+  if (access === 'permission-required') {
+    return (
+      <Card tone="subtle" style={styles.card}>
+        <Overline>Weather</Overline>
+        <AppText variant="body" color={color.text.secondary} style={styles.body}>
+          Local weather can help Her Keys plan around your day. It uses your approximate location only while the app is open, and
+          nothing is saved.
+        </AppText>
+        <View style={styles.footer}>
+          <Button label="Use my location" variant="secondary" size="sm" onPress={() => void refresh(true)} />
+        </View>
+      </Card>
+    );
+  }
+
+  if (access === 'denied-can-ask') {
+    return (
+      <Card tone="subtle" style={styles.card}>
+        <Overline>Weather</Overline>
+        <AppText variant="body" color={color.text.secondary} style={styles.body}>
+          Weather stays off without your location. That is fine — Today works the same either way.
+        </AppText>
+        <View style={styles.footer}>
+          <Button label="Use my location" variant="ghost" size="sm" onPress={() => void refresh(true)} />
+        </View>
+      </Card>
+    );
+  }
+
+  if (access === 'denied-blocked') {
+    return (
+      <Card tone="subtle" style={styles.card}>
+        <Overline>Weather</Overline>
+        <AppText variant="body" color={color.text.secondary} style={styles.body}>
+          Location is off for Her Keys, so Weather is off. You can turn it on in Settings whenever you like.
+        </AppText>
+        <View style={styles.footer}>
+          <Button label="Open Settings" variant="ghost" size="sm" onPress={() => void openLocationSettings()} />
+        </View>
+      </Card>
+    );
+  }
+
+  if (access === 'unavailable-after-request') {
+    return (
+      <Card tone="subtle" style={styles.card}>
+        <Overline>Weather</Overline>
+        <AppText variant="body" color={color.text.secondary} style={styles.body}>
+          Your location isn't available right now, so Weather is off for the moment.
+        </AppText>
+        <View style={styles.footer}>
+          <Button label="Try again" variant="ghost" size="sm" onPress={() => void refresh(true)} />
+        </View>
+      </Card>
+    );
+  }
+
+  if (access !== 'ready' || weather === null) return null;
 
   const today = weather.daily[0] ?? null;
   const condition = humanCondition(weather.current.conditionCode ?? today?.conditionCode);
@@ -63,7 +181,7 @@ export function WeatherContextCard() {
 
   return (
     <Card tone="subtle" style={styles.card}>
-      <Overline>{weatherAnchorConfig?.label ? `Weather · ${weatherAnchorConfig.label}` : 'Weather context'}</Overline>
+      <Overline>Weather · Near you</Overline>
       <AppText variant="sectionTitle" style={styles.title}>
         {condition || 'Forecast available'}
       </AppText>
