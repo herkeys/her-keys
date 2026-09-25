@@ -56,8 +56,35 @@ describe('local notification architecture boundary', () => {
   test('the native module is nevertheless a locked application dependency', () => {
     const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
     const lock = JSON.parse(readFileSync('package-lock.json', 'utf8'));
-    assert.equal(pkg.dependencies['expo-notifications'], '~57.0.20');
-    assert.equal(lock.packages[''].dependencies['expo-notifications'], '~57.0.20');
-    assert.equal(lock.packages['node_modules/expo-notifications'].version, '57.0.20');
+    // The SDK-57 line, kept in step with what `expo install --check` expects; the lock must agree with package.json.
+    assert.match(pkg.dependencies['expo-notifications'], /^~57\.0\.\d+$/);
+    assert.equal(lock.packages[''].dependencies['expo-notifications'], pkg.dependencies['expo-notifications']);
+    assert.match(lock.packages['node_modules/expo-notifications'].version, /^57\.0\.\d+$/);
+  });
+
+  test('there is no remote push backend, dependency or scheduling path: reminders are device-local DATE triggers only', () => {
+    // No push function exists in the backend, and none of the push/FCM/APNs SDKs or endpoints appear in app, backend or dependencies.
+    const functions = readdirSync('supabase/functions').filter((name) => statSync(`supabase/functions/${name}`).isDirectory());
+    assert.deepEqual(functions.sort(), ['_shared', 'calendar-data', 'calendar-oauth', 'weather-context']);
+    const walk = (dir) => readdirSync(dir).flatMap((name) => {
+      const path = `${dir}/${name}`;
+      return statSync(path).isDirectory() ? walk(path) : /\.(ts|tsx)$/.test(name) ? [path] : [];
+    });
+    for (const file of [...walk('src'), ...walk('app'), ...walk('supabase/functions')]) {
+      assert.doesNotMatch(
+        readFileSync(file, 'utf8'),
+        /exp\.host|expo-server-sdk|fcm\.googleapis|firebase-admin|apns|PushNotificationTrigger|addPushTokenListener|registerForPushNotificationsAsync/i,
+        `${file} references a remote push path`,
+      );
+    }
+    const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
+    for (const name of Object.keys({ ...pkg.dependencies, ...pkg.devDependencies })) {
+      assert.doesNotMatch(name, /^(expo-server-sdk|firebase(-admin)?|@react-native-firebase\/.*|react-native-push-notification|@notifee\/.*|onesignal.*|react-native-onesignal)$/, `${name} is a push dependency`);
+    }
+    // The one scheduler uses a local DATE trigger — never a push or a location/geofence trigger.
+    const scheduler = readFileSync('src/platform/localNotifications.ts', 'utf8');
+    assert.equal((scheduler.match(/scheduleNotificationAsync\(/g) ?? []).length, 1);
+    assert.match(scheduler, /SchedulableTriggerInputTypes\.DATE/);
+    assert.doesNotMatch(scheduler, /SchedulableTriggerInputTypes\.(TIME_INTERVAL|CALENDAR|DAILY|WEEKLY|YEARLY)|PushNotificationTrigger|LocationNotificationTrigger/);
   });
 });
