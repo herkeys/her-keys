@@ -32,3 +32,6 @@ supabase/migrations/20260922210000_int13_per_owner_uniqueness.sql text eol=lf
 
 # Pin the governed environment function-alignment migration to LF: it replaces function bodies, so cross-platform bytes must stay stable.
 supabase/migrations/20260924183000_env_function_alignment.sql text eol=lf
+
+# Pin the applied Google Calendar service-only migration to LF: it is applied to Staging and Production as written and its hash is pinned.
+supabase/migrations/20260925141432_external_calendar_connections.sql text eol=lf

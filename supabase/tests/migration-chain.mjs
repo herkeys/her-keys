@@ -33,6 +33,8 @@ export const ADDITIVE_CHAIN = [
   { file: '20260922210000_int13_per_owner_uniqueness.sql', owner: 'INT13', label: 'int13' },
   // Post-certification environment convergence: function-body alignment only, no table/data/policy/grant changes.
   { file: '20260924183000_env_function_alignment.sql', owner: 'ENV_ALIGN', label: 'env-align' },
+  // Google Calendar activation: two service-only tables (RLS on, no client grants). Applied to Staging and Production as written.
+  { file: '20260925141432_external_calendar_connections.sql', owner: 'CAL_CONNECTIONS', label: 'calendar' },
 ];
 
 /** WAVE3_BASE (363e473) ended at F05: the chain a WAVE3_BASE-era database was built with, and the populated-upgrade starting point. */

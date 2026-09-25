@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { describe, test } from 'node:test';
 
 describe('local notification architecture boundary', () => {
@@ -18,10 +19,38 @@ describe('local notification architecture boundary', () => {
     assert.equal(source.indexOf('requestLocalNotificationPermission();', requestAt + 1), -1);
   });
 
-  test('app config does not add APNs or exact-alarm configuration for a local-only reminder', () => {
+  test('the expo-notifications plugin is registered plain, and adds no remote-push behavior or exact alarm to a local-only reminder', () => {
     const app = JSON.parse(readFileSync('app.json', 'utf8'));
-    assert.equal(app.expo.plugins.includes('expo-notifications'), false);
-    assert.doesNotMatch(JSON.stringify(app), /SCHEDULE_EXACT_ALARM|aps-environment/);
+    // Registered as the bare string: no options, so no background remote-notification mode, custom sound or icon is configured.
+    assert.ok(app.expo.plugins.includes('expo-notifications'), 'the plugin resolves the native notification module');
+    assert.doesNotMatch(JSON.stringify(app), /SCHEDULE_EXACT_ALARM|USE_EXACT_ALARM|enableBackgroundRemoteNotifications|remote-notification/);
+
+    // What Expo really generates (real config plugins, not just app.json).
+    const resolved = JSON.parse(
+      execFileSync(process.execPath, ['node_modules/expo/bin/cli', 'config', '--type', 'introspect', '--json'], {
+        encoding: 'utf8',
+        env: { ...process.env, EXPO_NO_TELEMETRY: '1', CI: '1' },
+      }),
+    );
+    assert.ok(!(resolved.ios.infoPlist.UIBackgroundModes ?? []).includes('remote-notification'), 'no background remote-notification mode');
+    // The plugin always declares the APNs capability entitlement (development value). It is a capability, not a behavior: nothing in
+    // the app registers a push token or receives a remote push (asserted below), so delivery stays device-local.
+    assert.equal(resolved.ios.entitlements['aps-environment'], 'development');
+    assert.doesNotMatch(JSON.stringify(resolved.android), /SCHEDULE_EXACT_ALARM|USE_EXACT_ALARM/);
+  });
+
+  test('no application source registers for or handles remote push', () => {
+    const walk = (dir) => readdirSync(dir).flatMap((name) => {
+      const path = `${dir}/${name}`;
+      return statSync(path).isDirectory() ? walk(path) : /\.(ts|tsx)$/.test(name) ? [path] : [];
+    });
+    for (const file of [...walk('src'), ...walk('app')]) {
+      assert.doesNotMatch(
+        readFileSync(file, 'utf8'),
+        /getDevicePushTokenAsync|getExpoPushTokenAsync|setAutoServerRegistrationEnabledAsync|registerTaskAsync|addPushTokenListener/,
+        `${file} touches remote push`,
+      );
+    }
   });
 
   test('the native module is nevertheless a locked application dependency', () => {

@@ -77,6 +77,7 @@ describe('post-certification migration governance', () => {
   test('the environment-alignment migration stays registered, additive, and function-only at the schema level', () => {
     assert.deepEqual(POST_CERT_CHAIN.map((m) => [m.owner, m.file]), [
       ['ENV_ALIGN', '20260924183000_env_function_alignment.sql'],
+      ['CAL_CONNECTIONS', '20260925141432_external_calendar_connections.sql'],
     ]);
     const sql = lf(POST_CERT_CHAIN[0].file);
     const executable = sql.replace(/--.*$/gm, '');
@@ -85,6 +86,29 @@ describe('post-certification migration governance', () => {
     assert.ok(sql.trim().endsWith('COMMIT;'));
     assert.match(topLevel, /CREATE OR REPLACE FUNCTION/);
     assert.doesNotMatch(topLevel, /\b(?:CREATE|ALTER|DROP)\s+TABLE\b|\bTRUNCATE\b|\bCREATE\s+(?:UNIQUE\s+)?INDEX\b|\bADD\s+CONSTRAINT\b|\bGRANT\b|\bREVOKE\b/i);
+  });
+
+  test('the Google Calendar migration is byte-identical to its reviewed blueprint, never edited, and service-only', () => {
+    const file = '20260925141432_external_calendar_connections.sql';
+    const sql = lf(file);
+    // Applied to Staging and Production exactly as written: its bytes may never change (LF-normalized SHA-256).
+    assert.equal(createHash('sha256').update(sql).digest('hex'), 'e40c85f328c9338dd8a19bdf07e80547c94e92aefb7768dac421572ea7fa1127');
+    assert.equal(sql, readFileSync(join(REPO, 'supabase', 'blueprints', 'external_calendar_connections.sql'), 'utf8').replace(/\r\n/g, '\n'));
+
+    const executable = sql.replace(/--.*$/gm, '');
+    assert.deepEqual(
+      [...executable.matchAll(/create table if not exists public\.(\w+)/gi)].map((m) => m[1]).sort(),
+      ['calendar_oauth_states', 'external_calendar_connections'],
+    );
+    for (const table of ['calendar_oauth_states', 'external_calendar_connections']) {
+      assert.match(executable, new RegExp(`alter table public\\.${table} enable row level security;`));
+      assert.match(executable, new RegExp(`revoke all on table public\\.${table} from anon, authenticated;`));
+      assert.match(executable, new RegExp(`grant select, insert, update, delete on table public\\.${table} to service_role;`));
+    }
+    // No client policy and no client grant: the mobile app never reads these tables (only the Edge Functions do).
+    assert.doesNotMatch(executable, /create policy|to authenticated|to anon\b|grant\b[^;]*\bto\s+(?:public|authenticated|anon)\b/i);
+    assert.doesNotMatch(executable, /\b(?:drop|truncate|alter\s+table\s+\S+\s+drop)\b/i);
+    assert.ok(readFileSync(join(REPO, '.gitattributes'), 'utf8').includes(`supabase/migrations/${file} text eol=lf`), 'not pinned LF');
   });
 });
 
