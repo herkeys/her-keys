@@ -1,8 +1,8 @@
 # Her Keys — Weather + Google Calendar Activation Runbook
 
-Status: **scaffolded, dormant by default**
+Status: **backend activated in Staging + Production; prototype/device proof pending**
 
-This document is the activation checklist for External Intelligence Refinement Wave 1. The application and server boundaries already exist. Provider credentials are intentionally absent from source control, so an unconfigured build behaves exactly like Her Keys without Weather or Google Calendar.
+This document is the activation checklist for External Intelligence Refinement Wave 1. The application and server boundaries already exist. Provider credentials remain server-side and absent from source control. Weather and Google Calendar backend activation is complete in both Her Keys environments; real-device and end-to-end OAuth proof remain deferred until the internal prototype artifact exists.
 
 ## What is already built
 
@@ -35,10 +35,14 @@ This document is the activation checklist for External Intelligence Refinement W
 - Calendar UI clearly labels imported events as external/read-only
 - Google events remain outside canonical Her Keys `Event` state and do not yet affect Capacity or One Move
 - Dormant when the server-side Google Calendar credentials are absent
+- Backend activation complete in Staging (`fhhudicklmpofuzkxeqe`) and Production (`npykvnxnehlsdlbumzwk`): the service-only migration is applied, required server-side secrets are present, and both Calendar Edge Functions are ACTIVE
+- `calendar-oauth` is deployed identically in both environments with platform JWT precheck off by design; deployed hash `91907303dc5b3bb7a40bd01b0b6301ecdbb3daa44706563ad0681ed301e2c6cd`
+- `calendar-data` is deployed identically in both environments with JWT verification on; deployed hash `0dd36b9cdbc4dcffb765d47d7e0d18bdcf7cba20d15b72b61d599ccf931fce3a`
+- Real Google consent, app-return, calendar listing, event display, disconnect, and account-isolation proof remain pending the internal prototype build
 
 ## Activation order
 
-Use this order in each environment:
+Use this order in each environment. The backend portion of this sequence has now been completed in both Her Keys environments to preserve parity; the remaining repository/device proof is still required before prototype certification:
 
 1. Generate/apply the Calendar connection migration.
 2. Add server-side provider secrets.
@@ -58,6 +62,12 @@ Do **not** skip directly to Production.
 The reviewed schema blueprint is:
 
 `supabase/blueprints/external_calendar_connections.sql`
+
+The committed activation migration is:
+
+`supabase/migrations/20260925141432_external_calendar_connections.sql`
+
+The migration bytes match the reviewed blueprint. The same SQL was validated and then applied to both Staging and Production.
 
 Do not invent a migration filename by hand.
 
@@ -354,8 +364,10 @@ Those require separate product/truth decisions. The scaffold deliberately stops 
 
 ## Activation definition
 
-Weather is **activated** when WeatherKit server secrets are present, `weather-context` is deployed (already true in Staging and Production), and a signed-in user chooses to share her device location.
+Weather backend activation is complete in Staging and Production. User-level Weather activation occurs when a signed-in user chooses to share foreground device location; real-device permission proof remains part of prototype certification.
 
-Google Calendar is **activated** when the service-only migration exists, Google OAuth redirect/client credentials + encryption secret are present, the two Calendar functions are deployed, and a user explicitly connects Google Calendar.
+Google Calendar backend activation is complete in Staging and Production: the service-only migration exists, Google OAuth client credentials + environment-specific encryption secrets are present, and both Calendar functions are ACTIVE with identical deployment hashes across environments. User-level Calendar activation occurs only when a signed-in user explicitly completes Google Calendar consent.
 
-Until then, both capabilities remain dormant without changing core Her Keys behavior.
+For internal testing, Google OAuth remains in Testing mode and only configured Google test users can complete Calendar consent. Public Google verification, website/domain work, and opening Calendar authorization to all users are release work and are not blockers for the internal prototype.
+
+The remaining activation proof is therefore repository gates plus real-device/end-to-end testing from the prototype artifact.
