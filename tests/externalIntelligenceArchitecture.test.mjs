@@ -99,11 +99,19 @@ describe('External Intelligence scaffold architecture', () => {
     assert.doesNotMatch(blueprint, /grant .* to authenticated/);
   });
 
-  test('the provider scaffold is dormant without manual configuration', () => {
+  test('Weather is dormant without an account-bound user and a device location; Calendar stays dormant without configuration', () => {
     const weather = read('src/features/today/WeatherContextCard.tsx');
     const calendar = read('src/features/calendar/useGoogleCalendarBridge.ts');
 
-    assert.match(weather, /weatherAnchorConfig === null/);
+    // The fixed prototype anchor is retired (tests/weather/architecture.test.mjs owns the proof); Weather now needs both an
+    // account-bound user and a location she chose to share.
+    assert.doesNotMatch(weather, /weatherAnchorConfig/);
+    assert.match(weather, /account\?\.state\.kind === 'accountBound'/);
+    assert.match(weather, /from '\.\.\/\.\.\/platform\/deviceLocation'/);
     assert.match(calendar, /setAvailability\('dormant'\)/);
+  });
+
+  test('Weather has no build-time location variable in the public env template', () => {
+    assert.doesNotMatch(read('.env.example'), /EXPO_PUBLIC_WEATHER/);
   });
 });
