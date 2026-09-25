@@ -51,9 +51,9 @@ Use this order in each environment. The backend portion of this sequence has now
 5. (Weather needs no app-environment configuration: it uses the device's location, once the user allows it.)
 6. Run the repository gates.
 7. Test on a development build.
-8. Only after Staging proof, repeat the environment-specific activation in Production.
+8. Keep backend schema/function bytes in Staging and Production parity once the change has passed non-destructive validation. Real-device/provider-flow certification is performed against Staging first; Production remains backend-ready but is not used for internal prototype testing.
 
-Do **not** skip directly to Production.
+For this refinement, the migration and Edge Functions are already activated in both environments for parity. The remaining interactive proof is Staging-only until prototype certification is complete.
 
 ---
 
