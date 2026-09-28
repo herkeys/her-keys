@@ -36,6 +36,34 @@ const MUTANTS = [
     apply: (s) => s.replace('...(secureStorageAvailable ? [createGoogleProvider(providerClient)] : [])', "...(require('react-native').Platform.OS === 'ios' ? [createGoogleProvider(providerClient)] : [])"),
     tests: ['tests/googleAuthParity.test.mjs', 'tests/platformParity/registryGuard.test.mjs'],
   },
+  {
+    id: 'S6 Your Account opened to a quarantined device (PP-D04)',
+    file: 'src/domain/routeAccess.ts',
+    apply: (s) => s.replace("if (account.kind === 'boundOther') return guard === 'quarantined';", "if (account.kind === 'boundOther' && guard !== 'account') return guard === 'quarantined';"),
+    tests: ['tests/platformParity/accountAccess.test.mjs', 'tests/routeAccess.test.mjs'],
+  },
+  {
+    id: 'S7 Today account entry removed (PP-D04)',
+    file: 'src/features/today/TodayBriefing.tsx',
+    apply: (s) => s.replace(/ {8}<AccountEntry \/>\r?\n/, ''),
+    tests: ['tests/platformParity/accountAccess.test.mjs'],
+  },
+  {
+    id: 'S8 Apple cross-platform note shown where Apple is not offered (PP-D03)',
+    file: 'src/features/account/accountModel.ts',
+    apply: (s) => s.replace("return mode === 'signIn' && providers.includes('apple');", "return mode === 'signIn';"),
+    tests: ['tests/platformParity/accountAccess.test.mjs'],
+  },
+  {
+    id: 'S9 Apple portability limitation removed from the registry (PP-D03)',
+    file: 'docs/audits/HK_PLATFORM_PARITY_REGISTRY.json',
+    apply: (s) => {
+      const reg = JSON.parse(s);
+      delete reg.exceptions.find((entry) => entry.id === 'EX-01').portabilityLimitation;
+      return JSON.stringify(reg, null, 2) + '\n';
+    },
+    tests: ['tests/platformParity/registryGuard.test.mjs'],
+  },
 ];
 const results = [];
 for (const m of MUTANTS) {
