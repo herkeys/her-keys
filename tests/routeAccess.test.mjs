@@ -54,6 +54,18 @@ describe('Route access', () => {
     assert.equal(canOpenScreen('(app)', access(finished, 'ready', false, degraded)), true);
   });
 
+  test('PP-D21: a provider flow in flight keeps the screens she already had (the root stack never empties mid sign-in)', () => {
+    const inFlight = { kind: 'authenticating' };
+    for (const onboarding of [finished, unfinished]) {
+      const open = SCREENS.filter((screen) => canOpenScreen(screen, access(onboarding, 'ready', false, inFlight)));
+      assert.ok(open.includes('sign-in'), 'the modal running the flow stays mounted');
+      assert.ok(open.length > 1, 'something besides the modal remains under it');
+      assert.deepEqual(open, SCREENS.filter((screen) => canOpenScreen(screen, access(onboarding))), 'routes exactly like signed out');
+    }
+    assert.equal(canOpenScreen('(app)', access(unfinished, 'ready', false, inFlight)), false, 'onboarding still gates the app');
+    assert.equal(canOpenScreen('sign-in', access(finished, 'hydrating', false, inFlight)), false, 'hydration still gates everything');
+  });
+
   test('a link cannot skip past an onboarding choice', () => {
     let state = demoState();
     const step = (screen) => canOpenScreen(screen, access(state.onboarding));

@@ -64,9 +64,13 @@ export function canOpenScreen(screen: RootScreen, input: RouteAccessInput): bool
   if (account.kind === 'boundOther') return guard === 'quarantined';
   if (guard === 'quarantined') return false;
 
-  // A provider flow is in flight. Deciding now would decide on a state that is
-  // about to change, so nothing opens until it settles.
-  if (account.kind === 'authenticating') return false;
+  // A provider flow in flight ('authenticating') routes exactly like the state it
+  // started from (signed out or failed, with her own local household already on
+  // screen); ownership is only decided once the flow settles, and the first
+  // check above still wins the moment it resolves to another account. It used to
+  // close EVERY screen, which left the root stack holding only Expo Router's
+  // injected system routes, so the sign-in modal and the app vanished mid-flow
+  // and navigation reset onto the Sitemap / Unmatched Route page (PP-D21).
 
   if (guard === 'signedOutOrDegraded') return account.kind === 'authDegraded' || !canRenderAccountData(account);
 
