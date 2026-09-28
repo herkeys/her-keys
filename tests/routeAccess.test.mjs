@@ -54,6 +54,17 @@ describe('Route access', () => {
     assert.equal(canOpenScreen('(app)', access(finished, 'ready', false, degraded)), true);
   });
 
+  test('PP-D04: a normally bound account can open Your Account (sign-in) to sign out; quarantine still opens only the conflict screen', () => {
+    const session = { accountId: '11111111-1111-4111-8111-111111111111', accessToken: 'a', refreshToken: 'r', expiresAt: 1, provider: null };
+    const bound = { kind: 'accountBound', session, householdId: '33333333-3333-4333-8333-333333333333' };
+    const other = { kind: 'boundOther', session, quarantinedAccountId: '44444444-4444-4444-8444-444444444444' };
+    assert.equal(canOpenScreen('sign-in', access(finished, 'ready', false, bound)), true);
+    assert.equal(canOpenScreen('(app)', access(finished, 'ready', false, bound)), true);
+    assert.equal(canOpenScreen('sign-in', access(finished, 'ready', false, other)), false);
+    assert.deepEqual(SCREENS.filter((screen) => canOpenScreen(screen, access(finished, 'ready', false, other))), ['account-conflict']);
+    assert.equal(opens('/sign-in', access(finished, 'ready', false, other)), false, 'a deep link to sign-in cannot escape quarantine');
+  });
+
   test('PP-D21: a provider flow in flight keeps the screens she already had (the root stack never empties mid sign-in)', () => {
     const inFlight = { kind: 'authenticating' };
     for (const onboarding of [finished, unfinished]) {

@@ -180,11 +180,15 @@ describe('OAuth return isolation', () => {
     assert.equal(await provider.isAvailable(), false);
   });
 
-  test('the sign-in screen offers only providers the registry reports available (no broken Apple button on Android)', () => {
+  test('the account surface offers only providers the device reports available (no broken Apple button on Android)', () => {
     const screen = stripComments(read('app/sign-in.tsx'));
+    const panel = stripComments(read('src/features/account/AccountPanel.tsx'));
     assert.match(screen, /accountProviders\s*\.available\(\)/);
-    assert.match(screen, /\(providers \?\? \[\]\)\.map\(/);
-    assert.doesNotMatch(screen, /Platform\.|apple'\s*\]/);
+    assert.match(screen, /providers=\{providers\}/);
+    assert.match(panel, /providers\.map\(\(provider\) =>/);
+    for (const file of ['app/sign-in.tsx', 'src/features/account/AccountPanel.tsx', 'src/features/account/AccountEntry.tsx', 'src/features/account/accountModel.ts']) {
+      assert.doesNotMatch(stripComments(read(file)), /Platform\.|expo-apple-authentication|['"]apple['"]\s*\]/, file);
+    }
   });
 });
 

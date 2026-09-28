@@ -1,4 +1,4 @@
-import { canRenderAccountData, type AccountState } from './account/authState';
+import type { AccountState } from './account/authState';
 import { isOnboardingComplete, onboardingStepAccess } from './onboarding';
 import type { Onboarding, OnboardingStep } from './state';
 
@@ -13,7 +13,7 @@ import type { Onboarding, OnboardingStep } from './state';
 
 export type HydrationStatus = 'unhydrated' | 'hydrating' | 'ready' | 'recovery';
 
-type Guard = 'onboarding' | 'app' | 'internal' | 'signedOutOrDegraded' | 'quarantined' | { onboardingStep: OnboardingStep };
+type Guard = 'onboarding' | 'app' | 'internal' | 'account' | 'quarantined' | { onboardingStep: OnboardingStep };
 
 export const ROOT_SCREEN_GUARDS = {
   index: 'onboarding',
@@ -31,7 +31,11 @@ export const ROOT_SCREEN_GUARDS = {
   'dev-tools': 'internal',
   /** Development design gallery — same internal-build gate as dev-tools. */
   gallery: 'internal',
-  'sign-in': 'signedOutOrDegraded',
+  /**
+   * Your Account (PP-D04): sign in, reconnect, or — once connected — sign out. Open to every account state except
+   * quarantine, including while a provider flow or the binding is in flight, because that flow is running ON this screen.
+   */
+  'sign-in': 'account',
   /** The one screen a device holding another account's household may open. */
   'account-conflict': 'quarantined',
 } as const satisfies Record<string, Guard>;
@@ -72,7 +76,9 @@ export function canOpenScreen(screen: RootScreen, input: RouteAccessInput): bool
   // injected system routes, so the sign-in modal and the app vanished mid-flow
   // and navigation reset onto the Sitemap / Unmatched Route page (PP-D21).
 
-  if (guard === 'signedOutOrDegraded') return account.kind === 'authDegraded' || !canRenderAccountData(account);
+  // Your Account opens for every non-quarantined state, so it never disappears
+  // under a flow it is running.
+  if (guard === 'account') return true;
 
   const complete = isOnboardingComplete(input.onboarding);
   if (guard === 'app') return complete;

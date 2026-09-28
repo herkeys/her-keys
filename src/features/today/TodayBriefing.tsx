@@ -1,5 +1,6 @@
 import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
+import { AccountEntry } from '../account/AccountEntry';
 import { DailyLoadCard } from '../daily-load/DailyLoadCard';
 import { LoadMeter } from '../daily-load/LoadMeter';
 import { LifeStatusSummary } from '../life/LifeStatusSummary';
@@ -53,6 +54,7 @@ export function TodayBriefing({ view }: { view: TodayView }) {
       <TodayHeader view={view}>
         <PersistenceNotice />
         <SyncNotice />
+        <AccountEntry />
       </TodayHeader>
       {view.load ? <LoadMeter load={view.load} note={view.capacityNote} /> : null}
       <WeatherContextCard />

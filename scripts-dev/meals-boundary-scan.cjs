@@ -434,6 +434,7 @@ const LATER_FEATURES = [
     owned: [
       /^docs\/audits\/HK_(IOS_ANDROID_PLATFORM_PARITY\.md|PLATFORM_PARITY_(REGISTRY\.json|REMOTE_CHECKS\.md))$/,
       /^src\/platform\/systemLinks\.ts$/,
+      /^src\/features\/account\//,
       /^scripts-dev\/platform-parity-mutation-check\.cjs$/,
       /^tests\/platformParity\//,
     ],
@@ -445,6 +446,10 @@ const LATER_FEATURES = [
       ['app/+native-intent.tsx', 'Platform parity audit PP-D01: the Google Calendar OAuth return is also kept from the router, so Android no longer lands on Unmatched Route after connecting'],
       ['tests/googleAuthParity.test.mjs', 'Platform parity audit PP-D02: host-independent source scan paths; PP-D01: the router hook composes the identity guard with the Calendar return'],
       ['scripts-dev/meals-boundary-scan.cjs', 'Platform parity audit: register the audit lane'],
+      ['app/sign-in.tsx', 'Platform parity repair PP-D04: the existing route becomes Your Account (sign in / reconnect / connected with Sign out) through AccountPanel; PP-D03: iOS-only cross-platform provider note'],
+      ['src/domain/routeAccess.ts', 'Platform parity repair PP-D04: the account modal guard opens for every non-quarantined state; PP-D21: authenticating no longer closes every screen (the stack collapsed onto Expo Router system routes mid sign-in)'],
+      ['src/features/today/TodayBriefing.tsx', 'Platform parity repair PP-D04: one quiet account entry beside the existing shell notices'],
+      ['tests/routeAccess.test.mjs', 'Platform parity repair PP-D04 / PP-D21: account-guard and authenticating route coverage'],
     ],
   },
 ];
