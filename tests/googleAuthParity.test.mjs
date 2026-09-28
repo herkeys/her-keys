@@ -174,7 +174,9 @@ describe('2. the identity redirect is exactly herkeys://auth/callback', () => {
     }
   });
 
-  test('Android: the router is told to ignore the identity callback, and every other link passes through', () => {
+  test('Android: the identity guard ignores only the identity callback; the router composes it (PP-D01 adds Calendar there)', () => {
+    // The identity module decides only about its own callback. Calendar's return is handled beside it in
+    // src/platform/systemLinks.ts, so identity code still never names the Calendar route.
     assert.equal(routerPathForSystemLink('herkeys://auth/callback?code=abc'), null);
     assert.equal(routerPathForSystemLink('/auth/callback?code=abc'), null);
     assert.equal(routerPathForSystemLink('herkeys://calendar-connected?status=connected'), 'herkeys://calendar-connected?status=connected');
@@ -183,7 +185,8 @@ describe('2. the identity redirect is exactly herkeys://auth/callback', () => {
 
     const intent = read('app/+native-intent.tsx');
     assert.match(intent, /export function redirectSystemPath/);
-    assert.match(intent, /routerPathForSystemLink\(path\)/);
+    assert.match(intent, /routerPathForIncomingLink\(path\)/);
+    assert.match(read('src/platform/systemLinks.ts'), /if \(routerPathForSystemLink\(path\) === null\) return null;/);
   });
 });
 

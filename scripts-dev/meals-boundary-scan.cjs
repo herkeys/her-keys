@@ -428,6 +428,24 @@ const LATER_FEATURES = [
       ['scripts-dev/meals-boundary-scan.cjs', 'Prototype refinement accounting: register post-certification changes so the historical Meals boundary remains exact'],
     ],
   },
+  {
+    id: 'HK-V1-FINALIZATION-PART-1 (iOS / Android platform parity audit)',
+    branch: null,
+    owned: [
+      /^docs\/audits\/HK_(IOS_ANDROID_PLATFORM_PARITY\.md|PLATFORM_PARITY_(REGISTRY\.json|REMOTE_CHECKS\.md))$/,
+      /^src\/platform\/systemLinks\.ts$/,
+      /^tests\/platformParity\//,
+    ],
+    migrations: [],
+    schemas: [],
+    rootCollections: [],
+    syncKinds: [],
+    shared: [
+      ['app/+native-intent.tsx', 'Platform parity audit PP-D01: the Google Calendar OAuth return is also kept from the router, so Android no longer lands on Unmatched Route after connecting'],
+      ['tests/googleAuthParity.test.mjs', 'Platform parity audit PP-D02: host-independent source scan paths; PP-D01: the router hook composes the identity guard with the Calendar return'],
+      ['scripts-dev/meals-boundary-scan.cjs', 'Platform parity audit: register the audit lane'],
+    ],
+  },
 ];
 
 /**
