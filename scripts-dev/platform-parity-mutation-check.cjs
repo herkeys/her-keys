@@ -1,4 +1,5 @@
 // Platform-parity guard mutation check (V1 Finalization Part 1). Real-file sabotage of the parity guards.
+// Each mutation is applied to a shipped file, the named tests run, the file is restored
 // byte-for-byte, and the result (caught = at least one failing test) is printed. Run from the repo root:
 //   node scripts-dev/platform-parity-mutation-check.cjs
 const fs = require('fs');

@@ -133,6 +133,13 @@ describe('platform registry — the code matches the approved list exactly', () 
       if (entry.class === 'E') assert.ok(entry.runtime, `${entry.id} has no runtime handoff id`);
     }
   });
+
+  test('the prose report references the registry and states a binary verdict (one source of truth)', () => {
+    const report = read('docs/audits/HK_IOS_ANDROID_PLATFORM_PARITY.md');
+    assert.match(report, /HK_PLATFORM_PARITY_REGISTRY\.json/);
+    assert.match(report, /^PART1_RESULT=(PASS|FAIL)$/m);
+    for (const entry of registry.conditionals) assert.match(report, new RegExp(`\\b${entry.id}\\b`), `${entry.id} missing from the report`);
+  });
 });
 
 describe('native identity and permission doctrine (resolved through the real config plugins)', () => {
