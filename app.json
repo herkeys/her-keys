@@ -5,19 +5,19 @@
     "version": "1.0.0",
     "scheme": "herkeys",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/her-keys-4-house.png",
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
       "usesAppleSignIn": true,
-      "bundleIdentifier": "com.herkeys.app"
+      "bundleIdentifier": "com.herkeys.app",
+      "icon": "./assets/her-keys-4-house.png"
     },
     "android": {
+      "icon": "./assets/her-keys-4-house.png",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "backgroundColor": "#000000",
+        "foregroundImage": "./assets/her-keys-4-house-adaptive-foreground.png"
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.herkeys.app",
