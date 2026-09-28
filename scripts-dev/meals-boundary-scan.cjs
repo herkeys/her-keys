@@ -432,7 +432,8 @@ const LATER_FEATURES = [
     id: 'HK-V1-FINALIZATION-PART-1 (iOS / Android platform parity audit)',
     branch: null,
     owned: [
-      /^docs\/audits\/HK_(IOS_ANDROID_PLATFORM_PARITY\.md|PLATFORM_PARITY_(REGISTRY\.json|REMOTE_CHECKS\.md))$/,
+      /^docs\/audits\/HK_(IOS_ANDROID_PLATFORM_PARITY\.md|PLATFORM_PARITY_(REGISTRY\.json|REMOTE_CHECKS\.md)|PRE_ARTIFACT_SERVICE_CONFIG\.md)$/,
+      /^assets\/her-keys-4-house(?:-adaptive-foreground)?\.png$/,
       /^src\/platform\/systemLinks\.ts$/,
       /^src\/features\/account\//,
       /^scripts-dev\/platform-parity-mutation-check\.cjs$/,
