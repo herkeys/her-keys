@@ -65,3 +65,17 @@ export const PROVIDER_LABELS: Record<AuthProvider, string> = {
   apple: 'Continue with Apple',
   google: 'Continue with Google',
 };
+
+/**
+ * EX-01 disclosure. Sign in with Apple is iOS-only in V1, so an Apple account (particularly one using Hide My Email) may
+ * not be reachable from an Android phone. Shown only where Apple is actually offered, so Android never sees it.
+ */
+export const CROSS_PLATFORM_NOTE = 'Planning to use Her Keys on an Android phone too? Choose Google — it works on both.';
+
+/**
+ * Only when she is choosing an account. Reconnect must return to the SAME account (a different one is refused as the wrong
+ * actor), so suggesting another provider there would be misleading.
+ */
+export function showsCrossPlatformNote(mode: AccountModalMode, providers: readonly AuthProvider[]): boolean {
+  return mode === 'signIn' && providers.includes('apple');
+}

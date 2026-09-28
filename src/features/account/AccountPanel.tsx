@@ -2,7 +2,7 @@ import { StyleSheet, View } from 'react-native';
 import { AppText, Button, Overline } from '../../design/components';
 import { colors, spacing } from '../../design/tokens';
 import type { AuthProvider } from '../../domain/account/identity';
-import { PROVIDER_LABELS, type AccountModalMode } from './accountModel';
+import { CROSS_PLATFORM_NOTE, PROVIDER_LABELS, showsCrossPlatformNote, type AccountModalMode } from './accountModel';
 
 export interface AccountPanelProps {
   mode: AccountModalMode;
@@ -41,6 +41,12 @@ export function AccountPanel({ mode, providers, busy, failed, onSignIn, onSignOu
         {failed && offersProviders && (
           <AppText variant="bodySm" color={colors.textTertiary} style={styles.note} accessibilityLiveRegion="polite">
             That did not go through. Nothing on this device changed — you can try again.
+          </AppText>
+        )}
+
+        {showsCrossPlatformNote(mode, providers) && (
+          <AppText variant="bodySm" color={colors.textTertiary} style={styles.note}>
+            {CROSS_PLATFORM_NOTE}
           </AppText>
         )}
 

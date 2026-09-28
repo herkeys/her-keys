@@ -91,11 +91,20 @@
   "exceptions": [
     {
       "id": "EX-01",
-      "name": "Sign in with Apple is iOS-only",
+      "name": "Sign in with Apple is iOS-only in Her Keys V1",
+      "status": "PRODUCT_APPROVED_INTENTIONAL_EXCEPTION",
+      "approvedBy": "Owner (Build Manager decision), V1 platform-parity P0-P3 repair pass, 2026-09-28",
       "ios": "supported (expo-apple-authentication, native ASAuthorization, signInWithIdToken)",
       "android": "not offered; no Apple button, no Apple deep link, no Apple web flow",
-      "basis": "Product decision in the Part 1 brief; expo-apple-authentication supports Apple platforms only.",
-      "portability": "An account created with Apple is reachable from Android only if Supabase links it to a Google identity with the same verified email. Apple 'Hide My Email' accounts cannot be reached from Android: open defect PP-D03 (owner decision)."
+      "basis": "Deliberate V1 product scope; expo-apple-authentication supports Apple platforms only. Apple web OAuth on Android and Supabase identity linking are intentionally NOT built in V1.",
+      "portabilityLimitation": {
+        "statement": "An Apple-only Her Keys account that uses Hide My Email (a private-relay address) may not be directly accessible from Android in V1. An Apple account that shared its real verified email reaches the same Her Keys account through Google sign-in with that email.",
+        "crossPlatformMethod": "google",
+        "intentional": true,
+        "notPlatformDrift": "This is an intentional V1 limitation that follows from EX-01, not accidental platform drift.",
+        "closes": "PP-D03 (original P2; resolution PRODUCT_APPROVED_INTENTIONAL_EXCEPTION)",
+        "userDisclosure": "CROSS_PLATFORM_NOTE in src/features/account/accountModel.ts, shown on the Your Account provider choice only where Apple is offered (iOS)"
+      }
     }
   ],
   "oauthReturnRoutes": [

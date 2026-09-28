@@ -9,13 +9,16 @@ import { initialOnboarding } from '../../src/domain/onboarding.ts';
 import { canOpenScreen, ROOT_SCREEN_GUARDS } from '../../src/domain/routeAccess.ts';
 import {
   ACCOUNT_ROUTE,
+  CROSS_PLATFORM_NOTE,
   accountEntryLabel,
   accountModalMode,
+  showsCrossPlatformNote,
 } from '../../src/features/account/accountModel.ts';
 
 /**
  * PP-D04 — an ordinary way to Your Account, sign-out from a normally bound account, and account switching through the
- * existing quarantine rules. PP-D21 — a provider flow in flight must not close every root screen.
+ * existing quarantine rules. PP-D21 — a provider flow in flight must not close every root screen. PP-D03 — the Apple
+ * cross-platform limitation is disclosed where (and only where) Apple is offered.
  *
  * Route decisions use the real `canOpenScreen`; the runtime journeys use the real AccountRuntime + sync composition
  * (`composeAccountApp`, via tests/support/accountDevice.mjs); the panel renders the real component.
@@ -271,5 +274,29 @@ describe('PP-D04 — the Today entry, the same on iOS and Android', () => {
   test('a build with no account backend shows no entry (nothing it could open would work)', () => {
     assert.equal(accountModalMode(STATES.unauthenticated, false), 'unavailable');
     assert.equal(accountEntryLabel('unavailable'), null);
+  });
+});
+
+describe('PP-D03 — the Apple cross-platform limitation is disclosed where Apple is offered', () => {
+  test('7. iOS (Apple offered): the provider choice carries the cross-platform note', async () => {
+    const { texts: t, buttons: b } = await panel({ mode: 'signIn', providers: ['apple', 'google'] });
+    assert.ok(t.includes(CROSS_PLATFORM_NOTE));
+    assert.match(CROSS_PLATFORM_NOTE, /Android/);
+    assert.match(CROSS_PLATFORM_NOTE, /Google/);
+    assert.deepEqual(b.map((x) => x.label), ['Continue with Apple', 'Continue with Google', 'Not now']);
+  });
+
+  test('3. Android (Apple not offered): no Apple action and no note', async () => {
+    const { texts: t, buttons: b } = await panel({ mode: 'signIn', providers: ['google'] });
+    assert.ok(!t.includes(CROSS_PLATFORM_NOTE));
+    assert.deepEqual(b.map((x) => x.label), ['Continue with Google', 'Not now']);
+  });
+
+  test('the note is not shown where she must return to the same account, or where no choice is offered', () => {
+    for (const mode of ['reconnect', 'connected', 'resolving', 'unavailable', 'quarantined']) {
+      assert.equal(showsCrossPlatformNote(mode, ['apple', 'google']), false, mode);
+    }
+    assert.equal(showsCrossPlatformNote('signIn', ['apple', 'google']), true);
+    assert.equal(showsCrossPlatformNote('signIn', ['google']), false);
   });
 });

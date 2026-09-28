@@ -95,6 +95,28 @@ export function nativeViolations(config) {
   return problems;
 }
 
+/**
+ * PP-D03: while Apple sign-in is iOS-only (PC-02 → EX-01), the registry must carry the owner-approved portability limitation
+ * and name the user-facing disclosure, and that disclosure must exist and point Android users to Google.
+ */
+export function exceptionViolations(reg, disclosureSource) {
+  const problems = [];
+  const appleOnly = reg.conditionals.some((entry) => entry.file === 'src/platform/appleProvider.ts' && entry.exception === 'EX-01');
+  const ex = reg.exceptions.find((entry) => entry.id === 'EX-01');
+  if (!appleOnly) return problems;
+  if (!ex) return ['Apple is iOS-only but EX-01 is missing'];
+  if (ex.status !== 'PRODUCT_APPROVED_INTENTIONAL_EXCEPTION') problems.push('EX-01 is not recorded as product-approved');
+  const limit = ex.portabilityLimitation;
+  if (!limit) return [...problems, 'EX-01 has no portabilityLimitation while Apple remains iOS-only'];
+  if (limit.intentional !== true) problems.push('the limitation is not marked intentional');
+  if (limit.crossPlatformMethod !== 'google') problems.push('the cross-platform method is not Google');
+  if (!/Hide My Email/.test(limit.statement ?? '') || !/Android/.test(limit.statement ?? '')) problems.push('the statement does not name Hide My Email and Android');
+  if (!/CROSS_PLATFORM_NOTE/.test(limit.userDisclosure ?? '')) problems.push('no user-facing disclosure is named');
+  const note = /export const CROSS_PLATFORM_NOTE = '([^']+)';/.exec(disclosureSource)?.[1] ?? '';
+  if (!/Android/.test(note) || !/Google/.test(note)) problems.push('the disclosure does not point Android users to Google');
+  return problems;
+}
+
 /** Android deep-link delivery: the resolved manifest must route herkeys:// VIEW/BROWSABLE intents to the singleTask activity. */
 export function androidDeepLinkViolations(manifest) {
   const problems = [];
@@ -180,6 +202,10 @@ describe('OAuth return isolation', () => {
     assert.equal(await provider.isAvailable(), false);
   });
 
+  test('PP-D03: the Apple portability limitation is registered, owner-approved, and disclosed', () => {
+    assert.deepEqual(exceptionViolations(registry, read('src/features/account/accountModel.ts')), []);
+  });
+
   test('the account surface offers only providers the device reports available (no broken Apple button on Android)', () => {
     const screen = stripComments(read('app/sign-in.tsx'));
     const panel = stripComments(read('src/features/account/AccountPanel.tsx'));
@@ -210,6 +236,17 @@ describe('the guard can fail (negative controls)', () => {
       registryViolations(scanConditionals(currentSources()), [...currentPlatformFiles(), 'src/platform/deviceLocation.android.ts']).join('\n'),
       /unregistered platform-specific file/
     );
+  });
+
+  test('removing the Apple portability limitation (or its disclosure) while Apple stays iOS-only is reported', () => {
+    const model = read('src/features/account/accountModel.ts');
+    const withoutLimit = structuredClone(registry);
+    delete withoutLimit.exceptions.find((entry) => entry.id === 'EX-01').portabilityLimitation;
+    assert.match(exceptionViolations(withoutLimit, model).join('\n'), /no portabilityLimitation/);
+    const unapproved = structuredClone(registry);
+    unapproved.exceptions.find((entry) => entry.id === 'EX-01').status = 'OPEN_DEFECT';
+    assert.match(exceptionViolations(unapproved, model).join('\n'), /not recorded as product-approved/);
+    assert.match(exceptionViolations(registry, model.replace(/export const CROSS_PLATFORM_NOTE = '[^']+';/, "export const CROSS_PLATFORM_NOTE = 'Welcome';")).join('\n'), /does not point Android users to Google/);
   });
 
   test('a commented-out Platform.OS mention is not a conditional', () => {
