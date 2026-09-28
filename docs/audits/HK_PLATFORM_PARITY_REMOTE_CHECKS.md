@@ -75,3 +75,27 @@ Google Cloud has no live access from here. The OAuth client files the owner down
 - **What to verify:** Supabase → Authentication → URL Configuration → Redirect URLs must contain exactly `herkeys://auth/callback`.
 - **Why:** if the entry is missing, Supabase sends the browser to the Site URL instead of the app. On both platforms the auth session then never returns with a code, and sign-in ends as `cancelled`/`dismiss`.
 - **Blocks:** Part 2 Google scenarios if missing. It is not counted as a defect, because its state is unknown.
+
+## P0–P3 repair pass (2026-09-28)
+
+`REMOTE_MUTATION=NO` still holds for this pass. The owner authorized the minimum Staging correction for CFG-01 (and adding `herkeys://auth/callback` to Staging's Redirect URLs if missing), but the agent could not reach Staging's auth settings:
+
+- The Claude in Chrome extension was not connected (retried).
+- The in-app browser pane opened `supabase.com/dashboard/project/fhhudicklmpofuzkxeqe/auth/providers` and was redirected to the Supabase sign-in page. The agent does not sign in with the owner's password, so it stopped at that page without submitting anything.
+- The Supabase MCP has no auth-config read or write, and the only local CLI login is for the K Scan organization, which was not used.
+
+Consequences:
+- **No before/after state was recorded.** The current dashboard values (Client ID list, whether a secret is present, Redirect URLs) could not be read.
+- **Production was not touched.** Its allow-list stays UNVERIFIED, not PASS.
+
+| # | Timestamp (UTC) | Environment | Project ref | System | Field category | Result | Evidence | Mutation |
+|---|---|---|---|---|---|---|---|---|
+| R15 | 2026-09-28 17:3x | Staging | fhhudicklmpofuzkxeqe | Supabase dashboard (in-app browser) | Auth → Providers → Google | **NOT REACHABLE**: dashboard sign-in required | browser pane redirected to `/dashboard/sign-in?returnTo=…/auth/providers` | NO |
+| R16 | 2026-09-28 17:32:05 | Staging | fhhudicklmpofuzkxeqe | Supabase Auth `/settings` + `/authorize` + Google | provider, client, callback, Google answer (re-run of R3–R5) | `google = true`; `client_id = 857660202409-mrhq0…` (installed); callback `https://fhhudicklmpofuzkxeqe.supabase.co/auth/v1/callback`; Google 302 → `/signin/oauth/error` (`authError` present). **CFG-01 unchanged.** | auth-probe.mjs | NO |
+| R17 | 2026-09-28 17:32:07 | Production | npykvnxnehlsdlbumzwk | Supabase Auth `/settings` + `/authorize` + Google | re-run of R6–R8 | `google = true`; `client_id = 857660202409-109l3…` (web); Google 302 → `/v3/signin/identifier`. Unchanged. | auth-probe.mjs | NO |
+| R18 | 2026-09-28 | Staging and Production | both | Supabase Auth URL configuration | Redirect URLs contains `herkeys://auth/callback` (OA-02) | **UNVERIFIED** (see R9 and R15) | — | NO |
+| R19 | 2026-09-28 | Google Cloud | n/a | Calendar client separation (re-check of R12 against R16/R17) | identity vs Calendar client | Neither environment's identity provider uses the Calendar client `s63d2…` | R16, R17 | NO |
+
+**CFG-01 remains OPEN.** To close it, do either of the following, then have the agent rerun R16–R19 and record the before and after (non-secret) values here:
+- **Do it yourself** as described under CFG-01 above.
+- **Sign in to supabase.com in the in-app browser pane.** The agent then reorders the Client IDs and, if needed, adds the Staging Redirect URL, and you paste the Web client's secret.

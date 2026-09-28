@@ -11,23 +11,52 @@ PART1_RESULT=FAIL
 
 ---
 
+## 0. P0–P3 repair pass (2026-09-28)
+
+This section records the repair pass that followed the audit. It did not rerun the full audit; the Part 1 verdict below stands until Part 1 is re-certified.
+
+- **Start:** `73b7703`.
+- **Repair commits:**
+
+| Commit | Content |
+|---|---|
+| `9d4c643` | PP-D21 (new P1): the navigator no longer collapses while a sign-in is in flight |
+| `24adfbf` | PP-D04: Your Account entry, sign-out, and switching through quarantine |
+| `1618299` | PP-D03: the Apple portability gap closed as an owner-approved exception |
+| `85ad422` | Mutation check extended: S6–S9 |
+| (docs commit) | This report and the remote-checks ledger |
+
+**P0–P3 state after the pass:**
+
+| Defect | Original priority | State | Resolution |
+|---|---|---|---|
+| CFG-01 | P1 | **OPEN** | Owner-gated. The in-app browser is not signed in to Supabase. The agent may not enter the owner's password or the client secret, and has no other route to Staging auth settings. Re-probed 2026-09-28 17:32 UTC: still `mrhq0…` → `redirect_uri_mismatch`. |
+| PP-D21 | **P1 (new)** | **CLOSED** | Repaired in `9d4c643`. See §16 and §17. |
+| PP-D01 | P2 | CLOSED | Regression-checked: `systemLinks` 15/15; mutant S3 still caught. |
+| PP-D03 | P2 | **CLOSED** | `PRODUCT_APPROVED_INTENTIONAL_EXCEPTION`: EX-01 portability limitation, plus a disclosure on iOS. |
+| PP-D04 | P2 | **CLOSED** | Repaired in `24adfbf`. Scenarios 10, 12 and 34 are now reachable through the UI. |
+| PP-D02 | P3 | CLOSED | Regression-checked: `googleAuthParity` 38/38 on Windows. |
+
+- **Result:** `P0_OPEN=0`, `P1_OPEN=1` (CFG-01), `P2_OPEN=0`, `P3_OPEN=0`.
+- **Gates:** see §6.1.
+
 ## 1. Binary verdict
 
 **`PART1_RESULT=FAIL`**
 
-The code-level parity work is complete:
-- Both parity defects the audit found in code (PP-D01, PP-D02) are repaired and guarded.
-- The exit gates are green.
+This is the verdict of the original audit at `73b7703`. It is unchanged until Part 1 is re-certified.
 
-Part 1 still fails for three open items. Each is owner-gated.
+Status after the repair pass:
+- **PP-D04:** closed.
+- **PP-D03:** closed as an owner-approved exception.
+- **PP-D21:** a P1 found during the repairs, now closed.
+- **CFG-01:** still the one open blocker.
 
-| Blocking item | Priority | Why it blocks | Owner / agent |
-|---|---|---|---|
-| **CFG-01**: the Staging Google provider uses an `installed` (native) OAuth client, so Google answers `redirect_uri_mismatch` | P1 | Google identity sign-in cannot complete on Staging on either platform. Staging is the Part 2 device backend, so every Google device scenario is impossible. | Owner-gated configuration |
-| **PP-D04**: no in-app entry to sign in, and sign-out appears only on the conflict screen (OD-HK13-02) | P2 | Part 2 scenarios 10, 12 and 34 (logout/re-login, account switch) cannot be performed through the UI on either platform. | Owner product decision, then code |
-| **PP-D03**: an Apple account created with "Hide My Email" cannot be reached from Android, and no document accepts that | P2 | This is an undocumented account-access gap. Part 2 scenario 13 has no defined expected result. | Owner decision (accept as a limitation, or build identity linking) |
-
-All three items affect iOS and Android equally, with one exception: PP-D03 is Android-only by construction.
+| Blocking item | Priority | Why it blocks | Owner / agent | State |
+|---|---|---|---|---|
+| **CFG-01**: the Staging Google provider uses an `installed` (native) OAuth client, so Google answers `redirect_uri_mismatch` | P1 | Google identity sign-in cannot complete on Staging on either platform. Staging is the Part 2 device backend, so every Google device scenario is impossible. | Owner-gated configuration | **OPEN** |
+| **PP-D04**: no in-app entry to sign in, and sign-out appears only on the conflict screen (OD-HK13-02) | P2 | Part 2 scenarios 10, 12 and 34 could not be performed through the UI. | Manager decision → agent | CLOSED `24adfbf` |
+| **PP-D03**: an Apple account created with "Hide My Email" cannot be reached from Android, and no document accepted that | P2 | This was an undocumented account-access gap. | Owner decision: accepted as an intentional V1 limitation | CLOSED `1618299` |
 
 ## 2. Source reconciliation
 
@@ -173,6 +202,32 @@ Notes on the two export rows:
 | S4: Apple offered on Android | 3 / 14 |
 | S5: Google registered iOS-only | 3 / 52 |
 
+### 6.1 Repair-pass gates (at `85ad422`, 2026-09-28)
+
+| Check | Result |
+|---|---|
+| Node / npm | v24.14.0 / 11.9.0 (lockfile untouched) |
+| `npm run typecheck` | **PASS**: exit 0 |
+| `npm test` | **3574 tests, 3574 pass, 0 fail**, 817 suites, exit 0 |
+| `npx expo install --check` | **PASS**: "Dependencies are up to date" |
+| `npx expo-doctor` | **PASS**: 21/21 |
+| `npx expo config --type introspect` | **PASS**: exit 0; also consumed by the registry guard |
+| `npx expo export --platform ios` | **PASS**: exit 0, 1841 modules, `entry-b133398c….hbc` 7,420,314 B |
+| `npx expo export --platform android` | **PASS**: exit 0, 1978 modules, `entry-1835929c….hbc` 7,742,337 B |
+| Platform-parity mutation check | **9/9 caught** (S1–S5 unchanged; S6–S9 new), every file restored byte-for-byte |
+
+**Test count.** 3574 = 3545 (the audit's EXIT) + 25 (`accountAccess`) + 2 (`routeAccess`: PP-D21, PP-D04) + 2 (`registryGuard`: PP-D03 check and negative control). No test was removed.
+
+**Bundle proof.** Both bundles contain:
+- the control string `Rebuild your life.`
+- PP-D01's `/calendar-connected/`
+- PP-D04's `is connected.`
+- PP-D03's note, stored as UTF-16 because of its em dash: 1 occurrence in each bundle.
+
+**Regression.**
+- PP-D01: `systemLinks` 15/15; mutant S3 caught.
+- PP-D02: `googleAuthParity` 38/38 on Windows.
+
 ## 7. Capability matrix
 
 This matrix is built by tracing the platform boundary, not by trusting shared code alone. There are no `*.ios.*`, `*.android.*`, `*.native.*` or `*.web.*` files anywhere in `app/` or `src/`.
@@ -190,10 +245,11 @@ The following columns hold the same value for every row, so they are stated once
 | Life hub + Kids, Home, Co-Parent, Meals, Money, Work, Me/Rebuild, Life Admin, People, Inbox, Needs-me | Y / Y | tab `life` → `life/*` | guard | — | Y | none | registry scan | — | PASS |
 | Calendar (canonical) | Y / Y | tab `calendar`, `event-editor` | guard | — | Y | none | registry scan | — | PASS |
 | Systems / Routines | Y / Y | tab `systems`, `systems/edit` | guard | RN `KeyboardAvoidingView` | Y | keyboard behavior (PC-06, class E) | registry | PP-D10 (P7) | PASS static; RT-18 |
-| Google sign-in | Y / Y | `sign-in` (deep link only, PP-D04) | `signedOutOrDegraded`; registered where `secureStorageAvailable` | Supabase Auth, expo-web-browser | Y: one code path, Platform never read | native auth session (ND-01) | `googleAuthParity` 38; registry guard; S2 and S5 mutants | PP-D01 (router), CFG-01 (Staging), PP-D04 | code PASS; config FAIL (Staging) |
-| Apple sign-in | Y / **N** | `sign-in` | `Platform.OS === 'ios'` then `isAvailableAsync` | expo-apple-authentication (Apple only) | n/a | **EX-01** | registry guard EX-01; S4 mutant | PP-D03 | INTENTIONAL_EXCEPTION |
+| Google sign-in | Y / Y | Today → "Sign in" → Your Account (`sign-in`) | `account` (every state except `boundOther`); registered where `secureStorageAvailable` | Supabase Auth, expo-web-browser | Y: one code path, Platform never read | native auth session (ND-01) | `googleAuthParity` 38; registry guard; accountAccess; S2, S5 and S6 mutants | PP-D01 (router), PP-D21 (navigator), CFG-01 (Staging) | code PASS; config FAIL (Staging) |
+| Apple sign-in | Y / **N** | Your Account (iOS only) | `Platform.OS === 'ios'` then `isAvailableAsync` | expo-apple-authentication (Apple only) | n/a | **EX-01** (owner-approved, with portability limitation and iOS disclosure) | registry guard EX-01 + `exceptionViolations`; accountAccess PP-D03; S4, S8 and S9 mutants | PP-D03 (closed as exception) | INTENTIONAL_EXCEPTION |
 | Session restore / refresh / degraded / reconnect | Y / Y | launch; `AccountProvider` AppState | — | expo-secure-store | Y | keychain survives reinstall on iOS (ND-06) | `accountRuntime` and FR01 tests | PP-D05 (P4) | PASS static |
-| Account conflict / quarantine / sign-out | Y / Y | `account-conflict` | `quarantined` | — | Y | none | `routeAccess` | PP-D04 | PASS static |
+| Your Account: sign out / reconnect / switch | Y / Y | Today → "Your account" / "Reconnect" | `account` | — | Y (AccountRuntime `signOut` / `signIn`; switching through quarantine) | none | accountAccess 25 (real AccountRuntime journeys); routeAccess; S6 and S7 mutants | PP-D04 closed | PASS static; RT-21 |
+| Account conflict / quarantine | Y / Y | automatic (`boundOther`) | `quarantined` | — | Y | none | `routeAccess`; accountAccess 6/6b; S6 mutant | — | PASS static |
 | Sync | Y / Y | automatic | `accountBound` | Supabase | Y (one runtime, `composeAccountApp`) | none | no platform code; hk-f01f13 tests | — | PASS |
 | Google Calendar connect / list / select / disconnect | Y / Y | Calendar panel | `accountBound` and server "available" | expo-web-browser, Edge Functions | Y | native auth session (ND-01) | `systemLinks` 15; registry guard; S3 mutant | **PP-D01 repaired** | PASS static; RT-06..09 |
 | Weather (device location) | Y / Y | Today card, "Use my location" | user action only | expo-location | Y | precision model (ND-04) | `tests/weather` 44; introspect | — | PASS static; RT-10..12 |
@@ -205,17 +261,23 @@ The following columns hold the same value for every row, so they are stated once
 
 ## 8. Intentional exceptions
 
-- **EX-01: Sign in with Apple is iOS-only.**
-  - On Android the adapter returns `isAvailable() = false` before touching the native module. The sign-in screen renders only the providers reported available.
+- **EX-01: Sign in with Apple is iOS-only in Her Keys V1.** `PRODUCT_APPROVED_INTENTIONAL_EXCEPTION`, approved by the owner (Build Manager decision) in the P0–P3 repair pass, 2026-09-28.
+  - On Android the adapter returns `isAvailable() = false` before touching the native module. Your Account renders only the providers the device reports available.
   - No Android Apple button, deep link or web flow exists.
   - Shared account code never assumes the provider: `ProviderIdentity.provider` is only provenance, and the session is keyed by the Supabase user id.
-  - Guarded by `registryGuard` EX-01 and by mutant S4.
-- **Apple-created account used later from Android.**
-  - Supabase links identities automatically only when the verified emails match.
-  - An Apple account made with a real email, followed later by Google sign-in with the same email, reaches the same Her Keys account.
-  - An Apple "Hide My Email" account (`@privaterelay.appleid.com`) produces a *different* Google account. Her household then stays unreachable from Android.
-  - There is no in-app identity linking (`linkIdentity` is used nowhere), and no document accepts the limitation.
-  - This is recorded as **PP-D03 (P2, undocumented account-access defect)**, not as part of EX-01.
+  - Guarded by `registryGuard` EX-01 and `exceptionViolations`, and by mutants S4, S8 and S9.
+- **Portability limitation (part of EX-01; closes PP-D03).**
+  - An Apple account that shared its real verified email reaches the same Her Keys account through Google sign-in with that email, because Supabase links identities with matching verified emails.
+  - An Apple-only account that uses Hide My Email (a private-relay address) **may not be directly accessible from Android in V1**.
+  - Google is the cross-platform sign-in method for V1.
+  - This is an intentional V1 limitation, not accidental platform drift.
+  - Apple web OAuth on Android and Supabase `linkIdentity` were deliberately **not** built: no new multi-provider linking surface during the V1 freeze.
+- **User-facing disclosure (iOS only).**
+  - Where Apple is offered, Your Account shows beneath the provider choice: "Planning to use Her Keys on an Android phone too? Choose Google — it works on both."
+  - It is not shown on Android, where Apple is not offered.
+  - It is not shown in Reconnect, which must return to the same account.
+  - It is not a blocking warning.
+- **Registry:** `exceptions[EX-01].portabilityLimitation` in [`HK_PLATFORM_PARITY_REGISTRY.json`](HK_PLATFORM_PARITY_REGISTRY.json). The guard fails if it (or its approval, or the disclosure) is removed while Apple stays iOS-only.
 
 No other exception is claimed. Everything in §9 is either a necessary native difference (class A) or a runtime-proof item (class E).
 
@@ -438,7 +500,7 @@ Mock tests are regression guards, not device evidence.
 
 | # | SCENARIO_NAME | EXECUTION_METHOD | STATUS | EVIDENCE | DEFECT_ID |
 |---|---|---|---|---|---|
-| 1 | New Google user | TEST_PROVEN (code) / RUNTIME_REQUIRED | UNVERIFIED_RUNTIME (Staging blocked) | googleAuthParity §1–5; bootstrap in accountRuntime tests | CFG-01 |
+| 1 | New Google user | TEST_PROVEN (code) / RUNTIME_REQUIRED | UNVERIFIED_RUNTIME (Staging blocked) | googleAuthParity §1–5; bootstrap in accountRuntime tests; Today → Sign in entry (accountAccess) | CFG-01 |
 | 2 | Existing Google user | TEST_PROVEN / RUNTIME_REQUIRED | UNVERIFIED_RUNTIME | accountRuntime resume tests | CFG-01 |
 | 3 | Google cancel | TEST_PROVEN | PASS (code) | `cancel`/`dismiss` → `cancelled` | — |
 | 4 | Google error | TEST_PROVEN | PASS (code) | `error`/`error_description` → providerError | — |
@@ -447,10 +509,10 @@ Mock tests are regression guards, not device evidence.
 | 7 | Wrong OAuth state | STATIC_PROVEN | PASS (server-owned) | PKCE `flow_state` in GoTrue; the app never sees `state` | — |
 | 8 | Duplicate callback | STATIC_PROVEN + TEST_PROVEN | PASS | second delivery swallowed by the router; replay without verifier refused | — |
 | 9 | Stale callback | STATIC_PROVEN | PASS | session closed → router swallows (cold and warm) | PP-D13 (P7, silent) |
-| 10 | Logout / re-login | STATIC_PROVEN | **FAIL (no UI path)** | sign-out only on `account-conflict` | **PP-D04** |
+| 10 | Logout / re-login | TEST_PROVEN | PASS (code); UNVERIFIED_RUNTIME | Today → Your account → Sign out → Sign in; real AccountRuntime journey: binding kept, credential cleared, same household resumes (accountAccess 9) | PP-D04 closed |
 | 11 | Session restoration | TEST_PROVEN | PASS (code); UNVERIFIED_RUNTIME | accountRuntime restore / FR01 tests | PP-D05 (P4) |
-| 12 | Account switch | STATIC_PROVEN | **FAIL (no UI path)** | quarantine logic tested; no switch UI | **PP-D04** |
-| 13 | Apple-created account later used from Android | STATIC_PROVEN | **FAIL (undocumented)** | no identity linking; Hide My Email unreachable | **PP-D03** |
+| 12 | Account switch | TEST_PROVEN | PASS (code); UNVERIFIED_RUNTIME | Sign out → Sign in as B → `boundOther` → account-conflict only; Your Account closed in quarantine (accountAccess 6, 10) | PP-D04 closed |
+| 13 | Apple-created account later used from Android | STATIC_PROVEN | INTENTIONAL_EXCEPTION | Real verified email: the same account through Google. Hide My Email: not reachable in V1, owner-approved EX-01 limitation, disclosed on iOS (accountAccess PP-D03; registry `exceptionViolations`) | PP-D03 closed |
 | 14 | Calendar connect after identity login | STATIC_PROVEN | UNVERIFIED_RUNTIME | bridge requires `accountBound` | — |
 | 15 | Calendar with a different Google account | STATIC_PROVEN | PASS (static) | server-side tokens; identity never touched | — |
 | 16 | Calendar disconnect | STATIC_PROVEN | UNVERIFIED_RUNTIME | `disconnectCalendar` + revocation (runbook) | — |
@@ -471,7 +533,7 @@ Mock tests are regression guards, not device evidence.
 | 31 | Offline → online | TEST_PROVEN | PASS (code) | sync/transport tests | — |
 | 32 | Sync conflict | TEST_PROVEN | PASS (code) | clash / keptLocal tests | — |
 | 33 | Refused sync row | TEST_PROVEN | PASS (code) | refusal tests | — |
-| 34 | Account switch with pending state | STATIC_PROVEN | **FAIL (no UI path)** | quarantine tested; no UI | **PP-D04** |
+| 34 | Account switch with pending state | TEST_PROVEN (quarantine) / RUNTIME_REQUIRED | PASS (code); UNVERIFIED_RUNTIME | Sign out stops sync; B's sign-in quarantines A's household, including pending rows (never uploaded, never deleted: accountRuntime 23); account-conflict → Sign out returns to A | PP-D04 closed |
 | 35 | Equivalent operation → equivalent durable state | STATIC_PROVEN | PASS | no platform branch in domain, sync or persistence (registry scan) | — |
 | 36 | Account deletion | — | NOT_IMPLEMENTED | — | release item |
 | 37 | Purchase succeeds (RevenueCat) | STATIC_PROVEN | UNVERIFIED_RUNTIME | shared outcome mapping | — |
@@ -482,10 +544,11 @@ Mock tests are regression guards, not device evidence.
 
 | ID | Priority | Capability | Platform(s) | Description | Status |
 |---|---|---|---|---|---|
-| CFG-01 | **P1** | Google identity (Staging) | both | The Staging Google provider sends an installed/native client, so Google returns `redirect_uri_mismatch` | **OPEN**: owner configuration |
+| CFG-01 | **P1** | Google identity (Staging) | both | The Staging Google provider sends an installed/native client, so Google returns `redirect_uri_mismatch` | **OPEN**: owner configuration (re-probed 2026-09-28 17:32 UTC, unchanged) |
 | PP-D01 | **P2** | Calendar connect | Android | Calendar OAuth return routed to Expo Router → "Unmatched Route" screen | **REPAIRED** `b44a487` |
-| PP-D03 | **P2** | Account portability | Android | Apple "Hide My Email" account unreachable from Android (no linking, no Apple on Android), undocumented | **OPEN**: owner decision |
-| PP-D04 | **P2** | Account UI | both | No entry point to `/sign-in`; sign-out only on the conflict screen (OD-HK13-02) | **OPEN**: owner decision |
+| PP-D03 | **P2** | Account portability | Android | Apple "Hide My Email" account unreachable from Android (no linking, no Apple on Android), undocumented | **CLOSED** `1618299`: ORIGINAL_PRIORITY=P2, RESOLUTION=PRODUCT_APPROVED_INTENTIONAL_EXCEPTION |
+| PP-D21 | **P1 (found in the repair pass)** | Sign-in navigation | both | `canOpenScreen` closed every root screen while `authenticating`, leaving the root stack only Expo Router's injected `_sitemap` / `+not-found`. The sign-in modal and the app vanished mid-flow and she was left on Sitemap / Unmatched Route. | **REPAIRED** `9d4c643` |
+| PP-D04 | **P2** | Account UI | both | No entry point to `/sign-in`; sign-out only on the conflict screen (OD-HK13-02) | **REPAIRED** `24adfbf` |
 | PP-D02 | **P3** | Test gate | host (Windows) | Google parity source scan compared `\` paths to `/` literals | **REPAIRED** `0bb157f` |
 | PP-D05 | P4 | Session restore | iOS vs Android | Documented below | documented |
 | PP-D06 | P4 | OCR camera | Android | Documented below | documented |
@@ -504,7 +567,7 @@ Mock tests are regression guards, not device evidence.
 | PP-D18 | P10 | Timezone | both | Documented below | documented |
 | PP-D20 | P10 | Notifications | both | Documented below | documented |
 
-**Counts:** P0 0; P1 1 (0 repaired, 1 open); P2 3 (1 repaired, 2 open); P3 1 (1 repaired, 0 open); P4 3; P5 1; P6 1; P7 3; P8 2; P9 3; P10 3.
+**Counts:** P0 0; P1 2 (1 repaired [PP-D21], 1 open [CFG-01]); P2 3 (2 repaired [PP-D01, PP-D04], 1 closed as an approved exception [PP-D03], 0 open); P3 1 (1 repaired, 0 open); P4 3; P5 1; P6 1; P7 3; P8 2; P9 3; P10 3. The P4–P10 items are unchanged by the repair pass.
 
 ### P4–P10 detail
 
@@ -620,16 +683,19 @@ Each entry gives the evidence, the user impact, why it does not block, the recom
 |---|---|---|---|---|---|---|---|---|---|---|
 | PP-D01 | P2 | `+native-intent` passed every non-identity link through. Android's Custom Tab auth session also delivers the Calendar return to the router, and no screen exists for it. | none | Unmatched Route after every Calendar connect | `src/platform/systemLinks.ts` (new), `app/+native-intent.tsx`, `tests/platformParity/systemLinks.test.mjs` (new), `tests/googleAuthParity.test.mjs` (1 assertion), `scripts-dev/meals-boundary-scan.cjs` (lane) | Compose the identity guard with an exact Calendar-return match; `null` → the router stays | 15 new tests; reverting the hook fails 8; mutant S3 caught | targeted 63/63 + boundary 10/10 + tsc 0 + full suite (§6) | iOS unchanged (the router never saw the URL); Android now ends where iOS ends | CLOSED |
 | PP-D02 | P3 | `path.join` gives `\` on Windows; the assertion used `/` | n/a (test) | n/a (test) | `tests/googleAuthParity.test.mjs` | `filesUnder` returns `/`-separated repo paths | googleAuthParity 38/38 on Windows | full suite (§6) | n/a | CLOSED |
+| PP-D21 | P1 | `canOpenScreen` returned `false` for every root screen while `authenticating`. expo-router 57's `Stack` renders every route node except protected ones, and its injected `_sitemap` / `+not-found` are never protected, so the stack held only those. | The sign-in modal and the app vanished mid Apple/Google flow; she was left on Sitemap / Unmatched Route | the same | `src/domain/routeAccess.ts`, `tests/routeAccess.test.mjs` | `authenticating` routes like the signed-out state it started from; `boundOther` is still checked first | routeAccess PP-D21 (restoring the early return fails it) | 66/66 targeted; full suite (§6.1) | identical on both platforms; no platform input | CLOSED |
+| PP-D04 | P2 | No product path to `/sign-in`; sign-out only on `account-conflict` (OD-HK13-02) | logout/re-login and account switch impossible through the UI | the same | `app/sign-in.tsx`; `src/features/account/{accountModel.ts,AccountPanel.tsx,AccountEntryButton.tsx,AccountEntry.tsx}` (new); `src/features/today/TodayBriefing.tsx`; `src/domain/routeAccess.ts` (`signedOutOrDegraded` → `account`); tests; boundary lane | The existing route becomes Your Account (sign in / reconnect / connected with Sign out / resolving). Quiet Today entry. `account` guard opens for every non-quarantined state. Switching = Sign out, then Sign in, under the existing quarantine. | accountAccess 22 at commit (real AccountRuntime journeys, rendered panel); routeAccess; mutants S6 and S7 | 379/379 targeted; full suite (§6.1) | no platform conditional (registry exact counts unchanged) | CLOSED |
+| PP-D03 | P2 | Apple sign-in is iOS-only; Hide My Email accounts cannot be linked to Google on Android; not documented | none on iOS | Apple private-relay account not reachable | registry EX-01; `accountModel.ts` / `AccountPanel.tsx` (disclosure); tests | Owner decision: PRODUCT_APPROVED_INTENTIONAL_EXCEPTION. EX-01 `portabilityLimitation` + iOS-only disclosure + guard. | accountAccess PP-D03 (3); registryGuard `exceptionViolations` + negative controls; mutants S8 and S9 | 105/105 targeted; full suite (§6.1) | Apple still iOS-only; Google on both | CLOSED |
 
-Mini-gate after each repair commit (branch, HEAD, clean tree, targeted tests): passed for `0bb157f`, `b44a487` and `46755e5`.
+Mini-gate after each repair commit (branch, HEAD, clean tree, targeted tests): passed for `0bb157f`, `b44a487`, `46755e5`, `9d4c643`, `24adfbf`, `1618299` and `85ad422`.
 
 ## 18. Open defects
 
 | ID | Priority | Recommended correction | Type | Required retest |
 |---|---|---|---|---|
-| CFG-01 | P1 | Staging → Auth → Providers → Google: make `857660202409-109l3…` the first Client ID, with its secret. This matches Production. | Owner-gated configuration | Rerun remote checks R4 and R5 (`client_id` `109l3…`, Google sign-in page), then RT-01. |
-| PP-D04 | P2 | Decide OD-HK13-02: an Account row (sign in / sign out) reachable from the app, for example Today's sync notice or a settings surface. Then implement it: small and code-local. | Owner decision, then agent | `routeAccess` + a new UI test; Part 2 scenarios 10, 12 and 34. |
-| PP-D03 | P2 | Either (a) accept "Apple Hide My Email accounts are iOS-only in V1" and add it to EX-01 and product copy, or (b) add identity linking (a signed-in "Also sign in with Google" using `linkIdentity`), or Apple web OAuth on Android. | Owner decision (a: docs only; b: agent + Supabase config) | Registry guard (EX-01 text) and Part 2 scenario 13. |
+| CFG-01 | P1 | Staging → Authentication → Sign In / Providers → Google: make `857660202409-109l3…` (the Web identity client Production uses) the first Client ID, with that client's secret. Then check that Redirect URLs contains `herkeys://auth/callback` on Staging and Production (OA-02). | Owner-gated configuration. The owner may do it, or sign the agent in to the dashboard; the secret is always pasted by the owner. | Remote checks R3–R5 and R12: `client_id` `109l3…`, Google sign-in page, no `redirect_uri_mismatch`. |
+
+PP-D03 and PP-D04 are closed (§16, §17).
 
 ## 19. Runtime handoff (Part 2 device checklist)
 
@@ -637,7 +703,7 @@ Every item needs a development build on Staging, **after CFG-01 is fixed and OA-
 
 | TEST_ID | Feature | iOS scenario | Android scenario | Expected equivalent result | Prerequisite | Static evidence |
 |---|---|---|---|---|---|---|
-| RT-01 | Google sign-in (new + existing user) | Open `herkeys://sign-in` → Continue with Google → consent | same (Custom Tab) | Bound to the same account id; household bootstraps or hydrates; no Unmatched screen | CFG-01, OA-02, a test Google user | googleAuthParity |
+| RT-01 | Google sign-in (new + existing user) | Today → Sign in → Continue with Google → consent | same (Custom Tab) | Bound to the same account id; the modal shows "Your account is connected" and stays mounted throughout (PP-D21); household bootstraps or hydrates; no Unmatched screen | CFG-01, OA-02, a test Google user | googleAuthParity; accountAccess |
 | RT-02 | Google return race | Complete Google 5×; also press Back in the sheet | complete 5× in the Custom Tab; press Back | Success every time; Back gives `cancelled` with no error | RT-01 | §11 trace |
 | RT-03 | Process death during Google auth | n/a (in-process) | Enable "Don't keep activities", sign in | App opens normally, not signed in, no crash; retry works | RT-01 | §11 |
 | RT-04 | Session restore / refresh | Kill + relaunch; wait an hour, then foreground | same | Still bound; token refreshed; sync resumes | RT-01 | FR01 tests |
@@ -657,15 +723,15 @@ Every item needs a development build on Staging, **after CFG-01 is fixed and OA-
 | RT-18 | Keyboard | Talk It Out + Systems editor inputs | Android 15+ edge-to-edge | Focused input stays visible (PP-D10) | — | PC-05/06 |
 | RT-19 | Android hardware Back | n/a (swipe) | Back on sheets, modals and onboarding | Sheet Back = cancel; guards hold | — | Sheet `onRequestClose` |
 | RT-20 | Foreground / background / offline → online | Airplane mode, edit, reconnect | same | Queue drains; same durable rows | RT-01 | sync tests |
-| RT-21 | Account switch / sign-out | after PP-D04 | after PP-D04 | Quarantine / clean sign-out, no residue | PP-D04 | accountRuntime |
+| RT-21 | Sign out / re-login / account switch | Today → Your account → Sign out → Sign in (same account, then another) | same | Same account resumes its household. Another account → account-conflict only → Sign out returns to the original household; nothing merged or uploaded. | RT-01, two test accounts | accountAccess 9, 10; accountRuntime 23 |
 | RT-22 | RevenueCat purchase / restore / unknown | Sandbox purchase, restore | Play test purchase, restore | Same `plus` / `unknown` state | RevenueCat keys in EAS | monetization tests |
 
 ## 20. Part 2 recommendation
 
-**Do not start Part 2 yet.** Rerun Part 1 after these steps:
+**Do not start Part 2 yet.** After the repair pass, one blocker remains: **CFG-01**.
 
-1. **CFG-01.** The owner fixes Staging's Google Client ID and secret, about 2 minutes in the dashboard. Also verify OA-02 (`herkeys://auth/callback` in Redirect URLs) on Staging and Production.
-2. **PP-D03.** The owner decides between accepting the limitation and building linking.
-3. **PP-D04.** The owner decides OD-HK13-02. The agent then adds the account entry point and sign-out: small, code-local and parity-neutral.
+1. The owner fixes Staging's Google Client ID and secret (about 2 minutes in the dashboard) and verifies OA-02 on both environments. Alternatively, the owner signs the agent in to the Supabase dashboard in the in-app browser, and the agent makes the non-secret change while the owner pastes the secret.
+2. Rerun the remote probes R3–R5, R9 and R12.
+3. Re-certify Part 1: `tests/platformParity`, `npm run typecheck`, `npm test`, the Expo checks and both exports. All of these are green at `85ad422` (§6.1).
 
-Then rerun `tests/platformParity`, the remote probes R3–R9 and the full exit gate. The runtime checklist in §19 is ready for Part 2 as written.
+The runtime checklist in §19 is ready for Part 2 as written.
