@@ -1,0 +1,176 @@
+{
+  "$comment": "Machine-readable iOS/Android platform-parity registry for Her Keys V1 (Finalization Part 1). Consumed by tests/platformParity/registryGuard.test.mjs. Every platform conditional, platform-specific file, feature exclusion and native difference in app/ and src/ must be listed here, and every entry must still exist. Prose: docs/audits/HK_IOS_ANDROID_PLATFORM_PARITY.md.",
+  "version": 1,
+  "audit": "V1_FINALIZATION_PART_1_PLATFORM_PARITY",
+  "scan": {
+    "roots": ["app", "src"],
+    "extensions": [".ts", ".tsx"],
+    "conditionalPattern": "\\bPlatform\\s*\\.\\s*(OS|select|Version|isPad|isTV|constants)\\b",
+    "platformFilePattern": "\\.(ios|android|native|web)\\.(ts|tsx|js|jsx)$",
+    "classes": {
+      "A": "Necessary native implementation difference",
+      "B": "Deliberate product exception",
+      "C": "Parity defect",
+      "D": "Dead / obsolete / misleading platform code",
+      "E": "Genuine runtime-only proof required"
+    }
+  },
+  "conditionals": [
+    {
+      "id": "PC-01",
+      "file": "src/platform/secureStore.ts",
+      "count": 1,
+      "expression": "Platform.OS !== 'web'",
+      "class": "A",
+      "capability": "Session credential storage",
+      "difference": "Web has no keychain/keystore, so no credential is stored there; iOS and Android both use expo-secure-store.",
+      "iosAndroidEquivalent": true,
+      "evidence": "Both native platforms take the SecureStore branch; web is out of Part 1 scope."
+    },
+    {
+      "id": "PC-02",
+      "file": "src/platform/appleProvider.ts",
+      "count": 1,
+      "expression": "Platform.OS !== 'ios' -> isAvailable() false",
+      "class": "B",
+      "capability": "Sign in with Apple",
+      "difference": "Apple sign-in is offered on iOS only; on Android the adapter reports unavailable BEFORE touching the native module, so the sign-in screen never shows an Apple button.",
+      "iosAndroidEquivalent": false,
+      "exception": "EX-01",
+      "evidence": "app/sign-in.tsx renders only accountProviders.available(); tests/platformParity/registryGuard.test.mjs proves Android availability is false."
+    },
+    {
+      "id": "PC-03",
+      "file": "src/platform/localNotifications.ts",
+      "count": 2,
+      "expression": "Platform.OS !== 'android' (channel creation); Platform.OS === 'android' ? { channelId } (trigger)",
+      "class": "A",
+      "capability": "Local reminder notification",
+      "difference": "Android 8+ requires a notification channel (created before the Android 13 permission prompt); iOS has no channels.",
+      "iosAndroidEquivalent": true,
+      "evidence": "Same schedule, same content, same ownership filter, same cancel/reconcile on both platforms."
+    },
+    {
+      "id": "PC-04",
+      "file": "src/monetization/revenueCatClient.ts",
+      "count": 3,
+      "expression": "Platform.OS === 'ios' / 'android' -> per-store public SDK key",
+      "class": "A",
+      "capability": "RevenueCat entitlements",
+      "difference": "RevenueCat issues one public SDK key per store (App Store / Play). Entitlement id, state mapping, paywall outcome and restore semantics are shared.",
+      "iosAndroidEquivalent": true,
+      "evidence": "Only the key differs; with a key missing, both platforms resolve the entitlement to 'unknown' and fail open identically."
+    },
+    {
+      "id": "PC-05",
+      "file": "src/features/talk-it-out/TalkItOutView.tsx",
+      "count": 2,
+      "expression": "KeyboardAvoidingView behavior 'padding' (iOS) / 'height' (Android) and keyboardVerticalOffset",
+      "class": "E",
+      "capability": "Talk It Out text entry",
+      "difference": "Keyboard avoidance differs by OS; the goal (input stays visible) is the same.",
+      "iosAndroidEquivalent": true,
+      "runtime": "RT-18",
+      "evidence": "Static implementation is conventional; Android 15+ edge-to-edge keyboard insets need device proof."
+    },
+    {
+      "id": "PC-06",
+      "file": "src/features/systems/editor/SystemEditor.tsx",
+      "count": 1,
+      "expression": "KeyboardAvoidingView behavior 'padding' (iOS) / undefined (Android, relies on adjustResize)",
+      "class": "E",
+      "capability": "Systems editor text entry",
+      "difference": "Android relies on the window resize mode; under Android 15+ edge-to-edge that may not move content above the keyboard.",
+      "iosAndroidEquivalent": true,
+      "runtime": "RT-18",
+      "defect": "PP-D10",
+      "evidence": "Documented as PP-D10 (P7) pending device proof."
+    }
+  ],
+  "platformFiles": [],
+  "exceptions": [
+    {
+      "id": "EX-01",
+      "name": "Sign in with Apple is iOS-only",
+      "ios": "supported (expo-apple-authentication, native ASAuthorization, signInWithIdToken)",
+      "android": "not offered; no Apple button, no Apple deep link, no Apple web flow",
+      "basis": "Product decision in the Part 1 brief; expo-apple-authentication supports Apple platforms only.",
+      "portability": "An account created with Apple is reachable from Android only if Supabase links it to a Google identity with the same verified email. Apple 'Hide My Email' accounts cannot be reached from Android: open defect PP-D03 (owner decision)."
+    }
+  ],
+  "oauthReturnRoutes": [
+    {
+      "route": "herkeys://auth/callback",
+      "owner": "Google identity (src/platform/googleIdentityOAuth.ts)",
+      "routerHandling": "swallowed by app/+native-intent.tsx (null)"
+    },
+    {
+      "route": "herkeys://calendar-connected",
+      "owner": "Google Calendar (src/features/calendar/useGoogleCalendarBridge.ts, supabase/functions/calendar-oauth)",
+      "routerHandling": "swallowed by app/+native-intent.tsx (null) since PP-D01"
+    }
+  ],
+  "nativeIdentity": {
+    "iosBundleIdentifier": "com.herkeys.app",
+    "androidPackage": "com.herkeys.app",
+    "scheme": "herkeys",
+    "androidBlockedPermissions": ["android.permission.ACCESS_FINE_LOCATION"],
+    "iosForbiddenInfoPlistKeys": [
+      "NSLocationAlwaysAndWhenInUseUsageDescription",
+      "NSLocationAlwaysUsageDescription",
+      "NSMotionUsageDescription",
+      "NSMicrophoneUsageDescription",
+      "UIBackgroundModes"
+    ],
+    "androidForbiddenPermissions": [
+      "android.permission.ACCESS_BACKGROUND_LOCATION",
+      "android.permission.RECORD_AUDIO",
+      "android.permission.FOREGROUND_SERVICE_LOCATION"
+    ],
+    "requiredPlugins": ["expo-router", "expo-notifications", "expo-apple-authentication", "expo-secure-store", "expo-web-browser", "expo-image-picker", "expo-location"]
+  },
+  "nativeDifferences": [
+    {
+      "id": "ND-01",
+      "capability": "Google identity auth session",
+      "ios": "ASWebAuthenticationSession (native openAuthSessionAsync); return URL captured in-process",
+      "android": "Custom Tab + JS polyfill racing AppState 'active' (dismiss) against Linking (success); return URL also delivered to the router",
+      "parityMechanism": "app/+native-intent.tsx swallows the return URL; the callback is validated by the same code on both platforms"
+    },
+    {
+      "id": "ND-02",
+      "capability": "OCR recognition engine",
+      "ios": "Apple Vision (expo-ocr-kit)",
+      "android": "bundled ML Kit text-recognition 16.0.1 (expo-ocr-kit)",
+      "parityMechanism": "Recognized text is a candidate only; the same review/confirm boundary applies. Output text may legitimately differ."
+    },
+    {
+      "id": "ND-03",
+      "capability": "Photo selection",
+      "ios": "PHPicker, no photo-library permission (photosPermission false)",
+      "android": "Android Photo Picker / document picker; READ/WRITE_EXTERNAL_STORAGE declared by expo-image-picker and expo-file-system library manifests (legacy, not requested by Her Keys)",
+      "parityMechanism": "Same single-item selection; see PP-D07 for the Android manifest surplus"
+    },
+    {
+      "id": "ND-04",
+      "capability": "Location precision",
+      "ios": "When-In-Use with reduced accuracy allowed",
+      "android": "ACCESS_COARSE_LOCATION only; FINE removed with tools:node=remove",
+      "parityMechanism": "expo-location reports granted from COARSE on Android; Accuracy.Low is requested on both"
+    },
+    {
+      "id": "ND-05",
+      "capability": "Notification permission",
+      "ios": "UNUserNotificationCenter authorization (alert only)",
+      "android": "POST_NOTIFICATIONS runtime permission on 13+ (granted at install below 13); channel herkeys-reminders",
+      "parityMechanism": "Requested only from the Turn on action on both platforms"
+    },
+    {
+      "id": "ND-06",
+      "capability": "Secure storage persistence across reinstall",
+      "ios": "Keychain item survives app deletion",
+      "android": "Keystore key and SharedPreferences are removed with the app; backup rules exclude secure-store data",
+      "parityMechanism": "None yet; see PP-D05"
+    }
+  ]
+}

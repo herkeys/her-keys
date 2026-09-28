@@ -434,6 +434,7 @@ const LATER_FEATURES = [
     owned: [
       /^docs\/audits\/HK_(IOS_ANDROID_PLATFORM_PARITY\.md|PLATFORM_PARITY_(REGISTRY\.json|REMOTE_CHECKS\.md))$/,
       /^src\/platform\/systemLinks\.ts$/,
+      /^scripts-dev\/platform-parity-mutation-check\.cjs$/,
       /^tests\/platformParity\//,
     ],
     migrations: [],
