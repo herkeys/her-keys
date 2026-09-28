@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, sep } from 'node:path';
 import { describe, test } from 'node:test';
 import './support/googleAuth/register.mjs';
 
@@ -421,9 +421,10 @@ describe('the REAL supabase-js client: PKCE round trip with persistSession off',
   });
 });
 
+/** Repo-relative paths with `/` on every host, so assertions do not depend on the OS path separator. */
 function filesUnder(dir) {
   return readdirSync(dir).flatMap((name) => {
-    const path = join(dir, name);
+    const path = join(dir, name).split(sep).join('/');
     return statSync(path).isDirectory() ? filesUnder(path) : /\.tsx?$/.test(path) ? [path] : [];
   });
 }
