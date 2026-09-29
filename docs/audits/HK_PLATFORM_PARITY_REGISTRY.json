@@ -121,9 +121,9 @@
   ],
   "nativeIdentity": {
     "iosBundleIdentifier": "com.herkeys.app",
-    "androidPackage": "com.herkeys.app",
+    "androidPackage": "com.heykeys.app",
     "scheme": "herkeys",
-    "androidBlockedPermissions": ["android.permission.ACCESS_FINE_LOCATION"],
+    "androidBlockedPermissions": ["android.permission.ACCESS_FINE_LOCATION", "android.permission.SYSTEM_ALERT_WINDOW"],
     "iosForbiddenInfoPlistKeys": [
       "NSLocationAlwaysAndWhenInUseUsageDescription",
       "NSLocationAlwaysUsageDescription",

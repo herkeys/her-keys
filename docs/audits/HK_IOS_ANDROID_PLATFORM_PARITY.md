@@ -736,3 +736,19 @@ Every item needs a development build on Staging, **after CFG-01 is fixed and OA-
 3. Re-certify Part 1: `tests/platformParity`, `npm run typecheck`, `npm test`, the Expo checks and both exports. All of these are green at `85ad422` (§6.1).
 
 The runtime checklist in §19 is ready for Part 2 as written.
+
+## 21. Android release artifact repair (post-rejection, owner-directed)
+
+Google Play rejected the first production upload for a package-identity mismatch. The owner directed this Android-only repair; CFG-01 (§18, §20) is unrelated to it and remains open.
+
+| ID | PRIORITY | ROOT_CAUSE | REPAIR | FILES_CHANGED | STATUS |
+|---|---|---|---|---|---|
+| REL-01 | P0 | Android `applicationId` did not match the Google Play listing's required `com.heykeys.app`. | `android.package` → `com.heykeys.app` in `app.json`; iOS `bundleIdentifier` (`com.herkeys.app`) and scheme (`herkeys`) are unchanged. Registry (`HK_PLATFORM_PARITY_REGISTRY.json` `nativeIdentity.androidPackage`) and `tests/weather/architecture.test.mjs` updated to match. | `app.json`, `docs/audits/HK_PLATFORM_PARITY_REGISTRY.json`, `tests/weather/architecture.test.mjs` | CLOSED (source); AAB not rebuilt this pass |
+| REL-02 | P1 | Installed label was the slug (`her-keys`) instead of the product name. | `expo.name` → `"Her Keys"` (`expo.slug` unchanged at `her-keys`). | `app.json` | CLOSED |
+| REL-03 | P1 | `expo-dev-client` (pulling in `expo-dev-launcher`/`expo-dev-menu`) was a plain production `dependency`, so Android autolinking bundled dev-launcher's `SYSTEM_ALERT_WINDOW` permission and dev-menu surface into every build profile, including `production` and `preview` — not just `development`. Nothing in app source imports it (`expo-dev-client` had zero references outside `package.json`/`package-lock.json`); the project's actual on-device workflow uses Expo Go, not a custom dev client. | Removed `expo-dev-client` from `package.json` via `npm uninstall` (also drops `expo-dev-launcher`, `expo-dev-menu`, `expo-dev-menu-interface` transitively). `eas.json`'s `development` profile no longer sets `developmentClient: true` (the package it required is gone). Added `android.permission.SYSTEM_ALERT_WINDOW` to `app.json`'s `android.blockedPermissions` as defense-in-depth against reintroduction by any future dependency. | `package.json`, `package-lock.json`, `eas.json`, `app.json` | CLOSED |
+
+**External, owner-only surfaces (cannot be changed from this environment):**
+- RevenueCat's Android app configuration (dashboard mapping of package name → app). Client source does not hard-code the package name (`src/monetization/*` reads only `EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY`), so no source change is needed, but the RevenueCat project's registered Android package must be updated to `com.heykeys.app` externally. `REVENUECAT_EXTERNAL_PACKAGE_ACTION_REQUIRED=com.heykeys.app`.
+- Google Play Console listing identity and any Google Cloud OAuth client scoped to the old Android package, if one exists — no Google Cloud/Play Console MCP or connector is available in this session.
+
+No EAS build was run in this pass (owner directive: source repair and local gates only). REL-01/02/03 are verified against `app.json`, the introspected Expo config, and the local test/typecheck gates in this doc's §6 style — not against an actual built AAB.

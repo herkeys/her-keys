@@ -186,7 +186,7 @@ describe('the app.json permission intent', () => {
   });
 
   test('Android blocks precise location; coarse is all Weather needs', () => {
-    assert.deepEqual(app.android.blockedPermissions, ['android.permission.ACCESS_FINE_LOCATION']);
+    assert.deepEqual(app.android.blockedPermissions, ['android.permission.ACCESS_FINE_LOCATION', 'android.permission.SYSTEM_ALERT_WINDOW']);
     for (const permission of app.android.permissions ?? []) {
       assert.doesNotMatch(permission, /BACKGROUND_LOCATION|FOREGROUND_SERVICE|ACCESS_FINE_LOCATION/);
     }
@@ -203,7 +203,7 @@ describe('the app.json permission intent', () => {
     assert.equal(picker.microphonePermission, false);
     assert.match(picker.cameraPermission, /on-device text recognition/);
     assert.equal(app.ios.bundleIdentifier, 'com.herkeys.app');
-    assert.equal(app.android.package, 'com.herkeys.app');
+    assert.equal(app.android.package, 'com.heykeys.app');
     assert.equal(app.ios.usesAppleSignIn, true);
     assert.equal(app.scheme, 'herkeys');
   });
