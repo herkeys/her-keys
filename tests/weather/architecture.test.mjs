@@ -174,10 +174,15 @@ describe('the app.json permission intent', () => {
     assert.equal(options.isIosBackgroundLocationEnabled, false);
     assert.equal(options.isAndroidBackgroundLocationEnabled, false);
     assert.equal(options.isAndroidForegroundServiceEnabled, false);
-    // `false` removes the plugin's default Always / Motion usage strings from Info.plist.
+    // `false` removes the plugin's default Always usage strings from Info.plist. Motion is declared (not
+    // removed): App Store Error 90683 requires NSMotionUsageDescription in Info.plist even though Weather
+    // never requests motion authorization; the string is inert copy, not a new capability.
     assert.equal(options.locationAlwaysAndWhenInUsePermission, false);
     assert.equal(options.locationAlwaysPermission, false);
-    assert.equal(options.motionUsagePermission, false);
+    assert.equal(
+      options.motionUsagePermission,
+      'Her Keys may use motion activity to support location-aware features while you are using the app.',
+    );
   });
 
   test('Android blocks precise location; coarse is all Weather needs', () => {
@@ -214,12 +219,14 @@ describe('the permission surface Expo actually generates', () => {
     }),
   );
 
-  test('iOS: When-In-Use only — no Always, no Motion, no background mode', () => {
+  test('iOS: When-In-Use only — no Always, no background mode; Motion is declared but inert', () => {
     const plist = introspected.ios.infoPlist;
     assert.match(plist.NSLocationWhenInUseUsageDescription, /approximate location while you're using the app/);
     assert.equal(plist.NSLocationAlwaysUsageDescription, undefined);
     assert.equal(plist.NSLocationAlwaysAndWhenInUseUsageDescription, undefined);
-    assert.equal(plist.NSMotionUsageDescription, undefined);
+    // Declared to satisfy App Store Error 90683 (Info.plist requires this key); the seam never requests
+    // motion authorization, so the declaration carries no runtime behavior.
+    assert.match(plist.NSMotionUsageDescription, /motion activity/);
     assert.ok(!(plist.UIBackgroundModes ?? []).includes('location'));
   });
 

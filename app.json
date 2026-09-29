@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "her-keys",
+    "name": "Her Keys",
     "slug": "her-keys",
     "version": "1.0.0",
     "scheme": "herkeys",
@@ -8,10 +8,14 @@
     "icon": "./assets/her-keys-4-house.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "usesAppleSignIn": true,
       "bundleIdentifier": "com.herkeys.app",
-      "icon": "./assets/her-keys-4-house.png"
+      "buildNumber": "2",
+      "icon": "./assets/her-keys-4-house.png",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "icon": "./assets/her-keys-4-house.png",
@@ -24,6 +28,10 @@
       "versionCode": 1,
       "blockedPermissions": [
         "android.permission.ACCESS_FINE_LOCATION"
+      ],
+      "permissions": [
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
       ]
     },
     "web": {
@@ -34,7 +42,12 @@
       "expo-status-bar",
       "expo-notifications",
       "expo-apple-authentication",
-      "expo-secure-store",
+      [
+        "expo-secure-store",
+        {
+          "faceIDPermission": "Her Keys uses Face ID only when secure authentication is required to protect account credentials."
+        }
+      ],
       "expo-web-browser",
       [
         "expo-image-picker",
@@ -50,7 +63,7 @@
           "locationWhenInUsePermission": "Her Keys uses your approximate location while you're using the app to show local weather and location-aware planning.",
           "locationAlwaysAndWhenInUsePermission": false,
           "locationAlwaysPermission": false,
-          "motionUsagePermission": false,
+          "motionUsagePermission": "Her Keys may use motion activity to support location-aware features while you are using the app.",
           "isIosBackgroundLocationEnabled": false,
           "isAndroidBackgroundLocationEnabled": false,
           "isAndroidForegroundServiceEnabled": false

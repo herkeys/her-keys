@@ -127,7 +127,6 @@
     "iosForbiddenInfoPlistKeys": [
       "NSLocationAlwaysAndWhenInUseUsageDescription",
       "NSLocationAlwaysUsageDescription",
-      "NSMotionUsageDescription",
       "NSMicrophoneUsageDescription",
       "UIBackgroundModes"
     ],

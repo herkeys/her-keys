@@ -462,8 +462,9 @@ Versions and platform support were read from the installed packages (`expo-modul
 - Usage strings:
   - `NSCameraUsageDescription` (custom) ✔
   - `NSLocationWhenInUseUsageDescription` ✔
+  - `NSMotionUsageDescription` (custom, declared but inert — required by App Store Error 90683; Weather never requests motion authorization) ✔ (TestFlight build 2 repair pass, 2026-09-28)
 - Correctly absent:
-  - no Always/Motion location strings
+  - no Always location strings
   - no `NSMicrophoneUsageDescription`
   - no `NSPhotoLibraryUsageDescription` (not needed with PHPicker)
   - no `UIBackgroundModes`
