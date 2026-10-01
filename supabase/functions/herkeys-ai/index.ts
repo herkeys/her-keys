@@ -96,17 +96,17 @@ const RESPONSE_JSON_SCHEMA = {
         type: 'object',
         properties: {
           speaker: { type: 'string', enum: ['herkeys'] },
-          text: { type: 'string', minLength: 1, maxLength: 1200 },
+          text: { type: 'string' },
           stage: {
             type: 'string',
             enum: ['listen', 'hypothesis', 'refinement', 'clarify', 'result', 'next-step', 'unmatched'],
           },
-          confidenceLabel: { type: 'string', minLength: 1, maxLength: 80 },
+          confidenceLabel: { type: 'string' },
           confidence: { type: 'string', enum: ['possible', 'likely', 'established'] },
           evidence: {
             type: 'array',
             maxItems: 8,
-            items: { type: 'string', minLength: 1, maxLength: 180 },
+            items: { type: 'string' },
           },
         },
         required: ['speaker', 'text'],
@@ -116,12 +116,12 @@ const RESPONSE_JSON_SCHEMA = {
     state: {
       type: 'object',
       properties: {
-        topicId: { type: ['string', 'null'], maxLength: 96 },
+        topicId: { type: ['string', 'null'] },
         stage: { type: 'string', enum: ['listening', 'clarifying', 'refining', 'resolved'] },
         hypothesis: {
           type: ['object', 'null'],
           properties: {
-            statement: { type: 'string', minLength: 1, maxLength: 800 },
+            statement: { type: 'string' },
             confidence: { type: 'string', enum: ['possible', 'likely', 'established'] },
           },
           required: ['statement', 'confidence'],
@@ -133,9 +133,9 @@ const RESPONSE_JSON_SCHEMA = {
           items: {
             type: 'object',
             properties: {
-              questionId: { type: 'string', minLength: 1, maxLength: 96 },
-              optionId: { type: 'string', minLength: 1, maxLength: 96 },
-              label: { type: 'string', minLength: 1, maxLength: 180 },
+              questionId: { type: 'string' },
+              optionId: { type: 'string' },
+              label: { type: 'string' },
             },
             required: ['questionId', 'optionId', 'label'],
             additionalProperties: false,
@@ -144,8 +144,8 @@ const RESPONSE_JSON_SCHEMA = {
         pendingQuestion: {
           type: ['object', 'null'],
           properties: {
-            id: { type: 'string', minLength: 1, maxLength: 96 },
-            text: { type: 'string', minLength: 1, maxLength: 500 },
+            id: { type: 'string' },
+            text: { type: 'string' },
             options: {
               type: 'array',
               minItems: 1,
@@ -153,14 +153,14 @@ const RESPONSE_JSON_SCHEMA = {
               items: {
                 type: 'object',
                 properties: {
-                  id: { type: 'string', minLength: 1, maxLength: 96 },
-                  label: { type: 'string', minLength: 1, maxLength: 120 },
+                  id: { type: 'string' },
+                  label: { type: 'string' },
                   keywords: {
                     type: 'array',
                     maxItems: 12,
-                    items: { type: 'string', minLength: 1, maxLength: 80 },
+                    items: { type: 'string' },
                   },
-                  evidenceLabel: { type: 'string', minLength: 1, maxLength: 180 },
+                  evidenceLabel: { type: 'string' },
                 },
                 required: ['id', 'label', 'keywords'],
                 additionalProperties: false,
@@ -173,9 +173,9 @@ const RESPONSE_JSON_SCHEMA = {
         result: {
           type: ['object', 'null'],
           properties: {
-            summary: { type: 'string', minLength: 1, maxLength: 900 },
-            confidenceLabel: { type: 'string', minLength: 1, maxLength: 80 },
-            nextStep: { type: 'string', minLength: 1, maxLength: 500 },
+            summary: { type: 'string' },
+            confidenceLabel: { type: 'string' },
+            nextStep: { type: 'string' },
           },
           required: ['summary', 'confidenceLabel', 'nextStep'],
           additionalProperties: false,
@@ -190,14 +190,14 @@ const RESPONSE_JSON_SCHEMA = {
       items: {
         type: 'object',
         properties: {
-          id: { type: 'string', minLength: 1, maxLength: 96 },
-          label: { type: 'string', minLength: 1, maxLength: 120 },
+          id: { type: 'string' },
+          label: { type: 'string' },
           keywords: {
             type: 'array',
             maxItems: 12,
-            items: { type: 'string', minLength: 1, maxLength: 80 },
+            items: { type: 'string' },
           },
-          evidenceLabel: { type: 'string', minLength: 1, maxLength: 180 },
+          evidenceLabel: { type: 'string' },
         },
         required: ['id', 'label', 'keywords'],
         additionalProperties: false,
