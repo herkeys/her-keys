@@ -10,6 +10,7 @@ import type { SyncTransport } from '../domain/sync/transport';
 import { identifyRevenueCatAccount } from '../monetization/revenueCatClient';
 import { createAppleProvider } from '../platform/appleProvider';
 import { createGoogleProvider } from '../platform/googleProvider';
+import { createHerKeysAiClient, UNCONFIGURED_HER_KEYS_AI } from '../platform/herKeysAiClient';
 import { createExternalIntelligenceClient, UNCONFIGURED_EXTERNAL_INTELLIGENCE } from '../platform/externalIntelligenceClient';
 import { createDeviceSecureStorage, secureStorageAvailable } from '../platform/secureStore';
 import { createSupabaseAccountClient, createSupabaseClient } from '../platform/supabaseCloud';
@@ -62,6 +63,13 @@ export const accountsAvailable = client !== null && providerClient !== null;
  */
 export const externalIntelligenceClient =
   client === null ? UNCONFIGURED_EXTERNAL_INTELLIGENCE : createExternalIntelligenceClient(client);
+
+/**
+ * Talk It Out uses the same authenticated Supabase transport session as sync and
+ * the other server-backed features. The model credential never exists here;
+ * only the user-authenticated Edge Function can reach the provider.
+ */
+export const herKeysAiClient = client === null ? UNCONFIGURED_HER_KEYS_AI : createHerKeysAiClient(client);
 
 // Google identity is one Supabase OAuth path on iOS and Android. It is only
 // registered where the durable secure credential store exists; web has none, so
