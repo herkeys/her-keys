@@ -60,6 +60,58 @@ export function replayDiscovery(record: DiscoveryRecord | null): DiscoveryReplay
 }
 
 /**
+ * A provider turn may be more conversational than the original scripted
+ * discovery tree. Only the exact scripted topic/question/option structure is
+ * durable, because replayDiscovery must be able to reconstruct it without
+ * inventing the user's words after a relaunch.
+ */
+export function isReplayableDiscoveryConversation(conversation: ConversationState): boolean {
+  if (conversation.topicId === null) return true;
+
+  const topic = discoveryTopics.find((candidate) => candidate.id === conversation.topicId);
+  if (!topic) return false;
+  if (conversation.evidence.length > 2) return false;
+
+  let question = topic.firstQuestion;
+  for (let index = 0; index < conversation.evidence.length; index += 1) {
+    const evidence = conversation.evidence[index];
+    if (evidence.questionId !== question.id) return false;
+    const option = question.options.find((candidate) => candidate.id === evidence.optionId);
+    if (!option) return false;
+
+    if (index === 0) {
+      const branch = Object.prototype.hasOwnProperty.call(topic.branches, option.id) ? topic.branches[option.id] : undefined;
+      if (!branch) return false;
+      question = branch.followUp;
+    }
+  }
+
+  return true;
+}
+
+/**
+ * Gemini can discuss subjects outside Build 1's four scripted discovery trees.
+ * Those turns remain in-memory conversation only. If a dynamic subject replaces
+ * a previously stored scripted topic, clear that stale record rather than
+ * presenting it as the active conversation after a relaunch.
+ */
+export function applyProviderDiscoveryConversation(
+  state: AppState,
+  ctx: TransitionContext,
+  conversation: ConversationState
+): AppState {
+  if (isReplayableDiscoveryConversation(conversation)) {
+    return applyDiscoveryConversation(state, ctx, conversation);
+  }
+
+  if (state.discovery !== null && state.discovery.topicId !== conversation.topicId) {
+    return clearDiscovery(state);
+  }
+
+  return state;
+}
+
+/**
  * Stores the conversation's structure, or clears it when no topic is open.
  * Unchanged structure writes nothing.
  *
