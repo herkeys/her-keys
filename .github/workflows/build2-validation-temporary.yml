@@ -1,0 +1,91 @@
+name: Build 2 Validation (Temporary)
+
+on:
+  push:
+    branches:
+      - build/02-gemini-integration
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout Build 2
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Environment
+        run: |
+          node --version
+          npm --version
+
+      - name: Install dependencies
+        id: install
+        continue-on-error: true
+        run: npm ci
+
+      - name: TypeScript
+        id: typecheck
+        if: always() && steps.install.outcome == 'success'
+        continue-on-error: true
+        run: npm run typecheck
+
+      - name: Tests
+        id: tests
+        if: always() && steps.install.outcome == 'success'
+        continue-on-error: true
+        run: npm test
+
+      - name: Expo install check
+        id: expo_install
+        if: always() && steps.install.outcome == 'success'
+        continue-on-error: true
+        run: npx expo install --check
+
+      - name: Expo Doctor
+        id: expo_doctor
+        if: always() && steps.install.outcome == 'success'
+        continue-on-error: true
+        run: npx expo-doctor
+
+      - name: Expo public config
+        id: expo_public
+        if: always() && steps.install.outcome == 'success'
+        continue-on-error: true
+        run: npx expo config --type public > /dev/null
+
+      - name: Expo introspect config
+        id: expo_introspect
+        if: always() && steps.install.outcome == 'success'
+        continue-on-error: true
+        run: npx expo config --type introspect > /dev/null
+
+      - name: Validation summary
+        if: always()
+        run: |
+          echo "INSTALL=${{ steps.install.outcome }}"
+          echo "TYPECHECK=${{ steps.typecheck.outcome }}"
+          echo "TESTS=${{ steps.tests.outcome }}"
+          echo "EXPO_INSTALL_CHECK=${{ steps.expo_install.outcome }}"
+          echo "EXPO_DOCTOR=${{ steps.expo_doctor.outcome }}"
+          echo "EXPO_CONFIG_PUBLIC=${{ steps.expo_public.outcome }}"
+          echo "EXPO_CONFIG_INTROSPECT=${{ steps.expo_introspect.outcome }}"
+
+          failed=0
+          [ "${{ steps.install.outcome }}" = "success" ] || failed=1
+          [ "${{ steps.typecheck.outcome }}" = "success" ] || failed=1
+          [ "${{ steps.tests.outcome }}" = "success" ] || failed=1
+          [ "${{ steps.expo_install.outcome }}" = "success" ] || failed=1
+          [ "${{ steps.expo_doctor.outcome }}" = "success" ] || failed=1
+          [ "${{ steps.expo_public.outcome }}" = "success" ] || failed=1
+          [ "${{ steps.expo_introspect.outcome }}" = "success" ] || failed=1
+          exit "$failed"
