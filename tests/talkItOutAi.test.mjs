@@ -146,6 +146,7 @@ describe('server-side Gemini architecture', () => {
   test('Interactions API is stateless, structured and tool-free', () => {
     assert.match(edge, /response_format:\s*\{/);
     assert.match(edge, /mime_type:\s*'application\/json'/);
+    assert.doesNotMatch(edge, /minLength|maxLength/, 'Gemini structured-output schema must use the documented subset');
     assert.match(edge, /store:\s*false/);
     assert.doesNotMatch(edge, /previous_interaction_id\s*:/);
     assert.doesNotMatch(edge, /\btools\s*:/);
