@@ -36,6 +36,17 @@ export function createHerKeysAiClient(client: SupabaseClient): HerKeysAiClient {
 
         const parsed = parseHerKeysAiTurn(data);
         if (!parsed) return { kind: 'invalid', reason: 'invalid_ai_contract' };
+        if (__DEV__) {
+          console.info(
+            `[herkeys] ${JSON.stringify({
+              type: 'talk_it_out.provider_turn',
+              provider: parsed.meta.provider,
+              model: parsed.meta.model,
+              requestId: parsed.meta.requestId,
+              latencyMs: parsed.meta.latencyMs,
+            })}`,
+          );
+        }
         return { kind: 'ready', value: parsed };
       } catch {
         return { kind: 'unavailable', reason: 'network_unavailable' };
