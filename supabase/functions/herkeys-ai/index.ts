@@ -292,6 +292,8 @@ function validStateShape(state: ConversationState, quickReplies: ProviderTurn['q
 
   if (state.stage === 'resolved') {
     if (state.pendingQuestion !== null || state.result === null || quickReplies.length !== 0) return false;
+  } else if (state.result !== null) {
+    return false;
   }
 
   if (state.pendingQuestion !== null && quickReplies.length > 0) {
@@ -300,6 +302,7 @@ function validStateShape(state: ConversationState, quickReplies: ProviderTurn['q
   }
 
   if (state.hypothesis?.confidence && state.hypothesis.confidence !== 'possible') return false;
+  if (state.result !== null && state.result.confidenceLabel !== 'Possible pattern') return false;
   return true;
 }
 
@@ -308,18 +311,14 @@ const ACTION_CLAIM_PATTERN =
   /\b(?:i|i've|i have)\s+(?:saved|added|created|scheduled|sent|updated|deleted|changed|moved|paid|purchased|booked|cancelled|canceled)\b/i;
 
 function safeText(turn: ProviderTurn): boolean {
-  const text = [
-    ...turn.messages.map((message) => message.text),
-    turn.state.hypothesis?.statement ?? '',
-    turn.state.result?.summary ?? '',
-    turn.state.result?.nextStep ?? '',
-    turn.state.pendingQuestion?.text ?? '',
-  ].join('\n');
-
+  // Validate every string in the normalized object, not only the visible main
+  // message. URLs or action claims are not allowed to hide in chips/evidence.
+  const text = JSON.stringify(turn);
   if (URL_PATTERN.test(text) || ACTION_CLAIM_PATTERN.test(text)) return false;
 
   for (const message of turn.messages) {
     if (message.confidence && message.confidence !== 'possible') return false;
+    if (message.confidenceLabel && message.confidenceLabel !== 'Possible pattern') return false;
   }
   return true;
 }
