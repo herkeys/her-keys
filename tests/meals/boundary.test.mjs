@@ -69,6 +69,7 @@ describe('[BV] the semantic-boundary scan', () => {
     const { account, MEALS_LINE } = createRequire(import.meta.url)('../../scripts-dev/meals-boundary-scan.cjs');
     const F10 = 'HK-FEATURE-10 (Work / Career OS)';
     const REFINEMENTS = 'HK-PROTOTYPE-REFINEMENTS (FR01 / Notifications / External Intelligence)';
+    const POLISH = 'HK-FE-UI-02 (frontend UI / motion polish pass)';
     // useHousehold.ts carries only a Meals-line reason. Changed on the Wave 2 line, that explains it; changed after the checkpoint,
     // it does not — Meals was certified before any later lane branched, so a Meals reason there would be a misattribution.
     assert.deepEqual(account('src/store/useHousehold.ts', 'M', true, null).findings, []);
@@ -77,16 +78,19 @@ describe('[BV] the semantic-boundary scan', () => {
     // A PROTECTED file: changed on the Wave 2 line, it fails whatever a later lane says; changed only after it, the lane that did it explains it.
     assert.match(account('app/_layout.tsx', 'M', true, 'M').findings.join(), /PROTECTED file changed on the Wave 2 line/);
     assert.deepEqual(account('app/_layout.tsx', 'M', false, 'M').findings, []);
-    // Every registered later lane that changed it explains it: Feature 10 (its route) and the post-certification refinements (the
-    // device-local notification controller mount, d557f7c) — the accounting names them all, in registry order.
-    assert.deepEqual(account('app/_layout.tsx', 'M', false, 'M').shared.lanes, [F10, REFINEMENTS]);
+    // Every registered later lane that changed it explains it: Feature 10 (its route), the post-certification refinements (the
+    // device-local notification controller mount, d557f7c) and the polish pass (the splash fade) — the accounting names them all,
+    // in registry order.
+    assert.deepEqual(account('app/_layout.tsx', 'M', false, 'M').shared.lanes, [F10, REFINEMENTS, POLISH]);
     assert.match(account('src/domain/taskLists.ts', 'M', false, 'M').findings.join(), /no later lane's reason/, 'no lane explains taskLists.ts');
-    // A later lane's own file is its lane, not a shared change; one changed on the Wave 2 line still needs its Meals-line reason.
-    assert.deepEqual(account('src/features/work/WorkOverview.tsx', 'M', false, 'M'), { findings: [], shared: null, mealsFile: null });
+    // A later lane's own file is its lane, not a shared change; a shared change registered by a later lane names both lanes.
+    assert.deepEqual(account('src/features/work/WorkOverview.tsx', 'M', false, 'M').shared.lanes, [F10, POLISH]);
     assert.match(account('src/features/work/WorkOverview.tsx', 'M', true, 'M').findings.join(), /unexplained shared-file change on the Wave 2 line/);
     // A Meals file changed after the checkpoint names who changed it, and a Meals file no lane explains is a finding.
     assert.ok(account('supabase/tests/private-stack.mjs', 'M', true, 'M').mealsFile.lanes.includes('HK-F01-F13 integration (INT13 / AUD13)'));
-    assert.match(account('src/features/meals/MealsBody.tsx', 'M', true, 'M').findings.join(), /no later lane's reason/);
+    // HK-FE-UI-02 registered its hub-header change to MealsBody, so the file now names that lane; an unexplained Meals file still fails.
+    assert.ok(account('src/features/meals/MealsBody.tsx', 'M', true, 'M').mealsFile.lanes.includes(POLISH));
+    assert.match(account('src/features/meals/mealsView.ts', 'M', true, 'M').findings.join(), /no later lane's reason/);
   });
 
   test('[CB1] [CD1] no dependency relation, recipe link or external reference is created by Meals code', () => {

@@ -98,6 +98,8 @@ interface RecommendationBlockProps {
   onApprove?: () => void;
   onShowAlternative?: () => void;
   onNotToday?: () => void;
+  /** Lifts the card so a primary recommendation can own its screen. */
+  raised?: boolean;
   style?: ViewStyle;
 }
 
@@ -115,11 +117,12 @@ export function RecommendationBlock({
   onApprove,
   onShowAlternative,
   onNotToday,
+  raised = false,
   style,
 }: RecommendationBlockProps) {
   const primaryLabel = actionLabel ?? (approvalRequired ? 'Yes, do that' : 'Do that');
   return (
-    <Card tone="surface" style={style}>
+    <Card tone="surface" raised={raised} style={style}>
       <View style={styles.recHeader}>
         <Overline color={color.action.primary}>What I recommend</Overline>
         {approvalRequired ? (

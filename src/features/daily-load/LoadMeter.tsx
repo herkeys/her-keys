@@ -29,7 +29,7 @@ export function LoadMeter({ load, note }: { load: LoadEstimate; note?: string | 
             {load.label}
           </AppText>
         </View>
-        <SegmentBar filled={load.filled} total={load.total} tone="neutral" />
+        <SegmentBar filled={load.filled} total={load.total} tone="neutral" animated />
         <AppText variant="metadata" color={color.text.muted} style={styles.caption}>
           {load.caption}
         </AppText>

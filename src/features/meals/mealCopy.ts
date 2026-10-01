@@ -25,6 +25,7 @@ export const SLOT_CHOICES: readonly Exclude<MealSlot, 'unspecified'>[] = ['break
 export const MEAL_COPY = {
   // the hub
   addMeal: 'Add a meal',
+  hubLede: 'The coming days at the table, and the work that goes with them.',
   noMealsYet: 'No meals planned yet.',
   noMealsDay: 'No meals planned.',
   sectionUpNext: 'Up next',

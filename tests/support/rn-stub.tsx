@@ -48,8 +48,43 @@ export const StyleSheet = {
 /** Enough of RN's AppState for the store provider to mount: it subscribes, and never fires. */
 export const AppState = { addEventListener: (_event: string, _handler: (state: string) => void) => ({ remove: () => {} }) };
 
+/** Easing functions are identities in tests — timing is not asserted here. */
+export const Easing = {
+  cubic: (t: number) => t,
+  out: (f: (t: number) => number) => f,
+  inOut: (f: (t: number) => number) => f,
+};
+
+/** Reduce Motion is off in the test environment, and never changes. */
+export const AccessibilityInfo = {
+  isReduceMotionEnabled: () => Promise.resolve(false),
+  addEventListener: (_event: string, _handler: (value: boolean) => void) => ({ remove: () => {} }),
+};
+
+/**
+ * Enough of Animated for entrance/emphasis wrappers to mount: values hold
+ * their current number, interpolate returns it (tests assert structure and
+ * props, not frames), and timing completes immediately.
+ */
+class AnimatedValue {
+  value: number;
+  constructor(value: number) {
+    this.value = value;
+  }
+  interpolate() {
+    return this.value;
+  }
+}
+const AnimatedView = (props: AnyProps) => React.createElement('View', props, props.children);
+export const Animated = {
+  Value: AnimatedValue,
+  View: AnimatedView,
+  timing: (_value: unknown, _config: AnyProps) => ({ start: (cb?: (r: { finished: boolean }) => void) => cb?.({ finished: true }) }),
+};
+
 const rn = {
   View, Text, ScrollView, Pressable, TextInput, KeyboardAvoidingView, Modal,
   SafeAreaView, ActivityIndicator, useSafeAreaInsets, Platform, StyleSheet, AppState,
+  Easing, AccessibilityInfo, Animated,
 };
 export default rn;

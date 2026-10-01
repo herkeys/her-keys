@@ -21,11 +21,15 @@ import { transformSync } from 'esbuild';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const RN_STUB = pathToFileURL(join(HERE, 'rn-stub.tsx')).href;
+const ICON_STUB = pathToFileURL(join(HERE, 'icon-stub.tsx')).href;
 
 registerHooks({
   resolve(specifier, context, nextResolve) {
     if (specifier === 'react-native' || specifier === 'react-native-safe-area-context') {
       return nextResolve(RN_STUB, context);
+    }
+    if (specifier === '@expo/vector-icons') {
+      return nextResolve(ICON_STUB, context);
     }
     return nextResolve(specifier, context);
   },

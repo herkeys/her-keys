@@ -68,7 +68,21 @@
           "isAndroidBackgroundLocationEnabled": false,
           "isAndroidForegroundServiceEnabled": false
         }
-      ]
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#0B0A08",
+          "image": "./assets/splash-brand.png",
+          "imageWidth": 220,
+          "resizeMode": "contain",
+          "dark": {
+            "backgroundColor": "#0B0A08",
+            "image": "./assets/splash-brand.png"
+          }
+        }
+      ],
+      "expo-font"
     ],
     "extra": {
       "router": {},

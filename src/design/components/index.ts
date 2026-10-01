@@ -11,3 +11,6 @@ export * from './TextField';
 export * from './systemStates';
 export * from './Sheet';
 export * from './intelligence';
+export * from './animated';
+export * from './HubHeader';
+export * from './TabIcon';

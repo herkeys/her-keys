@@ -1,4 +1,5 @@
 import { SplashScreen, Stack } from 'expo-router';
+import * as NativeSplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { colors } from '../src/design/tokens';
@@ -15,6 +16,10 @@ import { TalkItOutProvider } from '../src/store/TalkItOutContext';
 
 // Keep the launch screen up until household state has loaded.
 SplashScreen.preventAutoHideAsync();
+// The launch bridge: the native splash (charcoal + the gold brand mark) fades
+// quickly into the warm interior instead of snapping. iOS honors the fade;
+// Android's system splash performs its own crossfade.
+NativeSplashScreen.setOptions({ duration: 250, fade: true });
 
 export default function RootLayout() {
   useEffect(() => {

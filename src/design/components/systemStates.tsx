@@ -1,5 +1,6 @@
 import { ActivityIndicator, StyleSheet, View, type ViewStyle } from 'react-native';
 import { color, radius, spacing } from '../tokens';
+import { FadeIn } from './animated';
 import { AppText, Overline } from './AppText';
 
 /**
@@ -42,7 +43,10 @@ export interface EmptyStateProps {
 
 export function EmptyState({ title, body, actionLabel, onAction, style }: EmptyStateProps) {
   return (
-    <View style={[styles.center, style]}>
+    <FadeIn style={[styles.center, style]}>
+      {/* The quiet mark: an open ring — a section that is valid and at rest,
+          not a warning and not an illustration. */}
+      <View style={styles.quietMark} accessibilityElementsHidden importantForAccessibility="no" />
       <AppText variant="sectionTitle" style={styles.gap}>
         {title}
       </AppText>
@@ -54,7 +58,7 @@ export function EmptyState({ title, body, actionLabel, onAction, style }: EmptyS
           {actionLabel}
         </AppText>
       )}
-    </View>
+    </FadeIn>
   );
 }
 
@@ -138,6 +142,13 @@ export function InlineNotice({ tone = 'info', title, body, style }: InlineNotice
 
 const styles = StyleSheet.create({
   center: { alignItems: 'center', paddingVertical: spacing.xxxl, paddingHorizontal: spacing.xl },
+  quietMark: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    borderWidth: StyleSheet.hairlineWidth * 2,
+    borderColor: color.border.control,
+  },
   gap: { marginTop: spacing.md, textAlign: 'center' },
   tightGap: { marginTop: spacing.sm, textAlign: 'center' },
   notice: {

@@ -70,9 +70,9 @@ describe('every Life screen has an entry point', () => {
     }
   });
 
-  test('the stable shell is exactly Today, Life, Calendar, Systems and Her Keys AI (no feature added a tab)', () => {
+  test('the stable shell is exactly Today, Life, Calendar, Systems and AI (no feature added a tab)', () => {
     const tabs = [...read('app/(app)/_layout.tsx').matchAll(/<Tabs\.Screen name="([^"]+)" options=\{\{ title: '([^']+)' \}\} \/>/g)].map((m) => `${m[1]}:${m[2]}`);
-    assert.deepEqual(tabs, ['today:Today', 'life:Life', 'calendar:Calendar', 'systems:Systems', 'ai:Her Keys AI']);
+    assert.deepEqual(tabs, ['today:Today', 'life:Life', 'calendar:Calendar', 'systems:Systems', 'ai:AI']);
   });
 });
 

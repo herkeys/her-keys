@@ -7,6 +7,7 @@ import { LifeStatusSummary } from '../life/LifeStatusSummary';
 import { OneMoveCard } from '../one-move/OneMoveCard';
 import { useOneMove } from '../../store/OneMoveContext';
 import { TalkItOutEntry } from '../talk-it-out/TalkItOutEntry';
+import { FadeIn } from '../../design/components';
 import { spacing } from '../../design/tokens';
 import { HandledLedger } from './HandledLedger';
 import type { SectionKey, TodayReady, TodayView } from './model';
@@ -58,12 +59,14 @@ export function TodayBriefing({ view }: { view: TodayView }) {
       </TodayHeader>
       {view.load ? <LoadMeter load={view.load} note={view.capacityNote} /> : null}
       <WeatherContextCard />
-      {view.composition.map(({ key }) => {
+      {view.composition.map(({ key }, index) => {
         const section = renderSection(key, view, complete, actions);
+        // Sections settle in with a short stagger rather than appearing at once;
+        // capped so a long day never feels delayed. Honors Reduce Motion.
         return section ? (
-          <View key={key} style={styles.block}>
+          <FadeIn key={key} delay={Math.min(index, 4) * 40} style={styles.block}>
             {section}
-          </View>
+          </FadeIn>
         ) : null;
       })}
       <TomorrowReminderCard />

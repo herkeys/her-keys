@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { AppText, Button, Card, Divider, InlineNotice, LoadingState, Overline, StatusList } from '../../design/components';
+import { AppText, Button, Card, Divider, HubHeader, InlineNotice, LoadingState, Overline, StatusList } from '../../design/components';
 import { colors, sizing, spacing } from '../../design/tokens';
 import { MEAL_COPY, SLOT_LABEL, moreLater, moreTasks } from './mealCopy';
 import { shortDate } from './mealDates';
@@ -30,6 +30,7 @@ export function MealsBody({ gate, view, flash, onAddMeal, onOpenEntry, onPlanAga
   const canAdd = gate.canWrite && view.context === 'ok';
   return (
     <View style={styles.root}>
+      <HubHeader title="Meals" lede={MEAL_COPY.hubLede} />
       {view.context === 'no-meals-context' ? <InlineNotice tone="info" title={MEAL_COPY.unavailableTitle} body={MEAL_COPY.unavailableBody} /> : null}
       {!gate.canWrite ? <InlineNotice tone="waiting" title={MEAL_COPY.readOnlyNotice} /> : null}
       {flash ? (

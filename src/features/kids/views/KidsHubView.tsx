@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, View } from 'react-native';
-import { AppText, Button, Card, EmptyState, InlineNotice, Tag } from '../../../design/components';
+import { AppText, Button, Card, EmptyState, HubHeader, InlineNotice, Tag } from '../../../design/components';
 import { color, interaction, radius, sizing, spacing } from '../../../design/tokens';
 import { HUB, cardTags, nextLine } from '../copy';
 import type { ChildCard, KidsView } from '../types';
@@ -29,6 +29,7 @@ export function KidsHubView({ view, canAddChild, onOpenChild, onAddChild }: Kids
   if (view.children.length === 0) {
     return (
       <View style={styles.stack}>
+        <HubHeader title="Kids" lede={HUB.intro} />
         <EmptyState title={HUB.emptyTitle} body={HUB.emptyBody} />
         {canAddChild ? (
           <Button label={HUB.addChild} onPress={onAddChild} />
@@ -41,9 +42,7 @@ export function KidsHubView({ view, canAddChild, onOpenChild, onAddChild }: Kids
 
   return (
     <View style={styles.stack}>
-      <AppText variant="supporting" color={color.text.secondary}>
-        {HUB.intro}
-      </AppText>
+      <HubHeader title="Kids" lede={HUB.intro} />
       {view.children.map((card) => {
         const summary = cardSummary(card, view.today);
         const tags = cardTags(card);

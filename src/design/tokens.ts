@@ -73,6 +73,15 @@ const palette = {
 
   /** Unfilled track for segment bars / progress. */
   track: '#E6E0D5',
+
+  /**
+   * Brand moments only: the launch/Welcome bridge that carries the app icon's
+   * black-and-gold into the warm interior. Gold is never an action color and
+   * charcoal never becomes an in-app surface (HK-FE-UI polish pass).
+   */
+  brandCharcoal: '#0B0A08',
+  brandGold: '#C9A24B',
+  brandGoldSoft: '#E9DDBE',
 } as const;
 
 export const color = {
@@ -152,6 +161,13 @@ export const color = {
   },
 
   track: palette.track,
+
+  /** Brand bridge (launch, Welcome) — see palette note. Not an action color. */
+  brand: {
+    charcoal: palette.brandCharcoal,
+    gold: palette.brandGold,
+    goldSoft: palette.brandGoldSoft,
+  },
 } as const;
 
 // ---------------------------------------------------------------------------

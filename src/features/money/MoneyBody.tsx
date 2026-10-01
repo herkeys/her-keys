@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { AppText, Button, InlineNotice, LoadingState, Overline, StatusList } from '../../design/components';
+import { AppText, Button, HubHeader, InlineNotice, LoadingState, Overline, StatusList } from '../../design/components';
 import { colors, spacing } from '../../design/tokens';
 import { needsAttention as taskNeedsAttention, openTaskLabel } from '../life/openTaskLabel';
 import type { MoneyGate } from './moneyGate';
@@ -63,6 +63,7 @@ export function MoneyBody({ gate, view, today, onAddObligation, onAddIncome, onO
 
   return (
     <View style={styles.root}>
+      <HubHeader title="Money" lede="What needs paying, what's coming in, and what can wait." />
       {!gate.canWrite ? <InlineNotice tone="waiting" title={MONEY_COPY.readOnlyNotice} /> : null}
 
       <View accessibilityLiveRegion="polite" style={styles.verdict}>

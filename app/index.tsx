@@ -1,8 +1,9 @@
 import { Redirect, router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { AppText, Button, Overline, Screen } from '../src/design/components';
-import { colors, spacing } from '../src/design/tokens';
+import { Ionicons } from '@expo/vector-icons';
+import { AppText, Button, FadeIn, Overline, Screen } from '../src/design/components';
+import { color, colors, sizing, spacing } from '../src/design/tokens';
 import { useOnboarding } from '../src/store/OnboardingContext';
 
 export default function Welcome() {
@@ -14,7 +15,12 @@ export default function Welcome() {
 
   return (
     <Screen scroll={false}>
-      <View style={styles.body}>
+      <FadeIn speed="deliberate" style={styles.body}>
+        {/* The brand bridge: the launch splash's gold mark resolves into this one
+            quiet gold key, then the warm interior takes over. */}
+        <View style={styles.mark} accessibilityElementsHidden importantForAccessibility="no">
+          <Ionicons name="key-outline" size={sizing.icon.lg} color={color.brand.gold} />
+        </View>
         <Overline>Her Keys</Overline>
         <AppText variant="hero" style={styles.title}>
           Rebuild your life.{'\n'}Run it your way.
@@ -23,7 +29,7 @@ export default function Welcome() {
           Her Keys holds the parts of your life you shouldn’t have to keep in your head — and tells you what actually
           needs you today.
         </AppText>
-      </View>
+      </FadeIn>
 
       <View style={styles.footer}>
         <AppText variant="bodySm" color={colors.textTertiary} style={styles.footnote}>
@@ -43,6 +49,15 @@ export default function Welcome() {
 
 const styles = StyleSheet.create({
   body: { flex: 1, justifyContent: 'center', paddingHorizontal: spacing.xl },
+  mark: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: color.brand.goldSoft,
+    marginBottom: spacing.lg,
+  },
   title: { marginTop: spacing.md },
   lede: { marginTop: spacing.xl },
   footer: { paddingHorizontal: spacing.xl, paddingBottom: spacing.xxl },

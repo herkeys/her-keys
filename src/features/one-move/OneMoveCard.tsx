@@ -1,7 +1,8 @@
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
-import { AppText, Button, Card, InsightBlock, Overline, RecommendationBlock, WhyThis } from '../../design/components';
-import { color, spacing } from '../../design/tokens';
+import { AppText, Button, Card, FadeIn, InsightBlock, Overline, RecommendationBlock, WhyThis } from '../../design/components';
+import { color, radius, sizing, spacing } from '../../design/tokens';
 import type { OneMoveCompletion, OneMoveSection } from '../today/model';
 import { TodayDisclosure } from '../today/TodayDisclosure';
 import { TodaySourceLine } from '../today/TodaySourceLine';
@@ -33,16 +34,26 @@ const COMPLETION_TEXT: Record<OneMoveCompletion, string> = {
  */
 export function OneMoveCard({ section, onComplete }: { section: OneMoveSection; onComplete: () => void }) {
   if (section.status === 'completed') {
+    // The completion settles in rather than snapping: a deliberate entrance on
+    // the resolved card, with a quiet check that names the state in shape and
+    // color together — never confetti.
     return (
-      <Card tone="success">
-        <Overline color={color.status.success}>One move</Overline>
-        <AppText variant="sectionTitle" style={styles.action}>
-          Done. That’s enough for today.
-        </AppText>
-        <AppText variant="supporting" color={color.text.secondary} style={styles.note}>
-          Her Keys won’t ask for anything else.
-        </AppText>
-      </Card>
+      <FadeIn key="completed" speed="deliberate">
+        <Card tone="success" raised>
+          <View style={styles.doneHeader}>
+            <View style={styles.doneMark} accessibilityElementsHidden importantForAccessibility="no">
+              <Ionicons name="checkmark" size={sizing.icon.sm} color={color.text.inverse} />
+            </View>
+            <Overline color={color.status.success}>One move</Overline>
+          </View>
+          <AppText variant="sectionTitle" style={styles.action}>
+            Done. That’s enough for today.
+          </AppText>
+          <AppText variant="supporting" color={color.text.secondary} style={styles.note}>
+            Her Keys won’t ask for anything else.
+          </AppText>
+        </Card>
+      </FadeIn>
     );
   }
 
@@ -56,13 +67,18 @@ export function OneMoveCard({ section, onComplete }: { section: OneMoveSection; 
 
   return (
     <View>
-      <RecommendationBlock
-        body={action}
-        approvalRequired={false}
-        actionLabel="I did it"
-        meta={estimatedMinutes != null ? `ABOUT ${estimatedMinutes} MINUTES` : undefined}
-        onApprove={onComplete}
-      />
+      {/* Today's single most important decision owns the screen: the one raised
+          surface among flat cards (Card reserves elevation for exactly this). */}
+      <FadeIn key="selected">
+        <RecommendationBlock
+          body={action}
+          approvalRequired={false}
+          actionLabel="I did it"
+          meta={estimatedMinutes != null ? `ABOUT ${estimatedMinutes} MINUTES` : undefined}
+          onApprove={onComplete}
+          raised
+        />
+      </FadeIn>
       {source?.uncertain ? <TodaySourceLine source={source} /> : null}
       {why ? (
         <View style={styles.why}>
@@ -101,6 +117,15 @@ export function OneMoveCard({ section, onComplete }: { section: OneMoveSection; 
 }
 
 const styles = StyleSheet.create({
+  doneHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  // Sized by padding, never a fixed height, so larger text settings can't clip it.
+  doneMark: {
+    padding: spacing.xs,
+    borderRadius: radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: color.status.success,
+  },
   action: { marginTop: spacing.md },
   note: { marginTop: spacing.sm },
   why: { marginTop: spacing.xs },

@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
-import { AppText, Overline, StatusList } from '../../design/components';
+import { AppText, HubHeader, Overline, StatusList } from '../../design/components';
 import { colors, spacing } from '../../design/tokens';
 import { hasOpenNextAction } from '../../domain/opportunities';
 import { workCareerVerdict } from '../../domain/reasoning/workCareer';
@@ -29,12 +29,12 @@ export function WorkOverview() {
 
   return (
     <View>
+      <HubHeader title="Work" lede="The work the household runs on — what's on today, and what's next in your career." />
       <AppText variant="bodyStrong" style={styles.verdict}>
         {workCareerVerdict(state, nowMs)}
       </AppText>
 
-      <Overline style={styles.label}>Work now</Overline>
-      <Overline style={styles.labelSpaced}>Today</Overline>
+      <Overline style={styles.label}>Today</Overline>
       {workEvents.length > 0 ? (
         <StatusList
           items={workEvents.map((e) => ({
