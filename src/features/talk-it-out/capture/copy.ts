@@ -45,6 +45,11 @@ const FAILURE: Record<InterpretationFailureCode, string> = {
 };
 
 export const copy = {
+  ai: {
+    thinking: 'Thinking…',
+    degraded: 'I had trouble reaching the full conversation service, so I kept this turn moving with the built-in path. You can keep going.',
+  },
+
   composer: {
     placeholderFirst: 'What’s going on?',
     placeholderAnswer: 'Or answer in your own words…',
