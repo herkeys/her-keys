@@ -36,7 +36,7 @@ export function createHerKeysAiClient(client: SupabaseClient): HerKeysAiClient {
 
         const parsed = parseHerKeysAiTurn(data);
         if (!parsed) return { kind: 'invalid', reason: 'invalid_ai_contract' };
-        if (__DEV__) {
+        if (typeof __DEV__ !== 'undefined' && __DEV__) {
           console.info(
             `[herkeys] ${JSON.stringify({
               type: 'talk_it_out.provider_turn',
