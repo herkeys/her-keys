@@ -27,7 +27,7 @@ function CaptureEntry({ captureId }: { captureId: string }) {
 }
 
 export function TalkItOutView({ showHeader = false }: { showHeader?: boolean }) {
-  const { messages, quickReplies, captures, isThinking, serviceNotice, canRestart, sendMessage, selectQuickReply, restart } = useTalkItOut();
+  const { messages, quickReplies, captures, isThinking, serviceNotice, canRetry, retryLastTurn, canRestart, sendMessage, selectQuickReply, restart } = useTalkItOut();
   const [draft, setDraft] = useState('');
   const scrollRef = useRef<ScrollView>(null);
   const frameRef = useRef<View>(null);
@@ -109,6 +109,16 @@ export function TalkItOutView({ showHeader = false }: { showHeader?: boolean }) 
           {serviceNotice && (
             <View style={styles.serviceNotice}>
               <InlineNotice tone="waiting" title={serviceNotice} />
+              {canRetry && (
+                <Button
+                  label={copy.ai.retry}
+                  variant="ghost"
+                  size="sm"
+                  onPress={retryLastTurn}
+                  disabled={isThinking}
+                  style={styles.retryButton}
+                />
+              )}
             </View>
           )}
 
@@ -229,6 +239,7 @@ const styles = StyleSheet.create({
   quickReplies: { flexDirection: 'row', flexWrap: 'wrap', marginTop: spacing.lg, gap: spacing.sm },
   quickReply: { paddingHorizontal: spacing.lg },
   serviceNotice: { marginBottom: spacing.sm },
+  retryButton: { alignSelf: 'flex-start', marginTop: spacing.xs },
   composerWrap: {
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.borderSubtle,
