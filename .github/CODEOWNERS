@@ -1,0 +1,8 @@
+# Build 2 release-sensitive surfaces.
+# Enforcement requires GitHub branch/ruleset settings to require Code Owner review.
+/supabase/ @herkeys
+/.github/workflows/ @herkeys
+/eas.json @herkeys
+/src/config/supabase.ts @herkeys
+/src/platform/herKeysAiClient.ts @herkeys
+/src/store/accountRuntimeInstance.ts @herkeys
