@@ -1,0 +1,36 @@
+name: Build 2 Lockfile Repair
+
+on:
+  push:
+    branches:
+      - build/02-gemini-integration
+    paths:
+      - .github/workflows/build2-lockfile-repair.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CI: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Regenerate lockfile only
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Show lockfile diff
+        run: git diff -- package-lock.json
+      - name: Upload repaired lockfile
+        uses: actions/upload-artifact@v4
+        with:
+          name: build2-repaired-package-lock
+          path: package-lock.json
+          if-no-files-found: error
+          retention-days: 1
