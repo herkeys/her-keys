@@ -34,6 +34,10 @@ interface TalkItOutContextValue {
   isThinking: boolean;
   /** Calm product-level notice when the built-in path had to carry a turn. */
   serviceNotice: string | null;
+  /** True when the most recent degraded turn can be replaced by a live response. */
+  canRetry: boolean;
+  /** Retries the most recent degraded turn without duplicating the user's message. */
+  retryLastTurn: () => void;
   /** True once the conversation has moved past its opening line. */
   canRestart: boolean;
   /** Resolves 'not-saved' when nothing could be saved, so the composer can give her words back. */
@@ -49,6 +53,15 @@ interface Session {
   quickReplies: ClarificationOption[];
   messages: TalkItOutMessage[];
   captures: CaptureRef[];
+}
+
+interface FallbackRetry {
+  before: Session;
+  optimistic: Session;
+  fallbackSession: Session;
+  text: string;
+  optionId?: string;
+  previousDiscovery: DiscoveryRecord | null;
 }
 
 type DraftMessage = Omit<TalkItOutMessage, 'id'>;
@@ -85,6 +98,7 @@ function TalkItOutSession({ children }: { children: ReactNode }) {
   const counterRef = useRef(0);
   const activeSubmissionRef = useRef<number | null>(null);
   const nextSubmissionRef = useRef(0);
+  const lastFallbackRef = useRef<FallbackRetry | null>(null);
 
   // One key per composed message: a re-tapped Send is the same submission, not a second capture.
   const submissionRef = useRef(0);
@@ -171,6 +185,8 @@ function TalkItOutSession({ children }: { children: ReactNode }) {
 
     try {
       const current = sessionRef.current;
+      lastFallbackRef.current = null;
+      setServiceNotice(null);
       const fallbackTurn = advance(current.conversation, trimmed, optionId);
 
       // A quick reply is an answer by construction. Free text is routed exactly
@@ -197,8 +213,8 @@ function TalkItOutSession({ children }: { children: ReactNode }) {
         messages: [...current.messages, userMessage],
       };
       update(optimistic);
-      setServiceNotice(null);
       setIsThinking(true);
+      const previousDiscovery = store.getSnapshot().state?.discovery ?? null;
 
       const call = await herKeysAiClient.advance({
         state: current.conversation,
@@ -219,22 +235,96 @@ function TalkItOutSession({ children }: { children: ReactNode }) {
           quickReplies: call.value.quickReplies,
         };
         store.dispatch((state, ctx) => applyProviderDiscoveryConversation(state, ctx, turn.state));
+        lastFallbackRef.current = null;
+        update({
+          ...optimistic,
+          recordId: store.getSnapshot().state?.discovery?.id ?? null,
+          conversation: turn.state,
+          quickReplies: turn.quickReplies,
+          messages: [...optimistic.messages, ...withIds(turn.messages)],
+        });
       } else {
         // The local deterministic engine is deliberately retained as the
         // explicit degraded path. No provider error text is shown to the user.
         turn = fallbackTurn;
         store.dispatch((state, ctx) => applyDiscoveryConversation(state, ctx, turn.state));
+        const fallbackSession: Session = {
+          ...optimistic,
+          recordId: store.getSnapshot().state?.discovery?.id ?? null,
+          conversation: turn.state,
+          quickReplies: turn.quickReplies,
+          messages: [...optimistic.messages, ...withIds(turn.messages)],
+        };
+        lastFallbackRef.current = {
+          before: current,
+          optimistic,
+          fallbackSession,
+          text: trimmed,
+          optionId,
+          previousDiscovery,
+        };
         setServiceNotice(DEGRADED_NOTICE);
+        update(fallbackSession);
       }
 
+      return 'sent';
+    } finally {
+      if (activeSubmissionRef.current === submissionId) {
+        activeSubmissionRef.current = null;
+        setIsThinking(false);
+      }
+    }
+  }
+
+  async function retryLastTurn() {
+    const retry = lastFallbackRef.current;
+    if (!retry || activeSubmissionRef.current !== null) return;
+
+    nextSubmissionRef.current += 1;
+    const submissionId = nextSubmissionRef.current;
+    activeSubmissionRef.current = submissionId;
+    setServiceNotice(null);
+    setIsThinking(true);
+
+    try {
+      const call = await herKeysAiClient.advance({
+        state: retry.before.conversation,
+        userText: retry.text,
+        optionId: retry.optionId,
+        history: retry.before.messages
+          .slice(-12)
+          .map(({ speaker, text: messageText }) => ({ speaker, text: messageText })),
+      });
+
+      if (activeSubmissionRef.current !== submissionId) return;
+
+      if (call.kind !== 'ready') {
+        setServiceNotice(DEGRADED_NOTICE);
+        update(retry.fallbackSession);
+        return;
+      }
+
+      const turn: DiscoveryTurn = {
+        messages: call.value.messages,
+        state: call.value.state,
+        quickReplies: call.value.quickReplies,
+      };
+
+      // The degraded turn was the only durable mutation made by that submission.
+      // Rebase that one field to its pre-turn value, then apply the validated
+      // provider state so retry replaces rather than duplicates the turn.
+      store.dispatch((state, ctx) =>
+        applyProviderDiscoveryConversation({ ...state, discovery: retry.previousDiscovery }, ctx, turn.state)
+      );
+
+      lastFallbackRef.current = null;
       update({
-        ...optimistic,
+        ...retry.optimistic,
         recordId: store.getSnapshot().state?.discovery?.id ?? null,
         conversation: turn.state,
         quickReplies: turn.quickReplies,
-        messages: [...optimistic.messages, ...withIds(turn.messages)],
+        messages: [...retry.optimistic.messages, ...withIds(turn.messages)],
       });
-      return 'sent';
     } finally {
       if (activeSubmissionRef.current === submissionId) {
         activeSubmissionRef.current = null;
@@ -247,6 +337,7 @@ function TalkItOutSession({ children }: { children: ReactNode }) {
     // Do not race a reset against an in-flight provider turn.
     if (activeSubmissionRef.current !== null) return;
     store.dispatch((state) => clearDiscovery(state));
+    lastFallbackRef.current = null;
     setServiceNotice(null);
     update(startFrom(null));
   }
@@ -257,6 +348,8 @@ function TalkItOutSession({ children }: { children: ReactNode }) {
     captures: session.captures,
     isThinking,
     serviceNotice,
+    canRetry: lastFallbackRef.current !== null,
+    retryLastTurn: () => void retryLastTurn(),
     canRestart: session.messages.length > 1,
     sendMessage: (text) => submit(text),
     selectQuickReply: (option) => void submit(option.label, option.id),
