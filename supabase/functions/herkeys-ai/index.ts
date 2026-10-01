@@ -308,7 +308,7 @@ function validStateShape(state: ConversationState, quickReplies: ProviderTurn['q
 
 const URL_PATTERN = /https?:\/\//i;
 const ACTION_CLAIM_PATTERN =
-  /\b(?:i|i've|i have)\s+(?:saved|added|created|scheduled|sent|updated|deleted|changed|moved|paid|purchased|booked|cancelled|canceled)\b/i;
+  /\b(?:(?:i|i've|i have|we|we've|we have|her keys)\s+(?:have\s+)?(?:saved|added|created|scheduled|sent|updated|deleted|changed|moved|paid|purchased|booked|cancelled|canceled)|(?:it|that|this|the (?:event|task|appointment|reminder|message|payment|purchase|booking|record))\s+(?:is|was|has been|was just)\s+(?:saved|added|created|scheduled|sent|updated|deleted|changed|moved|paid|purchased|booked|cancelled|canceled)|(?:i|we|her keys)\s+(?:put|placed)\s+(?:it|that|this)\s+(?:on|in)\s+your\s+(?:calendar|list|records?))\b/i;
 
 function safeText(turn: ProviderTurn): boolean {
   // Validate every string in the normalized object, not only the visible main
