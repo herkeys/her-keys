@@ -47,7 +47,8 @@ const FAILURE: Record<InterpretationFailureCode, string> = {
 export const copy = {
   ai: {
     thinking: 'Thinking…',
-    degraded: 'I had trouble reaching the full conversation service, so I kept this turn moving with the built-in path. You can keep going.',
+    degraded: 'I couldn’t reach the full conversation service, so I used a simpler response for this turn. You can keep going.',
+    retry: 'Try that response again',
   },
 
   composer: {
