@@ -179,6 +179,8 @@ describe('server-side Gemini architecture', () => {
     assert.match(context, /applyDiscoveryConversation\(state, ctx, turn\.state\)/);
     assert.match(context, /activeSubmissionRef\.current !== null/);
     assert.match(context, /quickReplies:\s*\[\]/);
+    assert.match(context, /async function retryLastTurn\(\)/);
+    assert.match(context, /discovery: retry\.previousDiscovery/);
   });
 });
 
