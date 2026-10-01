@@ -162,6 +162,10 @@ describe('server-side Gemini architecture', () => {
   test('provider output is treated as untrusted after HTTP success', () => {
     assert.match(edge, /ProviderTurnSchema\.safeParse/);
     assert.match(edge, /validTurn\(/);
+    assert.match(edge, /validRequestSemantics/);
+    assert.match(edge, /before\.topicId !== after\.topicId[\s\S]*?after\.evidence\.length === 0/);
+    assert.match(edge, /added\.questionId !== question\.id/);
+    assert.match(edge, /added\.optionId !== selectedOptionId/);
     assert.match(edge, /ACTION_CLAIM_PATTERN/);
     assert.match(edge, /URL_PATTERN/);
     assert.match(edge, /function_call/);
