@@ -1,11 +1,19 @@
 import { createContext, useContext, useRef, useState, type ReactNode } from 'react';
-import { applyDiscoveryConversation, clearDiscovery, freshDiscovery, replayDiscovery, type DiscoveryReplay } from '../domain/discovery';
+import {
+  applyDiscoveryConversation,
+  applyProviderDiscoveryConversation,
+  clearDiscovery,
+  freshDiscovery,
+  replayDiscovery,
+  type DiscoveryReplay,
+} from '../domain/discovery';
 import type { DiscoveryRecord } from '../domain/state';
 import { CaptureProvider, useCapture } from '../features/talk-it-out/capture/CaptureContext';
 import { copy } from '../features/talk-it-out/capture/copy';
 import { routeMessage } from '../features/talk-it-out/capture/routing';
-import { advance } from '../features/talk-it-out/engine';
+import { advance, type DiscoveryTurn } from '../features/talk-it-out/engine';
 import type { ClarificationOption, ConversationState, TalkItOutMessage } from '../types';
+import { herKeysAiClient } from './accountRuntimeInstance';
 import { useAppStore, useHouseholdState } from './AppStateProvider';
 
 /** A capture started in this conversation, shown after the Her Keys message that introduces it. */
@@ -22,6 +30,10 @@ interface TalkItOutContextValue {
   quickReplies: ClarificationOption[];
   /** Captures made in this conversation, each rendered after the message it belongs to. */
   captures: CaptureRef[];
+  /** True while a submitted Talk It Out turn is waiting for its server response. */
+  isThinking: boolean;
+  /** Calm product-level notice when the built-in path had to carry a turn. */
+  serviceNotice: string | null;
   /** True once the conversation has moved past its opening line. */
   canRestart: boolean;
   /** Resolves 'not-saved' when nothing could be saved, so the composer can give her words back. */
@@ -39,7 +51,12 @@ interface Session {
   captures: CaptureRef[];
 }
 
+type DraftMessage = Omit<TalkItOutMessage, 'id'>;
+
 const TalkItOutContext = createContext<TalkItOutContextValue | null>(null);
+
+const DEGRADED_NOTICE =
+  'I had trouble reaching the full conversation service, so I kept this turn moving with the built-in path. You can keep going.';
 
 /**
  * Global so the same conversation is visible whether it was started from the
@@ -48,8 +65,8 @@ const TalkItOutContext = createContext<TalkItOutContextValue | null>(null);
  * agent's job, not something the user manages across separate screens.
  *
  * Messages, including what she types, live only in memory. What's saved is
- * the structured record (topic and chosen answers); after a relaunch the
- * conversation is rebuilt from it by replaying the script.
+ * only replay-safe structured discovery; a provider-only conversational path
+ * is never persisted as if it were a scripted answer.
  *
  * Feature 02 adds a second thing a first message can be: a CAPTURE — something she wants turned into
  * a record. The capture provider is nested here so the root layout does not change.
@@ -67,29 +84,40 @@ function TalkItOutSession({ children }: { children: ReactNode }) {
   const { coordinator } = useCapture();
   const record = useHouseholdState().state.discovery;
   const counterRef = useRef(0);
+  const activeSubmissionRef = useRef<number | null>(null);
+  const nextSubmissionRef = useRef(0);
+
   // One key per composed message: a re-tapped Send is the same submission, not a second capture.
   const submissionRef = useRef(0);
   const submissionKey = () => `s${Date.now().toString(36)}-${submissionRef.current}`;
   const keyRef = useRef(submissionKey());
 
-  const withIds = (drafts: DiscoveryReplay['messages']): TalkItOutMessage[] =>
+  const withIds = (drafts: DraftMessage[]): TalkItOutMessage[] =>
     drafts.map((draft) => {
       counterRef.current += 1;
       return { ...draft, id: `msg-${counterRef.current}` };
     });
 
   const startFrom = (stored: DiscoveryRecord | null): Session => {
-    const replay = replayDiscovery(stored) ?? freshDiscovery();
-    return { recordId: stored?.id ?? null, conversation: replay.conversation, quickReplies: replay.quickReplies, messages: withIds(replay.messages), captures: [] };
+    const replay: DiscoveryReplay = replayDiscovery(stored) ?? freshDiscovery();
+    return {
+      recordId: stored?.id ?? null,
+      conversation: replay.conversation,
+      quickReplies: replay.quickReplies,
+      messages: withIds(replay.messages),
+      captures: [],
+    };
   };
 
   const [session, setSession] = useState<Session>(() => startFrom(record));
-  // Read by handlers so two quick sends build on each other rather than on a stale render (HK-AUDIT-037).
+  const [isThinking, setIsThinking] = useState(false);
+  const [serviceNotice, setServiceNotice] = useState<string | null>(null);
+  // Read by handlers so async turns always build on the latest committed conversation.
   const sessionRef = useRef(session);
 
   // The stored record changed without this conversation changing it (a reset, for instance): rebuild from it.
   const storedId = record?.id ?? null;
-  if (sessionRef.current.recordId !== storedId && session.recordId !== storedId) {
+  if (sessionRef.current.recordId !== storedId && session.recordId !== storedId && activeSubmissionRef.current === null) {
     const rebuilt = startFrom(record);
     sessionRef.current = rebuilt;
     setSession(rebuilt);
@@ -104,7 +132,6 @@ function TalkItOutSession({ children }: { children: ReactNode }) {
     counterRef.current += 1;
     return { id: `msg-${counterRef.current}`, speaker: 'herkeys', stage: 'listen', text };
   }
-
 
   async function capture(text: string): Promise<SendResult> {
     const outcome = await coordinator.submit({ text, submissionKey: keyRef.current });
@@ -137,41 +164,111 @@ function TalkItOutSession({ children }: { children: ReactNode }) {
 
   async function submit(text: string, optionId?: string): Promise<SendResult> {
     const trimmed = text.trim();
-    if (!trimmed) return 'ignored';
+    if (!trimmed || activeSubmissionRef.current !== null) return 'ignored';
 
-    const current = sessionRef.current;
-    const turn = advance(current.conversation, trimmed, optionId);
+    nextSubmissionRef.current += 1;
+    const submissionId = nextSubmissionRef.current;
+    activeSubmissionRef.current = submissionId;
 
-    // A quick reply is an answer by construction. Free text is routed: capture when the reader recognises something to
-    // save and the conversation would not have taken it as her answer; otherwise it stays the existing conversation.
-    if (!optionId) {
-      const preview = coordinator.preview(trimmed);
-      const route = routeMessage({
-        stage: current.conversation.stage,
-        hasWords: /[A-Za-z0-9]/.test(trimmed),
-        readerAvailable: preview !== null,
-        recognized: preview !== null && preview.failure?.code !== 'nothing-recognized',
-        conversationUnderstood: turn.messages[0]?.stage !== 'unmatched',
+    try {
+      const current = sessionRef.current;
+      const fallbackTurn = advance(current.conversation, trimmed, optionId);
+
+      // A quick reply is an answer by construction. Free text is routed exactly
+      // as before Build 2: the deterministic engine remains the routing reference
+      // so a provider outage cannot turn a capture into an AI-only conversation.
+      if (!optionId) {
+        const preview = coordinator.preview(trimmed);
+        const route = routeMessage({
+          stage: current.conversation.stage,
+          hasWords: /[A-Za-z0-9]/.test(trimmed),
+          readerAvailable: preview !== null,
+          recognized: preview !== null && preview.failure?.code !== 'nothing-recognized',
+          conversationUnderstood: fallbackTurn.messages[0]?.stage !== 'unmatched',
+        });
+        if (route === 'capture') return await capture(trimmed);
+      }
+
+      counterRef.current += 1;
+      const userMessage: TalkItOutMessage = { id: `msg-${counterRef.current}`, speaker: 'user', text: trimmed };
+      const optimistic: Session = {
+        ...current,
+        // Hide reply chips while the turn is in flight so two taps cannot create two answers.
+        quickReplies: [],
+        messages: [...current.messages, userMessage],
+      };
+      update(optimistic);
+      setServiceNotice(null);
+      setIsThinking(true);
+
+      const call = await herKeysAiClient.advance({
+        state: current.conversation,
+        userText: trimmed,
+        optionId,
+        history: current.messages
+          .slice(-12)
+          .map(({ speaker, text: messageText }) => ({ speaker, text: messageText })),
       });
-      if (route === 'capture') return capture(trimmed);
+
+      if (activeSubmissionRef.current !== submissionId) return 'sent';
+
+      let turn: DiscoveryTurn;
+      if (call.kind === 'ready') {
+        turn = {
+          messages: call.value.messages,
+          state: call.value.state,
+          quickReplies: call.value.quickReplies,
+        };
+        store.dispatch((state, ctx) => applyProviderDiscoveryConversation(state, ctx, turn.state));
+        if (__DEV__) {
+          console.info(
+            `[herkeys] ${JSON.stringify({
+              type: 'talk_it_out.provider_turn',
+              provider: call.value.meta.provider,
+              model: call.value.meta.model,
+              requestId: call.value.meta.requestId,
+              latencyMs: call.value.meta.latencyMs,
+            })}`,
+          );
+        }
+      } else {
+        // The local deterministic engine is deliberately retained as the
+        // explicit degraded path. No provider error text is shown to the user.
+        turn = fallbackTurn;
+        store.dispatch((state, ctx) => applyDiscoveryConversation(state, ctx, turn.state));
+        setServiceNotice(DEGRADED_NOTICE);
+        if (__DEV__) {
+          console.info(
+            `[herkeys] ${JSON.stringify({
+              type: 'talk_it_out.provider_turn',
+              provider: 'fallback',
+              reason: call.kind,
+            })}`,
+          );
+        }
+      }
+
+      update({
+        ...optimistic,
+        recordId: store.getSnapshot().state?.discovery?.id ?? null,
+        conversation: turn.state,
+        quickReplies: turn.quickReplies,
+        messages: [...optimistic.messages, ...withIds(turn.messages)],
+      });
+      return 'sent';
+    } finally {
+      if (activeSubmissionRef.current === submissionId) {
+        activeSubmissionRef.current = null;
+        setIsThinking(false);
+      }
     }
-
-    store.dispatch((state, ctx) => applyDiscoveryConversation(state, ctx, turn.state));
-
-    counterRef.current += 1;
-    const userMessage: TalkItOutMessage = { id: `msg-${counterRef.current}`, speaker: 'user', text: trimmed };
-    update({
-      ...current,
-      recordId: store.getSnapshot().state?.discovery?.id ?? null,
-      conversation: turn.state,
-      quickReplies: turn.quickReplies,
-      messages: [...current.messages, userMessage, ...withIds(turn.messages)],
-    });
-    return 'sent';
   }
 
   function restart() {
+    // Do not race a reset against an in-flight provider turn.
+    if (activeSubmissionRef.current !== null) return;
     store.dispatch((state) => clearDiscovery(state));
+    setServiceNotice(null);
     update(startFrom(null));
   }
 
@@ -179,6 +276,8 @@ function TalkItOutSession({ children }: { children: ReactNode }) {
     messages: session.messages,
     quickReplies: session.quickReplies,
     captures: session.captures,
+    isThinking,
+    serviceNotice,
     canRestart: session.messages.length > 1,
     sendMessage: (text) => submit(text),
     selectQuickReply: (option) => void submit(option.label, option.id),
