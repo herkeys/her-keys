@@ -55,8 +55,7 @@ type DraftMessage = Omit<TalkItOutMessage, 'id'>;
 
 const TalkItOutContext = createContext<TalkItOutContextValue | null>(null);
 
-const DEGRADED_NOTICE =
-  'I had trouble reaching the full conversation service, so I kept this turn moving with the built-in path. You can keep going.';
+const DEGRADED_NOTICE = copy.ai.degraded;
 
 /**
  * Global so the same conversation is visible whether it was started from the
@@ -220,32 +219,12 @@ function TalkItOutSession({ children }: { children: ReactNode }) {
           quickReplies: call.value.quickReplies,
         };
         store.dispatch((state, ctx) => applyProviderDiscoveryConversation(state, ctx, turn.state));
-        if (__DEV__) {
-          console.info(
-            `[herkeys] ${JSON.stringify({
-              type: 'talk_it_out.provider_turn',
-              provider: call.value.meta.provider,
-              model: call.value.meta.model,
-              requestId: call.value.meta.requestId,
-              latencyMs: call.value.meta.latencyMs,
-            })}`,
-          );
-        }
       } else {
         // The local deterministic engine is deliberately retained as the
         // explicit degraded path. No provider error text is shown to the user.
         turn = fallbackTurn;
         store.dispatch((state, ctx) => applyDiscoveryConversation(state, ctx, turn.state));
         setServiceNotice(DEGRADED_NOTICE);
-        if (__DEV__) {
-          console.info(
-            `[herkeys] ${JSON.stringify({
-              type: 'talk_it_out.provider_turn',
-              provider: 'fallback',
-              reason: call.kind,
-            })}`,
-          );
-        }
       }
 
       update({
