@@ -83,7 +83,7 @@ export function TalkItOutView({ showHeader = false }: { showHeader?: boolean }) 
           {isThinking && (
             <View style={styles.thinking}>
               <AppText variant="statusLabel" color={colors.textTertiary}>
-                Thinking…
+                {copy.ai.thinking}
               </AppText>
             </View>
           )}
