@@ -27,7 +27,7 @@ function CaptureEntry({ captureId }: { captureId: string }) {
 }
 
 export function TalkItOutView({ showHeader = false }: { showHeader?: boolean }) {
-  const { messages, quickReplies, captures, canRestart, sendMessage, selectQuickReply, restart } = useTalkItOut();
+  const { messages, quickReplies, captures, isThinking, serviceNotice, canRestart, sendMessage, selectQuickReply, restart } = useTalkItOut();
   const [draft, setDraft] = useState('');
   const scrollRef = useRef<ScrollView>(null);
   const frameRef = useRef<View>(null);
@@ -80,6 +80,14 @@ export function TalkItOutView({ showHeader = false }: { showHeader?: boolean }) 
             </Fragment>
           ))}
 
+          {isThinking && (
+            <View style={styles.thinking}>
+              <AppText variant="statusLabel" color={colors.textTertiary}>
+                Thinking…
+              </AppText>
+            </View>
+          )}
+
           {quickReplies.length > 0 && (
             <View style={styles.quickReplies}>
               {quickReplies.map((option) => (
@@ -89,6 +97,7 @@ export function TalkItOutView({ showHeader = false }: { showHeader?: boolean }) 
                   variant="secondary"
                   size="sm"
                   onPress={() => selectQuickReply(option)}
+                  disabled={isThinking}
                   style={styles.quickReply}
                 />
               ))}
@@ -97,9 +106,15 @@ export function TalkItOutView({ showHeader = false }: { showHeader?: boolean }) 
         </ScrollView>
 
         <View style={styles.composerWrap}>
+          {serviceNotice && (
+            <View style={styles.serviceNotice}>
+              <InlineNotice tone="waiting" title={serviceNotice} />
+            </View>
+          )}
+
           {canRestart && (
             <View style={styles.restartRow}>
-              <Button label={copy.composer.startOver} variant="ghost" size="sm" onPress={restart} />
+              <Button label={copy.composer.startOver} variant="ghost" size="sm" onPress={restart} disabled={isThinking} />
             </View>
           )}
 
@@ -114,7 +129,7 @@ export function TalkItOutView({ showHeader = false }: { showHeader?: boolean }) 
               multiline
               accessibilityLabel={copy.composer.accessibilityLabel}
             />
-            <Button label={copy.composer.send} size="sm" onPress={handleSend} disabled={!draft.trim()} />
+            <Button label={copy.composer.send} size="sm" onPress={handleSend} disabled={!draft.trim() || isThinking} />
           </View>
 
           <AppText variant="statusLabel" color={colors.textTertiary} style={styles.disclaimer}>
@@ -210,8 +225,10 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.borderSubtle,
   },
+  thinking: { marginTop: spacing.lg, paddingHorizontal: spacing.sm },
   quickReplies: { flexDirection: 'row', flexWrap: 'wrap', marginTop: spacing.lg, gap: spacing.sm },
   quickReply: { paddingHorizontal: spacing.lg },
+  serviceNotice: { marginBottom: spacing.sm },
   composerWrap: {
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.borderSubtle,
