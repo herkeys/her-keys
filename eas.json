@@ -12,7 +12,7 @@
     "preview": {
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_HERKEYS_BACKEND": "production"
+        "EXPO_PUBLIC_HERKEYS_BACKEND": "staging"
       }
     },
     "production": {
