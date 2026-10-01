@@ -5,7 +5,7 @@ Status date: 2026-10-01
 ## Certification ledger
 
 BUILD2_START_SHA=2370229a3a58986d2a5ce6b43498f878c58a9f7c  
-BUILD2_IMPLEMENTATION_SHA=ee77c82ef5c90efcc76118c9468a831ed419cbce  
+BUILD2_IMPLEMENTATION_SHA=7c8183e384d992e2e14ada30e91bb52e05d8cb03  
 BUILD2_END_SHA=NOT_CERTIFIED  
 BRANCH=build/02-gemini-integration
 
@@ -93,6 +93,7 @@ Verified against current official Google Gemini documentation on 2026-10-01.
 - Authentication: server-side Gemini authorization key in the `x-goog-api-key` header.
 - Storage: `store:false`. Her Keys remains authoritative for its own in-memory/session state. No `previous_interaction_id` is used.
 - Output: Interactions `response_format` with `type=text`, `mime_type=application/json`, and an explicit JSON Schema.
+- Schema compatibility: only Google's documented structured-output JSON Schema subset is sent to Gemini. String length limits are enforced by server-side Zod validation after generation rather than unsupported `minLength`/`maxLength` schema keywords.
 - Thinking: `low`; no thinking summary is returned.
 - Provider timeout: overall 12-second bounded deadline.
 - Retry: maximum one retry, only for transient 408/429/5xx classes.
