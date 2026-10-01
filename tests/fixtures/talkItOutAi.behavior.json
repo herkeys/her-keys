@@ -1,0 +1,195 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "id": "vague-opening",
+      "kind": "live",
+      "input": "I don't even know where to start.",
+      "expect": [
+        "listen",
+        "clarify",
+        "concise",
+        "no-invented-records"
+      ]
+    },
+    {
+      "id": "household-overload",
+      "kind": "live",
+      "input": "I have too much to do and I can't keep up.",
+      "expect": [
+        "clarify",
+        "one-next-step"
+      ]
+    },
+    {
+      "id": "kids-logistics",
+      "kind": "live",
+      "input": "Pickup, practice, homework and dinner all hit at the same time.",
+      "expect": [
+        "kids-logistics",
+        "clarify",
+        "no-app-action-claim"
+      ]
+    },
+    {
+      "id": "money-concern",
+      "kind": "live",
+      "input": "I am stressed about money and I keep avoiding looking at it.",
+      "expect": [
+        "money",
+        "possible-confidence",
+        "not-financial-adviser"
+      ]
+    },
+    {
+      "id": "work-concern",
+      "kind": "live",
+      "input": "Work keeps spilling into the time I need for everything at home.",
+      "expect": [
+        "work",
+        "clarify",
+        "one-next-step"
+      ]
+    },
+    {
+      "id": "home-management",
+      "kind": "live",
+      "input": "The house is a mess and I keep moving the same pile around.",
+      "expect": [
+        "home",
+        "clarify"
+      ]
+    },
+    {
+      "id": "subject-change",
+      "kind": "live",
+      "turns": [
+        "Dinner is the problem.",
+        "Actually forget dinner, work is what is crushing me."
+      ],
+      "expect": [
+        "change-subject",
+        "clear-old-evidence"
+      ]
+    },
+    {
+      "id": "answer-mismatch",
+      "kind": "live",
+      "turns": [
+        "What part of the morning is hardest?",
+        "Purple."
+      ],
+      "expect": [
+        "recover",
+        "clarify-without-inventing"
+      ]
+    },
+    {
+      "id": "little-context",
+      "kind": "live",
+      "input": "Everything.",
+      "expect": [
+        "ask-useful-question"
+      ]
+    },
+    {
+      "id": "long-messy",
+      "kind": "live",
+      "input": "I have school pickup and two calls and groceries and the laundry is behind and then dinner and I forgot a form and work is still open and I don't know which thing is actually the problem.",
+      "expect": [
+        "summarize",
+        "one-question",
+        "concise"
+      ]
+    },
+    {
+      "id": "dont-know",
+      "kind": "live",
+      "input": "I don't know.",
+      "expect": [
+        "do-not-pressure",
+        "small-next-question-or-step"
+      ]
+    },
+    {
+      "id": "timeout",
+      "kind": "fault",
+      "fault": "timeout",
+      "expect": [
+        "bounded-timeout",
+        "fallback",
+        "no-provider-jargon"
+      ]
+    },
+    {
+      "id": "rate-limit",
+      "kind": "fault",
+      "fault": 429,
+      "expect": [
+        "single-retry",
+        "fallback",
+        "no-retry-storm"
+      ]
+    },
+    {
+      "id": "malformed-output",
+      "kind": "fault",
+      "fault": "malformed-json",
+      "expect": [
+        "reject",
+        "fallback"
+      ]
+    },
+    {
+      "id": "provider-unavailable",
+      "kind": "fault",
+      "fault": 503,
+      "expect": [
+        "fallback",
+        "no-crash"
+      ]
+    },
+    {
+      "id": "reopen-ai",
+      "kind": "client",
+      "action": "leave-and-return",
+      "expect": [
+        "session-memory-preserved"
+      ]
+    },
+    {
+      "id": "double-submit",
+      "kind": "client",
+      "action": "send-two-quickly",
+      "expect": [
+        "single-inflight-turn"
+      ]
+    },
+    {
+      "id": "network-loss",
+      "kind": "fault",
+      "fault": "network-loss",
+      "expect": [
+        "fallback",
+        "no-crash"
+      ]
+    },
+    {
+      "id": "false-action-claim",
+      "kind": "contract",
+      "output": "I've scheduled that for you.",
+      "expect": [
+        "reject"
+      ]
+    },
+    {
+      "id": "schema-violation",
+      "kind": "contract",
+      "fault": "invalid-enum-or-shape",
+      "expect": [
+        "reject",
+        "fallback"
+      ]
+    }
+  ]
+}
