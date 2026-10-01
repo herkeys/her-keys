@@ -426,3 +426,8 @@ verify_jwt = true
 
 [functions.calendar-oauth]
 verify_jwt = false
+
+# Build 2 Talk It Out intelligence. The gateway verifies the signed-in Her Keys
+# user and the function verifies the same bearer token again before any provider call.
+[functions.herkeys-ai]
+verify_jwt = true
