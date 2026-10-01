@@ -271,14 +271,47 @@ function sameEvidence(left: ConversationState['evidence'][number], right: Conver
   return left.questionId === right.questionId && left.optionId === right.optionId && left.label === right.label;
 }
 
-function validEvidenceTransition(before: ConversationState, after: ConversationState): boolean {
-  if (before.topicId !== null && before.topicId === after.topicId) {
-    if (after.evidence.length < before.evidence.length || after.evidence.length > before.evidence.length + 1) return false;
-    return before.evidence.every((item, index) => sameEvidence(item, after.evidence[index]));
+function validRequestSemantics(body: RequestBody): boolean {
+  if (!body.optionId) return true;
+  const question = body.state.pendingQuestion;
+  if (!question) return false;
+  const option = question.options.find((candidate) => candidate.id === body.optionId);
+  return option !== undefined && body.userText === option.label;
+}
+
+function validEvidenceTransition(
+  before: ConversationState,
+  after: ConversationState,
+  selectedOptionId?: string
+): boolean {
+  if (before.topicId !== after.topicId) {
+    // A subject change starts a fresh investigation. The model can ask a new
+    // question, but it cannot invent evidence for a question the user never saw.
+    return after.evidence.length === 0;
   }
 
-  // A subject change must not smuggle the old subject's evidence forward.
-  return after.evidence.length <= 1;
+  if (before.topicId === null) return after.evidence.length === 0;
+
+  if (after.evidence.length < before.evidence.length || after.evidence.length > before.evidence.length + 1) return false;
+  if (!before.evidence.every((item, index) => sameEvidence(item, after.evidence[index]))) return false;
+
+  if (after.evidence.length === before.evidence.length) {
+    // Selecting an explicit chip is an answer; it must not disappear.
+    return selectedOptionId === undefined;
+  }
+
+  const question = before.pendingQuestion;
+  if (!question) return false;
+
+  const added = after.evidence[after.evidence.length - 1];
+  if (added.questionId !== question.id) return false;
+
+  const option = question.options.find((candidate) => candidate.id === added.optionId);
+  if (!option) return false;
+  if (selectedOptionId !== undefined && added.optionId !== selectedOptionId) return false;
+
+  const expectedLabel = option.evidenceLabel ?? option.label;
+  return added.label === expectedLabel;
 }
 
 function validStateShape(state: ConversationState, quickReplies: ProviderTurn['quickReplies']): boolean {
@@ -323,10 +356,10 @@ function safeText(turn: ProviderTurn): boolean {
   return true;
 }
 
-function validTurn(before: ConversationState, turn: ProviderTurn): boolean {
+function validTurn(before: ConversationState, turn: ProviderTurn, selectedOptionId?: string): boolean {
   return (
     stageTransitionAllowed(before, turn.state) &&
-    validEvidenceTransition(before, turn.state) &&
+    validEvidenceTransition(before, turn.state, selectedOptionId) &&
     validStateShape(turn.state, turn.quickReplies) &&
     safeText(turn)
   );
@@ -484,7 +517,9 @@ Deno.serve(async (req) => {
     }
 
     const parsedRequest = RequestSchema.safeParse(unknownBody);
-    if (!parsedRequest.success) return json({ error: 'invalid_request', requestId }, 400);
+    if (!parsedRequest.success || !validRequestSemantics(parsedRequest.data)) {
+      return json({ error: 'invalid_request', requestId }, 400);
+    }
 
     const outcome = await providerRequest(Deno.env.get('GEMINI_API_KEY')!, modelName, parsedRequest.data);
     const latencyMs = Date.now() - started;
@@ -557,7 +592,7 @@ Deno.serve(async (req) => {
     }
 
     const parsedTurn = ProviderTurnSchema.safeParse(rawTurn);
-    if (!parsedTurn.success || !validTurn(parsedRequest.data.state, parsedTurn.data)) {
+    if (!parsedTurn.success || !validTurn(parsedRequest.data.state, parsedTurn.data, parsedRequest.data.optionId)) {
       logOperational({
         requestId,
         model: modelName,
