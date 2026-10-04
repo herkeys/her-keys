@@ -41,6 +41,9 @@ jobs:
       - name: Backend environment protection
         run: node --test tests/build2BackendProtection.test.mjs
 
+      - name: Release identity guard
+        run: npm run verify:release-identity
+
       - name: TypeScript
         run: npm run typecheck
 

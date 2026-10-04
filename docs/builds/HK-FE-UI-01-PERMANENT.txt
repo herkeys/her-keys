@@ -107,7 +107,7 @@ The worktree may contain intentional owner infrastructure changes in app.json,
 including:
 
 - ios.bundleIdentifier = com.herkeys.app
-- android.package = com.herkeys.app
+- android.package = com.heykeys.app (NOT com.herkeys.app; intentionally different from iOS, see docs/release/ANDROID_RELEASE_IDENTITY.md)
 - EAS owner/project identity
 - EAS projectId
 - existing app scheme/plugins

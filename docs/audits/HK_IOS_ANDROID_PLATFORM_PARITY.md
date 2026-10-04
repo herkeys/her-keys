@@ -475,7 +475,7 @@ Versions and platform support were read from the installed packages (`expo-modul
 
 **Android (generated project):**
 - Identity:
-  - package `com.herkeys.app` ✔
+  - package `com.herkeys.app` ✔ (as observed at this audit; superseded by REL-01, the Android application id is now `com.heykeys.app`)
   - `MainActivity` is `singleTask` and exported, with VIEW/DEFAULT/BROWSABLE `herkeys` (and `exp+her-keys`) ✔
   - `adjustResize`; `screenOrientation=portrait`
 - Build: `minSdk 24`, `targetSdk 36`, `compileSdk 36`, `edgeToEdgeEnabled=true`, `newArchEnabled=true`, Hermes.
