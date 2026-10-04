@@ -7,6 +7,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { describe, test } from 'node:test';
+import { fileURLToPath } from 'node:url';
 import { archiveCategory } from '../../src/domain/categories.ts';
 import { addPerson } from '../../src/domain/responsibility.ts';
 import { addTask } from '../../src/domain/tasks.ts';
@@ -23,7 +24,7 @@ import { createFakeCloud } from '../support/fakeCloud.mjs';
 import { demoState } from '../support/fixtures.mjs';
 import { ANA, HOME, NOW, SAM, TODAY, atLocal, completeTask, fresh, homeTask, household, iso, lastTask, makeCtx, task } from '../support/homeFixtures.mjs';
 
-const ROOT = new URL('../..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
+const ROOT = fileURLToPath(new URL('../..', import.meta.url));
 const run = (state, change) => change(state, fresh()).state;
 const draft = (over = {}) => ({ title: 'Change the furnace filter', dueDate: null, notes: null, commitment: 'flexible', repeat: null, ...over });
 const created = (state, over = {}) => { const ctx = fresh(); const r = createHomeTask(state, ctx, draft(over)); assert.equal(r.refusal, null, `refusal ${r.refusal}`); return r.state; };

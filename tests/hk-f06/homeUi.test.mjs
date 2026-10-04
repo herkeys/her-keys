@@ -10,6 +10,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import React from 'react';
 import { describe, test } from 'node:test';
+import { fileURLToPath } from 'node:url';
 import { archiveCategory } from '../../src/domain/categories.ts';
 import { HomeItemDetailView } from '../../src/features/home/ui/HomeItemDetailView.tsx';
 import { HomeScreenView } from '../../src/features/home/ui/HomeScreenView.tsx';
@@ -20,7 +21,7 @@ import TestRenderer from 'react-test-renderer';
 import { render } from '../support/render.tsx';
 import { NOW, SAM, TODAY, TZ, accept, completeTask, delegate, fresh, homeTask, homeVisit, household, lastTask, repeating } from '../support/homeFixtures.mjs';
 
-const ROOT = new URL('../..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
+const ROOT = fileURLToPath(new URL('../..', import.meta.url));
 const copyContext = { today: TODAY, timeZone: TZ };
 const texts = (root) => root.findAllByType('Text').map((t) => (Array.isArray(t.props.children) ? t.props.children.join('') : String(t.props.children ?? '')));
 const allText = (root) => texts(root).join(' | ');

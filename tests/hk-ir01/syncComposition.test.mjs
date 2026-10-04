@@ -958,11 +958,20 @@ describe('HA-001 — cost', () => {
     assert.ok(perCall < 1, `an untouched 5,000-row collection cost ${perCall.toFixed(3)} ms per observed change`);
 
     const edited = updateTask(state, c, state.tasks[2500].id, { title: 'one edit' });
-    const t1 = performance.now();
-    for (let i = 0; i < 50; i += 1) observer.observe({ previous: state, next: edited, identity });
-    const perEdit = (performance.now() - t1) / 50;
+    // The budget is on what the code costs, so it is asked of the fastest of the 50 calls. The mean of a block of wall-clock time
+    // also counts every moment this process was not running: with the suite's files in parallel on every core it measured 5-9 ms
+    // for code that costs ~1 ms alone. Contention only ever adds time, and a real regression (a deep scan) slows every call, the
+    // fastest included.
+    const samples = [];
+    for (let i = 0; i < 50; i += 1) {
+      const t1 = performance.now();
+      observer.observe({ previous: state, next: edited, identity });
+      samples.push(performance.now() - t1);
+    }
+    const perEdit = Math.min(...samples);
+    const meanEdit = samples.reduce((sum, ms) => sum + ms, 0) / samples.length;
     assert.ok(perEdit < 5, `one edit inside a 5,000-row collection cost ${perEdit.toFixed(3)} ms`);
-    console.log(`      observe: untouched collection ${perCall.toFixed(4)} ms, one edit in 5,000 rows ${perEdit.toFixed(4)} ms`);
+    console.log(`      observe: untouched collection ${perCall.toFixed(4)} ms, one edit in 5,000 rows ${perEdit.toFixed(4)} ms (mean ${meanEdit.toFixed(4)} ms)`);
   });
 });
 

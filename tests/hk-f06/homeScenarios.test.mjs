@@ -6,11 +6,12 @@ import assert from 'node:assert/strict';
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, test } from 'node:test';
+import { fileURLToPath } from 'node:url';
 import { buildHomeView } from '../../src/features/home/model/buildHomeView.ts';
 import { evidenceOfView, sectionsOf } from '../support/homeEvidence.mjs';
 import { SCENARIOS } from '../support/homeScenarios.mjs';
 
-const DIR = join(new URL('../..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1'), 'tests/fixtures/home/scenarios');
+const DIR = join(fileURLToPath(new URL('../..', import.meta.url)), 'tests/fixtures/home/scenarios');
 const UPDATE = process.env.UPDATE_SCENARIOS === '1';
 
 const render = (scenario, view) => `${JSON.stringify({ scenario: scenario.id, tier: scenario.tier, title: scenario.title, label: view.label, context: view.context.kind, canCreate: view.canCreate, recordsConsidered: view.coverage.recordsConsidered, sections: sectionsOf(view), items: evidenceOfView(view) }, null, 2)}\n`;

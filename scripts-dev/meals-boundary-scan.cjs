@@ -493,6 +493,50 @@ const LATER_FEATURES = [
       ['credentials.json', 'HK-FE-UI-02: pre-existing device-local credential file; out of scope, never read, staged or committed'],
     ],
   },
+  {
+    id: 'HK-BUILD-02 (Gemini integration / release identity / certification)',
+    branch: null,
+    owned: [
+      /^\.github\/(CODEOWNERS|workflows\/build2-[a-z-]+\.yml)$/,
+      /^docs\/build2\//,
+      /^docs\/handoffs\/HK_BUILD2_GEMINI_HANDOFF\.md$/,
+      /^docs\/release\/ANDROID_RELEASE_IDENTITY\.md$/,
+      /^scripts\/verify-release-identity\.mjs$/,
+      /^src\/features\/talk-it-out\/providerContract\.ts$/,
+      /^src\/platform\/herKeysAiClient\.ts$/,
+      /^supabase\/functions\/herkeys-ai\//,
+      /^tests\/(build2BackendProtection|releaseIdentity|talkItOutAi)\.test\.mjs$/,
+      /^tests\/fixtures\/talkItOutAi\.behavior\.json$/,
+    ],
+    migrations: [],
+    schemas: [],
+    rootCollections: [],
+    syncKinds: [],
+    shared: [
+      ['src/domain/discovery.ts', 'Build 2: only the exact scripted topic/question/option structure of a provider turn is durable, so replay never invents the user\'s words (bac6bb6)'],
+      ['src/features/talk-it-out/TalkItOutView.tsx', 'Build 2: restrained async states and a retry for a degraded Talk It Out turn'],
+      ['src/features/talk-it-out/capture/copy.ts', 'Build 2: the async status and retry copy lives in the Talk It Out copy module'],
+      ['src/store/TalkItOutContext.tsx', 'Build 2: Talk It Out talks to the authenticated Her Keys AI function, with the scripted path as the fallback'],
+      ['src/store/accountRuntimeInstance.ts', 'Build 2: compose the Her Keys AI client with the authenticated session'],
+      ['supabase/config.toml', 'Build 2: the herkeys-ai function verifies the signed-in user (verify_jwt)'],
+      ['eas.json', 'Build 2: the preview profile stays on the staging backend'],
+      ['package.json', 'Build 2: release-identity guard scripts (verify, preflight, EAS post-install)'],
+      ['package-lock.json', 'Build 2: repair the Expo worklets lockfile entry'],
+      ['docs/builds/BUILD4.md', 'Build 2 release identity: the Android application id is com.heykeys.app, intentionally different from iOS'],
+      ['docs/builds/BUILD4_PHASE0_CHECKPOINT.md', 'Build 2 release identity: the Android application id is com.heykeys.app'],
+      ['docs/builds/HK-FE-UI-01-PERMANENT.txt', 'Build 2 release identity: the Android application id is com.heykeys.app'],
+      ['docs/audits/HK_IOS_ANDROID_PLATFORM_PARITY.md', 'Build 2 release identity: the Android application id is com.heykeys.app'],
+      ['tests/localNotificationArchitecture.test.mjs', 'Build 2 certification: the backend boundary is a reviewed function registry with no delivery path, so herkeys-ai is allowed and a push function is not'],
+      ['tests/hk-f06/homeContext.test.mjs', 'Build 2 certification: fileURLToPath, so a checkout path with a space is not read URL-encoded'],
+      ['tests/hk-f06/homeMutations.test.mjs', 'Build 2 certification: fileURLToPath, so a checkout path with a space is not read URL-encoded'],
+      ['tests/hk-f06/homeScenarios.test.mjs', 'Build 2 certification: fileURLToPath, so a checkout path with a space is not read URL-encoded'],
+      ['tests/hk-f06/homeUi.test.mjs', 'Build 2 certification: fileURLToPath, so a checkout path with a space is not read URL-encoded'],
+      ['tests/hk-f06/homeView.test.mjs', 'Build 2 certification: fileURLToPath, so a checkout path with a space is not read URL-encoded'],
+      ['tests/hk-f01f13/designGuard.test.mjs', 'Build 2 certification: fileURLToPath, so a checkout path with a space is not read URL-encoded'],
+      ['tests/hk-ir01/syncComposition.test.mjs', 'Build 2 certification: the observer cost budget is asked of the fastest call, not of a wall-clock mean taken under a parallel suite'],
+      ['scripts-dev/meals-boundary-scan.cjs', 'Build 2 certification: register the Build 2 lane; a registered device-local file absent from the checkout is not hashed'],
+    ],
+  },
 ];
 
 /**
@@ -704,8 +748,11 @@ function scan() {
   if (integrationFiles.length > 0) {
     const versions = (rev) => new Map(git('ls-tree', '-r', rev, '--', ...integrationFiles).split('\n').filter(Boolean).map((line) => [line.split('\t')[1], line.split(/\s+/)[2]]));
     const held = [CHECKPOINT, ...present.map((feature) => feature.branch)].map((rev) => [rev, versions(rev)]);
-    const here = git('hash-object', '--', ...integrationFiles).split('\n').filter(Boolean);
-    integrationFiles.forEach((file, i) => {
+    // Only a file in the working tree has a version to compare: a registered device-local file (never committed, absent from a
+    // clean checkout or CI) cannot be held by any branch, and `git hash-object` is fatal on a path that does not exist.
+    const inTree = integrationFiles.filter((file) => fs.existsSync(path.join(ROOT, file)));
+    const here = inTree.length > 0 ? git('hash-object', '--', ...inTree).split('\n').filter(Boolean) : [];
+    inTree.forEach((file, i) => {
       const holder = held.find(([, map]) => map.get(file) === here[i]);
       if (holder) overclaims.push(`the integration claims ${file}, but ${holder[0]} already holds this exact version`);
     });

@@ -6,6 +6,7 @@
  */
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
+import { fileURLToPath } from 'node:url';
 import { archiveCategory, renameCategory } from '../../src/domain/categories.ts';
 import { updateTask } from '../../src/domain/tasks.ts';
 import { attentionFor } from '../../src/domain/reasoning/attention.ts';
@@ -503,7 +504,7 @@ describe('BL / BF — feature boundary: no sibling imports, and Home never rende
   test('BL. no file under src/features/home, or its tests, imports a sibling Wave feature', async () => {
     const { readdirSync, readFileSync, statSync } = await import('node:fs');
     const { join } = await import('node:path');
-    const root = new URL('../..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
+    const root = fileURLToPath(new URL('../..', import.meta.url));
     const files = [];
     const walk = (dir) => { for (const e of readdirSync(dir)) { const f = join(dir, e); if (statSync(f).isDirectory()) walk(f); else if (/\.(ts|tsx|mjs)$/.test(e)) files.push(f); } };
     walk(join(root, 'src/features/home'));
@@ -521,7 +522,7 @@ describe('BL / BF — feature boundary: no sibling imports, and Home never rende
   test('BF. nothing in Home touches System steps, runs or templates', async () => {
     const { readdirSync, readFileSync, statSync } = await import('node:fs');
     const { join } = await import('node:path');
-    const root = new URL('../..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
+    const root = fileURLToPath(new URL('../..', import.meta.url));
     const files = [];
     const walk = (dir) => { for (const e of readdirSync(dir)) { const f = join(dir, e); if (statSync(f).isDirectory()) walk(f); else if (/\.(ts|tsx)$/.test(e)) files.push(f); } };
     walk(join(root, 'src/features/home'));

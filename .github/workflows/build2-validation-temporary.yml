@@ -28,6 +28,10 @@ jobs:
     steps:
       - name: Checkout candidate
         uses: actions/checkout@v4
+        with:
+          # Full history: tests/meals/boundary.test.mjs and scripts-dev/meals-boundary-scan.cjs diff against the historical
+          # commits 38ab7f1 (Wave 2 baseline) and 363e473 (integration checkpoint), which a shallow clone does not contain.
+          fetch-depth: 0
 
       - name: Use Node.js
         uses: actions/setup-node@v4

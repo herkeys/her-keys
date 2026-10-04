@@ -9,6 +9,7 @@ import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { test } from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 const ROOT = new URL('../../', import.meta.url);
 const FEATURES = ['money', 'work', 'rebuild', 'lifeAdmin', 'people'];
@@ -19,7 +20,7 @@ test('[HK13-D31] no Wave 3/4 save failure or refusal is shown in plum, the colou
   const offenders = [];
   let checked = 0;
   for (const feature of FEATURES) {
-    for (const file of walk(new URL(`src/features/${feature}/`, ROOT).pathname.replace(/^\/([A-Za-z]:)/, '$1'))) {
+    for (const file of walk(fileURLToPath(new URL(`src/features/${feature}/`, ROOT)))) {
       const lines = readFileSync(file, 'utf8').split(/\r?\n/);
       lines.forEach((line, index) => {
         const notice = line.match(/<InlineNotice\b([^>]*)/);

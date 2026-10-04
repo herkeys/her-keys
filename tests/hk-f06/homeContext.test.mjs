@@ -16,6 +16,7 @@ import assert from 'node:assert/strict';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, test } from 'node:test';
+import { fileURLToPath } from 'node:url';
 import { addCategory, archiveCategory, categoriesInOrder, categoryWithRole, renameCategory, restoreCategory } from '../../src/domain/categories.ts';
 import * as categoriesModule from '../../src/domain/categories.ts';
 import { CalendarEventSchema, HouseholdSystemSchema, TaskSchema, validateAppState } from '../../src/domain/state.ts';
@@ -29,7 +30,7 @@ import { homeCategoryIdOf, homeContextOf, homeLabelOf, isHomeRecord } from '../.
 import { ACCOUNT_A, NOW, TZ, accountCloudFor, bindAsNewDevice, makeDevice, mutate, withheldMove } from '../support/accountDevice.mjs';
 import { createFakeCloud } from '../support/fakeCloud.mjs';
 
-const ROOT = new URL('../..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
+const ROOT = fileURLToPath(new URL('../..', import.meta.url));
 const ctx = (start = 0) => {
   let n = start;
   return { nowMs: NOW, today: '2026-09-21', createId: (prefix) => `${prefix}-${++n}` };

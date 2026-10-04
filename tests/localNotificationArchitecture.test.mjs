@@ -64,8 +64,22 @@ describe('local notification architecture boundary', () => {
 
   test('there is no remote push backend, dependency or scheduling path: reminders are device-local DATE triggers only', () => {
     // No push function exists in the backend, and none of the push/FCM/APNs SDKs or endpoints appear in app, backend or dependencies.
+    // The boundary is "no Edge Function delivers or schedules a notification", not "these are the only functions": each function
+    // is registered here with what it does once it has been reviewed as carrying no delivery path, so a new function fails until
+    // it is reviewed, and a function unrelated to notifications (herkeys-ai, Build 2) is allowed without loosening the boundary.
+    const REVIEWED_FUNCTIONS = {
+      _shared: 'shared crypto, HTTP and auth helpers',
+      'calendar-data': 'authenticated Google Calendar read',
+      'calendar-oauth': 'Google Calendar OAuth exchange',
+      'herkeys-ai': 'authenticated Gemini request/response proxy',
+      'weather-context': 'weather lookup',
+    };
     const functions = readdirSync('supabase/functions').filter((name) => statSync(`supabase/functions/${name}`).isDirectory());
-    assert.deepEqual(functions.sort(), ['_shared', 'calendar-data', 'calendar-oauth', 'weather-context']);
+    for (const name of functions) {
+      assert.doesNotMatch(name, /push|notif|remind|fcm|apns|messag|deliver|cron|schedul/i, `supabase/functions/${name} is named as a remote notification backend`);
+      assert.ok(Object.hasOwn(REVIEWED_FUNCTIONS, name), `supabase/functions/${name} is not reviewed: confirm it has no notification delivery path, then register it`);
+    }
+    assert.deepEqual(Object.keys(REVIEWED_FUNCTIONS).filter((name) => !functions.includes(name)), [], 'a registered function no longer exists');
     const walk = (dir) => readdirSync(dir).flatMap((name) => {
       const path = `${dir}/${name}`;
       return statSync(path).isDirectory() ? walk(path) : /\.(ts|tsx)$/.test(name) ? [path] : [];
