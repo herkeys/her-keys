@@ -103,8 +103,7 @@ export default function HerKeysPlus() {
       </Card>
 
       <AppText variant="bodySm" color={colors.textTertiary} style={styles.reassurance}>
-        Nothing you've used in Her Keys so far is exclusive to Her Keys+. Continuing without it doesn't change your
-        access today.
+        You can keep using the core Her Keys experience without Her Keys+.
       </AppText>
 
       {note && (

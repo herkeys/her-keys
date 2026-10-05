@@ -3,8 +3,14 @@
   "version": 1,
   "audit": "V1_FINALIZATION_PART_1_PLATFORM_PARITY",
   "scan": {
-    "roots": ["app", "src"],
-    "extensions": [".ts", ".tsx"],
+    "roots": [
+      "app",
+      "src"
+    ],
+    "extensions": [
+      ".ts",
+      ".tsx"
+    ],
     "conditionalPattern": "\\bPlatform\\s*\\.\\s*(OS|select|Version|isPad|isTV|constants)\\b",
     "platformFilePattern": "\\.(ios|android|native|web)\\.(ts|tsx|js|jsx)$",
     "classes": {
@@ -85,6 +91,30 @@
       "runtime": "RT-18",
       "defect": "PP-D10",
       "evidence": "Documented as PP-D10 (P7) pending device proof."
+    },
+    {
+      "id": "PC-07",
+      "file": "src/features/welcome/views/EmailEntryView.tsx",
+      "count": 1,
+      "expression": "KeyboardAvoidingView behavior 'padding' (iOS) / undefined (Android, relies on adjustResize)",
+      "class": "E",
+      "capability": "Welcome tree email entry",
+      "difference": "Keyboard avoidance differs by OS; the goal (field and action stay visible above the keyboard) is the same. Presentational shell only — no auth behavior.",
+      "iosAndroidEquivalent": true,
+      "runtime": "RT-18",
+      "evidence": "Same pattern as PC-06 (Systems editor); Android relies on the window resize mode. Device proof pending with the welcome tree integration pass."
+    },
+    {
+      "id": "PC-08",
+      "file": "src/features/welcome/views/OtpEntryView.tsx",
+      "count": 1,
+      "expression": "KeyboardAvoidingView behavior 'padding' (iOS) / undefined (Android, relies on adjustResize)",
+      "class": "E",
+      "capability": "Welcome tree OTP entry",
+      "difference": "Keyboard avoidance differs by OS; the goal (field and action stay visible above the keyboard) is the same. Presentational shell only — no auth behavior.",
+      "iosAndroidEquivalent": true,
+      "runtime": "RT-18",
+      "evidence": "Same pattern as PC-06 (Systems editor); Android relies on the window resize mode. Device proof pending with the welcome tree integration pass."
     }
   ],
   "platformFiles": [],
@@ -123,7 +153,10 @@
     "iosBundleIdentifier": "com.herkeys.app",
     "androidPackage": "com.heykeys.app",
     "scheme": "herkeys",
-    "androidBlockedPermissions": ["android.permission.ACCESS_FINE_LOCATION", "android.permission.SYSTEM_ALERT_WINDOW"],
+    "androidBlockedPermissions": [
+      "android.permission.ACCESS_FINE_LOCATION",
+      "android.permission.SYSTEM_ALERT_WINDOW"
+    ],
     "iosForbiddenInfoPlistKeys": [
       "NSLocationAlwaysAndWhenInUseUsageDescription",
       "NSLocationAlwaysUsageDescription",
@@ -135,7 +168,15 @@
       "android.permission.RECORD_AUDIO",
       "android.permission.FOREGROUND_SERVICE_LOCATION"
     ],
-    "requiredPlugins": ["expo-router", "expo-notifications", "expo-apple-authentication", "expo-secure-store", "expo-web-browser", "expo-image-picker", "expo-location"]
+    "requiredPlugins": [
+      "expo-router",
+      "expo-notifications",
+      "expo-apple-authentication",
+      "expo-secure-store",
+      "expo-web-browser",
+      "expo-image-picker",
+      "expo-location"
+    ]
   },
   "nativeDifferences": [
     {

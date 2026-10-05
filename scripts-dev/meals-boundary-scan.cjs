@@ -537,6 +537,37 @@ const LATER_FEATURES = [
       ['scripts-dev/meals-boundary-scan.cjs', 'Build 2 certification: register the Build 2 lane; a registered device-local file absent from the checkout is not hashed'],
     ],
   },
+  {
+    id: 'HK-AI-02 (Talk It Out evaluation foundation)',
+    branch: null,
+    owned: [/^tests\/ai-evals\//],
+    migrations: [],
+    schemas: [],
+    rootCollections: [],
+    syncKinds: [],
+    shared: [
+      ['package.json', 'AI-02: two scripts, eval:ai:offline (the focused offline suite) and eval:ai:live (explicit, gated, never run by npm test)'],
+      ['.gitignore', 'AI-02: live evaluation run records under .ai-eval-runs/ are never committed by accident'],
+      ['scripts-dev/meals-boundary-scan.cjs', 'AI-02: register the evaluation-foundation lane'],
+    ],
+  },
+  {
+    id: 'HK-WELCOME-TREE (welcome/auth frontend shell)',
+    branch: 'feature/welcome-tree-auth-frontend',
+    owned: [/^src\/features\/welcome\//, /^tests\/welcomeAuthShell\.test\.mjs$/],
+    migrations: [],
+    schemas: [],
+    rootCollections: [],
+    syncKinds: [],
+    shared: [
+      ['app/gallery.tsx', 'Welcome tree: the internal design gallery exercises every welcome/auth state (dev-only surface; no production route or guard touched)'],
+      ['app/onboarding/plus.tsx', 'Welcome tree: future-safe Her Keys+ reassurance copy ("keep using the core experience without Her Keys+"); entitlement behavior unchanged'],
+      ['src/design/components/TextField.tsx', 'Welcome tree: additive passthrough props (autoCapitalize/autoCorrect/autoComplete/textContentType/returnKeyType/onSubmitEditing, error live-region) for email and one-time-code entry; every default unchanged'],
+      ['docs/audits/HK_PLATFORM_PARITY_REGISTRY.json', 'Welcome tree: register PC-07/PC-08 keyboard-avoidance conditionals (same class-E pattern as PC-06)'],
+      ['docs/audits/HK_IOS_ANDROID_PLATFORM_PARITY.md', 'Welcome tree: reference PC-07/PC-08 in the parity report table'],
+      ['scripts-dev/meals-boundary-scan.cjs', 'Welcome tree: register the welcome-tree lane; H no longer compares integration-claimed files against branches that are part of HEAD\u2019s own history (a lane forked from the current tip holds those versions by inheritance, which produced only false overclaims)'],
+    ],
+  },
 ];
 
 /**
@@ -747,7 +778,11 @@ function scan() {
   const integrationFiles = LATER_FEATURES.filter((feature) => feature.branch === null).flatMap((feature) => feature.shared.map(([file]) => file));
   if (integrationFiles.length > 0) {
     const versions = (rev) => new Map(git('ls-tree', '-r', rev, '--', ...integrationFiles).split('\n').filter(Boolean).map((line) => [line.split('\t')[1], line.split(/\s+/)[2]]));
-    const held = [CHECKPOINT, ...present.map((feature) => feature.branch)].map((rev) => [rev, versions(rev)]);
+    // A lane branch whose tip is part of HEAD's own history (merged, or the active line's branch) cannot hide a change from
+    // HEAD — every version it holds is already on this line, so comparing it against the working tree only ever produces
+    // false overclaims (HK-WELCOME-TREE: a lane branched from the current tip holds every integration version by inheritance).
+    // The check keeps its teeth for true sibling forks: branches whose tips are NOT ancestors of HEAD.
+    const held = [CHECKPOINT, ...present.map((feature) => feature.branch).filter((branch) => !gitOk('merge-base', '--is-ancestor', branch, 'HEAD').ok)].map((rev) => [rev, versions(rev)]);
     // Only a file in the working tree has a version to compare: a registered device-local file (never committed, absent from a
     // clean checkout or CI) cannot be held by any branch, and `git hash-object` is fatal on a path that does not exist.
     const inTree = integrationFiles.filter((file) => fs.existsSync(path.join(ROOT, file)));

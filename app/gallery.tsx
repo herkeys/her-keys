@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { ActionStateBlock, AppText, Button, Card, ChipToggle, ClarificationPrompt, ConfidenceBadge, ConfirmationSheet, Divider, EmptyState, ErrorState, InlineNotice, InsightBlock, InterpretationReview, LoadingState, OfflineState, Overline, ProvenanceLabel, RecommendationBlock, Screen, SegmentBar, Sheet, StatusList, Tag, TextField, WhyThis } from '../src/design/components';
 import { color, radius, spacing, type as typeScale } from '../src/design/tokens';
+import { WelcomeAuthGalleryPreview } from '../src/features/welcome/WelcomeAuthGalleryPreview';
 
 /**
  * Development design gallery (HK-FE-UI-01 §20). Demonstrates the permanent
@@ -190,6 +191,16 @@ export default function DesignGallery() {
         <ActionStateBlock style={styles.stack} stage="approved" summary="Move the dentist call to Thursday, 10:30–11:00." />
         <ActionStateBlock style={styles.stack} stage="succeeded" outcome="verified" summary="The dentist call moved to Thursday, 10:30." />
         <ActionStateBlock style={styles.stack} stage="failed" summary="The clinic’s portal refused the new time." />
+      </GallerySection>
+
+      <GallerySection title="Welcome + account choice (welcome tree shell)">
+        <AppText variant="supporting" color={color.text.secondary} style={styles.tight}>
+          The first-run welcome/auth frontend — presentational only, exercised here until the integration pass wires
+          it to the existing account runtime. Every state is one press away; nothing below can authenticate.
+        </AppText>
+        <View style={styles.stack}>
+          <WelcomeAuthGalleryPreview />
+        </View>
       </GallerySection>
 
       <GallerySection title="System states">

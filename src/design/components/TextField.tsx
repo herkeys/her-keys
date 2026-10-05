@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ComponentProps } from 'react';
 import { StyleSheet, TextInput, View, type KeyboardTypeOptions } from 'react-native';
 import { color, radius, sizing, spacing } from '../tokens';
 import { AppText, Overline } from './AppText';
@@ -16,6 +16,15 @@ export interface TextFieldProps {
   maxLength?: number;
   /** Renders a non-editable field without dimming it into illegibility. */
   editable?: boolean;
+  /** Passthroughs for specialized fields (email, one-time codes). Defaults unchanged. */
+  autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
+  autoCorrect?: boolean;
+  autoComplete?: ComponentProps<typeof TextInput>['autoComplete'];
+  textContentType?: ComponentProps<typeof TextInput>['textContentType'];
+  returnKeyType?: ComponentProps<typeof TextInput>['returnKeyType'];
+  onSubmitEditing?: () => void;
+  /** Announces the error text politely when it appears (field-level errors). */
+  errorAccessibilityLiveRegion?: 'none' | 'polite' | 'assertive';
 }
 
 /**
@@ -33,6 +42,13 @@ export function TextField({
   autoFocus,
   maxLength,
   editable = true,
+  autoCapitalize,
+  autoCorrect,
+  autoComplete,
+  textContentType,
+  returnKeyType,
+  onSubmitEditing,
+  errorAccessibilityLiveRegion,
 }: TextFieldProps) {
   const [focused, setFocused] = useState(false);
 
@@ -49,6 +65,12 @@ export function TextField({
         autoFocus={autoFocus}
         maxLength={maxLength}
         editable={editable}
+        autoCapitalize={autoCapitalize}
+        autoCorrect={autoCorrect}
+        autoComplete={autoComplete}
+        textContentType={textContentType}
+        returnKeyType={returnKeyType}
+        onSubmitEditing={onSubmitEditing}
         accessibilityLabel={label}
         accessibilityState={{ disabled: !editable }}
         onFocus={() => setFocused(true)}
@@ -61,7 +83,12 @@ export function TextField({
         ]}
       />
       {error && (
-        <AppText variant="metadata" color={color.status.attention} style={styles.error}>
+        <AppText
+          variant="metadata"
+          color={color.status.attention}
+          style={styles.error}
+          accessibilityLiveRegion={errorAccessibilityLiveRegion}
+        >
           {error}
         </AppText>
       )}
