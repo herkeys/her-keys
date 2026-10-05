@@ -70,6 +70,7 @@ describe('[BV] the semantic-boundary scan', () => {
     const F10 = 'HK-FEATURE-10 (Work / Career OS)';
     const REFINEMENTS = 'HK-PROTOTYPE-REFINEMENTS (FR01 / Notifications / External Intelligence)';
     const POLISH = 'HK-FE-UI-02 (frontend UI / motion polish pass)';
+    const WELCOME_AUTH = 'HK-WELCOME-AUTH-RUNTIME (welcome tree wired to the account runtime)';
     // useHousehold.ts carries only a Meals-line reason. Changed on the Wave 2 line, that explains it; changed after the checkpoint,
     // it does not — Meals was certified before any later lane branched, so a Meals reason there would be a misattribution.
     assert.deepEqual(account('src/store/useHousehold.ts', 'M', true, null).findings, []);
@@ -81,7 +82,8 @@ describe('[BV] the semantic-boundary scan', () => {
     // Every registered later lane that changed it explains it: Feature 10 (its route), the post-certification refinements (the
     // device-local notification controller mount, d557f7c) and the polish pass (the splash fade) — the accounting names them all,
     // in registry order.
-    assert.deepEqual(account('app/_layout.tsx', 'M', false, 'M').shared.lanes, [F10, REFINEMENTS, POLISH]);
+    // The welcome auth integration (the account-settling gate in the root layout) registers after them.
+    assert.deepEqual(account('app/_layout.tsx', 'M', false, 'M').shared.lanes, [F10, REFINEMENTS, POLISH, WELCOME_AUTH]);
     assert.match(account('src/domain/taskLists.ts', 'M', false, 'M').findings.join(), /no later lane's reason/, 'no lane explains taskLists.ts');
     // A later lane's own file is its lane, not a shared change; a shared change registered by a later lane names both lanes.
     assert.deepEqual(account('src/features/work/WorkOverview.tsx', 'M', false, 'M').shared.lanes, [F10, POLISH]);
@@ -91,6 +93,75 @@ describe('[BV] the semantic-boundary scan', () => {
     // HK-FE-UI-02 registered its hub-header change to MealsBody, so the file now names that lane; an unexplained Meals file still fails.
     assert.ok(account('src/features/meals/MealsBody.tsx', 'M', true, 'M').mealsFile.lanes.includes(POLISH));
     assert.match(account('src/features/meals/mealsView.ts', 'M', true, 'M').findings.join(), /no later lane's reason/);
+  });
+
+  test('[BV7] check H — the register is true: every known-invalid claim still fails, and only a PROVED stacked lane inherits', () => {
+    // `laneRegister` is check H as a rule over facts, so it can be held to cases the real tree does not contain. The welcome
+    // frontend lane was the first to be STACKED (forked from this line's tip instead of the checkpoint); its branch therefore
+    // holds every integration version by inheritance, which the original check read as "someone else already made this".
+    // Its fix skipped every lane branch already in HEAD's history — which is every MERGED lane, so the check stopped
+    // catching the very thing it exists for ([H2] below). The rule now inherits only for a lane that declares a base.
+    const { laneRegister } = createRequire(import.meta.url)('../../scripts-dev/meals-boundary-scan.cjs');
+    const v = (entries) => new Map(Object.entries(entries));
+    const parallel = (over = {}) => ({ id: 'F', branch: 'feature/f', base: null, shared: [], present: true, baseProved: true, changed: new Set(), versions: v({}), baseVersions: null, ...over });
+    const stacked = (over = {}) => parallel({ id: 'S', branch: 'feature/s', base: 'line-tip', baseVersions: v({}), ...over });
+    const check = ({ lanes = [], checkpointVersions = v({}), held = [] }) => laneRegister({ checkpoint: 'CHECKPOINT', checkpointVersions, lanes, held }).overclaims;
+    const X = 'package.json';
+
+    // [H1] the integration claims a file it holds exactly as the checkpoint did: it changed nothing.
+    assert.match(check({ checkpointVersions: v({ [X]: 'c0' }), held: [[X, 'c0']] }).join(), /the integration claims package\.json, but CHECKPOINT already holds this exact version/);
+
+    // [H2] the integration claims a file it holds exactly as a MERGED parallel lane left it. There is no "is this branch in
+    // HEAD's history" input to this rule at all: a merged lane is a witness like any other. (This is the case that was lost.)
+    const merged = parallel({ changed: new Set([X]), versions: v({ [X]: 'f1' }) });
+    assert.match(check({ checkpointVersions: v({ [X]: 'c0' }), lanes: [merged], held: [[X, 'f1']] }).join(), /the integration claims package\.json, but feature\/f already holds this exact version/);
+    // ...and a version nobody else made is the integration's own.
+    assert.deepEqual(check({ checkpointVersions: v({ [X]: 'c0' }), lanes: [merged], held: [[X, 'i2']] }), []);
+
+    // [H3] a lane lists a shared file its own history never changed.
+    assert.match(check({ lanes: [parallel({ shared: [X] })] }).join(), /F claims package\.json, which feature\/f never changed/);
+
+    // [H4] THE FALSE POSITIVE, for the intended reason: a stacked lane that did not touch the file holds the integration's
+    // version only by inheritance, so it is not a witness against it.
+    const inheriting = stacked({ versions: v({ [X]: 'i2' }), baseVersions: v({ [X]: 'i2' }) });
+    assert.deepEqual(check({ checkpointVersions: v({ [X]: 'c0' }), lanes: [inheriting], held: [[X, 'i2']] }), []);
+    // The same branch WITHOUT a declared base is an ordinary witness again: inheriting is never assumed, for any branch.
+    assert.match(check({ checkpointVersions: v({ [X]: 'c0' }), lanes: [parallel({ id: 'S', branch: 'feature/s', versions: v({ [X]: 'i2' }) })], held: [[X, 'i2']] }).join(), /feature\/s already holds this exact version/);
+
+    // [H5] a stacked lane changed the file ITSELF, on top of the line. The integration's claim is judged where the lane started:
+    const changedIt = (baseBlob) => stacked({ changed: new Set([X]), versions: v({ [X]: 's3' }), baseVersions: v(baseBlob === null ? {} : { [X]: baseBlob }) });
+    // true when the line's version there was already the integration's own,
+    assert.deepEqual(check({ checkpointVersions: v({ [X]: 'c0' }), lanes: [changedIt('i2')], held: [[X, 's3']] }), []);
+    // false when the checkpoint — or a merged parallel lane — already held that version (the integration never changed it),
+    assert.match(check({ checkpointVersions: v({ [X]: 'c0' }), lanes: [changedIt('c0')], held: [[X, 's3']] }).join(), /only a stacked lane changed it: beneath that lane, CHECKPOINT already held the line's version/);
+    assert.match(check({ checkpointVersions: v({ [X]: 'c0' }), lanes: [merged, changedIt('f1')], held: [[X, 's3']] }).join(), /beneath that lane, feature\/f already held the line's version/);
+    // and false when the stacked lane created the file.
+    assert.match(check({ lanes: [changedIt(null)], held: [[X, 's3']] }).join(), /the integration claims package\.json, but feature\/s created it/);
+    // Two stacked lanes, one on the other: the claim is followed down through both to the line beneath them.
+    const upper = stacked({ id: 'S2', branch: 'feature/s2', changed: new Set([X]), versions: v({ [X]: 's4' }), baseVersions: v({ [X]: 's3' }) });
+    assert.deepEqual(check({ checkpointVersions: v({ [X]: 'c0' }), lanes: [changedIt('i2'), upper], held: [[X, 's4']] }), []);
+    assert.match(check({ checkpointVersions: v({ [X]: 'c0' }), lanes: [changedIt('c0'), upper], held: [[X, 's4']] }).join(), /CHECKPOINT already held the line's version/);
+
+    // [H6] a stacked lane's own claims are measured from ITS base: it cannot claim what the line had done before it forked,
+    // even though that file does differ between the checkpoint and its branch.
+    assert.match(check({ lanes: [stacked({ shared: [X], changed: new Set(['app/gallery.tsx']) })] }).join(), /S claims package\.json, which feature\/s never changed/);
+
+    // [H7] a base that cannot be proved is a finding, and that lane inherits nothing and witnesses nothing.
+    const unproved = stacked({ baseProved: false, versions: v({ [X]: 'i2' }), baseVersions: v({ [X]: 'i2' }) });
+    assert.match(check({ lanes: [unproved] }).join(), /S declares base line-tip, which is not a commit of this line that feature\/s grew from/);
+
+    // [H8] a lane whose branch is absent is reported as unverified — never as a pass, and never as a finding.
+    const absent = laneRegister({ checkpoint: 'CHECKPOINT', checkpointVersions: v({}), lanes: [{ id: 'F', branch: 'feature/f', base: null, shared: [X], present: false }], held: [] });
+    assert.deepEqual([absent.unverified, absent.overclaims], [['F'], []]);
+
+    // The scanner's source: the base is PROVED from git (a commit, on this line above the checkpoint, that the branch grew
+    // from), and the HEAD-ancestry exemption is gone.
+    const source = read('scripts-dev/meals-boundary-scan.cjs');
+    assert.match(source, /const baseProved = !feature\.base \|\| \(isCommit\(feature\.base\) && isAncestor\(CHECKPOINT, feature\.base\) && isAncestor\(feature\.base, feature\.branch\)\);/);
+    assert.doesNotMatch(strip(source), /'--is-ancestor', branch, 'HEAD'/, 'no lane branch is exempted for being in HEAD\'s history');
+    // On the real tree both stacked lanes are present, proved, and verified; every merged feature lane is still a witness.
+    const { result } = scan();
+    assert.deepEqual(result.facts.laneOverclaims, []);
   });
 
   test('[CB1] [CD1] no dependency relation, recipe link or external reference is created by Meals code', () => {

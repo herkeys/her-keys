@@ -537,23 +537,15 @@ const LATER_FEATURES = [
       ['scripts-dev/meals-boundary-scan.cjs', 'Build 2 certification: register the Build 2 lane; a registered device-local file absent from the checkout is not hashed'],
     ],
   },
-  {
-    id: 'HK-AI-02 (Talk It Out evaluation foundation)',
-    branch: null,
-    owned: [/^tests\/ai-evals\//],
-    migrations: [],
-    schemas: [],
-    rootCollections: [],
-    syncKinds: [],
-    shared: [
-      ['package.json', 'AI-02: two scripts, eval:ai:offline (the focused offline suite) and eval:ai:live (explicit, gated, never run by npm test)'],
-      ['.gitignore', 'AI-02: live evaluation run records under .ai-eval-runs/ are never committed by accident'],
-      ['scripts-dev/meals-boundary-scan.cjs', 'AI-02: register the evaluation-foundation lane'],
-    ],
-  },
+  // (HK-AI-02, the Talk It Out evaluation foundation, is NOT registered on this line. The welcome frontend commit carried its
+  // lane entry in from a shared checkout, but none of that lane's files — tests/ai-evals/, its package.json scripts, its
+  // .gitignore line — were ever committed with it, so the entry explained changes this tree does not contain and check H
+  // rightly failed a clean checkout on it. The lane registers itself in the same commit as its files, as one change.)
   {
     id: 'HK-WELCOME-TREE (welcome/auth frontend shell)',
     branch: 'feature/welcome-tree-auth-frontend',
+    // Stacked: forked from the Build 2 tip of this line, not from the integration checkpoint (see check H).
+    base: '0cf041a2a3c77659a91c14dadb0524da63553369',
     owned: [/^src\/features\/welcome\//, /^tests\/welcomeAuthShell\.test\.mjs$/],
     migrations: [],
     schemas: [],
@@ -565,7 +557,53 @@ const LATER_FEATURES = [
       ['src/design/components/TextField.tsx', 'Welcome tree: additive passthrough props (autoCapitalize/autoCorrect/autoComplete/textContentType/returnKeyType/onSubmitEditing, error live-region) for email and one-time-code entry; every default unchanged'],
       ['docs/audits/HK_PLATFORM_PARITY_REGISTRY.json', 'Welcome tree: register PC-07/PC-08 keyboard-avoidance conditionals (same class-E pattern as PC-06)'],
       ['docs/audits/HK_IOS_ANDROID_PLATFORM_PARITY.md', 'Welcome tree: reference PC-07/PC-08 in the parity report table'],
-      ['scripts-dev/meals-boundary-scan.cjs', 'Welcome tree: register the welcome-tree lane; H no longer compares integration-claimed files against branches that are part of HEAD\u2019s own history (a lane forked from the current tip holds those versions by inheritance, which produced only false overclaims)'],
+      ['scripts-dev/meals-boundary-scan.cjs', 'Welcome tree: register the welcome-tree lane (its check-H change, which skipped every lane branch already in HEAD\u2019s history, was replaced by the welcome auth integration with the narrower stacked-lane rule)'],
+    ],
+  },
+  {
+    id: 'HK-WELCOME-AUTH-RUNTIME (welcome tree wired to the account runtime)',
+    branch: 'integration/welcome-tree-auth-runtime',
+    // Stacked on the welcome frontend commit.
+    base: '69af50f9339f9449e6286cd7c18d8cbc59ca43db',
+    owned: [
+      /^src\/domain\/account\/emailOtp\.ts$/,
+      /^src\/platform\/emailOtpProvider\.ts$/,
+      /^src\/features\/account\/(WelcomeAuthFlow\.tsx|welcomeFlowModel\.ts)$/,
+      /^tests\/(emailOtp|emailOtpProvider|welcomeAuthFlow)\.test\.mjs$/,
+      /^tests\/support\/welcomeFlow\//,
+      /^docs\/integration\/WELCOME_AUTH_/,
+    ],
+    migrations: [],
+    schemas: [],
+    rootCollections: [],
+    syncKinds: [],
+    shared: [
+      ['app/index.tsx', 'Welcome auth: the entry route renders the wired welcome tree for anyone without an account-held household and hands a held, unfinished household on to its audit step; the old Begin \u2192 onboarding/goals path for a signed-out user is gone'],
+      ['app/_layout.tsx', 'Welcome auth: no navigator until the stored session is resolved (the shell\u2019s settling presentation shows instead); the access input carries accountSettled'],
+      ['app/sign-in.tsx', 'Welcome auth: Your Account reconnects a degraded account through the welcome tree\u2019s reconnect presentation, so an email account can come back; it no longer opens for a signed-out device'],
+      ['src/domain/routeAccess.ts', 'Welcome auth: identity is part of the first-run gate \u2014 the audit and the app open only for a household held under an account, the entry is the welcome tree otherwise, and nothing opens before the account restore settles'],
+      ['src/domain/account/accountRuntime.ts', 'Welcome auth: passwordless email (request / verify) through one shared session-adoption path with Apple and Google; a numbered-attempt guard drops an authentication answer that outlived its attempt'],
+      ['src/domain/account/identity.ts', 'Welcome auth: AuthMethod \u2014 email is session provenance without becoming a one-step AuthProvider'],
+      ['src/domain/account/secureSession.ts', 'Welcome auth: a stored session may carry email provenance; any other unknown method is still refused'],
+      ['src/store/AccountProvider.tsx', 'Welcome auth: expose settled (derived from the restore, never persisted) and the two email operations; account actions resolve to the state they ended in'],
+      ['src/store/accountRuntimeInstance.ts', 'Welcome auth: compose the Supabase email port on the isolated provider client and hand it to the one account runtime'],
+      ['src/features/welcome/model.ts', 'Welcome auth: two wiring additions the real backend forces \u2014 an invalid-or-expired code kind (Supabase answers both identically) and an optional attempt-failed notice'],
+      ['src/features/welcome/copy.ts', 'Welcome auth: copy for those two additions, and the EX-01 Apple cross-platform disclosure reused word for word from the account feature'],
+      ['src/features/welcome/WelcomeAuthShell.tsx', 'Welcome auth: pass the notice to the account choice'],
+      ['src/features/welcome/views/AccountChoiceView.tsx', 'Welcome auth: one quiet line for a failed attempt, and the EX-01 disclosure where Apple is offered (never on a reconnect)'],
+      ['src/features/welcome/views/OtpEntryView.tsx', 'Welcome auth: copy for the invalid-or-expired code kind'],
+      ['tests/routeAccess.test.mjs', 'Welcome auth: the route table\u2019s spec, restated for identity in the first-run gate (settling, signed out, resolving, held, degraded, quarantine, deep links, no guest path, no welcome-seen flag)'],
+      ['tests/platformParity/accountAccess.test.mjs', 'Welcome auth: PP-D04 / PP-D21 restated \u2014 Your Account is the surface after the first run, the entry is where a first sign-in runs and stays mounted, and signing out closes the app'],
+      ['tests/support/store.mjs', 'Welcome auth: the route-access helper models a household held under an account, with the restore settled'],
+      ['tests/support/rn-stub.tsx', 'Welcome auth: a BackHandler stand-in, so Android hardware Back can be pressed in a component test'],
+      ['tests/today/lifecycle.test.mjs', 'Welcome auth: the onboarding guard is asked of a held household, and Today is never the entry for a signed-out device'],
+      ['tests/monetization.test.mjs', 'Welcome auth: comment only \u2014 Your Account stays reachable after onboarding for status, reconnect and sign out'],
+      ['tests/kids/boundaries.test.mjs', 'Welcome auth: the access input carries accountSettled'],
+      ['tests/people/sync.test.mjs', 'Welcome auth: the access input carries accountSettled'],
+      ['tests/hk-f01f13/accountSwitch.test.mjs', 'Welcome auth: the access input carries accountSettled'],
+      ['tests/hk-f01f13/integratedJourney.test.mjs', 'Welcome auth: the access input carries accountSettled'],
+      ['tests/meals/boundary.test.mjs', 'Welcome auth: check H\u2019s known-invalid cases are pinned against the extracted lane-register rule'],
+      ['scripts-dev/meals-boundary-scan.cjs', 'Welcome auth: check H repaired \u2014 the welcome frontend\u2019s change exempted every lane branch in HEAD\u2019s history from the holder check; only a lane that DECLARES and proves a stacked base now inherits, and its own claims are checked against that base. The unbuilt HK-AI-02 entry is removed; this lane is registered'],
     ],
   },
 ];
@@ -613,6 +651,75 @@ function account(file, status, early, late) {
   if (later.length > 0 && later.every((r) => r.reason === OWN_LANE)) return { findings, shared: null, mealsFile: null }; // a later lane's own file
   const reasons = [...(early && MEALS_REASONS.has(file) ? [{ lane: MEALS_LINE, reason: MEALS_REASONS.get(file) }] : []), ...later];
   return { findings, shared: reasons.length > 0 ? { file, status, ...summary(reasons) } : null, mealsFile: null };
+}
+
+/**
+ * Check H, as a rule over facts (no git here, so it can be held to cases the real tree does not contain).
+ *
+ *   lanes[]: { id, branch, base, shared: [file], present, baseProved, changed: Set<file>, versions: Map<file, blob>,
+ *              baseVersions: Map<file, blob> | null }   — every lane that names a branch
+ *   checkpointVersions: Map<file, blob>, held: [[file, blob]] — each integration-claimed file as the working tree holds it
+ *
+ * 1. A lane may explain only what its own history changed. Each `shared` file must be in `changed` — which is measured from the
+ *    checkpoint for a parallel lane and from its base for a stacked one, so a stacked lane cannot claim what the line had already
+ *    done before it forked.
+ * 2. A file the integration claims must be held here in a version nobody else made. A witness that holds the exact version refutes
+ *    the claim: the checkpoint, and EVERY parallel lane's branch — merged into HEAD or not. (Skipping a branch because it is
+ *    already in HEAD's history would drop every merged lane, which is nearly all of them, and with them the check.)
+ * 3. A stacked lane is a witness only for what it changed itself. When it is the one holding the working version, it made that
+ *    version ON TOP of the line, so the integration's claim is judged where the lane started: the version at its base must in
+ *    turn be one nobody else made. If the file did not exist there, or a witness already held that version, the integration never
+ *    changed it and the claim is false.
+ * 4. A lane whose branch is not present is reported as unverified, never as a pass; a stacked base that cannot be proved is a
+ *    finding, and that lane inherits nothing.
+ */
+function laneRegister({ checkpoint, checkpointVersions, lanes, held }) {
+  const overclaims = [];
+  const unverified = [];
+  // [who, the versions they answer for, where a stacked lane started (null: a parallel witness)]
+  const witnesses = [[checkpoint, checkpointVersions, null]];
+
+  for (const lane of lanes) {
+    if (!lane.present) {
+      unverified.push(lane.id);
+      continue;
+    }
+    if (!lane.baseProved) {
+      overclaims.push(`${lane.id} declares base ${lane.base}, which is not a commit of this line that ${lane.branch} grew from`);
+      continue;
+    }
+    for (const file of lane.shared) if (!lane.changed.has(file)) overclaims.push(`${lane.id} claims ${file}, which ${lane.branch} never changed`);
+    if (lane.baseVersions === null) {
+      witnesses.push([lane.branch, lane.versions, null]);
+    } else {
+      const own = new Map([...lane.versions].filter(([file, blob]) => lane.baseVersions.get(file) !== blob));
+      witnesses.push([lane.branch, own, lane.baseVersions]);
+    }
+  }
+
+  for (const [file, blob] of held) {
+    let version = blob;
+    // Each step moves to an earlier point on the line; the bound only guards against a register that contradicts itself.
+    for (let step = 0; step <= witnesses.length; step++) {
+      const holder = witnesses.find(([, map]) => map.get(file) === version);
+      if (!holder) break; // nobody else made this version: it is the integration's own
+      const [who, , startedFrom] = holder;
+      if (startedFrom === null) {
+        overclaims.push(
+          version === blob
+            ? `the integration claims ${file}, but ${who} already holds this exact version`
+            : `the integration claims ${file}, but only a stacked lane changed it: beneath that lane, ${who} already held the line's version`
+        );
+        break;
+      }
+      version = startedFrom.get(file);
+      if (version === undefined) {
+        overclaims.push(`the integration claims ${file}, but ${who} created it`);
+        break;
+      }
+    }
+  }
+  return { overclaims, unverified };
 }
 
 function changedFiles(from = BASE) {
@@ -763,35 +870,42 @@ function scan() {
   // every file a feature lane lists as shared must differ between the checkpoint and that lane's branch, and every file the
   // integration lists must be held here in a version that neither the checkpoint nor any lane branch holds (the integration's own
   // union, reconciliation or repair). A lane whose branch is not present locally is reported as unverified, not as a pass.
-  facts.unverifiedLanes = [];
-  const overclaims = [];
-  const present = LATER_FEATURES.filter((feature) => feature.branch && gitOk('rev-parse', '--verify', '--quiet', `${feature.branch}^{commit}`).ok);
-  for (const feature of LATER_FEATURES) {
-    if (feature.branch === null) continue;
-    if (!present.includes(feature)) {
-      facts.unverifiedLanes.push(feature.id);
-      continue;
-    }
-    const onBranch = new Set(git('diff', '--name-only', CHECKPOINT, feature.branch).split('\n').filter(Boolean));
-    for (const [file] of feature.shared) if (!onBranch.has(file)) overclaims.push(`${feature.id} claims ${file}, which ${feature.branch} never changed`);
-  }
-  const integrationFiles = LATER_FEATURES.filter((feature) => feature.branch === null).flatMap((feature) => feature.shared.map(([file]) => file));
-  if (integrationFiles.length > 0) {
-    const versions = (rev) => new Map(git('ls-tree', '-r', rev, '--', ...integrationFiles).split('\n').filter(Boolean).map((line) => [line.split('\t')[1], line.split(/\s+/)[2]]));
-    // A lane branch whose tip is part of HEAD's own history (merged, or the active line's branch) cannot hide a change from
-    // HEAD — every version it holds is already on this line, so comparing it against the working tree only ever produces
-    // false overclaims (HK-WELCOME-TREE: a lane branched from the current tip holds every integration version by inheritance).
-    // The check keeps its teeth for true sibling forks: branches whose tips are NOT ancestors of HEAD.
-    const held = [CHECKPOINT, ...present.map((feature) => feature.branch).filter((branch) => !gitOk('merge-base', '--is-ancestor', branch, 'HEAD').ok)].map((rev) => [rev, versions(rev)]);
-    // Only a file in the working tree has a version to compare: a registered device-local file (never committed, absent from a
-    // clean checkout or CI) cannot be held by any branch, and `git hash-object` is fatal on a path that does not exist.
-    const inTree = integrationFiles.filter((file) => fs.existsSync(path.join(ROOT, file)));
-    const here = inTree.length > 0 ? git('hash-object', '--', ...inTree).split('\n').filter(Boolean) : [];
-    inTree.forEach((file, i) => {
-      const holder = held.find(([, map]) => map.get(file) === here[i]);
-      if (holder) overclaims.push(`the integration claims ${file}, but ${holder[0]} already holds this exact version`);
-    });
-  }
+  //
+  // A lane is PARALLEL by default: forked from the checkpoint and merged back. A lane may instead be STACKED — forked from a later
+  // commit of this line, which it declares as `base`. A stacked lane inherits every version the line held at its base, so its
+  // branch holding a version proves nothing about who made it; only what it changed AFTER its base is its own. The declaration is
+  // proved here, never trusted: the base must be a commit of this line (the checkpoint is its ancestor) that the lane's branch
+  // grew from. Everything else — the facts gathered below, the rule itself — is `laneRegister`, which the tests hold to its
+  // known-invalid cases on data the real tree does not exercise.
+  const isCommit = (rev) => gitOk('rev-parse', '--verify', '--quiet', `${rev}^{commit}`).ok;
+  const isAncestor = (older, newer) => gitOk('merge-base', '--is-ancestor', older, newer).ok;
+  const integrationFiles = [...new Set(LATER_FEATURES.filter((feature) => feature.branch === null).flatMap((feature) => feature.shared.map(([file]) => file)))];
+  const versions = (rev) =>
+    integrationFiles.length === 0
+      ? new Map()
+      : new Map(git('ls-tree', '-r', rev, '--', ...integrationFiles).split('\n').filter(Boolean).map((line) => [line.split('\t')[1], line.split(/\s+/)[2]]));
+  const lanes = LATER_FEATURES.filter((feature) => feature.branch !== null).map((feature) => {
+    const lane = { id: feature.id, branch: feature.branch, base: feature.base ?? null, shared: feature.shared.map(([file]) => file) };
+    if (!isCommit(feature.branch)) return { ...lane, present: false };
+    const baseProved = !feature.base || (isCommit(feature.base) && isAncestor(CHECKPOINT, feature.base) && isAncestor(feature.base, feature.branch));
+    if (!baseProved) return { ...lane, present: true, baseProved: false };
+    return {
+      ...lane,
+      present: true,
+      baseProved: true,
+      // What the lane's own history changed: since the checkpoint for a parallel lane, since its base for a stacked one.
+      changed: new Set(git('diff', '--name-only', feature.base ?? CHECKPOINT, feature.branch).split('\n').filter(Boolean)),
+      versions: versions(feature.branch),
+      baseVersions: feature.base ? versions(feature.base) : null,
+    };
+  });
+  // Only a file in the working tree has a version to compare: a registered device-local file (never committed, absent from a
+  // clean checkout or CI) cannot be held by any branch, and `git hash-object` is fatal on a path that does not exist.
+  const inTree = integrationFiles.filter((file) => fs.existsSync(path.join(ROOT, file)));
+  const here = inTree.length > 0 ? git('hash-object', '--', ...inTree).split('\n').filter(Boolean) : [];
+  const register = laneRegister({ checkpoint: CHECKPOINT, checkpointVersions: versions(CHECKPOINT), lanes, held: inTree.map((file, i) => [file, here[i]]) });
+  facts.unverifiedLanes = register.unverified;
+  const overclaims = register.overclaims;
   facts.laneOverclaims = overclaims;
   if (overclaims.length > 0) findings.push(`H: a lane explains a change it did not make: ${overclaims.join('; ')}`);
 
@@ -799,7 +913,7 @@ function scan() {
 }
 
 // Required (not run) by tests/meals/boundary.test.mjs, which holds account() to its rules on files the real tree does not exercise.
-module.exports = { account, LATER_FEATURES, MEALS_LINE };
+module.exports = { account, laneRegister, LATER_FEATURES, MEALS_LINE };
 if (require.main !== module) return;
 
 const result = scan();
