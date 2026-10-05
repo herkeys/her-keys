@@ -24,6 +24,7 @@ import {
   type ClaimOutcome,
 } from './claim';
 import type { CloudAccountClient } from './cloudClient';
+import { UNAVAILABLE_EMAIL_OTP, type EmailOtpPort, type EmailOtpRequestResult, type EmailOtpVerifyResult } from './emailOtp';
 import { toAccountId, type AccountId, type AccountSession, type AuthProvider } from './identity';
 import type { ProviderRegistry } from './provider';
 import type { SecureSessionStore } from './secureSession';
@@ -53,6 +54,8 @@ export interface AccountRuntimeOptions {
   /** Supabase's in-memory session lifecycle. SecureSessionStore stays the only durable home. */
   sessionClient?: AccountSessionClient;
   providers: ProviderRegistry;
+  /** Passwordless email, the one two-phase method. Absent means this build cannot offer it. */
+  emailOtp?: EmailOtpPort;
   cloud: CloudAccountClient;
   /** Reads and writes the household blob's identity block. */
   identity: {
@@ -73,11 +76,25 @@ export interface AccountRuntimeOptions {
   report?: (event: { type: string; detail?: string }) => void;
 }
 
+/**
+ * How verifying an emailed code went. `verified` means the code was accepted
+ * and the runtime took the session from there — `state` says how THAT went
+ * (bound, quarantined, or an account failure), exactly as it does after a
+ * provider sign-in. Every other outcome leaves the account where it was.
+ */
+export type EmailVerification = { kind: 'verified' } | Exclude<EmailOtpVerifyResult, { kind: 'success' }>;
+
 export interface AccountRuntime {
   getState(): AccountState;
   /** Restore a stored session at launch. Never signs her out on a store failure. */
   restore(): Promise<AccountState>;
   signIn(provider: AuthProvider): Promise<AccountState>;
+  /** Whether passwordless email can be offered on this device. */
+  emailOtpAvailable(): boolean;
+  /** Email phase one: ask for a code. Changes no account state. Calling it again is the resend. */
+  requestEmailOtp(email: string): Promise<EmailOtpRequestResult>;
+  /** Email phase two: a verified code becomes a session and takes the same path as any provider's. */
+  verifyEmailOtp(email: string, code: string): Promise<{ state: AccountState; outcome: EmailVerification }>;
   /** Run the binding this device needs. Safe to call again after a failure. */
   resolveBinding(): Promise<AccountState>;
   signOut(): Promise<AccountState>;
@@ -156,7 +173,89 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
       });
   });
 
-  return {
+  const emailOtp = options.emailOtp ?? UNAVAILABLE_EMAIL_OTP;
+
+  type Degraded = Extract<AccountState, { kind: 'authDegraded' }>;
+
+  /**
+   * Start an authentication attempt, whatever the method. A new one may begin
+   * only from signed out, from a failed attempt, or to reconnect a degraded
+   * account (which stays degraded, and bound, until the SAME account returns).
+   */
+  type AuthAttempt = { id: number; degraded: Degraded | null };
+  let latestAttempt = 0;
+
+  const beginAuth = (): AuthAttempt | null => {
+    const degraded = state.kind === 'authDegraded' ? state : null;
+    if (degraded === null) {
+      if (state.kind !== 'unauthenticated' && state.kind !== 'authError') return null;
+      apply({ type: 'authStarted' });
+    }
+    latestAttempt += 1;
+    return { id: latestAttempt, degraded };
+  };
+
+  /**
+   * Whether the attempt that began is no longer the one in force. A provider
+   * sheet or a code check can outlive the state it started from — she signed
+   * out, or another account took over — and an answer that arrives then
+   * belongs to nobody: it is dropped rather than installed.
+   *
+   * The state alone cannot say so: by the time a late answer lands, a NEWER
+   * attempt may be mid-flight and look exactly the same ('authenticating').
+   * So each attempt is numbered, and only the latest one may be answered.
+   */
+  const superseded = ({ id, degraded }: AuthAttempt): boolean => {
+    if (id !== latestAttempt) return true;
+    return degraded === null
+      ? state.kind !== 'authenticating'
+      : !(state.kind === 'authDegraded' && state.accountId === degraded.accountId);
+  };
+
+  /**
+   * Take a freshly proven session the rest of the way. Every method ends here
+   * — Apple, Google and email alike — so wrong-actor refusal, quarantine,
+   * activation, durable storage and binding cannot differ by how she signed in.
+   */
+  const adoptSession = async (session: AccountSession, degraded: Degraded | null): Promise<AccountState> => {
+    if (degraded !== null && session.accountId !== degraded.accountId) {
+      report('account.reauth_wrong_actor');
+      return state;
+    }
+
+    // Signing in as B on a device bound to A is a real account conflict, but
+    // B must never become the transport credential for A.
+    if (degraded === null && bindingFor(session).mode === 'quarantine') {
+      await options.sessions.write(session);
+      await identify(session.accountId);
+      apply({ type: 'sessionEstablished', session });
+      return runtime.resolveBinding();
+    }
+
+    const activated = await sessionClient.activate(session);
+    if (activated.kind !== 'active') {
+      report('account.session_activate_failed', activated.detail);
+      if (degraded !== null) return state;
+      return apply({ type: 'authFailed', detail: activated.detail, recoverable: activated.kind === 'unreachable' });
+    }
+
+    try {
+      await options.sessions.write(activated.session);
+    } catch (error) {
+      await sessionClient.signOut();
+      report('account.session_store_failed', error instanceof Error ? error.message : String(error));
+      if (degraded !== null) return state;
+      return apply({ type: 'authFailed', detail: 'could not safely store the account session', recoverable: true });
+    }
+
+    await identify(activated.session.accountId);
+    if (degraded !== null) return apply({ type: 'sessionRecovered', session: activated.session });
+
+    apply({ type: 'sessionEstablished', session: activated.session });
+    return runtime.resolveBinding();
+  };
+
+  const runtime: AccountRuntime = {
     getState: () => state,
     lastClaimOutcome: () => lastOutcome,
     subscribe(listener) {
@@ -271,13 +370,16 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
     },
 
     async signIn(provider) {
-      const degraded = state.kind === 'authDegraded' ? state : null;
-      if (degraded === null) {
-        if (state.kind !== 'unauthenticated' && state.kind !== 'authError') return state;
-        apply({ type: 'authStarted' });
-      }
+      const attempt = beginAuth();
+      if (attempt === null) return state;
+      const { degraded } = attempt;
 
       const result = await options.providers.signIn(provider);
+
+      if (superseded(attempt)) {
+        report('account.auth_superseded');
+        return state;
+      }
 
       switch (result.kind) {
         case 'cancelled':
@@ -299,41 +401,59 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
           break;
       }
 
-      if (degraded !== null && result.session.accountId !== degraded.accountId) {
-        report('account.reauth_wrong_actor');
-        return state;
+      return adoptSession(result.session, degraded);
+    },
+
+    emailOtpAvailable: () => emailOtp.isAvailable(),
+
+    async requestEmailOtp(email) {
+      if (!emailOtp.isAvailable()) return { kind: 'unavailable', detail: 'email_otp_not_configured' };
+      // A code is only worth asking for from a state that could use one.
+      if (state.kind !== 'unauthenticated' && state.kind !== 'authError' && state.kind !== 'authDegraded') {
+        return { kind: 'unavailable', detail: 'account_not_awaiting_sign_in' };
       }
 
-      // Signing in as B on a device bound to A is a real account conflict, but
-      // B must never become the transport credential for A.
-      if (degraded === null && bindingFor(result.session).mode === 'quarantine') {
-        await options.sessions.write(result.session);
-        await identify(result.session.accountId);
-        apply({ type: 'sessionEstablished', session: result.session });
-        return this.resolveBinding();
-      }
-
-      const activated = await sessionClient.activate(result.session);
-      if (activated.kind !== 'active') {
-        report('account.session_activate_failed', activated.detail);
-        if (degraded !== null) return state;
-        return apply({ type: 'authFailed', detail: activated.detail, recoverable: activated.kind === 'unreachable' });
-      }
-
+      let result: EmailOtpRequestResult;
       try {
-        await options.sessions.write(activated.session);
-      } catch (error) {
-        await sessionClient.signOut();
-        report('account.session_store_failed', error instanceof Error ? error.message : String(error));
-        if (degraded !== null) return state;
-        return apply({ type: 'authFailed', detail: 'could not safely store the account session', recoverable: true });
+        result = await emailOtp.request(email);
+      } catch {
+        // A port that throws anyway never reached an answer. The thrown text is
+        // not kept: it is the one place an address could ride into a log.
+        result = { kind: 'unreachable', detail: 'email_otp_request_threw' };
+      }
+      if (result.kind !== 'sent') report(`account.email_request_${result.kind}`, result.detail);
+      return result;
+    },
+
+    async verifyEmailOtp(email, code) {
+      if (!emailOtp.isAvailable()) return { state, outcome: { kind: 'unavailable', detail: 'email_otp_not_configured' } };
+
+      const attempt = beginAuth();
+      if (attempt === null) return { state, outcome: { kind: 'unavailable', detail: 'account_not_awaiting_sign_in' } };
+      const { degraded } = attempt;
+
+      let result: EmailOtpVerifyResult;
+      try {
+        result = await emailOtp.verify(email, code);
+      } catch {
+        result = { kind: 'unreachable', detail: 'email_otp_verify_threw' };
       }
 
-      await identify(activated.session.accountId);
-      if (degraded !== null) return apply({ type: 'sessionRecovered', session: activated.session });
+      if (superseded(attempt)) {
+        report('account.auth_superseded');
+        return { state, outcome: { kind: 'failed', detail: 'auth_superseded' } };
+      }
 
-      apply({ type: 'sessionEstablished', session: activated.session });
-      return this.resolveBinding();
+      if (result.kind !== 'success') {
+        // A code that was not accepted is not an account failure. She is exactly
+        // where she was, on the same screen, free to try again — the same move
+        // as changing her mind in a provider sheet, and nothing local is touched.
+        report(`account.email_verify_${result.kind}`, result.detail);
+        if (degraded === null) apply({ type: 'authCancelled' });
+        return { state, outcome: result };
+      }
+
+      return { state: await adoptSession(result.session, degraded), outcome: { kind: 'verified' } };
     },
 
     async resolveBinding() {
@@ -500,6 +620,8 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
       return apply({ type: 'signedOut' });
     },
   };
+
+  return runtime;
 }
 
 async function safeSave(

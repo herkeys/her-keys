@@ -36,8 +36,16 @@ export function toAccountId(value: unknown): AccountId | null {
  */
 export type AuthProvider = 'apple' | 'google';
 
+/**
+ * How a session was proven. Passwordless email is a two-phase flow (request a
+ * code, then verify it), so it is NOT an `AuthProvider` — it has no one-step
+ * `signIn()` to give the provider registry — but a session it produces is the
+ * same Supabase user id as any other, and its provenance is recorded here.
+ */
+export type AuthMethod = AuthProvider | 'email';
+
 export interface ProviderIdentity {
-  provider: AuthProvider;
+  provider: AuthMethod;
   /** The provider's own subject. Recorded for support and audit only. */
   subject: string | null;
   /**

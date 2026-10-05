@@ -9,6 +9,7 @@ import type { SyncRuntime } from '../domain/sync/syncRuntime';
 import type { SyncTransport } from '../domain/sync/transport';
 import { identifyRevenueCatAccount } from '../monetization/revenueCatClient';
 import { createAppleProvider } from '../platform/appleProvider';
+import { createSupabaseEmailOtp } from '../platform/emailOtpProvider';
 import { createGoogleProvider } from '../platform/googleProvider';
 import { createHerKeysAiClient, UNCONFIGURED_HER_KEYS_AI } from '../platform/herKeysAiClient';
 import { createExternalIntelligenceClient, UNCONFIGURED_EXTERNAL_INTELLIGENCE } from '../platform/externalIntelligenceClient';
@@ -82,6 +83,11 @@ const adapters: AuthProviderAdapter[] =
 /** Which providers this device can actually offer. Asked, not assumed. */
 export const accountProviders = createProviderRegistry(adapters);
 
+// Passwordless email is two phases, so it is a port of its own rather than a
+// one-step adapter. It rides the same isolated provider client, and — like
+// Google — only where the durable secure credential store exists.
+const emailOtp = providerClient !== null && secureStorageAvailable ? createSupabaseEmailOtp(providerClient) : undefined;
+
 /**
  * With no Supabase project there is nothing to transport to. The runtime is still composed (so the composition never differs
  * between builds), but no account can bind, so it never starts.
@@ -104,6 +110,7 @@ const app = composeAccountApp({
     sessions,
     sessionClient,
     providers: accountProviders,
+    emailOtp,
     cloud: client === null ? unconfiguredCloud : createSupabaseAccountClient(client),
     timezone: deviceTimeZone,
     now: Date.now,

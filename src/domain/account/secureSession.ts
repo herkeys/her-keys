@@ -1,4 +1,4 @@
-import { toAccountId, type AccountSession, type AuthProvider } from './identity';
+import { toAccountId, type AccountSession, type AuthMethod } from './identity';
 
 /**
  * THE SESSION CREDENTIAL BOUNDARY.
@@ -45,7 +45,7 @@ export interface SecureSessionStore {
   clear(): Promise<void>;
 }
 
-const PROVIDERS: ReadonlySet<string> = new Set<AuthProvider>(['apple', 'google']);
+const PROVIDERS: ReadonlySet<string> = new Set<AuthMethod>(['apple', 'google', 'email']);
 
 /**
  * Narrow untrusted stored text into a session.
@@ -77,7 +77,7 @@ export function parseStoredSession(raw: string): AccountSession | null {
     const p = rawProvider as Record<string, unknown>;
     if (typeof p.provider !== 'string' || !PROVIDERS.has(p.provider)) return null;
     provider = {
-      provider: p.provider as AuthProvider,
+      provider: p.provider as AuthMethod,
       subject: typeof p.subject === 'string' ? p.subject : null,
       suggestedDisplayName: typeof p.suggestedDisplayName === 'string' ? p.suggestedDisplayName : null,
     };
