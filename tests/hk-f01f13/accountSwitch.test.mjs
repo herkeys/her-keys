@@ -60,7 +60,7 @@ function asTheServerScopesPulls(cloud, householdId, profileId) {
 }
 const routeAccess = (device, account) => {
   const snapshot = device.store.getSnapshot();
-  return { status: snapshot.status, onboarding: snapshot.state.onboarding, internalTools: false, account };
+  return { status: snapshot.status, onboarding: snapshot.state.onboarding, internalTools: false, account, accountSettled: true };
 };
 
 test('[P10] A -> B -> A on one device, with every Wave 3/4 feature\'s private rows: B sees, sends and overwrites nothing; A comes back whole', async () => {

@@ -46,7 +46,7 @@ const STATES = {
   authDegraded: { kind: 'authDegraded', accountId: ACCOUNT_A, householdId: HOUSEHOLD, reason: 'expired' },
   boundOther: { kind: 'boundOther', session: sessionFor(ACCOUNT_B), quarantinedAccountId: ACCOUNT_A },
 };
-const access = (account, onboarding = finished) => ({ status: 'ready', onboarding, internalTools: false, account });
+const access = (account, onboarding = finished) => ({ status: 'ready', onboarding, internalTools: false, account, accountSettled: true });
 const opens = (screen, account, onboarding) => canOpenScreen(screen, access(account, onboarding));
 
 /** All text a rendered tree shows, and the accessibility labels of every pressable. */
@@ -74,10 +74,15 @@ async function panel(props) {
   return { tree, calls, texts: texts(tree), buttons: buttons(tree) };
 }
 
-describe('PP-D04 — Your Account is reachable in every ordinary account state', () => {
-  test('1. an unauthenticated user can open Your Account, and Today offers "Sign in"', () => {
-    assert.equal(opens('sign-in', STATES.unauthenticated), true);
-    assert.equal(opens('sign-in', STATES.authError), true);
+describe('PP-D04 — Your Account is reachable for every household this device holds under an account', () => {
+  // Identity is now part of the first-run gate: someone who is signed out signs in through the entry route's welcome
+  // tree, so Your Account is no longer a second sign-in surface. It is the account surface AFTER the first run.
+  test('1. a signed-out device signs in at the entry route, not in Your Account; the account model still names that state', () => {
+    for (const kind of ['unauthenticated', 'authError']) {
+      assert.equal(opens('sign-in', STATES[kind]), false, kind);
+      assert.equal(opens('index', STATES[kind]), true, `${kind}: the welcome tree is where she signs in`);
+      assert.equal(opens('(app)', STATES[kind]), false, `${kind}: there is no way into the app without an account`);
+    }
     assert.equal(accountEntryLabel(accountModalMode(STATES.unauthenticated, true)), 'Sign in');
     assert.equal(accountModalMode(STATES.unauthenticated, true), 'signIn');
   });
@@ -95,9 +100,11 @@ describe('PP-D04 — Your Account is reachable in every ordinary account state',
     assert.equal(accountEntryLabel('reconnect'), 'Reconnect');
   });
 
-  test('Your Account opens before onboarding finishes too (unchanged from the old guard), without opening the app', () => {
-    assert.equal(opens('sign-in', STATES.unauthenticated, unfinished), true);
-    assert.equal(opens('(app)', STATES.unauthenticated, unfinished), false);
+  test('Your Account opens before onboarding finishes too, for a held household, without opening the app', () => {
+    assert.equal(opens('sign-in', STATES.accountBound, unfinished), true);
+    assert.equal(opens('sign-in', STATES.authDegraded, unfinished), true);
+    assert.equal(opens('(app)', STATES.accountBound, unfinished), false);
+    assert.equal(opens('sign-in', STATES.unauthenticated, unfinished), false, 'signed out: the entry route, not this modal');
   });
 
   test('the entry opens the one existing route, and the modal route is the one guarded here', () => {
@@ -129,13 +136,23 @@ describe('PP-D04 — quarantine is not weakened', () => {
 });
 
 describe('PP-D21 — a provider flow in flight does not collapse the navigator', () => {
-  test('while authenticating, Your Account and the screens she already had stay open', () => {
-    assert.equal(opens('sign-in', STATES.authenticating), true, 'the modal running the flow must stay mounted');
-    assert.equal(opens('(app)', STATES.authenticating), true);
-    assert.equal(opens('talk-it-out', STATES.authenticating), true);
-    assert.equal(opens('account-conflict', STATES.authenticating), false);
-    assert.equal(opens('index', STATES.authenticating, unfinished), true);
-    assert.equal(opens('(app)', STATES.authenticating, unfinished), false, 'onboarding guards are unchanged');
+  test('while authenticating, the screen running the flow stays open: the entry route, for a first sign-in', () => {
+    // A first sign-in runs on the entry route (the welcome tree), so that is the screen that must not be pulled away.
+    for (const onboarding of [finished, unfinished]) {
+      assert.equal(opens('index', STATES.authenticating, onboarding), true, 'the tree running the flow must stay mounted');
+      assert.equal(opens('(app)', STATES.authenticating, onboarding), false, 'nothing account-held opens before ownership is decided');
+      assert.equal(opens('account-conflict', STATES.authenticating, onboarding), false);
+      const open = Object.keys(ROOT_SCREEN_GUARDS).filter((screen) => opens(screen, STATES.authenticating, onboarding));
+      assert.ok(open.length >= 1, 'the root stack never empties onto the router\'s system routes');
+    }
+  });
+
+  test('a reconnect in flight keeps Your Account and the app: the account stays degraded, and bound, until the same account returns', () => {
+    // AccountRuntime does not enter `authenticating` for a degraded account, so the modal running the reconnect and the
+    // app under it are both still open for the whole flow.
+    assert.equal(opens('sign-in', STATES.authDegraded), true, 'the modal running the reconnect must stay mounted');
+    assert.equal(opens('(app)', STATES.authDegraded), true);
+    assert.equal(opens('talk-it-out', STATES.authDegraded), true);
   });
 
   test('authenticating routes exactly like the signed-out state it started from', () => {
@@ -146,9 +163,12 @@ describe('PP-D21 — a provider flow in flight does not collapse the navigator',
     }
   });
 
-  test('resolving states keep the modal mounted but offer nothing contradictory', async () => {
+  test('resolving states keep the entry mounted, open nothing account-held, and offer nothing contradictory', async () => {
     for (const kind of ['authenticating', 'authenticatedUnbound', 'bootstrapping', 'claiming']) {
-      assert.equal(opens('sign-in', STATES[kind]), true, kind);
+      for (const onboarding of [finished, unfinished]) {
+        // Signed in is not yet "this household is hers": until the binding answers, it could still be another account's.
+        assert.deepEqual(Object.keys(ROOT_SCREEN_GUARDS).filter((screen) => opens(screen, STATES[kind], onboarding)), ['index'], kind);
+      }
       assert.equal(accountModalMode(STATES[kind], true), 'resolving', kind);
     }
     const { buttons: b } = await panel({ mode: 'resolving', providers: ['apple', 'google'], busy: true });
@@ -195,6 +215,10 @@ describe('PP-D04 — sign-out and switching go through AccountRuntime', () => {
     }
     assert.match(strip(read('app/sign-in.tsx')), /const \{ state, available, busy, signIn, signOut \} = useAccount\(\);/);
     assert.match(strip(read('app/sign-in.tsx')), /onSignOut=\{\(\) => void signOut\(\)\}/);
+    // The welcome tree's wiring holds to the same rule: it reaches the runtime through useAccount and nothing else.
+    for (const file of ['src/features/account/WelcomeAuthFlow.tsx', 'src/features/account/welcomeFlowModel.ts', 'app/index.tsx']) {
+      assert.doesNotMatch(strip(read(file)), /expo-secure-store|@supabase|SecureStore|secureStore|sessions\.|supabaseCloud|AsyncStorage|setSession|auth\.sign|signInWithOtp|verifyOtp\(/, file);
+    }
     assert.match(read('src/store/AccountProvider.tsx'), /signOut: \(\) => run\(\(\) => accountRuntime\.signOut\(\)\)/);
   });
 
@@ -211,13 +235,16 @@ describe('PP-D04 — sign-out and switching go through AccountRuntime', () => {
     assert.equal(device.store.getSnapshot().identity.binding.accountId, ACCOUNT_A, 'signing out is not leaving the account');
     assert.notEqual(device.store.getSnapshot().state, null, 'the local household is still here');
     assert.equal(await device.secure.getItem('herkeys.secure.session'), null, 'the credential is gone');
-    assert.equal(opens('(app)', out), true, 'she keeps using her household locally');
-    assert.equal(opens('sign-in', out), true);
+    assert.equal(opens('(app)', out), false, 'signed out, the app is closed: nothing of the household renders without its account');
+    assert.equal(opens('sign-in', out), false);
+    assert.deepEqual(Object.keys(ROOT_SCREEN_GUARDS).filter((screen) => opens(screen, out)), ['index'], 'signing out returns her to the welcome tree, and to nothing else');
     assert.equal(accountModalMode(out, true), 'signIn');
 
     const again = await device.signIn();
     assert.equal(again.kind, 'accountBound');
     assert.equal(again.householdId, bound.householdId, 'the same account resumes the same household');
+    assert.equal(opens('(app)', again), true, 'and she is straight back in her app, with no second onboarding');
+    assert.equal(opens('index', again), false, 'a returning account does not see Welcome again');
   });
 
   test('10. account switch = Sign out, then Sign in as another account: the existing quarantine applies, nothing merges', async () => {
@@ -241,7 +268,8 @@ describe('PP-D04 — sign-out and switching go through AccountRuntime', () => {
     const back = await device.accountRuntime.signOut();
     assert.equal(back.kind, 'unauthenticated');
     assert.equal(device.store.getSnapshot().identity.binding.accountId, ACCOUNT_A, 'A\'s household and binding are untouched');
-    assert.equal(opens('(app)', back), true);
+    assert.equal(opens('(app)', back), false, 'signed out again, A\'s household is still on screen for nobody');
+    assert.equal(opens('index', back), true);
   });
 });
 

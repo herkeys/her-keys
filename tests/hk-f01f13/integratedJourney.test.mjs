@@ -186,7 +186,7 @@ test('[P11] the 21-step journey: every feature on one household, offline edits a
   assert.equal(accountC.kind, 'boundOther', 'the device holds A\'s household: quarantined from C');
   assert.equal(cloud.calls.length, callsBefore, 'not one request on C\'s behalf');
   const snapshot = c.store.getSnapshot();
-  const access = { status: snapshot.status, onboarding: snapshot.state.onboarding, internalTools: false, account: accountC };
+  const access = { status: snapshot.status, onboarding: snapshot.state.onboarding, internalTools: false, account: accountC, accountSettled: true };
   assert.equal(canOpenScreen('(app)', access), false, 'C can open no screen that renders A\'s household');
   assert.ok(c.persisted().identity.quarantine, 'A\'s household is preserved');
   for (const collection of COLLECTIONS) {

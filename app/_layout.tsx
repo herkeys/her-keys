@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { colors } from '../src/design/tokens';
 import { canOpenScreen, isSettled, type RootScreen } from '../src/domain/routeAccess';
+import { WelcomeAuthSettling } from '../src/features/account/WelcomeAuthFlow';
 import { RevenueCatProvider } from '../src/monetization/RevenueCatProvider';
 import { AccountProvider, useAccount } from '../src/store/AccountProvider';
 import { AppStateProvider, useStoreSnapshot } from '../src/store/AppStateProvider';
@@ -43,9 +44,10 @@ export default function RootLayout() {
 
 /**
  * The routing authority. Every root screen is declared inside its own guard
- * from the access table, so a link can't reach the app before onboarding is
- * finished, or onboarding after it — and a device holding another account's
- * household opens nothing but the conflict screen.
+ * from the access table, so a link can't reach the audit or the app without an
+ * account, the app before onboarding is finished, or onboarding after it — and
+ * a device holding another account's household opens nothing but the conflict
+ * screen.
  */
 function RootNavigator() {
   const snapshot = useStoreSnapshot();
@@ -63,7 +65,18 @@ function RootNavigator() {
   // is then checked against the guards — nothing is decided, or shown, early.
   if (!settled || !snapshot.state) return null;
 
-  const access = { status: snapshot.status, onboarding: snapshot.state.onboarding, internalTools, account: account.state };
+  // The household has loaded but the stored session is still being resolved. Account state is not an answer yet, so
+  // there is still no navigator: a returning account must not see Welcome, and nobody may see the audit or the app, for
+  // however long the restore takes. The launch URL keeps waiting, exactly as it does through hydration.
+  if (!account.settled) return <WelcomeAuthSettling />;
+
+  const access = {
+    status: snapshot.status,
+    onboarding: snapshot.state.onboarding,
+    internalTools,
+    account: account.state,
+    accountSettled: account.settled,
+  };
   const allow = (screen: RootScreen) => canOpenScreen(screen, access);
 
   return (
@@ -72,7 +85,7 @@ function RootNavigator() {
         <OneMoveProvider>
           <TalkItOutProvider>
             <Stack
-              // Welcome anchors onboarding only while it can be opened; otherwise the first allowed screen leads.
+              // The entry anchors the stack only while it can be opened; otherwise the first allowed screen leads.
               initialRouteName={allow('index') ? 'index' : undefined}
               screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}
             >

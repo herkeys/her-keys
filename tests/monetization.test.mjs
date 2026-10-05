@@ -187,7 +187,7 @@ describe('Onboarding: Her Keys+ is the final step', () => {
     for (const screen of Object.keys(ROOT_SCREEN_GUARDS)) {
       if (screen === '(app)' || screen === 'talk-it-out' || screen === 'event-editor' || screen === 'task-editor' || screen === 'opportunity-editor') continue;
       if (screen === 'dev-tools') continue;
-      // Signing in is offered, not demanded, so it stays reachable after
+      // Your Account (status, reconnect, sign out) stays reachable after
       // onboarding. It is not an onboarding step and cannot loop her back into
       // one -- it is a modal she can close.
       if (screen === 'sign-in') continue;

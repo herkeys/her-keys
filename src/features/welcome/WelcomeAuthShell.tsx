@@ -63,6 +63,7 @@ export function WelcomeAuthShell({ state, onBegin, onApple, onGoogle, onChooseEm
           platform={state.platform}
           pending={state.pending}
           headerless={state.presentation === 'auth-degraded'}
+          notice={state.notice}
           onApple={onApple}
           onGoogle={onGoogle}
           onChooseEmail={onChooseEmail}

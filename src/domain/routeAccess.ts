@@ -1,4 +1,4 @@
-import type { AccountState } from './account/authState';
+import { canRenderAccountData, type AccountState } from './account/authState';
 import { isOnboardingComplete, onboardingStepAccess } from './onboarding';
 import type { Onboarding, OnboardingStep } from './state';
 
@@ -9,14 +9,25 @@ import type { Onboarding, OnboardingStep } from './state';
  * in `Stack.Protected`, so the table is the routing authority rather than
  * per-screen redirects. Account state is one more condition here, which is why
  * no screen had to learn about authentication.
+ *
+ * IDENTITY IS PART OF THE FIRST-RUN GATE. The Life Systems Audit and the app
+ * open only for a household this device holds under a known account; everyone
+ * else gets the welcome tree. Whether Welcome shows is derived, every launch,
+ * from three facts — hydration, the restored account state, and onboarding —
+ * and from nothing else: there is no "has seen welcome" flag to drift from them,
+ * and there is no guest path.
  */
 
 export type HydrationStatus = 'unhydrated' | 'hydrating' | 'ready' | 'recovery';
 
-type Guard = 'onboarding' | 'app' | 'internal' | 'account' | 'quarantined' | { onboardingStep: OnboardingStep };
+type Guard = 'entry' | 'app' | 'internal' | 'account' | 'quarantined' | { onboardingStep: OnboardingStep };
 
 export const ROOT_SCREEN_GUARDS = {
-  index: 'onboarding',
+  /**
+   * The entry: the welcome tree (Welcome, account choice, email, code) for anyone without an account-held household, and
+   * the place a signed-in household that has not finished the audit is handed on to the step she had reached.
+   */
+  index: 'entry',
   'onboarding/goals': { onboardingStep: 'goals' },
   'onboarding/strengths': { onboardingStep: 'strengths' },
   'onboarding/struggles': { onboardingStep: 'struggles' },
@@ -32,8 +43,9 @@ export const ROOT_SCREEN_GUARDS = {
   /** Development design gallery — same internal-build gate as dev-tools. */
   gallery: 'internal',
   /**
-   * Your Account (PP-D04): sign in, reconnect, or — once connected — sign out. Open to every account state except
-   * quarantine, including while a provider flow or the binding is in flight, because that flow is running ON this screen.
+   * Your Account (PP-D04): account status, reconnect, and sign out — for a household this device holds under an account,
+   * including while a reconnect is in flight, because that flow is running ON this screen. Signing in for the first time
+   * is the welcome tree's job, not this screen's, so it does not open for someone who is signed out.
    */
   'sign-in': 'account',
   /** The one screen a device holding another account's household may open. */
@@ -48,6 +60,11 @@ export interface RouteAccessInput {
   internalTools: boolean;
   /** Who the app belongs to right now. The single account authority. */
   account: AccountState;
+  /**
+   * Whether the stored session has been resolved this launch. Until it has, `account` is only the runtime's starting
+   * value: routing on it would show Welcome to a returning account for as long as the restore takes.
+   */
+  accountSettled: boolean;
 }
 
 /** Until state has loaded nothing is decided — no screen opens, so nothing protected can flash. */
@@ -55,8 +72,13 @@ export function isSettled(status: HydrationStatus): boolean {
   return status === 'ready' || status === 'recovery';
 }
 
+/** Hydration AND the account restore have both answered. Before that, the only thing to show is that we are getting ready. */
+export function isRoutingSettled(input: Pick<RouteAccessInput, 'status' | 'accountSettled'>): boolean {
+  return isSettled(input.status) && input.accountSettled;
+}
+
 export function canOpenScreen(screen: RootScreen, input: RouteAccessInput): boolean {
-  if (!isSettled(input.status) || input.onboarding === null) return false;
+  if (!isRoutingSettled(input) || input.onboarding === null) return false;
 
   const guard: Guard = ROOT_SCREEN_GUARDS[screen];
   const account = input.account;
@@ -68,22 +90,31 @@ export function canOpenScreen(screen: RootScreen, input: RouteAccessInput): bool
   if (account.kind === 'boundOther') return guard === 'quarantined';
   if (guard === 'quarantined') return false;
 
-  // A provider flow in flight ('authenticating') routes exactly like the state it
-  // started from (signed out or failed, with her own local household already on
-  // screen); ownership is only decided once the flow settles, and the first
-  // check above still wins the moment it resolves to another account. It used to
-  // close EVERY screen, which left the root stack holding only Expo Router's
-  // injected system routes, so the sign-in modal and the app vanished mid-flow
-  // and navigation reset onto the Sitemap / Unmatched Route page (PP-D21).
+  // Internal tooling is a build property, not an account one.
+  if (guard === 'internal') return input.internalTools;
 
-  // Your Account opens for every non-quarantined state, so it never disappears
-  // under a flow it is running.
+  // The household on this device may be shown only once it is known to be THIS
+  // account's: bound, or bound with a lapsed credential (local work continues,
+  // B4-P0-015). Signed out, a flow in flight, a failed attempt, and signed in
+  // but not yet bound are all the same answer here -- not yet -- so a session
+  // that is still resolving can never put a household on screen that might turn
+  // out to be someone else's.
+  const held = canRenderAccountData(account);
+  const complete = isOnboardingComplete(input.onboarding);
+
+  // The entry stays open through a sign-in in flight ('authenticating', then
+  // binding), so the screen running the flow is never pulled out from under it
+  // and the root stack never empties onto Expo Router's system routes (PP-D21).
+  if (guard === 'entry') return !held || !complete;
+
+  if (!held) return false;
+
+  // Your Account, for a household this device holds. A reconnect leaves the
+  // account degraded until the same account returns, so the modal stays mounted
+  // under its own flow.
   if (guard === 'account') return true;
 
-  const complete = isOnboardingComplete(input.onboarding);
   if (guard === 'app') return complete;
-  if (guard === 'onboarding') return !complete;
-  if (guard === 'internal') return input.internalTools;
   return !complete && onboardingStepAccess(input.onboarding)[guard.onboardingStep];
 }
 

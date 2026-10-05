@@ -10,6 +10,8 @@ export interface AccountChoiceViewProps {
   pending: WelcomeAuthMethod | null;
   /** The degraded presentation supplies its own reconnect header instead. */
   headerless?: boolean;
+  /** The last attempt from here ended without an account. Never set for a cancellation. */
+  notice?: WelcomeAuthViewState['notice'];
   onApple: WelcomeAuthCallbacks['onApple'];
   onGoogle: WelcomeAuthCallbacks['onGoogle'];
   onChooseEmail: WelcomeAuthCallbacks['onChooseEmail'];
@@ -28,7 +30,7 @@ export interface AccountChoiceViewProps {
  * Terms/Privacy: no legal routes exist in the app yet, so no links render
  * (see copy.ts). Reported for release follow-up rather than faked.
  */
-export function AccountChoiceView({ platform, pending, headerless, onApple, onGoogle, onChooseEmail }: AccountChoiceViewProps) {
+export function AccountChoiceView({ platform, pending, headerless, notice, onApple, onGoogle, onChooseEmail }: AccountChoiceViewProps) {
   const handlers = { apple: onApple, google: onGoogle, email: onChooseEmail } as const;
   const methods = methodsForPlatform(platform);
 
@@ -57,6 +59,18 @@ export function AccountChoiceView({ platform, pending, headerless, onApple, onGo
             </AppText>
           </View>
         )}
+        {/* Only where she is choosing an account and Apple is among the choices: a reconnect must return to the same
+            account, so suggesting another method there would mislead (same rule as the account surface). */}
+        {!headerless && methods.includes('apple') && (
+          <AppText variant="bodySm" color={color.text.muted} style={styles.notice}>
+            {COPY.accountChoice.crossPlatformNote}
+          </AppText>
+        )}
+        {pending === null && notice === 'attempt-failed' && (
+          <AppText variant="bodySm" color={color.text.muted} style={styles.notice} accessibilityLiveRegion="polite">
+            {COPY.accountChoice.attemptFailed}
+          </AppText>
+        )}
         {methods.map((method) => (
           <ProviderButton key={method} method={method} disabled={pending !== null} onPress={handlers[method]} />
         ))}
@@ -77,4 +91,5 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     marginBottom: spacing.xs,
   },
+  notice: { textAlign: 'center', marginBottom: spacing.xs },
 });

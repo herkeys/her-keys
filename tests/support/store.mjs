@@ -1,4 +1,3 @@
-import { INITIAL_ACCOUNT_STATE } from '../../src/domain/account/authState.ts';
 import { completeOnboarding, toggleOnboardingOption } from '../../src/domain/onboarding.ts';
 import { resolveOneMoveForToday } from '../../src/domain/oneMove.ts';
 
@@ -11,7 +10,18 @@ export async function finishOnboarding(store) {
   await store.flush();
 }
 
-export function accessFor(store, internalTools = false, account = INITIAL_ACCOUNT_STATE) {
+/**
+ * A household this device holds under an account: the only state in which the Life Systems Audit or the app may open.
+ * Identity is part of the first-run gate, so a test about onboarding or app access is a test about a held household.
+ */
+export const HELD_ACCOUNT = Object.freeze({
+  kind: 'accountBound',
+  session: { accountId: '11111111-1111-4111-8111-111111111111', accessToken: 'a', refreshToken: 'r', expiresAt: 1, provider: null },
+  householdId: '33333333-3333-4333-8333-333333333333',
+});
+
+/** The route-access input for a running store, with the account restore already answered. */
+export function accessFor(store, internalTools = false, account = HELD_ACCOUNT) {
   const { status, state } = store.getSnapshot();
-  return { status, onboarding: state?.onboarding ?? null, internalTools, account };
+  return { status, onboarding: state?.onboarding ?? null, internalTools, account, accountSettled: true };
 }

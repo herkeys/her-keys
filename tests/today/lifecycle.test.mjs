@@ -19,6 +19,7 @@ import { tomorrowPreview } from '../../src/domain/tomorrowPreview.ts';
 import { buildTodayView } from '../../src/features/today/model/index.ts';
 import { createEmptyState } from '../../src/state/initialState.ts';
 import { STORAGE_KEYS, TZ, demoState, harness, onboardedState, rawEnvelope, stored } from '../support/fixtures.mjs';
+import { HELD_ACCOUNT } from '../support/store.mjs';
 import { DAY, NEXT_DAY, at, deepFreeze, ev, eventNamed, facet, household, mkCtx, nyMs, strings, taskNamed, tk, valid, view, withMove } from './fixtures.mjs';
 
 const READY = { status: 'ready', recovery: null, persistence: 'enabled' };
@@ -99,11 +100,13 @@ describe('Scenario L — the demo household, and the onboarding guard', () => {
 
   test('the onboarding guard is intact: Today cannot be the entry path for an incomplete household, and there is one Today route', () => {
     const incomplete = createEmptyState(TZ);
-    const access = (status, onboarding) => ({ status, onboarding, internalTools: false, account: INITIAL_ACCOUNT_STATE });
+    // Identity is part of the first-run gate, so the onboarding guard is asked of a household held under an account.
+    const access = (status, onboarding, account = HELD_ACCOUNT) => ({ status, onboarding, internalTools: false, account, accountSettled: true });
     assert.equal(canOpenScreen('(app)', access('ready', incomplete.onboarding)), false);
     assert.equal(canOpenScreen('index', access('ready', incomplete.onboarding)), true);
     assert.equal(canOpenScreen('(app)', access('ready', household().onboarding)), true);
     assert.equal(canOpenScreen('(app)', access('hydrating', household().onboarding)), false);
+    assert.equal(canOpenScreen('(app)', access('ready', household().onboarding, INITIAL_ACCOUNT_STATE)), false, 'and Today is never the entry path for a signed-out device, finished or not');
     assert.equal(ROOT_SCREEN_GUARDS['(app)'], 'app');
     assert.equal(rootScreenForPath('/today'), '(app)');
     assert.equal(Object.keys(ROOT_SCREEN_GUARDS).some((k) => /today/i.test(k)), false, 'no second Today route in the guard table');

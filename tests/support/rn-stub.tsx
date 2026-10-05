@@ -48,6 +48,29 @@ export const StyleSheet = {
 /** Enough of RN's AppState for the store provider to mount: it subscribes, and never fires. */
 export const AppState = { addEventListener: (_event: string, _handler: (state: string) => void) => ({ remove: () => {} }) };
 
+/**
+ * Android hardware Back. Handlers register exactly as on a device; a test presses Back with `BackHandler.__press()`, which
+ * asks the most recently added handler first (RN's order) and reports whether any handler consumed it. `false` means the
+ * press was left to the system — on a root screen, that is leaving the app.
+ */
+const backHandlers: Array<() => boolean | null | undefined> = [];
+export const BackHandler = {
+  addEventListener: (_event: string, handler: () => boolean | null | undefined) => {
+    backHandlers.push(handler);
+    return {
+      remove: () => {
+        const index = backHandlers.indexOf(handler);
+        if (index !== -1) backHandlers.splice(index, 1);
+      },
+    };
+  },
+  __press: (): boolean => {
+    for (let index = backHandlers.length - 1; index >= 0; index--) if (backHandlers[index]() === true) return true;
+    return false;
+  },
+  __count: (): number => backHandlers.length,
+};
+
 /** Easing functions are identities in tests — timing is not asserted here. */
 export const Easing = {
   cubic: (t: number) => t,
@@ -85,6 +108,6 @@ export const Animated = {
 const rn = {
   View, Text, ScrollView, Pressable, TextInput, KeyboardAvoidingView, Modal,
   SafeAreaView, ActivityIndicator, useSafeAreaInsets, Platform, StyleSheet, AppState,
-  Easing, AccessibilityInfo, Animated,
+  Easing, AccessibilityInfo, Animated, BackHandler,
 };
 export default rn;

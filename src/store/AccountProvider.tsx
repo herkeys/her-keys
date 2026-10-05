@@ -1,6 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { AppState } from 'react-native';
+import type { EmailVerification } from '../domain/account/accountRuntime';
 import { INITIAL_ACCOUNT_STATE, type AccountState } from '../domain/account/authState';
+import type { EmailOtpRequestResult } from '../domain/account/emailOtp';
 import type { AuthProvider } from '../domain/account/identity';
 import type { SyncNamespace } from '../domain/sync/syncTypes';
 import { accountRuntime, accountsAvailable, syncRuntime } from './accountRuntimeInstance';
@@ -16,10 +18,23 @@ export interface AccountContextValue {
   state: AccountState;
   /** Whether this build can bind to an account at all. */
   available: boolean;
-  signIn: (provider: AuthProvider) => Promise<void>;
-  signOut: () => Promise<void>;
+  /**
+   * Whether the stored session has been resolved since launch. Until it has, `state` is only the runtime's starting value,
+   * not an answer, and nothing may be routed on it — that is what keeps Welcome, onboarding and the app from flashing while
+   * a returning account is being restored. Derived each launch from the restore itself; never persisted.
+   */
+  settled: boolean;
+  /** Resolves to the account state the attempt ended in — the only evidence of how it went. */
+  signIn: (provider: AuthProvider) => Promise<AccountState>;
+  /** Whether passwordless email can be offered on this device. */
+  emailAvailable: boolean;
+  /** Email phase one. Changes no account state; calling it again is the resend. */
+  requestEmailOtp: (email: string) => Promise<EmailOtpRequestResult>;
+  /** Email phase two. The code goes straight to the runtime and is kept nowhere. */
+  verifyEmailOtp: (email: string, code: string) => Promise<{ state: AccountState; outcome: EmailVerification }>;
+  signOut: () => Promise<AccountState>;
   /** Retry the binding this device needs, after a failure she can see. */
-  retryBinding: () => Promise<void>;
+  retryBinding: () => Promise<AccountState>;
   busy: boolean;
   /** The sync namespace for the bound account, or null. Read-only here. */
   syncNamespace: SyncNamespace | null;
@@ -31,6 +46,8 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   const snapshot = useStoreSnapshot();
   const [state, setState] = useState<AccountState>(INITIAL_ACCOUNT_STATE);
   const [busy, setBusy] = useState(false);
+  // A build with no account backend has nothing to restore, so it is settled from the start.
+  const [settled, setSettled] = useState(!accountsAvailable);
   const hydrated = snapshot.state !== null;
 
   useEffect(() => accountRuntime.subscribe(setState), []);
@@ -50,7 +67,10 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         // opening on her own local household.
       })
       .finally(() => {
-        if (live) setBusy(false);
+        if (!live) return;
+        setBusy(false);
+        // Settled however the restore ended: signed out, bound, degraded and quarantined are all answers.
+        setSettled(true);
       });
     return () => {
       live = false;
@@ -80,7 +100,9 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   const run = useCallback(async (work: () => Promise<AccountState>) => {
     setBusy(true);
     try {
-      setState(await work());
+      const next = await work();
+      setState(next);
+      return next;
     } finally {
       setBusy(false);
     }
@@ -90,13 +112,26 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     () => ({
       state,
       available: accountsAvailable,
+      settled,
       syncNamespace: snapshot.identity?.sync ?? null,
       busy,
       signIn: (provider) => run(() => accountRuntime.signIn(provider)),
+      emailAvailable: accountRuntime.emailOtpAvailable(),
+      requestEmailOtp: (email) => accountRuntime.requestEmailOtp(email),
+      verifyEmailOtp: async (email, code) => {
+        setBusy(true);
+        try {
+          const verified = await accountRuntime.verifyEmailOtp(email, code);
+          setState(verified.state);
+          return verified;
+        } finally {
+          setBusy(false);
+        }
+      },
       signOut: () => run(() => accountRuntime.signOut()),
       retryBinding: () => run(() => accountRuntime.resolveBinding()),
     }),
-    [state, busy, run, snapshot.identity]
+    [state, settled, busy, run, snapshot.identity]
   );
 
   return <AccountContext.Provider value={value}>{children}</AccountContext.Provider>;

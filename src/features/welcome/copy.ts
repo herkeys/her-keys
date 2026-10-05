@@ -9,7 +9,7 @@
  * This module is presentation-only: no copy here implies a backend behavior,
  * a rate limit, or a persisted state.
  */
-import { PROVIDER_LABELS } from '../account/accountModel';
+import { CROSS_PLATFORM_NOTE, PROVIDER_LABELS } from '../account/accountModel';
 import type { WelcomeAuthMethod } from './model';
 
 export const WELCOME_AUTH_COPY = {
@@ -33,6 +33,13 @@ export const WELCOME_AUTH_COPY = {
      * routes land, the line belongs here.
      */
     pending: 'Connecting your account…',
+    /**
+     * EX-01, the owner-approved Apple exception: Sign in with Apple is iOS-only, so where Apple is offered the choice
+     * carries the account feature's own disclosure, word for word. Never shown where Apple is not.
+     */
+    crossPlatformNote: CROSS_PLATFORM_NOTE,
+    /** Same reassurance, in the same words, as the account surface uses after a failed sign-in. */
+    attemptFailed: 'That did not go through. Nothing on this device changed — you can try again.',
   },
 
   email: {
@@ -58,6 +65,8 @@ export const WELCOME_AUTH_COPY = {
     changeEmail: 'Use a different email',
     wrongCode: 'That code doesn’t match. Check it and try again.',
     expiredCode: 'This code expired. Request a new one.',
+    /** The auth service does not say which, so neither does this line. */
+    invalidOrExpired: 'That code didn’t work. Check it, or request a new one.',
     verifyFailed: 'That didn’t go through. Your information is still here — try again.',
     pending: 'Checking your code…',
   },

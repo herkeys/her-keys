@@ -171,7 +171,7 @@ describe('ACCOUNT-SWITCH ISOLATION and DEMO ISOLATION', () => {
     assert.equal(cloud.calls.length, callsBefore, 'not one request on B\'s behalf, so none of A\'s People (pending or not) went up under B');
     assert.equal(cloudRows(cloud, 'person_contexts').filter((r) => r.household_id === cloudB.ids.householdId).length, 0);
     const snapshot = b.store.getSnapshot();
-    const access = { status: snapshot.status, onboarding: snapshot.state.onboarding, internalTools: false, account: accountB };
+    const access = { status: snapshot.status, onboarding: snapshot.state.onboarding, internalTools: false, account: accountB, accountSettled: true };
     assert.equal(canOpenScreen('(app)', access), false, 'no app screen — People included — can render A\'s household to B');
     assert.equal(canOpenScreen('account-conflict', access), true);
     assert.ok(b.persisted().identity.quarantine, 'A\'s household is preserved in quarantine');

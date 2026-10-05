@@ -38,7 +38,19 @@ export type WelcomeAuthPresentation =
   | 'account-conflict';
 
 export type EmailErrorKind = 'invalid-email' | 'send-failed';
-export type OtpErrorKind = 'wrong-code' | 'expired-code' | 'verify-failed';
+/**
+ * `invalid-or-expired` is what the auth service actually reports: it answers a
+ * mistyped code and an expired one identically, so the wired flow cannot
+ * honestly claim either `wrong-code` or `expired-code` on its own.
+ */
+export type OtpErrorKind = 'wrong-code' | 'expired-code' | 'invalid-or-expired' | 'verify-failed';
+
+/**
+ * A calm line on the account choice: the last attempt from this screen ended
+ * without an account (a provider or network failure — never a cancellation,
+ * which shows nothing at all).
+ */
+export type WelcomeAuthNotice = 'attempt-failed';
 
 export interface WelcomeAuthViewState {
   step: WelcomeAuthStep;
@@ -59,6 +71,8 @@ export interface WelcomeAuthViewState {
    * is UI state only — it asserts nothing about any backend rate limit.
    */
   resendSecondsLeft: number | null;
+  /** Shown on the account choice only, and only while nothing is in flight. Absent means none. */
+  notice?: WelcomeAuthNotice | null;
 }
 
 /**

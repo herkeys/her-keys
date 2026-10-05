@@ -60,7 +60,7 @@ describe('AK. demo isolation: what Kids writes into a demo household can never r
 describe('AJ. account switching: another account\'s household is never rendered, so Kids cannot expose it', () => {
   const base = () => {
     const s = onboardedState();
-    return { status: 'ready', onboarding: s.onboarding, internalTools: false };
+    return { status: 'ready', onboarding: s.onboarding, internalTools: false, accountSettled: true };
   };
   const session = { accountId: 'acct-a', accessToken: 'x', refreshToken: 'y', expiresAt: 0, provider: { provider: 'apple', subject: 's', suggestedDisplayName: null } };
 

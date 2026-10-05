@@ -20,6 +20,7 @@ export interface OtpEntryViewProps {
 const ERROR_COPY: Record<OtpErrorKind, string> = {
   'wrong-code': COPY.otp.wrongCode,
   'expired-code': COPY.otp.expiredCode,
+  'invalid-or-expired': COPY.otp.invalidOrExpired,
   'verify-failed': COPY.otp.verifyFailed,
 };
 
