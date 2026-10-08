@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, ScrollView, StyleSheet, View } from 'react-native';
 import { AppText, Button, Overline, TextField } from '../../../design/components';
 import { color, spacing } from '../../../design/tokens';
 import type { EmailPasswordMode } from '../../../domain/account/emailPassword';
 import { emailObviousError } from '../model';
 import { WELCOME_AUTH_COPY as COPY } from '../copy';
+import { EMAIL_AUTH_KEYBOARD_BEHAVIOR } from './EmailEntryView';
 
 export type EmailPasswordNotice = 'confirmationRequired' | 'rejected' | 'unreachable' | 'unavailable' | null;
 
@@ -54,7 +55,7 @@ export function EmailPasswordView({ mode, notice, pending, allowSignUp, onModeCh
     : notice === 'rejected' ? COPY.password.rejected : null;
 
   return (
-    <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView style={styles.flex} behavior={EMAIL_AUTH_KEYBOARD_BEHAVIOR}>
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.container}>
         <Overline>{COPY.password.overline}</Overline>
         <AppText variant="display" style={styles.heading}>{create ? COPY.password.createTitle : COPY.password.signInTitle}</AppText>
