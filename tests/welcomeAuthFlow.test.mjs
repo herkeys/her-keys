@@ -234,7 +234,7 @@ describe('Google and Apple, through the runtime', () => {
       await press(r, `Continue with ${method}`);
 
       assert.equal(d.runtime.getState().kind, 'unauthenticated', `${method}: not authError`);
-      assert.match(shown(r), /Keep your life\non every device\./, `${method}: still the account choice`);
+      assert.ok(shown(r).includes(COPY.accountChoice.title), `${method}: still the account choice`);
       assert.doesNotMatch(shown(r), /did not go through|didn’t go through|try again|error|failed/i, `${method}: no failure presentation of any kind`);
       assert.equal(disabled(r, 'Continue with Google'), false, 'the choice is usable again at once');
       assert.deepEqual([d.cloudCalls, d.secureStorage.contents(), d.identity()], [[], {}, UNBOUND_IDENTITY], 'no account, credential, binding or household change');
