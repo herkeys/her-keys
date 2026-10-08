@@ -54,7 +54,7 @@ const child = { id: 'child-1', displayName: 'Mia', birthDate: '2016-04-02', scop
 
 /** An in-memory account cloud: what bootstrap_account and claim_local_household answer, and the rows they leave in the cloud. */
 function accountCloudFor(cloud, accountId, { householdId = uuid() } = {}) {
-  const ids = { householdId, memberId: uuid(), categories: null, claims: 0, failNext: 0, rejectNext: null };
+  const ids = { householdId, memberId: uuid(), categories: null, claims: 0, failNext: 0, rejectNext: null, supersedeBootstrap: false };
   const ensureBootstrapped = (state) => {
     if (ids.categories !== null) return;
     const starters = state.categories.map((c) => ({ localId: c.id, cloudId: uuid(), name: c.name, sortOrder: c.sortOrder, systemRole: c.systemRole, scope: c.scope }));
@@ -79,6 +79,7 @@ function accountCloudFor(cloud, accountId, { householdId = uuid() } = {}) {
       return {
         async bootstrapAccount() {
           if (ids.failNext > 0) { ids.failNext -= 1; return { kind: 'unreachable', detail: 'offline' }; }
+          if (ids.supersedeBootstrap) return { kind: 'ok', body: { status: 'rejected', rejected_reason: 'superseded_by_cloud', household_id: householdId, claim_id: null, id_map: {} } };
           if (ids.rejectNext) return { kind: 'ok', body: { status: 'rejected', rejected_reason: ids.rejectNext, household_id: householdId, claim_id: null, id_map: {} } };
           return answer(getState(), null);
         },
@@ -183,6 +184,35 @@ async function bindAsNewDevice(device, accountCloud) {
 }
 
 describe('HA-001 — the production composition operates sync after binding', () => {
+  test('a fresh device signs in through the actual composition and adopts then pulls the existing household without uploading starter data', async () => {
+    const cloud = createFakeCloud();
+    const accountCloud = accountCloudFor(cloud, ACCOUNT_A);
+    const a = await makeDevice({ cloud, accountId: ACCOUNT_A, accountCloud });
+    await householdWithContent(a);
+    await a.signIn();
+    const writes = cloud.calls.filter((c) => c.op === 'create' || c.op === 'update').length;
+    accountCloud.ids.supersedeBootstrap = true;
+    const b = await makeDevice({ cloud, accountId: ACCOUNT_A, accountCloud });
+    assert.equal((await b.signIn()).kind, 'accountBound');
+    assert.equal(b.persisted().identity.binding.householdId, accountCloud.ids.householdId);
+    assert.equal(b.persisted().identity.sync.hydration, 'ready');
+    assert.deepEqual(b.persisted().identity.sync.queue, []);
+    for (const key of ['children', 'tasks', 'events', 'systems', 'categories', 'onboarding']) {
+      assert.deepEqual(b.store.getSnapshot().state[key], a.store.getSnapshot().state[key], key);
+    }
+    assert.equal(cloud.calls.filter((c) => c.op === 'create' || c.op === 'update').length, writes, 'adoption and hydration upload no defaults');
+    const reloaded = await makeDevice({ cloud, accountId: ACCOUNT_A, accountCloud, storage: b.storage, secure: b.secure });
+    assert.equal((await reloaded.accountRuntime.restore()).kind, 'accountBound');
+    await reloaded.syncRuntime.idle();
+    assert.deepEqual(reloaded.persisted().state.tasks, b.persisted().state.tasks, 'adopted rows and namespace survive relaunch');
+    await reloaded.accountRuntime.signOut();
+    const beforeSwitch = JSON.stringify(reloaded.persisted().state);
+    const other = await makeDevice({ cloud, accountId: ACCOUNT_B, accountCloud: accountCloudFor(cloud, ACCOUNT_B), storage: b.storage });
+    assert.equal((await other.signIn()).kind, 'boundOther');
+    assert.equal(JSON.stringify(other.persisted().state), beforeSwitch, 'a different account cannot replace the adopted household');
+    assert.equal(other.syncRuntime.running(), null);
+  });
+
   test('binding an account makes the sync runtime OPERATIONAL, and the content the claim did not carry reaches the cloud', async () => {
     const cloud = createFakeCloud();
     const accountCloud = accountCloudFor(cloud, ACCOUNT_A);

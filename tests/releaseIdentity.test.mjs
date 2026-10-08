@@ -9,6 +9,7 @@ import {
   CANONICAL_IDENTITY,
   RELEASE_BRANCHES,
   checkIdentity,
+  checkBackendTarget,
   checkProvenance,
   resolveExpoConfig,
 } from '../scripts/verify-release-identity.mjs';
@@ -16,6 +17,19 @@ import {
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 
 describe('Release identity guard', () => {
+  test('EAS targets require the exact environment URL, a client key and empty data mode', () => {
+    const good = { EXPO_PUBLIC_HERKEYS_BACKEND: 'staging', EXPO_PUBLIC_SUPABASE_URL: 'https://fhhudicklmpofuzkxeqe.supabase.co', EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'test-public-key', EXPO_PUBLIC_HERKEYS_DATA_MODE: 'empty' };
+    assert.deepEqual(checkBackendTarget(good), []);
+    for (const change of [
+      { EXPO_PUBLIC_SUPABASE_URL: 'https://npykvnxnehlsdlbumzwk.supabase.co' },
+      { EXPO_PUBLIC_SUPABASE_URL: 'https://fhhudicklmpofuzkxeqe.evil.example' },
+      { EXPO_PUBLIC_SUPABASE_URL: 'http://fhhudicklmpofuzkxeqe.supabase.co' },
+      { EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: '' },
+      { EXPO_PUBLIC_HERKEYS_BACKEND: undefined },
+      { EXPO_PUBLIC_HERKEYS_DATA_MODE: 'demo' },
+      { EXPO_PUBLIC_HERKEYS_DATA_MODE: undefined },
+    ]) assert.ok(checkBackendTarget({ ...good, ...change }).length > 0);
+  });
   const resolved = resolveExpoConfig();
 
   test('the resolved Expo config carries the canonical identity', () => {

@@ -73,6 +73,7 @@ function runtimeFor({
   secureOptions = {},
   sessionClient,
   saveFails = false,
+  saveFailsAt = null,
   now = NOW,
 } = {}) {
   const calls = [];
@@ -106,11 +107,11 @@ function runtimeFor({
       },
       save: async () => {
         saves.push(staged);
-        if (saveFails) throw new Error('Simulated storage failure');
+        if (saveFails || saves.length === saveFailsAt) throw new Error('Simulated storage failure');
         stored = staged;
       },
     },
-    localState: () => state,
+    localState: () => typeof state === 'function' ? state() : state,
     timezone: () => TZ,
     now: () => now,
     newClaimKey: () => '88888888-8888-4888-8888-888888888888',
@@ -272,12 +273,13 @@ describe('bootstrap and claim', () => {
 
   test('15. a server refusal is not retried, and is recorded as the server worded it', async () => {
     const h = runtimeFor({
+      state: { ...createEmptyState(TZ), tasks: [task('task-1')] },
       cloud: {
         async bootstrapAccount() {
-          return { kind: 'ok', body: { status: 'rejected', rejected_reason: 'superseded_by_cloud', household_id: HOUSEHOLD_B, claim_id: null, id_map: {} } };
+          throw new Error('a populated device must claim, never adopt');
         },
         async claimLocalHousehold() {
-          throw new Error('not used');
+          return { kind: 'ok', body: { status: 'rejected', rejected_reason: 'superseded_by_cloud', household_id: HOUSEHOLD_B, claim_id: null, id_map: {} } };
         },
       },
     });
@@ -348,6 +350,59 @@ describe('bootstrap and claim', () => {
     const state = await h.runtime.signIn('apple');
     assert.equal(state.kind, 'authenticatedUnbound');
     assert.equal(h.onDisk().binding, null);
+  });
+});
+
+describe('fresh-device household adoption', () => {
+  const existing = (householdId = HOUSEHOLD_A) => ({
+    async bootstrapAccount() {
+      return { kind: 'ok', body: { status: 'rejected', rejected_reason: 'superseded_by_cloud', household_id: householdId, id_map: { untrusted: HOUSEHOLD_B } } };
+    },
+    async claimLocalHousehold() { throw new Error('not used'); },
+  });
+
+  test('an empty device durably binds the existing household with an unhydrated, empty outbound namespace', async () => {
+    const h = runtimeFor({ cloud: existing() });
+    assert.equal((await h.runtime.signIn('apple')).kind, 'accountBound');
+    const identity = h.onDisk();
+    assert.equal(identity.binding.householdId, HOUSEHOLD_A);
+    assert.deepEqual(identity.binding.idMap, {});
+    assert.equal(identity.receipt, null);
+    assert.equal(identity.sync.hydration, 'unhydrated');
+    assert.equal(identity.sync.cursor, '0');
+    assert.deepEqual(identity.sync.queue, []);
+    assert.deepEqual(identity.sync.mappings, {});
+    assert.equal(h.runtime.lastClaimOutcome().kind, 'rejected', 'adoption does not relabel a rejected claim');
+  });
+
+  test('an invalid or missing cloud household id never binds', async () => {
+    for (const id of [null, 'not-a-uuid']) {
+      const h = runtimeFor({ cloud: existing(id) });
+      assert.equal((await h.runtime.signIn('apple')).kind, 'authenticatedUnbound');
+      assert.equal(h.onDisk().binding, null);
+    }
+  });
+
+  test('work created while bootstrap is in flight is preserved and prevents adoption', async () => {
+    let local = createEmptyState(TZ);
+    const port = existing();
+    const h = runtimeFor({ state: () => local, cloud: { ...port, async bootstrapAccount() {
+      local = { ...local, tasks: [task('task-during-bootstrap')] };
+      return port.bootstrapAccount();
+    } } });
+    assert.equal((await h.runtime.signIn('apple')).kind, 'authenticatedUnbound');
+    assert.equal(h.onDisk().binding, null);
+    assert.equal(local.tasks[0].id, 'task-during-bootstrap');
+  });
+
+  test('a failed adoption write stays unbound and preserves the retryable receipt and original namespace', async () => {
+    const h = runtimeFor({ cloud: existing(), saveFailsAt: 2 });
+    assert.equal((await h.runtime.signIn('apple')).kind, 'authenticatedUnbound');
+    assert.equal(h.onDisk().binding, null);
+    assert.equal(h.staged().binding, null);
+    assert.equal(h.staged().sync, null);
+    assert.equal(h.staged().receipt.rejectedReason, null);
+    assert.equal((await h.runtime.resolveBinding()).kind, 'accountBound');
   });
 });
 

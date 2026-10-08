@@ -33,6 +33,12 @@ describe('Her Keys backend environment guard', () => {
     );
   });
 
+  test('a project-ref prefix on another host or an insecure URL is refused', () => {
+    for (const url of ['https://fhhudicklmpofuzkxeqe.evil.example', 'http://fhhudicklmpofuzkxeqe.supabase.co']) {
+      assert.throws(() => assertBackendMatchesUrl({ backend: 'staging', url, anonKey: 'test-public-key' }), /wrong Supabase project/);
+    }
+  });
+
   test('an unconfigured local build remains allowed to run local-only', () => {
     assert.equal(isSupabaseConfigured({ backend: undefined, url: undefined, anonKey: undefined }), false);
   });

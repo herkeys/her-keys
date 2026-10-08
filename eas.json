@@ -4,20 +4,26 @@
   },
   "build": {
     "development": {
+      "environment": "development",
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_HERKEYS_BACKEND": "staging"
+        "EXPO_PUBLIC_HERKEYS_BACKEND": "staging",
+        "EXPO_PUBLIC_HERKEYS_DATA_MODE": "empty"
       }
     },
     "preview": {
+      "environment": "preview",
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_HERKEYS_BACKEND": "staging"
+        "EXPO_PUBLIC_HERKEYS_BACKEND": "staging",
+        "EXPO_PUBLIC_HERKEYS_DATA_MODE": "empty"
       }
     },
     "production": {
+      "environment": "production",
       "env": {
-        "EXPO_PUBLIC_HERKEYS_BACKEND": "production"
+        "EXPO_PUBLIC_HERKEYS_BACKEND": "production",
+        "EXPO_PUBLIC_HERKEYS_DATA_MODE": "empty"
       }
     }
   }
