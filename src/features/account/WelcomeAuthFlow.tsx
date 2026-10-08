@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
-import { BackHandler } from 'react-native';
-import { accountProviders } from '../../store/accountRuntimeInstance';
+import { BackHandler, Platform } from 'react-native';
 import { useAccount } from '../../store/AccountProvider';
 import type { WelcomeAuthCallbacks, WelcomeAuthPlatform, WelcomeAuthViewState } from '../welcome/model';
 import { WelcomeAuthShell } from '../welcome/WelcomeAuthShell';
@@ -162,27 +161,14 @@ export function WelcomeAuthSettling() {
 }
 
 /**
- * Which method set to show. Asked of the provider adapters, never assumed from the OS: Sign in with Apple's own
- * availability check is the one place its iOS-only rule lives (EX-01), so Apple is offered exactly where it works and
- * this file needs no platform conditional of its own.
+ * An iOS candidate MUST always display native Sign in with Apple. Do not
+ * infer the device's platform from the asynchronous provider-availability
+ * probe: a temporary probe failure must not silently remove Apple signup.
+ * The native Apple adapter remains the authentication authority, and an
+ * unavailable/misconfigured native flow fails visibly at sign-in.
  */
 function useOfferedPlatform(): WelcomeAuthPlatform {
-  const [platform, setPlatform] = useState<WelcomeAuthPlatform>('android');
-  useEffect(() => {
-    let live = true;
-    accountProviders
-      .available()
-      .then((offered) => {
-        if (live) setPlatform(offered.includes('apple') ? 'ios' : 'android');
-      })
-      .catch(() => {
-        // Unanswered means not offered; Google and email remain.
-      });
-    return () => {
-      live = false;
-    };
-  }, []);
-  return platform;
+  return Platform.OS === 'ios' ? 'ios' : 'android';
 }
 
 /** The current time, ticking once a second only while a resend cooldown is running. Presentation only. */
