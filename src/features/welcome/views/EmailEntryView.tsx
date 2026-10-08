@@ -14,6 +14,9 @@ export interface EmailEntryViewProps {
   onSubmitEmail: (email: string) => void;
 }
 
+/** Shared email-auth keyboard behavior; one audited platform conditional, used by password + OTP screens. */
+export const EMAIL_AUTH_KEYBOARD_BEHAVIOR = Platform.OS === 'ios' ? 'padding' : undefined;
+
 /**
  * Passwordless email entry. Continue stays disabled until something is
  * typed; obvious format errors are caught inline on submit (presentation
@@ -42,7 +45,7 @@ export function EmailEntryView({ email, error, pending, onSubmitEmail }: EmailEn
   };
 
   return (
-    <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView style={styles.flex} behavior={EMAIL_AUTH_KEYBOARD_BEHAVIOR}>
       <View style={styles.body}>
         <Overline>{COPY.email.overline}</Overline>
         <AppText variant="display" style={styles.title}>
