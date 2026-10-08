@@ -25,13 +25,11 @@ export const WELCOME_AUTH_COPY = {
 
   accountChoice: {
     overline: 'Your account',
-    title: 'Keep your life\non every device.',
-    lede: 'One account holds your household, so a new phone is not a fresh start. Choose how you want to continue.',
-    /**
-     * Legal destinations (Terms / Privacy) do not exist in the app yet, so no
-     * links are rendered — dead links would be worse than none. When the real
-     * routes land, the line belongs here.
-     */
+    title: 'Connect your\naccount.',
+    lede: 'Sign in to connect your household to your account and sync eligible records. Restoring an existing household on a different phone is not available yet.',
+    legalNotice: 'By continuing, you agree to the Terms and Conditions and acknowledge the Privacy Policy.',
+    legalTerms: 'Terms and Conditions',
+    legalPrivacy: 'Privacy Policy',
     pending: 'Connecting your account…',
     /**
      * EX-01, the owner-approved Apple exception: Sign in with Apple is iOS-only, so where Apple is offered the choice
