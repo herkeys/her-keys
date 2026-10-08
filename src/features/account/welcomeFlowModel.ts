@@ -123,7 +123,7 @@ export function welcomeFlowReducer(state: WelcomeFlowState, event: WelcomeFlowEv
       return { ...state, step: 'password', passwordMode: 'signIn', passwordNotice: null, attemptFailed: false };
 
     case 'passwordModeChanged':
-      if (state.inFlight !== null || state.step !== 'password') return state;
+      if (state.inFlight !== null || state.step !== 'password' || (state.mode === 'reconnect' && event.mode === 'signUp')) return state;
       return { ...state, passwordMode: event.mode, passwordNotice: null };
 
     case 'passwordStarted':
@@ -221,6 +221,7 @@ export function welcomeFlowView(state: WelcomeFlowState, platform: WelcomeAuthPl
     emailError: state.emailError,
     otpError: state.otpError,
     passwordMode: state.passwordMode,
+    passwordCanSignUp: state.mode === 'first-run',
     passwordNotice: state.passwordNotice,
     resendSecondsLeft: secondsLeft > 0 ? secondsLeft : null,
     notice: state.attemptFailed && state.step === 'account-choice' ? 'attempt-failed' : null,
