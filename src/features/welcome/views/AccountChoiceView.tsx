@@ -1,4 +1,5 @@
-import { ActivityIndicator, Alert, Linking, Pressable, StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import { ActivityIndicator, Linking, Pressable, StyleSheet, View } from 'react-native';
 import { AppText, FadeIn, Overline } from '../../../design/components';
 import { HER_KEYS_LEGAL_URLS } from '../../../config/legal';
 import { color, sizing, spacing } from '../../../design/tokens';
@@ -34,6 +35,11 @@ export interface AccountChoiceViewProps {
 export function AccountChoiceView({ platform, pending, headerless, notice, onApple, onGoogle, onChooseEmail }: AccountChoiceViewProps) {
   const handlers = { apple: onApple, google: onGoogle, email: onChooseEmail } as const;
   const methods = methodsForPlatform(platform);
+  const [legalLinkError, setLegalLinkError] = useState(false);
+  const openLegalDocument = (url: string) => {
+    setLegalLinkError(false);
+    void Linking.openURL(url).catch(() => setLegalLinkError(true));
+  };
 
   return (
     <>
@@ -98,16 +104,14 @@ export function AccountChoiceView({ platform, pending, headerless, notice, onApp
             <AppText variant="bodySm" color={color.action.primary}>{COPY.accountChoice.legalPrivacy}</AppText>
           </Pressable>
         </View>
+        {legalLinkError && (
+          <AppText variant="bodySm" color={color.status.risk} accessibilityLiveRegion="polite" style={styles.legalNotice}>
+            Unable to open that document. Please try again later.
+          </AppText>
+        )}
       </View>
     </>
   );
-}
-
-/** A failed external URL must be visible; it must never alter an auth attempt. */
-function openLegalDocument(url: string): void {
-  void Linking.openURL(url).catch(() => {
-    Alert.alert('Unable to open document', 'Please try again later.');
-  });
 }
 
 const styles = StyleSheet.create({
