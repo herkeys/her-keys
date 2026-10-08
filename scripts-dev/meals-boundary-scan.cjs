@@ -619,6 +619,8 @@ const LATER_FEATURES = [
     shared: [
       ['.github/workflows/v2-integration-validation.yml', 'Password auth: run the same repository gate against the stacked repair branch'],
       ['docs/builds/HK_EMAIL_PASSWORD_AUTH_20261008.md', 'Password auth: implementation, confirmation and runtime acceptance limits'],
+      ['docs/audits/HK_PLATFORM_PARITY_REGISTRY.json', 'iOS Apple blocker: register PC-09 so the platform check cannot silently hide the native Apple button'],
+      ['docs/audits/HK_IOS_ANDROID_PLATFORM_PARITY.md', 'iOS Apple blocker: report PC-09 and pending physical-device certification'],
       ['scripts-dev/meals-boundary-scan.cjs', 'Password auth: register only this stacked branch and its actual changed files'],
       ['src/design/components/TextField.tsx', 'Password auth: masked input and password autofill props'],
       ['src/domain/account/accountRuntime.ts', 'Password auth: use the existing session adoption and account authority'],
