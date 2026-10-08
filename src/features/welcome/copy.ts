@@ -55,6 +55,8 @@ export const WELCOME_AUTH_COPY = {
   password: {
     overline: 'Email and password',
     choice: 'Continue with email and password',
+    tabSignIn: 'Sign In',
+    tabSignUp: 'Sign Up',
     signInTitle: 'Welcome back.',
     signInLede: 'Sign in with the email and password you created.',
     createTitle: 'Create your account.',
