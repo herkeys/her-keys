@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { KeyboardAvoidingView, ScrollView, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { AppText, Button, Overline, TextField } from '../../../design/components';
-import { color, spacing } from '../../../design/tokens';
+import { color, radius, sizing, spacing } from '../../../design/tokens';
 import type { EmailPasswordMode } from '../../../domain/account/emailPassword';
 import { emailObviousError } from '../model';
 import { WELCOME_AUTH_COPY as COPY } from '../copy';
@@ -35,7 +35,7 @@ export function EmailPasswordView({ mode, notice, pending, allowSignUp, onModeCh
   const submit = () => {
     if (pending) return;
     if (emailObviousError(email)) return setError(COPY.email.invalid);
-    if (password.length < 8) return setError(COPY.password.minimum);
+    if (create && password.length < 8) return setError(COPY.password.minimum);
     if (create && confirm !== password) return setError(COPY.password.mismatch);
     setError(null);
     onSubmit(mode, email, password);
@@ -58,6 +58,34 @@ export function EmailPasswordView({ mode, notice, pending, allowSignUp, onModeCh
     <KeyboardAvoidingView style={styles.flex} behavior={EMAIL_AUTH_KEYBOARD_BEHAVIOR}>
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.container}>
         <Overline>{COPY.password.overline}</Overline>
+        <View style={styles.modeTabs} accessibilityRole="tablist">
+          <Pressable
+            accessibilityRole="tab"
+            accessibilityLabel={COPY.password.tabSignIn}
+            accessibilityState={{ selected: !create, disabled: pending }}
+            disabled={pending}
+            onPress={() => changeMode('signIn')}
+            style={[styles.modeTab, !create && styles.modeTabActive]}
+          >
+            <AppText variant="actionLabel" color={!create ? color.text.primary : color.text.secondary}>
+              {COPY.password.tabSignIn}
+            </AppText>
+          </Pressable>
+          {allowSignUp && (
+            <Pressable
+              accessibilityRole="tab"
+              accessibilityLabel={COPY.password.tabSignUp}
+              accessibilityState={{ selected: create, disabled: pending }}
+              disabled={pending}
+              onPress={() => changeMode('signUp')}
+              style={[styles.modeTab, create && styles.modeTabActive]}
+            >
+              <AppText variant="actionLabel" color={create ? color.text.primary : color.text.secondary}>
+                {COPY.password.tabSignUp}
+              </AppText>
+            </Pressable>
+          )}
+        </View>
         <AppText variant="display" style={styles.heading}>{create ? COPY.password.createTitle : COPY.password.signInTitle}</AppText>
         <AppText variant="supporting" color={color.text.secondary} style={styles.lede}>
           {create ? COPY.password.createLede : COPY.password.signInLede}
@@ -92,11 +120,7 @@ export function EmailPasswordView({ mode, notice, pending, allowSignUp, onModeCh
         <View style={styles.actions}>
           <Button label={create ? COPY.password.create : COPY.password.signIn} onPress={submit}
             disabled={pending || password.length === 0 || email.length === 0} />
-          {allowSignUp && (
-            <Button label={create ? COPY.password.goToSignIn : COPY.password.goToCreate}
-              variant="ghost" disabled={pending}
-              onPress={() => changeMode(create ? 'signIn' : 'signUp')} />
-          )}
+
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -106,7 +130,24 @@ export function EmailPasswordView({ mode, notice, pending, allowSignUp, onModeCh
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   container: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: spacing.xl, paddingVertical: spacing.lg },
-  heading: { marginTop: spacing.md },
+  modeTabs: {
+    flexDirection: 'row',
+    borderRadius: radius.pill,
+    backgroundColor: color.surface.primary,
+    marginTop: spacing.xl,
+    padding: spacing.xxs,
+    gap: spacing.xs,
+  },
+  modeTab: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: sizing.minTouchTarget,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.md,
+  },
+  modeTabActive: { backgroundColor: color.surface.secondary },
+  heading: { marginTop: spacing.lg },
   lede: { marginTop: spacing.md },
   form: { marginTop: spacing.xl },
   actions: { marginTop: spacing.lg, gap: spacing.sm, paddingBottom: spacing.xl },
