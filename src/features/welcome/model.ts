@@ -67,6 +67,7 @@ export interface WelcomeAuthViewState {
   emailError: EmailErrorKind | null;
   otpError: OtpErrorKind | null;
   passwordMode?: 'signIn' | 'signUp';
+  passwordCanSignUp?: boolean;
   passwordNotice?: 'confirmationRequired' | 'rejected' | 'unreachable' | 'unavailable' | null;
   /**
    * Seconds until Resend is enabled again, or null when it is enabled. This
