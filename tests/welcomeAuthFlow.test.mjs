@@ -18,6 +18,7 @@ import './support/welcomeFlow/register.mjs';
 import { createAccountRuntime } from '../src/domain/account/accountRuntime.ts';
 import { UNBOUND_IDENTITY } from '../src/domain/account/binding.ts';
 import { createScriptedEmailOtp } from '../src/domain/account/emailOtp.ts';
+import { createScriptedEmailPassword } from '../src/domain/account/emailPassword.ts';
 import { createProviderRegistry, createScriptedProvider } from '../src/domain/account/provider.ts';
 import { SECURE_SESSION_KEY, createMemorySecureStorage, createSecureSessionStore } from '../src/domain/account/secureSession.ts';
 import { CROSS_PLATFORM_NOTE } from '../src/features/account/accountModel.ts';
@@ -63,7 +64,7 @@ const completeBody = {
 };
 
 /** A device: a real account runtime over scripted leaves, installed as what `useAccount` reads. */
-function device({ google = [success(ACCOUNT_A, 'google')], apple = [success(ACCOUNT_A, 'apple')], email = {}, identity = UNBOUND_IDENTITY, cloudAnswers, secureInitial = {}, sessionClient, offered = ['google'] } = {}) {
+function device({ google = [success(ACCOUNT_A, 'google')], apple = [success(ACCOUNT_A, 'apple')], email = {}, password = [], identity = UNBOUND_IDENTITY, cloudAnswers, secureInitial = {}, sessionClient, offered = ['google'] } = {}) {
   const cloudCalls = [];
   let staged = identity;
   let answered = 0;
@@ -89,6 +90,7 @@ function device({ google = [success(ACCOUNT_A, 'google')], apple = [success(ACCO
     sessionClient,
     providers: createProviderRegistry([createScriptedProvider('apple', { results: apple }), createScriptedProvider('google', { results: google })]),
     emailOtp,
+    emailPassword: createScriptedEmailPassword(password),
     cloud: { bootstrapAccount: async () => answer('bootstrap'), claimLocalHousehold: async () => answer('claim') },
     identity: { current: () => staged, set: (next) => { staged = next; }, save: async () => {} },
     localState: () => createEmptyState(TZ),
@@ -178,7 +180,7 @@ describe('the first run: Welcome → account choice → authenticate', () => {
     const labels = () => r.root.findAllByType('Pressable').map((n) => n.props.accessibilityLabel);
     assert.deepEqual(labels(), [COPY.welcome.begin]);
     await toAccountChoice(r);
-    assert.deepEqual(labels(), [COPY.back, 'Continue with Apple', 'Continue with Google', 'Continue with email', COPY.accountChoice.legalTerms, COPY.accountChoice.legalPrivacy]);
+    assert.deepEqual(labels(), [COPY.back, 'Continue with Apple', 'Continue with Google', 'Continue with email', COPY.password.choice, COPY.accountChoice.legalTerms, COPY.accountChoice.legalPrivacy]);
     assert.doesNotMatch(shown(r), /guest|skip|not now|later|explore|without an account/i);
   });
 
@@ -197,6 +199,42 @@ describe('the first run: Welcome → account choice → authenticate', () => {
     const text = shown(ios);
     assert.ok(text.indexOf('Continue with Apple') < text.indexOf('Continue with Google') && text.indexOf('Continue with Google') < text.indexOf('Continue with email'));
     assert.ok(text.includes(CROSS_PLATFORM_NOTE), 'EX-01: the owner-approved Apple limitation is disclosed where Apple is offered');
+  });
+});
+
+describe('email/password through the same runtime', () => {
+  test('the new choice is offered and verified sign-in binds the real account', async () => {
+    const d = device({ password: [success(ACCOUNT_A, 'email')] });
+    const r = await open();
+    await toAccountChoice(r);
+    await press(r, COPY.password.choice);
+    assert.match(shown(r), /Welcome back/);
+    const inputs = r.root.findAllByType('TextInput');
+    assert.equal(inputs.length, 2);
+    await TestRenderer.act(async () => inputs[0].props.onChangeText(EMAIL));
+    await TestRenderer.act(async () => inputs[1].props.onChangeText('secret-password-for-tests'));
+    await press(r, COPY.password.signIn);
+    assert.equal(d.runtime.getState().kind, 'accountBound');
+    assert.equal(d.runtime.getState().session.provider.provider, 'email');
+    assert.deepEqual(d.cloudCalls, ['bootstrap']);
+  });
+
+  test('signup requiring email confirmation never binds a household', async () => {
+    const d = device({ password: [{ kind: 'confirmationRequired' }] });
+    const r = await open();
+    await toAccountChoice(r);
+    await press(r, COPY.password.choice);
+    await press(r, COPY.password.goToCreate);
+    const inputs = r.root.findAllByType('TextInput');
+    assert.equal(inputs.length, 3);
+    for (const [index, value] of [EMAIL, 'secret-password-for-tests', 'secret-password-for-tests'].entries()) {
+      await TestRenderer.act(async () => inputs[index].props.onChangeText(value));
+    }
+    await press(r, COPY.password.create);
+    assert.match(shown(r), /Check your email for an account confirmation link/);
+    assert.equal(d.runtime.getState().kind, 'unauthenticated');
+    assert.deepEqual(d.cloudCalls, []);
+    assert.deepEqual(d.secureStorage.contents(), {});
   });
 });
 
