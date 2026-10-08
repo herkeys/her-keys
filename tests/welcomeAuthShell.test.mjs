@@ -15,6 +15,7 @@ import { describe, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import React from 'react';
 import TestRenderer from 'react-test-renderer';
+import { Linking } from 'react-native';
 
 import { emailObviousError, methodsForPlatform, stepAfterBack, OTP_CODE_LENGTH, RESEND_COOLDOWN_SECONDS } from '../src/features/welcome/model.ts';
 import { METHOD_LABELS, WELCOME_AUTH_COPY as COPY } from '../src/features/welcome/copy.ts';
@@ -92,6 +93,13 @@ describe('provider set and order are a platform decision', () => {
       }
       assert.match(joined(r), /agree to the Terms and Conditions/);
     }
+    const connected = await render(shell({ step: 'account-choice', platform: 'android' }));
+    Linking.__takeOpened();
+    await press(pressableByLabel(connected, COPY.accountChoice.legalTerms));
+    assert.deepEqual(Linking.__takeOpened(), [HER_KEYS_LEGAL_URLS.terms], 'Terms uses the native URL handler');
+    await press(pressableByLabel(connected, COPY.accountChoice.legalPrivacy));
+    assert.deepEqual(Linking.__takeOpened(), [HER_KEYS_LEGAL_URLS.privacy], 'Privacy uses the native URL handler');
+
     const pending = await render(shell({ step: 'account-choice', platform: 'android', pending: 'google' }));
     assert.equal(pressableByLabel(pending, COPY.accountChoice.legalTerms).props.disabled, true);
     assert.equal(pressableByLabel(pending, COPY.accountChoice.legalPrivacy).props.disabled, true);
