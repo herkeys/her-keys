@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ActivityIndicator, Linking, Pressable, StyleSheet, View } from 'react-native';
-import { AppText, Button, FadeIn, Overline } from '../../../design/components';
+import { AppText, FadeIn, Overline } from '../../../design/components';
 import { HER_KEYS_LEGAL_URLS } from '../../../config/legal';
 import { color, sizing, spacing } from '../../../design/tokens';
 import { WELCOME_AUTH_COPY as COPY } from '../copy';
@@ -24,7 +24,8 @@ export interface AccountChoiceViewProps {
  * The account choice. She is never asked to decide whether she is "creating
  * an account" or "signing in" first — every option reads "Continue with…",
  * in the platform's fixed order (Apple, Google, email on iOS; Google, email
- * on Android).
+ * on Android). Email always opens the unified password Sign In / Sign Up form;
+ * passwordless OTP is retained behind the service boundary, not in this menu.
  *
  * While any provider flow is in flight every other control is disabled and a
  * restrained progress note appears — no full-screen skeleton for provider
@@ -34,7 +35,8 @@ export interface AccountChoiceViewProps {
  * These are public documents, not authentication or app-route callbacks.
  */
 export function AccountChoiceView({ platform, pending, headerless, notice, onApple, onGoogle, onChooseEmail, onChoosePassword }: AccountChoiceViewProps) {
-  const handlers = { apple: onApple, google: onGoogle, email: onChooseEmail } as const;
+  // Exactly ONE visible email choice. Never route a normal signup back to the legacy email-code entry.
+  const handlers = { apple: onApple, google: onGoogle, email: onChoosePassword ?? onChooseEmail } as const;
   const methods = methodsForPlatform(platform);
   const [legalLinkError, setLegalLinkError] = useState(false);
   const openLegalDocument = (url: string) => {
@@ -82,7 +84,6 @@ export function AccountChoiceView({ platform, pending, headerless, notice, onApp
         {methods.map((method) => (
           <ProviderButton key={method} method={method} disabled={pending !== null} onPress={handlers[method]} />
         ))}
-        {onChoosePassword && <Button label={COPY.password.choice} disabled={pending !== null} onPress={onChoosePassword} variant="secondary" />}
         <AppText variant="bodySm" color={color.text.muted} style={styles.legalNotice}>
           {COPY.accountChoice.legalNotice}
         </AppText>
