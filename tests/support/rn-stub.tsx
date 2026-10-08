@@ -45,6 +45,18 @@ export const StyleSheet = {
   },
 };
 
+/**
+ * External URL handoff is native on devices. Tests record the requested URL
+ * without opening a browser; a press must use Linking, not a fake app route.
+ */
+const openedUrls: string[] = [];
+export const Linking = {
+  openURL: async (url: string): Promise<void> => {
+    openedUrls.push(url);
+  },
+  __takeOpened: (): string[] => openedUrls.splice(0),
+};
+
 /** Enough of RN's AppState for the store provider to mount: it subscribes, and never fires. */
 export const AppState = { addEventListener: (_event: string, _handler: (state: string) => void) => ({ remove: () => {} }) };
 
@@ -107,7 +119,7 @@ export const Animated = {
 
 const rn = {
   View, Text, ScrollView, Pressable, TextInput, KeyboardAvoidingView, Modal,
-  SafeAreaView, ActivityIndicator, useSafeAreaInsets, Platform, StyleSheet, AppState,
+  SafeAreaView, ActivityIndicator, useSafeAreaInsets, Platform, StyleSheet, AppState, Linking,
   Easing, AccessibilityInfo, Animated, BackHandler,
 };
 export default rn;
