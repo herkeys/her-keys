@@ -68,8 +68,10 @@ canonical release identity and was preserved.
 
 [CI for application repair](https://github.com/herkeys/her-keys/actions/runs/37853642633):
 `v2-repository-validation` PASS, 1m54s. Original run
-`37822694307` failed Expo patch compatibility. Final evidence-commit CI must also pass
-before any future merge; runtime/OTP gates still prevent certification.
+`37822694307` failed Expo patch compatibility.
+[CI for evidence commit ca09b32](https://github.com/herkeys/her-keys/actions/runs/37856004398)
+also PASS. Any subsequent HEAD must pass before a future merge; runtime/OTP gates
+still prevent certification.
 
 ## Live schema and migrations
 
@@ -141,6 +143,12 @@ JWT flags are configuration proof; authenticated Gemini, Calendar consent/refres
 and WeatherKit responses remain unproven. A download-source match does not certify
 external provider credentials, quotas or runtime behavior.
 
+Both projects' Edge secret-name lists include `GEMINI_API_KEY`, all four
+`WEATHERKIT_*` names (`KEY_ID`, `PRIVATE_KEY_P8`, `TEAM_ID`, `SERVICE_ID`),
+`GOOGLE_CALENDAR_CLIENT_ID`, `GOOGLE_CALENDAR_CLIENT_SECRET`, and
+`EXTERNAL_TOKEN_ENCRYPTION_KEY_B64`. Only names were inspected, not values.
+Presence does not prove validity, environment separation or provider runtime success.
+
 Google clients, same order in both projects:
 `857660202409-109l3gr8jo3pq1si08s7segqat1h6050.apps.googleusercontent.com`,
 `857660202409-trj4ec5diqeso3blh322phmld0b5bg8e.apps.googleusercontent.com`,
@@ -150,10 +158,11 @@ email are enabled; anonymous sign-in/manual linking disabled. Observed rate-limi
 values match: SMS 30, refresh 150, verification 30, anonymous 30, sign-in/signup 30,
 Web3 30; email sending limit was redacted by the browser and is not asserted here.
 
-SMTP is disabled in both projects. Magic link/OTP preview uses `{{ .ConfirmationURL }}`
-without a displayed token. A custom sender must be configured before template editing.
-No email was sent in this run. Confirm-signup token template still requires inspection
-and delivery testing once the sender is available.
+SMTP is disabled in both projects. Magic link/OTP and Confirm signup previews use
+`{{ .ConfirmationURL }}` without a displayed token. Both Confirm signup subjects are
+the default "Confirm your email address". A custom sender must be configured before
+template editing; the source-edit controls were disabled. No email was sent in this
+run. Token-bearing templates and complete delivery testing remain gated on the sender.
 
 ## EAS and native evidence
 
