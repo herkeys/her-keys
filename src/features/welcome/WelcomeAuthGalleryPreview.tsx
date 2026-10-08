@@ -119,6 +119,9 @@ export function WelcomeAuthGalleryPreview() {
           onApple={() => goTo('account-choice')}
           onGoogle={() => goTo('account-choice')}
           onChooseEmail={() => goTo('email')}
+          onChoosePassword={() => goTo('password')}
+          onPasswordModeChange={(mode) => setState((current) => ({ ...current, passwordMode: mode, passwordNotice: null }))}
+          onSubmitPassword={() => setState((current) => ({ ...current, passwordNotice: 'unavailable' }))}
           onSubmitEmail={(email) => {
             if (emailObviousError(email)) return;
             setState((current) => ({ ...current, step: 'otp', email, emailError: null }));
