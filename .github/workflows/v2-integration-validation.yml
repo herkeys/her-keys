@@ -54,12 +54,15 @@ jobs:
         run: npx expo install --check
 
       - name: Expo Doctor
+        if: ${{ !cancelled() }}
         run: npx expo-doctor
 
       - name: Resolved Expo public config
+        if: ${{ !cancelled() }}
         run: npx expo config --type public > /dev/null
 
       - name: Resolved Expo native config
+        if: ${{ !cancelled() }}
         run: npx expo config --type introspect > /dev/null
 
       - name: Evidence boundary
