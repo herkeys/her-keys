@@ -174,7 +174,9 @@ describe('nothing sensitive leaves through a result', () => {
     // The transport client (`client`) is the one sync, AI and the other server features use. Email must not sign in on it.
     assert.match(root, /createSupabaseEmailOtp\(providerClient\)/);
     assert.doesNotMatch(root, /createSupabaseEmailOtp\(client\)/);
-    assert.match(root, /emailOtp,\s*cloud:/, 'the port is handed to the ONE account runtime, not to a second authority');
+    assert.match(root, /emailOtp,\\s*emailPassword,\\s*cloud:/, 'both email methods feed the ONE account runtime');
+    assert.match(root, /createSupabaseEmailPassword\\(providerClient\\)/, 'password must use the isolated provider client');
+    assert.doesNotMatch(root, /createSupabaseEmailPassword\\(client\\)/, 'password must not use the data transport client');
     // The only callers of the Supabase OTP methods in the whole app are this adapter.
     for (const file of [...sourceFiles('src'), ...sourceFiles('app')]) {
       if (file === 'src/platform/emailOtpProvider.ts') continue;
