@@ -754,3 +754,7 @@ Google Play rejected the first production upload for a package-identity mismatch
 - Google Play Console listing identity and any Google Cloud OAuth client scoped to the old Android package, if one exists — no Google Cloud/Play Console MCP or connector is available in this session.
 
 No EAS build was run in this pass (owner directive: source repair and local gates only). REL-01/02/03 are verified against `app.json`, the introspected Expo config, and the local test/typecheck gates in this doc's §6 style — not against an actual built AAB.
+
+### PC-09 — iOS Apple signup must not disappear during provider discovery (2026-10-08)
+
+The V2 welcome integration now uses the **native OS** to choose its presented method set: iOS always shows Sign in with Apple first, followed by Google and email/password; Android offers Google and email/password without Apple. The platform predicate is registered as `PC-09` (class B, approved Apple exception EX-01) in `HK_PLATFORM_PARITY_REGISTRY.json`. We no longer infer whether the app is on iOS from the asynchronous Apple availability probe, which previously could incorrectly hide an iOS candidate's Apple choice when the probe failed or had not settled. Native Apple token exchange and device/account binding are still **NOT YET DEVICE-CERTIFIED**. This does not revise the historical `PART1_RESULT=FAIL` without a full Part 1 re-audit.
