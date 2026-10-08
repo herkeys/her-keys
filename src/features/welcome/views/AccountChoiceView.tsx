@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ActivityIndicator, Linking, Pressable, StyleSheet, View } from 'react-native';
-import { AppText, FadeIn, Overline } from '../../../design/components';
+import { AppText, Button, FadeIn, Overline } from '../../../design/components';
 import { HER_KEYS_LEGAL_URLS } from '../../../config/legal';
 import { color, sizing, spacing } from '../../../design/tokens';
 import { WELCOME_AUTH_COPY as COPY } from '../copy';
@@ -17,6 +17,7 @@ export interface AccountChoiceViewProps {
   onApple: WelcomeAuthCallbacks['onApple'];
   onGoogle: WelcomeAuthCallbacks['onGoogle'];
   onChooseEmail: WelcomeAuthCallbacks['onChooseEmail'];
+  onChoosePassword?: WelcomeAuthCallbacks['onChoosePassword'];
 }
 
 /**
@@ -32,7 +33,7 @@ export interface AccountChoiceViewProps {
  * Terms/Privacy open the owner-published PDFs through the OS URL handler.
  * These are public documents, not authentication or app-route callbacks.
  */
-export function AccountChoiceView({ platform, pending, headerless, notice, onApple, onGoogle, onChooseEmail }: AccountChoiceViewProps) {
+export function AccountChoiceView({ platform, pending, headerless, notice, onApple, onGoogle, onChooseEmail, onChoosePassword }: AccountChoiceViewProps) {
   const handlers = { apple: onApple, google: onGoogle, email: onChooseEmail } as const;
   const methods = methodsForPlatform(platform);
   const [legalLinkError, setLegalLinkError] = useState(false);
@@ -81,6 +82,7 @@ export function AccountChoiceView({ platform, pending, headerless, notice, onApp
         {methods.map((method) => (
           <ProviderButton key={method} method={method} disabled={pending !== null} onPress={handlers[method]} />
         ))}
+        {onChoosePassword && <Button label={COPY.password.choice} disabled={pending !== null} onPress={onChoosePassword} variant="secondary" />}
         <AppText variant="bodySm" color={color.text.muted} style={styles.legalNotice}>
           {COPY.accountChoice.legalNotice}
         </AppText>
