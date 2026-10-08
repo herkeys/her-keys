@@ -166,7 +166,7 @@ describe('the first run: Welcome → account choice → authenticate', () => {
     assert.equal(control(r, 'Continue with Google'), undefined, 'no method is offered before she begins');
 
     await press(r, COPY.welcome.begin);
-    assert.match(shown(r), /Keep your life\non every device\./);
+    assert.ok(shown(r).includes(COPY.accountChoice.title));
     assert.ok(control(r, 'Continue with Google') && control(r, 'Continue with email'));
     assert.equal(d.runtime.getState().kind, 'unauthenticated', 'Begin authenticates nothing');
     assert.deepEqual([d.cloudCalls, d.secureStorage.contents(), d.identity()], [[], {}, UNBOUND_IDENTITY], 'and touches nothing');
@@ -178,7 +178,7 @@ describe('the first run: Welcome → account choice → authenticate', () => {
     const labels = () => r.root.findAllByType('Pressable').map((n) => n.props.accessibilityLabel);
     assert.deepEqual(labels(), [COPY.welcome.begin]);
     await toAccountChoice(r);
-    assert.deepEqual(labels(), [COPY.back, 'Continue with Apple', 'Continue with Google', 'Continue with email']);
+    assert.deepEqual(labels(), [COPY.back, 'Continue with Apple', 'Continue with Google', 'Continue with email', COPY.accountChoice.legalTerms, COPY.accountChoice.legalPrivacy]);
     assert.doesNotMatch(shown(r), /guest|skip|not now|later|explore|without an account/i);
   });
 
@@ -234,7 +234,7 @@ describe('Google and Apple, through the runtime', () => {
       await press(r, `Continue with ${method}`);
 
       assert.equal(d.runtime.getState().kind, 'unauthenticated', `${method}: not authError`);
-      assert.match(shown(r), /Keep your life\non every device\./, `${method}: still the account choice`);
+      assert.ok(shown(r).includes(COPY.accountChoice.title), `${method}: still the account choice`);
       assert.doesNotMatch(shown(r), /did not go through|didn’t go through|try again|error|failed/i, `${method}: no failure presentation of any kind`);
       assert.equal(disabled(r, 'Continue with Google'), false, 'the choice is usable again at once');
       assert.deepEqual([d.cloudCalls, d.secureStorage.contents(), d.identity()], [[], {}, UNBOUND_IDENTITY], 'no account, credential, binding or household change');
@@ -465,7 +465,7 @@ describe('back, on screen and on the Android hardware key', () => {
     assert.match(shown(r), /What’s your email\?/);
     assert.equal(field(r).props.value, EMAIL, 'the code step returns to the address, preserved');
     await press(r, COPY.back);
-    assert.match(shown(r), /Keep your life\non every device\./);
+    assert.ok(shown(r).includes(COPY.accountChoice.title));
     await press(r, COPY.back);
     assert.match(shown(r), /Rebuild your life/);
     assert.equal(control(r, COPY.back), undefined);
@@ -481,7 +481,7 @@ describe('back, on screen and on the Android hardware key', () => {
     assert.equal(await hardwareBack(), true);
     assert.match(shown(r), /What’s your email\?/);
     assert.equal(await hardwareBack(), true);
-    assert.match(shown(r), /Keep your life\non every device\./);
+    assert.ok(shown(r).includes(COPY.accountChoice.title));
     assert.equal(await hardwareBack(), true);
     assert.match(shown(r), /Rebuild your life/);
     assert.equal(await hardwareBack(), false);
@@ -620,7 +620,7 @@ describe('the controller model, pure', () => {
   });
 
   test('the model holds no code: no event carries one, and no state field could keep one', () => {
-    const source = readFileSync('src/features/account/welcomeFlowModel.ts', 'utf8');
+    const source = readFileSync('src/features/account/welcomeFlowModel.ts', 'utf8').replace(/\r\n/g, '\n');
     const events = /export type WelcomeFlowEvent =([\s\S]*?);\n\nexport function/.exec(source)[1];
     assert.doesNotMatch(events, /code\s*:|token\s*:|otp\s*:/i, 'no event has a code, token or otp field');
     assert.deepEqual(Object.keys(initialWelcomeFlow('first-run')).sort(), ['attemptFailed', 'email', 'emailError', 'inFlight', 'mode', 'otpError', 'resendAvailableAt', 'step']);

@@ -68,6 +68,7 @@ export function composeAccountApp(deps: AccountAppDeps): AccountApp {
       if (state === null) throw new Error('The account runtime read household state before hydration finished.');
       return state;
     },
+    canAdoptCloudHousehold: () => store.getSnapshot().recovery === null,
     onStateChange: (state) => {
       syncRuntime.onAccountState(state);
       deps.onAccountState?.(state);

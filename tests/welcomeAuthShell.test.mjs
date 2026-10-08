@@ -15,9 +15,11 @@ import { describe, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import React from 'react';
 import TestRenderer from 'react-test-renderer';
+import { Linking } from 'react-native';
 
 import { emailObviousError, methodsForPlatform, stepAfterBack, OTP_CODE_LENGTH, RESEND_COOLDOWN_SECONDS } from '../src/features/welcome/model.ts';
 import { METHOD_LABELS, WELCOME_AUTH_COPY as COPY } from '../src/features/welcome/copy.ts';
+import { HER_KEYS_LEGAL_URLS } from '../src/config/legal.ts';
 import { WelcomeAuthShell } from '../src/features/welcome/WelcomeAuthShell.tsx';
 import { render } from './support/render.tsx';
 
@@ -76,6 +78,38 @@ describe('provider set and order are a platform decision', () => {
     const text = joined(r);
     assert.ok(text.indexOf('Continue with Apple') < text.indexOf('Continue with Google'), 'Apple precedes Google on iOS');
     assert.ok(text.indexOf('Continue with Google') < text.indexOf('Continue with email'), 'email is last');
+  });
+
+  test('account choice exposes both public Her Keys legal PDFs on both platforms', async () => {
+    assert.match(HER_KEYS_LEGAL_URLS.terms, /^https:\/\/npykvnxnehlsdlbumzwk\.supabase\.co\/.+\/her-keys-terms\.pdf$/);
+    assert.match(HER_KEYS_LEGAL_URLS.privacy, /^https:\/\/npykvnxnehlsdlbumzwk\.supabase\.co\/.+\/her-keys-policy\.pdf$/);
+    for (const platform of ['ios', 'android']) {
+      const r = await render(shell({ step: 'account-choice', platform }));
+      for (const label of [COPY.accountChoice.legalTerms, COPY.accountChoice.legalPrivacy]) {
+        const link = pressableByLabel(r, label);
+        assert.ok(link, `${platform}: ${label} link exists`);
+        assert.equal(link.props.accessibilityRole, 'link');
+        assert.equal(link.props.disabled, false);
+      }
+      assert.match(joined(r), /agree to the Terms and Conditions/);
+    }
+    const connected = await render(shell({ step: 'account-choice', platform: 'android' }));
+    Linking.__takeOpened();
+    await press(pressableByLabel(connected, COPY.accountChoice.legalTerms));
+    assert.deepEqual(Linking.__takeOpened(), [HER_KEYS_LEGAL_URLS.terms], 'Terms uses the native URL handler');
+    await press(pressableByLabel(connected, COPY.accountChoice.legalPrivacy));
+    assert.deepEqual(Linking.__takeOpened(), [HER_KEYS_LEGAL_URLS.privacy], 'Privacy uses the native URL handler');
+
+    const pending = await render(shell({ step: 'account-choice', platform: 'android', pending: 'google' }));
+    assert.equal(pressableByLabel(pending, COPY.accountChoice.legalTerms).props.disabled, true);
+    assert.equal(pressableByLabel(pending, COPY.accountChoice.legalPrivacy).props.disabled, true);
+  });
+
+  test('account-choice copy never promises unsupported new-device restoration', () => {
+    assert.match(COPY.accountChoice.lede, /not available yet/);
+    assert.match(COPY.accountChoice.crossPlatformNote, /not yet supported/);
+    const panel = readFileSync(join(ROOT, 'src', 'features', 'account', 'AccountPanel.tsx'), 'utf8');
+    assert.doesNotMatch(panel, /follows you to your next phone|new phone is not a fresh start/);
   });
 
   test('no button is ever labeled "Continue with Android"', async () => {

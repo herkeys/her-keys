@@ -44,13 +44,13 @@ export function isSupabaseConfigured(config: SupabaseConfig = supabaseConfig): b
 export function assertBackendMatchesUrl(config: SupabaseConfig = supabaseConfig): void {
   if (!config.backend || !config.url) return;
   const expected = PROJECT_REF[config.backend];
-  let host: string;
+  let parsed: URL;
   try {
-    host = new URL(config.url).hostname;
+    parsed = new URL(config.url);
   } catch {
     throw new Error('Her Keys Supabase URL is not a valid URL');
   }
-  if (!host.startsWith(`${expected}.`) && host !== `${expected}.supabase.co`) {
+  if (parsed.protocol !== 'https:' || parsed.hostname !== `${expected}.supabase.co` || parsed.port || parsed.username || parsed.password) {
     throw new Error(`Her Keys ${config.backend} build is pointed at the wrong Supabase project`);
   }
 }

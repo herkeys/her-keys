@@ -7,6 +7,7 @@ import {
 } from './authState';
 import {
   UNBOUND_IDENTITY,
+  AccountBindingSchema,
   isRetryable,
   recordAttempt,
   startReceipt,
@@ -29,7 +30,7 @@ import { toAccountId, type AccountId, type AccountSession, type AuthProvider } f
 import type { ProviderRegistry } from './provider';
 import type { SecureSessionStore } from './secureSession';
 import { NOOP_ACCOUNT_SESSION_CLIENT, type AccountSessionClient } from './sessionClient';
-import { namespaceFromClaim } from '../sync/claimSeam';
+import { namespaceForNewDevice, namespaceFromClaim } from '../sync/claimSeam';
 
 /**
  * THE ACCOUNT ORCHESTRATOR.
@@ -65,6 +66,8 @@ export interface AccountRuntimeOptions {
   };
   /** The household as it stands now. Read, never written, by this module. */
   localState(): AppState;
+  /** Recovery from unreadable storage is not a pristine installation. */
+  canAdoptCloudHousehold?: () => boolean;
   timezone(): string;
   now(): number;
   /** A fresh uuid for a claim key. Injected so a claim is reproducible in a test. */
@@ -531,6 +534,10 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
               payload: payload as NonNullable<typeof payload>,
             });
 
+      // A late bootstrap/claim result cannot bind after logout or an account
+      // switch. The next authenticated attempt can replay its durable key.
+      if (sessionOf(state)?.accountId !== session.accountId) return state;
+
       if (call.kind !== 'ok') {
         report(`account.claim_${call.kind}`, call.detail);
         return apply({ type: 'bindingFailed', detail: call.detail, recoverable: call.kind === 'unreachable' });
@@ -545,6 +552,47 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
       }
 
       if (outcome.kind === 'rejected') {
+        // A pristine device may adopt the household its authenticated bootstrap
+        // resolved. A local claim is still a refusal: never merge its content
+        // into an existing household. Recheck after the network wait, because
+        // local work or the active account may have changed while it was out.
+        if (
+          kind === 'bootstrap' && outcome.reason === 'superseded_by_cloud' && outcome.householdId !== null &&
+          (options.canAdoptCloudHousehold?.() ?? true) &&
+          sessionOf(state)?.accountId === session.accountId && bindingFor(session).mode === 'bootstrap'
+        ) {
+          const parsed = AccountBindingSchema.safeParse({
+            accountId: session.accountId,
+            householdId: outcome.householdId,
+            boundAt: new Date(options.now()).toISOString(),
+            kind: 'bootstrap',
+            // A rejected claim's map is not a successful claim receipt. Pull
+            // reconstructs the mappings and content from the cloud instead.
+            idMap: {},
+          });
+          if (!parsed.success) {
+            return apply({ type: 'bindingFailed', detail: 'cloud household identity was unreadable', recoverable: false });
+          }
+          const before = options.identity.current();
+          options.identity.set({
+            ...before,
+            binding: parsed.data,
+            receipt: null,
+            sync: namespaceForNewDevice({
+              accountId: session.accountId,
+              householdId: outcome.householdId,
+              deviceId: options.deviceId ?? session.accountId,
+            }),
+          });
+          if (!(await safeSave(options, report))) {
+            options.identity.set(before);
+            return apply({ type: 'bindingFailed', detail: 'cloud household adoption could not be recorded locally', recoverable: true });
+          }
+          report('account.household_adopted');
+          // The sync composition pulls first. Its unhydrated namespace blocks
+          // seed/top-up work and screens until that first batch is durable.
+          return apply({ type: 'bindingSucceeded', householdId: outcome.householdId });
+        }
         // The server gave its answer. Repeating the request would only get it
         // again, so the receipt records the refusal and stops being retryable.
         options.identity.set({

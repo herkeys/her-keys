@@ -606,6 +606,47 @@ const LATER_FEATURES = [
       ['scripts-dev/meals-boundary-scan.cjs', 'Welcome auth: check H repaired \u2014 the welcome frontend\u2019s change exempted every lane branch in HEAD\u2019s history from the holder check; only a lane that DECLARES and proves a stacked base now inherits, and its own claims are checked against that base. The unbuilt HK-AI-02 entry is removed; this lane is registered'],
     ],
   },
+  {
+    id: 'V2-AUDIT-LEGAL-AND-CI (2026-10-08)',
+    // This repair is committed on the integrated line; no independent feature
+    // branch claims the files. Check H still proves they are new here.
+    branch: null,
+    owned: [],
+    migrations: [],
+    schemas: [],
+    rootCollections: [],
+    syncKinds: [],
+    shared: [
+      ['src/config/legal.ts', 'V2 audit: owner-published Her Keys Terms and Privacy PDF links for the account choice; public URLs only, no auth or backend mutation'],
+      ['.github/workflows/v2-integration-validation.yml', 'V2 audit: the isolated pull-request gate for TypeScript, app tests, Expo and release identity; it deploys nothing'],
+      ['docs/audits/HK_V2_STAGING_PRODUCTION_PARITY_GATE.md', 'V2 audit: the evidence and promotion contract; no live certification or deployment'],
+      ['docs/audits/HK_V2_RUNTIME_CLOSEOUT_20261008.md', 'V2 closeout: dated live evidence, failures and owner dependencies; no environment certification'],
+      ['docs/audits/v2-closeout-20261008/staging-schema.csv', 'V2 closeout: read-only canonical Staging catalog fingerprint; no user data'],
+      ['docs/audits/v2-closeout-20261008/production-schema.csv', 'V2 closeout: read-only canonical Production catalog fingerprint; no user data'],
+      ['docs/audits/v2-closeout-20261008/staging-migrations.csv', 'V2 closeout: complete Staging ledger versions and statement hashes'],
+      ['docs/audits/v2-closeout-20261008/production-migrations.csv', 'V2 closeout: complete Production ledger versions and statement hashes'],
+      ['docs/audits/v2-closeout-20261008/migration-comparison.json', 'V2 closeout: compare all repository migration names, versions and source hashes to live ledgers'],
+      ['docs/audits/v2-closeout-20261008/function-hashes.json', 'V2 closeout: independently downloaded deployed function source hashes; no credentials'],
+      ['docs/audits/v2-closeout-20261008/staging-anonymous-smoke.json', 'V2 closeout: public Auth control and live unauthenticated denials; no fixture or user data'],
+      ['docs/audits/v2-closeout-20261008/android-build-runtime.json', 'V2 closeout: exact native build and APK identity plus observed launch and blocked authentication'],
+      ['docs/audits/v2-closeout-20261008/android-launch.png', 'V2 closeout: installed Android empty-mode launch evidence without user data'],
+      ['docs/audits/v2-closeout-20261008/android-account.png', 'V2 closeout: native account-choice and consent handoff evidence without user data'],
+      ['docs/audits/v2-closeout-20261008/android-account.xml', 'V2 closeout: UI-tree-derived account controls for emulator QA; no authenticated user data'],
+      ['package.json', 'V2 closeout: only the seven SDK 57 patch mismatches reported by the compatibility check'],
+      ['package-lock.json', 'V2 closeout: lock compatible SDK 57 patches and their required dependencies'],
+      ['tests/welcomeAuthFlow.test.mjs', 'V2 closeout: normalize CRLF before the existing token-storage source assertion on Windows'],
+      ['src/domain/account/accountRuntime.ts', 'V2 closeout: adopt an authenticated existing household only on a pristine device; durable unhydrated namespace, no local merging'],
+      ['src/store/composeAccountApp.ts', 'V2 closeout: a storage recovery fallback is not eligible for pristine-device adoption'],
+      ['tests/accountRuntime.test.mjs', 'V2 closeout: adoption safety, durable failure recovery and populated-device refusal regressions'],
+      ['tests/hk-ir01/syncComposition.test.mjs', 'V2 closeout: real production composition adopts, hydrates, persists and isolates a fresh device; scripted cloud evidence only'],
+      ['eas.json', 'V2 closeout: explicit EAS environment selection and empty data mode on every build profile'],
+      ['scripts/verify-release-identity.mjs', 'V2 closeout: EAS build hook also rejects missing or crossed backend targets before bundling'],
+      ['tests/releaseIdentity.test.mjs', 'V2 closeout: negative build-target checks without credentials'],
+      ['src/config/supabase.ts', 'V2 closeout: require the exact Her Keys HTTPS project host rather than accepting a host prefix'],
+      ['tests/backendEnvironment.test.mjs', 'V2 closeout: reject spoofed project hosts and insecure backend URLs'],
+    ],
+  },
+
 ];
 
 /**

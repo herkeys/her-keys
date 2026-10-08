@@ -37,6 +37,22 @@ export function checkIdentity(config) {
   return failures;
 }
 
+/** Fail an EAS build before bundling if its selected environment is missing or crossed. Never include key values in failures. */
+export function checkBackendTarget(env) {
+  const refs = { staging: 'fhhudicklmpofuzkxeqe', production: 'npykvnxnehlsdlbumzwk' };
+  const backend = env.EXPO_PUBLIC_HERKEYS_BACKEND;
+  const failures = [];
+  if (!Object.hasOwn(refs, backend ?? '')) return ['backend: an explicit Her Keys staging or production target is required'];
+  let url;
+  try { url = new URL(env.EXPO_PUBLIC_SUPABASE_URL); } catch { failures.push('backend: Supabase URL is missing or invalid'); }
+  if (url && (url.protocol !== 'https:' || url.hostname !== `${refs[backend]}.supabase.co` || url.port || url.username || url.password)) {
+    failures.push(`backend: ${backend} build is pointed at the wrong Supabase project`);
+  }
+  if (!(env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? env.EXPO_PUBLIC_SUPABASE_ANON_KEY)?.trim()) failures.push('backend: client publishable key is missing');
+  if (env.EXPO_PUBLIC_HERKEYS_DATA_MODE !== 'empty') failures.push('backend: EAS build must explicitly use empty data mode');
+  return failures;
+}
+
 export function checkProvenance({ branch, trackedChanges, head, upstreamHead }) {
   const failures = [];
   if (!RELEASE_BRANCHES.includes(branch)) {
@@ -67,6 +83,7 @@ function main() {
   const release = process.argv.includes('--release');
   const config = resolveExpoConfig();
   const failures = checkIdentity(config);
+  if (process.env.EAS_BUILD === 'true') failures.push(...checkBackendTarget(process.env));
   const report = {
     ANDROID_APPLICATION_ID: config?.android?.package,
     IOS_BUNDLE_IDENTIFIER: config?.ios?.bundleIdentifier,

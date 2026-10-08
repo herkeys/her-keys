@@ -1,0 +1,69 @@
+name: Her Keys V2 Integration Gate
+
+on:
+  pull_request:
+    branches:
+      - integration/welcome-tree-auth-runtime
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: herkeys-v2-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: v2-repository-validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      CI: '1'
+      EXPO_NO_TELEMETRY: '1'
+
+    steps:
+      - name: Checkout full candidate history
+        uses: actions/checkout@v4
+        with:
+          # Meals and integration history guards require historical commits.
+          fetch-depth: 0
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install exact lockfile
+        run: npm ci
+
+      - name: Backend boundary protection
+        run: node --test tests/build2BackendProtection.test.mjs
+
+      - name: Release identity guard
+        run: npm run verify:release-identity
+
+      - name: TypeScript
+        run: npm run typecheck
+
+      - name: Full application test suite
+        run: npm test
+
+      - name: Expo install compatibility
+        run: npx expo install --check
+
+      - name: Expo Doctor
+        if: ${{ !cancelled() }}
+        run: npx expo-doctor
+
+      - name: Resolved Expo public config
+        if: ${{ !cancelled() }}
+        run: npx expo config --type public > /dev/null
+
+      - name: Resolved Expo native config
+        if: ${{ !cancelled() }}
+        run: npx expo config --type introspect > /dev/null
+
+      - name: Evidence boundary
+        run: echo "Repository validation only. Live Her Keys Staging RLS, auth, provider calls, native behavior and migrations require separate certification; nothing was deployed."

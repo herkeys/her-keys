@@ -18,7 +18,7 @@ export interface AccountPanelProps {
 
 /**
  * Your Account. Signing in is offered, never demanded: her household already works on this device, and an account is what
- * lets it follow her to the next one. Signing out keeps everything on this phone; the next sign-in of the same account
+ * connects it to account-backed sync. Fresh-device household adoption is not implemented yet. Signing out keeps everything on this phone; the next sign-in of the same account
  * resumes it. Presentational only — the route supplies the actions, and they all go through AccountRuntime.
  */
 export function AccountPanel({ mode, providers, busy, failed, onSignIn, onSignOut, onClose }: AccountPanelProps) {
@@ -66,8 +66,8 @@ export function AccountPanel({ mode, providers, busy, failed, onSignIn, onSignOu
 const COPY: Record<AccountModalMode, { overline: string; title: string; lede: string }> = {
   signIn: {
     overline: 'Your account',
-    title: 'Keep your life\non every device.',
-    lede: 'Everything you have built here stays exactly as it is. Signing in gives it somewhere safe to live, so a new phone is not a fresh start.',
+    title: 'Connect your\naccount.',
+    lede: 'Your information stays on this phone. Signing in connects eligible records to your account, but restoring this household on a new phone is not available yet.',
   },
   reconnect: {
     overline: 'Reconnect',
@@ -77,7 +77,7 @@ const COPY: Record<AccountModalMode, { overline: string; title: string; lede: st
   connected: {
     overline: 'Your account',
     title: 'Your account\nis connected.',
-    lede: 'Your household is kept safe and follows you to your next phone. If you sign out, everything stays on this phone, and signing back in picks up where you left off.',
+    lede: 'Your household is connected to this account on this phone. Eligible records can sync. New-phone household restoration is not available yet; signing out keeps this phone’s information.',
   },
   resolving: {
     overline: 'Your account',
@@ -86,7 +86,7 @@ const COPY: Record<AccountModalMode, { overline: string; title: string; lede: st
   },
   unavailable: {
     overline: 'Your account',
-    title: 'Keep your life\non every device.',
+    title: 'Account setup\nis unavailable.',
     lede: 'Accounts are not set up in this build yet. Her Keys keeps working on this device.',
   },
   quarantined: {

@@ -1,0 +1,128 @@
+[
+  {
+    "function": "herkeys-ai",
+    "file": "index.ts",
+    "repositoryPath": "supabase/functions/herkeys-ai/index.ts",
+    "staging": "6dafa51385552fcf267abd607751b4b4e54f42e4fdf4ee118ce44c4b2e240606",
+    "production": "6dafa51385552fcf267abd607751b4b4e54f42e4fdf4ee118ce44c4b2e240606",
+    "repository": "6dafa51385552fcf267abd607751b4b4e54f42e4fdf4ee118ce44c4b2e240606",
+    "match": true
+  },
+  {
+    "function": "herkeys-ai",
+    "file": "source/_shared/http.ts",
+    "repositoryPath": "supabase/functions/_shared/http.ts",
+    "staging": "58f66be6e4f4056ae0637d4abcb71418bf063cd9ce3b5a26789edbbc2162576a",
+    "production": "58f66be6e4f4056ae0637d4abcb71418bf063cd9ce3b5a26789edbbc2162576a",
+    "repository": "58f66be6e4f4056ae0637d4abcb71418bf063cd9ce3b5a26789edbbc2162576a",
+    "match": true
+  },
+  {
+    "function": "herkeys-ai",
+    "file": "source/_shared/supabaseAdmin.ts",
+    "repositoryPath": "supabase/functions/_shared/supabaseAdmin.ts",
+    "staging": "0bbf833d35b4f2144bbc1bedd1722e5248e47b2d48e2af4a3c81c99c0eab1571",
+    "production": "0bbf833d35b4f2144bbc1bedd1722e5248e47b2d48e2af4a3c81c99c0eab1571",
+    "repository": "0bbf833d35b4f2144bbc1bedd1722e5248e47b2d48e2af4a3c81c99c0eab1571",
+    "match": true
+  },
+  {
+    "function": "calendar-data",
+    "file": "index.ts",
+    "repositoryPath": "supabase/functions/calendar-data/index.ts",
+    "staging": "a5479fa1c7128ddf036e2904bb950f6143043453d2216da22bdd7fff2345cc53",
+    "production": "a5479fa1c7128ddf036e2904bb950f6143043453d2216da22bdd7fff2345cc53",
+    "repository": "a5479fa1c7128ddf036e2904bb950f6143043453d2216da22bdd7fff2345cc53",
+    "match": true
+  },
+  {
+    "function": "calendar-data",
+    "file": "source/_shared/crypto.ts",
+    "repositoryPath": "supabase/functions/_shared/crypto.ts",
+    "staging": "12dc16b4a85d6de239761deef459f98f50f3955ed897df16865e386640070571",
+    "production": "12dc16b4a85d6de239761deef459f98f50f3955ed897df16865e386640070571",
+    "repository": "12dc16b4a85d6de239761deef459f98f50f3955ed897df16865e386640070571",
+    "match": true
+  },
+  {
+    "function": "calendar-data",
+    "file": "source/_shared/http.ts",
+    "repositoryPath": "supabase/functions/_shared/http.ts",
+    "staging": "58f66be6e4f4056ae0637d4abcb71418bf063cd9ce3b5a26789edbbc2162576a",
+    "production": "58f66be6e4f4056ae0637d4abcb71418bf063cd9ce3b5a26789edbbc2162576a",
+    "repository": "58f66be6e4f4056ae0637d4abcb71418bf063cd9ce3b5a26789edbbc2162576a",
+    "match": true
+  },
+  {
+    "function": "calendar-data",
+    "file": "source/_shared/supabaseAdmin.ts",
+    "repositoryPath": "supabase/functions/_shared/supabaseAdmin.ts",
+    "staging": "0bbf833d35b4f2144bbc1bedd1722e5248e47b2d48e2af4a3c81c99c0eab1571",
+    "production": "0bbf833d35b4f2144bbc1bedd1722e5248e47b2d48e2af4a3c81c99c0eab1571",
+    "repository": "0bbf833d35b4f2144bbc1bedd1722e5248e47b2d48e2af4a3c81c99c0eab1571",
+    "match": true
+  },
+  {
+    "function": "calendar-oauth",
+    "file": "index.ts",
+    "repositoryPath": "supabase/functions/calendar-oauth/index.ts",
+    "staging": "d012bf51fc16c9fd85b9187250c25deb612bf3975a2668b09bf7960bfe2bb43b",
+    "production": "d012bf51fc16c9fd85b9187250c25deb612bf3975a2668b09bf7960bfe2bb43b",
+    "repository": "d012bf51fc16c9fd85b9187250c25deb612bf3975a2668b09bf7960bfe2bb43b",
+    "match": true
+  },
+  {
+    "function": "calendar-oauth",
+    "file": "source/_shared/crypto.ts",
+    "repositoryPath": "supabase/functions/_shared/crypto.ts",
+    "staging": "12dc16b4a85d6de239761deef459f98f50f3955ed897df16865e386640070571",
+    "production": "12dc16b4a85d6de239761deef459f98f50f3955ed897df16865e386640070571",
+    "repository": "12dc16b4a85d6de239761deef459f98f50f3955ed897df16865e386640070571",
+    "match": true
+  },
+  {
+    "function": "calendar-oauth",
+    "file": "source/_shared/http.ts",
+    "repositoryPath": "supabase/functions/_shared/http.ts",
+    "staging": "58f66be6e4f4056ae0637d4abcb71418bf063cd9ce3b5a26789edbbc2162576a",
+    "production": "58f66be6e4f4056ae0637d4abcb71418bf063cd9ce3b5a26789edbbc2162576a",
+    "repository": "58f66be6e4f4056ae0637d4abcb71418bf063cd9ce3b5a26789edbbc2162576a",
+    "match": true
+  },
+  {
+    "function": "calendar-oauth",
+    "file": "source/_shared/supabaseAdmin.ts",
+    "repositoryPath": "supabase/functions/_shared/supabaseAdmin.ts",
+    "staging": "0bbf833d35b4f2144bbc1bedd1722e5248e47b2d48e2af4a3c81c99c0eab1571",
+    "production": "0bbf833d35b4f2144bbc1bedd1722e5248e47b2d48e2af4a3c81c99c0eab1571",
+    "repository": "0bbf833d35b4f2144bbc1bedd1722e5248e47b2d48e2af4a3c81c99c0eab1571",
+    "match": true
+  },
+  {
+    "function": "weather-context",
+    "file": "index.ts",
+    "repositoryPath": "supabase/functions/weather-context/index.ts",
+    "staging": "d1091ecc7da5754c190148657a3af09dc607b0a4e628449e0fd68d274fa9fc82",
+    "production": "d1091ecc7da5754c190148657a3af09dc607b0a4e628449e0fd68d274fa9fc82",
+    "repository": "7533b234810cb9d1d7735ad215631380b02426ba99ad12253657abd55a6eb9e8",
+    "match": false
+  },
+  {
+    "function": "weather-context",
+    "file": "source/_shared/http.ts",
+    "repositoryPath": "supabase/functions/_shared/http.ts",
+    "staging": "58f66be6e4f4056ae0637d4abcb71418bf063cd9ce3b5a26789edbbc2162576a",
+    "production": "58f66be6e4f4056ae0637d4abcb71418bf063cd9ce3b5a26789edbbc2162576a",
+    "repository": "58f66be6e4f4056ae0637d4abcb71418bf063cd9ce3b5a26789edbbc2162576a",
+    "match": true
+  },
+  {
+    "function": "weather-context",
+    "file": "source/_shared/supabaseAdmin.ts",
+    "repositoryPath": "supabase/functions/_shared/supabaseAdmin.ts",
+    "staging": "0bbf833d35b4f2144bbc1bedd1722e5248e47b2d48e2af4a3c81c99c0eab1571",
+    "production": "0bbf833d35b4f2144bbc1bedd1722e5248e47b2d48e2af4a3c81c99c0eab1571",
+    "repository": "0bbf833d35b4f2144bbc1bedd1722e5248e47b2d48e2af4a3c81c99c0eab1571",
+    "match": true
+  }
+]

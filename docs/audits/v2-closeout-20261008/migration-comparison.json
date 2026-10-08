@@ -1,0 +1,309 @@
+{
+  "sourceSha": "adf740c87c653ca5999d4b35962819981dc36c74",
+  "stagingRef": "fhhudicklmpofuzkxeqe",
+  "productionRef": "npykvnxnehlsdlbumzwk",
+  "method": "md5(array_to_string(statements, LF)) versus repository LF bytes; this does not establish semantic equality for a mismatch",
+  "missingStage": [],
+  "missingProduction": [],
+  "rows": [
+    {
+      "file": "20260919230054_build4_baseline.sql",
+      "version": "20260919230054",
+      "name": "build4_baseline",
+      "repositoryLfMd5": "d0ea6621c0f810088a07b4ed24c36720",
+      "repositoryLfSha256": "8bc38d66fcffbb9fa83502329bd4738a53a8446dd5ce89327013751872f8f16f",
+      "staging": {
+        "version": "20260919230054",
+        "name": "build4_baseline",
+        "statement_count": 1,
+        "statements_md5": "301b31cb16db86507583e5c2162ca2b6"
+      },
+      "production": {
+        "version": "20260924182148",
+        "name": "build4_baseline",
+        "statement_count": 1,
+        "statements_md5": "0c95e6aafd77c3e0aa0a67d70c48b9c8"
+      },
+      "stageVersionMatch": true,
+      "productionVersionMatch": false,
+      "stageSourceMatch": false,
+      "productionSourceMatch": false
+    },
+    {
+      "file": "20260919231500_build4_cloud_schema.sql",
+      "version": "20260919231500",
+      "name": "build4_cloud_schema",
+      "repositoryLfMd5": "5d6ddbfb311b6dce8ceb98b09dc81099",
+      "repositoryLfSha256": "7582e5e6db96b97385a2d9509fd14b40a1dec8af4c52f05e098f77c6567fd4dc",
+      "staging": {
+        "version": "20260919231500",
+        "name": "build4_cloud_schema",
+        "statement_count": 1,
+        "statements_md5": "afb7d0096ecaba9c2b93a89a13c7a0d4"
+      },
+      "production": {
+        "version": "20260924181956",
+        "name": "build4_cloud_schema",
+        "statement_count": 1,
+        "statements_md5": "5d6ddbfb311b6dce8ceb98b09dc81099"
+      },
+      "stageVersionMatch": true,
+      "productionVersionMatch": false,
+      "stageSourceMatch": false,
+      "productionSourceMatch": true
+    },
+    {
+      "file": "20260921120000_ir01_duration_source_and_claim_v3.sql",
+      "version": "20260921120000",
+      "name": "ir01_duration_source_and_claim_v3",
+      "repositoryLfMd5": "d359cfb9b4316b77c2da83c6709dab1c",
+      "repositoryLfSha256": "73db663974354f0c968b6b11b0a92f901aff6e5f464ad9bcfc953ff43a1901a4",
+      "staging": {
+        "version": "20260921120000",
+        "name": "ir01_duration_source_and_claim_v3",
+        "statement_count": 1,
+        "statements_md5": "116e05308c991b530050211229f6940f"
+      },
+      "production": {
+        "version": "20260924182007",
+        "name": "ir01_duration_source_and_claim_v3",
+        "statement_count": 1,
+        "statements_md5": "d359cfb9b4316b77c2da83c6709dab1c"
+      },
+      "stageVersionMatch": true,
+      "productionVersionMatch": false,
+      "stageSourceMatch": false,
+      "productionSourceMatch": true
+    },
+    {
+      "file": "20260921160000_f08_meal_slot_and_status.sql",
+      "version": "20260921160000",
+      "name": "f08_meal_slot_and_status",
+      "repositoryLfMd5": "e26e459aea96d24f60f486d5863ddf29",
+      "repositoryLfSha256": "fdfa8aabd1188346189e03d3bb93efc0054426d98dbac0e691a3f0c3196f1617",
+      "staging": {
+        "version": "20260921160000",
+        "name": "f08_meal_slot_and_status",
+        "statement_count": 1,
+        "statements_md5": "b8e6c41f2bc380d928a5a086240a2c85"
+      },
+      "production": {
+        "version": "20260924182010",
+        "name": "f08_meal_slot_and_status",
+        "statement_count": 1,
+        "statements_md5": "e26e459aea96d24f60f486d5863ddf29"
+      },
+      "stageVersionMatch": true,
+      "productionVersionMatch": false,
+      "stageSourceMatch": false,
+      "productionSourceMatch": true
+    },
+    {
+      "file": "20260921190000_f05_add_child_after_binding.sql",
+      "version": "20260921190000",
+      "name": "f05_add_child_after_binding",
+      "repositoryLfMd5": "11113160b87c7b456f19708628467410",
+      "repositoryLfSha256": "21cdfe205ca6b7ac9fd7923ab924d14aa0f7404a2550e864e3a890a1277d5e87",
+      "staging": {
+        "version": "20260921190000",
+        "name": "f05_add_child_after_binding",
+        "statement_count": 1,
+        "statements_md5": "c73437d1c597cb5d79a2d395ea899637"
+      },
+      "production": {
+        "version": "20260924182014",
+        "name": "f05_add_child_after_binding",
+        "statement_count": 1,
+        "statements_md5": "11113160b87c7b456f19708628467410"
+      },
+      "stageVersionMatch": true,
+      "productionVersionMatch": false,
+      "stageSourceMatch": false,
+      "productionSourceMatch": true
+    },
+    {
+      "file": "20260922180000_f09_task_payment_mechanism.sql",
+      "version": "20260922180000",
+      "name": "f09_task_payment_mechanism",
+      "repositoryLfMd5": "02f6067bbe047aaa9ecf5ea8b0d8abd8",
+      "repositoryLfSha256": "5a15898cef43b1825feb21b3a28e03a9b98faa2dc258291b94512df0b3bbc47e",
+      "staging": {
+        "version": "20260924182047",
+        "name": "f09_task_payment_mechanism",
+        "statement_count": 1,
+        "statements_md5": "02f6067bbe047aaa9ecf5ea8b0d8abd8"
+      },
+      "production": {
+        "version": "20260924182017",
+        "name": "f09_task_payment_mechanism",
+        "statement_count": 1,
+        "statements_md5": "02f6067bbe047aaa9ecf5ea8b0d8abd8"
+      },
+      "stageVersionMatch": false,
+      "productionVersionMatch": false,
+      "stageSourceMatch": true,
+      "productionSourceMatch": true
+    },
+    {
+      "file": "20260922181000_f10_career_opportunities.sql",
+      "version": "20260922181000",
+      "name": "f10_career_opportunities",
+      "repositoryLfMd5": "350ffe91b09e67ccf943fb0ad33d378a",
+      "repositoryLfSha256": "02b9a8a9773d41e3e72c947969de22aeda14f5253cc97c6651a18989654b2cf9",
+      "staging": {
+        "version": "20260924182051",
+        "name": "f10_career_opportunities",
+        "statement_count": 1,
+        "statements_md5": "350ffe91b09e67ccf943fb0ad33d378a"
+      },
+      "production": {
+        "version": "20260924182021",
+        "name": "f10_career_opportunities",
+        "statement_count": 1,
+        "statements_md5": "350ffe91b09e67ccf943fb0ad33d378a"
+      },
+      "stageVersionMatch": false,
+      "productionVersionMatch": false,
+      "stageSourceMatch": true,
+      "productionSourceMatch": true
+    },
+    {
+      "file": "20260922182000_f11_rebuild_focus.sql",
+      "version": "20260922182000",
+      "name": "f11_rebuild_focus",
+      "repositoryLfMd5": "f4ee299a1a82c6a356ff75e151b81a6f",
+      "repositoryLfSha256": "1e5f7affd3d3eb6a837306401c499a180f2a39929bd522fa089b652b1b2a17e8",
+      "staging": {
+        "version": "20260924182055",
+        "name": "f11_rebuild_focus",
+        "statement_count": 1,
+        "statements_md5": "f4ee299a1a82c6a356ff75e151b81a6f"
+      },
+      "production": {
+        "version": "20260924182024",
+        "name": "f11_rebuild_focus",
+        "statement_count": 1,
+        "statements_md5": "f4ee299a1a82c6a356ff75e151b81a6f"
+      },
+      "stageVersionMatch": false,
+      "productionVersionMatch": false,
+      "stageSourceMatch": true,
+      "productionSourceMatch": true
+    },
+    {
+      "file": "20260922183000_f12_life_records.sql",
+      "version": "20260922183000",
+      "name": "f12_life_records",
+      "repositoryLfMd5": "8647319bc3b094ecf87a49f8031a3749",
+      "repositoryLfSha256": "289bfb7209089fb882859b0122b58ecab09323321d0efb8defadd69a92f05900",
+      "staging": {
+        "version": "20260924182059",
+        "name": "f12_life_records",
+        "statement_count": 1,
+        "statements_md5": "8647319bc3b094ecf87a49f8031a3749"
+      },
+      "production": {
+        "version": "20260924182028",
+        "name": "f12_life_records",
+        "statement_count": 1,
+        "statements_md5": "8647319bc3b094ecf87a49f8031a3749"
+      },
+      "stageVersionMatch": false,
+      "productionVersionMatch": false,
+      "stageSourceMatch": true,
+      "productionSourceMatch": true
+    },
+    {
+      "file": "20260922200000_f13_people_os.sql",
+      "version": "20260922200000",
+      "name": "f13_people_os",
+      "repositoryLfMd5": "3408a9422b30b7539123cc1758259d69",
+      "repositoryLfSha256": "a63183bb1ac1a35324511ca4eba7834ef2408507f43fbaa01e59d58ef94e28a4",
+      "staging": {
+        "version": "20260924182113",
+        "name": "f13_people_os",
+        "statement_count": 1,
+        "statements_md5": "3408a9422b30b7539123cc1758259d69"
+      },
+      "production": {
+        "version": "20260924182033",
+        "name": "f13_people_os",
+        "statement_count": 1,
+        "statements_md5": "3408a9422b30b7539123cc1758259d69"
+      },
+      "stageVersionMatch": false,
+      "productionVersionMatch": false,
+      "stageSourceMatch": true,
+      "productionSourceMatch": true
+    },
+    {
+      "file": "20260922210000_int13_per_owner_uniqueness.sql",
+      "version": "20260922210000",
+      "name": "int13_per_owner_uniqueness",
+      "repositoryLfMd5": "06c7b2b18a7d12db3118da25071df70f",
+      "repositoryLfSha256": "fd05295a65b50977f04b4272f94bea56c45d49558ccd0a11c27d8c37d971ca9d",
+      "staging": {
+        "version": "20260924182116",
+        "name": "int13_per_owner_uniqueness",
+        "statement_count": 1,
+        "statements_md5": "06c7b2b18a7d12db3118da25071df70f"
+      },
+      "production": {
+        "version": "20260924182038",
+        "name": "int13_per_owner_uniqueness",
+        "statement_count": 1,
+        "statements_md5": "06c7b2b18a7d12db3118da25071df70f"
+      },
+      "stageVersionMatch": false,
+      "productionVersionMatch": false,
+      "stageSourceMatch": true,
+      "productionSourceMatch": true
+    },
+    {
+      "file": "20260924183000_env_function_alignment.sql",
+      "version": "20260924183000",
+      "name": "env_function_alignment",
+      "repositoryLfMd5": "d5a81609b9cca67c979ffc437977b3b1",
+      "repositoryLfSha256": "3acc6518cbb0be8372c5947bf50887073aaa6750906178984fe834b936b8b546",
+      "staging": {
+        "version": "20260924182838",
+        "name": "env_function_alignment",
+        "statement_count": 1,
+        "statements_md5": "d5a81609b9cca67c979ffc437977b3b1"
+      },
+      "production": {
+        "version": "20260924182844",
+        "name": "env_function_alignment",
+        "statement_count": 1,
+        "statements_md5": "d5a81609b9cca67c979ffc437977b3b1"
+      },
+      "stageVersionMatch": false,
+      "productionVersionMatch": false,
+      "stageSourceMatch": true,
+      "productionSourceMatch": true
+    },
+    {
+      "file": "20260925141432_external_calendar_connections.sql",
+      "version": "20260925141432",
+      "name": "external_calendar_connections",
+      "repositoryLfMd5": "7353e35fcf5b4d3ee7b6e74d0a38186d",
+      "repositoryLfSha256": "e40c85f328c9338dd8a19bdf07e80547c94e92aefb7768dac421572ea7fa1127",
+      "staging": {
+        "version": "20260925142007",
+        "name": "external_calendar_connections",
+        "statement_count": 1,
+        "statements_md5": "7353e35fcf5b4d3ee7b6e74d0a38186d"
+      },
+      "production": {
+        "version": "20260925142013",
+        "name": "external_calendar_connections",
+        "statement_count": 1,
+        "statements_md5": "7353e35fcf5b4d3ee7b6e74d0a38186d"
+      },
+      "stageVersionMatch": false,
+      "productionVersionMatch": false,
+      "stageSourceMatch": true,
+      "productionSourceMatch": true
+    }
+  ]
+}
