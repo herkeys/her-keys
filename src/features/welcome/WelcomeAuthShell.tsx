@@ -7,6 +7,7 @@ import { stepAfterBack, type WelcomeAuthCallbacks, type WelcomeAuthViewState } f
 import { AccountChoiceView } from './views/AccountChoiceView';
 import { EmailEntryView } from './views/EmailEntryView';
 import { OtpEntryView } from './views/OtpEntryView';
+import { EmailPasswordView } from './views/EmailPasswordView';
 import { ConflictView, DegradedHeader, SettlingView } from './views/StatePresentations';
 import { WelcomeView } from './views/WelcomeView';
 
@@ -29,7 +30,7 @@ export interface WelcomeAuthShellProps extends WelcomeAuthCallbacks {
  * Production routing is untouched: the shell is exercised from the internal
  * design gallery until the integration pass places it.
  */
-export function WelcomeAuthShell({ state, onBegin, onApple, onGoogle, onChooseEmail, onSubmitEmail, onSubmitOtp, onResendOtp, onChangeEmail, onBack, onSignOut }: WelcomeAuthShellProps) {
+export function WelcomeAuthShell({ state, onBegin, onApple, onGoogle, onChooseEmail, onChoosePassword, onPasswordModeChange, onSubmitPassword, onSubmitEmail, onSubmitOtp, onResendOtp, onChangeEmail, onBack, onSignOut }: WelcomeAuthShellProps) {
   // Hard presentations replace the step tree entirely.
   if (state.presentation === 'settling') {
     return (
@@ -67,11 +68,22 @@ export function WelcomeAuthShell({ state, onBegin, onApple, onGoogle, onChooseEm
           onApple={onApple}
           onGoogle={onGoogle}
           onChooseEmail={onChooseEmail}
+          onChoosePassword={onChoosePassword}
         />
       )}
 
       {state.presentation === 'normal' && state.step === 'email' && (
         <EmailEntryView email={state.email} error={state.emailError} pending={state.pending === 'email'} onSubmitEmail={onSubmitEmail} />
+      )}
+
+      {state.presentation === 'normal' && state.step === 'password' && onPasswordModeChange && onSubmitPassword && (
+        <EmailPasswordView
+          mode={state.passwordMode ?? 'signIn'}
+          notice={state.passwordNotice ?? null}
+          pending={state.pending === 'password'}
+          onModeChange={onPasswordModeChange}
+          onSubmit={onSubmitPassword}
+        />
       )}
 
       {state.presentation === 'normal' && state.step === 'otp' && (
