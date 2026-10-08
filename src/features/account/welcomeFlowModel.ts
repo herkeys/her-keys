@@ -1,4 +1,4 @@
-import type { EmailVerification } from '../../domain/account/accountRuntime';
+import type { EmailPasswordAttempt, EmailVerification } from '../../domain/account/accountRuntime';
 import type { AccountStateKind } from '../../domain/account/authState';
 import type { EmailOtpRequestResult } from '../../domain/account/emailOtp';
 import {
@@ -40,8 +40,10 @@ export interface WelcomeFlowState {
   email: string;
   emailError: EmailErrorKind | null;
   otpError: OtpErrorKind | null;
+  passwordMode: 'signIn' | 'signUp';
+  passwordNotice: 'confirmationRequired' | 'rejected' | 'unreachable' | 'unavailable' | null;
   /** The method this screen is waiting on, so progress shows beside the control that started it. */
-  inFlight: WelcomeAuthMethod | null;
+  inFlight: WelcomeAuthMethod | 'password' | null;
   /** When Resend is offered again (epoch ms), or null when it already is. A courtesy to her, not a rate limit. */
   resendAvailableAt: number | null;
   /** The last attempt from here ended without an account. Never set by a cancellation. */
@@ -52,6 +54,10 @@ export type WelcomeFlowEvent =
   | { type: 'begin' }
   | { type: 'back' }
   | { type: 'chooseEmail' }
+  | { type: 'choosePassword' }
+  | { type: 'passwordModeChanged'; mode: 'signIn' | 'signUp' }
+  | { type: 'passwordStarted' }
+  | { type: 'passwordSettled'; outcome: EmailPasswordAttempt['outcome']; account: AccountStateKind }
   | { type: 'changeEmail' }
   | { type: 'providerStarted'; method: 'apple' | 'google' }
   /** The provider flow ended. `account` is the runtime's state afterwards — the only evidence of how it went. */
@@ -70,6 +76,8 @@ export function initialWelcomeFlow(mode: WelcomeFlowMode): WelcomeFlowState {
     email: '',
     emailError: null,
     otpError: null,
+    passwordMode: 'signIn',
+    passwordNotice: null,
     inFlight: null,
     resendAvailableAt: null,
     attemptFailed: false,
@@ -108,6 +116,28 @@ export function welcomeFlowReducer(state: WelcomeFlowState, event: WelcomeFlowEv
       if (target === null) return state;
       // Going back clears what was said about the step being left, never what she typed.
       return { ...state, step: target, emailError: null, otpError: null, attemptFailed: false };
+    }
+
+    case 'choosePassword':
+      if (state.inFlight !== null || state.step !== 'account-choice') return state;
+      return { ...state, step: 'password', passwordMode: 'signIn', passwordNotice: null, attemptFailed: false };
+
+    case 'passwordModeChanged':
+      if (state.inFlight !== null || state.step !== 'password') return state;
+      return { ...state, passwordMode: event.mode, passwordNotice: null };
+
+    case 'passwordStarted':
+      if (state.inFlight !== null || state.step !== 'password') return state;
+      return { ...state, inFlight: 'password', passwordNotice: null };
+
+    case 'passwordSettled': {
+      if (state.inFlight !== 'password') return state;
+      const outcome = event.outcome.kind;
+      if (outcome === 'authenticated') {
+        const failed = verifiedButNotHeld(event.account);
+        return { ...state, inFlight: null, passwordNotice: failed ? 'rejected' : null };
+      }
+      return { ...state, inFlight: null, passwordNotice: outcome };
     }
 
     case 'chooseEmail':
@@ -190,6 +220,8 @@ export function welcomeFlowView(state: WelcomeFlowState, platform: WelcomeAuthPl
     email: state.email,
     emailError: state.emailError,
     otpError: state.otpError,
+    passwordMode: state.passwordMode,
+    passwordNotice: state.passwordNotice,
     resendSecondsLeft: secondsLeft > 0 ? secondsLeft : null,
     notice: state.attemptFailed && state.step === 'account-choice' ? 'attempt-failed' : null,
   };
