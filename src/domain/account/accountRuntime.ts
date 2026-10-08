@@ -25,6 +25,7 @@ import {
   type ClaimOutcome,
 } from './claim';
 import type { CloudAccountClient } from './cloudClient';
+import { UNAVAILABLE_EMAIL_PASSWORD, type EmailPasswordMode, type EmailPasswordPort, type EmailPasswordResult } from './emailPassword';
 import { UNAVAILABLE_EMAIL_OTP, type EmailOtpPort, type EmailOtpRequestResult, type EmailOtpVerifyResult } from './emailOtp';
 import { toAccountId, type AccountId, type AccountSession, type AuthProvider } from './identity';
 import type { ProviderRegistry } from './provider';
@@ -57,6 +58,8 @@ export interface AccountRuntimeOptions {
   providers: ProviderRegistry;
   /** Passwordless email, the one two-phase method. Absent means this build cannot offer it. */
   emailOtp?: EmailOtpPort;
+  /** Optional email/password sign-in and sign-up, using the same identity boundary. */
+  emailPassword?: EmailPasswordPort;
   cloud: CloudAccountClient;
   /** Reads and writes the household blob's identity block. */
   identity: {
@@ -86,6 +89,7 @@ export interface AccountRuntimeOptions {
  * provider sign-in. Every other outcome leaves the account where it was.
  */
 export type EmailVerification = { kind: 'verified' } | Exclude<EmailOtpVerifyResult, { kind: 'success' }>;
+export type EmailPasswordAttempt = { state: AccountState; outcome: { kind: 'authenticated' } | Exclude<EmailPasswordResult, { kind: 'success' }> };
 
 export interface AccountRuntime {
   getState(): AccountState;
@@ -94,6 +98,8 @@ export interface AccountRuntime {
   signIn(provider: AuthProvider): Promise<AccountState>;
   /** Whether passwordless email can be offered on this device. */
   emailOtpAvailable(): boolean;
+  emailPasswordAvailable(): boolean;
+  authenticateEmailPassword(mode: EmailPasswordMode, email: string, password: string): Promise<EmailPasswordAttempt>;
   /** Email phase one: ask for a code. Changes no account state. Calling it again is the resend. */
   requestEmailOtp(email: string): Promise<EmailOtpRequestResult>;
   /** Email phase two: a verified code becomes a session and takes the same path as any provider's. */
@@ -177,6 +183,7 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
   });
 
   const emailOtp = options.emailOtp ?? UNAVAILABLE_EMAIL_OTP;
+  const emailPassword = options.emailPassword ?? UNAVAILABLE_EMAIL_PASSWORD;
 
   type Degraded = Extract<AccountState, { kind: 'authDegraded' }>;
 
@@ -408,6 +415,34 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
     },
 
     emailOtpAvailable: () => emailOtp.isAvailable(),
+    emailPasswordAvailable: () => emailPassword.isAvailable(),
+
+    async authenticateEmailPassword(mode, email, password): Promise<EmailPasswordAttempt> {
+      if (!emailPassword.isAvailable()) {
+        return { state, outcome: { kind: 'unavailable', detail: 'email_password_not_configured' } };
+      }
+      const attempt = beginAuth();
+      if (attempt === null) {
+        return { state, outcome: { kind: 'unavailable', detail: 'account_not_awaiting_sign_in' } };
+      }
+
+      let result: EmailPasswordResult;
+      try {
+        result = await emailPassword.authenticate(mode, email, password);
+      } catch {
+        result = { kind: 'unreachable', detail: 'email_password_request_threw' };
+      }
+      if (superseded(attempt)) {
+        report('account.auth_superseded');
+        return { state, outcome: { kind: 'unavailable', detail: 'auth_superseded' } };
+      }
+      if (result.kind !== 'success') {
+        report('account.email_password_' + result.kind, result.kind === 'confirmationRequired' ? undefined : result.detail);
+        if (attempt.degraded === null) apply({ type: 'authCancelled' });
+        return { state, outcome: result };
+      }
+      return { state: await adoptSession(result.session, attempt.degraded), outcome: { kind: 'authenticated' } };
+    },
 
     async requestEmailOtp(email) {
       if (!emailOtp.isAvailable()) return { kind: 'unavailable', detail: 'email_otp_not_configured' };
