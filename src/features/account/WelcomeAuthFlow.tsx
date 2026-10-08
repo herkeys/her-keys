@@ -68,6 +68,17 @@ export function WelcomeAuthFlow({ mode }: { mode: WelcomeFlowMode }) {
     onApple: () => startProvider('apple'),
     onGoogle: () => startProvider('google'),
     onChooseEmail: () => dispatch({ type: 'chooseEmail' }),
+    onChoosePassword: () => dispatch({ type: 'choosePassword' }),
+    onPasswordModeChange: (mode) => dispatch({ type: 'passwordModeChanged', mode }),
+    onSubmitPassword: (mode, email, password) => {
+      if (flow.inFlight !== null) return;
+      dispatch({ type: 'passwordStarted' });
+      void (async () => {
+        await clearStrandedSession();
+        const result = await account.authenticateEmailPassword(mode, email, password);
+        send({ type: 'passwordSettled', outcome: result.outcome, account: result.state.kind });
+      })();
+    },
     onChangeEmail: () => dispatch({ type: 'changeEmail' }),
 
     onSubmitEmail: (email) => {
