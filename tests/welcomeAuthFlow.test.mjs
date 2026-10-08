@@ -33,6 +33,7 @@ const { BackHandler } = await import('./support/rn-stub.tsx');
 const { installAccountHost } = await import('./support/welcomeFlow/AccountProvider.tsx');
 const { offerProviders } = await import('./support/welcomeFlow/accountRuntimeInstance.mjs');
 const { WelcomeAuthFlow, WelcomeAuthSettling } = await import('../src/features/account/WelcomeAuthFlow.tsx');
+const { WelcomeAuthShell } = await import('../src/features/welcome/WelcomeAuthShell.tsx');
 
 const ACCOUNT_A = '11111111-1111-4111-8111-111111111111';
 const ACCOUNT_B = '22222222-2222-4222-8222-222222222222';
@@ -153,9 +154,15 @@ async function type(r, text) {
 }
 
 const toAccountChoice = async (r) => press(r, COPY.welcome.begin);
+/** Legacy OTP service regression only: this route is not exposed in the product's account choice. */
+async function openLegacyOtpForBoundaryTest(r) {
+  const shell = r.root.findByType(WelcomeAuthShell);
+  await TestRenderer.act(async () => shell.props.onChooseEmail());
+  await settle();
+}
 async function toCodeStep(r, address = EMAIL) {
   await toAccountChoice(r);
-  await press(r, 'Continue with email');
+  await openLegacyOtpForBoundaryTest(r);
   await type(r, address);
   await press(r, COPY.email.continue);
 }
@@ -180,7 +187,7 @@ describe('the first run: Welcome → account choice → authenticate', () => {
     const labels = () => r.root.findAllByType('Pressable').map((n) => n.props.accessibilityLabel);
     assert.deepEqual(labels(), [COPY.welcome.begin]);
     await toAccountChoice(r);
-    assert.deepEqual(labels(), [COPY.back, 'Continue with Apple', 'Continue with Google', 'Continue with email', COPY.password.choice, COPY.accountChoice.legalTerms, COPY.accountChoice.legalPrivacy]);
+    assert.deepEqual(labels(), [COPY.back, 'Continue with Apple', 'Continue with Google', 'Continue with email', COPY.accountChoice.legalTerms, COPY.accountChoice.legalPrivacy]);
     assert.doesNotMatch(shown(r), /guest|skip|not now|later|explore|without an account/i);
   });
 
@@ -203,11 +210,26 @@ describe('the first run: Welcome → account choice → authenticate', () => {
 });
 
 describe('email/password through the same runtime', () => {
+  test('the ONE visible email choice opens sign-in/password directly, not the code screen', async () => {
+    const d = device();
+    const r = await open();
+    await toAccountChoice(r);
+    assert.ok(control(r, 'Continue with email'));
+    assert.equal(control(r, COPY.password.choice), undefined, 'no second email choice');
+    await press(r, 'Continue with email');
+    assert.match(shown(r), /Welcome back/);
+    assert.ok(control(r, COPY.password.tabSignIn));
+    assert.ok(control(r, COPY.password.tabSignUp));
+    assert.equal(control(r, COPY.otp.verify), undefined, 'no verification-code form');
+    assert.doesNotMatch(shown(r), /send a short code|no password to remember/i);
+    assert.deepEqual(d.requested, [], 'do not ask the OTP service to send a code');
+  });
+
   test('the new choice is offered and verified sign-in binds the real account', async () => {
     const d = device({ password: [success(ACCOUNT_A, 'email')] });
     const r = await open();
     await toAccountChoice(r);
-    await press(r, COPY.password.choice);
+    await press(r, 'Continue with email');
     assert.match(shown(r), /Welcome back/);
     const inputs = r.root.findAllByType('TextInput');
     assert.equal(inputs.length, 2);
@@ -222,8 +244,8 @@ describe('email/password through the same runtime', () => {
   test('reconnect permits email/password login, not registration as another person', async () => {
     device();
     const r = await open('reconnect');
-    await press(r, COPY.password.choice);
-    assert.equal(control(r, COPY.password.goToCreate), undefined);
+    await press(r, 'Continue with email');
+    assert.equal(control(r, COPY.password.tabSignUp), undefined);
     assert.match(shown(r), /Welcome back/);
   });
 
@@ -231,8 +253,8 @@ describe('email/password through the same runtime', () => {
     const d = device({ password: [{ kind: 'confirmationRequired' }] });
     const r = await open();
     await toAccountChoice(r);
-    await press(r, COPY.password.choice);
-    await press(r, COPY.password.goToCreate);
+    await press(r, 'Continue with email');
+    await press(r, COPY.password.tabSignUp);
     const inputs = r.root.findAllByType('TextInput');
     assert.equal(inputs.length, 3);
     for (const [index, value] of [EMAIL, 'secret-password-for-tests', 'secret-password-for-tests'].entries()) {
@@ -346,7 +368,7 @@ describe('email, through the runtime', () => {
     const d = device({ email: { verifications: [success(ACCOUNT_A, 'email')] } });
     const r = await open();
     await toAccountChoice(r);
-    await press(r, 'Continue with email');
+    await openLegacyOtpForBoundaryTest(r);
     assert.match(shown(r), /What’s your email\?/);
 
     await type(r, EMAIL);
@@ -373,7 +395,7 @@ describe('email, through the runtime', () => {
     const d = device();
     const r = await open();
     await toAccountChoice(r);
-    await press(r, 'Continue with email');
+    await openLegacyOtpForBoundaryTest(r);
     await type(r, 'not-an-email');
     await press(r, COPY.email.continue);
     assert.ok(shown(r).includes(COPY.email.invalid));
@@ -582,7 +604,7 @@ describe('reconnect: a bound household whose credential lapsed', () => {
   test('AN EMAIL ACCOUNT CAN RECONNECT: code step, verify, and the same account is bound again with no claim', async () => {
     const d = await degradedDevice({ email: { verifications: [success(ACCOUNT_A, 'email')] } });
     const r = await open('reconnect');
-    await press(r, 'Continue with email');
+    await openLegacyOtpForBoundaryTest(r);
     assert.ok(control(r, COPY.back), 'the email step can go back to the reconnect choice');
     await type(r, EMAIL);
     await press(r, COPY.email.continue);
@@ -598,7 +620,7 @@ describe('reconnect: a bound household whose credential lapsed', () => {
   test('another account\'s code does not reconnect it: back at the reconnect choice, calmly, with the household still hers', async () => {
     const d = await degradedDevice({ email: { verifications: [success(ACCOUNT_B, 'email')] } });
     const r = await open('reconnect');
-    await press(r, 'Continue with email');
+    await openLegacyOtpForBoundaryTest(r);
     await type(r, 'other@example.test');
     await press(r, COPY.email.continue);
     await type(r, CODE);
