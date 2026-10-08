@@ -14,7 +14,7 @@
  */
 
 /** The methods the welcome tree can offer. Email code remains available alongside password auth. */
-export type WelcomeAuthMethod = 'apple' | 'google' | 'email' | 'password';
+export type WelcomeAuthMethod = 'apple' | 'google' | 'email';
 
 /** Only the two mobile platforms exist; desktop/web is out of scope. */
 export type WelcomeAuthPlatform = 'ios' | 'android';
@@ -61,7 +61,7 @@ export interface WelcomeAuthViewState {
    * contradictory control is disabled and a restrained progress treatment
    * shows near the action that started it.
    */
-  pending: WelcomeAuthMethod | null;
+  pending: WelcomeAuthMethod | 'password' | null;
   /** The address as typed — preserved across back navigation, never transformed. */
   email: string;
   emailError: EmailErrorKind | null;
