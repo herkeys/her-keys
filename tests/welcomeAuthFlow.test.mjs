@@ -219,6 +219,14 @@ describe('email/password through the same runtime', () => {
     assert.deepEqual(d.cloudCalls, ['bootstrap']);
   });
 
+  test('reconnect permits email/password login, not registration as another person', async () => {
+    device();
+    const r = await open('reconnect');
+    await press(r, COPY.password.choice);
+    assert.equal(control(r, COPY.password.goToCreate), undefined);
+    assert.match(shown(r), /Welcome back/);
+  });
+
   test('signup requiring email confirmation never binds a household', async () => {
     const d = device({ password: [{ kind: 'confirmationRequired' }] });
     const r = await open();
