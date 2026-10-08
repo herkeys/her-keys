@@ -669,7 +669,8 @@ describe('the controller model, pure', () => {
     const source = readFileSync('src/features/account/welcomeFlowModel.ts', 'utf8').replace(/\r\n/g, '\n');
     const events = /export type WelcomeFlowEvent =([\s\S]*?);\n\nexport function/.exec(source)[1];
     assert.doesNotMatch(events, /code\s*:|token\s*:|otp\s*:/i, 'no event has a code, token or otp field');
-    assert.deepEqual(Object.keys(initialWelcomeFlow('first-run')).sort(), ['attemptFailed', 'email', 'emailError', 'inFlight', 'mode', 'otpError', 'resendAvailableAt', 'step']);
+    assert.equal(Object.prototype.hasOwnProperty.call(initialWelcomeFlow('first-run'), 'password'), false, 'password text never enters the controller');
+    assert.deepEqual(Object.keys(initialWelcomeFlow('first-run')).sort(), ['attemptFailed', 'email', 'emailError', 'inFlight', 'mode', 'otpError', 'passwordMode', 'passwordNotice', 'resendAvailableAt', 'step']);
   });
 });
 
