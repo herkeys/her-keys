@@ -81,6 +81,7 @@ export function WelcomeAuthShell({ state, onBegin, onApple, onGoogle, onChooseEm
           mode={state.passwordMode ?? 'signIn'}
           notice={state.passwordNotice ?? null}
           pending={state.pending === 'password'}
+          allowSignUp={state.passwordCanSignUp ?? true}
           onModeChange={onPasswordModeChange}
           onSubmit={onSubmitPassword}
         />
