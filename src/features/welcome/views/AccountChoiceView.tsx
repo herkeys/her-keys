@@ -9,7 +9,7 @@ import { ProviderButton } from '../ProviderButton';
 
 export interface AccountChoiceViewProps {
   platform: WelcomeAuthViewState['platform'];
-  pending: WelcomeAuthMethod | null;
+  pending: WelcomeAuthViewState['pending'];
   /** The degraded presentation supplies its own reconnect header instead. */
   headerless?: boolean;
   /** The last attempt from here ended without an account. Never set for a cancellation. */
