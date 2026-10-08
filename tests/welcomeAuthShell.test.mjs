@@ -115,22 +115,35 @@ describe('provider set and order are a platform decision', () => {
     assert.doesNotMatch(panel, /follows you to your next phone|new phone is not a fresh start/);
   });
 
-  test('email and password is a separate available sign-in choice', async () => {
+  test('one email choice opens password; legacy OTP has no direct selection', async () => {
     const called = [];
-    const r = await render(shell({ step: 'account-choice' }, callbacks({ onChoosePassword: () => called.push('password') })));
-    const button = pressableByLabel(r, COPY.password.choice);
-    assert.ok(button);
-    await press(button);
+    const r = await render(shell({ step: 'account-choice' }, callbacks({
+      onChooseEmail: () => called.push('otp'),
+      onChoosePassword: () => called.push('password'),
+    })));
+    const choice = pressableByLabel(r, 'Continue with email');
+    assert.ok(choice);
+    assert.equal(pressables(r).filter((p) => p.props.accessibilityLabel === 'Continue with email').length, 1);
+    assert.equal(pressableByLabel(r, COPY.password.choice), undefined);
+    await press(choice);
     assert.deepEqual(called, ['password']);
   });
 
-  test('password screen has masked entry and sign-up confirmation without OTP', async () => {
-    const r = await render(shell({ step: 'password', passwordMode: 'signUp' }));
-    const inputs = r.root.findAllByType('TextInput');
+  test('unified email page offers Sign In / Sign Up tabs with masked password', async () => {
+    const signIn = await render(shell({ step: 'password', passwordMode: 'signIn' }));
+    assert.ok(pressableByLabel(signIn, COPY.password.tabSignIn));
+    assert.ok(pressableByLabel(signIn, COPY.password.tabSignUp));
+    assert.equal(pressableByLabel(signIn, COPY.password.tabSignIn).props.accessibilityState.selected, true);
+    assert.equal(signIn.root.findAllByType('TextInput').length, 2);
+    assert.equal(signIn.root.findAllByType('TextInput')[1].props.secureTextEntry, true);
+    const signUp = await render(shell({ step: 'password', passwordMode: 'signUp' }));
+    const inputs = signUp.root.findAllByType('TextInput');
     assert.equal(inputs.length, 3);
     assert.equal(inputs[1].props.secureTextEntry, true);
     assert.equal(inputs[2].props.secureTextEntry, true);
-    assert.match(joined(r), /Create your account/);
+    assert.equal(pressableByLabel(signUp, COPY.password.tabSignUp).props.accessibilityState.selected, true);
+    assert.match(joined(signUp), /Create your account/);
+    assert.doesNotMatch(joined(signIn), /send a short code/i);
   });
 
   test('no button is ever labeled "Continue with Android"', async () => {
@@ -156,13 +169,14 @@ describe('callbacks report intent and carry no auth implementation', () => {
     const cb = callbacks({
       onApple: () => calls.push('apple'),
       onGoogle: () => calls.push('google'),
-      onChooseEmail: () => calls.push('email'),
+      onChooseEmail: () => calls.push('otp'),
+      onChoosePassword: () => calls.push('password'),
     });
     const r = await render(shell({ step: 'account-choice', platform: 'ios' }, cb));
     await press(pressableByLabel(r, 'Continue with Apple'));
     await press(pressableByLabel(r, 'Continue with Google'));
     await press(pressableByLabel(r, 'Continue with email'));
-    assert.deepEqual(calls, ['apple', 'google', 'email']);
+    assert.deepEqual(calls, ['apple', 'google', 'password']);
   });
 
   test('a cancelled provider flow returns to the choice with NO error presentation', async () => {
