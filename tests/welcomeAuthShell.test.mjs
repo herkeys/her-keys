@@ -51,6 +51,9 @@ const callbacks = (overrides = {}) => ({
   onApple: () => {},
   onGoogle: () => {},
   onChooseEmail: () => {},
+  onChoosePassword: () => {},
+  onPasswordModeChange: () => {},
+  onSubmitPassword: () => {},
   onSubmitEmail: () => {},
   onSubmitOtp: () => {},
   onResendOtp: () => {},
@@ -110,6 +113,24 @@ describe('provider set and order are a platform decision', () => {
     assert.match(COPY.accountChoice.crossPlatformNote, /not yet supported/);
     const panel = readFileSync(join(ROOT, 'src', 'features', 'account', 'AccountPanel.tsx'), 'utf8');
     assert.doesNotMatch(panel, /follows you to your next phone|new phone is not a fresh start/);
+  });
+
+  test('email and password is a separate available sign-in choice', async () => {
+    const called = [];
+    const r = await render(shell({ step: 'account-choice' }, callbacks({ onChoosePassword: () => called.push('password') })));
+    const button = pressableByLabel(r, COPY.password.choice);
+    assert.ok(button);
+    await press(button);
+    assert.deepEqual(called, ['password']);
+  });
+
+  test('password screen has masked entry and sign-up confirmation without OTP', async () => {
+    const r = await render(shell({ step: 'password', passwordMode: 'signUp' }));
+    const inputs = r.root.findAllByType('TextInput');
+    assert.equal(inputs.length, 3);
+    assert.equal(inputs[1].props.secureTextEntry, true);
+    assert.equal(inputs[2].props.secureTextEntry, true);
+    assert.match(joined(r), /Create your account/);
   });
 
   test('no button is ever labeled "Continue with Android"', async () => {
