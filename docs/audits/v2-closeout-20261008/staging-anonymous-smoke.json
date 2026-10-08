@@ -1,0 +1,46 @@
+{
+  "projectRef": "fhhudicklmpofuzkxeqe",
+  "authorization": "none",
+  "results": [
+    {
+      "name": "public-auth-settings-control",
+      "status": 200,
+      "pass": true
+    },
+    {
+      "name": "table-anon-denied",
+      "status": 401,
+      "pass": true
+    },
+    {
+      "name": "sync-pull-anon-denied",
+      "status": 401,
+      "pass": true
+    },
+    {
+      "name": "sync-push-anon-denied",
+      "status": 401,
+      "pass": true
+    },
+    {
+      "name": "bootstrap-anon-denied",
+      "status": 401,
+      "pass": true
+    },
+    {
+      "name": "herkeys-ai-missing-jwt-denied",
+      "status": 401,
+      "pass": true
+    },
+    {
+      "name": "calendar-data-missing-jwt-denied",
+      "status": 401,
+      "pass": true
+    },
+    {
+      "name": "weather-context-missing-jwt-denied",
+      "status": 401,
+      "pass": true
+    }
+  ]
+}
