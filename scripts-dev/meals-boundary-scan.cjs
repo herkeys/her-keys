@@ -606,6 +606,22 @@ const LATER_FEATURES = [
       ['scripts-dev/meals-boundary-scan.cjs', 'Welcome auth: check H repaired \u2014 the welcome frontend\u2019s change exempted every lane branch in HEAD\u2019s history from the holder check; only a lane that DECLARES and proves a stacked base now inherits, and its own claims are checked against that base. The unbuilt HK-AI-02 entry is removed; this lane is registered'],
     ],
   },
+  {
+    id: 'V2-AUDIT-LEGAL-AND-CI (2026-10-08)',
+    // This repair is committed on the integrated line; no independent feature
+    // branch claims the files. Check H still proves they are new here.
+    branch: null,
+    owned: [],
+    migrations: [],
+    schemas: [],
+    rootCollections: [],
+    syncKinds: [],
+    shared: [
+      ['src/config/legal.ts', 'V2 audit: owner-published Her Keys Terms and Privacy PDF links for the account choice; public URLs only, no auth or backend mutation'],
+      ['.github/workflows/v2-integration-validation.yml', 'V2 audit: the isolated pull-request gate for TypeScript, app tests, Expo and release identity; it deploys nothing'],
+    ],
+  },
+
 ];
 
 /**
