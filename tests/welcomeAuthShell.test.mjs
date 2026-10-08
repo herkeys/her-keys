@@ -99,6 +99,7 @@ describe('provider set and order are a platform decision', () => {
 
   test('account-choice copy never promises unsupported new-device restoration', () => {
     assert.match(COPY.accountChoice.lede, /not available yet/);
+    assert.match(COPY.accountChoice.crossPlatformNote, /not yet supported/);
     const panel = readFileSync(join(ROOT, 'src', 'features', 'account', 'AccountPanel.tsx'), 'utf8');
     assert.doesNotMatch(panel, /follows you to your next phone|new phone is not a fresh start/);
   });
