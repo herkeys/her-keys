@@ -12,6 +12,7 @@ export interface EmailPasswordViewProps {
   mode: EmailPasswordMode;
   notice: EmailPasswordNotice;
   pending: boolean;
+  allowSignUp: boolean;
   onModeChange: (mode: EmailPasswordMode) => void;
   onSubmit: (mode: EmailPasswordMode, email: string, password: string) => void;
 }
@@ -21,7 +22,7 @@ export interface EmailPasswordViewProps {
  * AppState or analytics. The password is passed directly to AccountRuntime.
  * No fake session is created while email confirmation is pending.
  */
-export function EmailPasswordView({ mode, notice, pending, onModeChange, onSubmit }: EmailPasswordViewProps) {
+export function EmailPasswordView({ mode, notice, pending, allowSignUp, onModeChange, onSubmit }: EmailPasswordViewProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -39,7 +40,7 @@ export function EmailPasswordView({ mode, notice, pending, onModeChange, onSubmi
     onSubmit(mode, email, password);
   };
   const changeMode = (next: EmailPasswordMode) => {
-    if (pending) return;
+    if (pending || (next === 'signUp' && !allowSignUp)) return;
     setPassword('');
     setConfirm('');
     setError(null);
@@ -90,9 +91,11 @@ export function EmailPasswordView({ mode, notice, pending, onModeChange, onSubmi
         <View style={styles.actions}>
           <Button label={create ? COPY.password.create : COPY.password.signIn} onPress={submit}
             disabled={pending || password.length === 0 || email.length === 0} />
-          <Button label={create ? COPY.password.goToSignIn : COPY.password.goToCreate}
-            variant="ghost" disabled={pending}
-            onPress={() => changeMode(create ? 'signIn' : 'signUp')} />
+          {allowSignUp && (
+            <Button label={create ? COPY.password.goToSignIn : COPY.password.goToCreate}
+              variant="ghost" disabled={pending}
+              onPress={() => changeMode(create ? 'signIn' : 'signUp')} />
+          )}
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
