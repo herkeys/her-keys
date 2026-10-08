@@ -29,7 +29,7 @@ import { createEmptyState } from '../src/state/initialState.ts';
 import { TZ } from './support/fixtures.mjs';
 
 const { render } = await import('./support/render.tsx');
-const { BackHandler } = await import('./support/rn-stub.tsx');
+const { BackHandler, Platform } = await import('./support/rn-stub.tsx');
 const { installAccountHost } = await import('./support/welcomeFlow/AccountProvider.tsx');
 const { offerProviders } = await import('./support/welcomeFlow/accountRuntimeInstance.mjs');
 const { WelcomeAuthFlow, WelcomeAuthSettling } = await import('../src/features/account/WelcomeAuthFlow.tsx');
@@ -100,6 +100,8 @@ function device({ google = [success(ACCOUNT_A, 'google')], apple = [success(ACCO
     newClaimKey: () => '88888888-8888-4888-8888-888888888888',
   });
   offerProviders(offered);
+  // Simulate the actual OS, not provider-discovery timing. Apple choice on iOS is mandatory.
+  Platform.OS = offered.includes('apple') ? 'ios' : 'android';
   const host = installAccountHost(runtime);
   return { runtime, host, port, requested, cloudCalls, secureStorage, identity: () => staged };
 }
@@ -189,6 +191,16 @@ describe('the first run: Welcome → account choice → authenticate', () => {
     await toAccountChoice(r);
     assert.deepEqual(labels(), [COPY.back, 'Continue with Apple', 'Continue with Google', 'Continue with email', COPY.accountChoice.legalTerms, COPY.accountChoice.legalPrivacy]);
     assert.doesNotMatch(shown(r), /guest|skip|not now|later|explore|without an account/i);
+  });
+
+  test('iOS Apple choice remains visible without waiting for provider discovery', async () => {
+    device({ offered: ['apple', 'google'] });
+    const r = await open();
+    await toAccountChoice(r);
+    assert.ok(control(r, 'Continue with Apple'), 'Apple is mandatory on native iOS');
+    assert.ok(control(r, 'Continue with Google'), 'Google remains an alternative');
+    assert.ok(control(r, 'Continue with email'), 'email/password remains an alternative');
+    assert.equal(control(r, COPY.password.choice), undefined, 'never show a second email path');
   });
 
   test('ANDROID offers Google and email, and never Apple; IOS offers Apple, Google and email, with the Apple disclosure', async () => {
