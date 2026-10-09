@@ -679,6 +679,40 @@ describe('the controller model, pure', () => {
     }
   });
 
+  test('Premium opens only after Get Started; returning users bypass it', () => {
+    const start = initialWelcomeFlow('first-run');
+    const newUser = welcomeFlowReducer(start, { type: 'begin' });
+    const returning = welcomeFlowReducer(start, { type: 'existingAccount' });
+    assert.equal(newUser.step, 'premium');
+    assert.equal(newUser.passwordMode, 'signUp');
+    assert.equal(returning.step, 'account-choice');
+    assert.equal(returning.passwordMode, 'signIn');
+    assert.equal(welcomeFlowBackTarget(newUser), 'welcome');
+    assert.equal(welcomeFlowBackTarget(returning), 'welcome');
+    assert.equal(welcomeFlowReducer(initialWelcomeFlow('reconnect'), { type: 'begin' }).step, 'account-choice');
+  });
+
+  test('Premium outcomes advance only after an actual purchase/restore or free choice', () => {
+    const intro = welcomeFlowReducer(initialWelcomeFlow('first-run'), { type: 'begin' });
+    const waiting = welcomeFlowReducer(intro, { type: 'premiumStarted' });
+    assert.equal(waiting.premiumBusy, true);
+    assert.equal(welcomeFlowBackTarget(waiting), null);
+    assert.deepEqual(welcomeFlowReducer(waiting, { type: 'premiumContinueFree' }), waiting);
+    const cancelled = welcomeFlowReducer(waiting, { type: 'premiumSettled', outcome: 'cancelled' });
+    assert.equal(cancelled.step, 'premium');
+    assert.equal(cancelled.premiumNotice, null);
+    const missing = welcomeFlowReducer(waiting, { type: 'premiumSettled', outcome: 'no_offering' });
+    assert.equal(missing.step, 'premium');
+    assert.equal(missing.premiumNotice, 'no_offering');
+    assert.equal(welcomeFlowReducer(missing, { type: 'premiumContinueFree' }).step, 'account-choice');
+    for (const outcome of ['purchased', 'restored', 'already_entitled']) {
+      const next = welcomeFlowReducer(waiting, { type: 'premiumSettled', outcome });
+      assert.equal(next.step, 'account-choice', outcome);
+      assert.equal(next.premiumBusy, false);
+    }
+    assert.deepEqual(welcomeFlowReducer(waiting, { type: 'premiumStarted' }), waiting);
+  });
+
   test('a cancellation never sets the failure line; an auth error or an unfinished binding does', () => {
     const waiting = at('account-choice', { inFlight: 'google' });
     assert.equal(welcomeFlowReducer(waiting, { type: 'providerSettled', account: 'unauthenticated' }).attemptFailed, false);
@@ -697,7 +731,7 @@ describe('the controller model, pure', () => {
     assert.equal(welcomeFlowView(sent, 'android', NOW + 30_000).resendSecondsLeft, null);
     assert.equal(welcomeFlowView(sent, 'android', NOW + 3_600_000).resendSecondsLeft, null, 'after a long background, Resend is simply available');
     for (const mode of ['first-run', 'reconnect']) {
-      for (const step of ['welcome', 'account-choice', 'email', 'otp']) {
+      for (const step of ['welcome', 'premium', 'account-choice', 'email', 'otp']) {
         const presentation = welcomeFlowView({ ...initialWelcomeFlow(mode), step }, 'ios', NOW).presentation;
         assert.ok(presentation === 'normal' || presentation === 'auth-degraded', `${mode} ${step}`);
       }
