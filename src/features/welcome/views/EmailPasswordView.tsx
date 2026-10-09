@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, ScrollView, StyleSheet, View } from 'react-native';
 import { AppText, Button, Overline, TextField } from '../../../design/components';
-import { color, radius, sizing, spacing } from '../../../design/tokens';
+import { color, spacing } from '../../../design/tokens';
 import type { EmailPasswordMode } from '../../../domain/account/emailPassword';
 import { emailObviousError } from '../model';
 import { WELCOME_AUTH_COPY as COPY } from '../copy';
@@ -13,8 +13,6 @@ export interface EmailPasswordViewProps {
   mode: EmailPasswordMode;
   notice: EmailPasswordNotice;
   pending: boolean;
-  allowSignUp: boolean;
-  onModeChange: (mode: EmailPasswordMode) => void;
   onSubmit: (mode: EmailPasswordMode, email: string, password: string) => void;
 }
 
@@ -23,7 +21,7 @@ export interface EmailPasswordViewProps {
  * AppState or analytics. The password is passed directly to AccountRuntime.
  * No fake session is created while email confirmation is pending.
  */
-export function EmailPasswordView({ mode, notice, pending, allowSignUp, onModeChange, onSubmit }: EmailPasswordViewProps) {
+export function EmailPasswordView({ mode, notice, pending, onSubmit }: EmailPasswordViewProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -40,14 +38,6 @@ export function EmailPasswordView({ mode, notice, pending, allowSignUp, onModeCh
     setError(null);
     onSubmit(mode, email, password);
   };
-  const changeMode = (next: EmailPasswordMode) => {
-    if (pending || (next === 'signUp' && !allowSignUp)) return;
-    setPassword('');
-    setConfirm('');
-    setError(null);
-    onModeChange(next);
-  };
-
   const serverNotice = notice === 'confirmationRequired'
     ? COPY.password.confirmationRequired
     : notice === 'unreachable' ? COPY.password.unreachable
@@ -58,34 +48,6 @@ export function EmailPasswordView({ mode, notice, pending, allowSignUp, onModeCh
     <KeyboardAvoidingView style={styles.flex} behavior={EMAIL_AUTH_KEYBOARD_BEHAVIOR}>
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.container}>
         <Overline>{COPY.password.overline}</Overline>
-        <View style={styles.modeTabs} accessibilityRole="tablist">
-          <Pressable
-            accessibilityRole="tab"
-            accessibilityLabel={COPY.password.tabSignIn}
-            accessibilityState={{ selected: !create, disabled: pending }}
-            disabled={pending}
-            onPress={() => changeMode('signIn')}
-            style={[styles.modeTab, !create && styles.modeTabActive]}
-          >
-            <AppText variant="actionLabel" color={!create ? color.text.primary : color.text.secondary}>
-              {COPY.password.tabSignIn}
-            </AppText>
-          </Pressable>
-          {allowSignUp && (
-            <Pressable
-              accessibilityRole="tab"
-              accessibilityLabel={COPY.password.tabSignUp}
-              accessibilityState={{ selected: create, disabled: pending }}
-              disabled={pending}
-              onPress={() => changeMode('signUp')}
-              style={[styles.modeTab, create && styles.modeTabActive]}
-            >
-              <AppText variant="actionLabel" color={create ? color.text.primary : color.text.secondary}>
-                {COPY.password.tabSignUp}
-              </AppText>
-            </Pressable>
-          )}
-        </View>
         <AppText variant="display" style={styles.heading}>{create ? COPY.password.createTitle : COPY.password.signInTitle}</AppText>
         <AppText variant="supporting" color={color.text.secondary} style={styles.lede}>
           {create ? COPY.password.createLede : COPY.password.signInLede}
@@ -130,23 +92,6 @@ export function EmailPasswordView({ mode, notice, pending, allowSignUp, onModeCh
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   container: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: spacing.xl, paddingVertical: spacing.lg },
-  modeTabs: {
-    flexDirection: 'row',
-    borderRadius: radius.pill,
-    backgroundColor: color.surface.primary,
-    marginTop: spacing.xl,
-    padding: spacing.xxs,
-    gap: spacing.xs,
-  },
-  modeTab: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: sizing.minTouchTarget,
-    borderRadius: radius.pill,
-    paddingHorizontal: spacing.md,
-  },
-  modeTabActive: { backgroundColor: color.surface.secondary },
   heading: { marginTop: spacing.lg },
   lede: { marginTop: spacing.md },
   form: { marginTop: spacing.xl },
