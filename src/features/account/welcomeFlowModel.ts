@@ -119,7 +119,7 @@ export function welcomeFlowReducer(state: WelcomeFlowState, event: WelcomeFlowEv
   switch (event.type) {
     case 'begin':
       return state.step === 'welcome'
-        ? { ...state, step: 'premium', passwordMode: 'signUp', premiumNotice: null, attemptFailed: false }
+        ? { ...state, step: 'account-choice', passwordMode: 'signUp', premiumNotice: null, attemptFailed: false }
         : state;
 
     case 'premiumStarted':
