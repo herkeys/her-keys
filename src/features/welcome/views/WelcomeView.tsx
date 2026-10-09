@@ -6,6 +6,7 @@ import { WELCOME_AUTH_COPY as COPY } from '../copy';
 
 export interface WelcomeViewProps {
   onBegin: () => void;
+  onExistingAccount: () => void;
 }
 
 /**
@@ -17,7 +18,7 @@ export interface WelcomeViewProps {
  * resolves the launch splash into the warm interior, then the pinned
  * headline and lede carry the screen.
  */
-export function WelcomeView({ onBegin }: WelcomeViewProps) {
+export function WelcomeView({ onBegin, onExistingAccount }: WelcomeViewProps) {
   return (
     <>
       <FadeIn speed="deliberate" style={styles.body}>
@@ -38,6 +39,7 @@ export function WelcomeView({ onBegin }: WelcomeViewProps) {
           {COPY.welcome.footnote}
         </AppText>
         <Button label={COPY.welcome.begin} onPress={onBegin} />
+        <Button label={COPY.welcome.existingAccount} variant="secondary" onPress={onExistingAccount} />
       </View>
     </>
   );
@@ -56,6 +58,6 @@ const styles = StyleSheet.create({
   },
   title: { marginTop: spacing.md },
   lede: { marginTop: spacing.xl },
-  footer: { paddingHorizontal: spacing.xl, paddingBottom: spacing.xxl },
+  footer: { paddingHorizontal: spacing.xl, paddingBottom: spacing.xxl, gap: spacing.md },
   footnote: { marginBottom: spacing.lg },
 });
