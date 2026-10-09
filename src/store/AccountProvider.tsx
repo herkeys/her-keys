@@ -7,7 +7,7 @@ import type { EmailPasswordMode } from '../domain/account/emailPassword';
 import type { EmailPasswordAttempt } from '../domain/account/accountRuntime';
 import type { AuthProvider } from '../domain/account/identity';
 import type { SyncNamespace } from '../domain/sync/syncTypes';
-import { accountRuntime, accountsAvailable, syncRuntime } from './accountRuntimeInstance';
+import { accountRuntime, accountsAvailable, syncRuntime, requestWelcomeEmailAfterBinding } from './accountRuntimeInstance';
 import { useStoreSnapshot } from './AppStateProvider';
 
 /**
@@ -80,6 +80,14 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       live = false;
     };
   }, [hydrated]);
+
+  // Only a fully verified, bound user causes a welcome request.
+  // The server decides actual eligibility and deduplicates across devices,
+  // sessions and app restarts. Recovery and unbound sessions never send mail.
+  useEffect(() => {
+    if (!settled || state.kind !== 'accountBound') return;
+    void requestWelcomeEmailAfterBinding();
+  }, [settled, state.kind, state.kind === 'accountBound' ? state.session.accountId : null]);
 
   useEffect(() => {
     if (!accountsAvailable) return;
