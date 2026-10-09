@@ -67,8 +67,8 @@ const callbacks = (overrides = {}) => ({
 
 const shell = (state, cb = callbacks()) => <WelcomeAuthShell state={{ ...BASE, ...state }} {...cb} />;
 
-describe('Premium before account creation', () => {
-  test('welcome has two clear paths; Premium is only for new users', async () => {
+describe('Welcome and legacy Premium gallery preview', () => {
+  test('welcome offers exactly the two approved entry decisions', async () => {
     const taps = [];
     const r = await render(shell({ step: 'welcome' }, callbacks({
       onBegin: () => taps.push('get-started'),
@@ -88,7 +88,7 @@ describe('Premium before account creation', () => {
       onPremiumPlans: () => taps.push('plans'),
       onContinueFree: () => taps.push('free'),
     })));
-    assert.match(joined(r), /Her Keys Premium/);
+    assert.match(joined(r), /HER KEYS PREMIUM/i);
     await press(pressableByLabel(r, 'Explore Premium Plans'));
     await press(pressableByLabel(r, 'Continue with Her Keys Free'));
     assert.deepEqual(taps, ['plans', 'free']);
@@ -132,7 +132,7 @@ describe('provider set and order are a platform decision', () => {
         assert.equal(link.props.accessibilityRole, 'link');
         assert.equal(link.props.disabled, false);
       }
-      assert.match(joined(r), /agree to the Terms and Conditions/);
+      assert.match(joined(r), /asked to accept before using Her Keys/);
     }
     const connected = await render(shell({ step: 'account-choice', platform: 'android' }));
     Linking.__takeOpened();
@@ -169,9 +169,8 @@ describe('provider set and order are a platform decision', () => {
 
   test('unified email page offers Sign In / Sign Up tabs with masked password', async () => {
     const signIn = await render(shell({ step: 'password', passwordMode: 'signIn' }));
-    assert.ok(pressableByLabel(signIn, COPY.password.tabSignIn));
-    assert.ok(pressableByLabel(signIn, COPY.password.tabSignUp));
-    assert.equal(pressableByLabel(signIn, COPY.password.tabSignIn).props.accessibilityState.selected, true);
+    assert.equal(pressableByLabel(signIn, COPY.password.tabSignIn), undefined, 'welcome already established sign-in intent');
+    assert.equal(pressableByLabel(signIn, COPY.password.tabSignUp), undefined, 'no second authentication decision');
     assert.equal(signIn.root.findAllByType('TextInput').length, 2);
     assert.equal(signIn.root.findAllByType('TextInput')[1].props.secureTextEntry, true);
     const signUp = await render(shell({ step: 'password', passwordMode: 'signUp' }));
@@ -179,7 +178,7 @@ describe('provider set and order are a platform decision', () => {
     assert.equal(inputs.length, 3);
     assert.equal(inputs[1].props.secureTextEntry, true);
     assert.equal(inputs[2].props.secureTextEntry, true);
-    assert.equal(pressableByLabel(signUp, COPY.password.tabSignUp).props.accessibilityState.selected, true);
+    assert.equal(pressableByLabel(signUp, COPY.password.tabSignUp), undefined);
     assert.match(joined(signUp), /Create your account/);
     assert.doesNotMatch(joined(signIn), /send a short code/i);
   });
