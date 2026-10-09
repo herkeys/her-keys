@@ -63,6 +63,7 @@ export function WelcomeAuthFlow({ mode }: { mode: WelcomeFlowMode }) {
 
   const callbacks: WelcomeAuthCallbacks = {
     onBegin: () => dispatch({ type: 'begin' }),
+    onExistingAccount: () => dispatch({ type: 'existingAccount' }),
     onBack: () => dispatch({ type: 'back' }),
     onApple: () => startProvider('apple'),
     onGoogle: () => startProvider('google'),
@@ -142,6 +143,7 @@ const SETTLING: WelcomeAuthViewState = {
 const noop = () => {};
 const INERT: WelcomeAuthCallbacks = {
   onBegin: noop,
+  onExistingAccount: noop,
   onApple: noop,
   onGoogle: noop,
   onChooseEmail: noop,
