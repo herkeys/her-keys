@@ -612,11 +612,16 @@ const LATER_FEATURES = [
     // Stacked on the reviewed repair head, so this lane cannot claim its parent's repairs.
     base: '30511749a1f06682b913ec2e0da552688584245f',
     owned: [],
-    migrations: ['supabase/migrations/20261009020000_herkeys_welcome_email_receipts.sql'],
+    migrations: ['supabase/migrations/20261009020000_herkeys_welcome_email_receipts.sql', 'supabase/migrations/20261009060000_v2_account_consents.sql'],
     schemas: [],
     rootCollections: [],
     syncKinds: [],
     shared: [
+      ['supabase/migrations/20261009060000_v2_account_consents.sql', 'V2 consent: additive account-scoped audit ledger with restrictive RLS, append-only columns, and server-authoritative timestamps'],
+      ['supabase/tests/migration-chain.mjs', 'V2 consent: register the new independent additive ledger migration in the canonical backend harness'],
+      ['tests/migrationChain.test.mjs', 'V2 consent: extend strict post-certification migration registry with consent ledger'],
+      ['.gitattributes', 'V2 consent: retain LF migration pin without modifying previously applied migrations'],
+      ['tests/consentDatabaseGovernance.test.mjs', 'V2 consent: assert private append-only ledger structure, client column restrictions, and explicit account-bound policies'],
       ['docs/builds/HK_V2_PRODUCTION_ANDROID_SMOKE_20261008.md', 'V2 Android emulator smoke: new later-lane execution contract for internal Production-backend APK, one authorized disposable account, real signup and recovery email evidence, and fail-closed launch gates; no Meals-domain change'],
       ['.gitattributes', 'Production transactional email: pin the reviewed new migration LF for reproducibility'],
       ['supabase/tests/migration-chain.mjs', 'Production transactional email: register new additive ledger migration in the canonical ordered harness'],
