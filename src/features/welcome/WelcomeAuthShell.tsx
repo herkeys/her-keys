@@ -30,7 +30,7 @@ export interface WelcomeAuthShellProps extends WelcomeAuthCallbacks {
  * Production routing is untouched: the shell is exercised from the internal
  * design gallery until the integration pass places it.
  */
-export function WelcomeAuthShell({ state, onBegin, onApple, onGoogle, onChooseEmail, onChoosePassword, onPasswordModeChange, onSubmitPassword, onSubmitEmail, onSubmitOtp, onResendOtp, onChangeEmail, onBack, onSignOut }: WelcomeAuthShellProps) {
+export function WelcomeAuthShell({ state, onBegin, onExistingAccount, onApple, onGoogle, onChooseEmail, onChoosePassword, onPasswordModeChange, onSubmitPassword, onSubmitEmail, onSubmitOtp, onResendOtp, onChangeEmail, onBack, onSignOut }: WelcomeAuthShellProps) {
   // Hard presentations replace the step tree entirely.
   if (state.presentation === 'settling') {
     return (
@@ -55,7 +55,7 @@ export function WelcomeAuthShell({ state, onBegin, onApple, onGoogle, onChooseEm
 
       {state.presentation === 'auth-degraded' && <DegradedHeader />}
 
-      {state.presentation === 'normal' && state.step === 'welcome' && <WelcomeView onBegin={onBegin} />}
+      {state.presentation === 'normal' && state.step === 'welcome' && <WelcomeView onBegin={onBegin} onExistingAccount={onExistingAccount} />}
 
       {/* The degraded presentation keeps the account choice usable: reconnecting
           is the same control as a first sign-in, under its own header. */}
@@ -65,6 +65,7 @@ export function WelcomeAuthShell({ state, onBegin, onApple, onGoogle, onChooseEm
           pending={state.pending}
           headerless={state.presentation === 'auth-degraded'}
           notice={state.notice}
+          authMode={state.passwordMode ?? 'signIn'}
           onApple={onApple}
           onGoogle={onGoogle}
           onChooseEmail={onChooseEmail}
