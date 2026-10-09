@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { BackHandler, Platform } from 'react-native';
+import { createPasswordRecoveryPort, type PasswordRecoveryPort } from '../../platform/passwordRecoveryProvider';
 import { useAccount } from '../../store/AccountProvider';
 import type { WelcomeAuthCallbacks, WelcomeAuthPlatform, WelcomeAuthViewState } from '../welcome/model';
 import { WelcomeAuthShell } from '../welcome/WelcomeAuthShell';
@@ -31,6 +32,7 @@ export function WelcomeAuthFlow({ mode, presentWelcomePaywall }: { mode: Welcome
   const [flow, dispatch] = useReducer(welcomeFlowReducer, mode, initialWelcomeFlow);
   const platform = useOfferedPlatform();
   const now = useCooldownClock(flow.resendAvailableAt);
+  const recovery = useRef<PasswordRecoveryPort | null>(null);
 
   // A request that settles after this screen has gone has nothing left to update.
   const mounted = useRef(true);
@@ -38,6 +40,8 @@ export function WelcomeAuthFlow({ mode, presentWelcomePaywall }: { mode: Welcome
     mounted.current = true;
     return () => {
       mounted.current = false;
+      void recovery.current?.dispose();
+      recovery.current = null;
     };
   }, []);
   const send = useCallback((event: WelcomeFlowEvent) => {
@@ -62,6 +66,12 @@ export function WelcomeAuthFlow({ mode, presentWelcomePaywall }: { mode: Welcome
     })();
   };
 
+  const cancelRecovery = () => {
+    void recovery.current?.dispose();
+    recovery.current = null;
+    dispatch({ type: 'back' });
+  };
+
   const callbacks: WelcomeAuthCallbacks = {
     onBegin: () => dispatch({ type: 'begin' }),
     onExistingAccount: () => dispatch({ type: 'existingAccount' }),
@@ -79,12 +89,20 @@ export function WelcomeAuthFlow({ mode, presentWelcomePaywall }: { mode: Welcome
       })();
     },
     onContinueFree: () => dispatch({ type: 'premiumContinueFree' }),
-    onBack: () => dispatch({ type: 'back' }),
+    onBack: () => flow.step === 'recovery' ? cancelRecovery() : dispatch({ type: 'back' }),
     onApple: () => startProvider('apple'),
     onGoogle: () => startProvider('google'),
     onChooseEmail: () => dispatch({ type: 'chooseEmail' }),
     onChoosePassword: () => dispatch({ type: 'choosePassword' }),
     onPasswordModeChange: (mode) => dispatch({ type: 'passwordModeChanged', mode }),
+    onForgotPassword: (email) => dispatch({ type: 'forgotPassword', email }),
+    onRequestRecovery: async (email) => {
+      if (recovery.current === null) recovery.current = createPasswordRecoveryPort();
+      return recovery.current.request(email);
+    },
+    onVerifyRecovery: async (email, code) => recovery.current?.verify(email, code) ?? 'unavailable',
+    onUpdateRecoveryPassword: async (password) => recovery.current?.updatePassword(password) ?? 'unavailable',
+    onCancelRecovery: cancelRecovery,
     onSubmitPassword: (mode, email, password) => {
       if (flow.inFlight !== null) return;
       dispatch({ type: 'passwordStarted' });
@@ -135,11 +153,12 @@ export function WelcomeAuthFlow({ mode, presentWelcomePaywall }: { mode: Welcome
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
       if (waiting) return true;
       if (backTarget === null) return false;
-      dispatch({ type: 'back' });
+      if (flow.step === 'recovery') cancelRecovery();
+      else dispatch({ type: 'back' });
       return true;
     });
     return () => subscription.remove();
-  }, [backTarget, waiting]);
+  }, [backTarget, waiting, flow.step]);
 
   return <WelcomeAuthShell state={welcomeFlowView(flow, platform, now)} {...callbacks} />;
 }
