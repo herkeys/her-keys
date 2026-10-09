@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { HER_KEYS_CONSENT_VERSIONS } from '../domain/consent';
 import {
   parseHerKeysAiTurn,
   type HerKeysAiRequest,
@@ -25,6 +26,21 @@ export function createHerKeysAiClient(client: SupabaseClient): HerKeysAiClient {
   return {
     async advance(input) {
       try {
+        // Even when UI consent was saved, recheck the current account's latest
+        // server-owned decision immediately before an external AI request.
+        // A declined, withdrawn, stale or unreadable decision FAILS CLOSED.
+        if (process.env.EXPO_PUBLIC_HERKEYS_V2_CONSENT_GATE === 'true') {
+          const { data: receipts, error: consentError } = await client.from('account_consents')
+            .select('policy_version,granted')
+            .eq('consent_type', 'ai_processing')
+            .order('recorded_at', { ascending: false })
+            .limit(1);
+          if (consentError || !receipts?.length ||
+              receipts[0].policy_version !== HER_KEYS_CONSENT_VERSIONS.ai_processing ||
+              receipts[0].granted !== true) {
+            return { kind: 'unavailable', reason: 'ai_processing_consent_required' };
+          }
+        }
         const { data, error } = await client.functions.invoke('herkeys-ai', { body: input });
         if (error) {
           const status =
