@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { AppText, Button, Card, Overline, Screen } from '../../src/design/components';
 import { colors, spacing } from '../../src/design/tokens';
-import { canResolveOnboardingPlus, PAYWALL_POLICY } from '../../src/monetization/entitlement';
+import { canResolveOnboardingPlus, HER_KEYS_PREMIUM_DISPLAY_NAME, PAYWALL_POLICY } from '../../src/monetization/entitlement';
 import { useEntitlement } from '../../src/monetization/RevenueCatProvider';
 import { useOnboarding } from '../../src/store/OnboardingContext';
 
@@ -56,7 +56,7 @@ export default function HerKeysPlus() {
     } else if (outcome.kind === 'no_offering' || outcome.kind === 'unavailable') {
       setPaywallUnavailable(true);
     } else if (outcome.kind === 'error') {
-      setNote('Her Keys+ couldn’t open right now. You can continue without it for now.');
+      setNote(`${HER_KEYS_PREMIUM_DISPLAY_NAME} couldn’t open right now. You can continue without it for now.`);
     }
     setBusy(null);
   };
@@ -68,7 +68,7 @@ export default function HerKeysPlus() {
     if (outcome.kind === 'restored') {
       await resolve(complete);
     } else if (outcome.kind === 'no_purchases_found') {
-      setNote('No previous Her Keys+ purchase was found on this device.');
+      setNote(`No previous ${HER_KEYS_PREMIUM_DISPLAY_NAME} purchase was found on this device.`);
     } else {
       setNote('Her Keys couldn’t check for previous purchases right now.');
     }
@@ -85,16 +85,16 @@ export default function HerKeysPlus() {
 
   return (
     <Screen>
-      <Overline>Her Keys+</Overline>
+      <Overline>{HER_KEYS_PREMIUM_DISPLAY_NAME}</Overline>
       <AppText variant="hero" style={styles.title}>
         Let Her Keys carry more of the work.
       </AppText>
       <AppText variant="title" color={colors.textSecondary} style={styles.lede}>
-        Her Keys+ is where deeper household intelligence and more proactive planning will live as they're built.
+        {HER_KEYS_PREMIUM_DISPLAY_NAME} is where deeper household intelligence and more proactive planning will live as they're built.
       </AppText>
 
       <Card tone="subtle" style={styles.benefits}>
-        <Overline>Coming to Her Keys+</Overline>
+        <Overline>Coming to {HER_KEYS_PREMIUM_DISPLAY_NAME}</Overline>
         {BENEFITS.map((benefit) => (
           <AppText key={benefit} variant="body" style={styles.benefit}>
             {benefit}
@@ -103,7 +103,7 @@ export default function HerKeysPlus() {
       </Card>
 
       <AppText variant="bodySm" color={colors.textTertiary} style={styles.reassurance}>
-        You can keep using the core Her Keys experience without Her Keys+.
+        You can keep using the core Her Keys experience without {HER_KEYS_PREMIUM_DISPLAY_NAME}.
       </AppText>
 
       {note && (
@@ -114,7 +114,7 @@ export default function HerKeysPlus() {
 
       <View style={styles.actions}>
         {!paywallUnavailable && (
-          <Button label="See Her Keys+" onPress={onSeePlus} disabled={busy !== null} />
+          <Button label={`See ${HER_KEYS_PREMIUM_DISPLAY_NAME}`} onPress={onSeePlus} disabled={busy !== null} />
         )}
         <Button
           label="Restore purchases"
@@ -123,7 +123,7 @@ export default function HerKeysPlus() {
           disabled={busy !== null}
         />
         <Button
-          label="Continue without Her Keys+"
+          label={`Continue without ${HER_KEYS_PREMIUM_DISPLAY_NAME}`}
           variant="ghost"
           onPress={onContinueWithoutPlus}
           disabled={busy !== null}
