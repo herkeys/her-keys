@@ -617,6 +617,11 @@ const LATER_FEATURES = [
     rootCollections: [],
     syncKinds: [],
     shared: [
+      ['.gitattributes', 'Production transactional email: pin the reviewed new migration LF for reproducibility'],
+      ['supabase/tests/migration-chain.mjs', 'Production transactional email: register new additive ledger migration in the canonical ordered harness'],
+      ['tests/migrationChain.test.mjs', 'Production transactional email: assert newest migration is tracked without altering certified historical migrations'],
+      ['tests/hk-f01f13/support/account-runtime-instance-stub.mjs', 'Production transactional email: inert welcome operation in unconfigured screen test stub'],
+      ['tests/localNotificationArchitecture.test.mjs', 'Production transactional email: whitelist email-only Edge Function after verifying no remote push behavior'],
       ['supabase/migrations/20261009020000_herkeys_welcome_email_receipts.sql', 'Production welcome: idempotent per-account service-role delivery ledger, not a Meals change'],
       ['supabase/functions/herkeys-welcome-email/index.ts', 'Production welcome: one verified new account, JWT and project checks, secret-only server Resend sender'],
       ['supabase/email-templates/herkeys-recovery.html', 'Production recovery: Supabase Auth six-digit token template formatted with Her Keys branding'],
