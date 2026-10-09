@@ -617,6 +617,7 @@ const LATER_FEATURES = [
     rootCollections: [],
     syncKinds: [],
     shared: [
+      ['supabase/functions/herkeys-ai/index.ts', 'V2 consent: staging-activated Edge Function checks latest account-owned AI opt-in before transferring Gemini request'],
       ['app/_layout.tsx', 'V2 onboarding: stage account-scoped mandatory consent check before protected navigation, activation blocked until Staging ledger verified'],
       ['src/domain/consent.ts', 'V2 consent: current-version mandatory and optional decisions with fail-closed AI default'],
       ['src/platform/consentBackend.ts', 'V2 consent: isolated account-scoped ledger client and acknowledgment-before-progress verification'],
