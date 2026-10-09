@@ -8,6 +8,7 @@ import { AccountChoiceView } from './views/AccountChoiceView';
 import { EmailEntryView } from './views/EmailEntryView';
 import { OtpEntryView } from './views/OtpEntryView';
 import { EmailPasswordView } from './views/EmailPasswordView';
+import { PasswordRecoveryView } from './views/PasswordRecoveryView';
 import { ConflictView, DegradedHeader, SettlingView } from './views/StatePresentations';
 import { WelcomeView } from './views/WelcomeView';
 import { PremiumIntroView } from './views/PremiumIntroView';
@@ -31,7 +32,7 @@ export interface WelcomeAuthShellProps extends WelcomeAuthCallbacks {
  * Production routing is untouched: the shell is exercised from the internal
  * design gallery until the integration pass places it.
  */
-export function WelcomeAuthShell({ state, onBegin, onExistingAccount, onPremiumPlans, onContinueFree, onApple, onGoogle, onChooseEmail, onChoosePassword, onPasswordModeChange, onSubmitPassword, onSubmitEmail, onSubmitOtp, onResendOtp, onChangeEmail, onBack, onSignOut }: WelcomeAuthShellProps) {
+export function WelcomeAuthShell({ state, onBegin, onExistingAccount, onPremiumPlans, onContinueFree, onApple, onGoogle, onChooseEmail, onChoosePassword, onPasswordModeChange, onSubmitPassword, onForgotPassword, onRequestRecovery, onVerifyRecovery, onUpdateRecoveryPassword, onCancelRecovery, onSubmitEmail, onSubmitOtp, onResendOtp, onChangeEmail, onBack, onSignOut }: WelcomeAuthShellProps) {
   // Hard presentations replace the step tree entirely.
   if (state.presentation === 'settling') {
     return (
@@ -92,6 +93,17 @@ export function WelcomeAuthShell({ state, onBegin, onExistingAccount, onPremiumP
           notice={state.passwordNotice ?? null}
           pending={state.pending === 'password'}
           onSubmit={onSubmitPassword}
+          onForgotPassword={onForgotPassword}
+        />
+      )}
+
+      {state.presentation === 'normal' && state.step === 'recovery' && onRequestRecovery && onVerifyRecovery && onUpdateRecoveryPassword && (
+        <PasswordRecoveryView
+          initialEmail={state.recoveryEmail ?? ''}
+          request={onRequestRecovery}
+          verify={onVerifyRecovery}
+          updatePassword={onUpdateRecoveryPassword}
+          onReturnToSignIn={onCancelRecovery ?? onBack}
         />
       )}
 
