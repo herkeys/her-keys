@@ -23,7 +23,8 @@
       "environment": "production",
       "env": {
         "EXPO_PUBLIC_HERKEYS_BACKEND": "production",
-        "EXPO_PUBLIC_HERKEYS_DATA_MODE": "empty"
+        "EXPO_PUBLIC_HERKEYS_DATA_MODE": "empty",
+        "EXPO_PUBLIC_HERKEYS_V2_CONSENT_GATE": "true"
       }
     },
     "smoke-production-android": {
@@ -34,7 +35,8 @@
       },
       "env": {
         "EXPO_PUBLIC_HERKEYS_BACKEND": "production",
-        "EXPO_PUBLIC_HERKEYS_DATA_MODE": "empty"
+        "EXPO_PUBLIC_HERKEYS_DATA_MODE": "empty",
+        "EXPO_PUBLIC_HERKEYS_V2_CONSENT_GATE": "true"
       }
     }
   }
