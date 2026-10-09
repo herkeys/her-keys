@@ -14,6 +14,7 @@ export interface EmailPasswordViewProps {
   notice: EmailPasswordNotice;
   pending: boolean;
   onSubmit: (mode: EmailPasswordMode, email: string, password: string) => void;
+  onForgotPassword?: (email: string) => void;
 }
 
 /**
@@ -21,7 +22,7 @@ export interface EmailPasswordViewProps {
  * AppState or analytics. The password is passed directly to AccountRuntime.
  * No fake session is created while email confirmation is pending.
  */
-export function EmailPasswordView({ mode, notice, pending, onSubmit }: EmailPasswordViewProps) {
+export function EmailPasswordView({ mode, notice, pending, onSubmit, onForgotPassword }: EmailPasswordViewProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -82,6 +83,9 @@ export function EmailPasswordView({ mode, notice, pending, onSubmit }: EmailPass
         <View style={styles.actions}>
           <Button label={create ? COPY.password.create : COPY.password.signIn} onPress={submit}
             disabled={pending || password.length === 0 || email.length === 0} />
+          {!create && onForgotPassword && (
+            <Button label="Forgot Password?" variant="ghost" onPress={() => onForgotPassword(email)} disabled={pending} />
+          )}
 
         </View>
       </ScrollView>
