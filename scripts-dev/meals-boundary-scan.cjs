@@ -643,6 +643,8 @@ const LATER_FEATURES = [
       ['tests/support/welcomeFlow/AccountProvider.tsx', 'Password auth: component host models password operations'],
       ['tests/welcomeAuthFlow.test.mjs', 'Password auth: wiring, confirmation and no credential persistence checks'],
       ['tests/welcomeAuthShell.test.mjs', 'Password auth: password screen choices and transient field behavior'],
+      ['src/platform/passwordRecoveryProvider.ts', 'Password recovery: dedicated ephemeral non-persisted Supabase client, recovery OTP verified before update, local-only session close'],
+      ['tests/passwordRecovery.test.mjs', 'Password recovery: rejection of premature changes, invalid codes, temporary session disposal, non-enumerating request behavior'],
     ],
   },
   {
@@ -656,6 +658,10 @@ const LATER_FEATURES = [
     rootCollections: [],
     syncKinds: [],
     shared: [
+      ['app/(app)/systems/index.tsx', 'V2 follow-up: deliberate Systems dashboard refinement already committed on the parent repair line; unrelated to Meals'],
+      ['docs/builds/HK_V2_AI_DATA_PROCESSING_CONSENT_COPY.md', 'V2 follow-up: approved AI Data Processing disclosure copy, not an implementation of consent storage'],
+      ['src/monetization/entitlement.ts', 'V2 follow-up: audited existing Her Keys Premium entitlement behavior; preserve internal her_keys_plus'],
+      ['src/monetization/revenueCatClient.ts', 'V2 follow-up: audited existing RevenueCat client wiring without certifying live store products'],
       ['src/config/legal.ts', 'V2 audit: owner-published Her Keys Terms and Privacy PDF links for the account choice; public URLs only, no auth or backend mutation'],
       ['.github/workflows/v2-integration-validation.yml', 'V2 audit: the isolated pull-request gate for TypeScript, app tests, Expo and release identity; it deploys nothing'],
       ['docs/audits/HK_V2_STAGING_PRODUCTION_PARITY_GATE.md', 'V2 audit: the evidence and promotion contract; no live certification or deployment'],
