@@ -48,6 +48,9 @@ const BASE = {
 
 const callbacks = (overrides = {}) => ({
   onBegin: () => {},
+  onExistingAccount: () => {},
+  onPremiumPlans: () => {},
+  onContinueFree: () => {},
   onApple: () => {},
   onGoogle: () => {},
   onChooseEmail: () => {},
@@ -63,6 +66,41 @@ const callbacks = (overrides = {}) => ({
 });
 
 const shell = (state, cb = callbacks()) => <WelcomeAuthShell state={{ ...BASE, ...state }} {...cb} />;
+
+describe('Premium before account creation', () => {
+  test('welcome has two clear paths; Premium is only for new users', async () => {
+    const taps = [];
+    const r = await render(shell({ step: 'welcome' }, callbacks({
+      onBegin: () => taps.push('get-started'),
+      onExistingAccount: () => taps.push('existing'),
+    })));
+    const start = pressableByLabel(r, COPY.welcome.begin);
+    const existing = pressableByLabel(r, COPY.welcome.existingAccount);
+    assert.ok(start && existing);
+    await press(start);
+    await press(existing);
+    assert.deepEqual(taps, ['get-started', 'existing']);
+  });
+
+  test('Premium offer presents RevenueCat intent and a free account path', async () => {
+    const taps = [];
+    const r = await render(shell({ step: 'premium' }, callbacks({
+      onPremiumPlans: () => taps.push('plans'),
+      onContinueFree: () => taps.push('free'),
+    })));
+    assert.match(joined(r), /Her Keys Premium/);
+    await press(pressableByLabel(r, 'Explore Premium Plans'));
+    await press(pressableByLabel(r, 'Continue with Her Keys Free'));
+    assert.deepEqual(taps, ['plans', 'free']);
+    assert.equal(pressableByLabel(r, 'Continue with Apple'), undefined);
+  });
+
+  test('pending purchase cannot double-open RevenueCat or skip', async () => {
+    const r = await render(shell({ step: 'premium', premiumBusy: true }));
+    assert.equal(pressableByLabel(r, 'Explore Premium Plans').props.disabled, true);
+    assert.equal(pressableByLabel(r, 'Continue with Her Keys Free').props.disabled, true);
+  });
+});
 
 describe('provider set and order are a platform decision', () => {
   test('Android offers Google + email, and never Apple', async () => {
@@ -205,6 +243,7 @@ describe('callbacks report intent and carry no auth implementation', () => {
 describe('welcome is the root and back never skips it', () => {
   test('the back model: welcome has no back; each step returns one step', () => {
     assert.equal(stepAfterBack('welcome'), null);
+    assert.equal(stepAfterBack('premium'), 'welcome');
     assert.equal(stepAfterBack('account-choice'), 'welcome');
     assert.equal(stepAfterBack('email'), 'account-choice');
     assert.equal(stepAfterBack('otp'), 'email');
