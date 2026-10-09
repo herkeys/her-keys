@@ -1,3 +1,4 @@
+import type { PaywallOutcome } from '../../monetization/entitlement';
 import type { EmailPasswordAttempt, EmailVerification } from '../../domain/account/accountRuntime';
 import type { AccountStateKind } from '../../domain/account/authState';
 import type { EmailOtpRequestResult } from '../../domain/account/emailOtp';
@@ -56,7 +57,7 @@ export type WelcomeFlowEvent =
   | { type: 'begin' }
   | { type: 'existingAccount' }
   | { type: 'premiumStarted' }
-  | { type: 'premiumSettled'; outcome: 'purchased' | 'restored' | 'already_entitled' | 'cancelled' | 'no_offering' | 'unavailable' | 'error' }
+  | { type: 'premiumSettled'; outcome: PaywallOutcome['kind'] }
   | { type: 'premiumContinueFree' }
   | { type: 'back' }
   | { type: 'chooseEmail' }
@@ -133,7 +134,7 @@ export function welcomeFlowReducer(state: WelcomeFlowState, event: WelcomeFlowEv
       return {
         ...state,
         premiumBusy: false,
-        premiumNotice: event.outcome === 'cancelled' ? null : event.outcome,
+        premiumNotice: event.outcome === 'no_offering' || event.outcome === 'unavailable' ? event.outcome : event.outcome === 'cancelled' ? null : 'error',
       };
 
     case 'premiumContinueFree':
