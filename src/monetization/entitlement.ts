@@ -27,7 +27,7 @@ export const PAYWALL_POLICY: PaywallPolicy = 'soft';
  * Every reason a paywall can open. A presentation is interpreted by this
  * semantic reason, never by the route name that happened to trigger it.
  */
-export const PAYWALL_PLACEMENTS = ['onboarding_complete', 'systems_upgrade', 'premium_feature', 'manual_upgrade'] as const;
+export const PAYWALL_PLACEMENTS = ['welcome_premium', 'onboarding_complete', 'systems_upgrade', 'premium_feature', 'manual_upgrade'] as const;
 export type PaywallPlacement = (typeof PAYWALL_PLACEMENTS)[number];
 
 export type PaywallOutcome =
