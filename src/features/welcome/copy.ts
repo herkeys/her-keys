@@ -20,13 +20,18 @@ export const WELCOME_AUTH_COPY = {
     // Pinned lede — the current product voice.
     lede: 'Her Keys holds the parts of your life you shouldn’t have to keep in your head — and tells you what actually needs you today.',
     footnote: 'Your household stays on this device until you choose an account to hold it.',
-    begin: 'Begin',
+    begin: 'Get Started',
+    existingAccount: 'I Already Have an Account',
   },
 
   accountChoice: {
     overline: 'Your account',
-    title: 'Connect your\naccount.',
+    title: 'Connect your\\naccount.',
     lede: 'Sign in to connect your household to your account and sync eligible records. Restoring an existing household on a different phone is not available yet.',
+    signUpTitle: 'Create your account.',
+    signUpLede: 'Choose how you’d like to get started with Her Keys.',
+    signInTitle: 'Welcome back.',
+    signInLede: 'Choose how you’d like to sign in to Her Keys.',
     legalNotice: 'By continuing, you agree to the Terms and Conditions and acknowledge the Privacy Policy.',
     legalTerms: 'Terms and Conditions',
     legalPrivacy: 'Privacy Policy',
