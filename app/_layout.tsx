@@ -5,7 +5,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { colors } from '../src/design/tokens';
 import { canOpenScreen, isSettled, type RootScreen } from '../src/domain/routeAccess';
 import { WelcomeAuthSettling } from '../src/features/account/WelcomeAuthFlow';
-import { RevenueCatProvider } from '../src/monetization/RevenueCatProvider';
+import { RevenueCatProvider, useEntitlement } from '../src/monetization/RevenueCatProvider';
 import { AccountProvider, useAccount } from '../src/store/AccountProvider';
 import { AppStateProvider, useStoreSnapshot } from '../src/store/AppStateProvider';
 import { appStore, internalTools } from '../src/store/appStoreInstance';
@@ -52,6 +52,15 @@ export default function RootLayout() {
 function RootNavigator() {
   const snapshot = useStoreSnapshot();
   const account = useAccount();
+  const { refresh: refreshPremium } = useEntitlement();
+  // Recheck the store's canonical entitlement when a Supabase session is
+  // activated (including a pre-signup purchase) or signed out. The runtime
+  // identifies the RevenueCat UUID before publishing a bound account.
+  useEffect(() => {
+    if (account.settled && (account.state.kind === 'accountBound' || account.state.kind === 'unauthenticated')) {
+      void refreshPremium();
+    }
+  }, [account.settled, account.state.kind, refreshPremium]);
   const settled = isSettled(snapshot.status);
 
   useEffect(() => {
