@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
       return json({ status: 'not_eligible' }, 200);
     }
 
-    const token = Deno.env.get('RESEND_HERKEYS_SENDING_API_KEY');
+    const token = Deno.env.get('RESEND_API_KEY');
     if (!token) return json({ status: 'not_configured' }, 503);
 
     const admin = adminClient();
