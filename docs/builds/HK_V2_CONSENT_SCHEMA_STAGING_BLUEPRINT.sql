@@ -15,7 +15,10 @@ CREATE INDEX account_consents_latest_idx
   ON public.account_consents(account_id, consent_type, recorded_at DESC, id DESC);
 ALTER TABLE public.account_consents ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON TABLE public.account_consents FROM PUBLIC, anon, authenticated;
-GRANT SELECT, INSERT ON TABLE public.account_consents TO authenticated;
+GRANT SELECT ON TABLE public.account_consents TO authenticated;
+-- INSERT may NOT supply server-authoritative recorded_at or id columns.
+GRANT INSERT (account_id, consent_type, policy_version, granted)
+  ON TABLE public.account_consents TO authenticated;
 CREATE POLICY account_consents_select_own
   ON public.account_consents FOR SELECT TO authenticated
   USING (account_id = (SELECT auth.uid()));
@@ -25,8 +28,6 @@ CREATE POLICY account_consents_insert_own
 -- No UPDATE, DELETE or broad read grants. Decisions are an append-only audit.
 -- Acceptance is not inferred from authentication.
 -- Required hostile tests: account A cannot read/insert B; anon cannot read/write;
--- client cannot forge recorded_at (stronger enforcement requires a restricted
--- server RPC/default-only grants); declines remain addressable as latest events;
+-- client cannot forge recorded_at/id (column-level insert grant); declines
+-- remain addressable as latest events;
 -- duplicate acceptance, concurrent devices and policy revisions are evaluated.
--- BEFORE APPLYING: lock recorded_at against client writes with a column-specific
--- INSERT grant or SECURITY DEFINER RPC to guarantee server-authoritative time.
