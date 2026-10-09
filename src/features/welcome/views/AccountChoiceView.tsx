@@ -14,6 +14,7 @@ export interface AccountChoiceViewProps {
   headerless?: boolean;
   /** The last attempt from here ended without an account. Never set for a cancellation. */
   notice?: WelcomeAuthViewState['notice'];
+  authMode?: 'signIn' | 'signUp';
   onApple: WelcomeAuthCallbacks['onApple'];
   onGoogle: WelcomeAuthCallbacks['onGoogle'];
   onChooseEmail: WelcomeAuthCallbacks['onChooseEmail'];
@@ -34,7 +35,7 @@ export interface AccountChoiceViewProps {
  * Terms/Privacy open the owner-published PDFs through the OS URL handler.
  * These are public documents, not authentication or app-route callbacks.
  */
-export function AccountChoiceView({ platform, pending, headerless, notice, onApple, onGoogle, onChooseEmail, onChoosePassword }: AccountChoiceViewProps) {
+export function AccountChoiceView({ platform, pending, headerless, notice, authMode = 'signIn', onApple, onGoogle, onChooseEmail, onChoosePassword }: AccountChoiceViewProps) {
   // Exactly ONE visible email choice. Never route a normal signup back to the legacy email-code entry.
   const handlers = { apple: onApple, google: onGoogle, email: onChoosePassword ?? onChooseEmail } as const;
   const methods = methodsForPlatform(platform);
@@ -52,10 +53,10 @@ export function AccountChoiceView({ platform, pending, headerless, notice, onApp
         <FadeIn speed="deliberate" style={styles.body}>
           <Overline>{COPY.accountChoice.overline}</Overline>
           <AppText variant="hero" style={styles.title}>
-            {COPY.accountChoice.title}
+            {authMode === 'signUp' ? COPY.accountChoice.signUpTitle : COPY.accountChoice.signInTitle}
           </AppText>
           <AppText variant="title" color={color.text.secondary} style={styles.lede}>
-            {COPY.accountChoice.lede}
+            {authMode === 'signUp' ? COPY.accountChoice.signUpLede : COPY.accountChoice.signInLede}
           </AppText>
         </FadeIn>
       )}
