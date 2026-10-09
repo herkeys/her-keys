@@ -4,7 +4,6 @@ import { canRenderAccountData } from '../src/domain/account/authState';
 import type { OnboardingStep } from '../src/domain/state';
 import { WelcomeAuthFlow } from '../src/features/account/WelcomeAuthFlow';
 import { useAccount } from '../src/store/AccountProvider';
-import { useEntitlement } from '../src/monetization/RevenueCatProvider';
 import { useOnboarding } from '../src/store/OnboardingContext';
 
 /**
@@ -20,8 +19,7 @@ import { useOnboarding } from '../src/store/OnboardingContext';
  */
 export default function Entry() {
   const account = useAccount();
-  const { presentPaywall } = useEntitlement();
-  return canRenderAccountData(account.state) ? <ContinueAudit /> : <WelcomeAuthFlow mode="first-run" presentWelcomePaywall={() => presentPaywall('welcome_premium')} />;
+  return canRenderAccountData(account.state) ? <ContinueAudit /> : <WelcomeAuthFlow mode="first-run" />;
 }
 
 /**
