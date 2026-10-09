@@ -33,7 +33,7 @@ test('the server authenticates the caller and owns delivery idempotency, never t
   assert.match(fn, /await requireUser\(req\)/);
   assert.match(fn, /user\.email_confirmed_at/);
   assert.match(fn, /HER_KEYS_TRANSACTIONAL_EMAILS_ENABLED/);
-  assert.match(fn, /RESEND_HERKEYS_SENDING_API_KEY/);
+  assert.match(fn, /RESEND_API_KEY/);
   assert.match(fn, /template: \{ id: TEMPLATE_ALIAS \}/);
   assert.match(fn, /Idempotency-Key/);
   assert.match(fn, /herkeys_claim_welcome_email/);
