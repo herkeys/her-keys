@@ -1,11 +1,14 @@
 /**
- * Her Keys+ entitlement contract.
+ * Her Keys Premium entitlement contract.
  *
  * RevenueCat's CustomerInfo is the only authority for whether a customer
  * holds `her_keys_plus`. Nothing in this module, or anywhere under
  * `src/monetization`, persists that fact into household state — see
  * docs/builds/BUILD25_MONETIZATION_FOUNDATION.md.
  */
+
+/** Customer-facing tier name. Keep the stable RevenueCat entitlement identifier below. */
+export const HER_KEYS_PREMIUM_DISPLAY_NAME = 'Her Keys Premium';
 
 export const HER_KEYS_PLUS_ENTITLEMENT = 'her_keys_plus';
 
