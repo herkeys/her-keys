@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, StyleSheet, View } from 'react-native';
 import { AppText, Button, Overline, TextField } from '../../../design/components';
 import { color, sizing, spacing } from '../../../design/tokens';
 import { WELCOME_AUTH_COPY as COPY } from '../copy';
@@ -46,7 +46,7 @@ export function OtpEntryView({ email, error, pending, resendSecondsLeft, onSubmi
   };
 
   return (
-    <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView style={styles.flex} behavior="padding">
       <View style={styles.body}>
         <Overline>{COPY.otp.overline}</Overline>
         <AppText variant="display" style={styles.title}>

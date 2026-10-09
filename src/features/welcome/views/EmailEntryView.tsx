@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, StyleSheet, View } from 'react-native';
 import { AppText, Button, Overline, TextField } from '../../../design/components';
 import { color, spacing } from '../../../design/tokens';
 import { WELCOME_AUTH_COPY as COPY } from '../copy';
@@ -14,8 +14,8 @@ export interface EmailEntryViewProps {
   onSubmitEmail: (email: string) => void;
 }
 
-/** Shared email-auth keyboard behavior; one audited platform conditional, used by password + OTP screens. */
-export const EMAIL_AUTH_KEYBOARD_BEHAVIOR = Platform.OS === 'ios' ? 'padding' : undefined;
+/** Keep auth actions above the Android IME as well as the iOS keyboard. */
+export const EMAIL_AUTH_KEYBOARD_BEHAVIOR = 'padding' as const;
 
 /**
  * Passwordless email entry. Continue stays disabled until something is
