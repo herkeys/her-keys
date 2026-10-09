@@ -115,7 +115,8 @@ export function WelcomeAuthGalleryPreview() {
       <View style={styles.frame}>
         <WelcomeAuthShell
           state={state}
-          onBegin={() => goTo('account-choice')}
+          onBegin={() => setState((current) => ({ ...current, step: 'account-choice', passwordMode: 'signUp' }))}
+          onExistingAccount={() => setState((current) => ({ ...current, step: 'account-choice', passwordMode: 'signIn' }))}
           onApple={() => goTo('account-choice')}
           onGoogle={() => goTo('account-choice')}
           onChooseEmail={() => goTo('email')}
