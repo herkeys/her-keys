@@ -118,7 +118,7 @@ export function WelcomeAuthGalleryPreview() {
       <View style={styles.frame}>
         <WelcomeAuthShell
           state={state}
-          onBegin={() => setState((current) => ({ ...current, step: 'premium', passwordMode: 'signUp' }))}
+          onBegin={() => setState((current) => ({ ...current, step: 'account-choice', passwordMode: 'signUp' }))}
           onExistingAccount={() => setState((current) => ({ ...current, step: 'account-choice', passwordMode: 'signIn' }))}
           onPremiumPlans={() => setState((current) => ({ ...current, premiumNotice: 'unavailable' }))}
           onContinueFree={() => setState((current) => ({ ...current, step: 'account-choice' }))}
