@@ -20,7 +20,7 @@ export type WelcomeAuthMethod = 'apple' | 'google' | 'email';
 export type WelcomeAuthPlatform = 'ios' | 'android';
 
 /** The steps of the tree, in first-run order. */
-export type WelcomeAuthStep = 'welcome' | 'account-choice' | 'email' | 'otp' | 'password';
+export type WelcomeAuthStep = 'welcome' | 'premium' | 'account-choice' | 'email' | 'otp' | 'password';
 
 /**
  * Hard presentations that replace a step rather than decorate it. They mirror
@@ -69,6 +69,8 @@ export interface WelcomeAuthViewState {
   passwordMode?: 'signIn' | 'signUp';
   passwordCanSignUp?: boolean;
   passwordNotice?: 'confirmationRequired' | 'rejected' | 'unreachable' | 'unavailable' | null;
+  premiumNotice?: 'no_offering' | 'unavailable' | 'error' | null;
+  premiumBusy?: boolean;
   /**
    * Seconds until Resend is enabled again, or null when it is enabled. This
    * is UI state only — it asserts nothing about any backend rate limit.
@@ -87,6 +89,8 @@ export interface WelcomeAuthViewState {
 export interface WelcomeAuthCallbacks {
   onBegin: () => void;
   onExistingAccount: () => void;
+  onPremiumPlans: () => void;
+  onContinueFree: () => void;
   onApple: () => void;
   onGoogle: () => void;
   onChooseEmail: () => void;
@@ -144,6 +148,8 @@ export function stepAfterBack(step: WelcomeAuthStep): WelcomeAuthStep | null {
   switch (step) {
     case 'welcome':
       return null;
+    case 'premium':
+      return 'welcome';
     case 'account-choice':
       return 'welcome';
     case 'email':
