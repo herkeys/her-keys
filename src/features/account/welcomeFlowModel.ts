@@ -52,6 +52,7 @@ export interface WelcomeFlowState {
 
 export type WelcomeFlowEvent =
   | { type: 'begin' }
+  | { type: 'existingAccount' }
   | { type: 'back' }
   | { type: 'chooseEmail' }
   | { type: 'choosePassword' }
@@ -109,7 +110,14 @@ const verifiedButNotHeld = (account: AccountStateKind): boolean =>
 export function welcomeFlowReducer(state: WelcomeFlowState, event: WelcomeFlowEvent): WelcomeFlowState {
   switch (event.type) {
     case 'begin':
-      return state.step === 'welcome' ? { ...state, step: 'account-choice', attemptFailed: false } : state;
+      return state.step === 'welcome'
+        ? { ...state, step: 'account-choice', passwordMode: 'signUp', attemptFailed: false }
+        : state;
+
+    case 'existingAccount':
+      return state.step === 'welcome'
+        ? { ...state, step: 'account-choice', passwordMode: 'signIn', attemptFailed: false }
+        : state;
 
     case 'back': {
       const target = welcomeFlowBackTarget(state);
@@ -120,7 +128,7 @@ export function welcomeFlowReducer(state: WelcomeFlowState, event: WelcomeFlowEv
 
     case 'choosePassword':
       if (state.inFlight !== null || state.step !== 'account-choice') return state;
-      return { ...state, step: 'password', passwordMode: 'signIn', passwordNotice: null, attemptFailed: false };
+      return { ...state, step: 'password', passwordMode: state.mode === 'reconnect' ? 'signIn' : state.passwordMode, passwordNotice: null, attemptFailed: false };
 
     case 'passwordModeChanged':
       if (state.inFlight !== null || state.step !== 'password' || (state.mode === 'reconnect' && event.mode === 'signUp')) return state;
