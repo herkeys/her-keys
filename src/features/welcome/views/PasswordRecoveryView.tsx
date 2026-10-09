@@ -116,7 +116,7 @@ export function PasswordRecoveryView({ initialEmail, request, verify, updatePass
               keyboardType="email-address" autoCapitalize="none" autoCorrect={false} autoComplete="email" editable={!busy} />
           )}
           {stage === 'verify' && (
-            <TextField label="Recovery code" value={code} onChangeText={(value) => { setCode(value.replace(/\\D/g, '').slice(0, 6)); setError(null); }}
+            <TextField label="Recovery code" value={code} onChangeText={(value) => { setCode(value.replace(/\D/g, '').slice(0, 6)); setError(null); }}
               keyboardType="number-pad" autoComplete="one-time-code" maxLength={6} editable={!busy} />
           )}
           {stage === 'newPassword' && (
