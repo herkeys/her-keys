@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createSupabaseClient } from './supabaseCloud';
+import { verifyRecoveryOtp } from './emailOtpProvider';
 
 /**
  * Account recovery is deliberately ISOLATED from AccountRuntime's session.
@@ -51,7 +52,7 @@ export function createPasswordRecoveryPort(client: SupabaseClient | null = creat
     async verify(email, code) {
       if (disposed) return 'unavailable';
       try {
-        const { data, error } = await client.auth.verifyOtp({ email, token: code, type: 'recovery' });
+        const { data, error } = await verifyRecoveryOtp(client, email, code);
         if (error || !data.session || !data.user || data.user.id !== data.session.user.id) return resultFor(error ?? { status: 400 });
         verified = true;
         return 'ok';
