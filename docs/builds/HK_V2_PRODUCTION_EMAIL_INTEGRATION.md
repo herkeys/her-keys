@@ -15,7 +15,7 @@
 Production Supabase Auth must retain responsibility for creating the token, its expiration, verification and password update. Resend must only deliver that token.
 
 1. Open **https://supabase.com/dashboard/project/npykvnxnehlsdlbumzwk/auth/smtp** (or Authentication → SMTP Settings).
-2. Create a **sending-only** Resend API key restricted to the verified `herkeys.app` domain. **Do not store it in the mobile app, EAS EXPO_PUBLIC vars, repository or chat.**
+2. Reuse the already configured **`RESEND_API_KEY`** if it is a sending-only Resend key restricted to verified `herkeys.app`. If not, replace it safely with a sending-only, domain-scoped key. **Do not store it in the mobile app, EAS EXPO_PUBLIC vars, repository or chat.**
 3. Enable Custom SMTP in **Production** (not Staging):
    - From: `accounts@herkeys.app`; sender name: `Her Keys`
    - Server: `smtp.resend.com`; port: `465` (or `587` with STARTTLS when required by the provider/network)
@@ -31,7 +31,7 @@ Production Supabase Auth must retain responsibility for creating the token, its 
 
 1. Review and apply `supabase/migrations/20261009020000_herkeys_welcome_email_receipts.sql` to **Production only**, using the repository migration framework, after checking live migration parity. Never mark it applied based on code alone.
 2. Deploy `supabase/functions/herkeys-welcome-email/index.ts` with JWT verification enabled to **Production only**. It checks the Supabase user from the request bearer, requires email confirmation and a newly created account, and refuses to send outside Her Keys Production.
-3. Set **Production Supabase Edge Function secrets** `RESEND_HERKEYS_SENDING_API_KEY` (sending-only, domain scoped) and `HER_KEYS_TRANSACTIONAL_EMAILS_ENABLED=true` after the migration and function pass tests. Leave the server switch absent/off until ready. **Never prefix private values with `EXPO_PUBLIC_`**.
+3. Set **Production Supabase Edge Function secrets** `RESEND_API_KEY` (already provided by the user; confirm its existence without printing it, and verify it is sending-only and domain scoped) and `HER_KEYS_TRANSACTIONAL_EMAILS_ENABLED=true` after the migration and function pass tests. Leave the server switch absent/off until ready. **Never prefix private values with `EXPO_PUBLIC_`**. The Staging copy of `RESEND_API_KEY` alone does not activate outbound Staging email; the welcome function explicitly rejects Staging.
 4. The Her Keys mobile composition invokes this endpoint only against the exact Production Supabase URL after an account reaches `accountBound`. It passes no recipient; the server obtains the email from the verified JWT. The function uses `herkeys-welcome-v1` and a stable Resend idempotency key per Supabase user. A per-user database ledger prevents repeat welcome sends across sessions and devices.
 5. Test new verified accounts via Email, Google and Apple; test returning logins, different device, reinstall, rapid retries and expired/degraded sessions. Do not certify an already sent Resend request as **delivered** without checking actual receiving mailbox and Resend delivery status.
 
@@ -52,7 +52,7 @@ HERKEYS_PROD_RECOVERY_TEMPLATE=UNVERIFIED
 HERKEYS_PROD_RECOVERY_E2E=BLOCKED
 HERKEYS_PROD_WELCOME_MIGRATION=NOT_DEPLOYED
 HERKEYS_PROD_WELCOME_FUNCTION=NOT_DEPLOYED
-HERKEYS_PROD_WELCOME_SECRET=UNVERIFIED
+HERKEYS_PROD_WELCOME_SECRET=USER_REPORTS_CONFIGURED_NOT_REMOTE_VERIFIED
 HERKEYS_PROD_WELCOME_E2E=BLOCKED
 HERKEYS_STAGING_SMTP=NOT_REQUIRED
 ```
