@@ -25,6 +25,17 @@
         "EXPO_PUBLIC_HERKEYS_BACKEND": "production",
         "EXPO_PUBLIC_HERKEYS_DATA_MODE": "empty"
       }
+    },
+    "smoke-production-android": {
+      "environment": "production",
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_HERKEYS_BACKEND": "production",
+        "EXPO_PUBLIC_HERKEYS_DATA_MODE": "empty"
+      }
     }
   }
 }
