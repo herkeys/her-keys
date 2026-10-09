@@ -155,7 +155,11 @@ async function type(r, text) {
   await TestRenderer.act(async () => input.props.onChangeText(text));
 }
 
-const toAccountChoice = async (r) => press(r, COPY.welcome.begin);
+const toAccountChoice = async (r) => {
+  await press(r, COPY.welcome.begin);
+  await press(r, 'Continue with Her Keys Free');
+};
+const toExistingAccount = async (r) => press(r, COPY.welcome.existingAccount);
 /** Legacy OTP service regression only: this route is not exposed in the product's account choice. */
 async function openLegacyOtpForBoundaryTest(r) {
   const shell = r.root.findByType(WelcomeAuthShell);
@@ -170,14 +174,18 @@ async function toCodeStep(r, address = EMAIL) {
 }
 
 describe('the first run: Welcome → account choice → authenticate', () => {
-  test('a signed-out device starts at Welcome, and Begin leads to the account choice — never into the audit', async () => {
+  test('new users see Premium before account choice; neither path authenticates by itself', async () => {
     const d = device();
     const r = await open();
     assert.match(shown(r), /Rebuild your life\.\nRun it your way\./);
     assert.equal(control(r, 'Continue with Google'), undefined, 'no method is offered before she begins');
 
     await press(r, COPY.welcome.begin);
-    assert.ok(shown(r).includes(COPY.accountChoice.title));
+    assert.ok(shown(r).includes('Her Keys Premium'));
+    assert.ok(control(r, 'Explore Premium Plans'));
+    assert.equal(control(r, 'Continue with Google'), undefined, 'auth must wait until after Premium');
+    await press(r, 'Continue with Her Keys Free');
+    assert.ok(shown(r).includes(COPY.accountChoice.signUpTitle));
     assert.ok(control(r, 'Continue with Google') && control(r, 'Continue with email'));
     assert.equal(d.runtime.getState().kind, 'unauthenticated', 'Begin authenticates nothing');
     assert.deepEqual([d.cloudCalls, d.secureStorage.contents(), d.identity()], [[], {}, UNBOUND_IDENTITY], 'and touches nothing');
@@ -187,10 +195,10 @@ describe('the first run: Welcome → account choice → authenticate', () => {
     device({ offered: ['apple', 'google'] });
     const r = await open();
     const labels = () => r.root.findAllByType('Pressable').map((n) => n.props.accessibilityLabel);
-    assert.deepEqual(labels(), [COPY.welcome.begin]);
+    assert.deepEqual(labels(), [COPY.welcome.begin, COPY.welcome.existingAccount]);
     await toAccountChoice(r);
     assert.deepEqual(labels(), [COPY.back, 'Continue with Apple', 'Continue with Google', 'Continue with email', COPY.accountChoice.legalTerms, COPY.accountChoice.legalPrivacy]);
-    assert.doesNotMatch(shown(r), /guest|skip|not now|later|explore|without an account/i);
+    assert.doesNotMatch(shown(r), /guest|skip|not now|without an account/i);
   });
 
   test('iOS Apple choice remains visible without waiting for provider discovery', async () => {
@@ -229,9 +237,7 @@ describe('email/password through the same runtime', () => {
     assert.ok(control(r, 'Continue with email'));
     assert.equal(control(r, COPY.password.choice), undefined, 'no second email choice');
     await press(r, 'Continue with email');
-    assert.match(shown(r), /Welcome back/);
-    assert.ok(control(r, COPY.password.tabSignIn));
-    assert.ok(control(r, COPY.password.tabSignUp));
+    assert.match(shown(r), /Create your account/);
     assert.equal(control(r, COPY.otp.verify), undefined, 'no verification-code form');
     assert.doesNotMatch(shown(r), /send a short code|no password to remember/i);
     assert.deepEqual(d.requested, [], 'do not ask the OTP service to send a code');
@@ -240,7 +246,7 @@ describe('email/password through the same runtime', () => {
   test('the new choice is offered and verified sign-in binds the real account', async () => {
     const d = device({ password: [success(ACCOUNT_A, 'email')] });
     const r = await open();
-    await toAccountChoice(r);
+    await toExistingAccount(r);
     await press(r, 'Continue with email');
     assert.match(shown(r), /Welcome back/);
     const inputs = r.root.findAllByType('TextInput');
@@ -266,7 +272,6 @@ describe('email/password through the same runtime', () => {
     const r = await open();
     await toAccountChoice(r);
     await press(r, 'Continue with email');
-    await press(r, COPY.password.tabSignUp);
     const inputs = r.root.findAllByType('TextInput');
     assert.equal(inputs.length, 3);
     for (const [index, value] of [EMAIL, 'secret-password-for-tests', 'secret-password-for-tests'].entries()) {
@@ -704,7 +709,7 @@ describe('the controller model, pure', () => {
     const events = /export type WelcomeFlowEvent =([\s\S]*?);\n\nexport function/.exec(source)[1];
     assert.doesNotMatch(events, /code\s*:|token\s*:|otp\s*:/i, 'no event has a code, token or otp field');
     assert.equal(Object.prototype.hasOwnProperty.call(initialWelcomeFlow('first-run'), 'password'), false, 'password text never enters the controller');
-    assert.deepEqual(Object.keys(initialWelcomeFlow('first-run')).sort(), ['attemptFailed', 'email', 'emailError', 'inFlight', 'mode', 'otpError', 'passwordMode', 'passwordNotice', 'resendAvailableAt', 'step']);
+    assert.deepEqual(Object.keys(initialWelcomeFlow('first-run')).sort(), ['attemptFailed', 'email', 'emailError', 'inFlight', 'mode', 'otpError', 'passwordMode', 'passwordNotice', 'premiumBusy', 'premiumNotice', 'resendAvailableAt', 'step']);
   });
 });
 
