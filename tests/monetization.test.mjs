@@ -96,7 +96,7 @@ describe('RevenueCat API key configuration', () => {
 
 describe('Paywall placements', () => {
   test('placement ids are a fixed, typed set', () => {
-    assert.deepEqual(PAYWALL_PLACEMENTS, ['onboarding_complete', 'systems_upgrade', 'premium_feature', 'manual_upgrade']);
+    assert.deepEqual(PAYWALL_PLACEMENTS, ['welcome_premium', 'onboarding_complete', 'systems_upgrade', 'premium_feature', 'manual_upgrade']);
   });
 });
 
