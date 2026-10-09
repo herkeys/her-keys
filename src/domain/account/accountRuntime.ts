@@ -136,8 +136,10 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
   const report = (type: string, detail?: string) => options.report?.({ type, detail });
 
   /**
-   * RevenueCat is told the Supabase account id and nothing else, before a
-   * paywall can appear (B4-P0-036). A failure here is logged and stepped over:
+   * RevenueCat is told the Supabase account id and nothing else on identity
+   * activation. An earlier anonymous welcome purchase is not proof of this
+   * account's entitlement until RevenueCat has linked and refreshed it.
+   * A failure here is logged and stepped over:
    * entitlement is not identity, and it must not be able to undo a claim the
    * server already committed.
    */
