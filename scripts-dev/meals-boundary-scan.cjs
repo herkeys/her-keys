@@ -617,6 +617,10 @@ const LATER_FEATURES = [
     rootCollections: [],
     syncKinds: [],
     shared: [
+      ['eas.json', 'V2 production release candidate: require versioned legal and AI consent on shipping and smoke APK profiles'],
+      ['tests/productionConsentBuildProfile.test.mjs', 'V2 production profile: CI verifies mandatory legal/AI gate and prevents shipping client secrets'],
+      ['supabase/email-templates/herkeys-confirm-signup.html', 'V2 signup email: versioned branded Supabase confirmation link, never direct client credentials'],
+      ['docs/builds/HK_V2_SMOKE_P0_P1_CLOSEOUT_20261009.md', 'V2 P0/P1 closeout: precise production SMTP, redirects, secret activation, emulator stability and consent evidence handoff'],
       ['supabase/migrations/20261009060000_v2_account_consents.sql', 'V2 consent: additive account-scoped audit ledger with restrictive RLS, append-only columns, and server-authoritative timestamps'],
       ['supabase/tests/migration-chain.mjs', 'V2 consent: register the new independent additive ledger migration in the canonical backend harness'],
       ['tests/migrationChain.test.mjs', 'V2 consent: extend strict post-certification migration registry with consent ledger'],
