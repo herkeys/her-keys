@@ -20,7 +20,7 @@ export type WelcomeAuthMethod = 'apple' | 'google' | 'email';
 export type WelcomeAuthPlatform = 'ios' | 'android';
 
 /** The steps of the tree, in first-run order. */
-export type WelcomeAuthStep = 'welcome' | 'premium' | 'account-choice' | 'email' | 'otp' | 'password';
+export type WelcomeAuthStep = 'welcome' | 'premium' | 'account-choice' | 'email' | 'otp' | 'password' | 'recovery';
 
 /**
  * Hard presentations that replace a step rather than decorate it. They mirror
@@ -66,6 +66,7 @@ export interface WelcomeAuthViewState {
   email: string;
   emailError: EmailErrorKind | null;
   otpError: OtpErrorKind | null;
+  recoveryEmail?: string;
   passwordMode?: 'signIn' | 'signUp';
   passwordCanSignUp?: boolean;
   passwordNotice?: 'confirmationRequired' | 'rejected' | 'unreachable' | 'unavailable' | null;
@@ -98,6 +99,11 @@ export interface WelcomeAuthCallbacks {
   onChoosePassword?: () => void;
   onPasswordModeChange?: (mode: 'signIn' | 'signUp') => void;
   onSubmitPassword?: (mode: 'signIn' | 'signUp', email: string, password: string) => void;
+  onForgotPassword?: (email: string) => void;
+  onRequestRecovery?: (email: string) => Promise<import('../../platform/passwordRecoveryProvider').RecoveryResult>;
+  onVerifyRecovery?: (email: string, code: string) => Promise<import('../../platform/passwordRecoveryProvider').RecoveryResult>;
+  onUpdateRecoveryPassword?: (password: string) => Promise<import('../../platform/passwordRecoveryProvider').RecoveryResult>;
+  onCancelRecovery?: () => void;
   onSubmitEmail: (email: string) => void;
   onSubmitOtp: (code: string) => void;
   onResendOtp: () => void;
@@ -157,5 +163,7 @@ export function stepAfterBack(step: WelcomeAuthStep): WelcomeAuthStep | null {
       return 'account-choice';
     case 'otp':
       return 'email';
+    case 'recovery':
+      return 'password';
   }
 }
