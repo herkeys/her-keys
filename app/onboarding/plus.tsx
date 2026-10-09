@@ -37,7 +37,7 @@ export default function HerKeysPlus() {
     }
   };
 
-  // Already entitled — a returning anonymous customer, or a fast refresh right after purchase. No need to show the paywall at all.
+  // An already-entitled customer completes this final step without a second upsell.
   useEffect(() => {
     if (status === 'plus' && canResolveOnboardingPlus('already_entitled', PAYWALL_POLICY)) {
       void resolve(complete);
@@ -87,14 +87,14 @@ export default function HerKeysPlus() {
     <Screen>
       <Overline>{HER_KEYS_PREMIUM_DISPLAY_NAME}</Overline>
       <AppText variant="hero" style={styles.title}>
-        Let Her Keys carry more of the work.
+        You’re ready to begin.
       </AppText>
       <AppText variant="title" color={colors.textSecondary} style={styles.lede}>
-        {HER_KEYS_PREMIUM_DISPLAY_NAME} is where deeper household intelligence and more proactive planning will live as they're built.
+        Your Life Systems Audit is complete. You can start using Her Keys now.
       </AppText>
 
       <Card tone="subtle" style={styles.benefits}>
-        <Overline>Coming to {HER_KEYS_PREMIUM_DISPLAY_NAME}</Overline>
+        <Overline>Your journey continues</Overline>
         {BENEFITS.map((benefit) => (
           <AppText key={benefit} variant="body" style={styles.benefit}>
             {benefit}
@@ -103,7 +103,7 @@ export default function HerKeysPlus() {
       </Card>
 
       <AppText variant="bodySm" color={colors.textTertiary} style={styles.reassurance}>
-        You can keep using the core Her Keys experience without {HER_KEYS_PREMIUM_DISPLAY_NAME}.
+        Premium remains optional. You can explore plans again whenever you’re ready.
       </AppText>
 
       {note && (
@@ -113,19 +113,18 @@ export default function HerKeysPlus() {
       )}
 
       <View style={styles.actions}>
+        <Button
+          label="Continue to Her Keys"
+          onPress={onContinueWithoutPlus}
+          disabled={busy !== null}
+        />
         {!paywallUnavailable && (
-          <Button label={`See ${HER_KEYS_PREMIUM_DISPLAY_NAME}`} onPress={onSeePlus} disabled={busy !== null} />
+          <Button label={`Explore ${HER_KEYS_PREMIUM_DISPLAY_NAME}`} onPress={onSeePlus} variant="secondary" disabled={busy !== null} />
         )}
         <Button
           label="Restore purchases"
-          variant="secondary"
-          onPress={onRestore}
-          disabled={busy !== null}
-        />
-        <Button
-          label={`Continue without ${HER_KEYS_PREMIUM_DISPLAY_NAME}`}
           variant="ghost"
-          onPress={onContinueWithoutPlus}
+          onPress={onRestore}
           disabled={busy !== null}
         />
       </View>
