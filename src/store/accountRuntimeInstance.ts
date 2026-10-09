@@ -18,6 +18,8 @@ import { createDeviceSecureStorage, secureStorageAvailable } from '../platform/s
 import { createSupabaseAccountClient, createSupabaseClient } from '../platform/supabaseCloud';
 import { createSupabaseSessionClient } from '../platform/supabaseSessionClient';
 import { createSupabaseSyncTransport } from '../platform/supabaseSyncTransport';
+import { requestProductionWelcomeEmail } from '../platform/welcomeEmailClient';
+import { supabaseConfig } from '../config/supabase';
 import { appStore, changeObserver } from './appStoreInstance';
 import { composeAccountApp } from './composeAccountApp';
 
@@ -133,3 +135,8 @@ const app = composeAccountApp({
 
 export const accountRuntime: AccountRuntime = app.accountRuntime;
 export const syncRuntime: SyncRuntime = app.syncRuntime;
+
+/** Best-effort, production-only, server-authenticated first-login welcome request. */
+export async function requestWelcomeEmailAfterBinding(): Promise<void> {
+  await requestProductionWelcomeEmail(client, supabaseConfig);
+}
