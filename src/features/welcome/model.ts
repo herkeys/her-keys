@@ -86,6 +86,7 @@ export interface WelcomeAuthViewState {
  */
 export interface WelcomeAuthCallbacks {
   onBegin: () => void;
+  onExistingAccount: () => void;
   onApple: () => void;
   onGoogle: () => void;
   onChooseEmail: () => void;
