@@ -28,6 +28,9 @@ Deno.serve(async (req) => {
       return json({ status: 'not_eligible' }, 200);
     }
 
+    const token = Deno.env.get('RESEND_HERKEYS_SENDING_API_KEY');
+    if (!token) return json({ status: 'not_configured' }, 503);
+
     const admin = adminClient();
     const { data: claimed, error: claimError } = await admin.rpc(
       'herkeys_claim_welcome_email', { p_user_id: user.id },
@@ -35,8 +38,6 @@ Deno.serve(async (req) => {
     if (claimError) return json({ status: 'unavailable' }, 503);
     if (claimed !== true) return json({ status: 'already_claimed' }, 200);
 
-    const token = Deno.env.get('RESEND_HERKEYS_SENDING_API_KEY');
-    if (!token) return json({ status: 'not_configured' }, 503);
     let response: Response;
     try {
       response = await fetch('https://api.resend.com/emails', {
