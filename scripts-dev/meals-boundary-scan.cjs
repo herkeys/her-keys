@@ -617,6 +617,7 @@ const LATER_FEATURES = [
     rootCollections: [],
     syncKinds: [],
     shared: [
+      ['docs/builds/HK_V2_PRODUCTION_ANDROID_SMOKE_20261008.md', 'V2 Android emulator smoke: new later-lane execution contract for internal Production-backend APK, one authorized disposable account, real signup and recovery email evidence, and fail-closed launch gates; no Meals-domain change'],
       ['.gitattributes', 'Production transactional email: pin the reviewed new migration LF for reproducibility'],
       ['supabase/tests/migration-chain.mjs', 'Production transactional email: register new additive ledger migration in the canonical ordered harness'],
       ['tests/migrationChain.test.mjs', 'Production transactional email: assert newest migration is tracked without altering certified historical migrations'],
