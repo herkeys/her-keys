@@ -32,7 +32,7 @@ export const WELCOME_AUTH_COPY = {
     signUpLede: 'Choose how you’d like to get started with Her Keys.',
     signInTitle: 'Welcome back.',
     signInLede: 'Choose how you’d like to sign in to Her Keys.',
-    legalNotice: 'By continuing, you agree to the Terms and Conditions and acknowledge the Privacy Policy.',
+    legalNotice: 'Review the Terms and Privacy Policy. You will be asked to accept before using Her Keys.',
     legalTerms: 'Terms and Conditions',
     legalPrivacy: 'Privacy Policy',
     pending: 'Connecting your account…',
