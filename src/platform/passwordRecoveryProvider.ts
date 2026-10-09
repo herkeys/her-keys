@@ -29,12 +29,21 @@ export function createPasswordRecoveryPort(client: SupabaseClient | null = creat
   }
   const resultFor = (error: { status?: number } | null): RecoveryResult =>
     !error ? 'ok' : error.status === 429 ? 'rateLimited' : 'failed';
+  const close = async () => {
+    if (disposed) return;
+    disposed = true;
+    verified = false;
+    // End only this temporary recovery session. The app's account runtime is separate.
+    try { await client.auth.signOut({ scope: 'local' }); } catch { /* No persisted storage to clean. */ }
+  };
   return {
     async request(email) {
       if (disposed) return 'unavailable';
       try {
         const { error } = await client.auth.resetPasswordForEmail(email);
-        return resultFor(error);
+        // A recovery-request response cannot be used to determine whether an
+        // address exists. Even an account-not-found refusal gets the same UI.
+        return error?.status === 429 ? 'rateLimited' : error?.status && error.status >= 500 ? 'failed' : 'ok';
       } catch {
         return 'failed';
       }
@@ -58,18 +67,12 @@ export function createPasswordRecoveryPort(client: SupabaseClient | null = creat
       try {
         const { error } = await client.auth.updateUser({ password });
         const result = resultFor(error);
-        if (result === 'ok') await this.dispose();
+        if (result === 'ok') await close();
         return result;
       } catch {
         return 'failed';
       }
     },
-    async dispose() {
-      if (disposed) return;
-      disposed = true;
-      verified = false;
-      // Local sign-out only. Do not revoke sessions on any other device.
-      try { await client.auth.signOut({ scope: 'local' }); } catch { /* Ephemeral client has no persisted storage. */ }
-    },
+    dispose: close,
   };
 }
