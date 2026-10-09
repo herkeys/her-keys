@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
-import { BackHandler } from 'react-native';
-import { accountProviders } from '../../store/accountRuntimeInstance';
+import { BackHandler, Platform } from 'react-native';
+import { createPasswordRecoveryPort, type PasswordRecoveryPort } from '../../platform/passwordRecoveryProvider';
 import { useAccount } from '../../store/AccountProvider';
 import type { WelcomeAuthCallbacks, WelcomeAuthPlatform, WelcomeAuthViewState } from '../welcome/model';
 import { WelcomeAuthShell } from '../welcome/WelcomeAuthShell';
+import type { PaywallOutcome } from '../../monetization/entitlement';
 import {
   initialWelcomeFlow,
   welcomeFlowBackTarget,
@@ -26,11 +27,12 @@ import {
  * table closes this screen and opens the next one; when another account's
  * household is found it opens the conflict screen instead.
  */
-export function WelcomeAuthFlow({ mode }: { mode: WelcomeFlowMode }) {
+export function WelcomeAuthFlow({ mode, presentWelcomePaywall }: { mode: WelcomeFlowMode; presentWelcomePaywall?: () => Promise<PaywallOutcome> }) {
   const account = useAccount();
   const [flow, dispatch] = useReducer(welcomeFlowReducer, mode, initialWelcomeFlow);
   const platform = useOfferedPlatform();
   const now = useCooldownClock(flow.resendAvailableAt);
+  const recovery = useRef<PasswordRecoveryPort | null>(null);
 
   // A request that settles after this screen has gone has nothing left to update.
   const mounted = useRef(true);
@@ -38,6 +40,8 @@ export function WelcomeAuthFlow({ mode }: { mode: WelcomeFlowMode }) {
     mounted.current = true;
     return () => {
       mounted.current = false;
+      void recovery.current?.dispose();
+      recovery.current = null;
     };
   }, []);
   const send = useCallback((event: WelcomeFlowEvent) => {
@@ -62,12 +66,52 @@ export function WelcomeAuthFlow({ mode }: { mode: WelcomeFlowMode }) {
     })();
   };
 
+  const cancelRecovery = () => {
+    void recovery.current?.dispose();
+    recovery.current = null;
+    dispatch({ type: 'back' });
+  };
+
   const callbacks: WelcomeAuthCallbacks = {
     onBegin: () => dispatch({ type: 'begin' }),
-    onBack: () => dispatch({ type: 'back' }),
+    onExistingAccount: () => dispatch({ type: 'existingAccount' }),
+    onPremiumPlans: () => {
+      if (flow.step !== 'premium' || flow.premiumBusy) return;
+      dispatch({ type: 'premiumStarted' });
+      void (async () => {
+        let outcome: PaywallOutcome = { kind: 'unavailable' };
+        try {
+          outcome = await (presentWelcomePaywall?.() ?? Promise.resolve({ kind: 'unavailable' as const }));
+        } catch {
+          outcome = { kind: 'error', message: 'paywall_unreachable' };
+        }
+        send({ type: 'premiumSettled', outcome: outcome.kind });
+      })();
+    },
+    onContinueFree: () => dispatch({ type: 'premiumContinueFree' }),
+    onBack: () => flow.step === 'recovery' ? cancelRecovery() : dispatch({ type: 'back' }),
     onApple: () => startProvider('apple'),
     onGoogle: () => startProvider('google'),
     onChooseEmail: () => dispatch({ type: 'chooseEmail' }),
+    onChoosePassword: () => dispatch({ type: 'choosePassword' }),
+    onPasswordModeChange: (mode) => dispatch({ type: 'passwordModeChanged', mode }),
+    onForgotPassword: (email) => dispatch({ type: 'forgotPassword', email }),
+    onRequestRecovery: async (email) => {
+      if (recovery.current === null) recovery.current = createPasswordRecoveryPort();
+      return recovery.current.request(email);
+    },
+    onVerifyRecovery: async (email, code) => recovery.current?.verify(email, code) ?? 'unavailable',
+    onUpdateRecoveryPassword: async (password) => recovery.current?.updatePassword(password) ?? 'unavailable',
+    onCancelRecovery: cancelRecovery,
+    onSubmitPassword: (mode, email, password) => {
+      if (flow.inFlight !== null) return;
+      dispatch({ type: 'passwordStarted' });
+      void (async () => {
+        await clearStrandedSession();
+        const result = await account.authenticateEmailPassword(mode, email, password);
+        send({ type: 'passwordSettled', outcome: result.outcome, account: result.state.kind });
+      })();
+    },
     onChangeEmail: () => dispatch({ type: 'changeEmail' }),
 
     onSubmitEmail: (email) => {
@@ -109,11 +153,12 @@ export function WelcomeAuthFlow({ mode }: { mode: WelcomeFlowMode }) {
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
       if (waiting) return true;
       if (backTarget === null) return false;
-      dispatch({ type: 'back' });
+      if (flow.step === 'recovery') cancelRecovery();
+      else dispatch({ type: 'back' });
       return true;
     });
     return () => subscription.remove();
-  }, [backTarget, waiting]);
+  }, [backTarget, waiting, flow.step]);
 
   return <WelcomeAuthShell state={welcomeFlowView(flow, platform, now)} {...callbacks} />;
 }
@@ -132,6 +177,9 @@ const SETTLING: WelcomeAuthViewState = {
 const noop = () => {};
 const INERT: WelcomeAuthCallbacks = {
   onBegin: noop,
+  onExistingAccount: noop,
+  onPremiumPlans: noop,
+  onContinueFree: noop,
   onApple: noop,
   onGoogle: noop,
   onChooseEmail: noop,
@@ -151,27 +199,14 @@ export function WelcomeAuthSettling() {
 }
 
 /**
- * Which method set to show. Asked of the provider adapters, never assumed from the OS: Sign in with Apple's own
- * availability check is the one place its iOS-only rule lives (EX-01), so Apple is offered exactly where it works and
- * this file needs no platform conditional of its own.
+ * An iOS candidate MUST always display native Sign in with Apple. Do not
+ * infer the device's platform from the asynchronous provider-availability
+ * probe: a temporary probe failure must not silently remove Apple signup.
+ * The native Apple adapter remains the authentication authority, and an
+ * unavailable/misconfigured native flow fails visibly at sign-in.
  */
 function useOfferedPlatform(): WelcomeAuthPlatform {
-  const [platform, setPlatform] = useState<WelcomeAuthPlatform>('android');
-  useEffect(() => {
-    let live = true;
-    accountProviders
-      .available()
-      .then((offered) => {
-        if (live) setPlatform(offered.includes('apple') ? 'ios' : 'android');
-      })
-      .catch(() => {
-        // Unanswered means not offered; Google and email remain.
-      });
-    return () => {
-      live = false;
-    };
-  }, []);
-  return platform;
+  return Platform.OS === 'ios' ? 'ios' : 'android';
 }
 
 /** The current time, ticking once a second only while a resend cooldown is running. Presentation only. */

@@ -7,8 +7,11 @@ import { stepAfterBack, type WelcomeAuthCallbacks, type WelcomeAuthViewState } f
 import { AccountChoiceView } from './views/AccountChoiceView';
 import { EmailEntryView } from './views/EmailEntryView';
 import { OtpEntryView } from './views/OtpEntryView';
+import { EmailPasswordView } from './views/EmailPasswordView';
+import { PasswordRecoveryView } from './views/PasswordRecoveryView';
 import { ConflictView, DegradedHeader, SettlingView } from './views/StatePresentations';
 import { WelcomeView } from './views/WelcomeView';
+import { PremiumIntroView } from './views/PremiumIntroView';
 
 export interface WelcomeAuthShellProps extends WelcomeAuthCallbacks {
   state: WelcomeAuthViewState;
@@ -29,7 +32,7 @@ export interface WelcomeAuthShellProps extends WelcomeAuthCallbacks {
  * Production routing is untouched: the shell is exercised from the internal
  * design gallery until the integration pass places it.
  */
-export function WelcomeAuthShell({ state, onBegin, onApple, onGoogle, onChooseEmail, onSubmitEmail, onSubmitOtp, onResendOtp, onChangeEmail, onBack, onSignOut }: WelcomeAuthShellProps) {
+export function WelcomeAuthShell({ state, onBegin, onExistingAccount, onPremiumPlans, onContinueFree, onApple, onGoogle, onChooseEmail, onChoosePassword, onPasswordModeChange, onSubmitPassword, onForgotPassword, onRequestRecovery, onVerifyRecovery, onUpdateRecoveryPassword, onCancelRecovery, onSubmitEmail, onSubmitOtp, onResendOtp, onChangeEmail, onBack, onSignOut }: WelcomeAuthShellProps) {
   // Hard presentations replace the step tree entirely.
   if (state.presentation === 'settling') {
     return (
@@ -54,7 +57,15 @@ export function WelcomeAuthShell({ state, onBegin, onApple, onGoogle, onChooseEm
 
       {state.presentation === 'auth-degraded' && <DegradedHeader />}
 
-      {state.presentation === 'normal' && state.step === 'welcome' && <WelcomeView onBegin={onBegin} />}
+      {state.presentation === 'normal' && state.step === 'welcome' && <WelcomeView onBegin={onBegin} onExistingAccount={onExistingAccount} />}
+      {state.presentation === 'normal' && state.step === 'premium' && (
+        <PremiumIntroView
+          busy={state.premiumBusy ?? false}
+          notice={state.premiumNotice ?? null}
+          onViewPlans={onPremiumPlans}
+          onContinueFree={onContinueFree}
+        />
+      )}
 
       {/* The degraded presentation keeps the account choice usable: reconnecting
           is the same control as a first sign-in, under its own header. */}
@@ -64,14 +75,36 @@ export function WelcomeAuthShell({ state, onBegin, onApple, onGoogle, onChooseEm
           pending={state.pending}
           headerless={state.presentation === 'auth-degraded'}
           notice={state.notice}
+          authMode={state.passwordMode ?? 'signIn'}
           onApple={onApple}
           onGoogle={onGoogle}
           onChooseEmail={onChooseEmail}
+          onChoosePassword={onChoosePassword}
         />
       )}
 
       {state.presentation === 'normal' && state.step === 'email' && (
         <EmailEntryView email={state.email} error={state.emailError} pending={state.pending === 'email'} onSubmitEmail={onSubmitEmail} />
+      )}
+
+      {state.presentation === 'normal' && state.step === 'password' && onPasswordModeChange && onSubmitPassword && (
+        <EmailPasswordView
+          mode={state.passwordMode ?? 'signIn'}
+          notice={state.passwordNotice ?? null}
+          pending={state.pending === 'password'}
+          onSubmit={onSubmitPassword}
+          onForgotPassword={onForgotPassword}
+        />
+      )}
+
+      {state.presentation === 'normal' && state.step === 'recovery' && onRequestRecovery && onVerifyRecovery && onUpdateRecoveryPassword && (
+        <PasswordRecoveryView
+          initialEmail={state.recoveryEmail ?? ''}
+          request={onRequestRecovery}
+          verify={onVerifyRecovery}
+          updatePassword={onUpdateRecoveryPassword}
+          onReturnToSignIn={onCancelRecovery ?? onBack}
+        />
       )}
 
       {state.presentation === 'normal' && state.step === 'otp' && (

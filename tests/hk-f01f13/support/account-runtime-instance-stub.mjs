@@ -11,3 +11,6 @@ export { UNCONFIGURED_EXTERNAL_INTELLIGENCE as externalIntelligenceClient } from
 export const accountRuntime = null;
 export const syncRuntime = null;
 export const accountsAvailable = false;
+
+/** Never sends in the screen-only, unconfigured account test environment. */
+export const requestWelcomeEmailAfterBinding = async () => undefined;

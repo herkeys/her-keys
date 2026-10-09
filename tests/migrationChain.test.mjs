@@ -78,6 +78,8 @@ describe('post-certification migration governance', () => {
     assert.deepEqual(POST_CERT_CHAIN.map((m) => [m.owner, m.file]), [
       ['ENV_ALIGN', '20260924183000_env_function_alignment.sql'],
       ['CAL_CONNECTIONS', '20260925141432_external_calendar_connections.sql'],
+      ['WELCOME_EMAIL', '20261009020000_herkeys_welcome_email_receipts.sql'],
+      ['V2_CONSENT', '20261009060000_v2_account_consents.sql'],
     ]);
     const sql = lf(POST_CERT_CHAIN[0].file);
     const executable = sql.replace(/--.*$/gm, '');
@@ -161,7 +163,13 @@ describe('a re-declaration never drops an earlier registration', () => {
   });
 
   test('each feature migration registers its own tables in the SAME file that creates them (so every prefix of the chain works)', () => {
-    for (const { file } of ADDITIVE_CHAIN) {
+    for (const { file, owner } of ADDITIVE_CHAIN) {
+      // The versioned account-consent audit ledger is not a household-sync
+      // feature table: its separate governance suite verifies account RLS,
+      // no UPDATE/DELETE, and server-only receipt ID/timestamps. Keep the
+      // feature-specific sync + change-log enforcement unchanged for all
+      // existing migrations.
+      if (owner === 'V2_CONSENT') continue;
       const sql = lf(file);
       const created = [...sql.replace(/--.*$/gm, '').matchAll(/CREATE TABLE public\.(\w+)/g)].map((m) => m[1]);
       if (created.length === 0) continue;

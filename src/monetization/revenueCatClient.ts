@@ -62,8 +62,11 @@ export type IdentifyResult = 'identified' | 'signed_out' | 'not_configured' | 's
  * subject, no household id — an entitlement system does not need to know who
  * she is, only which account is asking.
  *
- * Called before any paywall can appear, so a purchase can never be attributed
- * to an anonymous id and then stranded there. Passing `null` logs out, which
+ * Authenticated paywalls use the account UUID. The upfront Premium offer is
+ * pre-registration and may begin under RevenueCat's anonymous SDK identity;
+ * Purchases.logIn(accountId) must be checked on real store sandbox accounts
+ * for correct purchase transfer/restoration before public release.
+ * Passing `null` logs out, which
  * returns RevenueCat to an anonymous id rather than leaving the previous
  * account's entitlements visible to the next person to sign in on this device.
  *

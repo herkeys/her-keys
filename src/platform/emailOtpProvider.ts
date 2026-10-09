@@ -110,3 +110,9 @@ function isCodeRejection(error: AuthFailure): boolean {
   if (error.code === 'otp_expired') return true;
   return error.code === undefined && (error.status === 401 || error.status === 403);
 }
+
+/** Recovery token validation lives beside email OTP verification: this is the one
+ * auth-token boundary. Password changes remain in the separate ephemeral recovery client. */
+export async function verifyRecoveryOtp(client: SupabaseClient, email: string, code: string) {
+  return client.auth.verifyOtp({ email, token: code, type: 'recovery' });
+}

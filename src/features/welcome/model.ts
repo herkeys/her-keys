@@ -13,14 +13,14 @@
  * when the tree shows), and connectivity detection.
  */
 
-/** The methods the welcome tree can offer. Email is passwordless OTP. */
+/** The methods the welcome tree can offer. Email code remains available alongside password auth. */
 export type WelcomeAuthMethod = 'apple' | 'google' | 'email';
 
 /** Only the two mobile platforms exist; desktop/web is out of scope. */
 export type WelcomeAuthPlatform = 'ios' | 'android';
 
 /** The steps of the tree, in first-run order. */
-export type WelcomeAuthStep = 'welcome' | 'account-choice' | 'email' | 'otp';
+export type WelcomeAuthStep = 'welcome' | 'premium' | 'account-choice' | 'email' | 'otp' | 'password' | 'recovery';
 
 /**
  * Hard presentations that replace a step rather than decorate it. They mirror
@@ -61,11 +61,17 @@ export interface WelcomeAuthViewState {
    * contradictory control is disabled and a restrained progress treatment
    * shows near the action that started it.
    */
-  pending: WelcomeAuthMethod | null;
+  pending: WelcomeAuthMethod | 'password' | null;
   /** The address as typed — preserved across back navigation, never transformed. */
   email: string;
   emailError: EmailErrorKind | null;
   otpError: OtpErrorKind | null;
+  recoveryEmail?: string;
+  passwordMode?: 'signIn' | 'signUp';
+  passwordCanSignUp?: boolean;
+  passwordNotice?: 'confirmationRequired' | 'rejected' | 'unreachable' | 'unavailable' | null;
+  premiumNotice?: 'no_offering' | 'unavailable' | 'error' | null;
+  premiumBusy?: boolean;
   /**
    * Seconds until Resend is enabled again, or null when it is enabled. This
    * is UI state only — it asserts nothing about any backend rate limit.
@@ -83,9 +89,21 @@ export interface WelcomeAuthViewState {
  */
 export interface WelcomeAuthCallbacks {
   onBegin: () => void;
+  onExistingAccount: () => void;
+  onPremiumPlans: () => void;
+  onContinueFree: () => void;
   onApple: () => void;
   onGoogle: () => void;
   onChooseEmail: () => void;
+  /** Additional email/password method; existing OTP remains available. */
+  onChoosePassword?: () => void;
+  onPasswordModeChange?: (mode: 'signIn' | 'signUp') => void;
+  onSubmitPassword?: (mode: 'signIn' | 'signUp', email: string, password: string) => void;
+  onForgotPassword?: (email: string) => void;
+  onRequestRecovery?: (email: string) => Promise<import('../../platform/passwordRecoveryProvider').RecoveryResult>;
+  onVerifyRecovery?: (email: string, code: string) => Promise<import('../../platform/passwordRecoveryProvider').RecoveryResult>;
+  onUpdateRecoveryPassword?: (password: string) => Promise<import('../../platform/passwordRecoveryProvider').RecoveryResult>;
+  onCancelRecovery?: () => void;
   onSubmitEmail: (email: string) => void;
   onSubmitOtp: (code: string) => void;
   onResendOtp: () => void;
@@ -136,11 +154,16 @@ export function stepAfterBack(step: WelcomeAuthStep): WelcomeAuthStep | null {
   switch (step) {
     case 'welcome':
       return null;
+    case 'premium':
+      return 'welcome';
     case 'account-choice':
       return 'welcome';
     case 'email':
+    case 'password':
       return 'account-choice';
     case 'otp':
       return 'email';
+    case 'recovery':
+      return 'password';
   }
 }

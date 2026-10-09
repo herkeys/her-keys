@@ -72,6 +72,7 @@ describe('local notification architecture boundary', () => {
       'calendar-data': 'authenticated Google Calendar read',
       'calendar-oauth': 'Google Calendar OAuth exchange',
       'herkeys-ai': 'authenticated Gemini request/response proxy',
+      'herkeys-welcome-email': 'authenticated first-account welcome email over Resend, no push token or OS notification path',
       'weather-context': 'weather lookup',
     };
     const functions = readdirSync('supabase/functions').filter((name) => statSync(`supabase/functions/${name}`).isDirectory());

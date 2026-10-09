@@ -7,6 +7,7 @@ import { WelcomeAuthShell } from './WelcomeAuthShell';
 
 type SceneKey =
   | 'welcome'
+  | 'premium'
   | 'choice'
   | 'email'
   | 'otp'
@@ -21,6 +22,7 @@ type SceneKey =
 const SCENES: Array<{ key: SceneKey; label: string }> = [
   { key: 'welcome', label: 'Welcome' },
   { key: 'choice', label: 'Account choice' },
+  { key: 'premium', label: 'Premium offer' },
   { key: 'email', label: 'Email' },
   { key: 'otp', label: 'OTP' },
   { key: 'otp-wrong', label: 'OTP wrong' },
@@ -35,6 +37,7 @@ const SCENES: Array<{ key: SceneKey; label: string }> = [
 const SCENE_STATE: Record<SceneKey, Partial<WelcomeAuthViewState>> = {
   welcome: { step: 'welcome' },
   choice: { step: 'account-choice' },
+  premium: { step: 'premium', passwordMode: 'signUp' },
   email: { step: 'email' },
   otp: { step: 'otp', email: 'rowan@example.com' },
   'otp-wrong': { step: 'otp', email: 'rowan@example.com', otpError: 'wrong-code' },
@@ -115,10 +118,16 @@ export function WelcomeAuthGalleryPreview() {
       <View style={styles.frame}>
         <WelcomeAuthShell
           state={state}
-          onBegin={() => goTo('account-choice')}
+          onBegin={() => setState((current) => ({ ...current, step: 'account-choice', passwordMode: 'signUp' }))}
+          onExistingAccount={() => setState((current) => ({ ...current, step: 'account-choice', passwordMode: 'signIn' }))}
+          onPremiumPlans={() => setState((current) => ({ ...current, premiumNotice: 'unavailable' }))}
+          onContinueFree={() => setState((current) => ({ ...current, step: 'account-choice' }))}
           onApple={() => goTo('account-choice')}
           onGoogle={() => goTo('account-choice')}
           onChooseEmail={() => goTo('email')}
+          onChoosePassword={() => goTo('password')}
+          onPasswordModeChange={(mode) => setState((current) => ({ ...current, passwordMode: mode, passwordNotice: null }))}
+          onSubmitPassword={() => setState((current) => ({ ...current, passwordNotice: 'unavailable' }))}
           onSubmitEmail={(email) => {
             if (emailObviousError(email)) return;
             setState((current) => ({ ...current, step: 'otp', email, emailError: null }));

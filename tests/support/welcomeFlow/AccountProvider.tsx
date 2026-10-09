@@ -19,7 +19,7 @@ interface Host {
 let host: Host | null = null;
 
 export function installAccountHost(runtime: Any, { settled = true, available = true }: { settled?: boolean; available?: boolean } = {}): Host {
-  let snapshot = { state: runtime.getState(), busy: false, settled, available, emailAvailable: runtime.emailOtpAvailable(), syncNamespace: null };
+  let snapshot = { state: runtime.getState(), busy: false, settled, available, emailAvailable: runtime.emailOtpAvailable(), emailPasswordAvailable: runtime.emailPasswordAvailable(), syncNamespace: null };
   const listeners = new Set<() => void>();
   const set = (patch: Any) => {
     snapshot = { ...snapshot, ...patch };
@@ -49,6 +49,16 @@ export function installAccountHost(runtime: Any, { settled = true, available = t
       signOut: () => run(() => runtime.signOut()),
       retryBinding: () => run(() => runtime.resolveBinding()),
       requestEmailOtp: (email: string) => runtime.requestEmailOtp(email),
+      authenticateEmailPassword: async (mode: string, email: string, password: string) => {
+        set({ busy: true });
+        try {
+          const result = await runtime.authenticateEmailPassword(mode, email, password);
+          set({ state: result.state });
+          return result;
+        } finally {
+          set({ busy: false });
+        }
+      },
       verifyEmailOtp: async (email: string, code: string) => {
         set({ busy: true });
         try {

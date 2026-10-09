@@ -10,6 +10,7 @@ import type { SyncTransport } from '../domain/sync/transport';
 import { identifyRevenueCatAccount } from '../monetization/revenueCatClient';
 import { createAppleProvider } from '../platform/appleProvider';
 import { createSupabaseEmailOtp } from '../platform/emailOtpProvider';
+import { createSupabaseEmailPassword } from '../platform/emailPasswordProvider';
 import { createGoogleProvider } from '../platform/googleProvider';
 import { createHerKeysAiClient, UNCONFIGURED_HER_KEYS_AI } from '../platform/herKeysAiClient';
 import { createExternalIntelligenceClient, UNCONFIGURED_EXTERNAL_INTELLIGENCE } from '../platform/externalIntelligenceClient';
@@ -17,6 +18,8 @@ import { createDeviceSecureStorage, secureStorageAvailable } from '../platform/s
 import { createSupabaseAccountClient, createSupabaseClient } from '../platform/supabaseCloud';
 import { createSupabaseSessionClient } from '../platform/supabaseSessionClient';
 import { createSupabaseSyncTransport } from '../platform/supabaseSyncTransport';
+import { requestProductionWelcomeEmail } from '../platform/welcomeEmailClient';
+import { supabaseConfig } from '../config/supabase';
 import { appStore, changeObserver } from './appStoreInstance';
 import { composeAccountApp } from './composeAccountApp';
 
@@ -87,6 +90,7 @@ export const accountProviders = createProviderRegistry(adapters);
 // one-step adapter. It rides the same isolated provider client, and — like
 // Google — only where the durable secure credential store exists.
 const emailOtp = providerClient !== null && secureStorageAvailable ? createSupabaseEmailOtp(providerClient) : undefined;
+const emailPassword = providerClient !== null && secureStorageAvailable ? createSupabaseEmailPassword(providerClient) : undefined;
 
 /**
  * With no Supabase project there is nothing to transport to. The runtime is still composed (so the composition never differs
@@ -111,6 +115,7 @@ const app = composeAccountApp({
     sessionClient,
     providers: accountProviders,
     emailOtp,
+    emailPassword,
     cloud: client === null ? unconfiguredCloud : createSupabaseAccountClient(client),
     timezone: deviceTimeZone,
     now: Date.now,
@@ -130,3 +135,8 @@ const app = composeAccountApp({
 
 export const accountRuntime: AccountRuntime = app.accountRuntime;
 export const syncRuntime: SyncRuntime = app.syncRuntime;
+
+/** Best-effort, production-only, server-authenticated first-login welcome request. */
+export async function requestWelcomeEmailAfterBinding(): Promise<void> {
+  await requestProductionWelcomeEmail(client, supabaseConfig);
+}

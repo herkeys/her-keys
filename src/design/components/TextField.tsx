@@ -11,6 +11,8 @@ export interface TextFieldProps {
   error?: string | null;
   keyboardType?: KeyboardTypeOptions;
   multiline?: boolean;
+  /** Keep password fields visually concealed; password values are never logged or persisted. */
+  secureTextEntry?: boolean;
   autoFocus?: boolean;
   /** The most characters the stored field accepts, so typing can't run past what can be saved. */
   maxLength?: number;
@@ -39,6 +41,7 @@ export function TextField({
   error,
   keyboardType,
   multiline,
+  secureTextEntry,
   autoFocus,
   maxLength,
   editable = true,
@@ -62,6 +65,7 @@ export function TextField({
         placeholderTextColor={color.text.muted}
         keyboardType={keyboardType}
         multiline={multiline}
+        secureTextEntry={secureTextEntry}
         autoFocus={autoFocus}
         maxLength={maxLength}
         editable={editable}

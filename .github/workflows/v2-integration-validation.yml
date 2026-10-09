@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - integration/welcome-tree-auth-runtime
+      - repair/v2-audit-safe-closeouts-20261008
   workflow_dispatch:
 
 permissions:

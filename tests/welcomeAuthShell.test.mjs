@@ -48,9 +48,15 @@ const BASE = {
 
 const callbacks = (overrides = {}) => ({
   onBegin: () => {},
+  onExistingAccount: () => {},
+  onPremiumPlans: () => {},
+  onContinueFree: () => {},
   onApple: () => {},
   onGoogle: () => {},
   onChooseEmail: () => {},
+  onChoosePassword: () => {},
+  onPasswordModeChange: () => {},
+  onSubmitPassword: () => {},
   onSubmitEmail: () => {},
   onSubmitOtp: () => {},
   onResendOtp: () => {},
@@ -60,6 +66,41 @@ const callbacks = (overrides = {}) => ({
 });
 
 const shell = (state, cb = callbacks()) => <WelcomeAuthShell state={{ ...BASE, ...state }} {...cb} />;
+
+describe('Welcome and legacy Premium gallery preview', () => {
+  test('welcome offers exactly the two approved entry decisions', async () => {
+    const taps = [];
+    const r = await render(shell({ step: 'welcome' }, callbacks({
+      onBegin: () => taps.push('get-started'),
+      onExistingAccount: () => taps.push('existing'),
+    })));
+    const start = pressableByLabel(r, COPY.welcome.begin);
+    const existing = pressableByLabel(r, COPY.welcome.existingAccount);
+    assert.ok(start && existing);
+    await press(start);
+    await press(existing);
+    assert.deepEqual(taps, ['get-started', 'existing']);
+  });
+
+  test('Premium offer presents RevenueCat intent and a free account path', async () => {
+    const taps = [];
+    const r = await render(shell({ step: 'premium' }, callbacks({
+      onPremiumPlans: () => taps.push('plans'),
+      onContinueFree: () => taps.push('free'),
+    })));
+    assert.match(joined(r), /HER KEYS PREMIUM/i);
+    await press(pressableByLabel(r, 'Explore Premium Plans'));
+    await press(pressableByLabel(r, 'Continue with Her Keys Free'));
+    assert.deepEqual(taps, ['plans', 'free']);
+    assert.equal(pressableByLabel(r, 'Continue with Apple'), undefined);
+  });
+
+  test('pending purchase cannot double-open RevenueCat or skip', async () => {
+    const r = await render(shell({ step: 'premium', premiumBusy: true }));
+    assert.equal(pressableByLabel(r, 'Explore Premium Plans').props.disabled, true);
+    assert.equal(pressableByLabel(r, 'Continue with Her Keys Free').props.disabled, true);
+  });
+});
 
 describe('provider set and order are a platform decision', () => {
   test('Android offers Google + email, and never Apple', async () => {
@@ -91,7 +132,7 @@ describe('provider set and order are a platform decision', () => {
         assert.equal(link.props.accessibilityRole, 'link');
         assert.equal(link.props.disabled, false);
       }
-      assert.match(joined(r), /agree to the Terms and Conditions/);
+      assert.match(joined(r), /asked to accept before using Her Keys/);
     }
     const connected = await render(shell({ step: 'account-choice', platform: 'android' }));
     Linking.__takeOpened();
@@ -110,6 +151,36 @@ describe('provider set and order are a platform decision', () => {
     assert.match(COPY.accountChoice.crossPlatformNote, /not yet supported/);
     const panel = readFileSync(join(ROOT, 'src', 'features', 'account', 'AccountPanel.tsx'), 'utf8');
     assert.doesNotMatch(panel, /follows you to your next phone|new phone is not a fresh start/);
+  });
+
+  test('one email choice opens password; legacy OTP has no direct selection', async () => {
+    const called = [];
+    const r = await render(shell({ step: 'account-choice' }, callbacks({
+      onChooseEmail: () => called.push('otp'),
+      onChoosePassword: () => called.push('password'),
+    })));
+    const choice = pressableByLabel(r, 'Continue with email');
+    assert.ok(choice);
+    assert.equal(pressables(r).filter((p) => p.props.accessibilityLabel === 'Continue with email').length, 1);
+    assert.equal(pressableByLabel(r, COPY.password.choice), undefined);
+    await press(choice);
+    assert.deepEqual(called, ['password']);
+  });
+
+  test('unified email page offers Sign In / Sign Up tabs with masked password', async () => {
+    const signIn = await render(shell({ step: 'password', passwordMode: 'signIn' }));
+    assert.equal(pressableByLabel(signIn, COPY.password.tabSignIn), undefined, 'welcome already established sign-in intent');
+    assert.equal(pressableByLabel(signIn, COPY.password.tabSignUp), undefined, 'no second authentication decision');
+    assert.equal(signIn.root.findAllByType('TextInput').length, 2);
+    assert.equal(signIn.root.findAllByType('TextInput')[1].props.secureTextEntry, true);
+    const signUp = await render(shell({ step: 'password', passwordMode: 'signUp' }));
+    const inputs = signUp.root.findAllByType('TextInput');
+    assert.equal(inputs.length, 3);
+    assert.equal(inputs[1].props.secureTextEntry, true);
+    assert.equal(inputs[2].props.secureTextEntry, true);
+    assert.equal(pressableByLabel(signUp, COPY.password.tabSignUp), undefined);
+    assert.match(joined(signUp), /Create your account/);
+    assert.doesNotMatch(joined(signIn), /send a short code/i);
   });
 
   test('no button is ever labeled "Continue with Android"', async () => {
@@ -135,13 +206,14 @@ describe('callbacks report intent and carry no auth implementation', () => {
     const cb = callbacks({
       onApple: () => calls.push('apple'),
       onGoogle: () => calls.push('google'),
-      onChooseEmail: () => calls.push('email'),
+      onChooseEmail: () => calls.push('otp'),
+      onChoosePassword: () => calls.push('password'),
     });
     const r = await render(shell({ step: 'account-choice', platform: 'ios' }, cb));
     await press(pressableByLabel(r, 'Continue with Apple'));
     await press(pressableByLabel(r, 'Continue with Google'));
     await press(pressableByLabel(r, 'Continue with email'));
-    assert.deepEqual(calls, ['apple', 'google', 'email']);
+    assert.deepEqual(calls, ['apple', 'google', 'password']);
   });
 
   test('a cancelled provider flow returns to the choice with NO error presentation', async () => {
@@ -170,6 +242,7 @@ describe('callbacks report intent and carry no auth implementation', () => {
 describe('welcome is the root and back never skips it', () => {
   test('the back model: welcome has no back; each step returns one step', () => {
     assert.equal(stepAfterBack('welcome'), null);
+    assert.equal(stepAfterBack('premium'), 'welcome');
     assert.equal(stepAfterBack('account-choice'), 'welcome');
     assert.equal(stepAfterBack('email'), 'account-choice');
     assert.equal(stepAfterBack('otp'), 'email');

@@ -3,9 +3,11 @@ import { AppState } from 'react-native';
 import type { EmailVerification } from '../domain/account/accountRuntime';
 import { INITIAL_ACCOUNT_STATE, type AccountState } from '../domain/account/authState';
 import type { EmailOtpRequestResult } from '../domain/account/emailOtp';
+import type { EmailPasswordMode } from '../domain/account/emailPassword';
+import type { EmailPasswordAttempt } from '../domain/account/accountRuntime';
 import type { AuthProvider } from '../domain/account/identity';
 import type { SyncNamespace } from '../domain/sync/syncTypes';
-import { accountRuntime, accountsAvailable, syncRuntime } from './accountRuntimeInstance';
+import { accountRuntime, accountsAvailable, syncRuntime, requestWelcomeEmailAfterBinding } from './accountRuntimeInstance';
 import { useStoreSnapshot } from './AppStateProvider';
 
 /**
@@ -28,6 +30,8 @@ export interface AccountContextValue {
   signIn: (provider: AuthProvider) => Promise<AccountState>;
   /** Whether passwordless email can be offered on this device. */
   emailAvailable: boolean;
+  emailPasswordAvailable: boolean;
+  authenticateEmailPassword: (mode: EmailPasswordMode, email: string, password: string) => Promise<EmailPasswordAttempt>;
   /** Email phase one. Changes no account state; calling it again is the resend. */
   requestEmailOtp: (email: string) => Promise<EmailOtpRequestResult>;
   /** Email phase two. The code goes straight to the runtime and is kept nowhere. */
@@ -77,6 +81,14 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     };
   }, [hydrated]);
 
+  // Only a fully verified, bound user causes a welcome request.
+  // The server decides actual eligibility and deduplicates across devices,
+  // sessions and app restarts. Recovery and unbound sessions never send mail.
+  useEffect(() => {
+    if (!settled || state.kind !== 'accountBound') return;
+    void requestWelcomeEmailAfterBinding();
+  }, [settled, state.kind, state.kind === 'accountBound' ? state.session.accountId : null]);
+
   useEffect(() => {
     if (!accountsAvailable) return;
 
@@ -117,6 +129,17 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       busy,
       signIn: (provider) => run(() => accountRuntime.signIn(provider)),
       emailAvailable: accountRuntime.emailOtpAvailable(),
+      emailPasswordAvailable: accountRuntime.emailPasswordAvailable(),
+      authenticateEmailPassword: async (mode, email, password) => {
+        setBusy(true);
+        try {
+          const result = await accountRuntime.authenticateEmailPassword(mode, email, password);
+          setState(result.state);
+          return result;
+        } finally {
+          setBusy(false);
+        }
+      },
       requestEmailOtp: (email) => accountRuntime.requestEmailOtp(email),
       verifyEmailOtp: async (email, code) => {
         setBusy(true);

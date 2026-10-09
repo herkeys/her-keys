@@ -1,5 +1,5 @@
 import { z } from 'npm:zod@4.6.5';
-import { AuthError, requireUser } from '../_shared/supabaseAdmin.ts';
+import { AuthError, adminClient, requireUser } from '../_shared/supabaseAdmin.ts';
 import { json, options } from '../_shared/http.ts';
 
 const DEFAULT_MODEL = 'gemini-3.8-flash';
@@ -494,7 +494,25 @@ Deno.serve(async (req) => {
   const modelName = model();
 
   try {
-    await requireUser(req);
+    const user = await requireUser(req);
+
+    // An authenticated caller must not bypass a declined AI Data Processing
+    // choice by calling this Edge Function directly. Enable ONLY after the
+    // versioned, RLS-isolated consent ledger is deployed and verified.
+    if (Deno.env.get('HER_KEYS_AI_REQUIRE_CONSENT') === 'true') {
+      const { data: decisions, error: consentError } = await adminClient()
+        .from('account_consents')
+        .select('policy_version,granted')
+        .eq('account_id', user.id)
+        .eq('consent_type', 'ai_processing')
+        .order('recorded_at', { ascending: false })
+        .limit(1);
+      if (consentError || decisions?.length !== 1 ||
+          decisions[0].policy_version !== 'ai-data-processing-initial-v1' ||
+          decisions[0].granted !== true) {
+        return json({ status: 'unavailable', reason: 'ai_processing_consent_required', requestId }, 403);
+      }
+    }
 
     if (!configured()) {
       logOperational({

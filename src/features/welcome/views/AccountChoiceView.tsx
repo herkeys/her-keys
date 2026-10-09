@@ -9,21 +9,24 @@ import { ProviderButton } from '../ProviderButton';
 
 export interface AccountChoiceViewProps {
   platform: WelcomeAuthViewState['platform'];
-  pending: WelcomeAuthMethod | null;
+  pending: WelcomeAuthViewState['pending'];
   /** The degraded presentation supplies its own reconnect header instead. */
   headerless?: boolean;
   /** The last attempt from here ended without an account. Never set for a cancellation. */
   notice?: WelcomeAuthViewState['notice'];
+  authMode?: 'signIn' | 'signUp';
   onApple: WelcomeAuthCallbacks['onApple'];
   onGoogle: WelcomeAuthCallbacks['onGoogle'];
   onChooseEmail: WelcomeAuthCallbacks['onChooseEmail'];
+  onChoosePassword?: WelcomeAuthCallbacks['onChoosePassword'];
 }
 
 /**
  * The account choice. She is never asked to decide whether she is "creating
  * an account" or "signing in" first — every option reads "Continue with…",
  * in the platform's fixed order (Apple, Google, email on iOS; Google, email
- * on Android).
+ * on Android). Email always opens the unified password Sign In / Sign Up form;
+ * passwordless OTP is retained behind the service boundary, not in this menu.
  *
  * While any provider flow is in flight every other control is disabled and a
  * restrained progress note appears — no full-screen skeleton for provider
@@ -32,8 +35,9 @@ export interface AccountChoiceViewProps {
  * Terms/Privacy open the owner-published PDFs through the OS URL handler.
  * These are public documents, not authentication or app-route callbacks.
  */
-export function AccountChoiceView({ platform, pending, headerless, notice, onApple, onGoogle, onChooseEmail }: AccountChoiceViewProps) {
-  const handlers = { apple: onApple, google: onGoogle, email: onChooseEmail } as const;
+export function AccountChoiceView({ platform, pending, headerless, notice, authMode = 'signIn', onApple, onGoogle, onChooseEmail, onChoosePassword }: AccountChoiceViewProps) {
+  // Exactly ONE visible email choice. Never route a normal signup back to the legacy email-code entry.
+  const handlers = { apple: onApple, google: onGoogle, email: onChoosePassword ?? onChooseEmail } as const;
   const methods = methodsForPlatform(platform);
   const [legalLinkError, setLegalLinkError] = useState(false);
   const openLegalDocument = (url: string) => {
@@ -49,10 +53,10 @@ export function AccountChoiceView({ platform, pending, headerless, notice, onApp
         <FadeIn speed="deliberate" style={styles.body}>
           <Overline>{COPY.accountChoice.overline}</Overline>
           <AppText variant="hero" style={styles.title}>
-            {COPY.accountChoice.title}
+            {authMode === 'signUp' ? COPY.accountChoice.signUpTitle : COPY.accountChoice.signInTitle}
           </AppText>
           <AppText variant="title" color={color.text.secondary} style={styles.lede}>
-            {COPY.accountChoice.lede}
+            {authMode === 'signUp' ? COPY.accountChoice.signUpLede : COPY.accountChoice.signInLede}
           </AppText>
         </FadeIn>
       )}

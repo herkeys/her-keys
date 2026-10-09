@@ -1,4 +1,5 @@
-import type { EmailVerification } from '../../domain/account/accountRuntime';
+import type { PaywallOutcome } from '../../monetization/entitlement';
+import type { EmailPasswordAttempt, EmailVerification } from '../../domain/account/accountRuntime';
 import type { AccountStateKind } from '../../domain/account/authState';
 import type { EmailOtpRequestResult } from '../../domain/account/emailOtp';
 import {
@@ -40,8 +41,13 @@ export interface WelcomeFlowState {
   email: string;
   emailError: EmailErrorKind | null;
   otpError: OtpErrorKind | null;
+  passwordMode: 'signIn' | 'signUp';
+  recoveryEmail: string;
+  passwordNotice: 'confirmationRequired' | 'rejected' | 'unreachable' | 'unavailable' | null;
+  premiumNotice: 'no_offering' | 'unavailable' | 'error' | null;
+  premiumBusy: boolean;
   /** The method this screen is waiting on, so progress shows beside the control that started it. */
-  inFlight: WelcomeAuthMethod | null;
+  inFlight: WelcomeAuthMethod | 'password' | null;
   /** When Resend is offered again (epoch ms), or null when it already is. A courtesy to her, not a rate limit. */
   resendAvailableAt: number | null;
   /** The last attempt from here ended without an account. Never set by a cancellation. */
@@ -50,8 +56,17 @@ export interface WelcomeFlowState {
 
 export type WelcomeFlowEvent =
   | { type: 'begin' }
+  | { type: 'existingAccount' }
+  | { type: 'premiumStarted' }
+  | { type: 'premiumSettled'; outcome: PaywallOutcome['kind'] }
+  | { type: 'premiumContinueFree' }
   | { type: 'back' }
   | { type: 'chooseEmail' }
+  | { type: 'choosePassword' }
+  | { type: 'passwordModeChanged'; mode: 'signIn' | 'signUp' }
+  | { type: 'forgotPassword'; email: string }
+  | { type: 'passwordStarted' }
+  | { type: 'passwordSettled'; outcome: EmailPasswordAttempt['outcome']; account: AccountStateKind }
   | { type: 'changeEmail' }
   | { type: 'providerStarted'; method: 'apple' | 'google' }
   /** The provider flow ended. `account` is the runtime's state afterwards — the only evidence of how it went. */
@@ -70,6 +85,11 @@ export function initialWelcomeFlow(mode: WelcomeFlowMode): WelcomeFlowState {
     email: '',
     emailError: null,
     otpError: null,
+    passwordMode: 'signIn',
+    recoveryEmail: '',
+    passwordNotice: null,
+    premiumNotice: null,
+    premiumBusy: false,
     inFlight: null,
     resendAvailableAt: null,
     attemptFailed: false,
@@ -82,7 +102,7 @@ export function initialWelcomeFlow(mode: WelcomeFlowMode): WelcomeFlowState {
  * choice is the root of a reconnect. Nothing moves while a request is out.
  */
 export function welcomeFlowBackTarget(state: WelcomeFlowState): WelcomeAuthStep | null {
-  if (state.inFlight !== null) return null;
+  if (state.inFlight !== null || state.premiumBusy) return null;
   if (state.mode === 'reconnect' && state.step === 'account-choice') return null;
   return stepAfterBack(state.step);
 }
@@ -101,13 +121,66 @@ const verifiedButNotHeld = (account: AccountStateKind): boolean =>
 export function welcomeFlowReducer(state: WelcomeFlowState, event: WelcomeFlowEvent): WelcomeFlowState {
   switch (event.type) {
     case 'begin':
-      return state.step === 'welcome' ? { ...state, step: 'account-choice', attemptFailed: false } : state;
+      return state.step === 'welcome'
+        ? { ...state, step: 'account-choice', passwordMode: 'signUp', premiumNotice: null, attemptFailed: false }
+        : state;
+
+    case 'premiumStarted':
+      if (state.step !== 'premium' || state.premiumBusy || state.inFlight !== null) return state;
+      return { ...state, premiumBusy: true, premiumNotice: null };
+
+    case 'premiumSettled':
+      if (state.step !== 'premium' || !state.premiumBusy) return state;
+      if (event.outcome === 'purchased' || event.outcome === 'restored' || event.outcome === 'already_entitled') {
+        return { ...state, premiumBusy: false, premiumNotice: null, step: 'account-choice' };
+      }
+      return {
+        ...state,
+        premiumBusy: false,
+        premiumNotice: event.outcome === 'no_offering' || event.outcome === 'unavailable' ? event.outcome : event.outcome === 'cancelled' ? null : 'error',
+      };
+
+    case 'premiumContinueFree':
+      return state.step === 'premium' && !state.premiumBusy
+        ? { ...state, step: 'account-choice', premiumNotice: null }
+        : state;
+
+    case 'existingAccount':
+      return state.step === 'welcome'
+        ? { ...state, step: 'account-choice', passwordMode: 'signIn', attemptFailed: false }
+        : state;
 
     case 'back': {
       const target = welcomeFlowBackTarget(state);
       if (target === null) return state;
       // Going back clears what was said about the step being left, never what she typed.
       return { ...state, step: target, emailError: null, otpError: null, attemptFailed: false };
+    }
+
+    case 'choosePassword':
+      if (state.inFlight !== null || state.step !== 'account-choice') return state;
+      return { ...state, step: 'password', passwordMode: state.mode === 'reconnect' ? 'signIn' : state.passwordMode, passwordNotice: null, attemptFailed: false };
+
+    case 'passwordModeChanged':
+      if (state.inFlight !== null || state.step !== 'password' || (state.mode === 'reconnect' && event.mode === 'signUp')) return state;
+      return { ...state, passwordMode: event.mode, passwordNotice: null };
+
+    case 'forgotPassword':
+      if (state.inFlight !== null || state.step !== 'password' || state.passwordMode !== 'signIn') return state;
+      return { ...state, step: 'recovery', recoveryEmail: event.email, passwordNotice: null };
+
+    case 'passwordStarted':
+      if (state.inFlight !== null || state.step !== 'password') return state;
+      return { ...state, inFlight: 'password', passwordNotice: null };
+
+    case 'passwordSettled': {
+      if (state.inFlight !== 'password') return state;
+      const outcome = event.outcome.kind;
+      if (outcome === 'authenticated') {
+        const failed = verifiedButNotHeld(event.account);
+        return { ...state, inFlight: null, passwordNotice: failed ? 'rejected' : null };
+      }
+      return { ...state, inFlight: null, passwordNotice: outcome };
     }
 
     case 'chooseEmail':
@@ -190,6 +263,12 @@ export function welcomeFlowView(state: WelcomeFlowState, platform: WelcomeAuthPl
     email: state.email,
     emailError: state.emailError,
     otpError: state.otpError,
+    passwordMode: state.passwordMode,
+    recoveryEmail: state.recoveryEmail,
+    passwordCanSignUp: state.mode === 'first-run',
+    passwordNotice: state.passwordNotice,
+    premiumNotice: state.premiumNotice,
+    premiumBusy: state.premiumBusy,
     resendSecondsLeft: secondsLeft > 0 ? secondsLeft : null,
     notice: state.attemptFailed && state.step === 'account-choice' ? 'attempt-failed' : null,
   };

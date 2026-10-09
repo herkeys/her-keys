@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { AppText, Button, Card, Overline, Screen } from '../../src/design/components';
 import { colors, spacing } from '../../src/design/tokens';
-import { canResolveOnboardingPlus, PAYWALL_POLICY } from '../../src/monetization/entitlement';
+import { canResolveOnboardingPlus, HER_KEYS_PREMIUM_DISPLAY_NAME, PAYWALL_POLICY } from '../../src/monetization/entitlement';
 import { useEntitlement } from '../../src/monetization/RevenueCatProvider';
 import { useOnboarding } from '../../src/store/OnboardingContext';
 
@@ -37,7 +37,7 @@ export default function HerKeysPlus() {
     }
   };
 
-  // Already entitled — a returning anonymous customer, or a fast refresh right after purchase. No need to show the paywall at all.
+  // An already-entitled customer completes this final step without a second upsell.
   useEffect(() => {
     if (status === 'plus' && canResolveOnboardingPlus('already_entitled', PAYWALL_POLICY)) {
       void resolve(complete);
@@ -56,7 +56,7 @@ export default function HerKeysPlus() {
     } else if (outcome.kind === 'no_offering' || outcome.kind === 'unavailable') {
       setPaywallUnavailable(true);
     } else if (outcome.kind === 'error') {
-      setNote('Her Keys+ couldn’t open right now. You can continue without it for now.');
+      setNote(`${HER_KEYS_PREMIUM_DISPLAY_NAME} couldn’t open right now. You can continue without it for now.`);
     }
     setBusy(null);
   };
@@ -68,7 +68,7 @@ export default function HerKeysPlus() {
     if (outcome.kind === 'restored') {
       await resolve(complete);
     } else if (outcome.kind === 'no_purchases_found') {
-      setNote('No previous Her Keys+ purchase was found on this device.');
+      setNote(`No previous ${HER_KEYS_PREMIUM_DISPLAY_NAME} purchase was found on this device.`);
     } else {
       setNote('Her Keys couldn’t check for previous purchases right now.');
     }
@@ -85,16 +85,16 @@ export default function HerKeysPlus() {
 
   return (
     <Screen>
-      <Overline>Her Keys+</Overline>
+      <Overline>{HER_KEYS_PREMIUM_DISPLAY_NAME}</Overline>
       <AppText variant="hero" style={styles.title}>
-        Let Her Keys carry more of the work.
+        You’re ready to begin.
       </AppText>
       <AppText variant="title" color={colors.textSecondary} style={styles.lede}>
-        Her Keys+ is where deeper household intelligence and more proactive planning will live as they're built.
+        Your Life Systems Audit is complete. You can start using Her Keys now.
       </AppText>
 
       <Card tone="subtle" style={styles.benefits}>
-        <Overline>Coming to Her Keys+</Overline>
+        <Overline>Your journey continues</Overline>
         {BENEFITS.map((benefit) => (
           <AppText key={benefit} variant="body" style={styles.benefit}>
             {benefit}
@@ -103,7 +103,7 @@ export default function HerKeysPlus() {
       </Card>
 
       <AppText variant="bodySm" color={colors.textTertiary} style={styles.reassurance}>
-        You can keep using the core Her Keys experience without Her Keys+.
+        Premium remains optional. You can explore plans again whenever you’re ready.
       </AppText>
 
       {note && (
@@ -113,19 +113,18 @@ export default function HerKeysPlus() {
       )}
 
       <View style={styles.actions}>
+        <Button
+          label="Continue to Her Keys"
+          onPress={onContinueWithoutPlus}
+          disabled={busy !== null}
+        />
         {!paywallUnavailable && (
-          <Button label="See Her Keys+" onPress={onSeePlus} disabled={busy !== null} />
+          <Button label={`Explore ${HER_KEYS_PREMIUM_DISPLAY_NAME}`} onPress={onSeePlus} variant="secondary" disabled={busy !== null} />
         )}
         <Button
           label="Restore purchases"
-          variant="secondary"
-          onPress={onRestore}
-          disabled={busy !== null}
-        />
-        <Button
-          label="Continue without Her Keys+"
           variant="ghost"
-          onPress={onContinueWithoutPlus}
+          onPress={onRestore}
           disabled={busy !== null}
         />
       </View>

@@ -10,6 +10,7 @@ import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 import { createAccountRuntime } from '../src/domain/account/accountRuntime.ts';
 import { UNBOUND_IDENTITY } from '../src/domain/account/binding.ts';
+import { createScriptedEmailPassword } from '../src/domain/account/emailPassword.ts';
 import { createProviderRegistry, createScriptedProvider } from '../src/domain/account/provider.ts';
 import {
   SECURE_SESSION_KEY,
@@ -68,6 +69,7 @@ function runtimeFor({
   state = createEmptyState(TZ),
   identity = UNBOUND_IDENTITY,
   providerResults = [{ kind: 'success', session: sessionFor(ACCOUNT_A) }],
+  passwordResults = [],
   cloud,
   secureInitial = {},
   secureOptions = {},
@@ -99,6 +101,7 @@ function runtimeFor({
     sessions: createSecureSessionStore(secureStorage),
     sessionClient,
     providers: createProviderRegistry([createScriptedProvider('apple', { results: providerResults })]),
+    emailPassword: createScriptedEmailPassword(passwordResults),
     cloud: cloud ?? defaultCloud,
     identity: {
       current: () => staged,
@@ -202,6 +205,40 @@ describe('sign-in', () => {
     const state = await h.runtime.signIn('google');
     assert.equal(state.kind, 'authError');
     assert.equal(state.recoverable, false);
+  });
+});
+
+describe('email/password shares the account boundary', () => {
+  test('confirmation-pending signup never creates a credential or a cloud household', async () => {
+    const h = runtimeFor({ passwordResults: [{ kind: 'confirmationRequired' }] });
+    const outcome = await h.runtime.authenticateEmailPassword('signUp', 'rowan@example.test', 'nonloggable-password');
+    assert.equal(outcome.outcome.kind, 'confirmationRequired');
+    assert.equal(outcome.state.kind, 'unauthenticated');
+    assert.deepEqual(h.calls, []);
+    assert.deepEqual(h.secureStorage.contents(), {});
+    assert.deepEqual(h.onDisk(), UNBOUND_IDENTITY);
+  });
+
+  test('confirmed password login adopts the exact same Supabase account binding path as Google/Apple', async () => {
+    const h = runtimeFor({ passwordResults: [{ kind: 'success', session: sessionFor(ACCOUNT_A, {
+      provider: { provider: 'email', subject: null, suggestedDisplayName: null },
+    }) }] });
+    const result = await h.runtime.authenticateEmailPassword('signIn', 'rowan@example.test', 'nonloggable-password');
+    assert.equal(result.outcome.kind, 'authenticated');
+    assert.equal(result.state.kind, 'accountBound');
+    assert.equal(result.state.session.provider.provider, 'email');
+    assert.deepEqual(h.calls.map(x => x.fn), ['bootstrap']);
+    assert.ok(h.secureStorage.contents()[SECURE_SESSION_KEY]);
+    assert.equal(JSON.stringify(h.onDisk()).includes('nonloggable-password'), false);
+  });
+
+  test('wrong password is a refusal; it does not bind, persist, or send records', async () => {
+    const h = runtimeFor({ passwordResults: [{ kind: 'rejected', detail: 'invalid_credentials' }] });
+    const result = await h.runtime.authenticateEmailPassword('signIn', 'rowan@example.test', 'incorrect-password');
+    assert.equal(result.outcome.kind, 'rejected');
+    assert.equal(result.state.kind, 'unauthenticated');
+    assert.deepEqual(h.calls, []);
+    assert.deepEqual(h.secureStorage.contents(), {});
   });
 });
 

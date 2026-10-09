@@ -18,6 +18,7 @@ import './support/welcomeFlow/register.mjs';
 import { createAccountRuntime } from '../src/domain/account/accountRuntime.ts';
 import { UNBOUND_IDENTITY } from '../src/domain/account/binding.ts';
 import { createScriptedEmailOtp } from '../src/domain/account/emailOtp.ts';
+import { createScriptedEmailPassword } from '../src/domain/account/emailPassword.ts';
 import { createProviderRegistry, createScriptedProvider } from '../src/domain/account/provider.ts';
 import { SECURE_SESSION_KEY, createMemorySecureStorage, createSecureSessionStore } from '../src/domain/account/secureSession.ts';
 import { CROSS_PLATFORM_NOTE } from '../src/features/account/accountModel.ts';
@@ -28,10 +29,11 @@ import { createEmptyState } from '../src/state/initialState.ts';
 import { TZ } from './support/fixtures.mjs';
 
 const { render } = await import('./support/render.tsx');
-const { BackHandler } = await import('./support/rn-stub.tsx');
+const { BackHandler, Platform } = await import('./support/rn-stub.tsx');
 const { installAccountHost } = await import('./support/welcomeFlow/AccountProvider.tsx');
 const { offerProviders } = await import('./support/welcomeFlow/accountRuntimeInstance.mjs');
 const { WelcomeAuthFlow, WelcomeAuthSettling } = await import('../src/features/account/WelcomeAuthFlow.tsx');
+const { WelcomeAuthShell } = await import('../src/features/welcome/WelcomeAuthShell.tsx');
 
 const ACCOUNT_A = '11111111-1111-4111-8111-111111111111';
 const ACCOUNT_B = '22222222-2222-4222-8222-222222222222';
@@ -63,7 +65,7 @@ const completeBody = {
 };
 
 /** A device: a real account runtime over scripted leaves, installed as what `useAccount` reads. */
-function device({ google = [success(ACCOUNT_A, 'google')], apple = [success(ACCOUNT_A, 'apple')], email = {}, identity = UNBOUND_IDENTITY, cloudAnswers, secureInitial = {}, sessionClient, offered = ['google'] } = {}) {
+function device({ google = [success(ACCOUNT_A, 'google')], apple = [success(ACCOUNT_A, 'apple')], email = {}, password = [], identity = UNBOUND_IDENTITY, cloudAnswers, secureInitial = {}, sessionClient, offered = ['google'] } = {}) {
   const cloudCalls = [];
   let staged = identity;
   let answered = 0;
@@ -89,6 +91,7 @@ function device({ google = [success(ACCOUNT_A, 'google')], apple = [success(ACCO
     sessionClient,
     providers: createProviderRegistry([createScriptedProvider('apple', { results: apple }), createScriptedProvider('google', { results: google })]),
     emailOtp,
+    emailPassword: createScriptedEmailPassword(password),
     cloud: { bootstrapAccount: async () => answer('bootstrap'), claimLocalHousehold: async () => answer('claim') },
     identity: { current: () => staged, set: (next) => { staged = next; }, save: async () => {} },
     localState: () => createEmptyState(TZ),
@@ -97,6 +100,8 @@ function device({ google = [success(ACCOUNT_A, 'google')], apple = [success(ACCO
     newClaimKey: () => '88888888-8888-4888-8888-888888888888',
   });
   offerProviders(offered);
+  // Simulate the actual OS, not provider-discovery timing. Apple choice on iOS is mandatory.
+  Platform.OS = offered.includes('apple') ? 'ios' : 'android';
   const host = installAccountHost(runtime);
   return { runtime, host, port, requested, cloudCalls, secureStorage, identity: () => staged };
 }
@@ -150,23 +155,33 @@ async function type(r, text) {
   await TestRenderer.act(async () => input.props.onChangeText(text));
 }
 
-const toAccountChoice = async (r) => press(r, COPY.welcome.begin);
+const toAccountChoice = async (r) => {
+  await press(r, COPY.welcome.begin);
+};
+const toExistingAccount = async (r) => press(r, COPY.welcome.existingAccount);
+/** Legacy OTP service regression only: this route is not exposed in the product's account choice. */
+async function openLegacyOtpForBoundaryTest(r) {
+  const shell = r.root.findByType(WelcomeAuthShell);
+  await TestRenderer.act(async () => shell.props.onChooseEmail());
+  await settle();
+}
 async function toCodeStep(r, address = EMAIL) {
   await toAccountChoice(r);
-  await press(r, 'Continue with email');
+  await openLegacyOtpForBoundaryTest(r);
   await type(r, address);
   await press(r, COPY.email.continue);
 }
 
 describe('the first run: Welcome → account choice → authenticate', () => {
-  test('a signed-out device starts at Welcome, and Begin leads to the account choice — never into the audit', async () => {
+  test('Get Started goes directly to account choices without an upfront paywall', async () => {
     const d = device();
     const r = await open();
     assert.match(shown(r), /Rebuild your life\.\nRun it your way\./);
     assert.equal(control(r, 'Continue with Google'), undefined, 'no method is offered before she begins');
 
     await press(r, COPY.welcome.begin);
-    assert.ok(shown(r).includes(COPY.accountChoice.title));
+    assert.equal(control(r, 'Explore Premium Plans'), undefined, 'no upfront Premium before registration');
+    assert.ok(shown(r).includes(COPY.accountChoice.signUpTitle));
     assert.ok(control(r, 'Continue with Google') && control(r, 'Continue with email'));
     assert.equal(d.runtime.getState().kind, 'unauthenticated', 'Begin authenticates nothing');
     assert.deepEqual([d.cloudCalls, d.secureStorage.contents(), d.identity()], [[], {}, UNBOUND_IDENTITY], 'and touches nothing');
@@ -176,10 +191,20 @@ describe('the first run: Welcome → account choice → authenticate', () => {
     device({ offered: ['apple', 'google'] });
     const r = await open();
     const labels = () => r.root.findAllByType('Pressable').map((n) => n.props.accessibilityLabel);
-    assert.deepEqual(labels(), [COPY.welcome.begin]);
+    assert.deepEqual(labels(), [COPY.welcome.begin, COPY.welcome.existingAccount]);
     await toAccountChoice(r);
     assert.deepEqual(labels(), [COPY.back, 'Continue with Apple', 'Continue with Google', 'Continue with email', COPY.accountChoice.legalTerms, COPY.accountChoice.legalPrivacy]);
-    assert.doesNotMatch(shown(r), /guest|skip|not now|later|explore|without an account/i);
+    assert.doesNotMatch(shown(r), /guest|skip|not now|without an account/i);
+  });
+
+  test('iOS Apple choice remains visible without waiting for provider discovery', async () => {
+    device({ offered: ['apple', 'google'] });
+    const r = await open();
+    await toAccountChoice(r);
+    assert.ok(control(r, 'Continue with Apple'), 'Apple is mandatory on native iOS');
+    assert.ok(control(r, 'Continue with Google'), 'Google remains an alternative');
+    assert.ok(control(r, 'Continue with email'), 'email/password remains an alternative');
+    assert.equal(control(r, COPY.password.choice), undefined, 'never show a second email path');
   });
 
   test('ANDROID offers Google and email, and never Apple; IOS offers Apple, Google and email, with the Apple disclosure', async () => {
@@ -197,6 +222,62 @@ describe('the first run: Welcome → account choice → authenticate', () => {
     const text = shown(ios);
     assert.ok(text.indexOf('Continue with Apple') < text.indexOf('Continue with Google') && text.indexOf('Continue with Google') < text.indexOf('Continue with email'));
     assert.ok(text.includes(CROSS_PLATFORM_NOTE), 'EX-01: the owner-approved Apple limitation is disclosed where Apple is offered');
+  });
+});
+
+describe('email/password through the same runtime', () => {
+  test('the ONE visible email choice opens sign-in/password directly, not the code screen', async () => {
+    const d = device();
+    const r = await open();
+    await toAccountChoice(r);
+    assert.ok(control(r, 'Continue with email'));
+    assert.equal(control(r, COPY.password.choice), undefined, 'no second email choice');
+    await press(r, 'Continue with email');
+    assert.match(shown(r), /Create your account/);
+    assert.equal(control(r, COPY.otp.verify), undefined, 'no verification-code form');
+    assert.doesNotMatch(shown(r), /send a short code|no password to remember/i);
+    assert.deepEqual(d.requested, [], 'do not ask the OTP service to send a code');
+  });
+
+  test('the new choice is offered and verified sign-in binds the real account', async () => {
+    const d = device({ password: [success(ACCOUNT_A, 'email')] });
+    const r = await open();
+    await toExistingAccount(r);
+    await press(r, 'Continue with email');
+    assert.match(shown(r), /Welcome back/);
+    const inputs = r.root.findAllByType('TextInput');
+    assert.equal(inputs.length, 2);
+    await TestRenderer.act(async () => inputs[0].props.onChangeText(EMAIL));
+    await TestRenderer.act(async () => inputs[1].props.onChangeText('secret-password-for-tests'));
+    await press(r, COPY.password.signIn);
+    assert.equal(d.runtime.getState().kind, 'accountBound');
+    assert.equal(d.runtime.getState().session.provider.provider, 'email');
+    assert.deepEqual(d.cloudCalls, ['bootstrap']);
+  });
+
+  test('reconnect permits email/password login, not registration as another person', async () => {
+    device();
+    const r = await open('reconnect');
+    await press(r, 'Continue with email');
+    assert.equal(control(r, COPY.password.tabSignUp), undefined);
+    assert.match(shown(r), /Welcome back/);
+  });
+
+  test('signup requiring email confirmation never binds a household', async () => {
+    const d = device({ password: [{ kind: 'confirmationRequired' }] });
+    const r = await open();
+    await toAccountChoice(r);
+    await press(r, 'Continue with email');
+    const inputs = r.root.findAllByType('TextInput');
+    assert.equal(inputs.length, 3);
+    for (const [index, value] of [EMAIL, 'secret-password-for-tests', 'secret-password-for-tests'].entries()) {
+      await TestRenderer.act(async () => inputs[index].props.onChangeText(value));
+    }
+    await press(r, COPY.password.create);
+    assert.match(shown(r), /Check your email for an account confirmation link/);
+    assert.equal(d.runtime.getState().kind, 'unauthenticated');
+    assert.deepEqual(d.cloudCalls, []);
+    assert.deepEqual(d.secureStorage.contents(), {});
   });
 });
 
@@ -234,7 +315,7 @@ describe('Google and Apple, through the runtime', () => {
       await press(r, `Continue with ${method}`);
 
       assert.equal(d.runtime.getState().kind, 'unauthenticated', `${method}: not authError`);
-      assert.ok(shown(r).includes(COPY.accountChoice.title), `${method}: still the account choice`);
+      assert.ok(shown(r).includes(COPY.accountChoice.signUpTitle), `${method}: still the account choice`);
       assert.doesNotMatch(shown(r), /did not go through|didn’t go through|try again|error|failed/i, `${method}: no failure presentation of any kind`);
       assert.equal(disabled(r, 'Continue with Google'), false, 'the choice is usable again at once');
       assert.deepEqual([d.cloudCalls, d.secureStorage.contents(), d.identity()], [[], {}, UNBOUND_IDENTITY], 'no account, credential, binding or household change');
@@ -300,7 +381,7 @@ describe('email, through the runtime', () => {
     const d = device({ email: { verifications: [success(ACCOUNT_A, 'email')] } });
     const r = await open();
     await toAccountChoice(r);
-    await press(r, 'Continue with email');
+    await openLegacyOtpForBoundaryTest(r);
     assert.match(shown(r), /What’s your email\?/);
 
     await type(r, EMAIL);
@@ -327,7 +408,7 @@ describe('email, through the runtime', () => {
     const d = device();
     const r = await open();
     await toAccountChoice(r);
-    await press(r, 'Continue with email');
+    await openLegacyOtpForBoundaryTest(r);
     await type(r, 'not-an-email');
     await press(r, COPY.email.continue);
     assert.ok(shown(r).includes(COPY.email.invalid));
@@ -465,7 +546,7 @@ describe('back, on screen and on the Android hardware key', () => {
     assert.match(shown(r), /What’s your email\?/);
     assert.equal(field(r).props.value, EMAIL, 'the code step returns to the address, preserved');
     await press(r, COPY.back);
-    assert.ok(shown(r).includes(COPY.accountChoice.title));
+    assert.ok(shown(r).includes(COPY.accountChoice.signUpTitle));
     await press(r, COPY.back);
     assert.match(shown(r), /Rebuild your life/);
     assert.equal(control(r, COPY.back), undefined);
@@ -481,7 +562,7 @@ describe('back, on screen and on the Android hardware key', () => {
     assert.equal(await hardwareBack(), true);
     assert.match(shown(r), /What’s your email\?/);
     assert.equal(await hardwareBack(), true);
-    assert.ok(shown(r).includes(COPY.accountChoice.title));
+    assert.ok(shown(r).includes(COPY.accountChoice.signUpTitle));
     assert.equal(await hardwareBack(), true);
     assert.match(shown(r), /Rebuild your life/);
     assert.equal(await hardwareBack(), false);
@@ -536,7 +617,7 @@ describe('reconnect: a bound household whose credential lapsed', () => {
   test('AN EMAIL ACCOUNT CAN RECONNECT: code step, verify, and the same account is bound again with no claim', async () => {
     const d = await degradedDevice({ email: { verifications: [success(ACCOUNT_A, 'email')] } });
     const r = await open('reconnect');
-    await press(r, 'Continue with email');
+    await openLegacyOtpForBoundaryTest(r);
     assert.ok(control(r, COPY.back), 'the email step can go back to the reconnect choice');
     await type(r, EMAIL);
     await press(r, COPY.email.continue);
@@ -552,7 +633,7 @@ describe('reconnect: a bound household whose credential lapsed', () => {
   test('another account\'s code does not reconnect it: back at the reconnect choice, calmly, with the household still hers', async () => {
     const d = await degradedDevice({ email: { verifications: [success(ACCOUNT_B, 'email')] } });
     const r = await open('reconnect');
-    await press(r, 'Continue with email');
+    await openLegacyOtpForBoundaryTest(r);
     await type(r, 'other@example.test');
     await press(r, COPY.email.continue);
     await type(r, CODE);
@@ -594,6 +675,31 @@ describe('the controller model, pure', () => {
     }
   });
 
+  test('both welcome decisions go directly to account choice, with intent preserved', () => {
+    const start = initialWelcomeFlow('first-run');
+    const newUser = welcomeFlowReducer(start, { type: 'begin' });
+    const returning = welcomeFlowReducer(start, { type: 'existingAccount' });
+    assert.equal(newUser.step, 'account-choice');
+    assert.equal(newUser.passwordMode, 'signUp');
+    assert.equal(returning.step, 'account-choice');
+    assert.equal(returning.passwordMode, 'signIn');
+    assert.equal(welcomeFlowBackTarget(newUser), 'welcome');
+    assert.equal(welcomeFlowBackTarget(returning), 'welcome');
+    assert.equal(welcomeFlowReducer(initialWelcomeFlow('reconnect'), { type: 'begin' }).step, 'account-choice');
+  });
+
+  test('obsolete upfront Premium callbacks cannot interrupt the approved welcome path', () => {
+    const start = welcomeFlowReducer(initialWelcomeFlow('first-run'), { type: 'begin' });
+    assert.equal(start.step, 'account-choice');
+    for (const event of [
+      { type: 'premiumStarted' },
+      { type: 'premiumContinueFree' },
+      { type: 'premiumSettled', outcome: 'purchased' },
+    ]) {
+      assert.deepEqual(welcomeFlowReducer(start, event), start, event.type);
+    }
+  });
+
   test('a cancellation never sets the failure line; an auth error or an unfinished binding does', () => {
     const waiting = at('account-choice', { inFlight: 'google' });
     assert.equal(welcomeFlowReducer(waiting, { type: 'providerSettled', account: 'unauthenticated' }).attemptFailed, false);
@@ -612,7 +718,7 @@ describe('the controller model, pure', () => {
     assert.equal(welcomeFlowView(sent, 'android', NOW + 30_000).resendSecondsLeft, null);
     assert.equal(welcomeFlowView(sent, 'android', NOW + 3_600_000).resendSecondsLeft, null, 'after a long background, Resend is simply available');
     for (const mode of ['first-run', 'reconnect']) {
-      for (const step of ['welcome', 'account-choice', 'email', 'otp']) {
+      for (const step of ['welcome', 'premium', 'account-choice', 'email', 'otp']) {
         const presentation = welcomeFlowView({ ...initialWelcomeFlow(mode), step }, 'ios', NOW).presentation;
         assert.ok(presentation === 'normal' || presentation === 'auth-degraded', `${mode} ${step}`);
       }
@@ -623,7 +729,8 @@ describe('the controller model, pure', () => {
     const source = readFileSync('src/features/account/welcomeFlowModel.ts', 'utf8').replace(/\r\n/g, '\n');
     const events = /export type WelcomeFlowEvent =([\s\S]*?);\n\nexport function/.exec(source)[1];
     assert.doesNotMatch(events, /code\s*:|token\s*:|otp\s*:/i, 'no event has a code, token or otp field');
-    assert.deepEqual(Object.keys(initialWelcomeFlow('first-run')).sort(), ['attemptFailed', 'email', 'emailError', 'inFlight', 'mode', 'otpError', 'resendAvailableAt', 'step']);
+    assert.equal(Object.prototype.hasOwnProperty.call(initialWelcomeFlow('first-run'), 'password'), false, 'password text never enters the controller');
+    assert.deepEqual(Object.keys(initialWelcomeFlow('first-run')).sort(), ['attemptFailed', 'email', 'emailError', 'inFlight', 'mode', 'otpError', 'passwordMode', 'passwordNotice', 'premiumBusy', 'premiumNotice', 'recoveryEmail', 'resendAvailableAt', 'step']);
   });
 });
 
@@ -657,7 +764,11 @@ describe('settling, and the production wiring behind the stand-in', () => {
       assert.doesNotMatch(source, /expo-router|router\.|<Redirect|useOnboarding|recordStep|completeOnboarding|store\.dispatch|store\.commit/, file);
       // (The model imports one TYPE from the runtime module; what is refused is holding or calling a runtime.)
       assert.doesNotMatch(source, /@supabase|supabase|SecureStore|AsyncStorage|accountRuntime\.|accountRuntime;|createAccountRuntime/, file);
-      assert.doesNotMatch(source, /Platform\./, `${file}: which methods to offer is asked of the adapters, not of the OS`);
+      if (file.endsWith('WelcomeAuthFlow.tsx')) {
+        assert.match(source, /Platform\.OS/, 'the OS determines whether native Apple must be shown on iOS');
+      } else {
+        assert.doesNotMatch(source, /Platform\./, file);
+      }
       assert.doesNotMatch(source, /console\./, file);
     }
     assert.match(strip(readFileSync('src/features/account/WelcomeAuthFlow.tsx', 'utf8')), /const account = useAccount\(\);/);

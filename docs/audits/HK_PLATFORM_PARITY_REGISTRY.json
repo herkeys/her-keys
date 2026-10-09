@@ -115,6 +115,18 @@
       "iosAndroidEquivalent": true,
       "runtime": "RT-18",
       "evidence": "Same pattern as PC-06 (Systems editor); Android relies on the window resize mode. Device proof pending with the welcome tree integration pass."
+    },
+    {
+      "id": "PC-09",
+      "file": "src/features/account/WelcomeAuthFlow.tsx",
+      "count": 1,
+      "expression": "Platform.OS === 'ios' -> the iOS welcome choice always includes native Apple",
+      "class": "B",
+      "capability": "Native Apple sign-in discoverability",
+      "difference": "Apple is visible on iOS even when asynchronous provider availability is delayed or fails; Android never shows Apple. Actual Apple authorization still requires live native device proof.",
+      "iosAndroidEquivalent": false,
+      "exception": "EX-01",
+      "evidence": "Native iOS requires Apple option; app.json usesAppleSignIn=true, expo-apple-authentication plugin is present, tests/welcomeAuthFlow.test.mjs asserts iOS button; device proof pending."
     }
   ],
   "platformFiles": [],
