@@ -78,6 +78,7 @@ describe('post-certification migration governance', () => {
     assert.deepEqual(POST_CERT_CHAIN.map((m) => [m.owner, m.file]), [
       ['ENV_ALIGN', '20260924183000_env_function_alignment.sql'],
       ['CAL_CONNECTIONS', '20260925141432_external_calendar_connections.sql'],
+      ['WELCOME_EMAIL', '20261009020000_herkeys_welcome_email_receipts.sql'],
     ]);
     const sql = lf(POST_CERT_CHAIN[0].file);
     const executable = sql.replace(/--.*$/gm, '');
