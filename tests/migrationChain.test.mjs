@@ -163,7 +163,13 @@ describe('a re-declaration never drops an earlier registration', () => {
   });
 
   test('each feature migration registers its own tables in the SAME file that creates them (so every prefix of the chain works)', () => {
-    for (const { file } of ADDITIVE_CHAIN) {
+    for (const { file, owner } of ADDITIVE_CHAIN) {
+      // The versioned account-consent audit ledger is not a household-sync
+      // feature table: its separate governance suite verifies account RLS,
+      // no UPDATE/DELETE, and server-only receipt ID/timestamps. Keep the
+      // feature-specific sync + change-log enforcement unchanged for all
+      // existing migrations.
+      if (owner === 'V2_CONSENT') continue;
       const sql = lf(file);
       const created = [...sql.replace(/--.*$/gm, '').matchAll(/CREATE TABLE public\.(\w+)/g)].map((m) => m[1]);
       if (created.length === 0) continue;
