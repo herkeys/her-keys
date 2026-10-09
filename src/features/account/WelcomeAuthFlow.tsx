@@ -3,6 +3,7 @@ import { BackHandler, Platform } from 'react-native';
 import { useAccount } from '../../store/AccountProvider';
 import type { WelcomeAuthCallbacks, WelcomeAuthPlatform, WelcomeAuthViewState } from '../welcome/model';
 import { WelcomeAuthShell } from '../welcome/WelcomeAuthShell';
+import type { PaywallOutcome } from '../../monetization/entitlement';
 import {
   initialWelcomeFlow,
   welcomeFlowBackTarget,
@@ -25,7 +26,7 @@ import {
  * table closes this screen and opens the next one; when another account's
  * household is found it opens the conflict screen instead.
  */
-export function WelcomeAuthFlow({ mode }: { mode: WelcomeFlowMode }) {
+export function WelcomeAuthFlow({ mode, presentWelcomePaywall }: { mode: WelcomeFlowMode; presentWelcomePaywall?: () => Promise<PaywallOutcome> }) {
   const account = useAccount();
   const [flow, dispatch] = useReducer(welcomeFlowReducer, mode, initialWelcomeFlow);
   const platform = useOfferedPlatform();
@@ -64,6 +65,20 @@ export function WelcomeAuthFlow({ mode }: { mode: WelcomeFlowMode }) {
   const callbacks: WelcomeAuthCallbacks = {
     onBegin: () => dispatch({ type: 'begin' }),
     onExistingAccount: () => dispatch({ type: 'existingAccount' }),
+    onPremiumPlans: () => {
+      if (flow.step !== 'premium' || flow.premiumBusy) return;
+      dispatch({ type: 'premiumStarted' });
+      void (async () => {
+        let outcome: PaywallOutcome = { kind: 'unavailable' };
+        try {
+          outcome = await (presentWelcomePaywall?.() ?? Promise.resolve({ kind: 'unavailable' as const }));
+        } catch {
+          outcome = { kind: 'error', message: 'paywall_unreachable' };
+        }
+        send({ type: 'premiumSettled', outcome: outcome.kind });
+      })();
+    },
+    onContinueFree: () => dispatch({ type: 'premiumContinueFree' }),
     onBack: () => dispatch({ type: 'back' }),
     onApple: () => startProvider('apple'),
     onGoogle: () => startProvider('google'),
@@ -144,6 +159,8 @@ const noop = () => {};
 const INERT: WelcomeAuthCallbacks = {
   onBegin: noop,
   onExistingAccount: noop,
+  onPremiumPlans: noop,
+  onContinueFree: noop,
   onApple: noop,
   onGoogle: noop,
   onChooseEmail: noop,
