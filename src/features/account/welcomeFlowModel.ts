@@ -42,6 +42,8 @@ export interface WelcomeFlowState {
   otpError: OtpErrorKind | null;
   passwordMode: 'signIn' | 'signUp';
   passwordNotice: 'confirmationRequired' | 'rejected' | 'unreachable' | 'unavailable' | null;
+  premiumNotice: 'no_offering' | 'unavailable' | 'error' | null;
+  premiumBusy: boolean;
   /** The method this screen is waiting on, so progress shows beside the control that started it. */
   inFlight: WelcomeAuthMethod | 'password' | null;
   /** When Resend is offered again (epoch ms), or null when it already is. A courtesy to her, not a rate limit. */
@@ -53,6 +55,9 @@ export interface WelcomeFlowState {
 export type WelcomeFlowEvent =
   | { type: 'begin' }
   | { type: 'existingAccount' }
+  | { type: 'premiumStarted' }
+  | { type: 'premiumSettled'; outcome: 'purchased' | 'restored' | 'already_entitled' | 'cancelled' | 'no_offering' | 'unavailable' | 'error' }
+  | { type: 'premiumContinueFree' }
   | { type: 'back' }
   | { type: 'chooseEmail' }
   | { type: 'choosePassword' }
@@ -79,6 +84,8 @@ export function initialWelcomeFlow(mode: WelcomeFlowMode): WelcomeFlowState {
     otpError: null,
     passwordMode: 'signIn',
     passwordNotice: null,
+    premiumNotice: null,
+    premiumBusy: false,
     inFlight: null,
     resendAvailableAt: null,
     attemptFailed: false,
@@ -91,7 +98,7 @@ export function initialWelcomeFlow(mode: WelcomeFlowMode): WelcomeFlowState {
  * choice is the root of a reconnect. Nothing moves while a request is out.
  */
 export function welcomeFlowBackTarget(state: WelcomeFlowState): WelcomeAuthStep | null {
-  if (state.inFlight !== null) return null;
+  if (state.inFlight !== null || state.premiumBusy) return null;
   if (state.mode === 'reconnect' && state.step === 'account-choice') return null;
   return stepAfterBack(state.step);
 }
@@ -111,7 +118,27 @@ export function welcomeFlowReducer(state: WelcomeFlowState, event: WelcomeFlowEv
   switch (event.type) {
     case 'begin':
       return state.step === 'welcome'
-        ? { ...state, step: 'account-choice', passwordMode: 'signUp', attemptFailed: false }
+        ? { ...state, step: 'premium', passwordMode: 'signUp', premiumNotice: null, attemptFailed: false }
+        : state;
+
+    case 'premiumStarted':
+      if (state.step !== 'premium' || state.premiumBusy || state.inFlight !== null) return state;
+      return { ...state, premiumBusy: true, premiumNotice: null };
+
+    case 'premiumSettled':
+      if (state.step !== 'premium' || !state.premiumBusy) return state;
+      if (event.outcome === 'purchased' || event.outcome === 'restored' || event.outcome === 'already_entitled') {
+        return { ...state, premiumBusy: false, premiumNotice: null, step: 'account-choice' };
+      }
+      return {
+        ...state,
+        premiumBusy: false,
+        premiumNotice: event.outcome === 'cancelled' ? null : event.outcome,
+      };
+
+    case 'premiumContinueFree':
+      return state.step === 'premium' && !state.premiumBusy
+        ? { ...state, step: 'account-choice', premiumNotice: null }
         : state;
 
     case 'existingAccount':
@@ -231,6 +258,8 @@ export function welcomeFlowView(state: WelcomeFlowState, platform: WelcomeAuthPl
     passwordMode: state.passwordMode,
     passwordCanSignUp: state.mode === 'first-run',
     passwordNotice: state.passwordNotice,
+    premiumNotice: state.premiumNotice,
+    premiumBusy: state.premiumBusy,
     resendSecondsLeft: secondsLeft > 0 ? secondsLeft : null,
     notice: state.attemptFailed && state.step === 'account-choice' ? 'attempt-failed' : null,
   };
