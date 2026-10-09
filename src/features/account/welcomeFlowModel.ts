@@ -42,6 +42,7 @@ export interface WelcomeFlowState {
   emailError: EmailErrorKind | null;
   otpError: OtpErrorKind | null;
   passwordMode: 'signIn' | 'signUp';
+  recoveryEmail: string;
   passwordNotice: 'confirmationRequired' | 'rejected' | 'unreachable' | 'unavailable' | null;
   premiumNotice: 'no_offering' | 'unavailable' | 'error' | null;
   premiumBusy: boolean;
@@ -63,6 +64,7 @@ export type WelcomeFlowEvent =
   | { type: 'chooseEmail' }
   | { type: 'choosePassword' }
   | { type: 'passwordModeChanged'; mode: 'signIn' | 'signUp' }
+  | { type: 'forgotPassword'; email: string }
   | { type: 'passwordStarted' }
   | { type: 'passwordSettled'; outcome: EmailPasswordAttempt['outcome']; account: AccountStateKind }
   | { type: 'changeEmail' }
@@ -84,6 +86,7 @@ export function initialWelcomeFlow(mode: WelcomeFlowMode): WelcomeFlowState {
     emailError: null,
     otpError: null,
     passwordMode: 'signIn',
+    recoveryEmail: '',
     passwordNotice: null,
     premiumNotice: null,
     premiumBusy: false,
@@ -161,6 +164,10 @@ export function welcomeFlowReducer(state: WelcomeFlowState, event: WelcomeFlowEv
     case 'passwordModeChanged':
       if (state.inFlight !== null || state.step !== 'password' || (state.mode === 'reconnect' && event.mode === 'signUp')) return state;
       return { ...state, passwordMode: event.mode, passwordNotice: null };
+
+    case 'forgotPassword':
+      if (state.inFlight !== null || state.step !== 'password' || state.passwordMode !== 'signIn') return state;
+      return { ...state, step: 'recovery', recoveryEmail: event.email, passwordNotice: null };
 
     case 'passwordStarted':
       if (state.inFlight !== null || state.step !== 'password') return state;
@@ -257,6 +264,7 @@ export function welcomeFlowView(state: WelcomeFlowState, platform: WelcomeAuthPl
     emailError: state.emailError,
     otpError: state.otpError,
     passwordMode: state.passwordMode,
+    recoveryEmail: state.recoveryEmail,
     passwordCanSignUp: state.mode === 'first-run',
     passwordNotice: state.passwordNotice,
     premiumNotice: state.premiumNotice,
