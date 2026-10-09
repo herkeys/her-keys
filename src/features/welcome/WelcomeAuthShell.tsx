@@ -10,6 +10,7 @@ import { OtpEntryView } from './views/OtpEntryView';
 import { EmailPasswordView } from './views/EmailPasswordView';
 import { ConflictView, DegradedHeader, SettlingView } from './views/StatePresentations';
 import { WelcomeView } from './views/WelcomeView';
+import { PremiumIntroView } from './views/PremiumIntroView';
 
 export interface WelcomeAuthShellProps extends WelcomeAuthCallbacks {
   state: WelcomeAuthViewState;
@@ -30,7 +31,7 @@ export interface WelcomeAuthShellProps extends WelcomeAuthCallbacks {
  * Production routing is untouched: the shell is exercised from the internal
  * design gallery until the integration pass places it.
  */
-export function WelcomeAuthShell({ state, onBegin, onExistingAccount, onApple, onGoogle, onChooseEmail, onChoosePassword, onPasswordModeChange, onSubmitPassword, onSubmitEmail, onSubmitOtp, onResendOtp, onChangeEmail, onBack, onSignOut }: WelcomeAuthShellProps) {
+export function WelcomeAuthShell({ state, onBegin, onExistingAccount, onPremiumPlans, onContinueFree, onApple, onGoogle, onChooseEmail, onChoosePassword, onPasswordModeChange, onSubmitPassword, onSubmitEmail, onSubmitOtp, onResendOtp, onChangeEmail, onBack, onSignOut }: WelcomeAuthShellProps) {
   // Hard presentations replace the step tree entirely.
   if (state.presentation === 'settling') {
     return (
@@ -56,6 +57,14 @@ export function WelcomeAuthShell({ state, onBegin, onExistingAccount, onApple, o
       {state.presentation === 'auth-degraded' && <DegradedHeader />}
 
       {state.presentation === 'normal' && state.step === 'welcome' && <WelcomeView onBegin={onBegin} onExistingAccount={onExistingAccount} />}
+      {state.presentation === 'normal' && state.step === 'premium' && (
+        <PremiumIntroView
+          busy={state.premiumBusy ?? false}
+          notice={state.premiumNotice ?? null}
+          onViewPlans={onPremiumPlans}
+          onContinueFree={onContinueFree}
+        />
+      )}
 
       {/* The degraded presentation keeps the account choice usable: reconnecting
           is the same control as a first sign-in, under its own header. */}
