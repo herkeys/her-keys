@@ -723,6 +723,34 @@ const LATER_FEATURES = [
       ['tests/backendEnvironment.test.mjs', 'V2 closeout: reject spoofed project hosts and insecure backend URLs'],
     ],
   },
+  {
+    id: 'BUILD-2A (2026-10-12)',
+    // Committed on the integrated line (integration/build2a-candidate, stacked on the PR #8 head f57aaee). No independent feature
+    // branch claims these files; check H still proves each one is new here.
+    branch: null,
+    owned: [],
+    migrations: [],
+    schemas: [],
+    rootCollections: [],
+    syncKinds: [],
+    shared: [
+      ['src/features/welcome/views/EmailEntryView.tsx', 'Build 2A: recovered commit 2641898 — padding keyboard avoidance on Android as well as iOS for the email entry and its siblings'],
+      ['src/features/welcome/views/OtpEntryView.tsx', 'Build 2A: recovered commit 2641898 — the one-time-code screen keeps its actions above the Android keyboard'],
+      ['docs/audits/HK_PLATFORM_PARITY_REGISTRY.json', 'Build 2A: PC-07 and PC-08 retired — the recovered keyboard repair removed the platform conditionals they approved'],
+      ['docs/audits/HK_IOS_ANDROID_PLATFORM_PARITY.md', 'Build 2A: parity report says PC-07 and PC-08 are retired, not approved differences'],
+      ['tests/androidAuthKeyboard.test.mjs', 'Build 2A: proves every email/password/OTP/recovery screen uses padding keyboard avoidance under Platform.OS android'],
+      ['package.json', 'Build 2A: six Expo SDK 57 patch versions published after the last green CI'],
+      ['package-lock.json', 'Build 2A: minimized npm 10 lock — only what the six SDK patches require moves; reanimated and worklets untouched'],
+      ['eas.json', 'Build 2A: development and preview profiles compile the mandatory consent gate like production'],
+      ['scripts/verify-release-identity.mjs', 'Build 2A: the EAS build hook refuses any build without the consent gate flag'],
+      ['tests/releaseIdentity.test.mjs', 'Build 2A: negative controls for an absent, false, mis-cased and empty consent-gate flag'],
+      ['tests/productionConsentBuildProfile.test.mjs', 'Build 2A: every EAS profile must target a backend and compile the gate; server and client AI policy versions are pinned together'],
+      ['docs/builds/HK_BUILD2A_SOURCE_CONVERGENCE.md', 'Build 2A: source lineage, ENTRY/EXIT results, verdicts and open owner decisions; no runtime change'],
+      ['docs/audits/HK_BUILD2A_BACKEND_PARITY_20261012.md', 'Build 2A: read-only Staging/Production parity classification and consent/auth findings; nothing deployed'],
+      ['docs/handoffs/HK_BUILD2A_REVENUECAT_CODEX_HANDOFF.md', 'Build 2A: RevenueCat source findings and the live configuration still to be verified; no purchase or dashboard change'],
+      ['scripts-dev/meals-boundary-scan.cjs', 'Build 2A: register this lane and its changed files'],
+    ],
+  },
 
 ];
 
