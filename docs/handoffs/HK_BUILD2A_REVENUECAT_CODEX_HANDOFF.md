@@ -12,12 +12,33 @@ REVENUECAT_LIVE_CERTIFICATION=NOT_RUN       (needs dashboard, store and sandbox 
 Do **not** declare Premium functionality certified, or the full Build 2 candidate ready for real testing, until section 6 has passed or the
 test scope explicitly excludes Premium.
 
+## 0. The owner's Premium decision (2026-10-12) and what it means for RevenueCat
+
+> Welcome → Get Started → **Premium offer** → Continue Free or Select Premium → Account Choice → Signup → Email Confirmation → Legal and AI
+> Consent → Permissions/Onboarding → App. An existing user taps "I Already Have An Account" and goes straight to sign-in, with current consents
+> and entitlements respected. Premium selection may be retained before signup, but **actual RevenueCat checkout must wait until account ownership
+> is established and required consent is complete. No anonymous purchase transfer is authorized.** The stable `her_keys_plus` identifier stays.
+
+How the source honours it:
+
+1. **The welcome tree cannot reach RevenueCat at all.** "Select Premium" and "Continue Free" only record an in-memory *intent*
+   (`PremiumChoice = 'premium' | 'free'`, `src/monetization/entitlement.ts`). A test scans every file under `src/features/welcome` and
+   `src/features/account` for `react-native-purchases`, `RevenueCat`, `Purchases.`, `presentPaywall`, `PaywallOutcome`, `useEntitlement`, `revenueCatClient`: none may appear.
+2. **Checkout happens in exactly one place**, `src/monetization/PremiumCheckoutAfterConsent.tsx`, mounted by `app/_layout.tsx` **inside the consent gate** and
+   **around the navigator**. It acts only when the account is `accountBound` and the intent is `premium`, presents the existing **`welcome_premium`** placement through
+   `presentPaywall`, **once**, and never blocks the app (a throw or an unavailable offering still lets her in).
+3. **A purchase can only belong to the account that makes it**: the runtime calls `identifyRevenueCatAccount(uuid)` (`Purchases.logIn`) *before* publishing a bound
+   account, and the gate does not exist until after that. There is no code path that buys while the SDK identity is still anonymous.
+4. The intent is **not persisted**. A killed process restarts the tree at Welcome with no intent; a persisted "wanted Premium" could outlive its owner on a shared device.
+5. "I Already Have An Account" clears the intent; going back to the offer or Welcome withdraws it; sign-out or another account never inherits one (tests below).
+
 ## 1. Repository, branch and commit
 
-- Repository `herkeys/her-keys`, branch **`integration/build2a-candidate`** (stacked on PR #8 head `f57aaee`).
-- Code commits: `2641898` (recovered keyboard repair), `db282ed`, `5a36946` (SDK 57 patches), `ab3822f` (consent gating); the branch tip is
-  the final commit that adds the Build 2A reports (see `docs/builds/HK_BUILD2A_SOURCE_CONVERGENCE.md` for the exact tip and its CI run).
-- Nothing under `src/monetization/`, `app/onboarding/plus.tsx` or `src/store/accountRuntimeInstance.ts` was modified by Build 2A.
+- Repository `herkeys/her-keys`, branch **`integration/build2a-candidate`** (stacked on PR #8 head `f57aaee`). The exact final SHA and its CI run are in
+  `docs/builds/HK_BUILD2A_SOURCE_CONVERGENCE.md`.
+- Build 2A changes under RevenueCat's neighbourhood: `src/monetization/entitlement.ts` (adds the `PremiumChoice` type only), new `src/monetization/PremiumCheckoutAfterConsent.tsx`,
+  new `src/store/PremiumIntentContext.tsx`, `app/_layout.tsx` and `app/index.tsx` (wiring). **Not touched:** `revenueCatClient.ts`, `RevenueCatProvider.tsx`, `config.ts`,
+  `accountRuntimeInstance.ts`, `app/onboarding/plus.tsx`.
 
 Identity, unchanged and verified from the **resolved** Expo config (`npm run verify:release-identity`): Android application ID
 `com.heykeys.app`; iOS bundle identifier `com.herkeys.app`; URL scheme `herkeys://`; EAS project `7b25f8fe-d7de-49c1-ba69-1fd3a065826a`;
@@ -29,53 +50,58 @@ store app under its own identifier**.
 | Requirement | Implementation | Source |
 |---|---|---|
 | Display tier "Her Keys Premium" | one constant, `HER_KEYS_PREMIUM_DISPLAY_NAME`; customer strings use it (only two code *comments* still say "Her Keys+") | `src/monetization/entitlement.ts:11` |
-| Stable entitlement `her_keys_plus` | `HER_KEYS_PLUS_ENTITLEMENT`; the only value ever tested against `CustomerInfo.entitlements.active` | `entitlement.ts:13`, `revenueCatClient.ts:95-98` |
+| Stable entitlement `her_keys_plus` | `HER_KEYS_PLUS_ENTITLEMENT`; the only value ever tested against `CustomerInfo.entitlements.active`; a test asserts it is unchanged | `entitlement.ts:13`, `revenueCatClient.ts:95-98`, `welcomePremiumFlow.test.mjs` |
+| Premium offered BEFORE account choice, as an intent | `begin` → `premium` step; `premiumSelected` / `premiumContinueFree` record a `PremiumChoice` | `src/features/account/welcomeFlowModel.ts` |
+| Checkout only after account + consent | `PremiumCheckoutAfterConsent` inside `ConsentGate`, `accountBound` required, consumed once | `app/_layout.tsx`, `PremiumCheckoutAfterConsent.tsx` |
 | Entitlement is never stored as household truth | status is a transient read; M3 test | `monetization.test.mjs` |
 | Fail open when RevenueCat cannot answer | `fetchActiveEntitlementIds()` → `null` → `unknown` (never "unsubscribed") | `revenueCatClient.ts:100-108`, `entitlement.ts:64` |
 | One SDK boundary | only `revenueCatClient.ts` imports `react-native-purchases(-ui)` | test "feature-access layer does not import RevenueCat" |
-| `Purchases.logIn(<Supabase user UUID>)` on sign-in | `identifyRevenueCatAccount(accountId)` is the runtime's `onAccountIdentified` callback; the UUID is the **only** identity sent (no email/provider subject/household id) | `revenueCatClient.ts:77-89`, `accountRuntimeInstance.ts:124-126`, `accountRuntime.ts:146-152` |
+| `Purchases.logIn(<Supabase user UUID>)` on sign-in | `identifyRevenueCatAccount(accountId)` is the runtime's `onAccountIdentified` callback; the UUID is the **only** identity sent | `revenueCatClient.ts:77-89`, `accountRuntimeInstance.ts:124-126`, `accountRuntime.ts:146-152` |
 | `Purchases.logOut()` on sign-out | same function with `null` | same |
 | Identify before a bound account is published | runtime calls `identify` first; a failure is reported, never thrown, and never undoes a server claim | `accountRuntime.test.mjs` #8, #20, #25 |
-| UI refreshes entitlement after an account change | `RootNavigator` calls `refresh()` when the account becomes `accountBound` or `unauthenticated` | `app/_layout.tsx` (effect above the settled check) |
-| Shared device, user A then B | sign-out → `logOut()` (anonymous id) → `refresh()` → B signs in → `logIn(B)` → `refresh()`; A's cached state is not reused | `accountRuntime.test.mjs` #24 (`[A, null]`), `syncEngine.test.mjs` 16/W |
-| Paywall | `presentPaywallIfNeeded({ offering, requiredEntitlementIdentifier: 'her_keys_plus' })` for `offerings.current`; no offering identifier is hard-coded | `revenueCatClient.ts:127-152` |
-| Restore Purchases | `Purchases.restorePurchases()`; result is `restored` only if `her_keys_plus` is active | `revenueCatClient.ts:154-163`; UI in `app/onboarding/plus.tsx:64-79,125` |
+| UI refreshes entitlement after an account change | `RootNavigator` calls `refresh()` when the account becomes `accountBound` or `unauthenticated` | `app/_layout.tsx` |
+| Shared device, user A then B | sign-out → `logOut()` → `refresh()` → B signs in → `logIn(B)` → `refresh()`; a different account on a device bound to A is **quarantined** and never offered a checkout | `accountRuntime.test.mjs` #24, `syncEngine.test.mjs` 16/W, `welcomePremiumFlow.test.mjs` |
+| Paywall | `presentPaywallIfNeeded({ offering, requiredEntitlementIdentifier: 'her_keys_plus' })` for `offerings.current`; no offering identifier is hard-coded; RevenueCat skips presenting for an already-entitled account | `revenueCatClient.ts:127-152` |
+| Restore Purchases | `Purchases.restorePurchases()`; result is `restored` only if `her_keys_plus` is active | `revenueCatClient.ts:154-163`; UI in `app/onboarding/plus.tsx` |
 | No secret in the client | public SDK keys only (`EXPO_PUBLIC_REVENUECAT_{IOS,ANDROID}_API_KEY`); test M7 forbids `sk_…` | `config.ts`, `monetization.test.mjs` |
 | Soft paywall policy | `PAYWALL_POLICY = 'soft'`; dismissal never blocks onboarding | `entitlement.ts:24` |
 
-Where the paywalls appear **today**: `onboarding_complete` (after the Life Systems Audit, `app/onboarding/plus.tsx`) and `systems_upgrade`
-(`app/(app)/systems/index.tsx`). `welcome_premium` is in the placement list but unreachable (section 5, R-01).
+Where paywalls appear **now**: `welcome_premium` (new user chose Premium; after bound account and consent), `onboarding_complete` (final onboarding step, `app/onboarding/plus.tsx`,
+primary action "Continue to Her Keys"), and `systems_upgrade` (`app/(app)/systems/index.tsx`).
 
 ## 3. Tests and results (METHOD / RAW / INTERPRETATION)
 
-METHOD: each suite run alone with `node --import ./tests/support/register-ts.mjs --import ./tests/support/register-jsx.mjs --test <file>`
-on Node 24.14.0 (Windows), tree `integration/build2a-candidate` at `ab3822f`.
+METHOD: each suite run alone with `node --import ./tests/support/register-ts.mjs --import ./tests/support/register-jsx.mjs --test <file>` on Node 24.14.0 (Windows), then the full
+suite in a fresh clone and on GitHub Actions at the final SHA (see the main report).
 
 | Suite | RAW | INTERPRETATION |
 |---|---|---|
-| `tests/monetization.test.mjs` | 23 / 23 pass | entitlement mapping, unknown ≠ free, no persisted entitlement, no hard-coded price, no `sk_` key, onboarding step order, no paywall loop |
-| `tests/accountRuntime.test.mjs` | 32 / 32 pass | includes #8/#20 (identify), #24 (sign-out returns RevenueCat to anonymous), #25 (RevenueCat down never undoes a claim) |
-| `tests/syncEngine.test.mjs` 16/W | covered in the full app suite | "B never sees A's entitlements" is asserted as `identified === [null]` after sign-out |
-| `tests/hk-f01f13/accountSwitch.test.mjs` | 1 / 1 pass | account switch quarantine |
+| `tests/welcomePremiumFlow.test.mjs` | 26 / 26 | the offer's state machine (incl. a seeded 3,000-sequence fuzz with invariants), the checkout gate, and whole journeys through the **real** welcome flow and **real** account runtime where the paywall presenter is the only spy: new user selecting Premium (no checkout during signup, none before consent, exactly one after), free, existing user, interrupted signup with email confirmation, back navigation, session recovery, same account returning, a different account quarantined, checkout failure |
+| `tests/welcomeAuthShell.test.mjs`, `welcomeAuthFlow.test.mjs`, `routeAccess.test.mjs` | pass | the offer screen, the "nothing is purchased here / no price / no plan" copy rule, the no-RevenueCat scan, back model, entry-route pin |
+| `tests/monetization.test.mjs` | 23 / 23 | entitlement mapping, unknown ≠ free, no persisted entitlement, no hard-coded price, no `sk_` key |
+| `tests/accountRuntime.test.mjs` | 32 / 32 | identify before bound, sign-out returns to anonymous, a RevenueCat failure never undoes a claim |
 
-These are **scripted-SDK-boundary tests**. `react-native-purchases` is not exercised; in Expo Go it swaps in a Preview mock that simulates
-purchases, so even a device run in Expo Go proves nothing about real entitlement. Real behavior needs a development/preview native build.
+**Mutants (each caught by assertion failures):** Get Started skips the offer; Select Premium forgets the intent; going back keeps the intent; checkout before an account is bound; the
+intent is never consumed; checkout placed outside the consent gate; wrong placement; RevenueCat imported into the welcome tree; the post-confirmation sign-in shortcut becomes
+permanent; an existing user is sent through the offer. Earlier: sign-out no longer anonymizes; sign-in identifies with the wrong id.
 
-## 4. Mutation evidence
-
-None added for RevenueCat in Build 2A (no RevenueCat source changed). Existing guards are listed above.
+These are **scripted-SDK-boundary tests**. `react-native-purchases` is not exercised; in Expo Go it swaps in a Preview mock that simulates purchases, so a device run in Expo Go proves
+nothing about real entitlement. Real behaviour needs a development/preview native build.
 
 ## 5. Known defects and gaps (source level)
 
 | ID | Sev | Finding | Suggested handling |
 |---|---|---|---|
-| R-01 | P1 decision | **Premium placement conflict.** The Build 2A brief orders Premium *before* account choice; the repository's V2 documents and commits order it *after* the Life Systems Audit. Today the welcome `premium` step is unreachable (`begin` → account choice; `app/index.tsx` passes no `presentWelcomePaywall`). Which is intended is an owner decision (see the main report). | Wait for the decision. If front-door is chosen, R-03 must be settled first |
+| R-01 | resolved | Premium placement was an owner decision. **Decided: before account choice, as an intent; checkout after account and consent** (section 0). | — |
 | R-02 | P2 | **No persistent "Restore Purchases" entry** after onboarding: the only one is on `onboarding/plus`, which closes for good once onboarding completes. Later upgrades go through RevenueCat's own paywall UI, whose restore link depends on its dashboard template. App Store review expects a restore path (Guideline 3.1.1). | Add a restore action to Your Account, or confirm the paywall template exposes it; test on a sandbox account |
-| R-03 | P1 decision | **Anonymous → account transfer has no approved policy.** `configure()` starts anonymous and `logIn(uuid)` follows. If a purchase ever happens before sign-in (only possible on the unreachable `welcome_premium` path), what happens to it depends on RevenueCat's project "transfer behavior" and whether the UUID already exists. The code comment at `revenueCatClient.ts:65-72` says this "must be checked on real store sandbox accounts". | Owner chooses a policy; verify with sandbox accounts (section 6) |
-| R-04 | P2 | `identifyRevenueCatAccount` returns `not_configured` silently if the SDK is not configured (for example the platform API key is absent) and is **never retried**; the caller discards the result. A build without keys therefore behaves as signed-out for entitlements with no visible warning. | Surface the result in the existing `report` channel; keep fail-open behavior |
+| R-03 | resolved in source / open in config | **No anonymous purchase transfer is authorized (owner).** The app can no longer purchase while anonymous (section 0). What remains is the **project-level RevenueCat "transfer behavior"** setting, which also governs what happens when a *different* app user restores a purchase made by the same store account (user A buys, signs out, user B on the same phone taps Restore). It must be set so a purchase is **not** moved to another App User ID without an authorized policy. | Verify/choose in the RevenueCat dashboard (section 6, step 4) and prove with the A/B sandbox test |
+| R-04 | P2 | `identifyRevenueCatAccount` returns `not_configured` silently if the SDK is not configured (for example the platform API key is absent) and is **never retried**; the caller discards the result. A build without keys therefore behaves as signed-out for entitlements with no visible warning. | Surface the result in the existing `report` channel; keep fail-open behaviour |
 | R-05 | P3 | Stale wording: two comments say "Her Keys+" (`app/onboarding/profile.tsx:55`, `src/monetization/featureAccess.ts:14`). Not customer-visible. | Cosmetic |
-| R-06 | info | `Purchases.logOut()` throws when the user is already anonymous; the function swallows it as `sdk_error`. Harmless, but means a sign-out cannot distinguish "already anonymous" from failure. | none |
-| R-07 | info | The Android and iOS API keys come only from EAS environment variables; `eas.json` carries **none** of them, so a build is functional only if the matching EAS environment holds valid keys. | verify in section 6 |
+| R-06 | info | `Purchases.logOut()` throws when the user is already anonymous; the function swallows it as `sdk_error`. | none |
+| R-07 | info | The Android and iOS API keys come only from EAS environment variables; `eas.json` carries **none** of them. | verify in section 6 |
+| R-08 | P2 | The comment in `revenueCatClient.ts` (lines ~65–72) still says the upfront Premium offer "may begin under RevenueCat's anonymous SDK identity" and that `logIn` must be checked for transfer. That is **no longer the design** (no anonymous purchase exists); the comment is stale and should be corrected in the next RevenueCat edit. | Edit comment; no behaviour change |
+| R-09 | P2 | The new `welcome_premium` post-consent checkout has **no device proof**: that the paywall opens once over the first onboarding screen, that a purchase is recorded under the account UUID, and that dismissing it leaves the app usable. | section 6, step 3 |
+| R-10 | info | The Premium intent lives in memory: if Android kills the process while she is away confirming her email, she restarts at Welcome and sees the offer again. A persisted intent was rejected on purpose (shared-device risk). | owner may revisit |
 
 ## 6. Live configuration that must be verified (not done)
 
@@ -83,11 +109,12 @@ None added for RevenueCat in Build 2A (no RevenueCat source changed). Existing g
    those keys are the values of `EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY` / `EXPO_PUBLIC_REVENUECAT_IOS_API_KEY` in the correct EAS
    environment (`development`, `preview`, `production`). PR #7's closeout recorded "an invalid configured key and unavailable emulator billing".
 2. Entitlement identifier is exactly `her_keys_plus` and is attached to the live products.
-3. A **current offering** exists with a paywall; its products are approved in both stores; customer-facing names read "Her Keys Premium".
-4. Project **transfer behavior** matches the policy decided in R-03.
-5. Sandbox: new subscriber; **existing subscriber** recognized after fresh install and sign-in; Restore Purchases; user A purchases, signs out, user B
-   signs in on the same device and sees **no** entitlement; A signs back in and sees it again; sign-in with the Supabase UUID appears as the App User ID.
-6. If anonymous purchase before sign-in is kept at all: purchase anonymously, then create an account, and record where the purchase lands.
+3. **New-user path on a native build** (Staging, sandbox tester): Get Started → Select Premium → create account → confirm email → sign in → consent → **the paywall appears once**, over the first
+   onboarding screen → purchase → entitlement active **under the Supabase UUID as App User ID**; repeat with **Continue Free** → no paywall until the final onboarding step.
+4. Project **transfer behaviour** matches the "no transfer authorized" decision: A buys, signs out; B signs in on the same device and **does not** receive A's entitlement, including after B taps Restore.
+5. A current **offering** exists with a paywall; its products are approved in both stores; customer-facing names read "Her Keys Premium".
+6. **Existing subscriber**: "I Already Have An Account" → sign in → recognised as entitled, no paywall, no consent re-ask if receipts are current.
+7. Restore Purchases (R-02) works from wherever it is offered.
 
 ## 7. Access required
 
@@ -97,7 +124,6 @@ an emulator with Play billing; two Supabase test accounts on Staging (cannot be 
 
 ## 8. Recommended next actions
 
-1. Owner decides Premium placement (R-01) and the anonymous-transfer policy (R-03).
-2. Codex: configure/verify section 6 on Staging builds, then run the sandbox matrix; record PASS/FAIL per step with the exact build SHA.
-3. Codex or Claude: R-02 (restore entry) and R-04 (surface not-configured), each with a focused test.
-4. Only then re-evaluate `REVENUECAT_LIVE_CERTIFICATION`.
+1. Codex: configure/verify section 6 on Staging builds, then run the sandbox matrix; record PASS/FAIL per step with the exact build SHA.
+2. Codex or Claude: R-02 (restore entry), R-04 (surface not-configured), R-08 (stale comment), each with a focused test.
+3. Only then re-evaluate `REVENUECAT_LIVE_CERTIFICATION`.

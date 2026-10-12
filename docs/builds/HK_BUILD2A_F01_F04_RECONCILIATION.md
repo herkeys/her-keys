@@ -56,8 +56,8 @@ candidate's newer structure, and judged by (a) its own tests, (b) the whole affe
 
 ## 4. Result
 
-* Candidate before: 3,789 tests (in the shared worktree; 3,752 in a fresh clone at the PR #8 head). After this reconciliation the suite grew by the recovered tests; see the EXIT table in
-  `HK_BUILD2A_SOURCE_CONVERGENCE.md` for the exact counts on the final SHA.
+* Fresh-clone full suite: **3,762 / 3,762** before the Premium-first work and this reconciliation, **4,006 / 4,006** after both (912 suites, 0 skipped), with GitHub Actions green on the same code state
+  (`727f3ec`, run 38277779158). The +244 are the 26 Premium-flow tests plus the recovered F01–F04 tests and the existing tests updated for them.
 * Focused suites at the end of the work: Today 245, Talk It Out 341, Calendar 316, Systems + sync 185, all passing, each repair with at least one mutant that fails without it.
 * `tsc` clean after every step.
 

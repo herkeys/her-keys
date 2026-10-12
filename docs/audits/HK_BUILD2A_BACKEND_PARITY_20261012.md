@@ -160,6 +160,9 @@ then `POST /functions/v1/herkeys-ai` with a valid minimal body and check for `40
 
 ## 9. Proposed Production changes (none made — each needs separate, named owner approval)
 
+The exact per-item proposals (change, risk, what to capture before, verification evidence, rollback, access) are in
+[`HK_BUILD2A_PRODUCTION_CHANGE_PROPOSALS.md`](HK_BUILD2A_PRODUCTION_CHANGE_PROPOSALS.md). The table below is the summary and the proposals document governs if they ever differ.
+
 | # | Exact change | Reason | Risk | Verification | Rollback |
 |---|---|---|---|---|---|
 | P-1 | Set Edge secret `HER_KEYS_AI_REQUIRE_CONSENT=true` on Production `herkeys-ai` (and Staging first) | B2A-BE-01: make declined AI choices binding on the server | Accounts with no current receipt get `403`; the client already treats that as "AI unavailable". Gate must be on in the build or users see AI fail closed | Direct call as `4efe7570-…` returns `403` and no Gemini log line; a granted account proceeds | Unset or set to anything but `true`; no redeploy needed |

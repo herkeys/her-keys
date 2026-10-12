@@ -770,6 +770,7 @@ const LATER_FEATURES = [
       ['tests/routeAccess.test.mjs', 'Build 2A Premium-first: the entry route pin carries the intent callback'],
       ['tests/meals/boundary.test.mjs', 'Build 2A: the BV6 lane accounting for app/_layout.tsx names this lane'],
       ['docs/builds/HK_BUILD2A_F01_F04_RECONCILIATION.md', 'Build 2A: disposition of every feature-specific commit on the local F01-F04 validation branches, with evidence; no runtime change'],
+      ['docs/audits/HK_BUILD2A_PRODUCTION_CHANGE_PROPOSALS.md', 'Build 2A: Production changes P-1 to P-5 proposed with exact change, risk, rollback and evidence needed; none executed'],
       // F01-F04 reconciliation (the local validate/hk-ir01-f0N branches): each repair below was ported onto this tree and tested here.
       ["scripts-dev/f02-oda-mutation-check.cjs", "Build 2A F02 reconciliation: the OD-A test-the-test (six mutants of the title-never-travels and unnamed-reading guards), recovered from validate/hk-ir01-f02"],
       ["src/features/calendar/copy.ts", "Build 2A F03 reconciliation: acceptance is not coverage while the load still needs her, duration knowledge, and gone prerequisites in Calendar (HA-009, HA-010, recovered from validate/hk-ir01-f03)"],
