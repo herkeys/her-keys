@@ -749,6 +749,7 @@ const LATER_FEATURES = [
       ['docs/audits/HK_BUILD2A_BACKEND_PARITY_20261012.md', 'Build 2A: read-only Staging/Production parity classification and consent/auth findings; nothing deployed'],
       ['docs/handoffs/HK_BUILD2A_REVENUECAT_CODEX_HANDOFF.md', 'Build 2A: RevenueCat source findings and the live configuration still to be verified; no purchase or dashboard change'],
       ['scripts-dev/meals-boundary-scan.cjs', 'Build 2A: register this lane and its changed files'],
+      ['.github/workflows/v2-integration-validation.yml', 'Build 2A: also run the existing gate when the candidate branch is pushed, so CI certifies the exact SHA (the dispatch route needs repository admin rights)'],
     ],
   },
 

@@ -5,6 +5,10 @@ on:
     branches:
       - integration/welcome-tree-auth-runtime
       - repair/v2-audit-safe-closeouts-20261008
+  # Build 2A: the candidate is certified by pushing the exact SHA, not by a pull-request merge ref.
+  push:
+    branches:
+      - integration/build2a-candidate
   workflow_dispatch:
 
 permissions:
