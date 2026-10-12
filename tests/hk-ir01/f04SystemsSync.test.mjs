@@ -264,7 +264,7 @@ const cloudSystem = (cloud, localId) => cloud.table(CLOUD_TABLE.system).find((r)
 const noConflicts = (device) => {
   const sync = device.persisted().identity.sync;
   assert.deepEqual(sync.queue, [], 'the queue drained');
-  assert.deepEqual(sync.evidence.filter((e) => /conflict|refused|validation/.test(e.evidence)), [], 'and no push was refused by a database rule');
+  assert.deepEqual(sync.evidence.map((e) => e.evidence), [], 'and no push was refused, conflicted, unresolved or collided (any evidence at all is a failure here)');
 };
 
 // ------------------------------------------------------------------ tests ---
@@ -354,7 +354,8 @@ describe('F04 Systems and steps reach a second device through the central compos
     const reordered = await editSystem(a, 'sys-kid', (d) => d.steps.unshift(d.steps.pop()));
     assert.equal(reordered.kind, 'saved');
     assert.deepEqual(order(), ['Story', 'Pyjamas', 'Teeth']);
-    assert.ok(a.persisted().identity.sync.queue.length >= 1, 'a reorder queues a sane amount of work');
+    const queuedByReorder = a.persisted().identity.sync.queue.length;
+    assert.ok(queuedByReorder >= 1 && queuedByReorder <= 3, `a reorder of three steps queues at most one update per step (${queuedByReorder})`);
     await a.settle();
     noConflicts(a);
     const cloudOrder = cloud

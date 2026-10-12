@@ -56,6 +56,8 @@ describe('SCENARIO H — a System names its child: the cloud requires it, the mo
     assert.deepEqual([childRow.scope, childRow.subject_member_id], ['child', 'cloud-child-1'], 'the projection sends the child the System names');
     const householdRow = toCloudRow(state, context, 'system', 'sys-1');
     assert.deepEqual([householdRow.scope, householdRow.subject_member_id], ['household', null], 'and a household System sends no subject');
+    const unmapped = { ...namespace, mappings: { 'category:cat-home': namespace.mappings['category:cat-home'] } };
+    assert.throws(() => toCloudRow(state, { householdId: 'hh', profileId: 'p', namespace: unmapped }, 'system', 'sys-kid'), /needs child member child-1/, 'a child with no mapping refuses to leave the device: it is never sent as a household routine');
   });
 
   test('a System Feature 04 authors for a child is child-scoped WITH that child; a household draft keeps a null subject', () => {
