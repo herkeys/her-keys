@@ -4,6 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import { AppText, Button, Card, FadeIn, InsightBlock, Overline, RecommendationBlock, WhyThis } from '../../design/components';
 import { color, radius, sizing, spacing } from '../../design/tokens';
 import type { OneMoveCompletion, OneMoveSection } from '../today/model';
+import { durationMeta } from '../today/model/phrases';
 import { TodayDisclosure } from '../today/TodayDisclosure';
 import { TodaySourceLine } from '../today/TodaySourceLine';
 
@@ -62,7 +63,7 @@ export function OneMoveCard({ section, onComplete }: { section: OneMoveSection; 
     return <InsightBlock>Today is already full, so Her Keys isn’t adding anything.</InsightBlock>;
   }
 
-  const { action, estimatedMinutes, why, source, open, completion } = section;
+  const { action, estimatedMinutes, durationKnowledge, why, source, open, completion } = section;
   if (action === null) return null;
 
   return (
@@ -74,7 +75,7 @@ export function OneMoveCard({ section, onComplete }: { section: OneMoveSection; 
           body={action}
           approvalRequired={false}
           actionLabel="I did it"
-          meta={estimatedMinutes != null ? `ABOUT ${estimatedMinutes} MINUTES` : undefined}
+          meta={estimatedMinutes != null ? durationMeta(estimatedMinutes, durationKnowledge) : undefined}
           onApprove={onComplete}
           raised
         />

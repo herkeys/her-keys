@@ -1,4 +1,5 @@
 import type { ActionCategory, ConsequenceLevel, OutcomeKind, Reversibility } from '../../../domain/foundation/authorization';
+import type { DurationKnowledge } from '../../../domain/foundation/duration';
 import type { ConfidenceLevel, ProvenanceSource } from '../../../domain/foundation/provenance';
 import type { ResponsibilityState, ResponsibleKind } from '../../../domain/foundation/responsibility';
 import type { TypedRef } from '../../../domain/foundation/typedRef';
@@ -108,6 +109,12 @@ export interface OneMoveSection {
   status: 'selected' | 'completed' | 'withheld';
   action: string | null;
   estimatedMinutes: number | null;
+  /**
+   * How far `estimatedMinutes` may be worded as something she said (HA-010), when it is a TASK's own duration. Only
+   * `user-provided` is hers; a default, an unrecorded number and an inferred one are estimates and are said as such.
+   * `null` when the number is not a task's duration (an event's own length, a routine's effort, a demo move).
+   */
+  durationKnowledge: DurationKnowledge | null;
   targetType: OneMoveTargetType | null;
   targetId: string | null;
   /** Where "open / adjust" goes, when the kind has a legitimate screen. */

@@ -1,4 +1,5 @@
 import type { ActionCategory, OutcomeKind } from '../../../domain/foundation/authorization';
+import type { DurationKnowledge } from '../../../domain/foundation/duration';
 
 /**
  * Words for the closed vocabularies Today has to speak about. An intent carries a
@@ -72,3 +73,31 @@ export const RETIRED_PREREQUISITE = {
 
 export const retiredPrerequisiteLine = (unconfirmed: boolean): string =>
   unconfirmed ? RETIRED_PREREQUISITE.unconfirmed : RETIRED_PREREQUISITE.stated;
+
+/**
+ * HOW A TASK'S DURATION IS SAID (HA-010 — DEFAULT != USER-PROVIDED).
+ *
+ * A number of minutes is not evidence that anyone said it. Only `user-provided` keeps the plain wording; a default, an
+ * unrecorded number, or one Her Keys inferred is an estimate and is worded as one — never as something she stated.
+ * `null` is for a number that is not a task's own duration (an event's own length, a routine's effort, a demo move):
+ * it keeps the plain wording, because nothing about it is a stand-in. `Record<DurationKnowledge, …>` keeps it total.
+ *
+ * An unrecorded number gets the same words as a default: its origin is unknown, so it is not hers to claim, and it is
+ * not known to be the default either — "an estimate" is true of both, and says no more than is known.
+ */
+const DURATION_SENTENCE: Record<DurationKnowledge, (minutes: string) => string> = {
+  'user-provided': (t) => `It should take about ${t}.`,
+  'default-estimate': (t) => `It should take about ${t} — that’s an estimate.`,
+  unrecorded: (t) => `It should take about ${t} — that’s an estimate.`,
+  'inferred-estimate': (t) => `Her Keys estimated about ${t}.`,
+};
+
+const minutesOf = (n: number): string => `${n} minute${n === 1 ? '' : 's'}`;
+
+/** "It should take about 15 minutes." — as firmly as the number's own provenance allows, and no firmer. */
+export const durationSentence = (minutes: number, knowledge: DurationKnowledge | null): string =>
+  DURATION_SENTENCE[knowledge ?? 'user-provided'](minutesOf(minutes));
+
+/** The One Move card's short label. The plain form is kept where the number is hers (or is not a stand-in); otherwise it says so. */
+export const durationMeta = (minutes: number, knowledge: DurationKnowledge | null): string =>
+  knowledge === null || knowledge === 'user-provided' ? `ABOUT ${minutes} MINUTES` : `ABOUT ${minutes} MINUTES · ESTIMATE`;

@@ -1,4 +1,5 @@
 import { consequenceRank } from '../../../domain/foundation/authorization';
+import { durationKnowledgeOf, type DurationKnowledge } from '../../../domain/foundation/duration';
 import type { LocalDate } from '../../../domain/logicalDay';
 import { oneMoveForDay } from '../../../domain/oneMove';
 import { explain } from '../../../domain/patterns';
@@ -6,7 +7,7 @@ import type { DayView } from '../../../domain/projectDay';
 import type { AppState, OneMoveRecord, OneMoveTargetType } from '../../../domain/state';
 import type { OneMoveItem } from '../../../types';
 import { relativeDay } from '../formatDay';
-import { retiredPrerequisiteLine } from './phrases';
+import { durationSentence, retiredPrerequisiteLine } from './phrases';
 import { describeRef, eventRouteFor, needsMeRoute, sourceOf, taskRoute } from './refs';
 import { dependentsOf, requirementsOf, retiredRequirementsOf, speakable } from './requirements';
 import type { OneMoveCompletion, OneMoveSection, OneMoveWhy, SourceLine, TodayRoute } from './types';
@@ -74,7 +75,7 @@ export function oneMoveSection(state: AppState, today: LocalDate, day: DayView):
   const record = state.oneMoves.find((r) => r.forDate === today) ?? null;
 
   if (view.status === 'withheld') {
-    return { status: 'withheld', action: null, estimatedMinutes: null, targetType: null, targetId: null, open: null, completion: null, why: null, source: null };
+    return { status: 'withheld', action: null, estimatedMinutes: null, durationKnowledge: null, targetType: null, targetId: null, open: null, completion: null, why: null, source: null };
   }
 
   const move = view.move;
@@ -86,6 +87,7 @@ export function oneMoveSection(state: AppState, today: LocalDate, day: DayView):
   const base = {
     action: move?.action ?? null,
     estimatedMinutes: move?.estimatedMinutes ?? null,
+    durationKnowledge: durationKnowledgeFor(state, targetType, targetId),
     targetType,
     targetId,
     open,
@@ -100,6 +102,17 @@ export function oneMoveSection(state: AppState, today: LocalDate, day: DayView):
     completion: affordance?.completion ?? null,
     why: record !== null && move !== null ? whyFor(state, today, day, record, move) : null,
   };
+}
+
+/**
+ * How far a One Move's minutes may be worded as hers (HA-010). Only a TASK carries a duration whose origin is recorded; the
+ * number is the task's `durationMinutes` (`taskAsOneMoveItem`), so its knowledge is the task's. Any other target's minutes
+ * are not a task duration — an event's own length from its start and end, a routine's effort, a demo move — and read plainly.
+ */
+function durationKnowledgeFor(state: AppState, targetType: OneMoveTargetType | null, targetId: string | null): DurationKnowledge | null {
+  if (targetType !== 'task' || targetId === null) return null;
+  const task = state.tasks.find((t) => t.id === targetId);
+  return task ? durationKnowledgeOf(task) : null;
 }
 
 function targetSource(state: AppState, targetType: OneMoveTargetType | null, targetId: string | null): SourceLine | null {
@@ -164,7 +177,7 @@ function whyFor(state: AppState, today: LocalDate, day: DayView, record: OneMove
   if (reasons.length === 0) return { basis: 'item_observation', reasons: [move.observation], evidence, context };
 
   if (move.estimatedMinutes !== undefined && move.estimatedMinutes > 0) {
-    reasons.push(`It should take about ${move.estimatedMinutes} minute${move.estimatedMinutes === 1 ? '' : 's'}.`);
+    reasons.push(durationSentence(move.estimatedMinutes, durationKnowledgeFor(state, record.targetType, record.targetId)));
   }
   return { basis: 'recorded_evidence', reasons, evidence, context };
 }
