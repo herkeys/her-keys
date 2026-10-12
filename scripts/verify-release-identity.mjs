@@ -42,7 +42,12 @@ export function checkBackendTarget(env) {
   const refs = { staging: 'fhhudicklmpofuzkxeqe', production: 'npykvnxnehlsdlbumzwk' };
   const backend = env.EXPO_PUBLIC_HERKEYS_BACKEND;
   const failures = [];
-  if (!Object.hasOwn(refs, backend ?? '')) return ['backend: an explicit Her Keys staging or production target is required'];
+  // The mandatory legal and AI-processing consent gate is compiled in by this one build-time flag. A build that reaches a Her
+  // Keys backend without it would silently skip the gate, because the app has no other switch for it.
+  if (env.EXPO_PUBLIC_HERKEYS_V2_CONSENT_GATE !== 'true') {
+    failures.push('consent: EXPO_PUBLIC_HERKEYS_V2_CONSENT_GATE must be exactly "true" so the mandatory legal and AI consent gate is compiled in');
+  }
+  if (!Object.hasOwn(refs, backend ?? '')) return [...failures, 'backend: an explicit Her Keys staging or production target is required'];
   let url;
   try { url = new URL(env.EXPO_PUBLIC_SUPABASE_URL); } catch { failures.push('backend: Supabase URL is missing or invalid'); }
   if (url && (url.protocol !== 'https:' || url.hostname !== `${refs[backend]}.supabase.co` || url.port || url.username || url.password)) {

@@ -8,7 +8,8 @@
       "distribution": "internal",
       "env": {
         "EXPO_PUBLIC_HERKEYS_BACKEND": "staging",
-        "EXPO_PUBLIC_HERKEYS_DATA_MODE": "empty"
+        "EXPO_PUBLIC_HERKEYS_DATA_MODE": "empty",
+        "EXPO_PUBLIC_HERKEYS_V2_CONSENT_GATE": "true"
       }
     },
     "preview": {
@@ -16,7 +17,8 @@
       "distribution": "internal",
       "env": {
         "EXPO_PUBLIC_HERKEYS_BACKEND": "staging",
-        "EXPO_PUBLIC_HERKEYS_DATA_MODE": "empty"
+        "EXPO_PUBLIC_HERKEYS_DATA_MODE": "empty",
+        "EXPO_PUBLIC_HERKEYS_V2_CONSENT_GATE": "true"
       }
     },
     "production": {

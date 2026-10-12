@@ -18,9 +18,13 @@ const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf
 
 describe('Release identity guard', () => {
   test('EAS targets require the exact environment URL, a client key and empty data mode', () => {
-    const good = { EXPO_PUBLIC_HERKEYS_BACKEND: 'staging', EXPO_PUBLIC_SUPABASE_URL: 'https://fhhudicklmpofuzkxeqe.supabase.co', EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'test-public-key', EXPO_PUBLIC_HERKEYS_DATA_MODE: 'empty' };
+    const good = { EXPO_PUBLIC_HERKEYS_BACKEND: 'staging', EXPO_PUBLIC_SUPABASE_URL: 'https://fhhudicklmpofuzkxeqe.supabase.co', EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'test-public-key', EXPO_PUBLIC_HERKEYS_DATA_MODE: 'empty', EXPO_PUBLIC_HERKEYS_V2_CONSENT_GATE: 'true' };
     assert.deepEqual(checkBackendTarget(good), []);
     for (const change of [
+      { EXPO_PUBLIC_HERKEYS_V2_CONSENT_GATE: undefined },
+      { EXPO_PUBLIC_HERKEYS_V2_CONSENT_GATE: 'false' },
+      { EXPO_PUBLIC_HERKEYS_V2_CONSENT_GATE: 'TRUE' },
+      { EXPO_PUBLIC_HERKEYS_V2_CONSENT_GATE: '' },
       { EXPO_PUBLIC_SUPABASE_URL: 'https://npykvnxnehlsdlbumzwk.supabase.co' },
       { EXPO_PUBLIC_SUPABASE_URL: 'https://fhhudicklmpofuzkxeqe.evil.example' },
       { EXPO_PUBLIC_SUPABASE_URL: 'http://fhhudicklmpofuzkxeqe.supabase.co' },

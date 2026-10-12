@@ -22,6 +22,21 @@ test('shipping and internal Production smoke builds cannot silently bypass legal
   }
 });
 
+test('EVERY EAS profile targets a Her Keys backend explicitly, compiles the consent gate and uses empty data mode', () => {
+  // Build 2A: development and preview (the Staging testing profiles) previously omitted the gate, so a testing build silently
+  // skipped mandatory legal/AI consent. A profile added later without these values fails here rather than shipping.
+  const expectedBackend = { development: 'staging', preview: 'staging', production: 'production' };
+  const profiles = Object.entries(eas.build);
+  assert.ok(profiles.length >= 4, 'the four known profiles must still exist');
+  for (const [name, profile] of profiles) {
+    const backend = profile.env?.EXPO_PUBLIC_HERKEYS_BACKEND;
+    assert.ok(backend === 'staging' || backend === 'production', `${name} must name its backend explicitly`);
+    assert.equal(profile.env.EXPO_PUBLIC_HERKEYS_V2_CONSENT_GATE, 'true', `${name} must compile the consent gate`);
+    assert.equal(profile.env.EXPO_PUBLIC_HERKEYS_DATA_MODE, 'empty', `${name} must not run demo data against a backend`);
+    assert.equal(backend, expectedBackend[profile.environment], `${name}: the EAS environment ${profile.environment} must match backend ${backend}`);
+  }
+});
+
 test('consent gate is tied to bound accounts and server ledger, not an untrusted screen-only flag', () => {
   const layout = readFileSync('app/_layout.tsx', 'utf8');
   const view = readFileSync('src/features/consent/ConsentFlow.tsx', 'utf8');
@@ -35,4 +50,18 @@ test('consent gate is tied to bound accounts and server ledger, not an untrusted
   assert.match(backend, /\.from\('account_consents'\)/);
   assert.match(ai, /HER_KEYS_AI_REQUIRE_CONSENT/);
   assert.match(ai, /\.eq\('account_id', user\.id\)/);
+});
+
+test('the Edge Function and the client agree on the current AI Data Processing policy version', async () => {
+  // The function compares the newest receipt with a literal. If the client constant is ever bumped without redeploying the
+  // function, every account's valid receipt is refused (or, the other way round, a stale one accepted). Pin them together.
+  const { HER_KEYS_CONSENT_VERSIONS } = await import('../src/domain/consent.ts');
+  const ai = readFileSync('supabase/functions/herkeys-ai/index.ts', 'utf8');
+  const literal = ai.match(/decisions\[0\]\.policy_version !== '([^']+)'/);
+  assert.ok(literal, 'the server consent guard must compare the receipt with an explicit policy version');
+  assert.equal(literal[1], HER_KEYS_CONSENT_VERSIONS.ai_processing);
+  // The server guard must also require an affirmative decision, not merely a recorded one.
+  assert.match(ai, /decisions\[0\]\.granted !== true/);
+  // And it must fail closed: an unreadable ledger or a missing receipt both refuse.
+  assert.match(ai, /consentError \|\| decisions\?\.length !== 1/);
 });
