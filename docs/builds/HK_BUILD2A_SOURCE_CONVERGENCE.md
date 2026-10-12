@@ -8,15 +8,19 @@ Date: 2026-10-12. Role: lead integration engineer. Candidate branch: **`integrat
 This phase did **not** build, submit or distribute anything, changed **nothing in Production**, and makes **no real-device claim**.
 
 ```
-SOURCE_AND_CI_CERTIFIED=<<VERDICT_SOURCE>>
-BACKEND_PARITY_CERTIFIED=<<VERDICT_PARITY>>
-PRODUCTION_SERVICES_VERIFIED=NOT_RUN
+SOURCE_AND_CI_CERTIFIED=PASS        (repository convergence and exact-SHA CI; scope stated below)
+BACKEND_PARITY_CERTIFIED=BLOCKED    (measurable items match; dashboard-only settings, OAuth/secrets and server consent enforcement could not be compared)
+PRODUCTION_SERVICES_VERIFIED=BLOCKED (SMTP, templates, redirects, secrets, welcome sending and AI refusal need a dashboard session or a user token)
 REVENUECAT_SOURCE_INTEGRATION=PASS
 REVENUECAT_LIVE_CERTIFICATION=NOT_RUN
 WELCOME_TREE_ORDERING=STOPPED — owner decision required (section 6)
 ```
 
-Final SHA and the GitHub Actions run URL: <<FINAL_REFS>>
+Scope of the PASS: the converged source is green on **exact-SHA CI** and in a fresh clone, with every defect found in scope repaired or recorded. It implements the
+repository's *post-audit* Premium order; whether that is the intended order is the open owner decision. **No real-device readiness is claimed**, and Premium is not certified.
+
+GitHub Actions run on the code state `3cddbed` (workflow *Her Keys V2 Integration Gate*, all 13 steps green):
+<https://github.com/herkeys/her-keys/actions/runs/38272075711>. The branch tip is a documentation-only commit on top of `3cddbed`; its own run is reported with the hand-off.
 
 ## 1. Verified project identity
 
@@ -131,15 +135,44 @@ omit the consent gate (found in 2A); the Premium-ordering ambiguity (section 6).
 | `db282ed` | retire PC-07/PC-08, add Android keyboard test | 155/155, tsc 0; 2 mutants caught |
 | `5a36946` | six Expo SDK 57 patch versions; lock regenerated with npm 10.9.4 then **minimized** | `expo install --check` clean; doctor 21/21; tsc 0; config introspect ok. The raw regeneration moved 46 packages incl. `react-native-reanimated` 4.6→4.7 and `react-native-worklets` 0.12→0.13; those and 10 others were restored — 34 move, all Expo-family or web-only Radix transitives; a second npm 10 pass leaves the package set unchanged and `npm ci` accepts it |
 | `ab3822f` | `development` and `preview` EAS profiles now compile the consent gate; the EAS build hook refuses any build without it; every profile must name a backend; server/client AI policy versions pinned together | the two edited suites 14/14 (`productionConsentBuildProfile` 4, `releaseIdentity` 10); 5 mutants caught by assertion failures (preview loses flag; hook stops checking; new ungated profile; server version drifts; server guard accepts a decline) |
-| (this doc commit) | boundary lane `BUILD-2A`, three reports | boundary scan |
+| `bde7d20` | boundary lane `BUILD-2A`, three reports | boundary scan: no finding of its own |
+| `3cddbed` | `v2-integration-validation.yml` also runs on **pushes to `integration/build2a-candidate`** (nothing else in the workflow changes). `gh workflow run` was refused with HTTP 403 ("Must have admin rights"); a push trigger needs no extra privilege and tests the exact SHA instead of a merge ref | CI run 38272075711 green |
+| tip (docs only) | verdict block, EXIT results, this table | CI on the tip |
 
 Why the consent change: the gate is one build-time flag (`EXPO_PUBLIC_HERKEYS_V2_CONSENT_GATE === 'true'`, default **off**), and the client-side AI recheck depends on the same flag. Only production
 and the smoke APK set it, so a Staging tester build silently skipped Terms, Privacy, age-18 and AI Data Processing. Staging has had the ledger since 2026-10-09, so the original reason to leave it off is gone.
 **Residual risk:** the flag is still default-off in code, so a non-EAS build (a local `expo run`) skips the gate. The EAS hook closes the shipping path; flipping the default is OD-2A-03.
 
-## 5. EXIT results
+## 5. EXIT results (code state `3cddbed`) — METHOD / RAW / INTERPRETATION
 
-<<EXIT_TABLE>>
+METHOD: two independent runs of the same gate sequence: (a) GitHub Actions, push event on the exact SHA, Node 22 / npm 10; (b) a **fresh `git clone`** from GitHub (no local
+branch refs), detached at `3cddbed`, `npm ci` with npm 10.9.4, run on Node 24.14.0.
+
+| Gate | ENTRY `f57aaee` (fresh clone) | EXIT `3cddbed` (fresh clone) | EXIT GitHub run |
+|---|---|---|---|
+| Backend boundary protection | 5/5 | 5/5 | success |
+| Release identity | PASS | PASS (`com.heykeys.app` / `com.herkeys.app` / `7b25f8fe-…`) | success |
+| `tsc --noEmit` | exit 0 | exit 0 | success |
+| Full app suite | 3752 tests, 851 suites, **3752 pass**, 0 fail | **3762 tests, 852 suites, 3762 pass**, 0 fail, 0 skipped, 37 s | success |
+| `expo install --check` | **FAIL** (6 patches) | "Dependencies are up to date" | success |
+| `expo-doctor` | **20/21** | **21/21** | success |
+| `expo config` public / introspect | pass / pass | pass / pass | success / success |
+
+INTERPRETATION: the +10 tests are the 8 Android keyboard tests and 2 consent/profile guards. The two defects at ENTRY (Expo patch drift, and the ungated testing profiles) are gone; no
+test was weakened, skipped or deleted (the only edits to existing tests *add* assertions, plus the registry/report rows that the recovered commit had orphaned).
+
+Additional executed evidence (not part of the CI gate):
+
+| Evidence | METHOD | RAW | INTERPRETATION |
+|---|---|---|---|
+| Targeted security suites | 28 files, each in its own process | 372 / 372 pass (`accountRuntime` 32, `routeAccess` 19, `emailOtp` 21, `emailPassword` 5, `passwordRecovery` 5, `googleAuthParity` 38, `consent*` 7, `welcomeAuthFlow` 41, `welcomeAuthShell` 38, `monetization` 23, parity guard 58, `migrationChain` 12, …) | auth, consent, isolation, RevenueCat identity, Welcome Tree and Android Back semantics all pass. These are scripted-boundary tests, not live-service tests |
+| Mutation controls | each mutant applied, judged, restored with git | **11 / 11 caught**: keyboard ×2; consent profile ×3; server AI guard ×2; routing ×2 (signed-out opens protected screens; returning user sees Welcome); RevenueCat identity ×2 (sign-out no longer anonymizes; sign-in sends the wrong id) | the guards fail when the behavior they protect is removed |
+| Android bundle export | fresh clone, `expo export --platform android` | exit 0, 94 s, 8,262,523 B; welcome, consent, entitlement and display-name control strings all present | the new SDK versions resolve and bundle; the bundle is this tree |
+| Consent flag A/B | two **cold, isolated-cache** exports differing only by `EXPO_PUBLIC_HERKEYS_V2_CONSENT_GATE` | unset → the client AI-consent refusal string `ai_processing_consent_required` is **absent** (0); `true` → **present** (1), different bundle hash | the flag really compiles the consent recheck in or out; a build without it ships no AI consent recheck. A first attempt reused Metro's cache and produced an identical bundle, which is why the A/B uses private cache directories |
+| Negative controls on Staging / deployed functions | companion report §5 | 11 role-based ledger controls + 9 unauthenticated function calls, all as required | the ledger and both function front doors refuse what they must |
+
+NOT RUN: the SQL harness and migration replay (Docker engine down); live provider, signup, recovery, email and cross-account tests (no accounts, mailbox or dashboard); server AI refusal;
+device runs of any kind; Premium purchase flows.
 
 ## 6. Welcome Tree product authority — **STOPPED**
 
