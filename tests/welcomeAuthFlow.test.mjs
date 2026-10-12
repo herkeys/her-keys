@@ -155,8 +155,10 @@ async function type(r, text) {
   await TestRenderer.act(async () => input.props.onChangeText(text));
 }
 
+/** A new user's path to the account choice: Get Started, then the Premium offer (here: the free continuation). */
 const toAccountChoice = async (r) => {
   await press(r, COPY.welcome.begin);
+  await press(r, COPY.premium.free);
 };
 const toExistingAccount = async (r) => press(r, COPY.welcome.existingAccount);
 /** Legacy OTP service regression only: this route is not exposed in the product's account choice. */
@@ -172,15 +174,19 @@ async function toCodeStep(r, address = EMAIL) {
   await press(r, COPY.email.continue);
 }
 
-describe('the first run: Welcome → account choice → authenticate', () => {
-  test('Get Started goes directly to account choices without an upfront paywall', async () => {
+describe('the first run: Welcome → Premium offer → account choice → authenticate', () => {
+  test('Get Started shows the Premium offer BEFORE any account method, and both decisions go on to the account choice', async () => {
     const d = device();
     const r = await open();
     assert.match(shown(r), /Rebuild your life\.\nRun it your way\./);
     assert.equal(control(r, 'Continue with Google'), undefined, 'no method is offered before she begins');
 
     await press(r, COPY.welcome.begin);
-    assert.equal(control(r, 'Explore Premium Plans'), undefined, 'no upfront Premium before registration');
+    assert.ok(control(r, COPY.premium.select) && control(r, COPY.premium.free), 'the Premium offer, with an obvious free continuation');
+    assert.equal(control(r, 'Continue with Google'), undefined, 'no account method before the Premium decision');
+    assert.ok(!shown(r).includes(COPY.accountChoice.signUpTitle), 'not yet the account choice');
+
+    await press(r, COPY.premium.free);
     assert.ok(shown(r).includes(COPY.accountChoice.signUpTitle));
     assert.ok(control(r, 'Continue with Google') && control(r, 'Continue with email'));
     assert.equal(d.runtime.getState().kind, 'unauthenticated', 'Begin authenticates nothing');
@@ -548,6 +554,8 @@ describe('back, on screen and on the Android hardware key', () => {
     await press(r, COPY.back);
     assert.ok(shown(r).includes(COPY.accountChoice.signUpTitle));
     await press(r, COPY.back);
+    assert.ok(control(r, COPY.premium.select) && control(r, COPY.premium.free), 'a new user\'s Back returns to the Premium offer she came through');
+    await press(r, COPY.back);
     assert.match(shown(r), /Rebuild your life/);
     assert.equal(control(r, COPY.back), undefined);
   });
@@ -563,6 +571,8 @@ describe('back, on screen and on the Android hardware key', () => {
     assert.match(shown(r), /What’s your email\?/);
     assert.equal(await hardwareBack(), true);
     assert.ok(shown(r).includes(COPY.accountChoice.signUpTitle));
+    assert.equal(await hardwareBack(), true);
+    assert.ok(control(r, COPY.premium.select) && control(r, COPY.premium.free), 'hardware Back also returns a new user to the Premium offer');
     assert.equal(await hardwareBack(), true);
     assert.match(shown(r), /Rebuild your life/);
     assert.equal(await hardwareBack(), false);
@@ -675,29 +685,20 @@ describe('the controller model, pure', () => {
     }
   });
 
-  test('both welcome decisions go directly to account choice, with intent preserved', () => {
+  test('Get Started goes to the Premium offer; I Already Have an Account goes straight to sign-in, skipping it', () => {
     const start = initialWelcomeFlow('first-run');
     const newUser = welcomeFlowReducer(start, { type: 'begin' });
     const returning = welcomeFlowReducer(start, { type: 'existingAccount' });
-    assert.equal(newUser.step, 'account-choice');
+    assert.equal(newUser.step, 'premium');
+    assert.equal(newUser.entry, 'new');
     assert.equal(newUser.passwordMode, 'signUp');
     assert.equal(returning.step, 'account-choice');
+    assert.equal(returning.entry, 'existing');
     assert.equal(returning.passwordMode, 'signIn');
+    assert.equal(returning.premiumChoice, null, 'an existing account is never offered, and never carries, a Premium intent');
     assert.equal(welcomeFlowBackTarget(newUser), 'welcome');
     assert.equal(welcomeFlowBackTarget(returning), 'welcome');
-    assert.equal(welcomeFlowReducer(initialWelcomeFlow('reconnect'), { type: 'begin' }).step, 'account-choice');
-  });
-
-  test('obsolete upfront Premium callbacks cannot interrupt the approved welcome path', () => {
-    const start = welcomeFlowReducer(initialWelcomeFlow('first-run'), { type: 'begin' });
-    assert.equal(start.step, 'account-choice');
-    for (const event of [
-      { type: 'premiumStarted' },
-      { type: 'premiumContinueFree' },
-      { type: 'premiumSettled', outcome: 'purchased' },
-    ]) {
-      assert.deepEqual(welcomeFlowReducer(start, event), start, event.type);
-    }
+    assert.equal(welcomeFlowReducer(initialWelcomeFlow('reconnect'), { type: 'begin' }).step, 'account-choice', 'a reconnect has no Welcome and no Premium offer');
   });
 
   test('a cancellation never sets the failure line; an auth error or an unfinished binding does', () => {
@@ -730,7 +731,7 @@ describe('the controller model, pure', () => {
     const events = /export type WelcomeFlowEvent =([\s\S]*?);\n\nexport function/.exec(source)[1];
     assert.doesNotMatch(events, /code\s*:|token\s*:|otp\s*:/i, 'no event has a code, token or otp field');
     assert.equal(Object.prototype.hasOwnProperty.call(initialWelcomeFlow('first-run'), 'password'), false, 'password text never enters the controller');
-    assert.deepEqual(Object.keys(initialWelcomeFlow('first-run')).sort(), ['attemptFailed', 'email', 'emailError', 'inFlight', 'mode', 'otpError', 'passwordMode', 'passwordNotice', 'premiumBusy', 'premiumNotice', 'recoveryEmail', 'resendAvailableAt', 'step']);
+    assert.deepEqual(Object.keys(initialWelcomeFlow('first-run')).sort(), ['attemptFailed', 'email', 'emailError', 'entry', 'inFlight', 'mode', 'otpError', 'passwordMode', 'passwordNotice', 'premiumChoice', 'recoveryEmail', 'resendAvailableAt', 'step']);
   });
 });
 

@@ -1,9 +1,10 @@
 import { SplashScreen, Stack } from 'expo-router';
 import * as NativeSplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { colors } from '../src/design/tokens';
 import { canOpenScreen, isSettled, type RootScreen } from '../src/domain/routeAccess';
+import { PremiumCheckoutAfterConsent } from '../src/monetization/PremiumCheckoutAfterConsent';
 import { WelcomeAuthSettling } from '../src/features/account/WelcomeAuthFlow';
 import { ConsentGate } from '../src/features/consent/ConsentFlow';
 import { RevenueCatProvider, useEntitlement } from '../src/monetization/RevenueCatProvider';
@@ -12,6 +13,7 @@ import { AppStateProvider, useStoreSnapshot } from '../src/store/AppStateProvide
 import { appStore, internalTools } from '../src/store/appStoreInstance';
 import { OnboardingProvider } from '../src/store/OnboardingContext';
 import { OneMoveProvider } from '../src/store/OneMoveContext';
+import { PremiumIntentProvider, usePremiumIntent } from '../src/store/PremiumIntentContext';
 import { LocalNotificationProvider } from '../src/store/LocalNotificationProvider';
 import { ScheduleProvider } from '../src/store/ScheduleContext';
 import { TalkItOutProvider } from '../src/store/TalkItOutContext';
@@ -31,13 +33,15 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <RevenueCatProvider>
-        <AppStateProvider store={appStore}>
-          <LocalNotificationProvider>
-            <AccountProvider>
-              <RootNavigator />
-            </AccountProvider>
-          </LocalNotificationProvider>
-        </AppStateProvider>
+        <PremiumIntentProvider>
+          <AppStateProvider store={appStore}>
+            <LocalNotificationProvider>
+              <AccountProvider>
+                <RootNavigator />
+              </AccountProvider>
+            </LocalNotificationProvider>
+          </AppStateProvider>
+        </PremiumIntentProvider>
       </RevenueCatProvider>
     </SafeAreaProvider>
   );
@@ -53,10 +57,14 @@ export default function RootLayout() {
 function RootNavigator() {
   const snapshot = useStoreSnapshot();
   const account = useAccount();
-  const { refresh: refreshPremium } = useEntitlement();
+  const { refresh: refreshPremium, presentPaywall } = useEntitlement();
+  const premiumIntent = usePremiumIntent();
+  // The welcome tree only records an intent to take Premium. Checkout is presented by `PremiumCheckoutAfterConsent` below, and
+  // only for a bound account after consent. There is no purchase before an account exists, so nothing is ever transferred.
+  const presentWelcomeCheckout = useCallback(() => presentPaywall('welcome_premium'), [presentPaywall]);
   // Recheck the store's canonical entitlement when a Supabase session is
-  // activated (including a pre-signup purchase) or signed out. The runtime
-  // identifies the RevenueCat UUID before publishing a bound account.
+  // activated or signed out. The runtime identifies the RevenueCat UUID
+  // before publishing a bound account.
   useEffect(() => {
     if (account.settled && (account.state.kind === 'accountBound' || account.state.kind === 'unauthenticated')) {
       void refreshPremium();
@@ -154,12 +162,26 @@ function RootNavigator() {
     </OnboardingProvider>
   );
 
+  // A new user's Premium intent is acted on here and only here: inside the consent gate (so it does not exist until the
+  // mandatory consent is complete) and around the navigator (so it never blocks the app). It does nothing for an account that is
+  // not bound or for anyone who did not choose Premium.
+  const afterConsent = (
+    <PremiumCheckoutAfterConsent
+      accountBound={account.state.kind === 'accountBound'}
+      choice={premiumIntent.choice}
+      present={presentWelcomeCheckout}
+      onSettled={premiumIntent.clear}
+    >
+      {guardedNavigator}
+    </PremiumCheckoutAfterConsent>
+  );
+
   // Opt-in staging activation only after the proposed RLS ledger has been
   // reviewed and applied. While checking or saving mandatory legal receipts,
   // NO protected Stack is mounted and deep links cannot bypass consent.
   // Production is not silently activated by this development branch.
   if (process.env.EXPO_PUBLIC_HERKEYS_V2_CONSENT_GATE === 'true' && account.state.kind === 'accountBound') {
-    return <ConsentGate session={account.state.session}>{guardedNavigator}</ConsentGate>;
+    return <ConsentGate session={account.state.session}>{afterConsent}</ConsentGate>;
   }
-  return guardedNavigator;
+  return afterConsent;
 }

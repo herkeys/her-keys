@@ -30,6 +30,13 @@ export const PAYWALL_POLICY: PaywallPolicy = 'soft';
 export const PAYWALL_PLACEMENTS = ['welcome_premium', 'onboarding_complete', 'systems_upgrade', 'premium_feature', 'manual_upgrade'] as const;
 export type PaywallPlacement = (typeof PAYWALL_PLACEMENTS)[number];
 
+/**
+ * What a new user chose on the welcome tree's Premium offer, before any account exists. It is an INTENT, never a purchase:
+ * `welcome_premium` is presented only after an account holds the household and the mandatory consent is complete, and nothing
+ * is ever bought anonymously or transferred between identities.
+ */
+export type PremiumChoice = 'premium' | 'free';
+
 export type PaywallOutcome =
   | { kind: 'purchased' }
   | { kind: 'restored' }

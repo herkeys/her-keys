@@ -268,7 +268,7 @@ describe('Route access', () => {
     }
     // The entry decides WHAT to show from account state; whether it may be shown at all is the guard table's.
     const entry = strip(readFileSync('app/index.tsx', 'utf8'));
-    assert.match(entry, /canRenderAccountData\(account\.state\) \? <ContinueAudit \/> : <WelcomeAuthFlow mode="first-run" \/>/);
+    assert.match(entry, /canRenderAccountData\(account\.state\) \? <ContinueAudit \/> : <WelcomeAuthFlow mode="first-run" onPremiumChoice=\{premiumIntent\.setChoice\} \/>/);
     assert.doesNotMatch(entry, /router\.(push|replace|navigate)|recordStep\('goals'\)/, 'no Begin → onboarding/goals path survives for a signed-out user');
   });
 });

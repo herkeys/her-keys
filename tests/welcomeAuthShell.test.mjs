@@ -49,7 +49,7 @@ const BASE = {
 const callbacks = (overrides = {}) => ({
   onBegin: () => {},
   onExistingAccount: () => {},
-  onPremiumPlans: () => {},
+  onSelectPremium: () => {},
   onContinueFree: () => {},
   onApple: () => {},
   onGoogle: () => {},
@@ -82,23 +82,49 @@ describe('Welcome and legacy Premium gallery preview', () => {
     assert.deepEqual(taps, ['get-started', 'existing']);
   });
 
-  test('Premium offer presents RevenueCat intent and a free account path', async () => {
+  test('the Premium offer records an intent and offers an equally visible free continuation', async () => {
     const taps = [];
     const r = await render(shell({ step: 'premium' }, callbacks({
-      onPremiumPlans: () => taps.push('plans'),
+      onSelectPremium: () => taps.push('premium'),
       onContinueFree: () => taps.push('free'),
     })));
     assert.match(joined(r), /HER KEYS PREMIUM/i);
-    await press(pressableByLabel(r, 'Explore Premium Plans'));
-    await press(pressableByLabel(r, 'Continue with Her Keys Free'));
-    assert.deepEqual(taps, ['plans', 'free']);
-    assert.equal(pressableByLabel(r, 'Continue with Apple'), undefined);
+    const select = pressableByLabel(r, COPY.premium.select);
+    const free = pressableByLabel(r, COPY.premium.free);
+    assert.ok(select && free, 'both decisions are on screen');
+    assert.equal(select.props.disabled, undefined, 'neither is disabled: nothing is in flight on this screen');
+    assert.equal(free.props.disabled, undefined);
+    await press(select);
+    await press(free);
+    assert.deepEqual(taps, ['premium', 'free']);
+    assert.equal(pressableByLabel(r, 'Continue with Apple'), undefined, 'no account method is offered before the Premium decision');
   });
 
-  test('pending purchase cannot double-open RevenueCat or skip', async () => {
-    const r = await render(shell({ step: 'premium', premiumBusy: true }));
-    assert.equal(pressableByLabel(r, 'Explore Premium Plans').props.disabled, true);
-    assert.equal(pressableByLabel(r, 'Continue with Her Keys Free').props.disabled, true);
+  test('the Premium offer never claims a purchase, a price, a plan or a trial', async () => {
+    const r = await render(shell({ step: 'premium' }));
+    const text = joined(r);
+    assert.match(text, /Nothing is purchased on this screen/);
+    assert.doesNotMatch(text, /\$|€|£|\/\s?(month|year|mo|yr)|per (month|year)|free trial|billed|subscribe now/i);
+  });
+
+  test('the welcome tree cannot start a checkout: no RevenueCat, Purchases or paywall anywhere under it', () => {
+    const files = [];
+    const walk = (dir) => {
+      for (const name of readdirSync(dir)) {
+        const path = join(dir, name);
+        if (name.endsWith('.ts') || name.endsWith('.tsx')) files.push(path);
+        else if (!name.includes('.')) walk(path);
+      }
+    };
+    walk(WELCOME_DIR);
+    walk(join(ROOT, 'src', 'features', 'account'));
+    assert.ok(files.length > 10);
+    for (const file of files) {
+      const source = readFileSync(file, 'utf8')
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/^\s*\/\/.*$/gm, '');
+      assert.doesNotMatch(source, /react-native-purchases|RevenueCat|Purchases\.|presentPaywall|PaywallOutcome|monetization\/RevenueCatProvider|revenueCatClient|useEntitlement/, file);
+    }
   });
 });
 
@@ -183,6 +209,25 @@ describe('provider set and order are a platform decision', () => {
     assert.doesNotMatch(joined(signIn), /send a short code/i);
   });
 
+  test('after a sign-up that needs email confirmation, and only then, she can move to sign-in without leaving the screen', async () => {
+    const taps = [];
+    const waiting = await render(shell({ step: 'password', passwordMode: 'signUp', passwordNotice: 'confirmationRequired' }, callbacks({
+      onPasswordModeChange: (mode) => taps.push(mode),
+    })));
+    await press(pressableByLabel(waiting, COPY.password.confirmedSignIn));
+    assert.deepEqual(taps, ['signIn']);
+
+    for (const state of [
+      { passwordMode: 'signUp', passwordNotice: null },
+      { passwordMode: 'signUp', passwordNotice: 'rejected' },
+      { passwordMode: 'signIn', passwordNotice: 'confirmationRequired' },
+      { passwordMode: 'signIn', passwordNotice: null },
+    ]) {
+      const r = await render(shell({ step: 'password', ...state }));
+      assert.equal(pressableByLabel(r, COPY.password.confirmedSignIn), undefined, `not a permanent switch: ${JSON.stringify(state)}`);
+    }
+  });
+
   test('no button is ever labeled "Continue with Android"', async () => {
     for (const platform of ['ios', 'android']) {
       const r = await render(shell({ step: 'account-choice', platform }));
@@ -243,7 +288,9 @@ describe('welcome is the root and back never skips it', () => {
   test('the back model: welcome has no back; each step returns one step', () => {
     assert.equal(stepAfterBack('welcome'), null);
     assert.equal(stepAfterBack('premium'), 'welcome');
-    assert.equal(stepAfterBack('account-choice'), 'welcome');
+    assert.equal(stepAfterBack('account-choice'), 'welcome', 'the base (existing-user) rule');
+    assert.equal(stepAfterBack('account-choice', 'existing'), 'welcome');
+    assert.equal(stepAfterBack('account-choice', 'new'), 'premium', 'a new user came through the Premium offer');
     assert.equal(stepAfterBack('email'), 'account-choice');
     assert.equal(stepAfterBack('otp'), 'email');
   });

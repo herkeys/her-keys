@@ -118,9 +118,9 @@ export function WelcomeAuthGalleryPreview() {
       <View style={styles.frame}>
         <WelcomeAuthShell
           state={state}
-          onBegin={() => setState((current) => ({ ...current, step: 'account-choice', passwordMode: 'signUp' }))}
+          onBegin={() => setState((current) => ({ ...current, step: 'premium', passwordMode: 'signUp' }))}
           onExistingAccount={() => setState((current) => ({ ...current, step: 'account-choice', passwordMode: 'signIn' }))}
-          onPremiumPlans={() => setState((current) => ({ ...current, premiumNotice: 'unavailable' }))}
+          onSelectPremium={() => setState((current) => ({ ...current, step: 'account-choice' }))}
           onContinueFree={() => setState((current) => ({ ...current, step: 'account-choice' }))}
           onApple={() => goTo('account-choice')}
           onGoogle={() => goTo('account-choice')}
@@ -137,7 +137,7 @@ export function WelcomeAuthGalleryPreview() {
           onChangeEmail={() => setState((current) => ({ ...current, step: 'email', otpError: null, resendSecondsLeft: null }))}
           onBack={() =>
             setState((current) => {
-              const previous = stepAfterBack(current.step);
+              const previous = stepAfterBack(current.step, current.passwordMode === 'signUp' ? 'new' : 'existing');
               return previous ? { ...current, step: previous, emailError: null, otpError: null } : current;
             })
           }

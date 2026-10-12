@@ -15,6 +15,12 @@ export interface EmailPasswordViewProps {
   pending: boolean;
   onSubmit: (mode: EmailPasswordMode, email: string, password: string) => void;
   onForgotPassword?: (email: string) => void;
+  /**
+   * Offered ONLY after a sign-up that needs email confirmation: the notice tells her to "come back and sign in", and this is
+   * where she does. It is not a permanent Sign In / Sign Up switch (those tabs were removed on purpose: Welcome already decides
+   * which she is); it exists so she does not have to back out to Welcome, which would also drop her Premium decision.
+   */
+  onGoToSignIn?: () => void;
 }
 
 /**
@@ -22,7 +28,7 @@ export interface EmailPasswordViewProps {
  * AppState or analytics. The password is passed directly to AccountRuntime.
  * No fake session is created while email confirmation is pending.
  */
-export function EmailPasswordView({ mode, notice, pending, onSubmit, onForgotPassword }: EmailPasswordViewProps) {
+export function EmailPasswordView({ mode, notice, pending, onSubmit, onForgotPassword, onGoToSignIn }: EmailPasswordViewProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -83,6 +89,9 @@ export function EmailPasswordView({ mode, notice, pending, onSubmit, onForgotPas
         <View style={styles.actions}>
           <Button label={create ? COPY.password.create : COPY.password.signIn} onPress={submit}
             disabled={pending || password.length === 0 || email.length === 0} />
+          {create && notice === 'confirmationRequired' && onGoToSignIn && (
+            <Button label={COPY.password.confirmedSignIn} variant="secondary" onPress={onGoToSignIn} disabled={pending} />
+          )}
           {!create && onForgotPassword && (
             <Button label="Forgot Password?" variant="ghost" onPress={() => onForgotPassword(email)} disabled={pending} />
           )}

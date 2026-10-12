@@ -3,22 +3,19 @@ import { Ionicons } from '@expo/vector-icons';
 import { AppText, Button, Card, Overline } from '../../../design/components';
 import { color, sizing, spacing } from '../../../design/tokens';
 import { HER_KEYS_PREMIUM_DISPLAY_NAME } from '../../../monetization/entitlement';
-
-export type PremiumNotice = 'no_offering' | 'unavailable' | 'error' | null;
+import { WELCOME_AUTH_COPY as COPY } from '../copy';
 
 export interface PremiumIntroProps {
-  busy: boolean;
-  notice: PremiumNotice;
-  onViewPlans: () => void;
+  onSelectPremium: () => void;
   onContinueFree: () => void;
 }
 
 /**
- * New-user introduction, BEFORE account creation. RC owns every product,
- * price, trial eligibility and purchase; this view never fabricates an offer.
- * The free path is always available. This screen does NOT represent a purchase.
+ * The new-user Premium offer, BEFORE the account choice. It records an intent and starts nothing: there is no account yet, so
+ * there is no RevenueCat call and no checkout here (the welcome tree cannot reach either). Both actions move on to the account
+ * choice; the free continuation is as large and as visible as the Premium one, and no state requires either.
  */
-export function PremiumIntroView({ busy, notice, onViewPlans, onContinueFree }: PremiumIntroProps) {
+export function PremiumIntroView({ onSelectPremium, onContinueFree }: PremiumIntroProps) {
   return (
     <>
       <View style={styles.body}>
@@ -27,29 +24,24 @@ export function PremiumIntroView({ busy, notice, onViewPlans, onContinueFree }: 
         </View>
         <Overline>{HER_KEYS_PREMIUM_DISPLAY_NAME}</Overline>
         <AppText variant="hero" style={styles.title}>
-          A little more room for you.
+          {COPY.premium.title}
         </AppText>
         <AppText variant="title" color={color.text.secondary} style={styles.lede}>
-          Explore deeper planning support and more proactive help as Her Keys grows.
+          {COPY.premium.lede}
         </AppText>
         <Card tone="subtle" style={styles.benefits}>
-          <AppText variant="body">Deeper household intelligence</AppText>
-          <AppText variant="body">More proactive planning support</AppText>
-          <AppText variant="body">Enhanced Talk It Out capabilities</AppText>
+          {COPY.premium.benefits.map((benefit) => (
+            <AppText key={benefit} variant="body">
+              {benefit}
+            </AppText>
+          ))}
         </Card>
-        {notice !== null && (
-          <AppText variant="bodySm" color={color.text.secondary} accessibilityLiveRegion="polite">
-            {notice === 'no_offering' || notice === 'unavailable'
-              ? 'Premium plans are not available on this device yet. You can still create your account.'
-              : 'Premium could not open. Please try again or continue with the free experience.'}
-          </AppText>
-        )}
       </View>
       <View style={styles.footer}>
-        <Button label="Explore Premium Plans" onPress={onViewPlans} disabled={busy} />
-        <Button label="Continue with Her Keys Free" variant="secondary" onPress={onContinueFree} disabled={busy} />
+        <Button label={COPY.premium.select} onPress={onSelectPremium} />
+        <Button label={COPY.premium.free} variant="secondary" onPress={onContinueFree} />
         <AppText variant="bodySm" color={color.text.muted} style={styles.note}>
-          Plans, prices and any trial eligibility are shown by the App Store or Google Play before a purchase.
+          {COPY.premium.note}
         </AppText>
       </View>
     </>

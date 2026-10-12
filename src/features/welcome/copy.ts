@@ -24,6 +24,23 @@ export const WELCOME_AUTH_COPY = {
     existingAccount: 'I Already Have an Account',
   },
 
+  /**
+   * The Premium offer a new user sees between Get Started and the account choice. It records an intent and nothing else:
+   * no price, no plan and no purchase is shown or started here, so the words must never imply one has happened.
+   */
+  premium: {
+    title: 'A little more room for you.',
+    lede: 'Explore deeper planning support and more proactive help as Her Keys grows.',
+    benefits: [
+      'Deeper household intelligence',
+      'More proactive planning support',
+      'Enhanced Talk It Out capabilities',
+    ],
+    select: 'Select Premium',
+    free: 'Continue Free',
+    note: 'Nothing is purchased on this screen. If you select Premium, you’ll choose a plan and check out once your account is set up. Plans and prices are shown by the App Store or Google Play first.',
+  },
+
   accountChoice: {
     overline: 'Your account',
     title: 'Connect your\\naccount.',
@@ -73,6 +90,8 @@ export const WELCOME_AUTH_COPY = {
     mismatch: 'Those passwords do not match.',
     signIn: 'Sign in',
     create: 'Create account',
+    /** Shown only after a sign-up that is waiting for email confirmation. */
+    confirmedSignIn: 'I’ve confirmed my email — Sign in',
     goToSignIn: 'Already have an account? Sign in',
     goToCreate: 'New here? Create an account',
     show: 'Show password',

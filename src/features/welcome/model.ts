@@ -23,6 +23,16 @@ export type WelcomeAuthPlatform = 'ios' | 'android';
 export type WelcomeAuthStep = 'welcome' | 'premium' | 'account-choice' | 'email' | 'otp' | 'password' | 'recovery';
 
 /**
+ * What she picked on the Premium offer: an INTENT, never a purchase (the type lives with the entitlement contract). The welcome
+ * tree has no checkout, because no account exists yet; a selected intent is acted on only after an account holds this household
+ * and the mandatory consent is complete (`src/monetization/PremiumCheckoutAfterConsent.tsx`).
+ */
+export type { PremiumChoice } from '../../monetization/entitlement';
+
+/** Which way she came to the account choice: through the Premium offer as a new user, or straight in as an existing one. */
+export type WelcomeEntry = 'new' | 'existing';
+
+/**
  * Hard presentations that replace a step rather than decorate it. They mirror
  * account states the app already models; rendering them changes no runtime
  * meaning.
@@ -70,8 +80,6 @@ export interface WelcomeAuthViewState {
   passwordMode?: 'signIn' | 'signUp';
   passwordCanSignUp?: boolean;
   passwordNotice?: 'confirmationRequired' | 'rejected' | 'unreachable' | 'unavailable' | null;
-  premiumNotice?: 'no_offering' | 'unavailable' | 'error' | null;
-  premiumBusy?: boolean;
   /**
    * Seconds until Resend is enabled again, or null when it is enabled. This
    * is UI state only — it asserts nothing about any backend rate limit.
@@ -90,7 +98,8 @@ export interface WelcomeAuthViewState {
 export interface WelcomeAuthCallbacks {
   onBegin: () => void;
   onExistingAccount: () => void;
-  onPremiumPlans: () => void;
+  /** Records the intent to take Premium. Starts nothing: checkout waits for an account and consent. */
+  onSelectPremium: () => void;
   onContinueFree: () => void;
   onApple: () => void;
   onGoogle: () => void;
@@ -149,15 +158,18 @@ export function emailObviousError(email: string): Extract<EmailErrorKind, 'inval
  * The back model, identical for the visible back control and Android hardware
  * Back: Welcome is the root (no back), every other step returns one step and
  * the OTP step keeps the entered email. No confirmation dialogs anywhere.
+ *
+ * A NEW user reached the account choice through the Premium offer, so back returns to it; an existing user came straight
+ * from Welcome, so back returns there. (`entry` defaults to the existing-user rule, which is the shell's base behavior.)
  */
-export function stepAfterBack(step: WelcomeAuthStep): WelcomeAuthStep | null {
+export function stepAfterBack(step: WelcomeAuthStep, entry: WelcomeEntry = 'existing'): WelcomeAuthStep | null {
   switch (step) {
     case 'welcome':
       return null;
     case 'premium':
       return 'welcome';
     case 'account-choice':
-      return 'welcome';
+      return entry === 'new' ? 'premium' : 'welcome';
     case 'email':
     case 'password':
       return 'account-choice';

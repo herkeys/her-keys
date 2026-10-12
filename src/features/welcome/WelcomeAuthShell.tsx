@@ -32,7 +32,7 @@ export interface WelcomeAuthShellProps extends WelcomeAuthCallbacks {
  * Production routing is untouched: the shell is exercised from the internal
  * design gallery until the integration pass places it.
  */
-export function WelcomeAuthShell({ state, onBegin, onExistingAccount, onPremiumPlans, onContinueFree, onApple, onGoogle, onChooseEmail, onChoosePassword, onPasswordModeChange, onSubmitPassword, onForgotPassword, onRequestRecovery, onVerifyRecovery, onUpdateRecoveryPassword, onCancelRecovery, onSubmitEmail, onSubmitOtp, onResendOtp, onChangeEmail, onBack, onSignOut }: WelcomeAuthShellProps) {
+export function WelcomeAuthShell({ state, onBegin, onExistingAccount, onSelectPremium, onContinueFree, onApple, onGoogle, onChooseEmail, onChoosePassword, onPasswordModeChange, onSubmitPassword, onForgotPassword, onRequestRecovery, onVerifyRecovery, onUpdateRecoveryPassword, onCancelRecovery, onSubmitEmail, onSubmitOtp, onResendOtp, onChangeEmail, onBack, onSignOut }: WelcomeAuthShellProps) {
   // Hard presentations replace the step tree entirely.
   if (state.presentation === 'settling') {
     return (
@@ -59,12 +59,7 @@ export function WelcomeAuthShell({ state, onBegin, onExistingAccount, onPremiumP
 
       {state.presentation === 'normal' && state.step === 'welcome' && <WelcomeView onBegin={onBegin} onExistingAccount={onExistingAccount} />}
       {state.presentation === 'normal' && state.step === 'premium' && (
-        <PremiumIntroView
-          busy={state.premiumBusy ?? false}
-          notice={state.premiumNotice ?? null}
-          onViewPlans={onPremiumPlans}
-          onContinueFree={onContinueFree}
-        />
+        <PremiumIntroView onSelectPremium={onSelectPremium} onContinueFree={onContinueFree} />
       )}
 
       {/* The degraded presentation keeps the account choice usable: reconnecting
@@ -94,6 +89,7 @@ export function WelcomeAuthShell({ state, onBegin, onExistingAccount, onPremiumP
           pending={state.pending === 'password'}
           onSubmit={onSubmitPassword}
           onForgotPassword={onForgotPassword}
+          onGoToSignIn={() => onPasswordModeChange('signIn')}
         />
       )}
 

@@ -1,4 +1,3 @@
-import type { PaywallOutcome } from '../../monetization/entitlement';
 import type { EmailPasswordAttempt, EmailVerification } from '../../domain/account/accountRuntime';
 import type { AccountStateKind } from '../../domain/account/authState';
 import type { EmailOtpRequestResult } from '../../domain/account/emailOtp';
@@ -7,10 +6,12 @@ import {
   stepAfterBack,
   type EmailErrorKind,
   type OtpErrorKind,
+  type PremiumChoice,
   type WelcomeAuthMethod,
   type WelcomeAuthPlatform,
   type WelcomeAuthStep,
   type WelcomeAuthViewState,
+  type WelcomeEntry,
 } from '../welcome/model';
 
 /**
@@ -44,8 +45,16 @@ export interface WelcomeFlowState {
   passwordMode: 'signIn' | 'signUp';
   recoveryEmail: string;
   passwordNotice: 'confirmationRequired' | 'rejected' | 'unreachable' | 'unavailable' | null;
-  premiumNotice: 'no_offering' | 'unavailable' | 'error' | null;
-  premiumBusy: boolean;
+  /**
+   * Which way she came to the account choice. `null` until she picks a Welcome decision, and always `null` on a reconnect.
+   * It decides where Back goes, and nothing else.
+   */
+  entry: WelcomeEntry | null;
+  /**
+   * The Premium decision, as an INTENT. It is reported upward (the controller's `onPremiumChoice`) so that the app can offer
+   * checkout once an account holds this household and consent is complete. Nothing here starts a purchase.
+   */
+  premiumChoice: PremiumChoice | null;
   /** The method this screen is waiting on, so progress shows beside the control that started it. */
   inFlight: WelcomeAuthMethod | 'password' | null;
   /** When Resend is offered again (epoch ms), or null when it already is. A courtesy to her, not a rate limit. */
@@ -57,8 +66,7 @@ export interface WelcomeFlowState {
 export type WelcomeFlowEvent =
   | { type: 'begin' }
   | { type: 'existingAccount' }
-  | { type: 'premiumStarted' }
-  | { type: 'premiumSettled'; outcome: PaywallOutcome['kind'] }
+  | { type: 'premiumSelected' }
   | { type: 'premiumContinueFree' }
   | { type: 'back' }
   | { type: 'chooseEmail' }
@@ -88,8 +96,8 @@ export function initialWelcomeFlow(mode: WelcomeFlowMode): WelcomeFlowState {
     passwordMode: 'signIn',
     recoveryEmail: '',
     passwordNotice: null,
-    premiumNotice: null,
-    premiumBusy: false,
+    entry: null,
+    premiumChoice: null,
     inFlight: null,
     resendAvailableAt: null,
     attemptFailed: false,
@@ -102,9 +110,10 @@ export function initialWelcomeFlow(mode: WelcomeFlowMode): WelcomeFlowState {
  * choice is the root of a reconnect. Nothing moves while a request is out.
  */
 export function welcomeFlowBackTarget(state: WelcomeFlowState): WelcomeAuthStep | null {
-  if (state.inFlight !== null || state.premiumBusy) return null;
+  if (state.inFlight !== null) return null;
   if (state.mode === 'reconnect' && state.step === 'account-choice') return null;
-  return stepAfterBack(state.step);
+  // A new user's Back from the account choice returns to the Premium offer she came through; an existing user's returns to Welcome.
+  return stepAfterBack(state.step, state.entry ?? 'existing');
 }
 
 /**
@@ -120,41 +129,44 @@ const verifiedButNotHeld = (account: AccountStateKind): boolean =>
 
 export function welcomeFlowReducer(state: WelcomeFlowState, event: WelcomeFlowEvent): WelcomeFlowState {
   switch (event.type) {
+    // A new user is shown the Premium offer BEFORE the account choice (owner decision, Build 2A).
     case 'begin':
       return state.step === 'welcome'
-        ? { ...state, step: 'account-choice', passwordMode: 'signUp', premiumNotice: null, attemptFailed: false }
+        ? { ...state, step: 'premium', entry: 'new', passwordMode: 'signUp', premiumChoice: null, attemptFailed: false }
         : state;
 
-    case 'premiumStarted':
-      if (state.step !== 'premium' || state.premiumBusy || state.inFlight !== null) return state;
-      return { ...state, premiumBusy: true, premiumNotice: null };
-
-    case 'premiumSettled':
-      if (state.step !== 'premium' || !state.premiumBusy) return state;
-      if (event.outcome === 'purchased' || event.outcome === 'restored' || event.outcome === 'already_entitled') {
-        return { ...state, premiumBusy: false, premiumNotice: null, step: 'account-choice' };
-      }
-      return {
-        ...state,
-        premiumBusy: false,
-        premiumNotice: event.outcome === 'no_offering' || event.outcome === 'unavailable' ? event.outcome : event.outcome === 'cancelled' ? null : 'error',
-      };
+    // Both Premium decisions only record an intent and move on. There is no purchase here: no account exists yet.
+    case 'premiumSelected':
+      return state.step === 'premium' && state.inFlight === null
+        ? { ...state, step: 'account-choice', premiumChoice: 'premium', attemptFailed: false }
+        : state;
 
     case 'premiumContinueFree':
-      return state.step === 'premium' && !state.premiumBusy
-        ? { ...state, step: 'account-choice', premiumNotice: null }
+      return state.step === 'premium' && state.inFlight === null
+        ? { ...state, step: 'account-choice', premiumChoice: 'free', attemptFailed: false }
         : state;
 
+    // An existing account skips the Premium offer entirely (its entitlement is whatever RevenueCat already holds for it).
     case 'existingAccount':
       return state.step === 'welcome'
-        ? { ...state, step: 'account-choice', passwordMode: 'signIn', attemptFailed: false }
+        ? { ...state, step: 'account-choice', entry: 'existing', passwordMode: 'signIn', premiumChoice: null, attemptFailed: false }
         : state;
 
     case 'back': {
       const target = welcomeFlowBackTarget(state);
       if (target === null) return state;
-      // Going back clears what was said about the step being left, never what she typed.
-      return { ...state, step: target, emailError: null, otpError: null, attemptFailed: false };
+      // Going back clears what was said about the step being left, never what she typed. Stepping back to the Premium offer or
+      // to Welcome withdraws the Premium decision (moving forward again requires making it again); Welcome also forgets the path.
+      const withdrawn = target === 'premium' || target === 'welcome';
+      return {
+        ...state,
+        step: target,
+        emailError: null,
+        otpError: null,
+        attemptFailed: false,
+        premiumChoice: withdrawn ? null : state.premiumChoice,
+        entry: target === 'welcome' ? null : state.entry,
+      };
     }
 
     case 'choosePassword':
@@ -267,8 +279,6 @@ export function welcomeFlowView(state: WelcomeFlowState, platform: WelcomeAuthPl
     recoveryEmail: state.recoveryEmail,
     passwordCanSignUp: state.mode === 'first-run',
     passwordNotice: state.passwordNotice,
-    premiumNotice: state.premiumNotice,
-    premiumBusy: state.premiumBusy,
     resendSecondsLeft: secondsLeft > 0 ? secondsLeft : null,
     notice: state.attemptFailed && state.step === 'account-choice' ? 'attempt-failed' : null,
   };

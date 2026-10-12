@@ -2,9 +2,8 @@ import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { BackHandler, Platform } from 'react-native';
 import { createPasswordRecoveryPort, type PasswordRecoveryPort } from '../../platform/passwordRecoveryProvider';
 import { useAccount } from '../../store/AccountProvider';
-import type { WelcomeAuthCallbacks, WelcomeAuthPlatform, WelcomeAuthViewState } from '../welcome/model';
+import type { PremiumChoice, WelcomeAuthCallbacks, WelcomeAuthPlatform, WelcomeAuthViewState } from '../welcome/model';
 import { WelcomeAuthShell } from '../welcome/WelcomeAuthShell';
-import type { PaywallOutcome } from '../../monetization/entitlement';
 import {
   initialWelcomeFlow,
   welcomeFlowBackTarget,
@@ -26,13 +25,25 @@ import {
  * Nothing here routes. When an account comes to hold this household the route
  * table closes this screen and opens the next one; when another account's
  * household is found it opens the conflict screen instead.
+ *
+ * Premium. A new user is offered Premium before she chooses an account. That decision is only an INTENT: this component has
+ * no RevenueCat access and starts no checkout, so nothing can be bought anonymously. The intent is reported upward through
+ * `onPremiumChoice` and acted on elsewhere, once an account holds the household and the mandatory consent is complete.
  */
-export function WelcomeAuthFlow({ mode, presentWelcomePaywall }: { mode: WelcomeFlowMode; presentWelcomePaywall?: () => Promise<PaywallOutcome> }) {
+export function WelcomeAuthFlow({ mode, onPremiumChoice }: { mode: WelcomeFlowMode; onPremiumChoice?: (choice: PremiumChoice | null) => void }) {
   const account = useAccount();
   const [flow, dispatch] = useReducer(welcomeFlowReducer, mode, initialWelcomeFlow);
   const platform = useOfferedPlatform();
   const now = useCooldownClock(flow.resendAvailableAt);
   const recovery = useRef<PasswordRecoveryPort | null>(null);
+
+  // The flow's state is the source of truth for the intent; the app-level holder only mirrors it. A fresh tree (mount) reports
+  // "no decision", which is correct: a restarted tree starts again at Welcome.
+  const reportChoice = useRef(onPremiumChoice);
+  reportChoice.current = onPremiumChoice;
+  useEffect(() => {
+    reportChoice.current?.(flow.premiumChoice);
+  }, [flow.premiumChoice]);
 
   // A request that settles after this screen has gone has nothing left to update.
   const mounted = useRef(true);
@@ -75,19 +86,7 @@ export function WelcomeAuthFlow({ mode, presentWelcomePaywall }: { mode: Welcome
   const callbacks: WelcomeAuthCallbacks = {
     onBegin: () => dispatch({ type: 'begin' }),
     onExistingAccount: () => dispatch({ type: 'existingAccount' }),
-    onPremiumPlans: () => {
-      if (flow.step !== 'premium' || flow.premiumBusy) return;
-      dispatch({ type: 'premiumStarted' });
-      void (async () => {
-        let outcome: PaywallOutcome = { kind: 'unavailable' };
-        try {
-          outcome = await (presentWelcomePaywall?.() ?? Promise.resolve({ kind: 'unavailable' as const }));
-        } catch {
-          outcome = { kind: 'error', message: 'paywall_unreachable' };
-        }
-        send({ type: 'premiumSettled', outcome: outcome.kind });
-      })();
-    },
+    onSelectPremium: () => dispatch({ type: 'premiumSelected' }),
     onContinueFree: () => dispatch({ type: 'premiumContinueFree' }),
     onBack: () => flow.step === 'recovery' ? cancelRecovery() : dispatch({ type: 'back' }),
     onApple: () => startProvider('apple'),
@@ -178,7 +177,7 @@ const noop = () => {};
 const INERT: WelcomeAuthCallbacks = {
   onBegin: noop,
   onExistingAccount: noop,
-  onPremiumPlans: noop,
+  onSelectPremium: noop,
   onContinueFree: noop,
   onApple: noop,
   onGoogle: noop,
