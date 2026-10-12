@@ -52,3 +52,23 @@ export const OUTCOME_IS_SUCCESS: Record<OutcomeKind, boolean> = {
   expired: false,
   no_effect: false,
 };
+
+// ------------------------------------------------------------------------------------------------------------
+// Sentences whose honesty depends on a foundation contract, said in ONE place so no screen can say them harder.
+// ------------------------------------------------------------------------------------------------------------
+
+/**
+ * WHAT A COMMITMENT WAS WAITING ON, WHEN THAT IS GONE (HA-009 — REMOVED != COMPLETED, MISSING != SATISFIED).
+ *
+ * Said only when a commitment's prerequisites are ALL retired or missing (readiness `needsReview`) and nothing live is
+ * left to wait for. It is neutral on purpose: it does not say the prerequisite was finished or handled, it does not say
+ * the commitment needs anything, and it does not say the commitment is ready. It says one true thing and leaves the
+ * choice with her. An edge Her Keys inferred and she has not confirmed is a possibility, so it is said as one.
+ */
+export const RETIRED_PREREQUISITE = {
+  stated: 'It was waiting on something that’s no longer there.',
+  unconfirmed: 'It may have been waiting on something that’s no longer there.',
+} as const;
+
+export const retiredPrerequisiteLine = (unconfirmed: boolean): string =>
+  unconfirmed ? RETIRED_PREREQUISITE.unconfirmed : RETIRED_PREREQUISITE.stated;

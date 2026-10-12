@@ -4,14 +4,16 @@
  * "no exclamation marks" or "no first-glance detail beyond titles" is proved over the whole range of days rather than
  * over one favourite fixture. Households are built through the domain's own operations.
  */
-import { addEvent } from '../../src/domain/events.ts';
+import { addEvent, removeEvent } from '../../src/domain/events.ts';
 import { captureNeedsMeItem } from '../../src/domain/needsMe.ts';
-import { completeOneMove } from '../../src/domain/oneMove.ts';
+import { completeOneMove, oneMoveRecordId } from '../../src/domain/oneMove.ts';
 import { accept, acknowledge, addPerson, decline, delegate, returnToSelf } from '../../src/domain/responsibility.ts';
 import { setCapacity, addDependency } from '../../src/domain/structure.ts';
+import { archiveTask, completeTask } from '../../src/domain/tasks.ts';
 import { demoState, onboardedState } from '../support/fixtures.mjs';
+import { SYSTEM } from '../support/provenance.mjs';
 import { richHousehold } from '../support/richHousehold.mjs';
-import { DAY, NEXT_DAY, at, dense, ev, eventNamed, facet, household, mkCtx, nyMs, taskNamed, tk, valid, withAction, withMove } from './fixtures.mjs';
+import { DAY, NEXT_DAY, at, dense, ev, eventNamed, facet, household, mkCtx, nyInstant, nyMs, taskNamed, tk, valid, withAction, withMove } from './fixtures.mjs';
 
 const ordinary = () => {
   let s = household();
@@ -91,6 +93,64 @@ const onYourMind = () => {
   return withMove(valid(s));
 };
 
+/** `from` requires `to`. The edge is written through the domain, so it is the shape the product would really store. */
+const requiring = (s, from, to) => {
+  const result = addDependency(s, mkCtx(), { relation: 'requires', from, to });
+  if (result.refusal !== null) throw new Error(`fixture edge refused: ${result.refusal}`);
+  return result.state;
+};
+const task = (s, title) => ({ kind: 'task', id: taskNamed(s, title).id });
+const event = (s, title) => ({ kind: 'event', id: eventNamed(s, title).id });
+
+/**
+ * A One Move she had ALREADY been given, stored as the domain stores one — and then the situation changed under it. The machinery
+ * no longer offers a task that cannot be done yet (a blocked task, which includes one whose only prerequisite is gone), so this is
+ * the way a gone prerequisite can reach the One Move: the move was selected while the task was still ready.
+ */
+const selectedMoveOn = (state, ref) => ({
+  ...state,
+  oneMoves: [{ id: oneMoveRecordId(DAY), forDate: DAY, targetId: ref.id, targetType: ref.kind, status: 'selected', decidedAt: nyInstant(7), completedAt: null, provenance: SYSTEM, scope: 'personal' }],
+});
+
+/** HA-009 — the only thing a commitment waited on was SET ASIDE (a cancelled fitting): not needed, and not done. */
+const removedPrerequisite = () => {
+  let s = ev(household(), { title: 'Fitting appointment', from: [16], to: [17], day: 17 });
+  s = tk(s, { title: 'Pay the tailor', minutes: 10 });
+  s = requiring(s, task(s, 'Pay the tailor'), event(s, 'Fitting appointment'));
+  s = selectedMoveOn(s, task(s, 'Pay the tailor'));
+  return valid(removeEvent(s, mkCtx(), eventNamed(s, 'Fitting appointment').id));
+};
+
+/** The same, for an archived task, plus a live task that still matters — the two are never confused. */
+const archivedPrerequisite = () => {
+  let s = tk(household(), { title: 'Book the venue', minutes: 10 });
+  s = tk(s, { title: 'Get the quote', plan: { kind: 'unplanned' } });
+  s = requiring(s, task(s, 'Book the venue'), task(s, 'Get the quote'));
+  s = selectedMoveOn(s, task(s, 'Book the venue'));
+  return valid(archiveTask(s, mkCtx(), taskNamed(s, 'Get the quote').id));
+};
+
+/** One prerequisite still live, one archived, one completed, one removed event: only the live one is spoken of. */
+const mixedPrerequisites = () => {
+  let s = ev(household(), { title: 'Site visit', from: [16], to: [17], day: 17 });
+  for (const title of ['Get the quote', 'Pick the date', 'Pay the deposit']) s = tk(s, { title, plan: { kind: 'unplanned' } });
+  s = tk(s, { title: 'Book the venue', minutes: 10 });
+  for (const to of [task(s, 'Get the quote'), task(s, 'Pick the date'), task(s, 'Pay the deposit'), event(s, 'Site visit')]) s = requiring(s, task(s, 'Book the venue'), to);
+  s = archiveTask(s, mkCtx(), taskNamed(s, 'Pick the date').id);
+  s = completeTask(s, mkCtx(), taskNamed(s, 'Pay the deposit').id);
+  s = selectedMoveOn(s, task(s, 'Book the venue'));
+  return valid(removeEvent(s, mkCtx(), eventNamed(s, 'Site visit').id));
+};
+
+/** Pickup was handed to Grandma June, then the pickup itself was removed: it is not live work, and it was not "handled". */
+const delegatedThenRemoved = () => {
+  let s = ev(household(), { title: 'School pickup', from: [15, 30], to: [16] });
+  s = addPerson(s, mkCtx(nyMs(9)), { displayName: 'Grandma June', relationship: 'grandparent' });
+  s = delegate(s, mkCtx(nyMs(12)), { about: event(s, 'School pickup'), to: { kind: 'person', id: s.people[0].id }, ackWithinMinutes: 30 });
+  s = acknowledge(s, mkCtx(nyMs(13)), s.responsibilities[0].id);
+  return valid(removeEvent(s, mkCtx(nyMs(13, 30)), eventNamed(s, 'School pickup').id));
+};
+
 /** Every situation, as { name, state, nowMs }. */
 export function corpus() {
   const list = [
@@ -134,6 +194,10 @@ export function corpus() {
     { name: 'capacity override', state: withCapacityOverride(), nowMs: nyMs(9) },
     { name: 'on your mind', state: onYourMind(), nowMs: nyMs(9) },
     { name: 'demo', state: onboardedState(demoState(DAY)), nowMs: nyMs(9) },
+    { name: 'R removed event prerequisite', state: removedPrerequisite(), nowMs: nyMs(9) },
+    { name: 'R archived task prerequisite', state: archivedPrerequisite(), nowMs: nyMs(9) },
+    { name: 'R mixed prerequisites', state: mixedPrerequisites(), nowMs: nyMs(9) },
+    { name: 'C delegated, then removed', state: delegatedThenRemoved(), nowMs: nyMs(14) },
   ];
   return list;
 }

@@ -2,7 +2,7 @@ import type { Provenance } from '../../../domain/foundation/provenance';
 import { refKey, type TypedRef } from '../../../domain/foundation/typedRef';
 import { relatedTo } from '../../../domain/reasoning/related';
 import type { AppState } from '../../../domain/state';
-import { blockersOf } from '../../../domain/structure';
+import { blockersOf, readinessOf, unavailablePrerequisitesOf } from '../../../domain/structure';
 import { describeRef, sourceOf } from './refs';
 import type { SourceLine, TodayRoute } from './types';
 
@@ -29,12 +29,36 @@ function named(state: AppState, ref: TypedRef, edge: { provenance: Provenance } 
   return info.title === null ? [] : [{ ref, title: info.title, route: info.route, source: edge ? sourceOf(edge) : null }];
 }
 
-/** What `ref` still waits on: the things it requires that are not done. */
+/**
+ * What `ref` still waits on: the LIVE things it requires that are not done. `blockersOf` names only pending
+ * prerequisites (HA-009), so a removed event, an archived task or a missing row is never something a commitment "needs":
+ * nothing here can keep asserting that a gone thing still exists. Those are `retiredRequirementsOf`.
+ */
 export function requirementsOf(state: AppState, ref: TypedRef): Requirement[] {
   const unmet = blockersOf(state, ref);
   if (unmet.length === 0) return [];
   const edges = relatedTo(state, ref).dependencies;
   return unmet.flatMap((to) => named(state, to, edges.find((d) => d.relation === 'requires' && refKey(d.from) === refKey(ref) && refKey(d.to) === refKey(to))));
+}
+
+/**
+ * A commitment whose prerequisites are ALL gone — removed, archived, abandoned or missing — with nothing live left to
+ * wait for (readiness `needsReview`). Returns `null` for anything else: ready, or still blocked by something live (then
+ * `requirementsOf` speaks, and the gone ones are not mentioned at all).
+ *
+ * This is the only thing Today may say about them: that something it was waiting on is no longer there. Never that it
+ * was finished, never that the commitment needs it, never that the commitment is ready. It carries the relationship's
+ * own provenance, like `speakable`: when every gone prerequisite rests only on Her Keys' unconfirmed claim, the wording
+ * must say "may".
+ */
+export function retiredRequirementsOf(state: AppState, ref: TypedRef): { unconfirmed: boolean } | null {
+  if (readinessOf(state, ref) !== 'needsReview') return null;
+  const edges = relatedTo(state, ref).dependencies;
+  const anyStated = unavailablePrerequisitesOf(state, ref).some(({ ref: to }) => {
+    const edge = edges.find((d) => d.relation === 'requires' && refKey(d.from) === refKey(ref) && refKey(d.to) === refKey(to));
+    return !(edge && sourceOf(edge).uncertain);
+  });
+  return { unconfirmed: !anyStated };
 }
 
 /**

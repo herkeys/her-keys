@@ -8,7 +8,7 @@ import type { AttentionItem, AttentionUrgency } from '../../../domain/reasoning/
 import type { Briefing } from '../../../domain/reasoning/briefing';
 import { needsMePersonally } from '../../../domain/responsibility';
 import type { AppState } from '../../../domain/state';
-import { isDone } from '../../../domain/structure';
+import { standingOf } from '../../../domain/structure';
 import { relativeDay } from '../formatDay';
 import { ACTION_VERB } from './phrases';
 import { capitalize, describeRef, holderName, timeLabelAt } from './refs';
@@ -77,7 +77,9 @@ export function attentionView(
   for (const r of latest.values()) {
     // Live and delegated (the briefing's `delegated`), or handed back to her (declined / returned).
     if (!inFlight.has(r.id) && r.state !== 'declined' && r.state !== 'returned') continue;
-    if (isDone(state, r.about)) continue;
+    // Only live work is shown. A finished thing has nothing left to wait for; a removed, archived or missing one was not
+    // finished — it is retired (HA-009) — and is not shown as still-live work either. Neither is ever counted as handled.
+    if (standingOf(state, r.about).standing !== 'pending') continue;
     if (unanswered.has(r.id)) continue; // already a row, from attentionFor
     if (!onRadar(state, day, r.about)) continue;
 

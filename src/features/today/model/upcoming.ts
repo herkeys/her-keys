@@ -30,6 +30,11 @@ import type { UpcomingSection } from './types';
  * A dependency is a stored relationship with its own provenance. One she stated is said flatly ("needs");
  * one Her Keys inferred and she has not confirmed is a possibility and is said as one ("may need", with the
  * permanent unconfirmed badge) — and only when there is no stated requirement to speak of instead.
+ *
+ * Only what is still LIVE is ever "needed" (HA-009). A prerequisite that was removed, archived or is missing is not
+ * finished and is not waited for: it is never named here, and never counted in "and N more". A commitment left with
+ * only such prerequisites constrains nothing today, so this line stays silent about it; the one neutral line about it
+ * (`RETIRED_PREREQUISITE`, in phrases.ts) is said with the One Move's context, where it can sit beside the row.
  */
 export function upcomingSection(state: AppState, nowMs: number, today: LocalDate): UpcomingSection | null {
   const tz = state.user.timezone;

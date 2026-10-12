@@ -6,8 +6,9 @@ import type { DayView } from '../../../domain/projectDay';
 import type { AppState, OneMoveRecord, OneMoveTargetType } from '../../../domain/state';
 import type { OneMoveItem } from '../../../types';
 import { relativeDay } from '../formatDay';
+import { retiredPrerequisiteLine } from './phrases';
 import { describeRef, eventRouteFor, needsMeRoute, sourceOf, taskRoute } from './refs';
-import { dependentsOf, requirementsOf, speakable } from './requirements';
+import { dependentsOf, requirementsOf, retiredRequirementsOf, speakable } from './requirements';
 import type { OneMoveCompletion, OneMoveSection, OneMoveWhy, SourceLine, TodayRoute } from './types';
 
 /**
@@ -116,6 +117,9 @@ function targetSource(state: AppState, targetType: OneMoveTargetType | null, tar
  * This is context about the row, not a reason for the choice: the stored decision did not cite it, so it is kept out of
  * `reasons` and never changes `basis`. It is said the way the relationship's own provenance allows — a `requires` edge
  * Her Keys inferred and she has not confirmed is "may need", never "needs".
+ *
+ * It names only what is still LIVE (HA-009). A prerequisite that was removed, archived or is missing is never "needed"
+ * and never "done": when nothing live is left and something is gone, the one neutral line says exactly that.
  */
 function contextFor(state: AppState, record: OneMoveRecord): string[] {
   const kind = record.targetType;
@@ -128,6 +132,8 @@ function contextFor(state: AppState, record: OneMoveRecord): string[] {
     const [first] = waitsOn.items;
     lines.push(`It ${waitsOn.unconfirmed ? 'may need' : 'needs'} “${first.title}”${moreCount(waitsOn.items.length - 1)} first.`);
   }
+  const retired = retiredRequirementsOf(state, ref);
+  if (retired !== null) lines.push(retiredPrerequisiteLine(retired.unconfirmed));
   const waitedOnBy = speakable(dependentsOf(state, ref));
   if (waitedOnBy !== null) {
     const [first] = waitedOnBy.items;

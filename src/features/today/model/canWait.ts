@@ -6,7 +6,7 @@ import type { DayView } from '../../../domain/projectDay';
 import type { AttentionItem } from '../../../domain/reasoning/attention';
 import { liveResponsibilityFor } from '../../../domain/responsibility';
 import type { AppState } from '../../../domain/state';
-import { isDone } from '../../../domain/structure';
+import { standingOf } from '../../../domain/structure';
 import { isMovable } from '../../daily-load/computeDailyLoad';
 import { taskRoute } from './refs';
 import type { CanWaitItem, CanWaitSection } from './types';
@@ -24,7 +24,9 @@ import type { CanWaitItem, CanWaitSection } from './types';
  *   - any attention reason names it (a deadline today, soon, or overdue; a risk)
  *   - it has a stated consequence of high or worse
  *   - it has a deadline-with-a-time, or a latest-finish, on or before tomorrow
- *   - something live requires it (a dependency: deferring it would strand that)
+ *   - something LIVE requires it (a dependency: deferring it would strand that). "Live" is the dependent's own standing
+ *     (HA-009): still pending. A dependent that is finished, or that was set aside (a removed event, an archived task) or
+ *     is not there, is not stranded by anything — and a removed event is not "done", so the test is liveness, not `isDone`.
  *   - it is delegated, or a handoff is in flight
  *   - it is today's One Move
  *
@@ -64,7 +66,7 @@ export function canWaitSection(args: {
     if (facets.latestFinishAt !== null && logicalDateAt(epochMsOf(facets.latestFinishAt), tz) <= tomorrow) continue;
 
     const requiredByLive = state.dependencies.some(
-      (d) => d.status === 'active' && d.relation === 'requires' && d.to.kind === 'task' && d.to.id === row.id && !isDone(state, d.from)
+      (d) => d.status === 'active' && d.relation === 'requires' && d.to.kind === 'task' && d.to.id === row.id && standingOf(state, d.from).standing === 'pending'
     );
     if (requiredByLive) continue;
     if (liveResponsibilityFor(state, ref) !== null) continue;
