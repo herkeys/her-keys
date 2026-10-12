@@ -109,7 +109,15 @@ describe('B — Feature 02 writes canonical state through the store and knows no
 
   test('no Feature 02 file imports a sync mechanism, the platform, persistence or the account layer; only the sync VOCABULARY is allowed', () => {
     const offenders = F02_FILES.flatMap((file) => forbiddenImports(readFileSync(file, 'utf8')).map((spec) => `${relative(ROOT, file)} imports ${spec}`));
-    assert.deepEqual(offenders, []);
+    // Build 2 (Gemini) legitimately gave the Talk It Out CONTEXT the server-backed AI client, taken from the composition root. That is
+    // the one exception, and it is exact: the context may import `herKeysAiClient` from it and nothing else (no sync, no identity,
+    // no store write), and no other Feature 02 file may import the composition root at all.
+    const context = join(ROOT, 'src', 'store', 'TalkItOutContext.tsx');
+    const contextSource = stripComments(readFileSync(context, 'utf8'));
+    const fromComposition = [...contextSource.matchAll(/import\s*\{([^}]*)\}\s*from\s*'\.\/accountRuntimeInstance'/g)].flatMap((m) => m[1].split(',').map((name) => name.trim()).filter(Boolean));
+    assert.deepEqual(fromComposition, ['herKeysAiClient'], 'the context takes only the AI client from the composition root');
+    const allowedException = `${relative(ROOT, context)} imports ./accountRuntimeInstance`;
+    assert.deepEqual(offenders.filter((offender) => offender !== allowedException), []);
   });
 
   test('no Feature 02 file names a queue, a namespace, a coordinator, an identity write or the composition', () => {
