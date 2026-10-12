@@ -93,30 +93,6 @@
       "evidence": "Documented as PP-D10 (P7) pending device proof."
     },
     {
-      "id": "PC-07",
-      "file": "src/features/welcome/views/EmailEntryView.tsx",
-      "count": 1,
-      "expression": "KeyboardAvoidingView behavior 'padding' (iOS) / undefined (Android, relies on adjustResize)",
-      "class": "E",
-      "capability": "Welcome tree email entry",
-      "difference": "Keyboard avoidance differs by OS; the goal (field and action stay visible above the keyboard) is the same. Presentational shell only — no auth behavior.",
-      "iosAndroidEquivalent": true,
-      "runtime": "RT-18",
-      "evidence": "Same pattern as PC-06 (Systems editor); Android relies on the window resize mode. Device proof pending with the welcome tree integration pass."
-    },
-    {
-      "id": "PC-08",
-      "file": "src/features/welcome/views/OtpEntryView.tsx",
-      "count": 1,
-      "expression": "KeyboardAvoidingView behavior 'padding' (iOS) / undefined (Android, relies on adjustResize)",
-      "class": "E",
-      "capability": "Welcome tree OTP entry",
-      "difference": "Keyboard avoidance differs by OS; the goal (field and action stay visible above the keyboard) is the same. Presentational shell only — no auth behavior.",
-      "iosAndroidEquivalent": true,
-      "runtime": "RT-18",
-      "evidence": "Same pattern as PC-06 (Systems editor); Android relies on the window resize mode. Device proof pending with the welcome tree integration pass."
-    },
-    {
       "id": "PC-09",
       "file": "src/features/account/WelcomeAuthFlow.tsx",
       "count": 1,

@@ -295,8 +295,8 @@ This section summarizes [`HK_PLATFORM_PARITY_REGISTRY.json`](HK_PLATFORM_PARITY_
 | PC-04 | `src/monetization/revenueCatClient.ts` | 3 | A | Per-store RevenueCat public key |
 | PC-05 | `src/features/talk-it-out/TalkItOutView.tsx` | 2 | E | Keyboard avoidance (RT-18) |
 | PC-06 | `src/features/systems/editor/SystemEditor.tsx` | 1 | E | Keyboard avoidance; Android relies on `adjustResize` (PP-D10, RT-18) |
-| PC-07 | `src/features/welcome/views/EmailEntryView.tsx` | 1 | E | Keyboard avoidance, welcome tree email entry (presentational shell); Android relies on `adjustResize` (RT-18) |
-| PC-08 | `src/features/welcome/views/OtpEntryView.tsx` | 1 | E | Keyboard avoidance, welcome tree OTP entry (presentational shell); Android relies on `adjustResize` (RT-18) |
+| PC-07 | — | — | — | RETIRED in Build 2A (commit `2641898`): the welcome-tree email entry no longer has a platform conditional. All four email/password/OTP/recovery screens use `padding` keyboard avoidance on iOS and Android (`EMAIL_AUTH_KEYBOARD_BEHAVIOR`), so no difference remains to approve. Pinned by `tests/androidAuthKeyboard.test.mjs` |
+| PC-08 | — | — | — | RETIRED in Build 2A (commit `2641898`): the welcome-tree OTP entry uses `padding` on both platforms, for the same reason. Device proof (RT-18) is still pending |
 
 No class C (parity defect) or D (dead) conditional remains.
 
