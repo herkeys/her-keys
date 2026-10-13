@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, type ViewStyle } from 'react-native';
+import { Platform, Pressable, StyleSheet, type ViewStyle } from 'react-native';
 import { color, interaction, radius, sizing, spacing } from '../tokens';
 import { AppText } from './AppText';
 
@@ -45,6 +45,7 @@ export function Button({
       style={({ pressed }) => [
         styles.base,
         size === 'sm' ? styles.sizeSm : styles.sizeMd,
+        size === 'sm' && Platform.OS === 'android' ? styles.androidSmallTarget : null,
         variantStyles[variant],
         disabled ? (variant === 'ghost' ? styles.disabledGhost : styles.disabled) : null,
         pressed && !disabled ? styles.pressed : null,
@@ -84,6 +85,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     minHeight: sizing.control.heightSmall,
   },
+  // Android's minimum touch target is 48dp; keep compact iOS/web sizing intact.
+  androidSmallTarget: { minHeight: sizing.control.height },
   pressed: { opacity: interaction.pressedOpacity },
   disabled: { backgroundColor: color.action.disabled },
   disabledGhost: { backgroundColor: 'transparent' },

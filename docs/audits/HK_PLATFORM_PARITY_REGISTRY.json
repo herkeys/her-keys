@@ -23,6 +23,17 @@
   },
   "conditionals": [
     {
+      "id": "PC-B2B-A02",
+      "file": "src/design/components/Button.tsx",
+      "count": 1,
+      "expression": "size === 'sm' && Platform.OS === 'android' -> 48dp minimum height",
+      "class": "A",
+      "capability": "Compact button touch targets",
+      "difference": "Android compact buttons use a 48dp minimum touch target; iOS and web retain their existing 44pt minimum. Labels, handlers and disabled behavior are unchanged.",
+      "iosAndroidEquivalent": true,
+      "evidence": "B2B-A02: tests/platformParity/androidButtonTarget.test.mjs checks rendered RN style and callback contracts for Android, iOS and web. Native layout and TalkBack remain NOT RUN."
+    },
+    {
       "id": "PC-01",
       "file": "src/platform/secureStore.ts",
       "count": 1,
