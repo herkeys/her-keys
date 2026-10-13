@@ -66,7 +66,7 @@ export function MealSheet(props: MealSheetProps) {
 
   return (
     <Sheet visible={visible} onClose={onClose} accessibilityLabel={TITLES[mode]}>
-      <ScrollView style={styles.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.scroll} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets showsVerticalScrollIndicator={false}>
         <AppText variant="sectionTitle">{TITLES[mode]}</AppText>
         {notice ? (
           <View style={styles.block}>

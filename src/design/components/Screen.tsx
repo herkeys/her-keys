@@ -26,6 +26,9 @@ export function Screen({ children, scroll = true, bottomClearance }: ScreenProps
           contentContainerStyle={[styles.scrollContent, { paddingBottom: bottom }]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          // iOS draws the keyboard over the app instead of resizing it (Android's adjustResize does). This iOS-only prop (not in
+          // Android's native view config) adds the overlap as a bottom inset and scrolls the focused field into view.
+          automaticallyAdjustKeyboardInsets
         >
           {children}
         </ScrollView>

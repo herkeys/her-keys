@@ -75,7 +75,7 @@ export function RecordSheet({ visible, mode, initial, childOptions, notice, busy
 
   return (
     <Sheet visible={visible} onClose={onClose} accessibilityLabel={title}>
-      <ScrollView style={styles.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.scroll} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets showsVerticalScrollIndicator={false}>
         <AppText variant="sectionTitle">{title}</AppText>
         {notice ? (
           <View style={styles.block}>
