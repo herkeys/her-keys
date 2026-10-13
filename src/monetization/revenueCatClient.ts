@@ -23,6 +23,18 @@ export interface ConfigureResult {
 }
 
 let configured = false;
+let identifiedAccountId: string | null = null;
+// Account changes must not interleave with a restore or a paywall's store transaction.
+let accountSdkOperation: Promise<void> = Promise.resolve();
+function withAccountSdkOperation<T>(operation: () => Promise<T>): Promise<T> {
+  const result = accountSdkOperation.then(operation);
+  accountSdkOperation = result.then(() => {}, () => {});
+  return result;
+}
+
+async function matchesIdentifiedAccount(expected: string | null): Promise<boolean> {
+  return configured && expected !== null && identifiedAccountId === expected && await Purchases.getAppUserID() === expected;
+}
 
 function currentPlatformApiKey(): string | undefined {
   if (Platform.OS === 'ios') return revenueCatApiKeys.ios;
@@ -62,10 +74,8 @@ export type IdentifyResult = 'identified' | 'signed_out' | 'not_configured' | 's
  * subject, no household id — an entitlement system does not need to know who
  * she is, only which account is asking.
  *
- * Authenticated paywalls use the account UUID. The upfront Premium offer is
- * pre-registration and may begin under RevenueCat's anonymous SDK identity;
- * Purchases.logIn(accountId) must be checked on real store sandbox accounts
- * for correct purchase transfer/restoration before public release.
+ * The upfront Premium offer records an intent only; checkout waits for account
+ * binding and consent. Store operations require the successfully identified UUID.
  * Passing `null` logs out, which
  * returns RevenueCat to an anonymous id rather than leaving the previous
  * account's entitlements visible to the next person to sign in on this device.
@@ -75,17 +85,22 @@ export type IdentifyResult = 'identified' | 'signed_out' | 'not_configured' | 's
  * committed, so the caller logs this and carries on.
  */
 export async function identifyRevenueCatAccount(accountId: string | null): Promise<IdentifyResult> {
-  if (!configured) return 'not_configured';
-  try {
-    if (accountId === null) {
-      await Purchases.logOut();
-      return 'signed_out';
+  return withAccountSdkOperation(async () => {
+    identifiedAccountId = null;
+    if (!configured) return 'not_configured';
+    try {
+      if (accountId === null) {
+        await Purchases.logOut();
+        return 'signed_out';
+      }
+      await Purchases.logIn(accountId);
+      if (await Purchases.getAppUserID() !== accountId) return 'sdk_error';
+      identifiedAccountId = accountId;
+      return 'identified';
+    } catch {
+      return 'sdk_error';
     }
-    await Purchases.logIn(accountId);
-    return 'identified';
-  } catch {
-    return 'sdk_error';
-  }
+  });
 }
 
 export function isRevenueCatConfigured(): boolean {
@@ -98,13 +113,16 @@ function activeEntitlementIds(info: CustomerInfo): string[] {
 
 /** `null` means the check could not be resolved (not configured, offline, SDK error) — callers must fail open. */
 export async function fetchActiveEntitlementIds(): Promise<string[] | null> {
-  if (!configured) return null;
-  try {
-    const info = await Purchases.getCustomerInfo();
-    return activeEntitlementIds(info);
-  } catch {
-    return null;
-  }
+  return withAccountSdkOperation(async () => {
+    const owner = identifiedAccountId;
+    try {
+      if (!await matchesIdentifiedAccount(owner)) return null;
+      const info = await Purchases.getCustomerInfo();
+      return await matchesIdentifiedAccount(owner) ? activeEntitlementIds(info) : null;
+    } catch {
+      return null;
+    }
+  });
 }
 
 export async function fetchCurrentOffering(): Promise<PurchasesOffering | null> {
@@ -125,39 +143,49 @@ export async function fetchCurrentOffering(): Promise<PurchasesOffering | null> 
  * notices.
  */
 export async function presentRevenueCatPaywall(offering: PurchasesOffering | null): Promise<PaywallOutcome> {
-  if (!configured) return { kind: 'unavailable' };
-  if (!offering) return { kind: 'no_offering' };
+  return withAccountSdkOperation(async () => {
+    if (!configured) return { kind: 'unavailable' };
+    if (!offering) return { kind: 'no_offering' };
 
-  try {
-    const result = await RevenueCatUI.presentPaywallIfNeeded({
-      offering,
-      requiredEntitlementIdentifier: HER_KEYS_PLUS_ENTITLEMENT,
-    });
-    switch (result) {
-      case PAYWALL_RESULT.PURCHASED:
-        return { kind: 'purchased' };
-      case PAYWALL_RESULT.RESTORED:
-        return { kind: 'restored' };
-      case PAYWALL_RESULT.NOT_PRESENTED:
-        return { kind: 'already_entitled' };
-      case PAYWALL_RESULT.CANCELLED:
-        return { kind: 'cancelled' };
-      case PAYWALL_RESULT.ERROR:
-      default:
-        return { kind: 'error', message: 'paywall_error' };
+    try {
+      const owner = identifiedAccountId;
+      if (!await matchesIdentifiedAccount(owner)) return { kind: 'unavailable' };
+      const result = await RevenueCatUI.presentPaywallIfNeeded({
+        offering,
+        requiredEntitlementIdentifier: HER_KEYS_PLUS_ENTITLEMENT,
+      });
+      if (!await matchesIdentifiedAccount(owner)) return { kind: 'unavailable' };
+      switch (result) {
+        case PAYWALL_RESULT.PURCHASED:
+          return { kind: 'purchased' };
+        case PAYWALL_RESULT.RESTORED:
+          return { kind: 'restored' };
+        case PAYWALL_RESULT.NOT_PRESENTED:
+          return { kind: 'already_entitled' };
+        case PAYWALL_RESULT.CANCELLED:
+          return { kind: 'cancelled' };
+        case PAYWALL_RESULT.ERROR:
+        default:
+          return { kind: 'error', message: 'paywall_error' };
+      }
+    } catch (error) {
+      return { kind: 'error', message: error instanceof Error ? error.message : 'unknown_error' };
     }
-  } catch (error) {
-    return { kind: 'error', message: error instanceof Error ? error.message : 'unknown_error' };
-  }
+  });
 }
 
-export async function restoreRevenueCatPurchases(): Promise<RestoreOutcome> {
-  if (!configured) return { kind: 'unavailable' };
-  try {
-    const info = await Purchases.restorePurchases();
-    const active = activeEntitlementIds(info);
-    return active.includes(HER_KEYS_PLUS_ENTITLEMENT) ? { kind: 'restored' } : { kind: 'no_purchases_found' };
-  } catch (error) {
-    return { kind: 'error', message: error instanceof Error ? error.message : 'unknown_error' };
-  }
+export async function restoreRevenueCatPurchases(expectedAccountId?: string): Promise<RestoreOutcome> {
+  const owner = expectedAccountId ?? identifiedAccountId;
+  return withAccountSdkOperation(async () => {
+    if (!configured) return { kind: 'unavailable' };
+    try {
+      if (!await matchesIdentifiedAccount(owner)) return { kind: 'unavailable' };
+      const info = await Purchases.restorePurchases();
+      if (!await matchesIdentifiedAccount(owner)) return { kind: 'unavailable' };
+      const active = activeEntitlementIds(info);
+      return active.includes(HER_KEYS_PLUS_ENTITLEMENT) ? { kind: 'restored' } : { kind: 'no_purchases_found' };
+    } catch (error) {
+      return { kind: 'error', message: error instanceof Error ? error.message : 'unknown_error' };
+    }
+  });
 }

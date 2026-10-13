@@ -1,4 +1,4 @@
-import { StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { AppText, Button, Overline } from '../../design/components';
 import { colors, spacing } from '../../design/tokens';
 import type { AuthProvider } from '../../domain/account/identity';
@@ -14,6 +14,9 @@ export interface AccountPanelProps {
   onSignIn: (provider: AuthProvider) => void;
   onSignOut: () => void;
   onClose: () => void;
+  onRestore?: () => void;
+  restoring?: boolean;
+  restoreNotice?: string | null;
 }
 
 /**
@@ -21,12 +24,12 @@ export interface AccountPanelProps {
  * connects it to account-backed sync. Fresh-device household adoption is not implemented yet. Signing out keeps everything on this phone; the next sign-in of the same account
  * resumes it. Presentational only — the route supplies the actions, and they all go through AccountRuntime.
  */
-export function AccountPanel({ mode, providers, busy, failed, onSignIn, onSignOut, onClose }: AccountPanelProps) {
+export function AccountPanel({ mode, providers, busy, failed, onSignIn, onSignOut, onClose, onRestore, restoring = false, restoreNotice }: AccountPanelProps) {
   const copy = COPY[mode];
   const offersProviders = mode === 'signIn' || mode === 'reconnect';
 
   return (
-    <View style={styles.root}>
+    <ScrollView contentContainerStyle={styles.root}>
       <View style={styles.body}>
         <Overline>{copy.overline}</Overline>
         <AppText variant="hero" accessibilityRole="header" style={styles.title}>
@@ -55,11 +58,17 @@ export function AccountPanel({ mode, providers, busy, failed, onSignIn, onSignOu
             <Button key={provider} label={PROVIDER_LABELS[provider]} disabled={busy} onPress={() => onSignIn(provider)} />
           ))}
 
-        {mode === 'connected' && <Button label="Sign out" variant="secondary" disabled={busy} onPress={onSignOut} />}
+        {mode === 'connected' && onRestore ? (
+          <>
+            <Button label={restoring ? 'Restoring purchases…' : 'Restore purchases'} variant="secondary" disabled={busy || restoring} onPress={onRestore} />
+            {restoreNotice ? <AppText variant="bodySm" style={styles.note} accessibilityLiveRegion="polite">{restoreNotice}</AppText> : null}
+          </>
+        ) : null}
+        {mode === 'connected' && <Button label="Sign out" variant="secondary" disabled={busy || restoring} onPress={onSignOut} />}
 
-        <Button label={mode === 'connected' ? 'Done' : 'Not now'} variant="ghost" onPress={onClose} disabled={busy && mode !== 'resolving'} />
+        <Button label={mode === 'connected' ? 'Done' : 'Not now'} variant="ghost" onPress={onClose} disabled={restoring || (busy && mode !== 'resolving')} />
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
@@ -97,7 +106,7 @@ const COPY: Record<AccountModalMode, { overline: string; title: string; lede: st
 };
 
 const styles = StyleSheet.create({
-  root: { flex: 1 },
+  root: { flexGrow: 1 },
   body: { flex: 1, justifyContent: 'center', paddingHorizontal: spacing.xl },
   title: { marginTop: spacing.md },
   lede: { marginTop: spacing.lg },

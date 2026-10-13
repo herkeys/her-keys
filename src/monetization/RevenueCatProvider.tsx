@@ -23,7 +23,7 @@ export interface EntitlementContextValue {
   isPlus: boolean;
   refresh: () => Promise<void>;
   presentPaywall: (placement: PaywallPlacement) => Promise<PaywallOutcome>;
-  restore: () => Promise<RestoreOutcome>;
+  restore: (expectedAccountId?: string) => Promise<RestoreOutcome>;
 }
 
 const EntitlementContext = createContext<EntitlementContextValue | null>(null);
@@ -67,8 +67,8 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
     [refresh]
   );
 
-  const restore = useCallback(async (): Promise<RestoreOutcome> => {
-    const outcome = await restoreRevenueCatPurchases();
+  const restore = useCallback(async (expectedAccountId?: string): Promise<RestoreOutcome> => {
+    const outcome = await restoreRevenueCatPurchases(expectedAccountId);
     if (outcome.kind === 'restored') await refresh();
     return outcome;
   }, [refresh]);
