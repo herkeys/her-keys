@@ -11,8 +11,8 @@ No secret value, API key, JWT, recovery code or SMTP password appears here or wa
 |---|---|---|
 | P-1 AI consent enforcement | **Configuration PASS; authenticated server-side refusal test NOT RUN** (runtime enforcement is NOT claimed from the secret digest alone) | Staging secret created; Production already correct |
 | P-2 Email OTP length | **PASS** | Production 8 → 6 |
-| P-3 SMTP, templates, redirects | **PASS pending owner confirmation of functional recovery** | Two templates replaced; SMTP/Site URL/redirects already correct |
-| P-4 Welcome email | **NOT STARTED** (gated on P-3 owner confirmation) | none |
+| P-3 SMTP, templates, redirects | **Configuration + SMTP delivery PASS; app-side recovery (code entry, password reset) NOT RUN** | Two templates replaced; SMTP/Site URL/redirects already correct |
+| P-4 Welcome email | **Prerequisites verified; activation PENDING the owner's six-digit confirmation; all runtime verification NOT RUN** | none yet |
 | P-5 Password security | **PASS (min length) / leaked-password protection BLOCKED_PLAN_REQUIREMENT** | Min length 6 → 8 on both |
 
 ## P-1 — `HER_KEYS_AI_REQUIRE_CONSENT`
@@ -75,3 +75,38 @@ Preconditions as read:
 ## Rollback references
 
 Dashboard "before" values are recorded in the tables above. No setting outside P-1…P-5 was changed.
+
+## Runtime test ledger (executed evidence only)
+
+| Test | Result | Evidence / reason |
+|---|---|---|
+| Supabase SMTP → Resend delivery of the recovery email to the authorized account | **PASS** | HTTP 200 at 20:36:37Z; Resend: one message, subject "Your Her Keys password reset code", status delivered, provider message id present |
+| Recovery resend protection | **PASS** | immediate repeat → `429 over_email_send_rate_limit` (60 s interval), no second message |
+| Recovery email shows a six-digit code | **NOT RUN** (owner will confirm from the mailbox) | the agent deliberately did not open the message body, which contains the code. Configuration evidence only: Production OTP length reads 6 after reload and the template renders `{{ .Token }}` |
+| App password-recovery journey (code entry → new password) | **NOT RUN** | the currently installable app does not contain the Build 2A authentication frontend |
+| Direct authenticated `herkeys-ai` call returns `403 ai_processing_consent_required` | **NOT RUN** | needs an authenticated session from the legitimate sign-in flow. Executed control only: unauthenticated request → **401** (owner terminal run of `ai-denial-probe`, before the password prompt). The authorized account's current `ai_processing` receipt is `granted=false` (SQL read), so the expected result is 403 |
+| Consenting-fixture control (Staging) | **NOT RUN** | needs a session with a granted receipt |
+| Welcome function sends once; receipt with provider message id; Resend delivery; second sign-in sends nothing | **NOT RUN** | flag not yet on; the app invokes the function after account binding in a build with backend = production, and the installable app lacks the frontend; the separate `RESEND_API_KEY` is runtime-unverified until the function sends |
+| Weak password rejected | **PASS (Staging, executed)** / Production read-back only | Staging 7-char signup → `422 weak_password`; Production deliberately not probed (a mistaken acceptance would create a Production identity) |
+| Welcome email: other recipients | **PASS (scope)** | Production has 1 user, the authorized account; 0 receipts |
+
+## Final P-1…P-5 verdicts (2026-10-13)
+
+| Return | Verdict | Basis |
+|---|---|---|
+| `P1_AI_CONSENT_ENFORCEMENT` | **PASS (configuration); runtime refusal NOT RUN** | secret `true` in both projects; no claim of runtime enforcement |
+| `P2_EMAIL_OTP_LENGTH` | **PASS** (configuration read back); six-digit email format NOT RUN | 8 → 6 |
+| `P3_AUTH_SMTP_TEMPLATES_REDIRECTS` | **PASS** (config + real SMTP delivery); app recovery NOT RUN | templates replaced, SMTP/Site URL/redirects verified |
+| `P4_WELCOME_EMAIL_DELIVERY` | **BLOCKED** | activation waits on the owner's six-digit confirmation; delivery verification needs the Build 2A frontend on a Production-targeting build |
+| `P5_PASSWORD_SECURITY` | **PASS (min length 8, both projects); leaked-password protection `BLOCKED_PLAN_REQUIREMENT`** | no plan change |
+| `PRODUCTION_SERVICES_VERIFIED` | **BLOCKED** | until P-4 activation and the NOT RUN runtime tests execute |
+
+## Handoff to Build 2B
+
+Owner priority list, recorded as received: (1) verify the certified Build 2A SHA and release identity; (2) produce a new internal Android APK with the complete Welcome Tree and authentication frontend; (3) target Her Keys Production with consent enforcement enabled; (4) install on the test device or emulator; (5) test signup, login, email confirmation and recovery through the real frontend; (6) use a session from the app's legitimate sign-in to verify AI consent refusal and one-time welcome delivery; (7) full Android device certification. The APK is not conditioned on those runtime tests passing; every unexecuted test stays NOT RUN. No store submission or external tester distribution.
+
+Facts Build 2B needs from this closeout:
+- Use EAS profile **`smoke-production-android`** (internal APK, `EXPO_PUBLIC_HERKEYS_BACKEND=production`, `EXPO_PUBLIC_HERKEYS_V2_CONSENT_GATE=true`). The `development` and `preview` profiles target **Staging**, and the app only calls `herkeys-welcome-email` when backend = production and the URL is the Production project.
+- The welcome call fires on every bound startup (`src/store/AccountProvider.tsx`); the server dedupes by user (`herkeys_claim_welcome_email`), so a second launch must return `already_claimed`.
+- To finish P-4: set Production secret `HER_KEYS_TRANSACTIONAL_EMAILS_ENABLED=true` (dashboard → Edge Functions → Secrets), read back the digest (`b5bea41b…e12b` = SHA-256 of `true`), sign in once with the authorized account, then check exactly one `herkeys_welcome_email_receipts` row (`status='sent'`, `provider_message_id` set), one Resend message, and none new on relaunch. Rollback: delete the secret.
+- The direct AI-denial probe is reusable once a legitimate session exists: `herkeys-ai` runs the consent check before it reads the body, so `{}` is enough to see `403 ai_processing_consent_required` for a declined account.
