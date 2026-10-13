@@ -860,6 +860,18 @@ const LATER_FEATURES = [
       ["tests/today/syncNotice.test.mjs", "Build 2A F01 reconciliation: the sync notice never says \"0 changes need your attention\" (recovered from validate/hk-ir01-f01)"],
     ],
   },
+  {
+    id: 'HK-BUILD2B-ANDROID (Android candidate audit)',
+    branch: null,
+    owned: [],
+    migrations: [],
+    schemas: [],
+    rootCollections: [],
+    syncKinds: [],
+    shared: [
+      ['src/design/components/Button.tsx', 'B2B-A02: only Android compact buttons receive a 48dp minimum height; iOS/web, callbacks and business behavior are unchanged; platformParity/androidButtonTarget regression verifies the boundary'],
+    ],
+  },
 
 ];
 

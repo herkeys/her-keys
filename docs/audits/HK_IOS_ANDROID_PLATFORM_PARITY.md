@@ -1,5 +1,15 @@
 # Her Keys V1: iOS / Android Platform Parity Audit (Finalization Part 1)
 
+## Build 2B Android addendum (2026-10-13)
+
+**B2B-A02 / PC-B2B-A02:** compact `Button` controls previously supplied a 44dp minimum height on Android. Android's accessibility
+guidance recommends at least 48dp touch targets. `src/design/components/Button.tsx` now supplies a 48dp minimum only for Android
+compact buttons; iOS/web remain 44 and regular buttons remain 48. Labels, callbacks, disabled states, business behavior and data
+contracts are unchanged. `tests/platformParity/androidButtonTarget.test.mjs` verifies the rendered style and handler contracts
+on all three platforms. The Android assertion failed before repair (`44 !== 48`). Native layout and TalkBack tests are **NOT RUN**.
+Guidance: https://developer.android.com/guide/topics/ui/accessibility/apps#use-large-simple-controls.
+This addendum does not recertify the historical V1 audit or its old live-service findings below.
+
 PART1_RESULT=FAIL
 
 - **Audit branch:** `audit/ios-android-platform-parity`.
