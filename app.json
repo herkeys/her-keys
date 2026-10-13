@@ -14,7 +14,8 @@
       "buildNumber": "2",
       "icon": "./assets/her-keys-4-house.png",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "UIUserInterfaceStyle": "Light"
       }
     },
     "android": {
@@ -79,6 +80,12 @@
           "dark": {
             "backgroundColor": "#0B0A08",
             "image": "./assets/splash-brand.png"
+          },
+          "ios": {
+            "dark": {
+              "backgroundColor": null,
+              "image": null
+            }
           }
         }
       ],
