@@ -244,8 +244,7 @@ export function useSystemEditor(systemId: string | undefined) {
     schedulePaused,
     categories: categoriesInOrder(state),
     /**
-     * Who a routine may be marked as being for: the household's EXISTING children, and no one else (HA-011). The control that
-     * shows them is left to integration; the choices and `actions.setSubject` are the whole contract it needs.
+     * Who a routine may be marked as being for: the household's EXISTING children, and no one else (HA-011).
      */
     subjectChoices: subjectChoicesFor(state),
     stepNumber: (key: string): number | null => {

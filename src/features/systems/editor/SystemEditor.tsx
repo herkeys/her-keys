@@ -99,8 +99,17 @@ export function SystemEditor({ systemId }: { systemId?: string }) {
             {errors('area')}
           </AppText>
         ) : null}
-        {/* A child this routine names that is not one of the household's children is said in words, never dropped. The chooser
-            that would set one is integration's; this only keeps a refused save from being silent. */}
+        <Overline style={styles.label}>{copy.editor.subjectTitle}</Overline>
+        <View style={styles.chipRow} accessibilityLabel={copy.editor.subjectTitle}>
+          <ChipToggle label={copy.editor.subjectHousehold} selected={draft.subjectMemberId === null} onPress={() => actions.setSubject(null)} />
+          {e.subjectChoices.map((child) => (
+            <ChipToggle key={child.id} label={copy.detail.forChild(child.name)} selected={draft.subjectMemberId === child.id} onPress={() => actions.setSubject(child.id)} />
+          ))}
+        </View>
+        {draft.subjectMemberId !== null && !e.subjectChoices.some((child) => child.id === draft.subjectMemberId) ? (
+          <InlineNotice tone="attention" title={copy.detail.childNotRecorded} />
+        ) : null}
+        {/* An unavailable saved child is never silently cleared; she chooses a replacement or the household. */}
         {errors('subject') !== null ? (
           <AppText variant="metadata" color={color.status.attention} style={styles.fieldError}>
             {errors('subject')}

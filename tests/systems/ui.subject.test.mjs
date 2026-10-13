@@ -1,21 +1,74 @@
 /**
  * HK-INTEGRATION-READINESS-01 / HA-011 — the System editor's contract for "who it is for", as the screen model.
  *
- * The visual chooser is deliberately NOT rendered by this branch (design-system placement is integration's); what integration needs
- * is exactly what is asserted here: `subjectChoices` (the household's own children and nobody else), `actions.setSubject`, the
- * refusal words when a subject is not one of them, and a stale banner that fires when the subject changes underneath the editor.
+ * B2B-N01 exposes the existing model through a consumer chooser. Interaction tests cover both native platforms;
+ * model tests retain eligible choices, refusal words and stale-editor protection.
  * The hook is driven through a real store, so a Save is a real commit and a refused save really wrote nothing.
  */
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
+import { Platform } from 'react-native';
 import { CHILDREN, DAY, MORNING, childSystemRow, realHousehold, systemRow, withRows } from './support/canon.mjs';
 import { systemsHarness } from './support/store.mjs';
-import { act, allText, navigation, press, withScreen } from './support/ui.mjs';
+import { act, allText, buttons, labelOf, navigation, press, typeInto, withScreen } from './support/ui.mjs';
 
 const { useSystemEditor } = await import('../../src/features/systems/editor/useSystemEditor.ts');
 const { SystemEditor } = await import('../../src/features/systems/editor/SystemEditor.tsx');
 
 const stateOf = (store) => store.getSnapshot().state;
+const isSelected = (r, label) => buttons(r).find((node) => labelOf(node) === label)?.props.accessibilityState.selected === true;
+
+for (const platform of ['android', 'ios']) {
+  test(`B2B-N01 ${platform}: consumer chooses, saves, restarts, edits and clears a child`, async () => {
+    const previous = Platform.OS;
+    Platform.OS = platform;
+    try {
+      const h = systemsHarness();
+      const store = await h.open();
+      await store.commit((state) => ({ ...state, children: CHILDREN }));
+      await withScreen(store, <SystemEditor />, async (r) => {
+        assert.ok(isSelected(r, 'The whole household'));
+        assert.ok(buttons(r).some((node) => labelOf(node) === 'For Josie'));
+        assert.ok(buttons(r).some((node) => labelOf(node) === 'For Theo'));
+        await typeInto(r, 'Name', 'Bedtime');
+        await press(r, 'For Josie');
+        assert.ok(isSelected(r, 'For Josie'));
+        assert.equal(isSelected(r, 'The whole household'), false);
+        assert.equal(stateOf(store).systems.length, 0, 'choosing does not persist before Save');
+        await press(r, 'Save System');
+      });
+      await store.flush();
+      const restarted = await h.open();
+      const id = stateOf(restarted).systems[0].id;
+      assert.equal(stateOf(restarted).systems[0].subjectMemberId, 'child-1');
+      await withScreen(restarted, <SystemEditor systemId={id} />, async (r) => {
+        assert.ok(isSelected(r, 'For Josie'), 'saved association is shown on edit');
+        await press(r, 'For Theo');
+        await press(r, 'Save changes');
+      });
+      await restarted.flush();
+      const edited = await h.open();
+      assert.equal(stateOf(edited).systems[0].subjectMemberId, 'child-2');
+      await withScreen(edited, <SystemEditor systemId={id} />, async (r) => {
+        assert.ok(isSelected(r, 'For Theo'));
+        await press(r, 'The whole household');
+        await press(r, 'Save changes');
+      });
+      await edited.flush();
+      const cleared = stateOf(await h.open()).systems[0];
+      assert.equal(cleared.subjectMemberId, null);
+      assert.equal(cleared.scope, 'household');
+    } finally { Platform.OS = previous; }
+  });
+}
+
+test('B2B-N01: no children means only household scope, not invented choices', async () => {
+  const store = await systemsHarness().open();
+  await withScreen(store, <SystemEditor />, async (r) => {
+    assert.ok(isSelected(r, 'The whole household'));
+    assert.equal(buttons(r).filter((node) => /^For /.test(labelOf(node))).length, 0);
+  });
+});
 
 async function openStore(rows) {
   const store = await systemsHarness().open();
@@ -139,13 +192,36 @@ describe('a stale editor and the subject', () => {
 });
 
 describe('the refusal reaches the screen in words, through the copy module', () => {
+  test('B2B-N01: a refused save keeps the child selection, reports failure and leaves the editor open', async () => {
+    let failWrites = false;
+    const h = systemsHarness({ storageOptions: { failWrite: () => failWrites } });
+    const store = await h.open();
+    await store.commit((state) => ({ ...state, children: CHILDREN }));
+    await store.flush();
+    failWrites = true;
+    await withScreen(store, <SystemEditor />, async (r) => {
+      await typeInto(r, 'Name', 'Bedtime');
+      await press(r, 'For Josie');
+      await press(r, 'Save System');
+      assert.ok(isSelected(r, 'For Josie'));
+      assert.match(allText(r), /couldn’t save that yet/);
+      assert.equal(stateOf(store).systems.length, 0);
+      assert.deepEqual(navigation.calls, []);
+    });
+    failWrites = false;
+    await store.flush();
+  });
   test('a row that names a child this household does not have: Save says so calmly, commits nothing, and does not close', async () => {
     const store = showing({ ...realHousehold({ children: CHILDREN }), systems: [systemRow({ id: 'sys-1', name: 'Bedtime', scope: 'child', subjectMemberId: 'child-gone' })] });
     await withScreen(store, <SystemEditor systemId="sys-1" />, async (r) => {
+      assert.match(allText(r), /doesn’t have which child recorded/);
+      assert.equal(isSelected(r, 'The whole household'), false, 'missing association is not silently cleared');
       await press(r, 'Save changes');
       assert.match(allText(r), /That child isn’t in your household\. Choose one of your children, or leave it for the whole household\./);
       assert.equal(store.commits, 0, 'nothing was committed');
       assert.deepEqual(navigation.calls, []);
+      await press(r, 'The whole household');
+      assert.ok(isSelected(r, 'The whole household'), 'consumer may explicitly clear an unavailable association');
     });
   });
 });

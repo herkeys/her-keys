@@ -86,15 +86,12 @@ describe('Editor — creating a System', () => {
     });
   });
 
-  // DELIBERATELY RE-STATED (HA-011). The last clause used to say a child-subject control "does not exist" because a System could not hold
-  // a child. It can now: the editor's model offers the household's children (`useSystemEditor().subjectChoices`, `actions.setSubject`,
-  // exercised in tests/systems/subject.test.mjs) and copy words for them. The visual control is deliberately NOT rendered by this branch
-  // (design-system placement is integration's); this assertion is the sentinel integration replaces when it adds that control.
-  test('it never offers what does not exist: no delete, archive, duplicate or run control, and the child chooser is not rendered yet (integration adds it)', async () => {
+  test('it offers household scope while unsupported delete, archive, duplicate and run controls stay absent', async () => {
     const { store } = await open();
     await withScreen(store, <SystemEditor />, async (r) => {
       const text = `${buttonLabels(r).join(' | ')} ${allText(r)}`;
-      assert.doesNotMatch(text, /delete|archive|duplicate|copy|start (a )?run|check off|which child|for a child/i);
+      assert.doesNotMatch(text, /delete|archive|duplicate|copy|start (a )?run|check off/i);
+      assert.ok(selected(r, 'The whole household'));
     });
   });
 });
