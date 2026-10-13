@@ -789,6 +789,7 @@ const LATER_FEATURES = [
       ['src/features/money/MoneySheet.tsx', 'iOS audit IOS-D04: keyboard-inset aware sheet scroll region'],
       ['tests/ios/keyboardInsets.test.mjs', 'iOS audit IOS-D04: every input-hosting scroll view is keyboard-inset aware on iOS; the unscrolled-sheet gap is registered'],
       ['.github/workflows/v2-integration-validation.yml', 'iOS audit: the existing gate also runs on the audit branch push so the exact pushed SHA is certified by CI; trigger list only, no step changed'],
+      ['docs/audits/HK_IOS_BUILD2_CANDIDATE_AUDIT_20261013.md', 'iOS audit: evidence, the three defect registers, the Supabase and Render findings and the release decisions; no runtime change'],
       // F01-F04 reconciliation (the local validate/hk-ir01-f0N branches): each repair below was ported onto this tree and tested here.
       ["scripts-dev/f02-oda-mutation-check.cjs", "Build 2A F02 reconciliation: the OD-A test-the-test (six mutants of the title-never-travels and unnamed-reading guards), recovered from validate/hk-ir01-f02"],
       ["src/features/calendar/copy.ts", "Build 2A F03 reconciliation: acceptance is not coverage while the load still needs her, duration knowledge, and gone prerequisites in Calendar (HA-009, HA-010, recovered from validate/hk-ir01-f03)"],
