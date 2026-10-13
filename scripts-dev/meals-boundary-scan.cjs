@@ -872,6 +872,26 @@ const LATER_FEATURES = [
       ['src/design/components/Button.tsx', 'B2B-A02: only Android compact buttons receive a 48dp minimum height; iOS/web, callbacks and business behavior are unchanged; platformParity/androidButtonTarget regression verifies the boundary'],
     ],
   },
+  {
+    id: 'HK-BUILD2B-SHARED (authorized shared integration closeout)',
+    branch: null,
+    owned: [],
+    migrations: [],
+    schemas: [],
+    rootCollections: [],
+    syncKinds: [],
+    shared: [
+      ['src/features/systems/editor/SystemEditor.tsx', 'B2B-N01: expose only existing eligible child/household choices through setSubject, selected state and unavailable-child notice; no domain changes'],
+      ['src/features/systems/editor/useSystemEditor.ts', 'B2B-N01: retire the stale integration-placement comment; existing choice and command behavior unchanged'],
+      ['app/sign-in.tsx', 'B2B-N02: persistent account restore through existing entitlement boundary, expected UUID, single-flight and account-tagged feedback; no Welcome flow change'],
+      ['src/features/account/AccountPanel.tsx', 'B2B-N02: restore/loading/outcome control and scrollable persistent account panel; no account/consent business rule change'],
+      ['src/monetization/RevenueCatProvider.tsx', 'B2B-N02: pass optional expected account UUID through the existing restore boundary; canonical entitlement refresh preserved'],
+      ['src/monetization/revenueCatClient.ts', 'B2B-N02: verified native SDK account UUID and serialized identity-sensitive transactions prevent anonymous/stale-account restore and entitlement leakage; no remote product/transfer policy change'],
+      ['docs/release/BUILD2B_RELEASE_POLICY_PROPOSAL.md', 'B2B-N04: reviewable one-branch release-policy proposal only; owner approval required before applying it'],
+      ['docs/audits/HK_BUILD2B_SHARED_REPAIR_LEDGER.md', 'Build 2B shared closeout: per-defect repair commits, source evidence, restoration scope and internal-versus-store/runtime blockers'],
+      ['docs/builds/HK_BUILD2B_SHARED_INTEGRATION_CLOSEOUT.md', 'Build 2B shared closeout: source handoff, authorized changes and release-policy awaiting-owner status'],
+    ],
+  },
 
 ];
 
