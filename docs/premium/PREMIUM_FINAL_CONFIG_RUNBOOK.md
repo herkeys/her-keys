@@ -93,7 +93,7 @@ Only where the owner explicitly permits a synthetic purchase-shaped Staging tran
 node scripts-dev/premium-final-config.mjs smoke --type INITIAL_PURCHASE --account-id "$HK_STAGING_TESTER_ACCOUNT_ID" --synthetic-only --env staging
 ```
 
-**Expected:** an accepted/durable event does *not* by itself grant Premium. The runner emits `actualPurchaseVerified:false` and `entitlementGrantVerified:false`. Genuine subscriber evidence must come from RevenueCat and the reconciliation runner. For genuine subscription certification, make an actual RC Sandbox purchase or restore in a signed-in test build and inspect its RevenueCat event + server projection. **Do not substitute a forged purchase fixture for that verification.**
+**Expected:** an accepted/durable event does *not* by itself grant Premium. The runner reports `projectionBefore`, `projectionAfter` and `projectionUpdated` from the actual Staging projection, and emits `actualPurchaseVerified:false` and `entitlementGrantVerified:false`. Genuine subscriber evidence must come from RevenueCat and the reconciliation runner. For genuine subscription certification, make an actual RC Sandbox purchase or restore in a signed-in test build and inspect its RevenueCat event + server projection. **Do not substitute a forged purchase fixture for that verification.**
 
 ## 5. Staging tester allowlist
 Use the UUID of an existing **Staging Supabase Auth** account, not a Production account. Account IDs belong in a secure test evidence record, not an unrestricted public ledger.
