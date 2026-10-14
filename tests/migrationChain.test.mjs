@@ -81,6 +81,7 @@ describe('post-certification migration governance', () => {
       ['WELCOME_EMAIL', '20261009020000_herkeys_welcome_email_receipts.sql'],
       ['V2_CONSENT', '20261009060000_v2_account_consents.sql'],
       ['ACCOUNT_DELETION', '20261014002726_account_deletion_lifecycle.sql'],
+      ['ACCOUNT_DELETION_AUTH', '20261014012518_account_deletion_auth_reconciliation.sql'],
     ]);
     const sql = lf(POST_CERT_CHAIN[0].file);
     const executable = sql.replace(/--.*$/gm, '');

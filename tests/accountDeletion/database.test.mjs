@@ -60,12 +60,18 @@ test('account deletion: real SQL state, privileges, recovery and purge',async t=
   assert.equal((await cmd('status',{receipt_hash:'r'.repeat(43)})).status,'pending');
   assert.equal((await cmd('claim')).requests.length,0);
   await assert.rejects(cmd('restored',{request_id:r.request_id,ciphertext:'confirmation',iv:'iv'}),/invalid_transition/);
-  await cmd('deactivation_ack',{request_id:r.request_id,auth_ban:true,session_revocation:true});
+  const failed=await cmd('deactivation_ack',{request_id:r.request_id,auth_ban:false,session_revocation:true});
+  assert.equal(failed.reconciliation_pending,true);
+  await assert.rejects(cmd('restored',{request_id:r.request_id,ciphertext:'confirmation',iv:'iv'}),/invalid_transition/);
+  await cmd('deactivation_ack',{request_id:r.request_id,auth_ban:true,session_revocation:false});
+  assert.equal((await q('select count(*) as n from auth.sessions where user_id=$1',[A])).rows[0].n,0);
+  assert.equal((await q('select count(*) as n from auth.sessions where user_id=$1',[B])).rows[0].n,1);
   await cmd('restored',{request_id:r.request_id,ciphertext:'confirmation',iv:'iv'});
   assert.equal((await cmd('status',{receipt_hash:'r'.repeat(43)})).status,'restored');
   assert.equal((await as(A,()=>q('select * from public.profiles'))).rows.length,1);
  });
  await t.test('new lifecycle after restoration has a new deadline',async()=>{
+  await q('insert into auth.sessions(id,user_id) values($1,$2)',[SA,A]);
   request=await cmd('request',{...params,receipt_hash:'s'.repeat(43),recovery_hash:'x'.repeat(43)});
   assert.equal(request.duplicate,false);
  });

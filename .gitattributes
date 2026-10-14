@@ -39,3 +39,4 @@ supabase/migrations/20260925141432_external_calendar_connections.sql text eol=lf
 supabase/migrations/20261009020000_herkeys_welcome_email_receipts.sql text eol=lf
 supabase/migrations/20261009060000_v2_account_consents.sql text eol=lf
 supabase/migrations/20261014002726_account_deletion_lifecycle.sql text eol=lf
+supabase/migrations/20261014012518_account_deletion_auth_reconciliation.sql text eol=lf

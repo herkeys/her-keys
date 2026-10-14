@@ -1011,12 +1011,14 @@ const LATER_FEATURES = [
   "branch": null,
   "owned": [/^supabase\/migrations\/20261014002726_account_deletion_lifecycle\.sql$/,/^docs\/account-deletion\//,/^tests\/accountDeletion\//,/^src\/domain\/account\/deletion\.ts/,/^src\/store\/deletionRuntimeInstance\.ts/,/^src\/features\/account\/DeletionGate\.tsx/,/^src\/features\/account\/DeleteAccountPanel\.tsx/,/^supabase\/functions\/request-account-deletion\//,/^supabase\/functions\/restore-account\//,/^supabase\/functions\/resend-restoration-email\//,/^supabase\/functions\/deletion-status\//,/^supabase\/functions\/process-account-deletions\//,/^supabase\/functions\/monitor-account-deletions\//,/^supabase\/functions\/capture-apple-credential\//,/^supabase\/functions\/begin-web-deletion\//,/^supabase\/functions\/_shared\/deletion/,/^supabase\/functions\/deno\./,/^supabase\/tests\/deletion-database\.mjs/,/^supabase\/blueprints\/account_deletion_scheduler\.sql/,/^\.github\/workflows\/account-deletion/],
   "migrations": [
-    "supabase/migrations/20261014002726_account_deletion_lifecycle.sql"
+    "supabase/migrations/20261014002726_account_deletion_lifecycle.sql",
+    "supabase/migrations/20261014012518_account_deletion_auth_reconciliation.sql"
   ],
   "schemas": [],
   "rootCollections": [],
   "syncKinds": [],
   "shared": [['supabase/blueprints/staging-deletion-fixture.ts', 'Temporary HMAC-authenticated Staging fixture harness; forbidden in Production.'],
+    ['supabase/migrations/20261014012518_account_deletion_auth_reconciliation.sql', 'Additive session-revocation reconciliation verified against hosted Auth behavior.'],
     ['tsconfig.json', 'Deno blueprints are checked by Deno rather than the Expo client compiler.'],
     ['.gitattributes', 'Pin the additive lifecycle migration to LF for exact deployment checksums.'],
     [

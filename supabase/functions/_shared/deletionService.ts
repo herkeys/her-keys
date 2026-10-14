@@ -56,8 +56,8 @@ export async function handleDeletion(req: Request, action: 'request'|'restore'|'
     receipt_hash:await sha256Base64Url(body.receipt),recovery_hash:await sha256Base64Url(token),...encrypted});
    if(result.duplicate)return json({...result,email_status:'previously_queued'});
    // Restrictive database state is authoritative even if Auth/provider calls fail.
-   const ban=await adminClient().auth.admin.updateUserById(user.id,{ban_duration:'876000h'});
    const revoke=await adminClient().auth.admin.signOut(bearer,'global');
+   const ban=await adminClient().auth.admin.updateUserById(user.id,{ban_duration:'876000h'});
    await command('deactivation_ack',{request_id:result.request_id,auth_ban:!ban.error,session_revocation:!revoke.error});
    return json({...result,email_status:'queued',auth_reconciliation_pending:!!ban.error || !!revoke.error});
   }

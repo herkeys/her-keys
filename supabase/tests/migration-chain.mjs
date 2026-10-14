@@ -38,6 +38,7 @@ export const ADDITIVE_CHAIN = [
   { file: '20261009020000_herkeys_welcome_email_receipts.sql', owner: 'WELCOME_EMAIL', label: 'welcome-email' },
   { file: '20261009060000_v2_account_consents.sql', owner: 'V2_CONSENT', label: 'v2-consent' },
   { file: '20261014002726_account_deletion_lifecycle.sql', owner: 'ACCOUNT_DELETION', label: 'account-deletion' },
+  { file: '20261014012518_account_deletion_auth_reconciliation.sql', owner: 'ACCOUNT_DELETION_AUTH', label: 'account-deletion-auth' },
 ];
 
 /** WAVE3_BASE (363e473) ended at F05: the chain a WAVE3_BASE-era database was built with, and the populated-upgrade starting point. */

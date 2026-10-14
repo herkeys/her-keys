@@ -21,10 +21,10 @@ CREATE TABLE private.deletion_scheduler_target(singleton boolean PRIMARY KEY CHE
 REVOKE ALL ON private.deletion_scheduler_target FROM PUBLIC,anon,authenticated,service_role;
 -- Insert exactly ONE independently verified environment URL before activation.
 SELECT cron.schedule('herkeys-account-deletion','*/5 * * * *','SELECT private.invoke_deletion_worker();');
-UPDATE cron.job SET active=false WHERE jobname='herkeys-account-deletion';
+SELECT cron.alter_job(job_id:=(SELECT jobid FROM cron.job WHERE jobname='herkeys-account-deletion'),active:=false);
 SELECT cron.schedule('herkeys-account-deletion-monitor','2-59/5 * * * *',$$SELECT private.invoke_deletion_worker('monitor-account-deletions');$$);
-UPDATE cron.job SET active=false WHERE jobname='herkeys-account-deletion-monitor';
+SELECT cron.alter_job(job_id:=(SELECT jobid FROM cron.job WHERE jobname='herkeys-account-deletion-monitor'),active:=false);
 -- Emergency controls:
 -- UPDATE public.account_deletion_control SET enabled=false WHERE singleton;
--- UPDATE cron.job SET active=false WHERE jobname='herkeys-account-deletion';
+-- SELECT cron.alter_job(job_id:=(SELECT jobid FROM cron.job WHERE jobname='herkeys-account-deletion'),active:=false);
 -- In-flight operations stop at the next fenced resource boundary; bounded HTTP requests may complete.

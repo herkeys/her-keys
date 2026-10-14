@@ -17,6 +17,8 @@ export async function processDeletions() {
  for(const r of pending) {
   if(r.status==='restoring') await reconcileRestoration(r.id,r.account_id);
   else if(r.auth_deactivation_pending && Date.parse(r.deactivated_at)<Date.now()-300000) {
+   const claim=await command('claim_deactivation',{request_id:r.id});
+   if(!claim.claimed)continue;
    const {error}=await admin.auth.admin.updateUserById(r.account_id,{ban_duration:'876000h'});
    await command('deactivation_ack',{request_id:r.id,auth_ban:!error,session_revocation:false});
   }
