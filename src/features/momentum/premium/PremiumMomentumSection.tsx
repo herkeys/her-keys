@@ -1,0 +1,302 @@
+import { StyleSheet, View } from 'react-native';
+import { AppText, Button, Card, Divider, Sheet, Tag } from '../../../design/components';
+import { colors, spacing } from '../../../design/tokens';
+import type { MomentumReport } from '../../../domain/premium/momentum/model';
+import type { SavedReport } from '../../../domain/premium/momentum/snapshot';
+import type { PremiumCopy } from '../../../monetization/premiumCopy';
+import {
+  COPY,
+  basedOnLine,
+  comparisonLines,
+  comparisonUnavailableLine,
+  countLines,
+  insufficientBody,
+  nextStepBody,
+  nextStepHeadline,
+  patternLine,
+  periodLabel,
+  savedLine,
+  savedReviewLine,
+  tierExplanation,
+  tierLabel,
+  unavailableLine,
+} from './copy';
+import type { SavedReview } from './momentumFlow';
+import { usePremiumMomentum, type MomentumView, type PremiumMomentumApi } from './usePremiumMomentum';
+
+/**
+ * Her Keys Premium's weekly review, on Today. Shown for an account that has Premium, or that already has saved reviews (they stay
+ * readable after a subscription ends). It renders nothing for a signed-out device, while the server's answer is loading, or for a
+ * Free account with no saved reviews — there is no standing upsell here.
+ */
+export function PremiumMomentumSection() {
+  const api = usePremiumMomentum();
+  const { feature } = api;
+  if (feature.state.kind === 'signed_out' || feature.state.kind === 'loading') return null;
+  if (!feature.usable && api.saved.length === 0) return null;
+  return <PremiumMomentumPanel api={api} />;
+}
+
+export function PremiumMomentumPanel({ api }: { api: PremiumMomentumApi }) {
+  const { feature, view } = api;
+  const open = view.kind === 'review' || view.kind === 'saved';
+  return (
+    <Card tone="accent" style={styles.card}>
+      <Tag label="Her Keys Premium" tone="accent" />
+      <AppText variant="screenTitle" style={styles.headline}>
+        {feature.usable ? COPY.entry.title : feature.copy.title}
+      </AppText>
+      <AppText variant="body" color={colors.textSecondary} style={styles.body}>
+        {feature.usable ? COPY.entry.body : feature.copy.body}
+      </AppText>
+
+      {api.upgrade.notice !== null ? (
+        <AppText variant="supporting" color={colors.textSecondary} style={styles.note} accessibilityRole="alert">
+          {api.upgrade.notice.message}
+        </AppText>
+      ) : null}
+      {api.notice !== null ? (
+        <AppText variant="supporting" color={colors.attention} style={styles.note} accessibilityRole="alert">
+          {api.notice.message}
+        </AppText>
+      ) : null}
+
+      <Actions api={api} copy={feature.copy} />
+      <Earlier api={api} />
+
+      <Sheet visible={open} onClose={api.close} accessibilityLabel={COPY.sheet.title}>
+        <SheetBody api={api} view={view} />
+      </Sheet>
+    </Card>
+  );
+}
+
+function Actions({ api, copy }: { api: PremiumMomentumApi; copy: PremiumCopy }) {
+  const { feature, upgrade } = api;
+  if (feature.usable) {
+    return <Button label={api.view.kind === 'opening' ? COPY.entry.opening : COPY.entry.open} onPress={() => void api.open()} disabled={api.view.kind === 'opening'} style={styles.primaryButton} />;
+  }
+  const primary = copy.actionLabel;
+  return (
+    <View>
+      {copy.action === 'upgrade' && primary !== null ? <Button label={primary} onPress={() => void upgrade.start()} disabled={upgrade.presenting} style={styles.primaryButton} /> : null}
+      {(copy.action === 'verify' || copy.action === 'retry') && primary !== null ? <Button label={primary} onPress={() => void feature.verify()} style={styles.primaryButton} /> : null}
+      {copy.action === 'restore' && primary !== null ? <Button label={primary} onPress={() => void upgrade.start()} disabled={upgrade.presenting} style={styles.primaryButton} /> : null}
+      {copy.secondaryAction === 'verify' && copy.secondaryLabel !== null ? <Button label={copy.secondaryLabel} variant="ghost" size="sm" onPress={() => void feature.verify()} /> : null}
+      {copy.secondaryAction === 'restore' && copy.secondaryLabel !== null ? <Button label={copy.secondaryLabel} variant="ghost" size="sm" onPress={() => void upgrade.start()} disabled={upgrade.presenting} /> : null}
+    </View>
+  );
+}
+
+function Earlier({ api }: { api: PremiumMomentumApi }) {
+  if (api.saved.length === 0) return null;
+  return (
+    <View style={styles.block}>
+      <Divider />
+      <AppText variant="sectionTitle" style={styles.sectionTitle}>
+        {COPY.entry.earlier}
+      </AppText>
+      <AppText variant="supporting" color={colors.textSecondary}>
+        {COPY.entry.earlierBody}
+      </AppText>
+      {api.saved.slice(0, 5).map((review) => (
+        <View key={review.id} style={styles.row}>
+          <AppText variant="body" color={colors.textSecondary} style={styles.rowText}>
+            {savedReviewLine(review.report)}
+          </AppText>
+          <Button label={`${COPY.entry.openSaved} ${periodLabel(review.report.period)}`} variant="secondary" size="sm" onPress={() => api.openSaved(review.id)} />
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function SheetBody({ api, view }: { api: PremiumMomentumApi; view: MomentumView }) {
+  if (view.kind === 'saved') return <SavedBody api={api} review={view.review} />;
+  if (view.kind !== 'review') return null;
+  const { outcome } = view;
+  if (outcome.kind === 'unavailable') {
+    return (
+      <View>
+        <AppText variant="screenTitle">{COPY.sheet.title}</AppText>
+        <AppText variant="body" color={colors.textSecondary} style={styles.block}>
+          {unavailableLine(outcome)}
+        </AppText>
+        <Button label={COPY.sheet.close} variant="secondary" onPress={api.close} style={styles.closeButton} />
+      </View>
+    );
+  }
+  if (outcome.kind === 'insufficient') {
+    const { report } = outcome;
+    return (
+      <View>
+        <AppText variant="screenTitle">{COPY.insufficient.title}</AppText>
+        <AppText variant="supporting" color={colors.textSecondary} style={styles.gap}>
+          {periodLabel(report.period)}
+        </AppText>
+        <AppText variant="body" color={colors.textSecondary} style={styles.block}>
+          {insufficientBody(report.reason, report.have, report.needs)}
+        </AppText>
+        <Button label={COPY.sheet.close} variant="secondary" onPress={api.close} style={styles.closeButton} />
+      </View>
+    );
+  }
+  return <ReadyBody api={api} report={outcome.report} saved={outcome.saved} nextApproved={view.nextApproved} />;
+}
+
+function ReadyBody({ api, report, saved, nextApproved }: { api: PremiumMomentumApi; report: Extract<MomentumReport, { status: 'ready' }>; saved: 'recorded' | 'already_saved' | 'pending'; nextApproved: boolean }) {
+  const lines = countLines(report.counts);
+  const next = report.nextStep;
+  return (
+    <View>
+      <AppText variant="screenTitle">{COPY.sheet.title}</AppText>
+      <AppText variant="supporting" color={colors.textSecondary} style={styles.gap}>
+        {periodLabel(report.period)}
+      </AppText>
+
+      <Section title={COPY.sheet.thisWeekTitle}>
+        {lines.map((line) => (
+          <AppText key={line} variant="body" style={styles.line}>
+            {line}
+          </AppText>
+        ))}
+      </Section>
+
+      <Section title={COPY.sheet.changesTitle}>
+        {report.comparison ? (
+          comparisonLines(report.comparison.deltas).map((line) => (
+            <AppText key={line} variant="body" style={styles.line}>
+              {line}
+            </AppText>
+          ))
+        ) : (
+          <AppText variant="body" color={colors.textSecondary}>
+            {comparisonUnavailableLine}
+          </AppText>
+        )}
+      </Section>
+
+      <Section title={COPY.sheet.patternsTitle}>
+        {report.patterns.length === 0 ? (
+          <AppText variant="body" color={colors.textSecondary}>
+            {COPY.noPatterns}
+          </AppText>
+        ) : (
+          report.patterns.map((pattern, index) => (
+            <View key={`${pattern.kind}-${pattern.about?.id ?? pattern.weekday}-${index}`} style={styles.pattern}>
+              <Tag label={tierLabel[pattern.tier]} tone={pattern.tier === 'possible' ? 'neutral' : 'accent'} />
+              <AppText variant="body" style={styles.line}>
+                {patternLine(pattern, api.titleOf)}
+              </AppText>
+              <AppText variant="supporting" color={colors.textSecondary}>
+                {tierExplanation(pattern)}
+              </AppText>
+            </View>
+          ))
+        )}
+      </Section>
+
+      <Section title={COPY.sheet.nextStepTitle}>
+        {next === null ? (
+          <AppText variant="body" color={colors.textSecondary}>
+            {COPY.noNextStep}
+          </AppText>
+        ) : (
+          <View>
+            <AppText variant="body">{nextStepHeadline(api.titleOf(next.about))}</AppText>
+            <AppText variant="supporting" color={colors.textSecondary} style={styles.gap}>
+              {nextStepBody}
+            </AppText>
+            {nextApproved ? (
+              <AppText variant="body" color={colors.success} style={styles.line} accessibilityRole="alert">
+                {COPY.nextStep.approved}
+              </AppText>
+            ) : (
+              <View>
+                <AppText variant="supporting" color={colors.textSecondary} style={styles.gap}>
+                  {COPY.nextStep.scope}
+                </AppText>
+                <Button label={api.approving ? COPY.nextStep.approving : COPY.nextStep.approve} onPress={() => void api.approveNext()} disabled={api.approving} style={styles.primaryButton} />
+              </View>
+            )}
+          </View>
+        )}
+      </Section>
+
+      <Section title={COPY.sheet.basedOnTitle}>
+        <AppText variant="supporting" color={colors.textSecondary}>
+          {basedOnLine(report.evidence)}
+        </AppText>
+        <AppText variant="supporting" color={colors.textSecondary} style={styles.gap}>
+          {savedLine(saved)}
+        </AppText>
+      </Section>
+
+      <Button label={COPY.sheet.close} variant="secondary" onPress={api.close} style={styles.closeButton} />
+    </View>
+  );
+}
+
+function SavedBody({ api, review }: { api: PremiumMomentumApi; review: SavedReview }) {
+  const report: SavedReport = review.report;
+  const lines = countLines(report.counts);
+  return (
+    <View>
+      <AppText variant="screenTitle">{COPY.sheet.savedCopyTitle}</AppText>
+      <AppText variant="supporting" color={colors.textSecondary} style={styles.gap}>
+        {periodLabel(report.period)}
+      </AppText>
+      <Section title={COPY.sheet.thisWeekTitle}>
+        {lines.map((line) => (
+          <AppText key={line} variant="body" style={styles.line}>
+            {line}
+          </AppText>
+        ))}
+      </Section>
+      <Section title={COPY.sheet.patternsTitle}>
+        {report.patterns.length === 0 ? (
+          <AppText variant="body" color={colors.textSecondary}>
+            {COPY.noPatterns}
+          </AppText>
+        ) : (
+          report.patterns.map((pattern, index) => (
+            <View key={`${pattern.kind}-${pattern.about?.id ?? pattern.weekday}-${index}`} style={styles.pattern}>
+              <Tag label={tierLabel[pattern.tier]} tone={pattern.tier === 'possible' ? 'neutral' : 'accent'} />
+              <AppText variant="body" style={styles.line}>
+                {patternLine(pattern, api.titleOf)}
+              </AppText>
+            </View>
+          ))
+        )}
+      </Section>
+      <Button label={COPY.sheet.close} variant="secondary" onPress={api.close} style={styles.closeButton} />
+    </View>
+  );
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <View style={styles.block}>
+      <AppText variant="sectionTitle" style={styles.sectionTitle}>
+        {title}
+      </AppText>
+      {children}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  card: { marginBottom: spacing.lg },
+  headline: { marginTop: spacing.md },
+  body: { marginTop: spacing.sm },
+  note: { marginTop: spacing.md },
+  primaryButton: { marginTop: spacing.lg },
+  block: { marginTop: spacing.lg },
+  sectionTitle: { marginBottom: spacing.xs },
+  row: { marginTop: spacing.sm, gap: spacing.sm },
+  rowText: { flexShrink: 1 },
+  line: { marginTop: spacing.xs },
+  gap: { marginTop: spacing.xs },
+  pattern: { marginTop: spacing.sm },
+  closeButton: { marginTop: spacing.xl },
+});

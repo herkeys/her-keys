@@ -5,6 +5,7 @@ import { DailyLoadCard } from '../daily-load/DailyLoadCard';
 import { PremiumDailyLoadEntry } from '../daily-load/premium/PremiumDailyLoadEntry';
 import { LoadMeter } from '../daily-load/LoadMeter';
 import { LifeStatusSummary } from '../life/LifeStatusSummary';
+import { PremiumMomentumSection } from '../momentum/premium/PremiumMomentumSection';
 import { OneMoveCard } from '../one-move/OneMoveCard';
 import { useOneMove } from '../../store/OneMoveContext';
 import { TalkItOutEntry } from '../talk-it-out/TalkItOutEntry';
@@ -71,6 +72,7 @@ export function TodayBriefing({ view }: { view: TodayView }) {
         ) : null;
       })}
       <TomorrowReminderCard />
+      <PremiumMomentumSection />
       <TalkItOutEntry />
     </>
   );
