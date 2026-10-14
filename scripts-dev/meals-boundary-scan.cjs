@@ -920,6 +920,9 @@ const LATER_FEATURES = [
     syncKinds: [],
     shared: [
       ['src/monetization/useRestorePurchases.ts', 'SC-02: reusable account-level Restore Purchases hook over the existing entitlement boundary (expected UUID, single-flight, owner-tagged feedback); extracted from app/sign-in.tsx with no behavior change'],
+      ['src/features/talk-it-out/capture/fixForm.ts', 'SC-06: pure height rule for the capture Fix sheet scroll area (bounded by window height and font scale); no capture, approval or revision semantics change'],
+      ['tests/talkItOutCapture.ui.test.mjs', 'SC-06: Fix sheet structure, small-screen and large-text regression; existing capture/apply semantics tests unchanged'],
+      ['tests/systems/subject.sync.test.mjs', 'SC-01: pins the System child association through the existing sync projection/apply boundary; tests only'],
     ],
   },
 

@@ -33,6 +33,10 @@ export const SafeAreaView = (props: AnyProps) => React.createElement('SafeAreaVi
 export const ActivityIndicator = (props: AnyProps) => React.createElement('ActivityIndicator', props);
 export const useSafeAreaInsets = () => ({ top: 0, bottom: 0, left: 0, right: 0 });
 
+/** Test-controlled window metrics: tests change these to simulate a small phone or large accessibility text. */
+export const windowMetrics = { width: 390, height: 844, scale: 3, fontScale: 1 };
+export const useWindowDimensions = () => ({ ...windowMetrics });
+
 export const Platform = { OS: 'ios', select: (map: AnyProps) => map.ios ?? map.default };
 export const StyleSheet = {
   create: (styles: AnyProps) => styles,
@@ -119,7 +123,7 @@ export const Animated = {
 
 const rn = {
   View, Text, ScrollView, Pressable, TextInput, KeyboardAvoidingView, Modal,
-  SafeAreaView, ActivityIndicator, useSafeAreaInsets, Platform, StyleSheet, AppState, Linking,
+  SafeAreaView, ActivityIndicator, useSafeAreaInsets, useWindowDimensions, Platform, StyleSheet, AppState, Linking,
   Easing, AccessibilityInfo, Animated, BackHandler,
 };
 export default rn;

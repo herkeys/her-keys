@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import {
   AppText,
   Button,
@@ -18,7 +18,7 @@ import { logicalDateAt } from '../../../domain/logicalDay';
 import { useStoreSnapshot } from '../../../store/AppStateProvider';
 import { useCapture, useCaptureVM } from './CaptureContext';
 import { copy } from './copy';
-import { dayChoices, initialForm, patchFromForm, type FixForm } from './fixForm';
+import { dayChoices, fixSheetFieldsMaxHeight, initialForm, patchFromForm, type FixForm } from './fixForm';
 import type { ProposalVM, QuestionVM } from './viewModel';
 import type { ClarificationAnswer, ProposalKind } from './types';
 
@@ -220,6 +220,7 @@ function FixSheet({ readingId, onClose, onFixed }: { readingId: string; onClose:
   const [said, setSaid] = useState('');
   const [problem, setProblem] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const { height: windowHeight, fontScale } = useWindowDimensions();
   if (!state || !reading || !initial || !form) return null;
   const today = logicalDateAt(now(), state.user.timezone);
   const set = (patch: Partial<FixForm>) => setForm({ ...form, ...patch });
@@ -256,56 +257,59 @@ function FixSheet({ readingId, onClose, onFixed }: { readingId: string; onClose:
 
   return (
     <Sheet visible onClose={onClose} accessibilityLabel={copy.fix.title}>
-      <AppText variant="sectionTitle" accessibilityRole="header">
-        {copy.fix.title}
-      </AppText>
-      <View style={styles.block}>
-        <TextField label={copy.fix.sayIt} value={said} onChangeText={setSaid} placeholder={copy.fix.sayItPlaceholder} />
-      </View>
-      <TextField label={copy.fix.labelTitle} value={form.title} onChangeText={(title) => set({ title })} />
-      <AppText variant="metadata" color={color.text.muted}>
-        {copy.fix.labelKind}
-      </AppText>
-      <View style={styles.chips}>
-        {KIND_CHOICES.map((choice) => (
-          <ChipToggle key={choice.kind} label={choice.label} selected={form.kind === choice.kind} onPress={() => set({ kind: choice.kind })} />
-        ))}
-      </View>
-      <AppText variant="metadata" color={color.text.muted}>
-        {copy.fix.labelDay}
-      </AppText>
-      <View style={styles.chips}>
-        {dayChoices(today).map((choice) => (
-          <ChipToggle key={choice.date} label={choice.label} selected={form.date === choice.date} onPress={() => set({ date: choice.date })} />
-        ))}
-      </View>
-      {form.kind === 'event' && <TextField label={copy.fix.labelTime} value={form.timeText} onChangeText={(timeText) => set({ timeText })} placeholder={copy.fix.timeHint} />}
-      {form.kind !== 'needsMe' && (
-        <>
-          <TextField label={copy.fix.labelAmount} value={form.amountText} onChangeText={(amountText) => set({ amountText })} placeholder={copy.fix.amountHint} keyboardType="decimal-pad" />
-          <AppText variant="metadata" color={color.text.muted}>
-            {copy.fix.amountDirection}
-          </AppText>
-          <View style={styles.chips}>
-            <ChipToggle label={copy.clarify.optionPay} selected={form.direction === 'outflow'} onPress={() => set({ direction: 'outflow' })} />
-            <ChipToggle label={copy.clarify.optionOwed} selected={form.direction === 'inflow'} onPress={() => set({ direction: 'inflow' })} />
-          </View>
-          {state.children.length > 0 && (
-            <>
-              <AppText variant="metadata" color={color.text.muted}>
-                {copy.fix.labelChild}
-              </AppText>
-              <View style={styles.chips}>
-                {state.children.map((child) => (
-                  <ChipToggle key={child.id} label={child.displayName} selected={form.subject === `child:${child.id}`} onPress={() => set({ subject: `child:${child.id}` })} />
-                ))}
-                <ChipToggle label={copy.review.noChild} selected={form.subject === 'none'} onPress={() => set({ subject: 'none' })} />
-              </View>
-            </>
-          )}
-        </>
-      )}
-      {problem && <InlineNotice tone="attention" title={problem} style={styles.block} />}
+      {/* The fields scroll and are keyboard-aware; Apply / Cancel are pinned below them so they are always reachable. */}
+      <ScrollView style={{ maxHeight: fixSheetFieldsMaxHeight(windowHeight, fontScale) }} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets showsVerticalScrollIndicator={false}>
+        <AppText variant="sectionTitle" accessibilityRole="header">
+          {copy.fix.title}
+        </AppText>
+        <View style={styles.block}>
+          <TextField label={copy.fix.sayIt} value={said} onChangeText={setSaid} placeholder={copy.fix.sayItPlaceholder} />
+        </View>
+        <TextField label={copy.fix.labelTitle} value={form.title} onChangeText={(title) => set({ title })} />
+        <AppText variant="metadata" color={color.text.muted}>
+          {copy.fix.labelKind}
+        </AppText>
+        <View style={styles.chips}>
+          {KIND_CHOICES.map((choice) => (
+            <ChipToggle key={choice.kind} label={choice.label} selected={form.kind === choice.kind} onPress={() => set({ kind: choice.kind })} />
+          ))}
+        </View>
+        <AppText variant="metadata" color={color.text.muted}>
+          {copy.fix.labelDay}
+        </AppText>
+        <View style={styles.chips}>
+          {dayChoices(today).map((choice) => (
+            <ChipToggle key={choice.date} label={choice.label} selected={form.date === choice.date} onPress={() => set({ date: choice.date })} />
+          ))}
+        </View>
+        {form.kind === 'event' && <TextField label={copy.fix.labelTime} value={form.timeText} onChangeText={(timeText) => set({ timeText })} placeholder={copy.fix.timeHint} />}
+        {form.kind !== 'needsMe' && (
+          <>
+            <TextField label={copy.fix.labelAmount} value={form.amountText} onChangeText={(amountText) => set({ amountText })} placeholder={copy.fix.amountHint} keyboardType="decimal-pad" />
+            <AppText variant="metadata" color={color.text.muted}>
+              {copy.fix.amountDirection}
+            </AppText>
+            <View style={styles.chips}>
+              <ChipToggle label={copy.clarify.optionPay} selected={form.direction === 'outflow'} onPress={() => set({ direction: 'outflow' })} />
+              <ChipToggle label={copy.clarify.optionOwed} selected={form.direction === 'inflow'} onPress={() => set({ direction: 'inflow' })} />
+            </View>
+            {state.children.length > 0 && (
+              <>
+                <AppText variant="metadata" color={color.text.muted}>
+                  {copy.fix.labelChild}
+                </AppText>
+                <View style={styles.chips}>
+                  {state.children.map((child) => (
+                    <ChipToggle key={child.id} label={child.displayName} selected={form.subject === `child:${child.id}`} onPress={() => set({ subject: `child:${child.id}` })} />
+                  ))}
+                  <ChipToggle label={copy.review.noChild} selected={form.subject === 'none'} onPress={() => set({ subject: 'none' })} />
+                </View>
+              </>
+            )}
+          </>
+        )}
+        {problem && <InlineNotice tone="attention" title={problem} style={styles.block} />}
+      </ScrollView>
       <View style={styles.actions}>
         <Button label={copy.fix.apply} onPress={apply} disabled={busy} />
         <Button label={copy.fix.cancel} variant="ghost" onPress={onClose} disabled={busy} />

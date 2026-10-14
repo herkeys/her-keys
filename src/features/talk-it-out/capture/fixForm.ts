@@ -96,3 +96,17 @@ export function dayChoices(today: LocalDate, count = 8): Array<{ date: LocalDate
     return { date, label: formatDay(date, today) };
   });
 }
+
+/**
+ * How tall the Fix sheet's scrolling field area may be.
+ *
+ * The sheet is bottom-anchored inside a transparent Modal, so everything in it — the drag handle, the fields and the pinned
+ * Apply / Cancel row — has to fit the window. The row is pinned OUTSIDE the scroll area so Apply stays reachable however many
+ * fields the kind shows; its height grows with the user's font scale (the two buttons can wrap onto separate lines), so the
+ * fields give up room first. Never below 120 (a field plus its label stays usable) and never above 560 on tall screens.
+ */
+export function fixSheetFieldsMaxHeight(windowHeight: number, fontScale: number): number {
+  const scale = Number.isFinite(fontScale) ? Math.max(1, fontScale) : 1;
+  const height = Number.isFinite(windowHeight) ? windowHeight : 0;
+  return Math.max(120, Math.min(560, Math.floor(height - (120 + 112 * scale))));
+}

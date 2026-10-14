@@ -19,6 +19,8 @@ import { copy } from '../src/features/talk-it-out/capture/copy.ts';
 import { AppStateProvider } from '../src/store/AppStateProvider.tsx';
 import { startWorld } from './support/captureWorld.mjs';
 import { render } from './support/render.tsx';
+import { windowMetrics } from './support/rn-stub.tsx';
+import { fixSheetFieldsMaxHeight } from '../src/features/talk-it-out/capture/fixForm.ts';
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 const settle = (ms = 40) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -267,6 +269,80 @@ describe('Fix it: one operation, reachable by structured edit or by saying it', 
     await press(ui.renderer, copy.fix.apply);
     assert.ok(has(ui.renderer, copy.fix.notUnderstood));
     assert.equal(world.state().interpretations.length, 1);
+  });
+});
+
+describe('SC-06: the Fix sheet scrolls, avoids the keyboard and keeps Apply reachable', () => {
+  const fieldLabels = () => [copy.fix.sayIt, copy.fix.labelTitle, copy.fix.labelTime, copy.fix.labelAmount];
+  const insideScroll = (renderer, label) => renderer.root.findAllByType('ScrollView').some((sv) => sv.findAll((n) => n.props.accessibilityLabel === label).length > 0);
+
+  async function openFix(text = 'Dentist Friday at 3pm') {
+    const world = await startWorld();
+    const ui = await mount(world);
+    const out = await ui.coordinator.submit({ text, submissionKey: 'sc06' });
+    await ui.show(<CaptureGroup captureId={out.captureId} />);
+    await press(ui.renderer, copy.review.fix);
+    return { world, ui };
+  }
+
+  test('every field lives in one keyboard-aware ScrollView; Apply and Cancel are outside it, so they are always reachable', async () => {
+    const { ui } = await openFix();
+    const scrolls = ui.renderer.root.findAllByType('ScrollView');
+    assert.equal(scrolls.length, 1, 'one scroll region');
+    const props = scrolls[0].props;
+    assert.equal(props.keyboardShouldPersistTaps, 'handled', 'a tap on Apply while a field is focused is not swallowed');
+    assert.equal(props.automaticallyAdjustKeyboardInsets, true, 'iOS keeps the focused field above the keyboard');
+    assert.equal(typeof props.style.maxHeight, 'number');
+    for (const label of fieldLabels()) assert.ok(insideScroll(ui.renderer, label), 'field “' + label + '” scrolls');
+    for (const label of [copy.fix.apply, copy.fix.cancel]) {
+      assert.equal(named(ui.renderer, label).length, 1);
+      assert.equal(insideScroll(ui.renderer, label), false, '“' + label + '” is pinned outside the scroll area');
+    }
+  });
+
+  for (const [name, metrics] of [
+    ['a small phone (568pt)', { height: 568, fontScale: 1 }],
+    ['a small phone with 2x text', { height: 568, fontScale: 2 }],
+    ['a large phone with 1.3x text', { height: 926, fontScale: 1.3 }],
+  ]) {
+    test('on ' + name + ' the scroll area is bounded and Apply still works', async () => {
+      const before = { ...windowMetrics };
+      Object.assign(windowMetrics, metrics);
+      try {
+        const { world, ui } = await openFix();
+        const bound = ui.renderer.root.findByType('ScrollView').props.style.maxHeight;
+        assert.equal(bound, fixSheetFieldsMaxHeight(metrics.height, metrics.fontScale));
+        assert.ok(bound >= 120 && bound <= 560);
+        // The bounded fields plus the reserved chrome (handle, padding, the pinned action row at this text size) fit the window.
+        assert.ok(bound + 120 + 112 * Math.max(1, metrics.fontScale) <= metrics.height);
+        await press(ui.renderer, 'Tomorrow');
+        await press(ui.renderer, copy.fix.apply);
+        const [v1, v2] = world.state().interpretations;
+        assert.equal(v1.state, 'superseded', 'Apply keeps the one-operation correction semantics');
+        assert.match(v2.startsAt, /^2026-09-17T19:00/);
+      } finally {
+        Object.assign(windowMetrics, before);
+      }
+    });
+  }
+
+  test('the note kind (fewest fields) and the event kind (most) both keep the same structure', async () => {
+    const { ui } = await openFix('Remember to call Mom');
+    assert.equal(ui.renderer.root.findAllByType('ScrollView').length, 1);
+    assert.equal(insideScroll(ui.renderer, copy.fix.apply), false);
+    await press(ui.renderer, copy.fix.kindEvent);
+    assert.ok(insideScroll(ui.renderer, copy.fix.labelTime), 'the time field appears inside the scroll area');
+    assert.equal(insideScroll(ui.renderer, copy.fix.apply), false);
+  });
+
+  test('the height rule: bounded, monotonic in text size, never below a usable field, and safe on junk input', () => {
+    assert.equal(fixSheetFieldsMaxHeight(844, 1), 560, 'tall screens cap at 560');
+    assert.equal(fixSheetFieldsMaxHeight(568, 1), 336);
+    assert.equal(fixSheetFieldsMaxHeight(568, 2), 224);
+    assert.ok(fixSheetFieldsMaxHeight(568, 2) < fixSheetFieldsMaxHeight(568, 1), 'bigger text leaves less room for fields');
+    assert.equal(fixSheetFieldsMaxHeight(320, 3), 120, 'never collapses below a usable field');
+    assert.equal(fixSheetFieldsMaxHeight(568, 0.5), fixSheetFieldsMaxHeight(568, 1), 'a sub-1 font scale does not enlarge the area');
+    assert.equal(fixSheetFieldsMaxHeight(Number.NaN, Number.NaN), 120);
   });
 });
 

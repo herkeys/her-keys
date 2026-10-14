@@ -27,7 +27,7 @@ const scrollViewTags = (source) => [...source.matchAll(/<ScrollView\b[^>]*>/g)].
  * by the iOS audit. This list may only shrink: a new entry fails the test, and a fixed one must be removed.
  */
 const KNOWN_UNSCROLLED_INPUT_HOSTS = {
-  'src/features/talk-it-out/capture/CaptureCards.tsx': 'SH-04: the capture "Fix" sheet (6+ fields) is not scrollable',
+  // SH-04 (the capture "Fix" sheet) was repaired by SC-06 (scrollable, keyboard-aware, Apply pinned) and removed from this list.
 };
 
 describe('IOS-D04 every ScrollView that hosts a text field is keyboard-inset aware on iOS', () => {
