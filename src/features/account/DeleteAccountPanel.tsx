@@ -7,7 +7,7 @@ export function DeleteAccountPanel({onBack}:{onBack:()=>void}) {
  const [email,setEmail]=useState(''),[code,setCode]=useState(''),[busy,setBusy]=useState(false),[notice,setNotice]=useState('');
  const account=useAccount();
  async function work(fn:()=>Promise<unknown>){if(busy)return;setBusy(true);try{await fn();}catch{setNotice('This did not complete. Verify your identity recently and try again. Your deletion status is checked before access resumes.');}finally{setBusy(false);}}
- return <ScrollView contentContainerStyle={{padding:24,gap:20}}>
+ return <ScrollView automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" contentContainerStyle={{padding:24,gap:20}}>
   <AppText variant="hero" accessibilityRole="header">Privacy & Data</AppText>
   <AppText variant="title">Delete Account</AppText>
   <AppText>Confirming stops account access and synchronization immediately. You have 30 days from the server-recorded request to recover through email. After that, automated permanent deletion removes your account-owned household, child, task, calendar, private, and associated records. Shared ownership exceptions are reviewed to protect other members.</AppText>

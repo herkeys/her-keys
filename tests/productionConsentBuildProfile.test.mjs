@@ -42,7 +42,8 @@ test('consent gate is tied to bound accounts and server ledger, not an untrusted
   const view = readFileSync('src/features/consent/ConsentFlow.tsx', 'utf8');
   const backend = readFileSync('src/platform/consentBackend.ts', 'utf8');
   const ai = readFileSync('supabase/functions/herkeys-ai/index.ts', 'utf8');
-  assert.match(layout, /HERKEYS_V2_CONSENT_GATE/);
+  assert.match(layout, /if \(account\.state\.kind === 'accountBound'\)\s*\{\s*return <ConsentGate session=\{account\.state\.session\}>\{afterConsent\}<\/ConsentGate>/);
+  assert.doesNotMatch(layout, /if\s*\([^)]*(?:process\.env|HERKEYS_V2_CONSENT_GATE)[^)]*\)/, 'mandatory consent cannot be skipped by an environment flag');
   assert.match(layout, /account\.state\.kind === 'accountBound'/);
   assert.match(view, /createConsentLedger/);
   assert.match(view, /'age18'/);

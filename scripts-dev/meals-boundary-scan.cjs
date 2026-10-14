@@ -960,6 +960,8 @@ const LATER_FEATURES = [
     ['src/store/PremiumIntentContext.tsx', 'Pass A: retain a new-user choice through first identity binding only; clear on sign-out and account switch'],
     ['src/features/daily-load/premium/usePremiumDailyLoad.ts', 'Pass A: fence asynchronous canonical mutation on current actor/lifecycle, without changing review or reschedule rules'],
     ['tests/premium/clientProvider.test.mjs', 'Pass A: every-render privacy, same-household A-B-A replay, lifecycle denial, restored verification and late-purchase regressions'],
+    ['tests/premium/clientState.test.mjs', 'Pass A: exact server/client enum comparison accepts LF/CRLF delimiters and still fails missing types or changed sets'],
+    ['tests/productionConsentBuildProfile.test.mjs', 'Pass A: stricter mandatory bound-account consent guard rejects environment-conditional bypass'],
     ['tests/platformParity/restoreIdentity.test.mjs', 'Pass A: mounted provider clears on identity change; stricter late-restore rejection'],
     ['tests/welcomePremiumFlow.test.mjs', 'Pass A: intent follows first bound identity only and cannot survive sign-out or switch'],
     ['tests/premiumFeedback.test.mjs', 'Pass A: onboarding navigation reaches the one Account restore control; real route is stubbed at platform boundary'],

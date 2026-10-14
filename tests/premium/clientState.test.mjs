@@ -212,7 +212,9 @@ describe('client and server agree on the contract', () => {
   const types = readFileSync(new URL('../../supabase/functions/_shared/premium/types.ts', import.meta.url), 'utf8');
   const literals = (name) => {
     const block = types.slice(types.indexOf(`export type ${name} =`));
-    return [...block.slice(0, block.indexOf(';\n')).matchAll(/'([a-z_]+)'/g)].map((m) => m[1]);
+    assert.ok(types.indexOf(`export type ${name} =`) >= 0, `missing server type ${name}`);
+    assert.ok(block.indexOf(';') >= 0, `unterminated server type ${name}`);
+    return [...block.slice(0, block.indexOf(';')).matchAll(/'([a-z_]+)'/g)].map((m) => m[1]);
   };
 
   test('entitlement states, authorization reasons and next actions are identical sets', () => {
