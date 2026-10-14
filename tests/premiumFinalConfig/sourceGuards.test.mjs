@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 const cli=readFileSync(new URL('../../scripts-dev/premium-final-config.mjs',import.meta.url),'utf8');
 const core=readFileSync(new URL('../../scripts-dev/premium-final-config/core.mjs',import.meta.url),'utf8');
-const sql=readFileSync(new URL('../../supabase/operator/premium/20261015140000_premium_staging_tester_guard.sql',import.meta.url),'utf8');
+const sql=readFileSync(new URL('../../supabase/functions/_shared/premium/staging_tester_guard.sql',import.meta.url),'utf8');
 
 test('mutating CLI targets the Staging project only',()=>{
   assert.match(cli,/function requireStaging\(/);
