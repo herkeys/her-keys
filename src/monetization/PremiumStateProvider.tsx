@@ -6,7 +6,7 @@ import { PremiumController, type PremiumSnapshot } from './premiumController';
 import { premiumCopyFor, purchaseOutcomeNotice, type PremiumCopy } from './premiumCopy';
 import { deriveFeatureState, isUsable, type PremiumFeatureState } from './premiumFeatureState';
 import { UNCONFIGURED_PREMIUM_LEDGER, type PremiumLedgerClient } from './premiumLedgerClient';
-import type { GateDecision, GateRequest, GateResult, PremiumServerClient } from './premiumTypes';
+import type { ExtractRequest, ExtractResult, GateDecision, GateRequest, GateResult, PremiumServerClient } from './premiumTypes';
 import { useEntitlement } from './RevenueCatProvider';
 
 export interface PremiumContextValue {
@@ -22,6 +22,8 @@ export interface PremiumContextValue {
   decisions: Readonly<Record<string, GateDecision>>;
   recordDecision: (featureKey: string, decision: GateDecision | null) => void;
   authorize: (request: GateRequest) => Promise<GateResult>;
+  /** Smart Inbox: the server authorizes, runs and meters one extraction. An answer that arrives after the account changed is discarded. */
+  extract: (request: ExtractRequest) => Promise<ExtractResult>;
 }
 
 const PremiumContext = createContext<PremiumContextValue | null>(null);
@@ -111,10 +113,20 @@ export function PremiumStateProvider({
     [client, controller, recordDecision],
   );
 
+  const extract = useCallback(
+    async (request: ExtractRequest): Promise<ExtractResult> => {
+      const owner = controller.getSnapshot().accountId;
+      const result = await client.extract(request);
+      if (controller.getSnapshot().accountId !== owner) return { kind: 'unavailable', reason: 'account_changed' };
+      return result;
+    },
+    [client, controller],
+  );
+
   const householdId = accountState.kind === 'accountBound' ? accountState.householdId : null;
   const value = useMemo<PremiumContextValue>(
-    () => ({ snapshot, controller, accountBound, householdId, ledger, appVersion, decisions, recordDecision, authorize }),
-    [snapshot, controller, accountBound, householdId, ledger, appVersion, decisions, recordDecision, authorize],
+    () => ({ snapshot, controller, accountBound, householdId, ledger, appVersion, decisions, recordDecision, authorize, extract }),
+    [snapshot, controller, accountBound, householdId, ledger, appVersion, decisions, recordDecision, authorize, extract],
   );
   return <PremiumContext.Provider value={value}>{children}</PremiumContext.Provider>;
 }
@@ -125,6 +137,11 @@ export function usePremiumState(): PremiumContextValue {
   const value = useContext(PremiumContext);
   if (!value) throw new Error('usePremiumState must be used within PremiumStateProvider');
   return value;
+}
+
+/** For code that must keep working where Premium is not mounted (Free features, tests): null instead of throwing. */
+export function useOptionalPremiumState(): PremiumContextValue | null {
+  return useContext(PremiumContext);
 }
 
 export interface PremiumFeatureApi {

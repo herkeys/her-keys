@@ -122,7 +122,11 @@ export type AssumptionCode =
   | 'hedged-language'
   | 'title-shortened'
   | 'multiple-children-no-single-subject'
-  | 'amount-direction-unknown';
+  | 'amount-direction-unknown'
+  /** Her Keys Premium's reader (a language model, behind the server) produced this proposal, not the deterministic local reader. */
+  | 'premium-reading'
+  /** She already has something very like this: a warning, never a block. */
+  | 'possible-duplicate';
 
 export interface Proposal {
   /** Stable within one result (`p1`, `p2`, …). Durable identity is the interpretation id it becomes. */

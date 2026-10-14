@@ -446,3 +446,8 @@ verify_jwt = true
 
 [functions.premium-reconcile]
 verify_jwt = true
+
+# Smart Inbox (Premium): the gateway verifies the signed-in user and the function verifies the same bearer token again; entitlement,
+# AI Data Processing consent and quota are then checked by the server before any model call.
+[functions.smart-inbox-extract]
+verify_jwt = true

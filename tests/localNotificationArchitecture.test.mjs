@@ -79,6 +79,7 @@ describe('local notification architecture boundary', () => {
       'premium-gate': 'authenticated Premium authorization decision; no notification path',
       'premium-reconcile': 'authenticated "verify my subscription" read of RevenueCat; no notification path',
       'premium-ops': 'operator-secret backlog and reconcile endpoint; no notification path',
+      'smart-inbox-extract': 'authenticated Premium extraction of typed proposals from pasted text; returns data to the caller, sends nothing',
     };
     const functions = readdirSync('supabase/functions').filter((name) => statSync(`supabase/functions/${name}`).isDirectory());
     for (const name of functions) {

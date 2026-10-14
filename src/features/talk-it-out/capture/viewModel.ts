@@ -258,6 +258,7 @@ export function buildCaptureVM(inputs: ReviewInputs & { captureId: string }): Ca
 
   const sessionNotes: string[] = [];
   if (session?.failure) sessionNotes.push(copy.capture.failure(session.failure.code));
+  if (session?.reader.kind === 'local' && session.reader.premiumNotUsed) sessionNotes.push(copy.review.premiumNotUsed[session.reader.premiumNotUsed]);
   const seen = new Set<string>();
   for (const item of session?.unsupported ?? []) {
     const key = item.reason === 'responsibility-handoff' ? `handoff:${item.person?.name ?? ''}` : item.reason;

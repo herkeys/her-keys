@@ -1,5 +1,8 @@
-import { createContext, useContext, useEffect, useMemo, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, type ReactNode } from 'react';
+import { useOptionalPremiumState } from '../../../monetization/PremiumStateProvider';
+import { isEntitledState } from '../../../monetization/premiumTypes';
 import { useAppStore, useStoreSnapshot } from '../../../store/AppStateProvider';
+import { createSmartInboxEnhancer } from '../../smart-inbox/smartInboxEnhancer';
 import { createCaptureCoordinator, type CaptureCoordinator } from './coordinator';
 import { localInterpreter } from './port';
 import { createMemoryCaptureTextStore, pruneOrphans, type CaptureTextStore } from './textStore';
@@ -23,9 +26,28 @@ const CaptureContext = createContext<CaptureContextValue | null>(null);
 
 export function CaptureProvider({ children, now = Date.now }: { children: ReactNode; now?: () => number }) {
   const store = useAppStore();
+  // The coordinator holds this session's readings in memory, so it must NOT be rebuilt when Premium's state changes: the enhancer reads
+  // the latest Premium view through a ref at call time instead.
+  const premium = useOptionalPremiumState();
+  const premiumRef = useRef(premium);
+  premiumRef.current = premium;
   const value = useMemo<CaptureContextValue>(() => {
     const text = createMemoryCaptureTextStore();
-    return { text, now, coordinator: createCaptureCoordinator({ store, interpreter: localInterpreter, text, now }) };
+    const enhance = createSmartInboxEnhancer({
+      premium: () => {
+        const p = premiumRef.current;
+        if (!p) return null;
+        return {
+          accountBound: p.accountBound,
+          householdId: p.householdId,
+          entitled: p.snapshot.server !== null && isEntitledState(p.snapshot.server.state),
+          appVersion: p.appVersion,
+          extract: p.extract,
+        };
+      },
+      state: () => store.getSnapshot().state,
+    });
+    return { text, now, coordinator: createCaptureCoordinator({ store, interpreter: localInterpreter, text, now, enhance }) };
   }, [store, now]);
 
   // Words are reachable only through a source; if the household was reset, forget what nothing refers to.

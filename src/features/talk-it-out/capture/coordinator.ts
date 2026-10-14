@@ -25,6 +25,7 @@ import type {
   EvidenceRef,
   InterpretationContext,
   InterpretationFailure,
+  InterpretationResult,
   Proposal,
   ProposalDraft,
   ProposalPatch,
@@ -58,7 +59,27 @@ export interface CaptureSession {
   failure: InterpretationFailure | null;
   /** What the reader ASSUMED and which of her words each fact came from, per reading. Session-only: never stored. */
   details: ReadonlyMap<string, CaptureDetail>;
+  /**
+   * Which reader produced these readings. `premium` = Her Keys Premium's server reader; `local` = the deterministic one, with — only
+   * when a Premium reading was ATTEMPTED and not used — the reason, so a customer is told why. Session-only: never stored.
+   */
+  reader: CaptureReader;
 }
+
+export type PremiumReadingSkip = 'consent' | 'limit' | 'unavailable' | 'replayed';
+export type CaptureReader = { kind: 'local'; premiumNotUsed: PremiumReadingSkip | null } | { kind: 'premium' };
+
+/**
+ * An OPTIONAL second reader (Smart Inbox, Her Keys Premium). It runs only AFTER the local high-stakes screen has passed and the source is
+ * saved, so text the local screen refuses is never sent anywhere. It may return a better reading, or decline; it never throws into the
+ * coordinator, and a decline always leaves the local reading in place. Everything it returns is still only a proposal awaiting her review.
+ */
+export type CaptureEnhancer = (input: {
+  text: string;
+  submissionKey: string;
+  context: InterpretationContext;
+  local: InterpretationResult;
+}) => Promise<{ kind: 'enhanced'; result: InterpretationResult } | { kind: 'kept-local'; skipped: PremiumReadingSkip | null }>;
 
 export interface CaptureDetail {
   assumptions: readonly AssumptionCode[];
@@ -107,6 +128,8 @@ export interface CaptureCoordinatorDeps {
   text: CaptureTextStore;
   /** The same clock the store uses, so "today" means one thing. */
   now: () => number;
+  /** Smart Inbox (Premium). Absent for a Free account: capture is then exactly what it was. */
+  enhance?: CaptureEnhancer;
 }
 
 export interface CaptureCoordinator {
@@ -197,7 +220,7 @@ export function categoryIdForHint(state: Pick<AppState, 'categories'>, hint: Sys
 // -------------------------------------------------------------- coordinator ---
 
 export function createCaptureCoordinator(deps: CaptureCoordinatorDeps): CaptureCoordinator {
-  const { store, interpreter, text, now } = deps;
+  const { store, interpreter, text, now, enhance } = deps;
   const sessions = new Map<string, CaptureSession>();
   const understoodFailures = new Map<string, number>();
   const inflight = new Map<string, Promise<SubmitOutcome>>();
@@ -215,7 +238,12 @@ export function createCaptureCoordinator(deps: CaptureCoordinatorDeps): CaptureC
     });
   }
 
-  async function readAndPropose(captureId: string, duplicate: boolean, precomputed?: ReturnType<TalkItOutInterpreterPort['interpret']>): Promise<SubmitOutcome> {
+  async function readAndPropose(
+    captureId: string,
+    duplicate: boolean,
+    precomputed?: ReturnType<TalkItOutInterpreterPort['interpret']>,
+    reader: CaptureReader = { kind: 'local', premiumNotUsed: null },
+  ): Promise<SubmitOutcome> {
     const state = snapshotState();
     const artifact = state ? artifactOf(state, captureId) : undefined;
     if (!state || !artifact || artifact.retractedAt !== null) return { kind: 'not-saved' };
@@ -230,7 +258,7 @@ export function createCaptureCoordinator(deps: CaptureCoordinatorDeps): CaptureC
 
     const result = precomputed ?? interpreter.interpret({ captureId, text: words, context: contextNow(state) });
     const details = new Map<string, CaptureDetail>();
-    sessions.set(captureId, { captureId, unsupported: result.unsupported, failure: result.failure, details });
+    sessions.set(captureId, { captureId, unsupported: result.unsupported, failure: result.failure, details, reader });
     if (result.proposals.length === 0) return { kind: 'captured', captureId, readingIds: [], duplicate, failure: result.failure, unsupported: result.unsupported };
 
     if (!(await proposeReadings(captureId, result.proposals))) return { kind: 'not-saved' };
@@ -274,7 +302,23 @@ export function createCaptureCoordinator(deps: CaptureCoordinatorDeps): CaptureC
       text.delete(contentRef);
       return { kind: 'not-saved' };
     }
-    return readAndPropose(artifact.id, false, { ...preview, captureId: artifact.id });
+    // The local reading is the floor. An enhancer (Smart Inbox, Premium) may replace it, but only AFTER the high-stakes screen above and
+    // the durable save: it can never see text the local screen refused, and a source can never exist without readings falling back here.
+    let result = { ...preview, captureId: artifact.id };
+    let reader: CaptureReader = { kind: 'local', premiumNotUsed: null };
+    if (enhance) {
+      try {
+        const current = snapshotState();
+        const better = current ? await enhance({ text: words, submissionKey: input.submissionKey, context: contextNow(current), local: preview }) : null;
+        if (better?.kind === 'enhanced') {
+          result = { ...better.result, captureId: artifact.id };
+          reader = { kind: 'premium' };
+        } else if (better) reader = { kind: 'local', premiumNotUsed: better.skipped };
+      } catch {
+        reader = { kind: 'local', premiumNotUsed: 'unavailable' };
+      }
+    }
+    return readAndPropose(artifact.id, false, result, reader);
   }
 
   return {

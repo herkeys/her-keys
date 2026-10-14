@@ -94,6 +94,66 @@ export interface GateRequest {
 
 export type VerifyStatus = 'reconciled' | 'rate_limited' | 'provider_unavailable' | 'invalid_response' | 'conflict';
 
+// ---------------------------------------------------------------------------------------------------- Smart Inbox (server extraction)
+
+export const EXTRACT_AMBIGUITIES = ['which_child', 'which_day', 'which_money_direction'] as const;
+export type ExtractAmbiguity = (typeof EXTRACT_AMBIGUITIES)[number];
+export const EXTRACT_UNSUPPORTED_REASONS = ['change-to-existing-item', 'recurrence', 'responsibility-handoff', 'multiple-dates', 'multiple-times', 'multiple-amounts', 'foreign-currency', 'context-only'] as const;
+export type ExtractUnsupportedReason = (typeof EXTRACT_UNSUPPORTED_REASONS)[number];
+
+export interface ExtractRef {
+  ref: string;
+  name: string;
+}
+
+export interface ExtractRequest {
+  householdId: string;
+  idempotencyKey: string;
+  text: string;
+  context: { timeZone: string; today: string; children: ExtractRef[]; people: ExtractRef[]; areas: string[] };
+  appVersion?: string;
+}
+
+/** What the server validated and returned. Still UNTRUSTED to the app: it is checked again before it becomes a proposal. */
+export interface ExtractedProposal {
+  key: string;
+  kind: 'task' | 'event' | 'needsMe';
+  title: string;
+  quote: string;
+  span: { start: number; end: number };
+  date: string | null;
+  startMinutes: number | null;
+  endMinutes: number | null;
+  durationMinutes: number | null;
+  amount: string | null;
+  direction: 'outflow' | 'inflow' | null;
+  childRef: string | null;
+  childAmbiguous: boolean;
+  category: string | null;
+  hedged: boolean;
+  ambiguity: ExtractAmbiguity[];
+}
+
+export interface ExtractedUnsupported {
+  reason: ExtractUnsupportedReason;
+  span: { start: number; end: number };
+  person: { name: string; known: boolean } | null;
+}
+
+export interface Extraction {
+  proposals: ExtractedProposal[];
+  unsupported: ExtractedUnsupported[];
+  dropped: number;
+}
+
+export type ExtractResult =
+  | { kind: 'ok'; extraction: Extraction; via: 'premium' | 'free_allowance' }
+  | { kind: 'denied'; decision: GateDecision }
+  | { kind: 'replayed' }
+  | { kind: 'unavailable'; reason: string }
+  | { kind: 'invalid_output' }
+  | { kind: 'invalid_request' };
+
 /** The only way the app reaches the server's Premium state. Implemented over Supabase; scripted in tests. */
 export interface PremiumServerClient {
   entitlement(): Promise<{ kind: 'ok'; value: ServerEntitlement } | { kind: 'unavailable' }>;
@@ -101,6 +161,8 @@ export interface PremiumServerClient {
   /** "Verify my subscription": the server reads RevenueCat's authenticated record for THIS account. Rate-limited server-side. */
   verify(): Promise<{ kind: 'ok'; status: VerifyStatus } | { kind: 'unavailable' }>;
   authorize(request: GateRequest): Promise<GateResult>;
+  /** Smart Inbox: the SERVER authorizes (entitlement, AI consent, quota), calls the model, and validates. Her words go nowhere else. */
+  extract(request: ExtractRequest): Promise<ExtractResult>;
 }
 
 export function isEntitledState(state: ServerEntitlementState): boolean {

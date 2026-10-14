@@ -23,6 +23,8 @@ const ASSUMPTION: Record<AssumptionCode, string> = {
   'title-shortened': 'I shortened the title. Your full words are kept only while the app is open.',
   'multiple-children-no-single-subject': 'You named more than one child, so this isn’t tied to a single child.',
   'amount-direction-unknown': 'You didn’t say whether you pay this or are owed it, so I didn’t record the amount as money.',
+  'premium-reading': 'Her Keys Premium read this from your words. It can get a day or a name wrong, so check each detail before you save it.',
+  'possible-duplicate': 'You already have something very like this. Check before you save it twice.',
 };
 
 const UNSUPPORTED: Record<Exclude<UnsupportedReason, 'responsibility-handoff'>, string> = {
@@ -82,6 +84,13 @@ export const copy = {
     sourceCollapse: 'Show less',
     sourceUnavailable: 'The exact words aren’t kept after the app closes. What Her Keys understood is still here.',
     revised: 'Revised from an earlier reading.',
+    // Said only to someone who has Her Keys Premium and whose Premium reading was NOT used: why, and that the basic reader read it instead.
+    premiumNotUsed: {
+      consent: 'Her Keys Premium didn’t read this because it needs your okay in your privacy choices, so the basic reader did. You can change that there.',
+      limit: 'Her Keys Premium has reached its limit for now, so the basic reader read this one.',
+      unavailable: 'Her Keys Premium couldn’t read this just now, so the basic reader did. Nothing was lost.',
+      replayed: 'Her Keys Premium had already read this once, so the basic reader read it again.',
+    },
     checkDetails: 'Her Keys read these details from your words. Check the day and time before you save it.',
     sourceFromTalk: 'From what you told Her Keys',
     kind: (kind: ProposalKind, hasDate: boolean): string => (kind === 'needsMe' && hasDate ? 'A dated note' : KIND_LABEL[kind]),

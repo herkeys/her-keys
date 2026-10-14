@@ -208,6 +208,25 @@ export class FakeStore {
     if (!this.authorizeImpl) throw new Error('no authorizeImpl');
     return this.authorizeImpl(args, this);
   }
+
+  // The usage lifecycle a server-executed feature owns: reserve (authorize) -> run -> complete OR fail. Calls are recorded in order.
+  usageCalls = [];
+  async completeUsage(accountId, feature, key) {
+    this.usageCalls.push(['complete', accountId, feature, key]);
+    if (this.faults.completeUsage > 0) {
+      this.faults.completeUsage -= 1;
+      throw new Error('completeUsage_injected_failure');
+    }
+    return 'completed';
+  }
+  async failUsage(accountId, feature, key) {
+    this.usageCalls.push(['fail', accountId, feature, key]);
+    if (this.faults.failUsage > 0) {
+      this.faults.failUsage -= 1;
+      throw new Error('failUsage_injected_failure');
+    }
+    return 'failed';
+  }
 }
 
 export class FakeApi {
