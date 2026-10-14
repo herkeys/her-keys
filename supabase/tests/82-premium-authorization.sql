@@ -322,12 +322,20 @@ SELECT CASE WHEN bool_and(NOT has_table_privilege('authenticated', 'public.' || 
             THEN 'PASS' ELSE 'FAIL' END || ' | no client role holds ANY privilege on any Premium table'
 FROM unnest(ARRAY['premium_runtime_config', 'premium_feature_config', 'premium_entitlements', 'premium_events', 'premium_subscriber_identities',
                   'premium_reconcile_state', 'premium_usage', 'premium_usage_events', 'premium_usage_global', 'premium_authorization_audit']) AS t;
-SELECT CASE WHEN count(*) = 10 THEN 'PASS' ELSE 'FAIL' END || ' | RLS is enabled AND forced on all ten Premium tables'
-FROM pg_class WHERE relnamespace = 'public'::regnamespace AND relname LIKE 'premium\_%' AND relkind = 'r' AND relrowsecurity AND relforcerowsecurity;
+-- Eleven Premium tables once the decision ledger (A4) is in the chain: the ten above plus premium_decisions (owner-readable receipts; its
+-- client privileges are pinned in suite 83). The count is exact on purpose: an unprotected twelfth table must fail here.
+SELECT CASE WHEN count(*) = 11 AND count(*) FILTER (WHERE relrowsecurity AND relforcerowsecurity) = 11 THEN 'PASS' ELSE 'FAIL' END
+       || ' | there are exactly eleven Premium tables and RLS is enabled AND forced on every one (ten foundation + the decision ledger)'
+FROM pg_class WHERE relnamespace = 'public'::regnamespace AND relname LIKE 'premium\_%' AND relkind = 'r';
 SELECT CASE WHEN bool_and(NOT has_function_privilege('authenticated', p.oid, 'EXECUTE') AND NOT has_function_privilege('anon', p.oid, 'EXECUTE'))
             THEN 'PASS' ELSE 'FAIL' END || ' | no client role can execute a service-only Premium function (incl. premium_authorize)'
 FROM pg_proc p WHERE p.pronamespace = 'public'::regnamespace AND p.proname LIKE 'premium\_%'
-  AND p.proname NOT IN ('premium_my_entitlement', 'premium_feature_manifest');
+  AND p.proname NOT IN ('premium_my_entitlement', 'premium_feature_manifest', 'premium_decision_record', 'premium_decision_transition');
+-- The client-callable Premium surface is EXACTLY these four (the two entitlement reads here, the two ledger state-machine functions in suite 83).
+SELECT CASE WHEN (SELECT array_agg(p.proname::text ORDER BY p.proname) FROM pg_proc p WHERE p.pronamespace = 'public'::regnamespace AND p.proname LIKE 'premium\_%'
+                    AND has_function_privilege('authenticated', p.oid, 'EXECUTE'))
+                 = ARRAY['premium_decision_record', 'premium_decision_transition', 'premium_feature_manifest', 'premium_my_entitlement']
+            THEN 'PASS' ELSE 'FAIL' END || ' | the client-callable Premium functions are exactly the two entitlement reads and the two ledger functions';
 SELECT CASE WHEN has_function_privilege('authenticated', 'public.premium_my_entitlement()', 'EXECUTE')
               AND NOT has_function_privilege('anon', 'public.premium_my_entitlement()', 'EXECUTE')
             THEN 'PASS' ELSE 'FAIL' END || ' | only authenticated can read its own entitlement state';
