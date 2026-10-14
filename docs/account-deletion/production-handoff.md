@@ -1,5 +1,7 @@
 # Production handoff: database migrations applied; activation remains closed
 
+> **Later update (2026-10-14):** After the database-only handoff below, the owner authorized Production infrastructure deployment. All 14 required Edge Functions and three inactive scheduler jobs are now installed, with destructive processing still disabled. See [production-edge-deployment-20261014.md](production-edge-deployment-20261014.md). The following sections remain the historical database-only approval record.
+
 Target: npykvnxnehlsdlbumzwk. The owner authorized the eight reviewed canonical lifecycle SQL migrations; all eight were applied on 2026-10-14. Customer deletion, Edge Function deployment, scheduler installation and worker activation remain unauthorized. The pre-apply read-only inspection found no lifecycle tables/migrations and no pg_cron extension. Existing Edge Function versions are captured in deployment-manifest.json. Production RevenueCat secret names and project-ID digest were independently inspected without revealing either key.
 
 Concrete candidate:
