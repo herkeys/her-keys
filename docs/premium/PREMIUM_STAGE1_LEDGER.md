@@ -139,3 +139,22 @@ Local, same code: `tsc` clean; `deno check` clean for all five functions; SQL su
 ## 10. Rollback
 
 Disable, don't drop (`PREMIUM_STAGE1_OPERATIONS.md` §1, §6): global switch, per-feature `enabled`/`kill_switch`, `webhook_processing=false`. Edge Functions are stateless and redeployable to the previous version. The migrations are additive; the drop path is valid **only while the tables are empty**. Never delete `premium_events` or `premium_decisions`.
+
+---
+
+## 2026-10-14 hosted backend follow-up — additive evidence (integration branch)
+
+**Original Stage 1 source-level evidence remains unchanged.** Five Staging Edge Functions are now `ACTIVE` v1 from Premium SHA `e4462d2`; hosted JWT/public-GET negative checks pass. Both environments passed complete Premium base-table RLS/grant audits. The two shared databases' migrations were already installed before this pass.
+
+**Evidence file:** [PREMIUM_STAGE1_STAGING_EVIDENCE_20261014.md](PREMIUM_STAGE1_STAGING_EVIDENCE_20261014.md) — exact deployed SHA-256 digests, live Staging HTTP request IDs 340–344 / 346–351, response bodies, operation/function logs, Production constraint/RLS/RPC checks, and the eleven-item certification table.
+
+**New certification outcomes:**
+- `PREMIUM_EDGE_STAGING_DEPLOYMENT=PASS` (only deployment + unauthenticated GET); five Edge Functions deployed Staging only.
+- `PREMIUM_STAGING_PERMISSIONS_AUDIT=PASS` and `PREMIUM_PRODUCTION_SAFEGUARDS_AUDIT=PASS` (read-only structural evidence; switches intentionally OFF in Production).
+- `PREMIUM_WEBHOOK_SECURITY_STAGING=BLOCKED`: live unauthorized POSTs return `503 not_configured`, not the required post-configuration `401`; webhook/operator secrets have not been supplied; RevenueCat Sandbox webhook not registered.
+- `PREMIUM_STAGING_SIGNED_JWT_JOURNEY=BLOCKED`; `PREMIUM_SANDBOX_PURCHASE=BLOCKED`; `PREMIUM_HOSTED_QUOTA_RACE=NOT_RUN`; `PREMIUM_OPERATIONS_REHEARSAL=BLOCKED`.
+- `PREMIUM_SMART_INBOX_LIVE_EVAL=NOT_RUN` (model spend not approved).
+- `PREMIUM_DELETION_INTEGRATION=BLOCKED`, assigned to deletion owner via [GitHub issue #9](https://github.com/herkeys/her-keys/issues/9).
+- `PREMIUM_PUBLIC_SALES_READY=FAIL` remains unchanged.
+
+The Staging webhook processor remains deliberately paused; no entitlement was granted; Production Premium authorization and webhook processing remain disabled. No Expo, UI, device, EAS, store, or pricing change was made. This addendum does not recertify the original source-code SHA or claim device verification.
