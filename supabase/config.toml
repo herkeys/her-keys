@@ -431,3 +431,18 @@ verify_jwt = false
 # user and the function verifies the same bearer token again before any provider call.
 [functions.herkeys-ai]
 verify_jwt = true
+
+# Her Keys Premium Stage 1. The webhook is called by RevenueCat (no Supabase JWT): it authenticates the SENDER itself with the configured
+# Authorization header and the HMAC signature over the raw body. premium-ops is an operator endpoint guarded by PREMIUM_OPS_SECRET.
+# premium-gate and premium-reconcile are user endpoints: the gateway verifies the JWT and the function verifies it again.
+[functions.revenuecat-webhook]
+verify_jwt = false
+
+[functions.premium-ops]
+verify_jwt = false
+
+[functions.premium-gate]
+verify_jwt = true
+
+[functions.premium-reconcile]
+verify_jwt = true

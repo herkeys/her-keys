@@ -303,7 +303,7 @@ $$;
 -- ---------------------------------------------------------------------------------------------------------------
 CREATE FUNCTION public.premium_record_event(p_event jsonb)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, public AS $$
-DECLARE v_id uuid;
+DECLARE v_id uuid; v_status text;
 BEGIN
   INSERT INTO public.premium_events (
     event_id, environment, event_type, event_timestamp_ms, app_user_id, original_app_user_id,
@@ -316,10 +316,10 @@ BEGIN
   ON CONFLICT (environment, event_id) DO NOTHING
   RETURNING id INTO v_id;
   IF v_id IS NULL THEN
-    SELECT id INTO v_id FROM public.premium_events WHERE environment = p_event->>'environment' AND event_id = p_event->>'event_id';
-    RETURN jsonb_build_object('id', v_id, 'duplicate', true);
+    SELECT id, status INTO v_id, v_status FROM public.premium_events WHERE environment = p_event->>'environment' AND event_id = p_event->>'event_id';
+    RETURN jsonb_build_object('id', v_id, 'duplicate', true, 'status', v_status);
   END IF;
-  RETURN jsonb_build_object('id', v_id, 'duplicate', false);
+  RETURN jsonb_build_object('id', v_id, 'duplicate', false, 'status', 'received');
 END
 $$;
 
