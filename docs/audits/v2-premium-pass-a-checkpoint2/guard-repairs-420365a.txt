@@ -1,0 +1,145 @@
+▶ IOS-D04 every ScrollView that hosts a text field is keyboard-inset aware on iOS
+  ✔ there are input-hosting scroll views to guard (the scan is not vacuous) (1.1154ms)
+  ✔ src/features/account/DeleteAccountPanel.tsx: every <ScrollView> sets automaticallyAdjustKeyboardInsets (1.3857ms)
+  ✔ src/features/lifeAdmin/OcrReviewScreen.tsx: every <ScrollView> sets automaticallyAdjustKeyboardInsets (1.9418ms)
+  ✔ src/features/lifeAdmin/RecordSheet.tsx: every <ScrollView> sets automaticallyAdjustKeyboardInsets (2.2084ms)
+  ✔ src/features/lifeAdmin/RecordTaskSheet.tsx: every <ScrollView> sets automaticallyAdjustKeyboardInsets (1.9363ms)
+  ✔ src/features/meals/MealSheet.tsx: every <ScrollView> sets automaticallyAdjustKeyboardInsets (1.835ms)
+  ✔ src/features/meals/MealTaskSheet.tsx: every <ScrollView> sets automaticallyAdjustKeyboardInsets (1.9499ms)
+  ✔ src/features/money/MoneySheet.tsx: every <ScrollView> sets automaticallyAdjustKeyboardInsets (1.8299ms)
+  ✔ src/features/talk-it-out/capture/CaptureCards.tsx: every <ScrollView> sets automaticallyAdjustKeyboardInsets (1.8205ms)
+  ✔ the shared Screen scroll container (the page-level editors) is keyboard-inset aware (2.1084ms)
+  ✔ a ScrollView that hosts a text field and uses KeyboardAvoidingView is not double-adjusted by the guard (467.8609ms)
+✔ IOS-D04 every ScrollView that hosts a text field is keyboard-inset aware on iOS (488.2616ms)
+▶ IOS-D04 text-field hosts with no scroll container are a registered shared gap
+  ✔ the set of unscrolled input hosts is exactly the registered one (365.6949ms)
+✔ IOS-D04 text-field hosts with no scroll container are a registered shared gap (366.0143ms)
+▶ IOS-D04 the prop is iOS-only in the installed React Native, so Android is unaffected
+  ✔ it is in the iOS branch of RCTScrollView's native view config and not in Android's (1.8697ms)
+  ✔ the shared source never branches on Platform to do it (no new registry conditional) (2.0139ms)
+✔ IOS-D04 the prop is iOS-only in the installed React Native, so Android is unaffected (4.1423ms)
+▶ [BV] the semantic-boundary scan
+  ✔ [BV1] [BV2] [BV3] [BV4] [BV5] the scan passes: one migration, no new durable type, table, collection or sync kind, every shared-file change explained (14184.5659ms)
+  ✔ [BM1] [BM2] [BM3] no sibling imports, by import scan and by ancestry (13.8079ms)
+  ✔ [BM4] the checked-out branch is the line under test, never its own sibling — and a detached HEAD or any OTHER branch is not exempt (7.6705ms)
+  ✔ [BM5] only the owner-reviewed exact Premium import is registered; future tips and unrelated lanes still fail (0.5362ms)
+  ✔ [BV6] who could have made a change decides what explains it: the Wave 2 line needs a Meals-line reason, a later change a later lane's (HK13-D11) (10.1474ms)
+  ✔ [BV7] check H — the register is true: every known-invalid claim still fails, and only a PROVED stacked lane inherits (5.1506ms)
+  ✔ [CB1] [CD1] no dependency relation, recipe link or external reference is created by Meals code (14.9956ms)
+✔ [BV] the semantic-boundary scan (14240.7798ms)
+▶ [AN] [BY] no dietary or allergy context exists to attribute
+  ✔ [AN1] [BY1] nothing outside Meals' own copy mentions allergy, diet, nutrition, calories or recipes: the foundation has no such facts, so none may be claimed (226.9054ms)
+✔ [AN] [BY] no dietary or allergy context exists to attribute (227.2405ms)
+▶ [BF] drafts and UI state stay off the store
+  ✔ [BF1] the sheets and the body import no store, persistence or sync module: a draft lives and dies in the component (4.1644ms)
+  ✔ [BF2] the only writes are the meal domain actions through the canonical store commit (2.7457ms)
+✔ [BF] drafts and UI state stay off the store (7.2337ms)
+▶ [BO] no network, no logging, no secrets in Meals code
+  ✔ [BO3] Meals code makes no network call and logs nothing (a meal title never reaches a log) (14.2773ms)
+  ✔ [BO1] no secret or credential pattern in any line Feature 08 added (587.4246ms)
+✔ [BO] no network, no logging, no secrets in Meals code (602.0233ms)
+▶ [BL] the route and the Life hub are used as they were
+  ✔ [BL1] [BL2] Meals never changed the routing, route access, root layout or Life layout; any later change to one is a registered later lane's; the Meals route is the existing direct route (167.3003ms)
+✔ [BL] the route and the Life hub are used as they were (167.5699ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-03: every paywall outcome has words in the right tone, and none leak the SDK’s own message (3.1933ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ V2 integration: onboarding routes to Account for restore rather than mounting a second transaction control (30.3633ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-03 android: the Systems Premium card tells her how every paywall ended (37.4513ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-03 ios: the Systems Premium card tells her how every paywall ended (39.3509ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-03: the Systems card is single-flight, a throwing paywall is a failed paywall, and entitled users see no upsell (10.0235ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-03: the unmounted Systems card ignores a paywall that ends late (3.316ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-03: the onboarding step words an unavailable offering, a failure and a cancel — and never traps her (46.732ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-03: the onboarding step completes on purchase or restore, once, and on free continuation (48.7626ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-03: the onboarding step no longer lists benefits nothing delivers (3.7243ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-03: after consent, a Premium choice that cannot be fulfilled is told to her — and the app stays open (27.8315ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-03: a checkout that throws is worded, never blocks the app, and the notice can be dismissed (9.1756ms)
+✔ SC-03: a free choice shows nothing and offers no checkout (1.7953ms)
+✔ PBP-1: no feature is gated on her_keys_plus — outside src/monetization the only entitlement read is the Systems upsell card (1605.074ms)
+✔ PBP-1b (Premium Stage 1): the ONLY server-authoritative consumers of Premium state outside src/monetization are the Premium features themselves (766.2067ms)
+✔ PBP-2 (evolved in Premium Stage 1): the backend enforces Premium ONLY inside the Premium namespace — no Free function, calendar, weather, AI, welcome-email or sync path reads the entitlement (297.6495ms)
+✔ PBP-3: outside the Welcome Tree, no source copy claims Premium benefits the app does not deliver (648.0034ms)
+▶ the unified Premium feature state
+  ✔ signed out: Premium needs an account, and the account is the only thing that can be entitled (1.9951ms)
+  ✔ loading until the server has answered (0.3103ms)
+  ✔ ENTITLED only when the SERVER says so — the store SDK alone can never unlock a feature (0.4667ms)
+  ✔ the three paid server states are entitled, each described truthfully (3.8721ms)
+  ✔ free and unknown server states with a free store are an upgrade prompt (0.2864ms)
+  ✔ expired and refunded are different, and both leave her information alone (0.2113ms)
+  ✔ the store says paid but the server has not agreed: verification, in each honest flavour (1.7006ms)
+  ✔ with the server unreachable and no purchase in play, the feature is simply unavailable for now (Free is untouched) (0.3079ms)
+  ✔ the account being deleted overrides everything (0.2529ms)
+  ✔ a release switch in the manifest closes the feature even for a paying customer (0.288ms)
+  ✔ a real server decision is shown as what it was: consent, limit, kill switch, outage, busy, ownership (0.3355ms)
+  ✔ a SUBSCRIPTION denial goes stale once the server's own state has moved on (a purchase completed since) (0.2078ms)
+  ✔ an approved free allowance is its own state, and only when the server said so (0.1642ms)
+  ✔ every unusable kind is unusable (0.1663ms)
+✔ the unified Premium feature state (12.7342ms)
+▶ every word Her Keys says about Premium
+  ✔ the product is "Her Keys Premium"; the technical entitlement id and the old name never reach her (1.3922ms)
+  ✔ no price, no limit number and no count is ever stated (none is owner-approved) (0.3733ms)
+  ✔ every state that stops her says Free is untouched, and every end-of-subscription state says her information is safe (0.493ms)
+  ✔ a pending verification NEVER claims Premium is on (0.723ms)
+  ✔ exactly one purchase action per state, never two buy buttons (0.3189ms)
+  ✔ billing grace tells her the provider's date and to fix the payment — it adds no grace of its own (0.2268ms)
+  ✔ a canceled-but-paid subscription says it stays on through the paid term (0.1495ms)
+  ✔ every restore and paywall outcome has words, none leaks an SDK message, and "no purchases" names the other-account cause (0.4329ms)
+✔ every word Her Keys says about Premium (4.492ms)
+▶ client and server agree on the contract
+  ✔ entitlement states, authorization reasons and next actions are identical sets (0.4472ms)
+  ✔ the entitled set matches the server's own isEntitled (3.4747ms)
+✔ client and server agree on the contract (4.0707ms)
+▶ the server client parses strictly
+  ✔ a well-formed entitlement is parsed; anything else is "unavailable", never an interpretation (8.6759ms)
+  ✔ a throwing transport is unavailable, not an exception (12.2445ms)
+  ✔ the manifest is validated field by field (5.7617ms)
+  ✔ a decision is parsed; a server 400 is "invalid", a 503 with a typed body is still an answer, a bare failure is unavailable (3.0879ms)
+  ✔ verify reports the server's typed status (1.3957ms)
+  ✔ the client never sends an account, a household-less entitlement or a Premium flag: the request it builds is the gate's strict schema (0.5463ms)
+✔ the server client parses strictly (32.3169ms)
+✔ shipping and internal Production smoke builds cannot silently bypass legal and AI consent (2.4186ms)
+✔ EVERY EAS profile targets a Her Keys backend explicitly, compiles the consent gate and uses empty data mode (0.3826ms)
+✔ consent gate is tied to bound accounts and server ledger, not an untrusted screen-only flag (8.8764ms)
+✔ the Edge Function and the client agree on the current AI Data Processing policy version (167.4297ms)
+ℹ tests 77
+ℹ suites 12
+ℹ pass 77
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 15818.5596

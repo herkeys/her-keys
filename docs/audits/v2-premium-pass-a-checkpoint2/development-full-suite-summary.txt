@@ -1,0 +1,26 @@
+✖ account deletion: real SQL state, privileges, recovery and purge (25859.9481ms)
+✖ critical lifecycle negative controls detect unsafe guard mutations (26071.2474ms)
+✖ all 43 registered resources: shared and unrelated isolation (28778.0494ms)
+✖ all 43 registered resources: former_member and unrelated isolation (19454.6166ms)
+✖ all 43 registered resources: single and unrelated isolation (18174.5999ms)
+✖ growth is not combinatorial (1883.856ms)
+✖ IOS-D04 every ScrollView that hosts a text field is keyboard-inset aware on iOS (3375.2085ms)
+✖ [BV] the semantic-boundary scan (40555.0803ms)
+✖ client and server agree on the contract (26.4658ms)
+✖ consent gate is tied to bound accounts and server ledger, not an untrusted screen-only flag (7.9576ms)
+ℹ tests 4655
+ℹ pass 4642
+ℹ fail 13
+ℹ skipped 0
+✖ failing tests:
+✖ complete database cleanup preserves the other account (20.4355ms)
+✖ purged requires Auth absence and independent resource evidence (239.2275ms)
+✖ approved shared policy deletes private records, restricts ambiguous records and preserves the other adult (114.0881ms)
+✖ all 43 registered resources: shared and unrelated isolation (28778.0494ms)
+✖ all 43 registered resources: former_member and unrelated isolation (19454.6166ms)
+✖ all 43 registered resources: single and unrelated isolation (18174.5999ms)
+✖ quadrupling a day’s commitments never multiplies the time by anything like the number of arrangements (1617.3095ms)
+✖ src/features/account/DeleteAccountPanel.tsx: every <ScrollView> sets automaticallyAdjustKeyboardInsets (165.3901ms)
+✖ [BV6] who could have made a change decides what explains it: the Wave 2 line needs a Meals-line reason, a later change a later lane's (HK13-D11) (7.4722ms)
+✖ entitlement states, authorization reasons and next actions are identical sets (5.6952ms)
+✖ consent gate is tied to bound accounts and server ledger, not an untrusted screen-only flag (7.9576ms)

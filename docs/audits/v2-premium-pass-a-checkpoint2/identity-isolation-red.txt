@@ -1,0 +1,97 @@
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✖ V2 integration: identity change clears the mounted provider before a manual refresh (28.8617ms)
+✖ B2B-N02: anonymous and mismatched SDK identities never restore, open checkout, or expose entitlements (3.7838ms)
+✔ B2B-N02 android: correct identity restores only the canonical entitlement and recovers from store errors (0.7502ms)
+✔ B2B-N02 ios: correct identity restores only the canonical entitlement and recovers from store errors (0.6909ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ B2B-N02: account switching waits for the store transaction, and the previous account cannot restore afterward (3.7663ms)
+✔ B2B-N02: failed identity change clears prior restore authority, even if the SDK retains old data (0.5448ms)
+✔ B2B-N02: actual entitlement provider refreshes canonical CustomerInfo through its existing restore boundary (5.3989ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+▶ the consumer journey through the real provider
+  ✖ V2 integration: every render after an account switch discards the previous server snapshot and open child state (43.6382ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ free account: the feature offers Premium, names Her Keys Premium, and keeps Free untouched (7.8644ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ purchase: the paywall completes, the SERVER is asked to verify, and ONLY the server's answer unlocks the feature (2022.7235ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ the upgrade flow presents the paywall for its placement, then hands verification to the server (not the store) (10.1019ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ a cancelled paywall changes nothing, says so kindly, and she can try again (6.3334ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ single-flight: pressing the upgrade control twice opens ONE paywall (5.434ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ switching accounts: B never inherits A's Premium, A's decisions are gone, and the account is re-read (7.1532ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ signing out leaves a signed-out state with no Premium at all, and signing back in re-reads the server (7.5045ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ a non-bound account state (degraded, claiming) holds NO Premium (2.9999ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ the server decision is shown as it was: a denial that the SERVER made (consent) surfaces, with its own words (5.6517ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ a subscription denial clears itself when the server's state changes (she bought it since) (7.3681ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ a late authorization answer after an account switch is dropped, not shown to the new account (7.7455ms)
+  ✔ Free is never routed through Premium state: an unreachable server only affects Premium features (3.945ms)
+✖ the consumer journey through the real provider (2142.2001ms)
+ℹ tests 20
+ℹ suites 1
+ℹ pass 17
+ℹ fail 3
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3285.0242
+
+✖ failing tests:
+
+test at tests\platformParity\restoreIdentity.test.mjs:29:1
+✖ V2 integration: identity change clears the mounted provider before a manual refresh (28.8617ms)
+  AssertionError [ERR_ASSERTION]: B must not receive A's cached purchase display
+
+  true !== false
+
+      at TestContext.<anonymous> (file:///C:/Users/jsmit/.codex/worktrees/v2-premium-pass-a/Her%20Keys/tests/platformParity/restoreIdentity.test.mjs:44:12)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:358:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\platformParity\restoreIdentity.test.mjs:53:1
+✖ B2B-N02: anonymous and mismatched SDK identities never restore, open checkout, or expose entitlements (3.7838ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+  [] !== null
+
+      at TestContext.<anonymous> (file:///C:/Users/jsmit/.codex/worktrees/v2-premium-pass-a/Her%20Keys/tests/platformParity/restoreIdentity.test.mjs:55:10)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [],
+    expected: null,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\premium\clientProvider.test.mjs:71:3
+✖ V2 integration: every render after an account switch discards the previous server snapshot and open child state (43.6382ms)
+  AssertionError [ERR_ASSERTION]: no first-frame A state on B, including a shared household
+      at TestContext.<anonymous> (file:///C:/Users/jsmit/.codex/worktrees/v2-premium-pass-a/Her%20Keys/tests/premium/clientProvider.test.mjs:90:12)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async Promise.all (index 0)
+      at async Suite.run (node:internal/test_runner/test:1533:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:358:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }

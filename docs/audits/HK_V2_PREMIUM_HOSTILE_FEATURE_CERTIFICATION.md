@@ -1,0 +1,27 @@
+# Her Keys V2 Premium hostile verification — interim integration findings
+
+Date: 2026-10-14. **Full Checkpoint 5 certification NOT RUN.** This is the required append-only record of security failures discovered during Checkpoint 2 integration. Checkpoint 3 is still a hard stop before feature work. No hosted or native certification is implied.
+
+## Confirmed integration failures and repairs
+
+| Finding | Source-executable result | Requires Staging status | Owner / evidence producer and environment |
+|---|---|---|---|
+| P0-INT-01: first-frame cross-account Premium snapshot / retained open consumer state | FAIL before repair; regression now PASS, SOURCE_VALIDATED at `7eb6592348422dd54e6b3b5d3377c03b75694078` | BLOCKED; no real account/device switch run | mobile integration agent, #10; `tests/premium/clientProvider.test.mjs` V2 every-render switch test; local |
+| P1-INT-02: RevenueCat provider retained A's paid display after identity B until manual refresh | FAIL before repair; regression PASS, SOURCE_VALIDATED at `7eb6592` | BLOCKED; real SDK/store switch still requires #12 | integration agent; `tests/platformParity/restoreIdentity.test.mjs` identity-change test; local |
+| Stale ledger/purchase callback after same-household A→B→A or lifecycle restriction | PASS, SOURCE_VALIDATED at `7eb6592`; new generation fences deny ledger, authorization, extraction and verification work | BLOCKED; real JWT/receipt calls require #11/#12 | integration agent; `tests/premium/clientProvider.test.mjs`; local |
+| Restored account inherits prior server entitlement | PASS, SOURCE_VALIDATED at `7eb6592`; SDK hint cannot unlock while fresh server state is unknown | BLOCKED; actual account recovery and Sandbox restore require #9/#12 | integration agent; `tests/premium/clientProvider.test.mjs` restored-account test; local |
+| Existing Premium deletion privacy P0 (#9) | FAIL / BLOCKED: combined-chain cleanup is refused with unclassified_resource; no terminal purge certification | BLOCKED; deletion owner has no Premium erasure sign-off | deletion lifecycle owner, [#9](https://github.com/herkeys/her-keys/issues/9); `tests/accountDeletion/database.test.mjs`, `mutations.test.mjs`, `resourceCoverage.test.mjs`; local PGlite SQL, no hosted write |
+
+P0-INT-01 reproduction: mount real PremiumStateProvider with bound account A and server premium_active; open a consumer screen; update the provider to B in the same household; collect **every** child render before effects. Previously B's first render received snapshot.accountId=A, server=premium_active and the previously open state. The ordinary test that inspected only after act/effects missed that frame. Root cause: controller.setAccount ran in a passive effect and consumer state was keyed only by household. Repair: actor+household keyed consumer boundary, synchronous scope generation invalidation, current-account/lifecycle transport fences, and disposal that discards the server snapshot. No cached entitlement authorizes computation; server authority remains unchanged.
+
+P1-INT-02 reproduction: mount real RevenueCatProvider after identifying A with SDK entitlement her_keys_plus, then identify B with no purchase and inspect without manually invoking refresh. Previously isPlus stayed true. Repair: immediate identity generation publication before serialized SDK changes; provider masks old status synchronously and only applies responses for the current generation. Queued native operations remain serialized; late results are discarded, including A→B→A. Anonymous/current-UUID guards remain in place.
+
+Red output: `v2-premium-pass-a-checkpoint2/identity-isolation-red.txt`, produced by `node --import ./tests/support/register-ts.mjs --import ./tests/support/register-jsx.mjs --test tests/platformParity/restoreIdentity.test.mjs tests/premium/clientProvider.test.mjs` before repair, local working tree with baseline provider source inherited unchanged from `1a0d25e`. The extra anonymous-test failure in that initial run was test-fixture residue following the deliberately failing test; teardown was repaired to sign out and clear scripted call history. It is not a third application defect.
+
+Green combined producer at exact `7eb6592`: command and 137/137 output in `v2-premium-pass-a-checkpoint2/client-integration-7eb6592.txt`, named in the user-journey report. Later keyboard/strict-guard repairs are `420365ac64f5d189a1eb3f5f2d77ed4fb8b7fe17`, 77/77 guard tests. These source results do not prove hosted persistence or authorize release.
+
+## Open P0 defects
+
+**#9 — Premium account-deletion provider identifier erasure / resource classification**, deletion lifecycle owner. Both migrations introduce records not classified by the inherited worker/registry. premium_events retains app_user_id, original_app_user_id, aliases and transfer identifiers; null account FK is insufficient. Combined-chain tests fail closed rather than certify incomplete erasure. The original worker/registry/authorization SQL were preserved byte-for-byte; reproduction was posted on #9. Other subscribers and global config must be preserved in the owner's repair. This open P0 forces the unified release decision FAIL.
+
+P0-INT-01 is repaired at SOURCE_VALIDATED level; Staging/device regression remains BLOCKED. No full attack class matrix has run in this continuation. Village and Co-Parent Plus remain BLOCKED by Pass A scope, without UI or release-flag changes.

@@ -1,0 +1,342 @@
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-05 android: unreadable consent keeps the app closed and offers Try again and Sign out (142.4278ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-05 ios: unreadable consent keeps the app closed and offers Try again and Sign out (9.5086ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-05: Try again recovers once the network is back and only then opens the app (124.2768ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-05: Try again that fails again stays closed, says so, and can be repeated (44.6571ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-05: a double press of Try again makes one read, and a read that throws is a failure, not a hang (13.3737ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-05: an account that has not consented never reaches the app, and a consenting one does (42.4951ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-05: Sign out is single-flight, disables the pair while pending and never opens the app (23.8442ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-05: a sign-out that fails does not crash the gate, leaves the app closed and gives the controls back (35.7832ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-05: a hung consent read is bounded: it becomes the recoverable error screen (9.8316ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-05 session ownership: a token rotation never re-checks consent or unmounts the open app (6.5189ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-05 session ownership: Try again uses the freshest tokens, not the ones the gate first saw (17.5436ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-05 session ownership: another account never inherits the first account’s decision (36.526ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-05 session ownership: the app is never RENDERED for a new account before that account is confirmed (no one-frame leak) (20.8159ms)
+✔ SC-05 session ownership: a late answer for the previous account is ignored (6.3167ms)
+▶ the migration chain
+  ✔ the migrations directory holds exactly the registered chain, in order, and nothing else (3.1143ms)
+  ✔ every migration version is unique and strictly increasing (no two files claim one version) (0.7967ms)
+  ✔ no migration that existed at WAVE3_BASE has changed by a single byte (an applied migration is never edited) (91.6652ms)
+  ✔ every migration the integration adds is LF on disk, pinned LF by .gitattributes, and opens, closes and asserts (11.4269ms)
+✔ the migration chain (109.2907ms)
+▶ post-certification migration governance
+  ✔ the environment-alignment migration stays registered, additive, and function-only at the schema level (4.5386ms)
+  ✔ the Google Calendar migration is byte-identical to its reviewed blueprint, never edited, and service-only (4.4953ms)
+✔ post-certification migration governance (9.5009ms)
+▶ a re-declaration never drops an earlier registration
+  ✔ change_log_entity_table_check: each re-declaration is a superset of the one before it (743.055ms)
+  ✔ the sync_push owner-private allow-list: each re-declaration is a superset of the one before it (51.0603ms)
+  ✔ the sync_push no-revision list: each re-declaration is a superset of the one before it (1360.2655ms)
+  ✔ after the whole chain, the change-log check and the sync_push allow-list name every feature table (477.2699ms)
+  ✔ HK13-D24: after the whole chain, each owner-private uniqueness rule is PER OWNER (its last definition names profile_id) (1607.2831ms)
+  ✔ each feature migration registers its own tables in the SAME file that creates them (so every prefix of the chain works) (556.997ms)
+✔ a re-declaration never drops an earlier registration (4796.8039ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ B2B-N02 android: persistent account restore is reachable after onboarding and reports each outcome (274.6286ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ B2B-N02 ios: persistent account restore is reachable after onboarding and reports each outcome (90.4769ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ B2B-N02: a pending restore is single-flight, disables contradictory actions, and ignores another account’s late result (47.1117ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ V2 integration: Account mounts one Restore Purchases control and reaches Privacy & Data without a second restore mount (24.1088ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ B2B-N02: throwing restore is recoverable and unmount never reports success to a new screen (34.1302ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ B2B-N02: reconnect, quarantine and busy account states cannot initiate restoration (36.3098ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-02 android: the control restores for the bound account, reports each outcome and tells its host when it is busy (136.3026ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-02 ios: the control restores for the bound account, reports each outcome and tells its host when it is busy (53.5384ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-02: the host is told while a restore is pending, and again when it ends (7.782ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-02: nothing renders, and nothing can start, without a bound account (2.7283ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-02: a blocked host cannot start a restore (2.9235ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-02: loading state is single-flight and another account never receives the late result (17.4584ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-02: a restore that throws is recoverable, and an unmounted control ignores a late result (11.4486ms)
+✔ SC-02: outcome words never leak an SDK message and cover every outcome kind (2.0084ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ V2 integration: identity change clears the mounted provider before a manual refresh (68.7409ms)
+✔ B2B-N02: anonymous and mismatched SDK identities never restore, open checkout, or expose entitlements (33.3076ms)
+✔ B2B-N02 android: correct identity restores only the canonical entitlement and recovers from store errors (1.381ms)
+✔ B2B-N02 ios: correct identity restores only the canonical entitlement and recovers from store errors (1.9154ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ B2B-N02: account switching waits for the store transaction, and the previous account cannot restore afterward (5.3414ms)
+✔ B2B-N02: failed identity change clears prior restore authority, even if the SDK retains old data (1.001ms)
+An update to RevenueCatProvider inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RevenueCatProvider inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+✔ B2B-N02: actual entitlement provider refreshes canonical CustomerInfo through its existing restore boundary (12.6937ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+▶ discovering Premium on a heavy Wednesday
+  ✔ a Free account is told what Her Keys Premium does, in words, and that Free is untouched (342.4025ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ "See Her Keys Premium" opens the approved purchase interface for the premium_feature placement (52.9621ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ a signed-out device (no account) shows no Premium panel at all (12.9827ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ when the day is clear and she has no receipts, the panel does not appear (it never sells into a good day) (9.5864ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ bought but not yet confirmed by the server: it says "confirming", never "Premium is on", and offers "Check again" once it has waited (37.2063ms)
+✔ discovering Premium on a heavy Wednesday (458.0033ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+▶ the review
+  ✔ opening it asks the SERVER first, then shows the pressure, who is responsible, and an evaluated move with both days (95.827ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ "Show what was considered" explains every record, including why the fixed ones stay put (99.7619ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ a denial by the server (limit reached) is shown in its own words and no review is produced (55.7593ms)
+✔ the review (252.2731ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+▶ approving: explicit, one change, then undo
+  ✔ approval is a SEPARATE explicit step that states its scope, and changes nothing until confirmed (133.717ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ confirming moves the task, says so only because it is saved, shows the receipt, and she can undo it (271.2428ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ a ledger that cannot record the change means NOTHING changes, and she is told in plain words (172.5375ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ a household that changed since the review is refused gently: "this no longer fits", nothing changed (229.7523ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ "Not this one" records her decision, hides the proposal, and changes nothing (137.59ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ a double tap on approve cannot move it twice (170.4042ms)
+✔ approving: explicit, one change, then undo (1116.7027ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+▶ accounts, restarts and small screens
+  ✔ switching accounts drops the previous account's review and receipts (231.0373ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ after an app restart the receipt is still there and Undo still works (nothing lives only in memory) (183.056ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ a stale server answer cannot unlock the panel: with the server unreachable it is "unavailable", not Premium (15.2399ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ every control has an accessible name, and the panel renders on a very small screen at large text (52.1963ms)
+✔ accounts, restarts and small screens (482.1756ms)
+▶ Free Daily Load is untouched
+  ✔ the Premium section never renders the Free card's controls or words, and reads no Free action (29.1942ms)
+✔ Free Daily Load is untouched (33.7429ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+▶ who sees the card
+  ✔ a Free account with no saved review sees nothing — there is no standing upsell here (218.8235ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ a signed-out device sees nothing (23.8258ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ a Free account that HAS a saved review still reads it (what she has stays hers), and nothing is asked of the server (65.9943ms)
+✔ who sees the card (311.9775ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+▶ the weekly review
+  ✔ opening it asks the server for THIS household, then shows the real period, real counts, the pattern with its tier, and what it is based on (68.8819ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ no number is invented: no time saved, no score, no percentage, no praise, no streak (53.2ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ the review is saved as a receipt that holds numbers and references only (62.4238ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ approving the suggested next step records her choice and changes NOTHING in the household (186.3765ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ a thin week says so honestly, shows what exists, and costs nothing (no authorization) (44.6229ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ a server refusal shows no review and no sheet (47.064ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ if her receipts cannot be read the review is not built, and it says why in plain words (61.1386ms)
+✔ the weekly review (525.3175ms)
+▶ account isolation
+  ✔ switching to another account drops the open review and the saved list; the other household’s receipts never appear (40.5363ms)
+✔ account isolation (40.913ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-03: every paywall outcome has words in the right tone, and none leak the SDK’s own message (6.4374ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ V2 integration: onboarding routes to Account for restore rather than mounting a second transaction control (76.9016ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-03 android: the Systems Premium card tells her how every paywall ended (64.0787ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-03 ios: the Systems Premium card tells her how every paywall ended (89.2724ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-03: the Systems card is single-flight, a throwing paywall is a failed paywall, and entitled users see no upsell (33.9277ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-03: the unmounted Systems card ignores a paywall that ends late (9.3452ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-03: the onboarding step words an unavailable offering, a failure and a cancel — and never traps her (115.8492ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-03: the onboarding step completes on purchase or restore, once, and on free continuation (45.0288ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-03: the onboarding step no longer lists benefits nothing delivers (7.7769ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-03: after consent, a Premium choice that cannot be fulfilled is told to her — and the app stays open (58.6773ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-03: a checkout that throws is worded, never blocks the app, and the notice can be dismissed (6.9106ms)
+✔ SC-03: a free choice shows nothing and offers no checkout (4.0695ms)
+✔ PBP-1: no feature is gated on her_keys_plus — outside src/monetization the only entitlement read is the Systems upsell card (9512.2307ms)
+✔ PBP-1b (Premium Stage 1): the ONLY server-authoritative consumers of Premium state outside src/monetization are the Premium features themselves (4637.8826ms)
+✔ PBP-2 (evolved in Premium Stage 1): the backend enforces Premium ONLY inside the Premium namespace — no Free function, calendar, weather, AI, welcome-email or sync path reads the entitlement (1937.6036ms)
+✔ PBP-3: outside the Welcome Tree, no source copy claims Premium benefits the app does not deliver (869.9174ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+▶ the consumer journey through the real provider
+  ✔ V2 integration: stale same-household ledger callbacks cannot run after A -> B -> A (198.6768ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ V2 integration: lifecycle restriction blocks computation, purchase and ledger writes before rerender (44.0823ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ V2 integration: a restored account with an SDK paid hint stays locked while fresh server verification is unavailable (2037.0587ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ V2 integration: a purchase finishing after a switch cannot verify or notify the next account (12.7558ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ V2 integration: every render after an account switch discards the previous server snapshot and open child state (18.8734ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ free account: the feature offers Premium, names Her Keys Premium, and keeps Free untouched (4.7742ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ purchase: the paywall completes, the SERVER is asked to verify, and ONLY the server's answer unlocks the feature (2021.6834ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ the upgrade flow presents the paywall for its placement, then hands verification to the server (not the store) (8.2627ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ a cancelled paywall changes nothing, says so kindly, and she can try again (14.3654ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ single-flight: pressing the upgrade control twice opens ONE paywall (4.6152ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ switching accounts: B never inherits A's Premium, A's decisions are gone, and the account is re-read (6.5339ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ signing out leaves a signed-out state with no Premium at all, and signing back in re-reads the server (10.8752ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ a non-bound account state (degraded, claiming) holds NO Premium (7.4205ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ the server decision is shown as it was: a denial that the SERVER made (consent) surfaces, with its own words (7.4832ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ a subscription denial clears itself when the server's state changes (she bought it since) (8.3543ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ a late authorization answer after an account switch is dropped, not shown to the new account (8.6271ms)
+  ✔ Free is never routed through Premium state: an unreachable server only affects Premium features (6.0081ms)
+✔ the consumer journey through the real provider (4426.3152ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ V2 integration: welcome intent follows the first identity, then is discarded on sign-out or account switch (81.0395ms)
+▶ the controller: Premium offer state machine
+  ✔ Get Started opens the Premium offer; Select Premium and Continue Free each record an intent and go on to the account choice (17.3657ms)
+  ✔ the free continuation is never gated: it works from the offer with nothing else done (0.6066ms)
+  ✔ Premium events do nothing anywhere but the offer, so a stray event cannot invent an intent (0.6317ms)
+  ✔ an existing user skips the offer and carries no intent, even after backing out of a Premium selection (0.8525ms)
+  ✔ a reconnect has no Welcome, no offer and no intent (0.6669ms)
+  ✔ BACK NAVIGATION: new users return through the offer, existing users straight to Welcome, and going back withdraws the intent (1.274ms)
+  ✔ stepping forward and back inside signup keeps the intent; only leaving the offer's far side withdraws it (0.8477ms)
+  ✔ INTERRUPTED SIGNUP: confirmation-required, a failed attempt and a mode switch all keep the intent; none binds anything (1.4413ms)
+  ✔ SESSION RECOVERY: a killed process restarts the tree at Welcome with no intent (nothing here is persisted) (1.4556ms)
+  ✔ FUZZ: over every event, in any order, the Premium invariants hold (seeded, 3000 sequences) (90.8298ms)
+✔ the controller: Premium offer state machine (117.8301ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+▶ the one place Premium intent is acted on
+  ✔ premium + bound account: one checkout, then the intent is consumed; the app is visible throughout (66.9035ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ premium but NOT bound: nothing happens until an account is bound — then exactly once (5.3386ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ a free intent offers nothing and is cleared; no intent does nothing at all (28.2138ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ a checkout that throws never blocks the app, and the intent is still consumed (4.5697ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ a NEW intent after the old one was cleared is acted on again (the guard resets with the intent) (8.726ms)
+  ✔ PLACEMENT, by source: checkout is inside the consent gate, around the navigator, for the welcome_premium placement, from the entitlement layer only (72.7134ms)
+  ✔ the stable entitlement id and the display name are untouched (1.4802ms)
+✔ the one place Premium intent is acted on (188.8867ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+▶ journeys through the real welcome flow and the real account runtime
+  ✔ NEW USER, SELECT PREMIUM: no checkout while signing up, none before consent, exactly one after it (192.4231ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ NEW USER, CONTINUE FREE: the app opens after consent and checkout is never offered (76.8922ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ EXISTING USER: straight to sign-in, never shown the offer, never checked out (38.1403ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ INTERRUPTED SIGNUP: the intent survives the confirmation round trip and is acted on once, after sign-in and consent (222.3151ms)
+  ✔ BACK NAVIGATION withdraws the intent: Premium → choice → back → back → I Already Have an Account never checks out (104.3378ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ SESSION RECOVERY: a restored account goes straight to the app — no Welcome, no offer, no checkout (4.3918ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ ONE CHECKOUT PER INTENT: after sign-out, the same account signing back in is not offered a second checkout (92.665ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ NO LEAK BETWEEN ACCOUNTS: a different account on a device bound to the first is quarantined and is never offered a checkout (102.7805ms)
+  ✔ A CHECKOUT FAILURE never blocks the app (64.7186ms)
+✔ journeys through the real welcome flow and the real account runtime (899.8093ms)
+ℹ tests 137
+ℹ suites 15
+ℹ pass 137
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 19929.0447

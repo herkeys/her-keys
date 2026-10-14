@@ -1,7 +1,7 @@
 name: Account deletion source validation
 on:
   push:
-    branches: [codex/account-deletion]
+    branches: [codex/account-deletion, codex/v2-premium-pass-a]
   workflow_dispatch:
 permissions:
   contents: read
