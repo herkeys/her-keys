@@ -11,7 +11,7 @@ test('only Staging Auth app_metadata can unlock the tester guard, and Production
   const sql=read('supabase/functions/_shared/premium/staging_tester_guard.sql');
   assert.match(sql,/rt\.environment = 'staging'/);
   assert.match(sql,/raw_app_meta_data/);
-  assert.doesNotMatch(sql,/raw_user_meta_data/);
+  assert.doesNotMatch(sql.replace(/^--.*$/gm,''),/raw_user_meta_data/);
   assert.match(sql,/v_reason := 'feature_disabled'/);
   const operator=read('scripts-dev/premium-final-config.mjs');
   assert.match(operator,/if \(requested!=='staging'\)/);
