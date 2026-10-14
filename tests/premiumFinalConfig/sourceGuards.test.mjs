@@ -31,6 +31,9 @@ test('release targets only three actual Premium features, not Village or CoParen
 });
 test('signed-event transport does not claim it verifies a customer purchase',()=>{
   assert.match(cli,/actualPurchaseVerified:false,entitlementGrantVerified:false/);
+  assert.match(cli,/projectionUpdated/);
+  assert.match(cli,/projectionBefore/);
+  assert.match(cli,/projectionAfter/);
   assert.match(core,/not_configured/);
   assert.match(cli,/signed TEST smoke/);
 });
