@@ -970,7 +970,7 @@ const LATER_FEATURES = [
       ['src/features/talk-it-out/capture/CaptureContext.tsx', 'Premium Stage 1 (Smart Inbox): the capture provider hands the coordinator an optional Premium reader read from a tiny context (null where Premium is not mounted); Free capture imports nothing from the Premium provider'],
       ['src/features/talk-it-out/capture/types.ts', 'Premium Stage 1 (Smart Inbox): two assumption codes (premium-reading, possible-duplicate) so a Premium reading and a possible duplicate are shown as assumptions, never as something she said'],
       ['tests/support/captureWorld.mjs', 'Premium Stage 1 (Smart Inbox): the capture test world accepts an optional enhancer; every existing suite passes none'],
-      ['scripts-dev/meals-boundary-scan.cjs', 'Premium Stage 1: register this lane and its changed files; check G exempts the branch being scanned (the line under test), exactly as it exempts the Meals line, so a CI push checkout is not reported as its own sibling — every other branch is still judged by ancestry'],
+      ['scripts-dev/meals-boundary-scan.cjs', 'Premium Stage 1: register this lane and its changed files; check G exempts the branch being scanned (the line under test), exactly as it exempts the Meals line, so a CI push checkout is not reported as its own sibling — every other branch is still judged by ancestry; the scan sets process.exitCode instead of calling process.exit(), because its --json output (157 KB) was cut off mid-string on a Linux pipe in CI'],
       ['.github/workflows/v2-integration-validation.yml', 'Premium Stage 1: exact-SHA CI push trigger for the Premium branch (remove with the branch)'],
       ['tests/meals/boundary.test.mjs', 'Premium Stage 1: [BM4] pins that check G exempts the branch being scanned and nothing else'],
     ],
@@ -1310,4 +1310,6 @@ if (process.argv.includes('--json')) {
     result.facts.unverifiedLanes.length > 0 ? `| unverified (branch not present): ${result.facts.unverifiedLanes.join(', ')}` : '');
   console.log(result.ok ? '\nRESULT: PASS' : `\nRESULT: FAIL\n  ${result.findings.join('\n  ')}`);
 }
-process.exit(result.ok ? 0 : 1);
+// Not process.exit(): on a Linux pipe the process would exit while the (large) --json output is still being written, and the reader would
+// see it cut off mid-string. Setting the code lets stdout drain first.
+process.exitCode = result.ok ? 0 : 1;
