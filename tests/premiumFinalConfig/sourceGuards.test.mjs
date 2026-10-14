@@ -16,7 +16,7 @@ test('allowlist is server side, uses admin-only app metadata, fails closed befor
   assert.match(sql,/cfg\.rollout_status = 'staging_only'/);
   assert.match(sql,/auth\.users u/);
   assert.match(sql,/raw_app_meta_data->>'herkeys_premium_tester'/);
-  assert.doesNotMatch(sql,/u\\.raw_user_meta_data/);
+  assert.doesNotMatch(sql,/u\.raw_user_meta_data/);
   const allow=sql.indexOf("v_checks := v_checks || jsonb_build_object('staging_allowlist', false)");
   const entitlement=sql.indexOf('-- 6. entitlement, or an APPROVED free allowance');
   assert.ok(allow>0&&entitlement>allow);
