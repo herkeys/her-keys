@@ -85,7 +85,15 @@ The CLI's local fixture library contains each required RevenueCat event shape an
 node scripts-dev/premium-final-config.mjs smoke --type TEST --env staging
 ```
 
-For a deliberately synthetic `INITIAL_PURCHASE` event, require an existing allowlisted Staging test account and the explicit `--synthetic-only` switch. This transport test is NOT subscription proof, and the backend must NOT issue Premium from the event alone; it must authenticate the subscriber state with RevenueCat. For genuine subscription certification, make an actual RC Sandbox purchase or restore in a signed-in test build and inspect its RevenueCat event + server projection. **Do not substitute a forged purchase fixture for that verification.**
+For a deliberately synthetic `INITIAL_PURCHASE` event, require an existing allowlisted Staging test account and the explicit `--synthetic-only` switch. This transport test is NOT subscription proof, and the backend must NOT issue Premium from the event alone; it must authenticate the subscriber state with RevenueCat.
+
+Only where the owner explicitly permits a synthetic purchase-shaped Staging transport exercise (never Production), the command is:
+
+```bash
+node scripts-dev/premium-final-config.mjs smoke --type INITIAL_PURCHASE --account-id "$HK_STAGING_TESTER_ACCOUNT_ID" --synthetic-only --env staging
+```
+
+**Expected:** an accepted/durable event does *not* by itself grant Premium. The runner emits `actualPurchaseVerified:false` and `entitlementGrantVerified:false`. Genuine subscriber evidence must come from RevenueCat and the reconciliation runner. For genuine subscription certification, make an actual RC Sandbox purchase or restore in a signed-in test build and inspect its RevenueCat event + server projection. **Do not substitute a forged purchase fixture for that verification.**
 
 ## 5. Staging tester allowlist
 Use the UUID of an existing **Staging Supabase Auth** account, not a Production account. Account IDs belong in a secure test evidence record, not an unrestricted public ledger.
