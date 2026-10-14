@@ -148,6 +148,20 @@ async function setWindow(mode) {
   if(guardError||guard!==true)throw new Error('Staging database allowlist guard migration has not been applied');
   // Require a valid signed-event TEST smoke receipt from the current session before enabling.
   if(!flag('--signed-smoke-passed'))throw new Error('run signed TEST smoke and explicitly pass --signed-smoke-passed');
+  // The operator flag is NOT security evidence; prove a recent authenticated
+  // receipt was durably written by the actual hosted webhook handler.
+  const {data:smokeRow,error:smokeError}=await c.from('premium_events')
+    .select('id').eq('environment','SANDBOX').eq('event_type','TEST')
+    .in('status',['received','ignored_test']).gte('received_at',new Date(Date.now()-15*60*1000).toISOString())
+    .order('received_at',{ascending:false}).limit(1).maybeSingle();
+  if(smokeError||!smokeRow)throw new Error('no recent authenticated signed TEST receipt in Staging');
+  // A tester flag is NOT a Premium grant. At least one real RC-confirmed
+  // subscription must be projected before a test feature window may open.
+  const projected=await readProjection(accountId);
+  if(!projected || projected.needs_reconcile ||
+     !['premium_active','premium_canceled_active','premium_billing_grace'].includes(projected.state)) {
+    throw new Error('Staging tester has no currently verified Premium entitlement');
+  }
   const w=await c.from('premium_feature_config').update({enabled:true,released:true,rollout_status:'staging_only'}).in('feature_key',FEATURES);
   if(w.error)throw new Error('Staging feature activation failed');
   const rt=await c.from('premium_runtime_config').update({premium_enabled:true,webhook_processing:true}).eq('singleton',true);
