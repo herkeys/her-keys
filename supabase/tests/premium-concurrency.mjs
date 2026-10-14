@@ -29,6 +29,15 @@ export async function premiumConcurrency({ check, psql, scalar, psqlAsync }) {
   check(`16 concurrent sessions against a limit of 5 admit EXACTLY 5 (admitted ${admitted}, quota_exhausted ${refused})`, admitted === 5 && refused === 11, distinct.join(' ; '));
   check('the stored counter never exceeds the limit', scalar(`SELECT used + reserved FROM public.premium_usage WHERE account_id = '${UA}' AND feature_key = 'daily_load_premium'`) === '5');
 
+  // ---- 1b. THE PRODUCTION PATH (settle at authorization): the same race, charged straight to `used` -----------------------------
+  psql(`DELETE FROM public.premium_usage WHERE account_id = '${UA}'; DELETE FROM public.premium_usage_events WHERE account_id = '${UA}';
+        UPDATE public.premium_feature_config SET premium_limit = 5 WHERE feature_key = 'daily_load_premium';`, 'concurrency setup 1b');
+  const settled = await race(psqlAsync, Array.from({ length: 16 }, (_, i) => call(UA, hh, 'daily_load_premium', `race-settle-${String(i).padStart(3, '0')}`, ', NULL, NULL, 1, true')));
+  const admittedSettled = settled.filter((r) => r.startsWith('allowed')).length;
+  check(`16 concurrent SETTLE-AT-AUTHORIZATION sessions against a limit of 5 admit EXACTLY 5 (admitted ${admittedSettled})`, admittedSettled === 5, settled.join(' ; '));
+  check('…all five are USED and none is left reserved', scalar(`SELECT used || '/' || reserved FROM public.premium_usage WHERE account_id = '${UA}' AND feature_key = 'daily_load_premium'`) === '5/0');
+  check('…and the refused eleven left no claim behind', scalar(`SELECT count(*) FROM public.premium_usage_events WHERE account_id = '${UA}'`) === '5');
+
   // ---- 2. N parallel requests with the SAME key: one charge, the rest replays ---------------------------------------------------
   psql(`DELETE FROM public.premium_usage WHERE account_id = '${UA}'; DELETE FROM public.premium_usage_events WHERE account_id = '${UA}';
         UPDATE public.premium_feature_config SET premium_limit = 50 WHERE feature_key = 'daily_load_premium';`, 'concurrency setup 2');

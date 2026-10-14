@@ -1,13 +1,15 @@
 import { SplashScreen, Stack } from 'expo-router';
 import * as NativeSplashScreen from 'expo-splash-screen';
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, type ReactNode } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { colors } from '../src/design/tokens';
 import { canOpenScreen, isSettled, type RootScreen } from '../src/domain/routeAccess';
 import { PremiumCheckoutAfterConsent } from '../src/monetization/PremiumCheckoutAfterConsent';
 import { WelcomeAuthSettling } from '../src/features/account/WelcomeAuthFlow';
 import { ConsentGate } from '../src/features/consent/ConsentFlow';
+import { PremiumStateProvider } from '../src/monetization/PremiumStateProvider';
 import { RevenueCatProvider, useEntitlement } from '../src/monetization/RevenueCatProvider';
+import { premiumServerClient } from '../src/store/accountRuntimeInstance';
 import { AccountProvider, useAccount } from '../src/store/AccountProvider';
 import { AppStateProvider, useStoreSnapshot } from '../src/store/AppStateProvider';
 import { appStore, internalTools } from '../src/store/appStoreInstance';
@@ -37,13 +39,25 @@ export default function RootLayout() {
           <AppStateProvider store={appStore}>
             <LocalNotificationProvider>
               <AccountProvider>
-                <RootNavigator />
+                <PremiumStateBridge>
+                  <RootNavigator />
+                </PremiumStateBridge>
               </AccountProvider>
             </LocalNotificationProvider>
           </AppStateProvider>
         </PremiumIntentProvider>
       </RevenueCatProvider>
     </SafeAreaProvider>
+  );
+}
+
+/** Premium's server view follows the bound account: it exists only for one, and is dropped the moment it changes. */
+function PremiumStateBridge({ children }: { children: ReactNode }) {
+  const account = useAccount();
+  return (
+    <PremiumStateProvider client={premiumServerClient} accountState={account.state}>
+      {children}
+    </PremiumStateProvider>
   );
 }
 

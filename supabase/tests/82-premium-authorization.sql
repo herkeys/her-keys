@@ -147,6 +147,16 @@ SELECT public.premium_authorize(:'ua', 'talk_it_out', NULL, 'k-free-tier-1') AS 
 SELECT CASE WHEN (:'d'::jsonb ->> 'outcome') = 'allowed' AND (:'d'::jsonb ->> 'via') = 'free' AND (:'d'::jsonb ->> 'quota') IS NULL THEN 'PASS' ELSE 'FAIL' END || ' | a free-tier feature (Talk It Out) needs no entitlement and is never metered';
 ROLLBACK;
 
+-- Each flag in ISOLATION: a feature that is enabled but NOT released (a staged rollout) must be as closed as a disabled one.
+BEGIN;
+SELECT herkeys_test.premium_grant(:'ua', 'active');
+UPDATE public.premium_feature_config SET enabled = true, released = false WHERE feature_key = 'village_delegation';
+SELECT public.premium_authorize(:'ua', 'village_delegation', :'hh_a', 'k-flag-0001') ->> 'reason' AS r1 \gset
+UPDATE public.premium_feature_config SET enabled = false, released = true WHERE feature_key = 'village_delegation';
+SELECT public.premium_authorize(:'ua', 'village_delegation', :'hh_a', 'k-flag-0002') ->> 'reason' AS r2 \gset
+SELECT CASE WHEN :'r1' = 'feature_disabled' AND :'r2' = 'feature_disabled' THEN 'PASS' ELSE 'FAIL' END || ' | enabled-but-unreleased AND released-but-disabled are each closed (got ' || :'r1' || ' / ' || :'r2' || ')';
+ROLLBACK;
+
 -- ============ AI CONSENT ===========================================================================================================
 BEGIN;
 SELECT herkeys_test.premium_grant(:'ua', 'active');
@@ -190,6 +200,53 @@ SELECT public.premium_complete_usage(:'ua', 'daily_load_premium', 'k-quota-0001'
 SELECT CASE WHEN :'c1' = 'completed' AND :'c2' = 'completed' AND (SELECT used FROM public.premium_usage WHERE account_id = :'ua' AND feature_key = 'daily_load_premium') = 1 THEN 'PASS' ELSE 'FAIL' END || ' | completion is idempotent (used 1 after two completes)';
 ROLLBACK;
 
+-- THE PRODUCTION PATH: Daily Load settles at authorization (p_complete_now = true). It must be bounded exactly like a reservation.
+BEGIN;
+SELECT herkeys_test.premium_grant(:'ua', 'active');
+UPDATE public.premium_feature_config SET premium_limit = 3, rate_limit_per_minute = 100 WHERE feature_key = 'daily_load_premium';
+SELECT public.premium_authorize(:'ua', 'daily_load_premium', :'hh_a', 'k-settle-0001', NULL, NULL, 1, true) ->> 'outcome' AS o1 \gset
+SELECT public.premium_authorize(:'ua', 'daily_load_premium', :'hh_a', 'k-settle-0002', NULL, NULL, 1, true) ->> 'outcome' AS o2 \gset
+SELECT public.premium_authorize(:'ua', 'daily_load_premium', :'hh_a', 'k-settle-0003', NULL, NULL, 1, true) ->> 'outcome' AS o3 \gset
+SELECT public.premium_authorize(:'ua', 'daily_load_premium', :'hh_a', 'k-settle-0004', NULL, NULL, 1, true) AS d4 \gset
+SELECT CASE WHEN :'o1' = 'allowed' AND :'o2' = 'allowed' AND :'o3' = 'allowed' AND (:'d4'::jsonb ->> 'reason') = 'quota_exhausted' THEN 'PASS' ELSE 'FAIL' END || ' | settle-at-authorization: the 4th request against a limit of 3 is quota_exhausted';
+SELECT CASE WHEN (SELECT used FROM public.premium_usage WHERE account_id = :'ua' AND feature_key = 'daily_load_premium') = 3
+             AND (SELECT reserved FROM public.premium_usage WHERE account_id = :'ua' AND feature_key = 'daily_load_premium') = 0
+            THEN 'PASS' ELSE 'FAIL' END || ' | settled units are USED, nothing is left reserved';
+SELECT public.premium_authorize(:'ua', 'daily_load_premium', :'hh_a', 'k-settle-0002', NULL, NULL, 1, true) ->> 'replay' AS rp \gset
+SELECT CASE WHEN :'rp' = 'true' AND (SELECT used FROM public.premium_usage WHERE account_id = :'ua' AND feature_key = 'daily_load_premium') = 3 THEN 'PASS' ELSE 'FAIL' END || ' | a settled key replays without a second charge';
+-- A refusal must leave NOTHING behind: no pending claim, no consumed rate-limit slot, no poisoned key.
+SELECT CASE WHEN (SELECT count(*) FROM public.premium_usage_events WHERE status = 'pending') = 0
+             AND (SELECT count(*) FROM public.premium_usage_events WHERE idempotency_key = 'k-settle-0004') = 0
+            THEN 'PASS' ELSE 'FAIL' END || ' | a quota refusal leaves no pending claim and no event for its key';
+UPDATE public.premium_feature_config SET premium_limit = 10 WHERE feature_key = 'daily_load_premium';
+SELECT public.premium_authorize(:'ua', 'daily_load_premium', :'hh_a', 'k-settle-0004', NULL, NULL, 1, true) ->> 'outcome' AS o5 \gset
+SELECT CASE WHEN :'o5' = 'allowed' THEN 'PASS' ELSE 'FAIL' END || ' | the refused key succeeds once the limit allows it (the key was not poisoned)';
+ROLLBACK;
+
+-- A refusal must not burn rate-limit slots: with a rate of 2/minute, five REFUSED requests do not stop a valid one.
+BEGIN;
+SELECT herkeys_test.premium_grant(:'ua', 'active');
+UPDATE public.premium_feature_config SET premium_limit = 0, rate_limit_per_minute = 2 WHERE feature_key = 'daily_load_premium';
+SELECT public.premium_authorize(:'ua', 'daily_load_premium', :'hh_a', 'k-burn-00001');
+SELECT public.premium_authorize(:'ua', 'daily_load_premium', :'hh_a', 'k-burn-00002');
+SELECT public.premium_authorize(:'ua', 'daily_load_premium', :'hh_a', 'k-burn-00003');
+SELECT public.premium_authorize(:'ua', 'daily_load_premium', :'hh_a', 'k-burn-00004');
+SELECT public.premium_authorize(:'ua', 'daily_load_premium', :'hh_a', 'k-burn-00005');
+UPDATE public.premium_feature_config SET premium_limit = 50 WHERE feature_key = 'daily_load_premium';
+SELECT public.premium_authorize(:'ua', 'daily_load_premium', :'hh_a', 'k-burn-00006') ->> 'outcome' AS o \gset
+SELECT CASE WHEN :'o' = 'allowed' THEN 'PASS' ELSE 'FAIL' END || ' | refused requests do not consume rate-limit slots';
+ROLLBACK;
+
+-- Settle-at-authorization against the GLOBAL cost cap compensates the already-used unit.
+BEGIN;
+SELECT herkeys_test.premium_grant(:'ua', 'active');
+UPDATE public.premium_feature_config SET premium_limit = 100, rate_limit_per_minute = 100, global_daily_cost_cap = 2, cost_weight = 1 WHERE feature_key = 'daily_load_premium';
+SELECT public.premium_authorize(:'ua', 'daily_load_premium', :'hh_a', 'k-gcap-00001', NULL, NULL, 1, true);
+SELECT public.premium_authorize(:'ua', 'daily_load_premium', :'hh_a', 'k-gcap-00002', NULL, NULL, 1, true);
+SELECT public.premium_authorize(:'ua', 'daily_load_premium', :'hh_a', 'k-gcap-00003', NULL, NULL, 1, true) ->> 'reason' AS r3 \gset
+SELECT CASE WHEN :'r3' = 'quota_exhausted' AND (SELECT used FROM public.premium_usage WHERE account_id = :'ua' AND feature_key = 'daily_load_premium') = 2 THEN 'PASS' ELSE 'FAIL' END || ' | a global-budget refusal on the settled path compensates the per-account unit (used stays 2)';
+ROLLBACK;
+
 BEGIN;
 SELECT herkeys_test.premium_grant(:'ua', 'active');
 UPDATE public.premium_feature_config SET premium_limit = 2, rate_limit_per_minute = 100 WHERE feature_key = 'daily_load_premium';
@@ -230,7 +287,11 @@ INSERT INTO public.profiles (id, timezone) VALUES (:'ud', 'America/Chicago') ON 
 INSERT INTO public.household_members (household_id, local_id, profile_id, member_type, role, display_name, scope)
   SELECT :'hh_a', 'user-d', :'ud', 'adult', 'member', NULL, 'personal';
 SELECT public.premium_authorize(:'ud', 'smart_inbox_extract', :'hh_a', 'k-free-0001') ->> 'reason' AS r1 \gset
-SELECT CASE WHEN :'r1' = 'requires_premium' THEN 'PASS' ELSE 'FAIL' END || ' | a PROPOSED (unapproved) free allowance is not honoured: free users get requires_premium';
+SELECT CASE WHEN :'r1' = 'requires_premium' THEN 'PASS' ELSE 'FAIL' END || ' | with no allowance at all, a free user gets requires_premium';
+-- A NON-ZERO but unapproved number must be exactly as closed: "proposed" is not "approved".
+UPDATE public.premium_feature_config SET free_allowance = 5, free_allowance_status = 'proposed_not_approved', rate_limit_per_minute = 100 WHERE feature_key = 'smart_inbox_extract';
+SELECT public.premium_authorize(:'ud', 'smart_inbox_extract', :'hh_a', 'k-free-0001b') ->> 'reason' AS r1b \gset
+SELECT CASE WHEN :'r1b' = 'requires_premium' THEN 'PASS' ELSE 'FAIL' END || ' | a PROPOSED, non-zero free allowance is NOT honoured until the owner approves it';
 UPDATE public.premium_feature_config SET free_allowance = 2, free_allowance_status = 'approved', rate_limit_per_minute = 100 WHERE feature_key = 'smart_inbox_extract';
 SELECT public.premium_authorize(:'ud', 'smart_inbox_extract', :'hh_a', 'k-free-0002') AS d2 \gset
 SELECT public.premium_authorize(:'ud', 'smart_inbox_extract', :'hh_a', 'k-free-0003') ->> 'outcome' AS o3 \gset

@@ -1,5 +1,6 @@
-// Production adapter for PremiumStorePort over the service-role Supabase client. DENO ONLY (not imported by the app test suite).
-import type { SupabaseClient } from 'npm:@supabase/supabase-js@2.116.0';
+// Production adapter for PremiumStorePort over the service-role Supabase client. Runs in Deno; the app's test suite also drives it
+// with a real supabase-js client against a private PostgREST. The client is typed STRUCTURALLY (only what is used) so this file needs
+// no `npm:` specifier and type-checks identically under Deno and under the app's `tsc`.
 import type { AuthorizeArgs, PremiumStorePort } from './ports.ts';
 import type { AuthorizationDecision, DeploymentEnvironment, EntitlementState, EventStatus, NormalizedEvent, Projection } from './types.ts';
 
@@ -11,7 +12,19 @@ function fail(op: string, error: { message?: string; code?: string } | null): ne
 const PROJECTION_COLUMNS =
   'source,environment,product_id,store,has_entitlement,expires_at,grace_expires_at,canceled_at,billing_issue_at,revoked_at,expiration_confirmed_at,clocks,last_event_ms,last_reconciled_at,needs_reconcile,version';
 
-export function createSupabaseStore(client: SupabaseClient): PremiumStorePort {
+interface ErrorLike {
+  message?: string;
+  code?: string;
+}
+// deno-lint-ignore no-explicit-any
+type Any = any;
+/** The slice of a supabase-js client this adapter uses. */
+export interface SupabaseLike {
+  from(table: string): Any;
+  rpc(fn: string, args?: Record<string, unknown>): PromiseLike<{ data: Any; error: ErrorLike | null }>;
+}
+
+export function createSupabaseStore(client: SupabaseLike): PremiumStorePort {
   return {
     async getRuntime() {
       const { data, error } = await client
@@ -54,7 +67,7 @@ export function createSupabaseStore(client: SupabaseClient): PremiumStorePort {
         .order('received_at', { ascending: true })
         .limit(limit);
       if (error) fail('list_backlog', error);
-      return (data ?? []).map((row) => {
+      return ((data ?? []) as Any[]).map((row: Any) => {
         const payload = (row.payload ?? {}) as Record<string, unknown>;
         const event: NormalizedEvent = {
           event_id: row.event_id,

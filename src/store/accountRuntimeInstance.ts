@@ -7,6 +7,7 @@ import { createSecureSessionStore } from '../domain/account/secureSession';
 import { deviceTimeZone } from '../domain/logicalDay';
 import type { SyncRuntime } from '../domain/sync/syncRuntime';
 import type { SyncTransport } from '../domain/sync/transport';
+import { createPremiumServerClient, UNCONFIGURED_PREMIUM_SERVER } from '../monetization/premiumServerClient';
 import { identifyRevenueCatAccount } from '../monetization/revenueCatClient';
 import { createAppleProvider } from '../platform/appleProvider';
 import { createSupabaseEmailOtp } from '../platform/emailOtpProvider';
@@ -74,6 +75,12 @@ export const externalIntelligenceClient =
  * only the user-authenticated Edge Function can reach the provider.
  */
 export const herKeysAiClient = client === null ? UNCONFIGURED_HER_KEYS_AI : createHerKeysAiClient(client);
+
+/**
+ * Her Keys Premium's server view (entitlement state, display manifest, authorization). Same authenticated session as sync and the AI
+ * function, so every call is made AS the bound account; the server never takes the account from a request body.
+ */
+export const premiumServerClient = client === null ? UNCONFIGURED_PREMIUM_SERVER : createPremiumServerClient(client);
 
 // Google identity is one Supabase OAuth path on iOS and Android. It is only
 // registered where the durable secure credential store exists; web has none, so
