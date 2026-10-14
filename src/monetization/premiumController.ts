@@ -46,11 +46,15 @@ export class PremiumController {
   private timer: unknown = null;
   private autoVerifiedForEpoch = -1;
 
-  constructor(
-    private readonly client: PremiumServerClient,
-    private readonly scheduler: Scheduler = defaultScheduler,
-    private readonly delays: readonly number[] = VERIFY_DELAYS_MS,
-  ) {}
+  private readonly client: PremiumServerClient;
+  private readonly scheduler: Scheduler;
+  private readonly delays: readonly number[];
+
+  constructor(client: PremiumServerClient, scheduler: Scheduler = defaultScheduler, delays: readonly number[] = VERIFY_DELAYS_MS) {
+    this.client = client;
+    this.scheduler = scheduler;
+    this.delays = delays;
+  }
 
   getSnapshot = (): PremiumSnapshot => this.snapshot;
 
