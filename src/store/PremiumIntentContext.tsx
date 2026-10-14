@@ -20,10 +20,17 @@ export interface PremiumIntentValue {
 
 const PremiumIntentContext = createContext<PremiumIntentValue | null>(null);
 
-export function PremiumIntentProvider({ children }: { children: ReactNode }) {
-  const [choice, setChoiceState] = useState<PremiumChoice | null>(null);
-  const setChoice = useCallback((next: PremiumChoice | null) => setChoiceState(next), []);
-  const clear = useCallback(() => setChoiceState(null), []);
+export function PremiumIntentProvider({ children, accountId }: { children: ReactNode; accountId?: string | null }) {
+  const [intent, setIntent] = useState<{ owner: string | null; choice: PremiumChoice | null; hasBound: boolean }>({ owner: accountId ?? null, choice: null, hasBound: accountId != null });
+  let current = intent;
+  if (accountId !== undefined && intent.owner !== accountId) {
+    // A new user's unauthenticated choice follows their FIRST identity only. Sign-out or a different actor discards it.
+    current = { owner: accountId, choice: !intent.hasBound && accountId !== null ? intent.choice : null, hasBound: intent.hasBound || accountId !== null };
+    setIntent(current);
+  }
+  const choice = current.choice;
+  const setChoice = useCallback((next: PremiumChoice | null) => setIntent((previous) => ({ ...previous, choice: next })), []);
+  const clear = useCallback(() => setIntent((previous) => ({ ...previous, choice: null })), []);
   const value = useMemo<PremiumIntentValue>(() => ({ choice, setChoice, clear }), [choice, setChoice, clear]);
   return <PremiumIntentContext.Provider value={value}>{children}</PremiumIntentContext.Provider>;
 }

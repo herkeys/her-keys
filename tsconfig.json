@@ -5,6 +5,7 @@
     "allowImportingTsExtensions": true
   },
   "exclude": [
-    "supabase/functions"
+    "supabase/functions",
+    "supabase/blueprints"
   ]
 }

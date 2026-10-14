@@ -9,7 +9,7 @@ import { useEntitlement } from './RevenueCatProvider';
 export function restoreNoticeFor(outcome: RestoreOutcome): string {
   switch (outcome.kind) {
     case 'restored':
-      return 'Your Premium purchase was restored.';
+      return 'Your Premium purchase was restored. Her Keys is checking Premium access.';
     case 'no_purchases_found':
       return 'No Premium purchase was found for this store account.';
     case 'unavailable':

@@ -24,6 +24,18 @@ export interface ConfigureResult {
 
 let configured = false;
 let identifiedAccountId: string | null = null;
+export interface RevenueCatIdentity { accountId: string | null; epoch: number }
+let identity: RevenueCatIdentity = { accountId: null, epoch: 0 };
+const identityListeners = new Set<() => void>();
+export const getRevenueCatIdentity = () => identity;
+export const subscribeRevenueCatIdentity = (listener: () => void) => {
+  identityListeners.add(listener);
+  return () => { identityListeners.delete(listener); };
+};
+function publishIdentity(next: RevenueCatIdentity) {
+  identity = next;
+  for (const listener of identityListeners) listener();
+}
 // Account changes must not interleave with a restore or a paywall's store transaction.
 let accountSdkOperation: Promise<void> = Promise.resolve();
 function withAccountSdkOperation<T>(operation: () => Promise<T>): Promise<T> {
@@ -85,17 +97,24 @@ export type IdentifyResult = 'identified' | 'signed_out' | 'not_configured' | 's
  * committed, so the caller logs this and carries on.
  */
 export async function identifyRevenueCatAccount(accountId: string | null): Promise<IdentifyResult> {
+  // Invalidate display and pending results immediately, before the serialized native operation can start.
+  const epoch = identity.epoch + 1;
+  publishIdentity({ accountId: null, epoch });
   return withAccountSdkOperation(async () => {
+    if (identity.epoch !== epoch) return 'sdk_error';
     identifiedAccountId = null;
     if (!configured) return 'not_configured';
     try {
       if (accountId === null) {
-        await Purchases.logOut();
+        if (!(await Purchases.getAppUserID()).startsWith('$RCAnonymousID:')) await Purchases.logOut();
         return 'signed_out';
       }
+      const previousId = await Purchases.getAppUserID();
+      if (previousId !== accountId && !previousId.startsWith('$RCAnonymousID:')) await Purchases.logOut();
       await Purchases.logIn(accountId);
-      if (await Purchases.getAppUserID() !== accountId) return 'sdk_error';
+      if (identity.epoch !== epoch || await Purchases.getAppUserID() !== accountId) return 'sdk_error';
       identifiedAccountId = accountId;
+      publishIdentity({ accountId, epoch });
       return 'identified';
     } catch {
       return 'sdk_error';
@@ -113,12 +132,13 @@ function activeEntitlementIds(info: CustomerInfo): string[] {
 
 /** `null` means the check could not be resolved (not configured, offline, SDK error) — callers must fail open. */
 export async function fetchActiveEntitlementIds(): Promise<string[] | null> {
+  const scope = identity;
   return withAccountSdkOperation(async () => {
-    const owner = identifiedAccountId;
+    const owner = scope.accountId;
     try {
-      if (!await matchesIdentifiedAccount(owner)) return null;
+      if (identity !== scope || !await matchesIdentifiedAccount(owner)) return null;
       const info = await Purchases.getCustomerInfo();
-      return await matchesIdentifiedAccount(owner) ? activeEntitlementIds(info) : null;
+      return identity === scope && await matchesIdentifiedAccount(owner) ? activeEntitlementIds(info) : null;
     } catch {
       return null;
     }
@@ -142,19 +162,20 @@ export async function fetchCurrentOffering(): Promise<PurchasesOffering | null> 
  * already-entitled customer never sees the paywall flash before Her Keys
  * notices.
  */
-export async function presentRevenueCatPaywall(offering: PurchasesOffering | null): Promise<PaywallOutcome> {
+export async function presentRevenueCatPaywall(offering: PurchasesOffering | null, expectedAccountId?: string): Promise<PaywallOutcome> {
+  const scope = identity;
   return withAccountSdkOperation(async () => {
     if (!configured) return { kind: 'unavailable' };
     if (!offering) return { kind: 'no_offering' };
 
     try {
-      const owner = identifiedAccountId;
-      if (!await matchesIdentifiedAccount(owner)) return { kind: 'unavailable' };
+      const owner = expectedAccountId ?? scope.accountId;
+      if (identity !== scope || !await matchesIdentifiedAccount(owner)) return { kind: 'unavailable' };
       const result = await RevenueCatUI.presentPaywallIfNeeded({
         offering,
         requiredEntitlementIdentifier: HER_KEYS_PLUS_ENTITLEMENT,
       });
-      if (!await matchesIdentifiedAccount(owner)) return { kind: 'unavailable' };
+      if (identity !== scope || !await matchesIdentifiedAccount(owner)) return { kind: 'unavailable' };
       switch (result) {
         case PAYWALL_RESULT.PURCHASED:
           return { kind: 'purchased' };
@@ -175,13 +196,14 @@ export async function presentRevenueCatPaywall(offering: PurchasesOffering | nul
 }
 
 export async function restoreRevenueCatPurchases(expectedAccountId?: string): Promise<RestoreOutcome> {
-  const owner = expectedAccountId ?? identifiedAccountId;
+  const scope = identity;
+  const owner = expectedAccountId ?? scope.accountId;
   return withAccountSdkOperation(async () => {
     if (!configured) return { kind: 'unavailable' };
     try {
-      if (!await matchesIdentifiedAccount(owner)) return { kind: 'unavailable' };
+      if (identity !== scope || !await matchesIdentifiedAccount(owner)) return { kind: 'unavailable' };
       const info = await Purchases.restorePurchases();
-      if (!await matchesIdentifiedAccount(owner)) return { kind: 'unavailable' };
+      if (identity !== scope || !await matchesIdentifiedAccount(owner)) return { kind: 'unavailable' };
       const active = activeEntitlementIds(info);
       return active.includes(HER_KEYS_PLUS_ENTITLEMENT) ? { kind: 'restored' } : { kind: 'no_purchases_found' };
     } catch (error) {

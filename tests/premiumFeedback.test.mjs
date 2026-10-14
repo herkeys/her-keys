@@ -19,7 +19,7 @@ import { PremiumCheckoutAfterConsent } from '../src/monetization/PremiumCheckout
 
 const stub = new URL('./support/premium/stubs.mjs', import.meta.url).href;
 registerHooks({ resolve(specifier, context, next) {
-  if (/\/(RevenueCatProvider|OnboardingContext|SystemsHub)$/.test(specifier)) return next(stub, context);
+  if (/\/(RevenueCatProvider|OnboardingContext|SystemsHub)$/.test(specifier) || specifier === 'expo-router') return next(stub, context);
   return next(specifier, context);
 } });
 const { default: SystemsScreen } = await import('../app/(app)/systems/index.tsx');
@@ -47,6 +47,16 @@ test('SC-03: every paywall outcome has words in the right tone, and none leak th
   for (const kind of ['no_offering', 'unavailable', 'error']) assert.match(paywallNoticeFor({ kind, message: 'x' }).message, /try again/i);
   assert.match(paywallNoticeFor({ kind: 'error', message: 'x' }).message, /Restore purchases/, 'a failed paywall points to restore');
   assert.match(paywallNoticeFor({ kind: 'unavailable' }).message, /everything in Her Keys still works/, 'free features are never implied to be affected');
+});
+
+test('V2 integration: onboarding routes to Account for restore rather than mounting a second transaction control', async () => {
+  reset(); fixture.navigation.length = 0;
+  const r = await render(<PlusStep />);
+  try {
+    assert.equal(button(r, 'Restore purchases'), undefined);
+    await act(() => button(r, 'Your Account & purchases').props.onPress());
+    assert.deepEqual(fixture.navigation, ['/sign-in']);
+  } finally { await act(() => r.unmount()); }
 });
 
 for (const platform of ['android', 'ios']) {
@@ -230,8 +240,14 @@ test('PBP-2 (evolved in Premium Stage 1): the backend enforces Premium ONLY insi
   const backend = readdirSync('supabase', { recursive: true }).map((f) => `supabase/${String(f).replaceAll('\\', '/')}`).filter((f) => /\.(ts|sql|toml|example)$/.test(f));
   assert.ok(backend.length > 10, 'the scan is not vacuous');
   const mentions = backend.filter((f) => /her_keys_plus|revenuecat|premium_(entitlements|authorize|usage|derive_state|my_entitlement)/i.test(read(f)));
+  // Deletion removes the external provider customer; its name is not an entitlement read. Keep these exact cleanup/fixture
+  // paths classified separately and prohibit ANY projection/authorization reference inside them. Never exempt a Free consumer.
+  const deletionProviderOnly = new Set(['supabase/blueprints/staging-deletion-fixture.ts', 'supabase/functions/_shared/deletionProviders.ts', 'supabase/functions/_shared/deletionWorker.ts']);
+  for (const file of deletionProviderOnly) {
+    assert.doesNotMatch(read(file), /her_keys_plus|premium_(entitlements|authorize|usage|derive_state|my_entitlement)/i, `${file} must not read or enforce Premium`);
+  }
   const PREMIUM_BACKEND = /^supabase\/(migrations\/\d{14}_premium_[a-z_]+\.sql|functions\/(_shared\/premium\/|premium-[a-z]+\/|revenuecat-webhook\/|smart-inbox-[a-z-]+\/|\.env\.example$|_shared\/supabaseAdmin\.ts$)|config\.toml$|tests\/)/;
-  assert.deepEqual(mentions.filter((f) => !PREMIUM_BACKEND.test(f)), [], 'a function or migration outside the Premium namespace reads or enforces the entitlement');
+  assert.deepEqual(mentions.filter((f) => !PREMIUM_BACKEND.test(f) && !deletionProviderOnly.has(f)), [], 'a function or migration outside the Premium namespace reads or enforces the entitlement');
   assert.ok(mentions.some((f) => f.startsWith('supabase/functions/premium-gate/') || f.startsWith('supabase/functions/_shared/premium/')), 'and the Premium namespace really does carry the enforcement');
   // The Free functions are named, so a future edit that quietly gates one fails here by name.
   for (const free of ['herkeys-ai', 'calendar-data', 'calendar-oauth', 'weather-context', 'herkeys-welcome-email']) {

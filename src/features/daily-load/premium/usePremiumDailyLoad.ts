@@ -50,7 +50,7 @@ export interface PremiumDailyLoadApi {
 export function usePremiumDailyLoad(): PremiumDailyLoadApi {
   const store = useAppStore();
   const snapshot = useStoreSnapshot();
-  const { householdId, ledger, appVersion } = usePremiumState();
+  const { householdId, ledger, appVersion, isCurrent } = usePremiumState();
   const feature = usePremiumFeature(FEATURE_KEY, COPY.featureName);
   const upgrade = usePremiumUpgrade('premium_feature');
 
@@ -74,7 +74,7 @@ export function usePremiumDailyLoad(): PremiumDailyLoadApi {
     return {
       ledger,
       authorize: (request) => feature.authorize(request),
-      commit: (transition) => store.commit(transition),
+      commit: (transition) => isCurrent() ? store.commit((state, ctx) => isCurrent() ? transition(state, ctx) : state) : Promise.resolve(false),
       getState: () => {
         const state = store.getSnapshot().state;
         if (state === null) throw new Error('household not loaded');
@@ -85,7 +85,7 @@ export function usePremiumDailyLoad(): PremiumDailyLoadApi {
     };
     // `feature.authorize` is stable per feature key; the others are stable per account.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [householdId, ledger, appVersion, store, feature.authorize]);
+  }, [householdId, ledger, appVersion, store, feature.authorize, isCurrent]);
 
   useEffect(() => {
     mounted.current = true;
@@ -129,14 +129,14 @@ export function usePremiumDailyLoad(): PremiumDailyLoadApi {
   }, [householdId, snapshot.state === null]);
 
   const guarded = useCallback(async (work: () => Promise<void>) => {
-    if (inFlight.current) return;
+    if (inFlight.current || !isCurrent()) return;
     inFlight.current = true;
     try {
       await work();
     } finally {
       inFlight.current = false;
     }
-  }, []);
+  }, [isCurrent]);
 
   const open = useCallback(
     () =>

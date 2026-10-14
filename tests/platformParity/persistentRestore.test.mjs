@@ -11,7 +11,7 @@ import { onboardedState } from '../support/fixtures.mjs';
 
 const stub = new URL('./support/restoreRoute.mjs', import.meta.url).href;
 registerHooks({ resolve(specifier, context, next) {
-  if (/\/(AccountProvider|RevenueCatProvider|accountRuntimeInstance|WelcomeAuthFlow)$/.test(specifier) || specifier === 'expo-router') return next(stub, context);
+  if (/\/(AccountProvider|RevenueCatProvider|accountRuntimeInstance|deletionRuntimeInstance|WelcomeAuthFlow)$/.test(specifier) || specifier === 'expo-router') return next(stub, context);
   return next(specifier, context);
 } });
 const { default: AccountScreen } = await import('../../app/sign-in.tsx');
@@ -66,11 +66,27 @@ test('B2B-N02: a pending restore is single-flight, disables contradictory action
     assert.equal(button(r, 'Restoring purchases…').props.disabled, true);
     assert.equal(button(r, 'Sign out').props.disabled, true);
     assert.equal(button(r, 'Done').props.disabled, true);
+    assert.equal(button(r, 'Privacy & Data').props.disabled, true, 'deletion entry is held during restore');
     fixture.account = account(B);
     await act(() => r.update(<AccountScreen />));
     await act(() => settle({ kind: 'restored' }));
     assert.doesNotMatch(text(r), /purchase was restored/);
     assert.equal(button(r, 'Restore purchases').props.disabled, false);
+  } finally { await act(() => r.unmount()); }
+});
+
+test('V2 integration: Account mounts one Restore Purchases control and reaches Privacy & Data without a second restore mount', async () => {
+  fixture.account = account();
+  fixture.entitlement = { restore: async () => ({ kind: 'no_purchases_found' }) };
+  const r = await render(<AccountScreen />);
+  try {
+    const restoreButtons = () => r.root.findAllByType('Pressable').filter((node) => node.props.accessibilityLabel === 'Restore purchases');
+    assert.equal(restoreButtons().length, 1);
+    await act(() => button(r, 'Privacy & Data').props.onPress());
+    assert.match(text(r), /Delete Account/);
+    assert.equal(restoreButtons().length, 0);
+    await act(() => button(r, 'Back to Your Account').props.onPress());
+    assert.equal(restoreButtons().length, 1);
   } finally { await act(() => r.unmount()); }
 });
 

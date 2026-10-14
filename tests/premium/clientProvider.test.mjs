@@ -16,7 +16,7 @@ registerHooks({ resolve(specifier, context, next) {
   if (/\/RevenueCatProvider$/.test(specifier)) return next(stub, context);
   return next(specifier, context);
 } });
-const { PremiumStateProvider, usePremiumFeature, usePremiumUpgrade } = await import('../../src/monetization/PremiumStateProvider.tsx');
+const { PremiumStateProvider, usePremiumState, usePremiumFeature, usePremiumUpgrade } = await import('../../src/monetization/PremiumStateProvider.tsx');
 
 const A = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const B = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
@@ -63,6 +63,105 @@ const remount = (renderer, server, accountState) => TestRenderer.act(async () =>
 });
 
 describe('the consumer journey through the real provider', () => {
+  test('V2 integration: stale same-household ledger callbacks cannot run after A -> B -> A', async () => {
+    const server = makeServer();
+    server.who = A;
+    const calls = [];
+    const ledger = {
+      record: async () => { calls.push('record'); return { kind: 'unavailable' }; },
+      transition: async () => { calls.push('transition'); return { kind: 'unavailable' }; },
+      list: async () => { calls.push('list'); return { kind: 'ok', value: [] }; },
+    };
+    let context;
+    function ContextProbe() { context = usePremiumState(); return null; }
+    const tree = (id) => <PremiumStateProvider client={server.client} accountState={bound(id)} ledger={ledger}><ContextProbe /></PremiumStateProvider>;
+    const r = await render(tree(A));
+    await settle();
+    const old = context;
+    server.who = B;
+    await TestRenderer.act(async () => r.update(tree(B)));
+    server.who = A;
+    await TestRenderer.act(async () => r.update(tree(A)));
+    assert.equal(old.isCurrent(), false);
+    assert.equal((await old.ledger.record({ householdId: 'h' })).kind, 'unavailable');
+    assert.equal((await old.ledger.transition('receipt', 'applied')).kind, 'unavailable');
+    assert.equal((await old.ledger.list('momentum_report', 'h', 20)).kind, 'unavailable');
+    assert.deepEqual(calls, []);
+    assert.equal((await context.ledger.list('momentum_report', 'h', 20)).kind, 'ok', 'saved reads remain available to a Free account');
+    await TestRenderer.act(async () => r.unmount());
+  });
+
+  test('V2 integration: lifecycle restriction blocks computation, purchase and ledger writes before rerender', async () => {
+    const server = makeServer(); server.who = A; server.states.set(A, 'premium_active');
+    let allowed = true, extracts = 0, purchases = 0, writes = 0, context;
+    server.client.extract = async () => { extracts++; return { kind: 'unavailable' }; };
+    fixture.entitlement = { ...fixture.entitlement, presentPaywall: async () => { purchases++; return { kind: 'purchased' }; } };
+    function ContextProbe() { context = usePremiumState(); return <Probe />; }
+    const r = await render(<PremiumStateProvider client={server.client} accountState={bound(A)} isAccountCurrent={() => allowed}
+      ledger={{ record: async () => { writes++; return { kind: 'unavailable' }; }, transition: async () => ({ kind: 'unavailable' }), list: async () => ({ kind: 'ok', value: [] }) }}><ContextProbe /></PremiumStateProvider>);
+    await settle();
+    allowed = false;
+    assert.equal((await context.authorize({ feature: 'daily_load_premium', householdId: 'h', idempotencyKey: 'blocked-operation' })).kind, 'unavailable');
+    assert.equal((await context.extract({ householdId: 'h' })).kind, 'unavailable');
+    assert.equal((await context.ledger.record({ householdId: 'h' })).kind, 'unavailable');
+    assert.equal((await probe.upgrade.start()).kind, 'unavailable');
+    assert.equal(server.calls.authorize + extracts + purchases + writes, 0);
+    await TestRenderer.act(async () => r.unmount());
+  });
+
+  test('V2 integration: a restored account with an SDK paid hint stays locked while fresh server verification is unavailable', async () => {
+    const server = makeServer(); server.who = A; server.states.set(A, 'premium_active');
+    const r = await mount(server, bound(A)); await settle();
+    await remount(r, server, unauthenticated);
+    server.client.entitlement = async () => entitlement('unknown');
+    fixture.entitlement = { ...fixture.entitlement, status: 'plus', isPlus: true };
+    await remount(r, server, bound(A)); await settle();
+    assert.equal(probe.feature.usable, false);
+    assert.notEqual(probe.feature.state.kind, 'entitled');
+    server.client.entitlement = async () => entitlement('premium_active');
+    await TestRenderer.act(async () => probe.feature.verify()); await settle();
+    assert.equal(probe.feature.usable, true, 'only a fresh server reply unlocks');
+    await TestRenderer.act(async () => r.unmount());
+  });
+
+  test('V2 integration: a purchase finishing after a switch cannot verify or notify the next account', async () => {
+    const server = makeServer(); server.who = A;
+    let finish;
+    fixture.entitlement = { ...fixture.entitlement, presentPaywall: () => new Promise((resolve) => { finish = resolve; }) };
+    const r = await mount(server, bound(A)); await settle();
+    let pending;
+    await TestRenderer.act(async () => { pending = probe.upgrade.start(); });
+    server.who = B; await remount(r, server, bound(B));
+    let outcome;
+    await TestRenderer.act(async () => { finish({ kind: 'purchased' }); outcome = await pending; });
+    assert.equal(outcome.kind, 'unavailable');
+    assert.equal(server.calls.verify, 0);
+    assert.equal(probe.upgrade.notice, null);
+    await TestRenderer.act(async () => r.unmount());
+  });
+
+  test('V2 integration: every render after an account switch discards the previous server snapshot and open child state', async () => {
+    const server = makeServer();
+    server.states.set(A, 'premium_active');
+    server.who = A;
+    const renders = [];
+    let open;
+    function ScopedScreen() {
+      const premium = usePremiumState();
+      const [opened, setOpened] = React.useState(false);
+      open = () => setOpened(true);
+      renders.push({ accountId: premium.snapshot.accountId, server: premium.snapshot.server, opened });
+      return null;
+    }
+    const r = await render(<PremiumStateProvider client={server.client} accountState={bound(A)}><ScopedScreen /></PremiumStateProvider>);
+    await settle();
+    await TestRenderer.act(async () => open());
+    renders.length = 0;
+    server.who = B;
+    await TestRenderer.act(async () => r.update(<PremiumStateProvider client={server.client} accountState={bound(B)}><ScopedScreen /></PremiumStateProvider>));
+    assert.ok(renders.every((row) => row.accountId !== A && row.server?.state !== 'premium_active' && !row.opened), 'no first-frame A state on B, including a shared household');
+    await TestRenderer.act(async () => r.unmount());
+  });
   test('free account: the feature offers Premium, names Her Keys Premium, and keeps Free untouched', async () => {
     const server = makeServer();
     server.who = A;

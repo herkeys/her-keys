@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { AppState as NativeAppState } from 'react-native';
 import {
   resolveEntitlementState,
@@ -13,6 +13,9 @@ import {
   fetchCurrentOffering,
   presentRevenueCatPaywall,
   restoreRevenueCatPurchases,
+  getRevenueCatIdentity,
+  subscribeRevenueCatIdentity,
+  type RevenueCatIdentity,
 } from './revenueCatClient';
 
 /** `'loading'` only while the very first check is in flight; afterward this always settles to one of `EntitlementState`. */
@@ -36,14 +39,17 @@ const EntitlementContext = createContext<EntitlementContextValue | null>(null);
  * CustomerInfo object shape.
  */
 export function RevenueCatProvider({ children }: { children: ReactNode }) {
-  const [status, setStatus] = useState<EntitlementStatus>('loading');
+  const identity = useSyncExternalStore(subscribeRevenueCatIdentity, getRevenueCatIdentity, getRevenueCatIdentity);
+  const [resolved, setResolved] = useState<{ identity: RevenueCatIdentity; status: EntitlementStatus } | null>(null);
+  const status: EntitlementStatus = identity.accountId === null ? 'unknown' : resolved?.identity === identity ? resolved.status : 'loading';
   const statusRef = useRef<EntitlementStatus>('loading');
   statusRef.current = status;
 
   const refresh = useCallback(async () => {
     configureRevenueCat();
+    const owner = getRevenueCatIdentity();
     const ids = await fetchActiveEntitlementIds();
-    setStatus(resolveEntitlementState(ids));
+    if (owner === getRevenueCatIdentity()) setResolved({ identity: owner, status: resolveEntitlementState(ids) });
   }, []);
 
   useEffect(() => {
@@ -52,14 +58,18 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
       if (next === 'active') void refresh();
     });
     return () => subscription.remove();
-  }, [refresh]);
+  }, [refresh, identity]);
 
   const presentPaywall = useCallback(
     async (placement: PaywallPlacement): Promise<PaywallOutcome> => {
+      const owner = getRevenueCatIdentity();
+      if (owner.accountId === null) return { kind: 'unavailable' };
       if (statusRef.current === 'plus') return { kind: 'already_entitled' };
 
       const offering = await fetchCurrentOffering();
-      const outcome = await presentRevenueCatPaywall(offering);
+      if (owner !== getRevenueCatIdentity()) return { kind: 'unavailable' };
+      const outcome = await presentRevenueCatPaywall(offering, owner.accountId);
+      if (owner !== getRevenueCatIdentity()) return { kind: 'unavailable' };
       if (outcome.kind === 'purchased' || outcome.kind === 'restored') await refresh();
       if (__DEV__) console.info(`[herkeys] ${JSON.stringify({ type: 'paywall_presented', placement, outcome: outcome.kind })}`);
       return outcome;

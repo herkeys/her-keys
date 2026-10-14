@@ -1,7 +1,9 @@
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
+// This module is also imported by the Node verification harness.
+declare const Deno: { env: { get(name: string): string | undefined } };
 
-function bytesFromBase64(value: string): Uint8Array {
+function bytesFromBase64(value: string): Uint8Array<ArrayBuffer> {
   const binary = atob(value.replace(/-/g, '+').replace(/_/g, '/'));
   return Uint8Array.from(binary, (char) => char.charCodeAt(0));
 }

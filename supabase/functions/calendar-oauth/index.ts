@@ -1,4 +1,4 @@
-import { AuthError, adminClient, requireUser } from '../_shared/supabaseAdmin.ts';
+import { AuthError, adminClient, requireUser, assertAccountActive } from '../_shared/supabaseAdmin.ts';
 import { encryptSecret, randomUrlSafe, sha256Base64Url } from '../_shared/crypto.ts';
 import { json, options } from '../_shared/http.ts';
 
@@ -96,6 +96,7 @@ async function callback(req: Request): Promise<Response> {
     .maybeSingle();
 
   if (pendingError || !pending) return appRedirect('error', 'invalid_state');
+  await assertAccountActive(pending.user_id);
   await admin.from('calendar_oauth_states').delete().eq('state_hash', stateHash);
 
   if (Date.parse(pending.expires_at) <= Date.now()) return appRedirect('error', 'expired_state');

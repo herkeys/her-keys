@@ -1,0 +1,5357 @@
+{
+  "buckets": [],
+  "columns": [
+    {
+      "type": "timestamp with time zone",
+      "table": "tasks",
+      "column": "updated_at"
+    },
+    {
+      "type": "uuid",
+      "table": "responsibilities",
+      "column": "responsible_person_id"
+    },
+    {
+      "type": "uuid",
+      "table": "responsibilities",
+      "column": "responsible_child_id"
+    },
+    {
+      "type": "bigint",
+      "table": "tasks",
+      "column": "revision"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "household_systems",
+      "column": "created_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "responsibilities",
+      "column": "requested_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "responsibilities",
+      "column": "acknowledged_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "responsibilities",
+      "column": "responded_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "responsibilities",
+      "column": "completed_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "responsibilities",
+      "column": "returned_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "responsibilities",
+      "column": "ack_due_at"
+    },
+    {
+      "type": "boolean",
+      "table": "responsibilities",
+      "column": "still_needs_me"
+    },
+    {
+      "type": "uuid",
+      "table": "responsibilities",
+      "column": "previous_responsibility_id"
+    },
+    {
+      "type": "uuid",
+      "table": "tasks",
+      "column": "source_artifact_id"
+    },
+    {
+      "type": "uuid",
+      "table": "responsibilities",
+      "column": "source_artifact_id"
+    },
+    {
+      "type": "uuid",
+      "table": "needs_me_items",
+      "column": "id"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "tasks",
+      "column": "due_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "responsibilities",
+      "column": "origin_created_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "responsibilities",
+      "column": "origin_updated_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "responsibilities",
+      "column": "created_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "responsibilities",
+      "column": "updated_at"
+    },
+    {
+      "type": "bigint",
+      "table": "responsibilities",
+      "column": "revision"
+    },
+    {
+      "type": "uuid",
+      "table": "capacity_profiles",
+      "column": "id"
+    },
+    {
+      "type": "uuid",
+      "table": "capacity_profiles",
+      "column": "household_id"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "tasks",
+      "column": "earliest_start_at"
+    },
+    {
+      "type": "uuid",
+      "table": "capacity_profiles",
+      "column": "origin_device_id"
+    },
+    {
+      "type": "uuid",
+      "table": "capacity_profiles",
+      "column": "profile_id"
+    },
+    {
+      "type": "integer",
+      "table": "capacity_profiles",
+      "column": "day_start_minutes"
+    },
+    {
+      "type": "integer",
+      "table": "capacity_profiles",
+      "column": "day_end_minutes"
+    },
+    {
+      "type": "integer",
+      "table": "capacity_profiles",
+      "column": "transition_buffer_minutes"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "tasks",
+      "column": "latest_finish_at"
+    },
+    {
+      "type": "uuid",
+      "table": "capacity_profiles",
+      "column": "source_artifact_id"
+    },
+    {
+      "type": "boolean",
+      "table": "tasks",
+      "column": "splittable"
+    },
+    {
+      "type": "integer",
+      "table": "tasks",
+      "column": "min_chunk_minutes"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "capacity_profiles",
+      "column": "origin_created_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "capacity_profiles",
+      "column": "origin_updated_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "capacity_profiles",
+      "column": "created_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "capacity_profiles",
+      "column": "updated_at"
+    },
+    {
+      "type": "bigint",
+      "table": "capacity_profiles",
+      "column": "revision"
+    },
+    {
+      "type": "uuid",
+      "table": "patterns",
+      "column": "id"
+    },
+    {
+      "type": "uuid",
+      "table": "patterns",
+      "column": "household_id"
+    },
+    {
+      "type": "uuid",
+      "table": "needs_me_items",
+      "column": "household_id"
+    },
+    {
+      "type": "uuid",
+      "table": "patterns",
+      "column": "origin_device_id"
+    },
+    {
+      "type": "uuid",
+      "table": "patterns",
+      "column": "profile_id"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "meal_plan_entries",
+      "column": "origin_created_at"
+    },
+    {
+      "type": "uuid",
+      "table": "needs_me_items",
+      "column": "origin_device_id"
+    },
+    {
+      "type": "uuid",
+      "table": "patterns",
+      "column": "about_task_id"
+    },
+    {
+      "type": "uuid",
+      "table": "patterns",
+      "column": "about_event_id"
+    },
+    {
+      "type": "uuid",
+      "table": "patterns",
+      "column": "about_needs_me_id"
+    },
+    {
+      "type": "uuid",
+      "table": "patterns",
+      "column": "about_system_id"
+    },
+    {
+      "type": "uuid",
+      "table": "patterns",
+      "column": "about_meal_id"
+    },
+    {
+      "type": "uuid",
+      "table": "patterns",
+      "column": "about_goal_id"
+    },
+    {
+      "type": "uuid",
+      "table": "patterns",
+      "column": "category_id"
+    },
+    {
+      "type": "integer",
+      "table": "patterns",
+      "column": "weekday"
+    },
+    {
+      "type": "boolean",
+      "table": "tasks",
+      "column": "needs_me_personally"
+    },
+    {
+      "type": "integer",
+      "table": "tasks",
+      "column": "travel_minutes_before"
+    },
+    {
+      "type": "date",
+      "table": "patterns",
+      "column": "first_observed_on"
+    },
+    {
+      "type": "date",
+      "table": "patterns",
+      "column": "last_observed_on"
+    },
+    {
+      "type": "integer",
+      "table": "tasks",
+      "column": "travel_minutes_after"
+    },
+    {
+      "type": "uuid",
+      "table": "patterns",
+      "column": "source_artifact_id"
+    },
+    {
+      "type": "integer",
+      "table": "tasks",
+      "column": "preparation_minutes"
+    },
+    {
+      "type": "bigint",
+      "table": "tasks",
+      "column": "value_amount_minor"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "patterns",
+      "column": "origin_created_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "patterns",
+      "column": "origin_updated_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "patterns",
+      "column": "created_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "patterns",
+      "column": "updated_at"
+    },
+    {
+      "type": "bigint",
+      "table": "patterns",
+      "column": "revision"
+    },
+    {
+      "type": "uuid",
+      "table": "evidence_links",
+      "column": "id"
+    },
+    {
+      "type": "uuid",
+      "table": "evidence_links",
+      "column": "household_id"
+    },
+    {
+      "type": "uuid",
+      "table": "needs_me_items",
+      "column": "profile_id"
+    },
+    {
+      "type": "uuid",
+      "table": "evidence_links",
+      "column": "origin_device_id"
+    },
+    {
+      "type": "uuid",
+      "table": "evidence_links",
+      "column": "profile_id"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "meal_plan_entries",
+      "column": "origin_updated_at"
+    },
+    {
+      "type": "uuid",
+      "table": "evidence_links",
+      "column": "for_pattern_id"
+    },
+    {
+      "type": "uuid",
+      "table": "evidence_links",
+      "column": "for_one_move_id"
+    },
+    {
+      "type": "uuid",
+      "table": "evidence_links",
+      "column": "for_intent_id"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "meal_plan_entries",
+      "column": "created_at"
+    },
+    {
+      "type": "uuid",
+      "table": "evidence_links",
+      "column": "support_task_id"
+    },
+    {
+      "type": "uuid",
+      "table": "evidence_links",
+      "column": "support_event_id"
+    },
+    {
+      "type": "uuid",
+      "table": "evidence_links",
+      "column": "support_needs_me_id"
+    },
+    {
+      "type": "uuid",
+      "table": "evidence_links",
+      "column": "support_system_id"
+    },
+    {
+      "type": "uuid",
+      "table": "evidence_links",
+      "column": "support_meal_id"
+    },
+    {
+      "type": "uuid",
+      "table": "evidence_links",
+      "column": "support_goal_id"
+    },
+    {
+      "type": "uuid",
+      "table": "evidence_links",
+      "column": "support_responsibility_id"
+    },
+    {
+      "type": "uuid",
+      "table": "evidence_links",
+      "column": "support_observation_id"
+    },
+    {
+      "type": "date",
+      "table": "needs_me_items",
+      "column": "due_date"
+    },
+    {
+      "type": "uuid",
+      "table": "account_claims",
+      "column": "id"
+    },
+    {
+      "type": "uuid",
+      "table": "evidence_links",
+      "column": "source_artifact_id"
+    },
+    {
+      "type": "uuid",
+      "table": "account_claims",
+      "column": "profile_id"
+    },
+    {
+      "type": "uuid",
+      "table": "account_claims",
+      "column": "claim_key"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "evidence_links",
+      "column": "origin_created_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "evidence_links",
+      "column": "created_at"
+    },
+    {
+      "type": "uuid",
+      "table": "households",
+      "column": "id"
+    },
+    {
+      "type": "uuid",
+      "table": "needs_me_items",
+      "column": "category_id"
+    },
+    {
+      "type": "uuid",
+      "table": "households",
+      "column": "origin_device_id"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "meal_plan_entries",
+      "column": "updated_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "households",
+      "column": "created_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "households",
+      "column": "updated_at"
+    },
+    {
+      "type": "bigint",
+      "table": "households",
+      "column": "revision"
+    },
+    {
+      "type": "uuid",
+      "table": "household_members",
+      "column": "id"
+    },
+    {
+      "type": "uuid",
+      "table": "household_members",
+      "column": "household_id"
+    },
+    {
+      "type": "uuid",
+      "table": "account_claims",
+      "column": "household_id"
+    },
+    {
+      "type": "uuid",
+      "table": "household_members",
+      "column": "origin_device_id"
+    },
+    {
+      "type": "uuid",
+      "table": "household_members",
+      "column": "profile_id"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "needs_me_items",
+      "column": "origin_created_at"
+    },
+    {
+      "type": "jsonb",
+      "table": "account_claims",
+      "column": "row_counts"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "account_claims",
+      "column": "created_at"
+    },
+    {
+      "type": "date",
+      "table": "household_members",
+      "column": "birth_date"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "account_claims",
+      "column": "updated_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "household_members",
+      "column": "created_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "household_members",
+      "column": "updated_at"
+    },
+    {
+      "type": "bigint",
+      "table": "household_members",
+      "column": "revision"
+    },
+    {
+      "type": "uuid",
+      "table": "dependencies",
+      "column": "id"
+    },
+    {
+      "type": "uuid",
+      "table": "dependencies",
+      "column": "household_id"
+    },
+    {
+      "type": "uuid",
+      "table": "behavior_observations",
+      "column": "id"
+    },
+    {
+      "type": "uuid",
+      "table": "dependencies",
+      "column": "origin_device_id"
+    },
+    {
+      "type": "uuid",
+      "table": "dependencies",
+      "column": "profile_id"
+    },
+    {
+      "type": "uuid",
+      "table": "behavior_observations",
+      "column": "household_id"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "needs_me_items",
+      "column": "created_at"
+    },
+    {
+      "type": "uuid",
+      "table": "dependencies",
+      "column": "from_task_id"
+    },
+    {
+      "type": "uuid",
+      "table": "dependencies",
+      "column": "from_event_id"
+    },
+    {
+      "type": "uuid",
+      "table": "dependencies",
+      "column": "from_needs_me_id"
+    },
+    {
+      "type": "uuid",
+      "table": "dependencies",
+      "column": "from_system_id"
+    },
+    {
+      "type": "uuid",
+      "table": "dependencies",
+      "column": "from_meal_id"
+    },
+    {
+      "type": "uuid",
+      "table": "dependencies",
+      "column": "from_goal_id"
+    },
+    {
+      "type": "uuid",
+      "table": "behavior_observations",
+      "column": "origin_device_id"
+    },
+    {
+      "type": "uuid",
+      "table": "dependencies",
+      "column": "to_task_id"
+    },
+    {
+      "type": "uuid",
+      "table": "dependencies",
+      "column": "to_event_id"
+    },
+    {
+      "type": "uuid",
+      "table": "dependencies",
+      "column": "to_needs_me_id"
+    },
+    {
+      "type": "uuid",
+      "table": "dependencies",
+      "column": "to_system_id"
+    },
+    {
+      "type": "uuid",
+      "table": "dependencies",
+      "column": "to_meal_id"
+    },
+    {
+      "type": "uuid",
+      "table": "dependencies",
+      "column": "to_goal_id"
+    },
+    {
+      "type": "uuid",
+      "table": "behavior_observations",
+      "column": "profile_id"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "needs_me_items",
+      "column": "updated_at"
+    },
+    {
+      "type": "uuid",
+      "table": "dependencies",
+      "column": "source_artifact_id"
+    },
+    {
+      "type": "uuid",
+      "table": "behavior_observations",
+      "column": "about_task_id"
+    },
+    {
+      "type": "uuid",
+      "table": "behavior_observations",
+      "column": "about_event_id"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "dependencies",
+      "column": "origin_created_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "dependencies",
+      "column": "origin_updated_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "dependencies",
+      "column": "created_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "dependencies",
+      "column": "updated_at"
+    },
+    {
+      "type": "bigint",
+      "table": "dependencies",
+      "column": "revision"
+    },
+    {
+      "type": "uuid",
+      "table": "dependencies",
+      "column": "from_opportunity_id"
+    },
+    {
+      "type": "uuid",
+      "table": "dependencies",
+      "column": "to_opportunity_id"
+    },
+    {
+      "type": "uuid",
+      "table": "career_opportunities",
+      "column": "id"
+    },
+    {
+      "type": "uuid",
+      "table": "career_opportunities",
+      "column": "household_id"
+    },
+    {
+      "type": "uuid",
+      "table": "behavior_observations",
+      "column": "about_needs_me_id"
+    },
+    {
+      "type": "uuid",
+      "table": "career_opportunities",
+      "column": "origin_device_id"
+    },
+    {
+      "type": "uuid",
+      "table": "career_opportunities",
+      "column": "profile_id"
+    },
+    {
+      "type": "uuid",
+      "table": "behavior_observations",
+      "column": "about_system_id"
+    },
+    {
+      "type": "uuid",
+      "table": "behavior_observations",
+      "column": "about_meal_id"
+    },
+    {
+      "type": "uuid",
+      "table": "behavior_observations",
+      "column": "about_goal_id"
+    },
+    {
+      "type": "uuid",
+      "table": "behavior_observations",
+      "column": "about_responsibility_id"
+    },
+    {
+      "type": "uuid",
+      "table": "behavior_observations",
+      "column": "about_one_move_id"
+    },
+    {
+      "type": "uuid",
+      "table": "behavior_observations",
+      "column": "about_interpretation_id"
+    },
+    {
+      "type": "date",
+      "table": "career_opportunities",
+      "column": "application_deadline"
+    },
+    {
+      "type": "date",
+      "table": "career_opportunities",
+      "column": "follow_up_date"
+    },
+    {
+      "type": "bigint",
+      "table": "needs_me_items",
+      "column": "revision"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "behavior_observations",
+      "column": "occurred_at"
+    },
+    {
+      "type": "date",
+      "table": "behavior_observations",
+      "column": "logical_date"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "career_opportunities",
+      "column": "stage_changed_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "career_opportunities",
+      "column": "archived_at"
+    },
+    {
+      "type": "date",
+      "table": "behavior_observations",
+      "column": "planned_date"
+    },
+    {
+      "type": "uuid",
+      "table": "career_opportunities",
+      "column": "source_artifact_id"
+    },
+    {
+      "type": "date",
+      "table": "behavior_observations",
+      "column": "to_date"
+    },
+    {
+      "type": "bigint",
+      "table": "meal_plan_entries",
+      "column": "revision"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "career_opportunities",
+      "column": "origin_created_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "career_opportunities",
+      "column": "origin_updated_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "career_opportunities",
+      "column": "created_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "career_opportunities",
+      "column": "updated_at"
+    },
+    {
+      "type": "bigint",
+      "table": "career_opportunities",
+      "column": "revision"
+    },
+    {
+      "type": "uuid",
+      "table": "rebuild_focuses",
+      "column": "id"
+    },
+    {
+      "type": "uuid",
+      "table": "rebuild_focuses",
+      "column": "household_id"
+    },
+    {
+      "type": "uuid",
+      "table": "behavior_observations",
+      "column": "source_artifact_id"
+    },
+    {
+      "type": "uuid",
+      "table": "rebuild_focuses",
+      "column": "origin_device_id"
+    },
+    {
+      "type": "uuid",
+      "table": "rebuild_focuses",
+      "column": "profile_id"
+    },
+    {
+      "type": "uuid",
+      "table": "needs_me_items",
+      "column": "source_artifact_id"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "household_systems",
+      "column": "updated_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "behavior_observations",
+      "column": "origin_created_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "behavior_observations",
+      "column": "created_at"
+    },
+    {
+      "type": "uuid",
+      "table": "rebuild_focuses",
+      "column": "source_artifact_id"
+    },
+    {
+      "type": "uuid",
+      "table": "action_outcomes",
+      "column": "id"
+    },
+    {
+      "type": "uuid",
+      "table": "action_outcomes",
+      "column": "household_id"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "rebuild_focuses",
+      "column": "origin_created_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "rebuild_focuses",
+      "column": "origin_updated_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "rebuild_focuses",
+      "column": "created_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "rebuild_focuses",
+      "column": "updated_at"
+    },
+    {
+      "type": "bigint",
+      "table": "rebuild_focuses",
+      "column": "revision"
+    },
+    {
+      "type": "uuid",
+      "table": "rebuild_focus_links",
+      "column": "id"
+    },
+    {
+      "type": "uuid",
+      "table": "rebuild_focus_links",
+      "column": "household_id"
+    },
+    {
+      "type": "uuid",
+      "table": "discovery_records",
+      "column": "id"
+    },
+    {
+      "type": "uuid",
+      "table": "rebuild_focus_links",
+      "column": "origin_device_id"
+    },
+    {
+      "type": "uuid",
+      "table": "rebuild_focus_links",
+      "column": "profile_id"
+    },
+    {
+      "type": "uuid",
+      "table": "rebuild_focus_links",
+      "column": "focus_id"
+    },
+    {
+      "type": "uuid",
+      "table": "action_outcomes",
+      "column": "origin_device_id"
+    },
+    {
+      "type": "uuid",
+      "table": "rebuild_focus_links",
+      "column": "target_task_id"
+    },
+    {
+      "type": "uuid",
+      "table": "rebuild_focus_links",
+      "column": "target_goal_id"
+    },
+    {
+      "type": "uuid",
+      "table": "rebuild_focus_links",
+      "column": "target_system_id"
+    },
+    {
+      "type": "uuid",
+      "table": "rebuild_focus_links",
+      "column": "target_event_id"
+    },
+    {
+      "type": "uuid",
+      "table": "action_outcomes",
+      "column": "profile_id"
+    },
+    {
+      "type": "uuid",
+      "table": "action_outcomes",
+      "column": "execution_id"
+    },
+    {
+      "type": "uuid",
+      "table": "discovery_records",
+      "column": "household_id"
+    },
+    {
+      "type": "uuid",
+      "table": "rebuild_focus_links",
+      "column": "source_artifact_id"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "action_outcomes",
+      "column": "observed_at"
+    },
+    {
+      "type": "uuid",
+      "table": "meal_plan_entries",
+      "column": "source_artifact_id"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "rebuild_focus_links",
+      "column": "origin_created_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "rebuild_focus_links",
+      "column": "origin_updated_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "rebuild_focus_links",
+      "column": "created_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "rebuild_focus_links",
+      "column": "updated_at"
+    },
+    {
+      "type": "bigint",
+      "table": "rebuild_focus_links",
+      "column": "revision"
+    },
+    {
+      "type": "uuid",
+      "table": "life_records",
+      "column": "id"
+    },
+    {
+      "type": "uuid",
+      "table": "life_records",
+      "column": "household_id"
+    },
+    {
+      "type": "uuid",
+      "table": "household_systems",
+      "column": "id"
+    },
+    {
+      "type": "uuid",
+      "table": "life_records",
+      "column": "origin_device_id"
+    },
+    {
+      "type": "uuid",
+      "table": "life_records",
+      "column": "profile_id"
+    },
+    {
+      "type": "uuid",
+      "table": "action_outcomes",
+      "column": "source_artifact_id"
+    },
+    {
+      "type": "uuid",
+      "table": "discovery_records",
+      "column": "origin_device_id"
+    },
+    {
+      "type": "uuid",
+      "table": "discovery_records",
+      "column": "profile_id"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "action_outcomes",
+      "column": "origin_created_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "action_outcomes",
+      "column": "created_at"
+    },
+    {
+      "type": "date",
+      "table": "life_records",
+      "column": "issued_on"
+    },
+    {
+      "type": "date",
+      "table": "life_records",
+      "column": "expires_on"
+    },
+    {
+      "type": "date",
+      "table": "life_records",
+      "column": "renew_by"
+    },
+    {
+      "type": "date",
+      "table": "life_records",
+      "column": "review_on"
+    },
+    {
+      "type": "uuid",
+      "table": "recurrence_rules",
+      "column": "id"
+    },
+    {
+      "type": "uuid",
+      "table": "recurrence_rules",
+      "column": "household_id"
+    },
+    {
+      "type": "uuid",
+      "table": "life_records",
+      "column": "subject_member_id"
+    },
+    {
+      "type": "bigint",
+      "table": "household_systems",
+      "column": "revision"
+    },
+    {
+      "type": "uuid",
+      "table": "recurrence_rules",
+      "column": "origin_device_id"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "life_records",
+      "column": "archived_at"
+    },
+    {
+      "type": "uuid",
+      "table": "recurrence_rules",
+      "column": "profile_id"
+    },
+    {
+      "type": "uuid",
+      "table": "life_records",
+      "column": "source_artifact_id"
+    },
+    {
+      "type": "integer",
+      "table": "meal_plan_entries",
+      "column": "prep_minutes"
+    },
+    {
+      "type": "uuid",
+      "table": "recurrence_rules",
+      "column": "about_task_id"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "life_records",
+      "column": "origin_created_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "life_records",
+      "column": "origin_updated_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "life_records",
+      "column": "created_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "life_records",
+      "column": "updated_at"
+    },
+    {
+      "type": "bigint",
+      "table": "life_records",
+      "column": "revision"
+    },
+    {
+      "type": "uuid",
+      "table": "life_record_task_links",
+      "column": "id"
+    },
+    {
+      "type": "uuid",
+      "table": "life_record_task_links",
+      "column": "household_id"
+    },
+    {
+      "type": "uuid",
+      "table": "recurrence_rules",
+      "column": "about_event_id"
+    },
+    {
+      "type": "uuid",
+      "table": "life_record_task_links",
+      "column": "origin_device_id"
+    },
+    {
+      "type": "uuid",
+      "table": "life_record_task_links",
+      "column": "profile_id"
+    },
+    {
+      "type": "uuid",
+      "table": "life_record_task_links",
+      "column": "life_record_id"
+    },
+    {
+      "type": "uuid",
+      "table": "life_record_task_links",
+      "column": "task_id"
+    },
+    {
+      "type": "uuid",
+      "table": "recurrence_rules",
+      "column": "about_system_id"
+    },
+    {
+      "type": "uuid",
+      "table": "recurrence_rules",
+      "column": "about_meal_id"
+    },
+    {
+      "type": "uuid",
+      "table": "life_record_task_links",
+      "column": "source_artifact_id"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "discovery_records",
+      "column": "deleted_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "discovery_records",
+      "column": "created_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "life_record_task_links",
+      "column": "origin_created_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "life_record_task_links",
+      "column": "created_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "life_record_task_links",
+      "column": "updated_at"
+    },
+    {
+      "type": "bigint",
+      "table": "life_record_task_links",
+      "column": "revision"
+    },
+    {
+      "type": "bigint",
+      "table": "change_log",
+      "column": "seq"
+    },
+    {
+      "type": "uuid",
+      "table": "change_log",
+      "column": "household_id"
+    },
+    {
+      "type": "uuid",
+      "table": "change_log",
+      "column": "owner_profile_id"
+    },
+    {
+      "type": "integer",
+      "table": "recurrence_rules",
+      "column": "interval_count"
+    },
+    {
+      "type": "uuid",
+      "table": "change_log",
+      "column": "entity_id"
+    },
+    {
+      "type": "ARRAY",
+      "table": "recurrence_rules",
+      "column": "by_weekday"
+    },
+    {
+      "type": "bigint",
+      "table": "change_log",
+      "column": "row_revision"
+    },
+    {
+      "type": "xid8",
+      "table": "change_log",
+      "column": "committed_xid"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "change_log",
+      "column": "logged_at"
+    },
+    {
+      "type": "uuid",
+      "table": "person_contexts",
+      "column": "id"
+    },
+    {
+      "type": "uuid",
+      "table": "person_contexts",
+      "column": "household_id"
+    },
+    {
+      "type": "integer",
+      "table": "recurrence_rules",
+      "column": "by_month_day"
+    },
+    {
+      "type": "uuid",
+      "table": "person_contexts",
+      "column": "origin_device_id"
+    },
+    {
+      "type": "uuid",
+      "table": "person_contexts",
+      "column": "profile_id"
+    },
+    {
+      "type": "uuid",
+      "table": "person_contexts",
+      "column": "child_id"
+    },
+    {
+      "type": "date",
+      "table": "recurrence_rules",
+      "column": "anchor_date"
+    },
+    {
+      "type": "uuid",
+      "table": "person_contexts",
+      "column": "person_id"
+    },
+    {
+      "type": "integer",
+      "table": "recurrence_rules",
+      "column": "time_of_day_minutes"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "discovery_records",
+      "column": "updated_at"
+    },
+    {
+      "type": "date",
+      "table": "recurrence_rules",
+      "column": "ends_on"
+    },
+    {
+      "type": "integer",
+      "table": "recurrence_rules",
+      "column": "occurrence_count"
+    },
+    {
+      "type": "bigint",
+      "table": "discovery_records",
+      "column": "revision"
+    },
+    {
+      "type": "uuid",
+      "table": "person_contexts",
+      "column": "source_artifact_id"
+    },
+    {
+      "type": "uuid",
+      "table": "household_systems",
+      "column": "household_id"
+    },
+    {
+      "type": "uuid",
+      "table": "recurrence_rules",
+      "column": "source_artifact_id"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "person_contexts",
+      "column": "origin_created_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "person_contexts",
+      "column": "origin_updated_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "person_contexts",
+      "column": "created_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "person_contexts",
+      "column": "updated_at"
+    },
+    {
+      "type": "bigint",
+      "table": "person_contexts",
+      "column": "revision"
+    },
+    {
+      "type": "uuid",
+      "table": "person_task_links",
+      "column": "id"
+    },
+    {
+      "type": "uuid",
+      "table": "person_task_links",
+      "column": "household_id"
+    },
+    {
+      "type": "uuid",
+      "table": "discovery_records",
+      "column": "source_artifact_id"
+    },
+    {
+      "type": "uuid",
+      "table": "person_task_links",
+      "column": "origin_device_id"
+    },
+    {
+      "type": "uuid",
+      "table": "person_task_links",
+      "column": "profile_id"
+    },
+    {
+      "type": "uuid",
+      "table": "person_task_links",
+      "column": "context_id"
+    },
+    {
+      "type": "uuid",
+      "table": "household_systems",
+      "column": "source_artifact_id"
+    },
+    {
+      "type": "uuid",
+      "table": "person_task_links",
+      "column": "follow_up_task_id"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "recurrence_rules",
+      "column": "origin_created_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "recurrence_rules",
+      "column": "origin_updated_at"
+    },
+    {
+      "type": "uuid",
+      "table": "person_task_links",
+      "column": "source_artifact_id"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "recurrence_rules",
+      "column": "created_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "recurrence_rules",
+      "column": "updated_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "person_task_links",
+      "column": "origin_created_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "person_task_links",
+      "column": "created_at"
+    },
+    {
+      "type": "bigint",
+      "table": "recurrence_rules",
+      "column": "revision"
+    },
+    {
+      "type": "uuid",
+      "table": "calendar_oauth_states",
+      "column": "user_id"
+    },
+    {
+      "type": "uuid",
+      "table": "profiles",
+      "column": "id"
+    },
+    {
+      "type": "uuid",
+      "table": "discovery_answers",
+      "column": "discovery_id"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "calendar_oauth_states",
+      "column": "created_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "calendar_oauth_states",
+      "column": "expires_at"
+    },
+    {
+      "type": "uuid",
+      "table": "account_consents",
+      "column": "id"
+    },
+    {
+      "type": "uuid",
+      "table": "account_consents",
+      "column": "account_id"
+    },
+    {
+      "type": "smallint",
+      "table": "discovery_answers",
+      "column": "answer_order"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "profiles",
+      "column": "created_at"
+    },
+    {
+      "type": "boolean",
+      "table": "account_consents",
+      "column": "granted"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "account_consents",
+      "column": "recorded_at"
+    },
+    {
+      "type": "uuid",
+      "table": "external_calendar_connections",
+      "column": "id"
+    },
+    {
+      "type": "uuid",
+      "table": "external_calendar_connections",
+      "column": "user_id"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "profiles",
+      "column": "updated_at"
+    },
+    {
+      "type": "bigint",
+      "table": "profiles",
+      "column": "revision"
+    },
+    {
+      "type": "uuid",
+      "table": "system_steps",
+      "column": "id"
+    },
+    {
+      "type": "uuid",
+      "table": "system_steps",
+      "column": "household_id"
+    },
+    {
+      "type": "uuid",
+      "table": "household_systems",
+      "column": "origin_device_id"
+    },
+    {
+      "type": "uuid",
+      "table": "system_steps",
+      "column": "origin_device_id"
+    },
+    {
+      "type": "uuid",
+      "table": "system_steps",
+      "column": "profile_id"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "external_calendar_connections",
+      "column": "connected_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "external_calendar_connections",
+      "column": "updated_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "external_calendar_connections",
+      "column": "last_sync_at"
+    },
+    {
+      "type": "uuid",
+      "table": "system_steps",
+      "column": "system_id"
+    },
+    {
+      "type": "integer",
+      "table": "system_steps",
+      "column": "position"
+    },
+    {
+      "type": "uuid",
+      "table": "onboarding_state",
+      "column": "household_id"
+    },
+    {
+      "type": "integer",
+      "table": "system_steps",
+      "column": "effort_minutes"
+    },
+    {
+      "type": "uuid",
+      "table": "household_categories",
+      "column": "id"
+    },
+    {
+      "type": "uuid",
+      "table": "system_steps",
+      "column": "source_artifact_id"
+    },
+    {
+      "type": "uuid",
+      "table": "household_categories",
+      "column": "household_id"
+    },
+    {
+      "type": "uuid",
+      "table": "onboarding_state",
+      "column": "profile_id"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "system_steps",
+      "column": "origin_created_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "system_steps",
+      "column": "origin_updated_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "system_steps",
+      "column": "created_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "system_steps",
+      "column": "updated_at"
+    },
+    {
+      "type": "bigint",
+      "table": "system_steps",
+      "column": "revision"
+    },
+    {
+      "type": "uuid",
+      "table": "source_artifacts",
+      "column": "id"
+    },
+    {
+      "type": "uuid",
+      "table": "source_artifacts",
+      "column": "household_id"
+    },
+    {
+      "type": "uuid",
+      "table": "household_categories",
+      "column": "origin_device_id"
+    },
+    {
+      "type": "uuid",
+      "table": "source_artifacts",
+      "column": "origin_device_id"
+    },
+    {
+      "type": "uuid",
+      "table": "source_artifacts",
+      "column": "profile_id"
+    },
+    {
+      "type": "uuid",
+      "table": "household_categories",
+      "column": "owner_profile_id"
+    },
+    {
+      "type": "uuid",
+      "table": "household_categories",
+      "column": "subject_member_id"
+    },
+    {
+      "type": "uuid",
+      "table": "household_systems",
+      "column": "owner_profile_id"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "source_artifacts",
+      "column": "received_at"
+    },
+    {
+      "type": "integer",
+      "table": "household_systems",
+      "column": "effort_minutes"
+    },
+    {
+      "type": "uuid",
+      "table": "household_systems",
+      "column": "category_id"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "source_artifacts",
+      "column": "retracted_at"
+    },
+    {
+      "type": "uuid",
+      "table": "meal_plan_entries",
+      "column": "id"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "source_artifacts",
+      "column": "origin_created_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "source_artifacts",
+      "column": "created_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "source_artifacts",
+      "column": "updated_at"
+    },
+    {
+      "type": "bigint",
+      "table": "source_artifacts",
+      "column": "revision"
+    },
+    {
+      "type": "uuid",
+      "table": "interpretations",
+      "column": "id"
+    },
+    {
+      "type": "uuid",
+      "table": "interpretations",
+      "column": "household_id"
+    },
+    {
+      "type": "integer",
+      "table": "household_categories",
+      "column": "sort_order"
+    },
+    {
+      "type": "uuid",
+      "table": "interpretations",
+      "column": "origin_device_id"
+    },
+    {
+      "type": "uuid",
+      "table": "interpretations",
+      "column": "profile_id"
+    },
+    {
+      "type": "uuid",
+      "table": "interpretations",
+      "column": "artifact_id"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "onboarding_state",
+      "column": "completed_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "household_categories",
+      "column": "origin_created_at"
+    },
+    {
+      "type": "date",
+      "table": "interpretations",
+      "column": "due_date"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "interpretations",
+      "column": "starts_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "interpretations",
+      "column": "ends_at"
+    },
+    {
+      "type": "integer",
+      "table": "interpretations",
+      "column": "duration_minutes"
+    },
+    {
+      "type": "bigint",
+      "table": "interpretations",
+      "column": "value_amount_minor"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "household_categories",
+      "column": "origin_updated_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "household_categories",
+      "column": "created_at"
+    },
+    {
+      "type": "uuid",
+      "table": "interpretations",
+      "column": "subject_member_id"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "household_categories",
+      "column": "updated_at"
+    },
+    {
+      "type": "bigint",
+      "table": "household_categories",
+      "column": "revision"
+    },
+    {
+      "type": "uuid",
+      "table": "meal_plan_entries",
+      "column": "household_id"
+    },
+    {
+      "type": "uuid",
+      "table": "household_categories",
+      "column": "source_artifact_id"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "onboarding_state",
+      "column": "created_at"
+    },
+    {
+      "type": "uuid",
+      "table": "interpretations",
+      "column": "accepted_task_id"
+    },
+    {
+      "type": "uuid",
+      "table": "interpretations",
+      "column": "accepted_event_id"
+    },
+    {
+      "type": "uuid",
+      "table": "interpretations",
+      "column": "accepted_needs_me_id"
+    },
+    {
+      "type": "uuid",
+      "table": "interpretations",
+      "column": "supersedes_id"
+    },
+    {
+      "type": "integer",
+      "table": "interpretations",
+      "column": "interpretation_version"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "interpretations",
+      "column": "decided_at"
+    },
+    {
+      "type": "uuid",
+      "table": "events",
+      "column": "id"
+    },
+    {
+      "type": "uuid",
+      "table": "interpretations",
+      "column": "source_artifact_id"
+    },
+    {
+      "type": "uuid",
+      "table": "events",
+      "column": "household_id"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "onboarding_state",
+      "column": "updated_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "interpretations",
+      "column": "origin_created_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "interpretations",
+      "column": "created_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "interpretations",
+      "column": "updated_at"
+    },
+    {
+      "type": "bigint",
+      "table": "interpretations",
+      "column": "revision"
+    },
+    {
+      "type": "uuid",
+      "table": "external_references",
+      "column": "id"
+    },
+    {
+      "type": "uuid",
+      "table": "external_references",
+      "column": "household_id"
+    },
+    {
+      "type": "uuid",
+      "table": "events",
+      "column": "origin_device_id"
+    },
+    {
+      "type": "uuid",
+      "table": "external_references",
+      "column": "origin_device_id"
+    },
+    {
+      "type": "uuid",
+      "table": "external_references",
+      "column": "profile_id"
+    },
+    {
+      "type": "uuid",
+      "table": "events",
+      "column": "owner_profile_id"
+    },
+    {
+      "type": "bigint",
+      "table": "onboarding_state",
+      "column": "revision"
+    },
+    {
+      "type": "uuid",
+      "table": "events",
+      "column": "category_id"
+    },
+    {
+      "type": "uuid",
+      "table": "events",
+      "column": "subject_member_id"
+    },
+    {
+      "type": "uuid",
+      "table": "household_systems",
+      "column": "subject_member_id"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "events",
+      "column": "starts_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "events",
+      "column": "ends_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "external_references",
+      "column": "last_observed_at"
+    },
+    {
+      "type": "uuid",
+      "table": "onboarding_state",
+      "column": "source_artifact_id"
+    },
+    {
+      "type": "uuid",
+      "table": "meal_plan_entries",
+      "column": "origin_device_id"
+    },
+    {
+      "type": "uuid",
+      "table": "external_references",
+      "column": "linked_task_id"
+    },
+    {
+      "type": "uuid",
+      "table": "external_references",
+      "column": "linked_event_id"
+    },
+    {
+      "type": "uuid",
+      "table": "external_references",
+      "column": "linked_needs_me_id"
+    },
+    {
+      "type": "uuid",
+      "table": "external_references",
+      "column": "linked_system_id"
+    },
+    {
+      "type": "uuid",
+      "table": "external_references",
+      "column": "linked_meal_id"
+    },
+    {
+      "type": "uuid",
+      "table": "external_references",
+      "column": "linked_goal_id"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "external_references",
+      "column": "written_at"
+    },
+    {
+      "type": "uuid",
+      "table": "one_move_records",
+      "column": "id"
+    },
+    {
+      "type": "uuid",
+      "table": "one_move_records",
+      "column": "household_id"
+    },
+    {
+      "type": "uuid",
+      "table": "external_references",
+      "column": "source_artifact_id"
+    },
+    {
+      "type": "integer",
+      "table": "events",
+      "column": "travel_minutes_before"
+    },
+    {
+      "type": "integer",
+      "table": "events",
+      "column": "travel_minutes_after"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "external_references",
+      "column": "origin_created_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "external_references",
+      "column": "origin_updated_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "external_references",
+      "column": "created_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "external_references",
+      "column": "updated_at"
+    },
+    {
+      "type": "bigint",
+      "table": "external_references",
+      "column": "revision"
+    },
+    {
+      "type": "uuid",
+      "table": "automation_authorities",
+      "column": "id"
+    },
+    {
+      "type": "uuid",
+      "table": "automation_authorities",
+      "column": "household_id"
+    },
+    {
+      "type": "integer",
+      "table": "events",
+      "column": "preparation_minutes"
+    },
+    {
+      "type": "uuid",
+      "table": "automation_authorities",
+      "column": "origin_device_id"
+    },
+    {
+      "type": "uuid",
+      "table": "automation_authorities",
+      "column": "profile_id"
+    },
+    {
+      "type": "uuid",
+      "table": "meal_plan_entries",
+      "column": "owner_profile_id"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "events",
+      "column": "origin_created_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "events",
+      "column": "origin_updated_at"
+    },
+    {
+      "type": "boolean",
+      "table": "automation_authorities",
+      "column": "persistent"
+    },
+    {
+      "type": "uuid",
+      "table": "automation_authorities",
+      "column": "category_id"
+    },
+    {
+      "type": "uuid",
+      "table": "automation_authorities",
+      "column": "subject_member_id"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "events",
+      "column": "created_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "events",
+      "column": "updated_at"
+    },
+    {
+      "type": "bigint",
+      "table": "automation_authorities",
+      "column": "max_amount_minor"
+    },
+    {
+      "type": "bigint",
+      "table": "events",
+      "column": "revision"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "automation_authorities",
+      "column": "granted_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "automation_authorities",
+      "column": "expires_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "automation_authorities",
+      "column": "revoked_at"
+    },
+    {
+      "type": "uuid",
+      "table": "one_move_records",
+      "column": "origin_device_id"
+    },
+    {
+      "type": "uuid",
+      "table": "automation_authorities",
+      "column": "source_artifact_id"
+    },
+    {
+      "type": "uuid",
+      "table": "events",
+      "column": "source_artifact_id"
+    },
+    {
+      "type": "uuid",
+      "table": "one_move_records",
+      "column": "profile_id"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "automation_authorities",
+      "column": "origin_created_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "automation_authorities",
+      "column": "origin_updated_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "automation_authorities",
+      "column": "created_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "automation_authorities",
+      "column": "updated_at"
+    },
+    {
+      "type": "bigint",
+      "table": "automation_authorities",
+      "column": "revision"
+    },
+    {
+      "type": "uuid",
+      "table": "goals",
+      "column": "id"
+    },
+    {
+      "type": "uuid",
+      "table": "goals",
+      "column": "household_id"
+    },
+    {
+      "type": "date",
+      "table": "one_move_records",
+      "column": "logical_day"
+    },
+    {
+      "type": "uuid",
+      "table": "goals",
+      "column": "origin_device_id"
+    },
+    {
+      "type": "uuid",
+      "table": "goals",
+      "column": "profile_id"
+    },
+    {
+      "type": "uuid",
+      "table": "meal_plan_entries",
+      "column": "subject_member_id"
+    },
+    {
+      "type": "boolean",
+      "table": "events",
+      "column": "needs_me_personally"
+    },
+    {
+      "type": "date",
+      "table": "goals",
+      "column": "target_date"
+    },
+    {
+      "type": "uuid",
+      "table": "goals",
+      "column": "category_id"
+    },
+    {
+      "type": "bigint",
+      "table": "events",
+      "column": "value_amount_minor"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "household_systems",
+      "column": "origin_created_at"
+    },
+    {
+      "type": "uuid",
+      "table": "goals",
+      "column": "source_artifact_id"
+    },
+    {
+      "type": "uuid",
+      "table": "one_move_records",
+      "column": "target_task_id"
+    },
+    {
+      "type": "uuid",
+      "table": "action_records",
+      "column": "id"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "goals",
+      "column": "origin_created_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "goals",
+      "column": "origin_updated_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "goals",
+      "column": "created_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "goals",
+      "column": "updated_at"
+    },
+    {
+      "type": "bigint",
+      "table": "goals",
+      "column": "revision"
+    },
+    {
+      "type": "uuid",
+      "table": "action_intents",
+      "column": "id"
+    },
+    {
+      "type": "uuid",
+      "table": "action_intents",
+      "column": "household_id"
+    },
+    {
+      "type": "uuid",
+      "table": "action_records",
+      "column": "household_id"
+    },
+    {
+      "type": "uuid",
+      "table": "action_intents",
+      "column": "origin_device_id"
+    },
+    {
+      "type": "uuid",
+      "table": "action_intents",
+      "column": "profile_id"
+    },
+    {
+      "type": "uuid",
+      "table": "one_move_records",
+      "column": "target_needs_me_id"
+    },
+    {
+      "type": "uuid",
+      "table": "action_records",
+      "column": "origin_device_id"
+    },
+    {
+      "type": "uuid",
+      "table": "action_intents",
+      "column": "about_task_id"
+    },
+    {
+      "type": "uuid",
+      "table": "action_intents",
+      "column": "about_event_id"
+    },
+    {
+      "type": "uuid",
+      "table": "action_intents",
+      "column": "about_needs_me_id"
+    },
+    {
+      "type": "uuid",
+      "table": "action_intents",
+      "column": "about_system_id"
+    },
+    {
+      "type": "uuid",
+      "table": "action_intents",
+      "column": "about_meal_id"
+    },
+    {
+      "type": "uuid",
+      "table": "action_intents",
+      "column": "about_goal_id"
+    },
+    {
+      "type": "uuid",
+      "table": "action_intents",
+      "column": "about_responsibility_id"
+    },
+    {
+      "type": "uuid",
+      "table": "action_records",
+      "column": "actor_profile_id"
+    },
+    {
+      "type": "date",
+      "table": "action_records",
+      "column": "logical_date"
+    },
+    {
+      "type": "uuid",
+      "table": "one_move_records",
+      "column": "target_event_id"
+    },
+    {
+      "type": "bigint",
+      "table": "action_intents",
+      "column": "amount_amount_minor"
+    },
+    {
+      "type": "uuid",
+      "table": "one_move_records",
+      "column": "target_system_id"
+    },
+    {
+      "type": "uuid",
+      "table": "one_move_records",
+      "column": "target_responsibility_id"
+    },
+    {
+      "type": "uuid",
+      "table": "action_records",
+      "column": "target_id"
+    },
+    {
+      "type": "smallint",
+      "table": "action_records",
+      "column": "payload_version"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "action_intents",
+      "column": "expires_at"
+    },
+    {
+      "type": "jsonb",
+      "table": "action_records",
+      "column": "reason"
+    },
+    {
+      "type": "uuid",
+      "table": "action_intents",
+      "column": "source_artifact_id"
+    },
+    {
+      "type": "jsonb",
+      "table": "action_records",
+      "column": "before_state"
+    },
+    {
+      "type": "jsonb",
+      "table": "action_records",
+      "column": "after_state"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "action_intents",
+      "column": "origin_created_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "action_intents",
+      "column": "created_at"
+    },
+    {
+      "type": "uuid",
+      "table": "intent_decisions",
+      "column": "id"
+    },
+    {
+      "type": "uuid",
+      "table": "intent_decisions",
+      "column": "household_id"
+    },
+    {
+      "type": "date",
+      "table": "meal_plan_entries",
+      "column": "meal_date"
+    },
+    {
+      "type": "uuid",
+      "table": "intent_decisions",
+      "column": "origin_device_id"
+    },
+    {
+      "type": "uuid",
+      "table": "intent_decisions",
+      "column": "profile_id"
+    },
+    {
+      "type": "uuid",
+      "table": "intent_decisions",
+      "column": "intent_id"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "one_move_records",
+      "column": "decided_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "action_records",
+      "column": "origin_created_at"
+    },
+    {
+      "type": "uuid",
+      "table": "intent_decisions",
+      "column": "authority_id"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "intent_decisions",
+      "column": "decided_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "action_records",
+      "column": "created_at"
+    },
+    {
+      "type": "uuid",
+      "table": "intent_decisions",
+      "column": "source_artifact_id"
+    },
+    {
+      "type": "uuid",
+      "table": "tasks",
+      "column": "id"
+    },
+    {
+      "type": "uuid",
+      "table": "tasks",
+      "column": "household_id"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "intent_decisions",
+      "column": "origin_created_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "intent_decisions",
+      "column": "created_at"
+    },
+    {
+      "type": "uuid",
+      "table": "action_executions",
+      "column": "id"
+    },
+    {
+      "type": "uuid",
+      "table": "action_executions",
+      "column": "household_id"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "one_move_records",
+      "column": "completed_at"
+    },
+    {
+      "type": "uuid",
+      "table": "action_executions",
+      "column": "origin_device_id"
+    },
+    {
+      "type": "uuid",
+      "table": "action_executions",
+      "column": "profile_id"
+    },
+    {
+      "type": "uuid",
+      "table": "action_executions",
+      "column": "intent_id"
+    },
+    {
+      "type": "uuid",
+      "table": "action_executions",
+      "column": "decision_id"
+    },
+    {
+      "type": "uuid",
+      "table": "action_executions",
+      "column": "authority_id"
+    },
+    {
+      "type": "integer",
+      "table": "action_executions",
+      "column": "attempt"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "action_executions",
+      "column": "attempted_at"
+    },
+    {
+      "type": "uuid",
+      "table": "tasks",
+      "column": "origin_device_id"
+    },
+    {
+      "type": "uuid",
+      "table": "tasks",
+      "column": "owner_profile_id"
+    },
+    {
+      "type": "uuid",
+      "table": "action_executions",
+      "column": "external_reference_id"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "one_move_records",
+      "column": "cleared_at"
+    },
+    {
+      "type": "uuid",
+      "table": "tasks",
+      "column": "category_id"
+    },
+    {
+      "type": "uuid",
+      "table": "tasks",
+      "column": "subject_member_id"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "household_systems",
+      "column": "origin_updated_at"
+    },
+    {
+      "type": "uuid",
+      "table": "action_executions",
+      "column": "compensates_execution_id"
+    },
+    {
+      "type": "integer",
+      "table": "tasks",
+      "column": "duration_minutes"
+    },
+    {
+      "type": "uuid",
+      "table": "action_executions",
+      "column": "source_artifact_id"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "one_move_records",
+      "column": "created_at"
+    },
+    {
+      "type": "date",
+      "table": "tasks",
+      "column": "due_date"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "action_executions",
+      "column": "origin_created_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "action_executions",
+      "column": "created_at"
+    },
+    {
+      "type": "uuid",
+      "table": "household_people",
+      "column": "id"
+    },
+    {
+      "type": "uuid",
+      "table": "household_people",
+      "column": "household_id"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "one_move_records",
+      "column": "updated_at"
+    },
+    {
+      "type": "uuid",
+      "table": "household_people",
+      "column": "origin_device_id"
+    },
+    {
+      "type": "uuid",
+      "table": "household_people",
+      "column": "profile_id"
+    },
+    {
+      "type": "date",
+      "table": "tasks",
+      "column": "planned_date"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "tasks",
+      "column": "planned_starts_at"
+    },
+    {
+      "type": "bigint",
+      "table": "one_move_records",
+      "column": "revision"
+    },
+    {
+      "type": "uuid",
+      "table": "meal_plan_entries",
+      "column": "category_id"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "tasks",
+      "column": "completed_at"
+    },
+    {
+      "type": "uuid",
+      "table": "household_people",
+      "column": "source_artifact_id"
+    },
+    {
+      "type": "uuid",
+      "table": "one_move_records",
+      "column": "source_artifact_id"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "tasks",
+      "column": "origin_created_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "household_people",
+      "column": "origin_created_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "household_people",
+      "column": "origin_updated_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "household_people",
+      "column": "created_at"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "household_people",
+      "column": "updated_at"
+    },
+    {
+      "type": "bigint",
+      "table": "household_people",
+      "column": "revision"
+    },
+    {
+      "type": "uuid",
+      "table": "responsibilities",
+      "column": "id"
+    },
+    {
+      "type": "uuid",
+      "table": "responsibilities",
+      "column": "household_id"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "tasks",
+      "column": "origin_updated_at"
+    },
+    {
+      "type": "uuid",
+      "table": "responsibilities",
+      "column": "origin_device_id"
+    },
+    {
+      "type": "uuid",
+      "table": "responsibilities",
+      "column": "profile_id"
+    },
+    {
+      "type": "timestamp with time zone",
+      "table": "tasks",
+      "column": "created_at"
+    },
+    {
+      "type": "uuid",
+      "table": "responsibilities",
+      "column": "about_task_id"
+    },
+    {
+      "type": "uuid",
+      "table": "responsibilities",
+      "column": "about_event_id"
+    },
+    {
+      "type": "uuid",
+      "table": "responsibilities",
+      "column": "about_needs_me_id"
+    },
+    {
+      "type": "uuid",
+      "table": "responsibilities",
+      "column": "about_system_id"
+    },
+    {
+      "type": "uuid",
+      "table": "responsibilities",
+      "column": "about_meal_id"
+    },
+    {
+      "type": "uuid",
+      "table": "responsibilities",
+      "column": "about_goal_id"
+    },
+    {
+      "type": "text",
+      "table": "life_records",
+      "column": "local_id"
+    },
+    {
+      "type": "text",
+      "table": "household_systems",
+      "column": "local_id"
+    },
+    {
+      "type": "text",
+      "table": "household_systems",
+      "column": "subject_member_type"
+    },
+    {
+      "type": "text",
+      "table": "household_systems",
+      "column": "name"
+    },
+    {
+      "type": "text",
+      "table": "household_systems",
+      "column": "description"
+    },
+    {
+      "type": "text",
+      "table": "household_systems",
+      "column": "scope"
+    },
+    {
+      "type": "text",
+      "table": "household_systems",
+      "column": "producer"
+    },
+    {
+      "type": "text",
+      "table": "household_systems",
+      "column": "confidence"
+    },
+    {
+      "type": "text",
+      "table": "household_systems",
+      "column": "automation_mode"
+    },
+    {
+      "type": "text",
+      "table": "household_systems",
+      "column": "energy_demand"
+    },
+    {
+      "type": "text",
+      "table": "meal_plan_entries",
+      "column": "local_id"
+    },
+    {
+      "type": "text",
+      "table": "meal_plan_entries",
+      "column": "subject_member_type"
+    },
+    {
+      "type": "text",
+      "table": "meal_plan_entries",
+      "column": "title"
+    },
+    {
+      "type": "text",
+      "table": "meal_plan_entries",
+      "column": "scope"
+    },
+    {
+      "type": "text",
+      "table": "meal_plan_entries",
+      "column": "producer"
+    },
+    {
+      "type": "text",
+      "table": "meal_plan_entries",
+      "column": "confidence"
+    },
+    {
+      "type": "text",
+      "table": "meal_plan_entries",
+      "column": "energy_demand"
+    },
+    {
+      "type": "text",
+      "table": "meal_plan_entries",
+      "column": "meal_slot"
+    },
+    {
+      "type": "text",
+      "table": "meal_plan_entries",
+      "column": "status"
+    },
+    {
+      "type": "ARRAY",
+      "table": "onboarding_state",
+      "column": "goal_ids"
+    },
+    {
+      "type": "ARRAY",
+      "table": "onboarding_state",
+      "column": "strength_ids"
+    },
+    {
+      "type": "ARRAY",
+      "table": "onboarding_state",
+      "column": "struggle_ids"
+    },
+    {
+      "type": "text",
+      "table": "onboarding_state",
+      "column": "last_step"
+    },
+    {
+      "type": "text",
+      "table": "onboarding_state",
+      "column": "scope"
+    },
+    {
+      "type": "text",
+      "table": "onboarding_state",
+      "column": "producer"
+    },
+    {
+      "type": "text",
+      "table": "onboarding_state",
+      "column": "confidence"
+    },
+    {
+      "type": "text",
+      "table": "one_move_records",
+      "column": "local_id"
+    },
+    {
+      "type": "text",
+      "table": "one_move_records",
+      "column": "timezone_at_decision"
+    },
+    {
+      "type": "text",
+      "table": "one_move_records",
+      "column": "target_type"
+    },
+    {
+      "type": "text",
+      "table": "one_move_records",
+      "column": "status"
+    },
+    {
+      "type": "text",
+      "table": "one_move_records",
+      "column": "scope"
+    },
+    {
+      "type": "text",
+      "table": "one_move_records",
+      "column": "producer"
+    },
+    {
+      "type": "text",
+      "table": "one_move_records",
+      "column": "confidence"
+    },
+    {
+      "type": "text",
+      "table": "needs_me_items",
+      "column": "local_id"
+    },
+    {
+      "type": "text",
+      "table": "needs_me_items",
+      "column": "title"
+    },
+    {
+      "type": "text",
+      "table": "needs_me_items",
+      "column": "status"
+    },
+    {
+      "type": "text",
+      "table": "needs_me_items",
+      "column": "scope"
+    },
+    {
+      "type": "text",
+      "table": "needs_me_items",
+      "column": "producer"
+    },
+    {
+      "type": "text",
+      "table": "needs_me_items",
+      "column": "confidence"
+    },
+    {
+      "type": "text",
+      "table": "discovery_records",
+      "column": "local_id"
+    },
+    {
+      "type": "text",
+      "table": "discovery_records",
+      "column": "topic_id"
+    },
+    {
+      "type": "text",
+      "table": "discovery_records",
+      "column": "scope"
+    },
+    {
+      "type": "text",
+      "table": "discovery_records",
+      "column": "producer"
+    },
+    {
+      "type": "text",
+      "table": "discovery_records",
+      "column": "confidence"
+    },
+    {
+      "type": "text",
+      "table": "discovery_answers",
+      "column": "question_id"
+    },
+    {
+      "type": "text",
+      "table": "discovery_answers",
+      "column": "option_id"
+    },
+    {
+      "type": "text",
+      "table": "household_categories",
+      "column": "local_id"
+    },
+    {
+      "type": "text",
+      "table": "household_categories",
+      "column": "subject_member_type"
+    },
+    {
+      "type": "text",
+      "table": "household_categories",
+      "column": "name"
+    },
+    {
+      "type": "text",
+      "table": "household_categories",
+      "column": "system_role"
+    },
+    {
+      "type": "text",
+      "table": "household_categories",
+      "column": "status"
+    },
+    {
+      "type": "text",
+      "table": "household_categories",
+      "column": "scope"
+    },
+    {
+      "type": "text",
+      "table": "household_categories",
+      "column": "producer"
+    },
+    {
+      "type": "text",
+      "table": "household_categories",
+      "column": "confidence"
+    },
+    {
+      "type": "text",
+      "table": "events",
+      "column": "local_id"
+    },
+    {
+      "type": "text",
+      "table": "events",
+      "column": "title"
+    },
+    {
+      "type": "text",
+      "table": "events",
+      "column": "subject_member_type"
+    },
+    {
+      "type": "text",
+      "table": "events",
+      "column": "location"
+    },
+    {
+      "type": "text",
+      "table": "events",
+      "column": "notes"
+    },
+    {
+      "type": "text",
+      "table": "events",
+      "column": "commitment"
+    },
+    {
+      "type": "text",
+      "table": "events",
+      "column": "status"
+    },
+    {
+      "type": "text",
+      "table": "events",
+      "column": "scope"
+    },
+    {
+      "type": "text",
+      "table": "events",
+      "column": "producer"
+    },
+    {
+      "type": "text",
+      "table": "events",
+      "column": "confidence"
+    },
+    {
+      "type": "text",
+      "table": "events",
+      "column": "energy_demand"
+    },
+    {
+      "type": "text",
+      "table": "events",
+      "column": "consequence"
+    },
+    {
+      "type": "text",
+      "table": "events",
+      "column": "value_currency"
+    },
+    {
+      "type": "text",
+      "table": "events",
+      "column": "value_direction"
+    },
+    {
+      "type": "text",
+      "table": "action_records",
+      "column": "local_id"
+    },
+    {
+      "type": "text",
+      "table": "action_records",
+      "column": "action_type"
+    },
+    {
+      "type": "text",
+      "table": "action_records",
+      "column": "approval"
+    },
+    {
+      "type": "text",
+      "table": "action_records",
+      "column": "target_type"
+    },
+    {
+      "type": "text",
+      "table": "action_records",
+      "column": "source"
+    },
+    {
+      "type": "text",
+      "table": "action_records",
+      "column": "scope"
+    },
+    {
+      "type": "text",
+      "table": "tasks",
+      "column": "local_id"
+    },
+    {
+      "type": "text",
+      "table": "tasks",
+      "column": "title"
+    },
+    {
+      "type": "text",
+      "table": "tasks",
+      "column": "subject_member_type"
+    },
+    {
+      "type": "text",
+      "table": "tasks",
+      "column": "commitment"
+    },
+    {
+      "type": "text",
+      "table": "tasks",
+      "column": "plan_kind"
+    },
+    {
+      "type": "text",
+      "table": "tasks",
+      "column": "notes"
+    },
+    {
+      "type": "text",
+      "table": "tasks",
+      "column": "status"
+    },
+    {
+      "type": "text",
+      "table": "tasks",
+      "column": "scope"
+    },
+    {
+      "type": "text",
+      "table": "tasks",
+      "column": "producer"
+    },
+    {
+      "type": "text",
+      "table": "tasks",
+      "column": "confidence"
+    },
+    {
+      "type": "text",
+      "table": "tasks",
+      "column": "preferred_time_of_day"
+    },
+    {
+      "type": "text",
+      "table": "tasks",
+      "column": "energy_demand"
+    },
+    {
+      "type": "text",
+      "table": "tasks",
+      "column": "consequence"
+    },
+    {
+      "type": "text",
+      "table": "tasks",
+      "column": "value_currency"
+    },
+    {
+      "type": "text",
+      "table": "tasks",
+      "column": "value_direction"
+    },
+    {
+      "type": "text",
+      "table": "tasks",
+      "column": "duration_source"
+    },
+    {
+      "type": "text",
+      "table": "tasks",
+      "column": "payment_mechanism"
+    },
+    {
+      "type": "text",
+      "table": "account_claims",
+      "column": "kind"
+    },
+    {
+      "type": "text",
+      "table": "account_claims",
+      "column": "status"
+    },
+    {
+      "type": "text",
+      "table": "account_claims",
+      "column": "rejected_reason"
+    },
+    {
+      "type": "text",
+      "table": "behavior_observations",
+      "column": "local_id"
+    },
+    {
+      "type": "text",
+      "table": "behavior_observations",
+      "column": "about_type"
+    },
+    {
+      "type": "text",
+      "table": "behavior_observations",
+      "column": "outcome"
+    },
+    {
+      "type": "text",
+      "table": "behavior_observations",
+      "column": "producer"
+    },
+    {
+      "type": "text",
+      "table": "behavior_observations",
+      "column": "confidence"
+    },
+    {
+      "type": "text",
+      "table": "behavior_observations",
+      "column": "scope"
+    },
+    {
+      "type": "text",
+      "table": "action_outcomes",
+      "column": "local_id"
+    },
+    {
+      "type": "text",
+      "table": "action_outcomes",
+      "column": "kind"
+    },
+    {
+      "type": "text",
+      "table": "action_outcomes",
+      "column": "producer"
+    },
+    {
+      "type": "text",
+      "table": "action_outcomes",
+      "column": "confidence"
+    },
+    {
+      "type": "text",
+      "table": "action_outcomes",
+      "column": "scope"
+    },
+    {
+      "type": "text",
+      "table": "recurrence_rules",
+      "column": "local_id"
+    },
+    {
+      "type": "text",
+      "table": "recurrence_rules",
+      "column": "about_type"
+    },
+    {
+      "type": "text",
+      "table": "recurrence_rules",
+      "column": "trigger_kind"
+    },
+    {
+      "type": "text",
+      "table": "recurrence_rules",
+      "column": "frequency"
+    },
+    {
+      "type": "text",
+      "table": "recurrence_rules",
+      "column": "timezone"
+    },
+    {
+      "type": "text",
+      "table": "recurrence_rules",
+      "column": "status"
+    },
+    {
+      "type": "text",
+      "table": "recurrence_rules",
+      "column": "producer"
+    },
+    {
+      "type": "text",
+      "table": "recurrence_rules",
+      "column": "confidence"
+    },
+    {
+      "type": "text",
+      "table": "recurrence_rules",
+      "column": "scope"
+    },
+    {
+      "type": "text",
+      "table": "profiles",
+      "column": "display_name"
+    },
+    {
+      "type": "text",
+      "table": "profiles",
+      "column": "timezone"
+    },
+    {
+      "type": "text",
+      "table": "system_steps",
+      "column": "local_id"
+    },
+    {
+      "type": "text",
+      "table": "system_steps",
+      "column": "title"
+    },
+    {
+      "type": "text",
+      "table": "system_steps",
+      "column": "producer"
+    },
+    {
+      "type": "text",
+      "table": "system_steps",
+      "column": "confidence"
+    },
+    {
+      "type": "text",
+      "table": "system_steps",
+      "column": "scope"
+    },
+    {
+      "type": "text",
+      "table": "source_artifacts",
+      "column": "local_id"
+    },
+    {
+      "type": "text",
+      "table": "source_artifacts",
+      "column": "kind"
+    },
+    {
+      "type": "text",
+      "table": "source_artifacts",
+      "column": "origin"
+    },
+    {
+      "type": "text",
+      "table": "source_artifacts",
+      "column": "provider"
+    },
+    {
+      "type": "text",
+      "table": "source_artifacts",
+      "column": "content_digest"
+    },
+    {
+      "type": "text",
+      "table": "source_artifacts",
+      "column": "content_ref"
+    },
+    {
+      "type": "text",
+      "table": "source_artifacts",
+      "column": "scope"
+    },
+    {
+      "type": "text",
+      "table": "interpretations",
+      "column": "local_id"
+    },
+    {
+      "type": "text",
+      "table": "interpretations",
+      "column": "proposed_kind"
+    },
+    {
+      "type": "text",
+      "table": "interpretations",
+      "column": "title"
+    },
+    {
+      "type": "text",
+      "table": "interpretations",
+      "column": "value_currency"
+    },
+    {
+      "type": "text",
+      "table": "interpretations",
+      "column": "value_direction"
+    },
+    {
+      "type": "text",
+      "table": "interpretations",
+      "column": "subject_member_type"
+    },
+    {
+      "type": "text",
+      "table": "interpretations",
+      "column": "category_hint"
+    },
+    {
+      "type": "text",
+      "table": "interpretations",
+      "column": "state"
+    },
+    {
+      "type": "text",
+      "table": "interpretations",
+      "column": "clarification"
+    },
+    {
+      "type": "text",
+      "table": "interpretations",
+      "column": "accepted_type"
+    },
+    {
+      "type": "text",
+      "table": "interpretations",
+      "column": "producer"
+    },
+    {
+      "type": "text",
+      "table": "interpretations",
+      "column": "confidence"
+    },
+    {
+      "type": "text",
+      "table": "interpretations",
+      "column": "scope"
+    },
+    {
+      "type": "text",
+      "table": "external_references",
+      "column": "local_id"
+    },
+    {
+      "type": "text",
+      "table": "external_references",
+      "column": "provider"
+    },
+    {
+      "type": "text",
+      "table": "external_references",
+      "column": "external_account"
+    },
+    {
+      "type": "text",
+      "table": "external_references",
+      "column": "external_object_id"
+    },
+    {
+      "type": "text",
+      "table": "external_references",
+      "column": "external_version"
+    },
+    {
+      "type": "text",
+      "table": "external_references",
+      "column": "origin"
+    },
+    {
+      "type": "text",
+      "table": "external_references",
+      "column": "direction"
+    },
+    {
+      "type": "text",
+      "table": "external_references",
+      "column": "authority"
+    },
+    {
+      "type": "text",
+      "table": "external_references",
+      "column": "last_observed_digest"
+    },
+    {
+      "type": "text",
+      "table": "external_references",
+      "column": "linked_type"
+    },
+    {
+      "type": "text",
+      "table": "external_references",
+      "column": "status"
+    },
+    {
+      "type": "text",
+      "table": "external_references",
+      "column": "producer"
+    },
+    {
+      "type": "text",
+      "table": "external_references",
+      "column": "confidence"
+    },
+    {
+      "type": "text",
+      "table": "external_references",
+      "column": "scope"
+    },
+    {
+      "type": "text",
+      "table": "automation_authorities",
+      "column": "local_id"
+    },
+    {
+      "type": "text",
+      "table": "automation_authorities",
+      "column": "category"
+    },
+    {
+      "type": "text",
+      "table": "automation_authorities",
+      "column": "mode"
+    },
+    {
+      "type": "text",
+      "table": "automation_authorities",
+      "column": "max_consequence"
+    },
+    {
+      "type": "text",
+      "table": "automation_authorities",
+      "column": "subject_member_type"
+    },
+    {
+      "type": "text",
+      "table": "automation_authorities",
+      "column": "provider"
+    },
+    {
+      "type": "text",
+      "table": "automation_authorities",
+      "column": "max_amount_currency"
+    },
+    {
+      "type": "text",
+      "table": "automation_authorities",
+      "column": "producer"
+    },
+    {
+      "type": "text",
+      "table": "automation_authorities",
+      "column": "confidence"
+    },
+    {
+      "type": "text",
+      "table": "automation_authorities",
+      "column": "scope"
+    },
+    {
+      "type": "text",
+      "table": "goals",
+      "column": "local_id"
+    },
+    {
+      "type": "text",
+      "table": "goals",
+      "column": "title"
+    },
+    {
+      "type": "text",
+      "table": "goals",
+      "column": "status"
+    },
+    {
+      "type": "text",
+      "table": "goals",
+      "column": "catalog_goal_id"
+    },
+    {
+      "type": "text",
+      "table": "goals",
+      "column": "producer"
+    },
+    {
+      "type": "text",
+      "table": "goals",
+      "column": "confidence"
+    },
+    {
+      "type": "text",
+      "table": "goals",
+      "column": "scope"
+    },
+    {
+      "type": "text",
+      "table": "action_intents",
+      "column": "local_id"
+    },
+    {
+      "type": "text",
+      "table": "action_intents",
+      "column": "category"
+    },
+    {
+      "type": "text",
+      "table": "action_intents",
+      "column": "about_type"
+    },
+    {
+      "type": "text",
+      "table": "action_intents",
+      "column": "consequence"
+    },
+    {
+      "type": "text",
+      "table": "action_intents",
+      "column": "reversibility"
+    },
+    {
+      "type": "text",
+      "table": "action_intents",
+      "column": "summary_code"
+    },
+    {
+      "type": "text",
+      "table": "action_intents",
+      "column": "amount_currency"
+    },
+    {
+      "type": "text",
+      "table": "action_intents",
+      "column": "amount_direction"
+    },
+    {
+      "type": "text",
+      "table": "action_intents",
+      "column": "provider"
+    },
+    {
+      "type": "text",
+      "table": "action_intents",
+      "column": "permitted_mode"
+    },
+    {
+      "type": "text",
+      "table": "action_intents",
+      "column": "producer"
+    },
+    {
+      "type": "text",
+      "table": "action_intents",
+      "column": "confidence"
+    },
+    {
+      "type": "text",
+      "table": "action_intents",
+      "column": "scope"
+    },
+    {
+      "type": "text",
+      "table": "intent_decisions",
+      "column": "local_id"
+    },
+    {
+      "type": "text",
+      "table": "intent_decisions",
+      "column": "decision"
+    },
+    {
+      "type": "text",
+      "table": "intent_decisions",
+      "column": "basis"
+    },
+    {
+      "type": "text",
+      "table": "intent_decisions",
+      "column": "producer"
+    },
+    {
+      "type": "text",
+      "table": "intent_decisions",
+      "column": "confidence"
+    },
+    {
+      "type": "text",
+      "table": "intent_decisions",
+      "column": "scope"
+    },
+    {
+      "type": "text",
+      "table": "action_executions",
+      "column": "local_id"
+    },
+    {
+      "type": "text",
+      "table": "action_executions",
+      "column": "provider"
+    },
+    {
+      "type": "text",
+      "table": "action_executions",
+      "column": "external_action_id"
+    },
+    {
+      "type": "text",
+      "table": "action_executions",
+      "column": "result"
+    },
+    {
+      "type": "text",
+      "table": "action_executions",
+      "column": "error_class"
+    },
+    {
+      "type": "text",
+      "table": "action_executions",
+      "column": "reversibility"
+    },
+    {
+      "type": "text",
+      "table": "action_executions",
+      "column": "compensation_code"
+    },
+    {
+      "type": "text",
+      "table": "action_executions",
+      "column": "producer"
+    },
+    {
+      "type": "text",
+      "table": "action_executions",
+      "column": "confidence"
+    },
+    {
+      "type": "text",
+      "table": "action_executions",
+      "column": "scope"
+    },
+    {
+      "type": "text",
+      "table": "household_people",
+      "column": "local_id"
+    },
+    {
+      "type": "text",
+      "table": "household_people",
+      "column": "display_name"
+    },
+    {
+      "type": "text",
+      "table": "household_people",
+      "column": "relationship"
+    },
+    {
+      "type": "text",
+      "table": "household_people",
+      "column": "channel"
+    },
+    {
+      "type": "text",
+      "table": "household_people",
+      "column": "status"
+    },
+    {
+      "type": "text",
+      "table": "household_people",
+      "column": "producer"
+    },
+    {
+      "type": "text",
+      "table": "household_people",
+      "column": "confidence"
+    },
+    {
+      "type": "text",
+      "table": "household_people",
+      "column": "scope"
+    },
+    {
+      "type": "text",
+      "table": "responsibilities",
+      "column": "local_id"
+    },
+    {
+      "type": "text",
+      "table": "responsibilities",
+      "column": "about_type"
+    },
+    {
+      "type": "text",
+      "table": "responsibilities",
+      "column": "responsible_kind"
+    },
+    {
+      "type": "text",
+      "table": "responsibilities",
+      "column": "responsible_child_type"
+    },
+    {
+      "type": "text",
+      "table": "responsibilities",
+      "column": "state"
+    },
+    {
+      "type": "text",
+      "table": "responsibilities",
+      "column": "producer"
+    },
+    {
+      "type": "text",
+      "table": "responsibilities",
+      "column": "confidence"
+    },
+    {
+      "type": "text",
+      "table": "responsibilities",
+      "column": "scope"
+    },
+    {
+      "type": "text",
+      "table": "capacity_profiles",
+      "column": "local_id"
+    },
+    {
+      "type": "text",
+      "table": "capacity_profiles",
+      "column": "producer"
+    },
+    {
+      "type": "text",
+      "table": "capacity_profiles",
+      "column": "confidence"
+    },
+    {
+      "type": "text",
+      "table": "capacity_profiles",
+      "column": "scope"
+    },
+    {
+      "type": "text",
+      "table": "patterns",
+      "column": "local_id"
+    },
+    {
+      "type": "text",
+      "table": "patterns",
+      "column": "kind"
+    },
+    {
+      "type": "text",
+      "table": "patterns",
+      "column": "about_type"
+    },
+    {
+      "type": "text",
+      "table": "patterns",
+      "column": "time_bucket"
+    },
+    {
+      "type": "text",
+      "table": "patterns",
+      "column": "status"
+    },
+    {
+      "type": "text",
+      "table": "patterns",
+      "column": "producer"
+    },
+    {
+      "type": "text",
+      "table": "patterns",
+      "column": "confidence"
+    },
+    {
+      "type": "text",
+      "table": "patterns",
+      "column": "scope"
+    },
+    {
+      "type": "text",
+      "table": "evidence_links",
+      "column": "local_id"
+    },
+    {
+      "type": "text",
+      "table": "evidence_links",
+      "column": "for_type"
+    },
+    {
+      "type": "text",
+      "table": "evidence_links",
+      "column": "support_type"
+    },
+    {
+      "type": "text",
+      "table": "evidence_links",
+      "column": "code"
+    },
+    {
+      "type": "text",
+      "table": "evidence_links",
+      "column": "producer"
+    },
+    {
+      "type": "text",
+      "table": "evidence_links",
+      "column": "confidence"
+    },
+    {
+      "type": "text",
+      "table": "evidence_links",
+      "column": "scope"
+    },
+    {
+      "type": "text",
+      "table": "households",
+      "column": "local_id"
+    },
+    {
+      "type": "text",
+      "table": "households",
+      "column": "display_name"
+    },
+    {
+      "type": "text",
+      "table": "household_members",
+      "column": "local_id"
+    },
+    {
+      "type": "text",
+      "table": "household_members",
+      "column": "member_type"
+    },
+    {
+      "type": "text",
+      "table": "household_members",
+      "column": "role"
+    },
+    {
+      "type": "text",
+      "table": "household_members",
+      "column": "display_name"
+    },
+    {
+      "type": "text",
+      "table": "household_members",
+      "column": "scope"
+    },
+    {
+      "type": "text",
+      "table": "dependencies",
+      "column": "local_id"
+    },
+    {
+      "type": "text",
+      "table": "dependencies",
+      "column": "relation"
+    },
+    {
+      "type": "text",
+      "table": "dependencies",
+      "column": "from_type"
+    },
+    {
+      "type": "text",
+      "table": "dependencies",
+      "column": "to_type"
+    },
+    {
+      "type": "text",
+      "table": "dependencies",
+      "column": "status"
+    },
+    {
+      "type": "text",
+      "table": "dependencies",
+      "column": "producer"
+    },
+    {
+      "type": "text",
+      "table": "dependencies",
+      "column": "confidence"
+    },
+    {
+      "type": "text",
+      "table": "dependencies",
+      "column": "scope"
+    },
+    {
+      "type": "text",
+      "table": "career_opportunities",
+      "column": "local_id"
+    },
+    {
+      "type": "text",
+      "table": "career_opportunities",
+      "column": "title"
+    },
+    {
+      "type": "text",
+      "table": "career_opportunities",
+      "column": "organization_name"
+    },
+    {
+      "type": "text",
+      "table": "career_opportunities",
+      "column": "opportunity_type"
+    },
+    {
+      "type": "text",
+      "table": "career_opportunities",
+      "column": "stage"
+    },
+    {
+      "type": "text",
+      "table": "career_opportunities",
+      "column": "closed_reason"
+    },
+    {
+      "type": "text",
+      "table": "career_opportunities",
+      "column": "source_note"
+    },
+    {
+      "type": "text",
+      "table": "career_opportunities",
+      "column": "contact_name"
+    },
+    {
+      "type": "text",
+      "table": "career_opportunities",
+      "column": "compensation_note"
+    },
+    {
+      "type": "text",
+      "table": "career_opportunities",
+      "column": "notes"
+    },
+    {
+      "type": "text",
+      "table": "career_opportunities",
+      "column": "producer"
+    },
+    {
+      "type": "text",
+      "table": "career_opportunities",
+      "column": "confidence"
+    },
+    {
+      "type": "text",
+      "table": "career_opportunities",
+      "column": "scope"
+    },
+    {
+      "type": "text",
+      "table": "rebuild_focuses",
+      "column": "local_id"
+    },
+    {
+      "type": "text",
+      "table": "rebuild_focuses",
+      "column": "title"
+    },
+    {
+      "type": "text",
+      "table": "rebuild_focuses",
+      "column": "note"
+    },
+    {
+      "type": "text",
+      "table": "rebuild_focuses",
+      "column": "state"
+    },
+    {
+      "type": "text",
+      "table": "rebuild_focuses",
+      "column": "producer"
+    },
+    {
+      "type": "text",
+      "table": "rebuild_focuses",
+      "column": "confidence"
+    },
+    {
+      "type": "text",
+      "table": "rebuild_focuses",
+      "column": "scope"
+    },
+    {
+      "type": "text",
+      "table": "rebuild_focus_links",
+      "column": "local_id"
+    },
+    {
+      "type": "text",
+      "table": "rebuild_focus_links",
+      "column": "target_type"
+    },
+    {
+      "type": "text",
+      "table": "rebuild_focus_links",
+      "column": "relation"
+    },
+    {
+      "type": "text",
+      "table": "rebuild_focus_links",
+      "column": "status"
+    },
+    {
+      "type": "text",
+      "table": "rebuild_focus_links",
+      "column": "producer"
+    },
+    {
+      "type": "text",
+      "table": "rebuild_focus_links",
+      "column": "confidence"
+    },
+    {
+      "type": "text",
+      "table": "rebuild_focus_links",
+      "column": "scope"
+    },
+    {
+      "type": "text",
+      "table": "life_records",
+      "column": "title"
+    },
+    {
+      "type": "text",
+      "table": "life_records",
+      "column": "record_kind"
+    },
+    {
+      "type": "text",
+      "table": "life_records",
+      "column": "type_name"
+    },
+    {
+      "type": "text",
+      "table": "life_records",
+      "column": "issuer_name"
+    },
+    {
+      "type": "text",
+      "table": "life_records",
+      "column": "reference_number"
+    },
+    {
+      "type": "text",
+      "table": "life_records",
+      "column": "location_hint"
+    },
+    {
+      "type": "text",
+      "table": "life_records",
+      "column": "note"
+    },
+    {
+      "type": "text",
+      "table": "life_records",
+      "column": "subject_member_type"
+    },
+    {
+      "type": "text",
+      "table": "life_records",
+      "column": "status"
+    },
+    {
+      "type": "text",
+      "table": "life_records",
+      "column": "producer"
+    },
+    {
+      "type": "text",
+      "table": "life_records",
+      "column": "confidence"
+    },
+    {
+      "type": "text",
+      "table": "life_records",
+      "column": "scope"
+    },
+    {
+      "type": "text",
+      "table": "life_record_task_links",
+      "column": "local_id"
+    },
+    {
+      "type": "text",
+      "table": "life_record_task_links",
+      "column": "relation"
+    },
+    {
+      "type": "text",
+      "table": "life_record_task_links",
+      "column": "producer"
+    },
+    {
+      "type": "text",
+      "table": "life_record_task_links",
+      "column": "confidence"
+    },
+    {
+      "type": "text",
+      "table": "life_record_task_links",
+      "column": "scope"
+    },
+    {
+      "type": "text",
+      "table": "change_log",
+      "column": "entity_table"
+    },
+    {
+      "type": "text",
+      "table": "change_log",
+      "column": "op"
+    },
+    {
+      "type": "text",
+      "table": "person_contexts",
+      "column": "local_id"
+    },
+    {
+      "type": "text",
+      "table": "person_contexts",
+      "column": "child_type"
+    },
+    {
+      "type": "text",
+      "table": "person_contexts",
+      "column": "relationship_name"
+    },
+    {
+      "type": "text",
+      "table": "person_contexts",
+      "column": "organization_name"
+    },
+    {
+      "type": "text",
+      "table": "person_contexts",
+      "column": "context_note"
+    },
+    {
+      "type": "text",
+      "table": "person_contexts",
+      "column": "status"
+    },
+    {
+      "type": "text",
+      "table": "person_contexts",
+      "column": "producer"
+    },
+    {
+      "type": "text",
+      "table": "person_contexts",
+      "column": "confidence"
+    },
+    {
+      "type": "text",
+      "table": "person_contexts",
+      "column": "scope"
+    },
+    {
+      "type": "text",
+      "table": "person_task_links",
+      "column": "local_id"
+    },
+    {
+      "type": "text",
+      "table": "person_task_links",
+      "column": "follow_up_type"
+    },
+    {
+      "type": "text",
+      "table": "person_task_links",
+      "column": "relation"
+    },
+    {
+      "type": "text",
+      "table": "person_task_links",
+      "column": "producer"
+    },
+    {
+      "type": "text",
+      "table": "person_task_links",
+      "column": "confidence"
+    },
+    {
+      "type": "text",
+      "table": "person_task_links",
+      "column": "scope"
+    },
+    {
+      "type": "text",
+      "table": "calendar_oauth_states",
+      "column": "state_hash"
+    },
+    {
+      "type": "text",
+      "table": "calendar_oauth_states",
+      "column": "code_verifier"
+    },
+    {
+      "type": "text",
+      "table": "calendar_oauth_states",
+      "column": "redirect_uri"
+    },
+    {
+      "type": "text",
+      "table": "account_consents",
+      "column": "consent_type"
+    },
+    {
+      "type": "text",
+      "table": "account_consents",
+      "column": "policy_version"
+    },
+    {
+      "type": "text",
+      "table": "external_calendar_connections",
+      "column": "provider"
+    },
+    {
+      "type": "text",
+      "table": "external_calendar_connections",
+      "column": "provider_account_id"
+    },
+    {
+      "type": "ARRAY",
+      "table": "external_calendar_connections",
+      "column": "scopes"
+    },
+    {
+      "type": "text",
+      "table": "external_calendar_connections",
+      "column": "refresh_token_ciphertext"
+    },
+    {
+      "type": "text",
+      "table": "external_calendar_connections",
+      "column": "refresh_token_iv"
+    },
+    {
+      "type": "ARRAY",
+      "table": "external_calendar_connections",
+      "column": "selected_calendar_ids"
+    },
+    {
+      "type": "text",
+      "table": "external_calendar_connections",
+      "column": "status"
+    }
+  ],
+  "foreign_keys": [
+    {
+      "table": "events",
+      "definition": "FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "events",
+      "definition": "FOREIGN KEY (owner_profile_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "events",
+      "definition": "FOREIGN KEY (category_id, household_id) REFERENCES household_categories(id, household_id) ON DELETE RESTRICT"
+    },
+    {
+      "table": "events",
+      "definition": "FOREIGN KEY (subject_member_id, household_id, subject_member_type) REFERENCES household_members(id, household_id, member_type) ON DELETE RESTRICT"
+    },
+    {
+      "table": "tasks",
+      "definition": "FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "tasks",
+      "definition": "FOREIGN KEY (owner_profile_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "tasks",
+      "definition": "FOREIGN KEY (category_id, household_id) REFERENCES household_categories(id, household_id) ON DELETE RESTRICT"
+    },
+    {
+      "table": "tasks",
+      "definition": "FOREIGN KEY (subject_member_id, household_id, subject_member_type) REFERENCES household_members(id, household_id, member_type) ON DELETE RESTRICT"
+    },
+    {
+      "table": "household_systems",
+      "definition": "FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "household_systems",
+      "definition": "FOREIGN KEY (owner_profile_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "household_systems",
+      "definition": "FOREIGN KEY (category_id, household_id) REFERENCES household_categories(id, household_id) ON DELETE RESTRICT"
+    },
+    {
+      "table": "household_systems",
+      "definition": "FOREIGN KEY (subject_member_id, household_id, subject_member_type) REFERENCES household_members(id, household_id, member_type) ON DELETE RESTRICT"
+    },
+    {
+      "table": "meal_plan_entries",
+      "definition": "FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "meal_plan_entries",
+      "definition": "FOREIGN KEY (owner_profile_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "meal_plan_entries",
+      "definition": "FOREIGN KEY (category_id, household_id) REFERENCES household_categories(id, household_id) ON DELETE RESTRICT"
+    },
+    {
+      "table": "meal_plan_entries",
+      "definition": "FOREIGN KEY (subject_member_id, household_id, subject_member_type) REFERENCES household_members(id, household_id, member_type) ON DELETE RESTRICT"
+    },
+    {
+      "table": "onboarding_state",
+      "definition": "FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "onboarding_state",
+      "definition": "FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "account_claims",
+      "definition": "FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "account_claims",
+      "definition": "FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE SET NULL"
+    },
+    {
+      "table": "one_move_records",
+      "definition": "FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "one_move_records",
+      "definition": "FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "needs_me_items",
+      "definition": "FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "needs_me_items",
+      "definition": "FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "needs_me_items",
+      "definition": "FOREIGN KEY (category_id, household_id) REFERENCES household_categories(id, household_id) ON DELETE RESTRICT"
+    },
+    {
+      "table": "discovery_records",
+      "definition": "FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "discovery_records",
+      "definition": "FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "discovery_answers",
+      "definition": "FOREIGN KEY (discovery_id) REFERENCES discovery_records(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "action_records",
+      "definition": "FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "action_records",
+      "definition": "FOREIGN KEY (actor_profile_id) REFERENCES profiles(id) ON DELETE RESTRICT"
+    },
+    {
+      "table": "profiles",
+      "definition": "FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "change_log",
+      "definition": "FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "household_members",
+      "definition": "FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "household_members",
+      "definition": "FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "household_categories",
+      "definition": "FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "household_categories",
+      "definition": "FOREIGN KEY (owner_profile_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "household_categories",
+      "definition": "FOREIGN KEY (subject_member_id, household_id, subject_member_type) REFERENCES household_members(id, household_id, member_type) ON DELETE RESTRICT"
+    },
+    {
+      "table": "source_artifacts",
+      "definition": "FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "source_artifacts",
+      "definition": "FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "interpretations",
+      "definition": "FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "interpretations",
+      "definition": "FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "interpretations",
+      "definition": "FOREIGN KEY (source_artifact_id, household_id, profile_id) REFERENCES source_artifacts(id, household_id, profile_id)"
+    },
+    {
+      "table": "interpretations",
+      "definition": "FOREIGN KEY (artifact_id, household_id, profile_id) REFERENCES source_artifacts(id, household_id, profile_id)"
+    },
+    {
+      "table": "interpretations",
+      "definition": "FOREIGN KEY (subject_member_id, household_id, subject_member_type) REFERENCES household_members(id, household_id, member_type)"
+    },
+    {
+      "table": "interpretations",
+      "definition": "FOREIGN KEY (accepted_task_id, household_id) REFERENCES tasks(id, household_id)"
+    },
+    {
+      "table": "interpretations",
+      "definition": "FOREIGN KEY (accepted_event_id, household_id) REFERENCES events(id, household_id)"
+    },
+    {
+      "table": "interpretations",
+      "definition": "FOREIGN KEY (accepted_needs_me_id, household_id, profile_id) REFERENCES needs_me_items(id, household_id, profile_id)"
+    },
+    {
+      "table": "interpretations",
+      "definition": "FOREIGN KEY (supersedes_id, household_id, profile_id) REFERENCES interpretations(id, household_id, profile_id)"
+    },
+    {
+      "table": "external_references",
+      "definition": "FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "external_references",
+      "definition": "FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "external_references",
+      "definition": "FOREIGN KEY (source_artifact_id, household_id, profile_id) REFERENCES source_artifacts(id, household_id, profile_id)"
+    },
+    {
+      "table": "external_references",
+      "definition": "FOREIGN KEY (linked_task_id, household_id) REFERENCES tasks(id, household_id)"
+    },
+    {
+      "table": "external_references",
+      "definition": "FOREIGN KEY (linked_event_id, household_id) REFERENCES events(id, household_id)"
+    },
+    {
+      "table": "external_references",
+      "definition": "FOREIGN KEY (linked_needs_me_id, household_id, profile_id) REFERENCES needs_me_items(id, household_id, profile_id)"
+    },
+    {
+      "table": "external_references",
+      "definition": "FOREIGN KEY (linked_system_id, household_id) REFERENCES household_systems(id, household_id)"
+    },
+    {
+      "table": "external_references",
+      "definition": "FOREIGN KEY (linked_meal_id, household_id) REFERENCES meal_plan_entries(id, household_id)"
+    },
+    {
+      "table": "external_references",
+      "definition": "FOREIGN KEY (linked_goal_id, household_id, profile_id) REFERENCES goals(id, household_id, profile_id)"
+    },
+    {
+      "table": "behavior_observations",
+      "definition": "FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "behavior_observations",
+      "definition": "FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE RESTRICT"
+    },
+    {
+      "table": "behavior_observations",
+      "definition": "FOREIGN KEY (source_artifact_id, household_id, profile_id) REFERENCES source_artifacts(id, household_id, profile_id)"
+    },
+    {
+      "table": "behavior_observations",
+      "definition": "FOREIGN KEY (about_task_id, household_id) REFERENCES tasks(id, household_id)"
+    },
+    {
+      "table": "behavior_observations",
+      "definition": "FOREIGN KEY (about_event_id, household_id) REFERENCES events(id, household_id)"
+    },
+    {
+      "table": "behavior_observations",
+      "definition": "FOREIGN KEY (about_needs_me_id, household_id, profile_id) REFERENCES needs_me_items(id, household_id, profile_id)"
+    },
+    {
+      "table": "behavior_observations",
+      "definition": "FOREIGN KEY (about_system_id, household_id) REFERENCES household_systems(id, household_id)"
+    },
+    {
+      "table": "behavior_observations",
+      "definition": "FOREIGN KEY (about_meal_id, household_id) REFERENCES meal_plan_entries(id, household_id)"
+    },
+    {
+      "table": "behavior_observations",
+      "definition": "FOREIGN KEY (about_goal_id, household_id, profile_id) REFERENCES goals(id, household_id, profile_id)"
+    },
+    {
+      "table": "behavior_observations",
+      "definition": "FOREIGN KEY (about_responsibility_id, household_id, profile_id) REFERENCES responsibilities(id, household_id, profile_id)"
+    },
+    {
+      "table": "behavior_observations",
+      "definition": "FOREIGN KEY (about_one_move_id, household_id, profile_id) REFERENCES one_move_records(id, household_id, profile_id)"
+    },
+    {
+      "table": "behavior_observations",
+      "definition": "FOREIGN KEY (about_interpretation_id, household_id, profile_id) REFERENCES interpretations(id, household_id, profile_id)"
+    },
+    {
+      "table": "automation_authorities",
+      "definition": "FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "automation_authorities",
+      "definition": "FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "automation_authorities",
+      "definition": "FOREIGN KEY (source_artifact_id, household_id, profile_id) REFERENCES source_artifacts(id, household_id, profile_id)"
+    },
+    {
+      "table": "automation_authorities",
+      "definition": "FOREIGN KEY (category_id, household_id) REFERENCES household_categories(id, household_id)"
+    },
+    {
+      "table": "automation_authorities",
+      "definition": "FOREIGN KEY (subject_member_id, household_id, subject_member_type) REFERENCES household_members(id, household_id, member_type)"
+    },
+    {
+      "table": "action_intents",
+      "definition": "FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "action_intents",
+      "definition": "FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE RESTRICT"
+    },
+    {
+      "table": "action_intents",
+      "definition": "FOREIGN KEY (source_artifact_id, household_id, profile_id) REFERENCES source_artifacts(id, household_id, profile_id)"
+    },
+    {
+      "table": "action_intents",
+      "definition": "FOREIGN KEY (about_task_id, household_id) REFERENCES tasks(id, household_id)"
+    },
+    {
+      "table": "action_intents",
+      "definition": "FOREIGN KEY (about_event_id, household_id) REFERENCES events(id, household_id)"
+    },
+    {
+      "table": "action_intents",
+      "definition": "FOREIGN KEY (about_needs_me_id, household_id, profile_id) REFERENCES needs_me_items(id, household_id, profile_id)"
+    },
+    {
+      "table": "action_intents",
+      "definition": "FOREIGN KEY (about_system_id, household_id) REFERENCES household_systems(id, household_id)"
+    },
+    {
+      "table": "action_intents",
+      "definition": "FOREIGN KEY (about_meal_id, household_id) REFERENCES meal_plan_entries(id, household_id)"
+    },
+    {
+      "table": "action_intents",
+      "definition": "FOREIGN KEY (about_goal_id, household_id, profile_id) REFERENCES goals(id, household_id, profile_id)"
+    },
+    {
+      "table": "action_intents",
+      "definition": "FOREIGN KEY (about_responsibility_id, household_id, profile_id) REFERENCES responsibilities(id, household_id, profile_id)"
+    },
+    {
+      "table": "intent_decisions",
+      "definition": "FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "intent_decisions",
+      "definition": "FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE RESTRICT"
+    },
+    {
+      "table": "intent_decisions",
+      "definition": "FOREIGN KEY (source_artifact_id, household_id, profile_id) REFERENCES source_artifacts(id, household_id, profile_id)"
+    },
+    {
+      "table": "intent_decisions",
+      "definition": "FOREIGN KEY (intent_id, household_id, profile_id) REFERENCES action_intents(id, household_id, profile_id)"
+    },
+    {
+      "table": "intent_decisions",
+      "definition": "FOREIGN KEY (authority_id, household_id, profile_id) REFERENCES automation_authorities(id, household_id, profile_id)"
+    },
+    {
+      "table": "action_executions",
+      "definition": "FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "action_executions",
+      "definition": "FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE RESTRICT"
+    },
+    {
+      "table": "action_executions",
+      "definition": "FOREIGN KEY (source_artifact_id, household_id, profile_id) REFERENCES source_artifacts(id, household_id, profile_id)"
+    },
+    {
+      "table": "action_executions",
+      "definition": "FOREIGN KEY (intent_id, household_id, profile_id) REFERENCES action_intents(id, household_id, profile_id)"
+    },
+    {
+      "table": "action_executions",
+      "definition": "FOREIGN KEY (decision_id, household_id, profile_id) REFERENCES intent_decisions(id, household_id, profile_id)"
+    },
+    {
+      "table": "action_executions",
+      "definition": "FOREIGN KEY (authority_id, household_id, profile_id) REFERENCES automation_authorities(id, household_id, profile_id)"
+    },
+    {
+      "table": "action_executions",
+      "definition": "FOREIGN KEY (external_reference_id, household_id, profile_id) REFERENCES external_references(id, household_id, profile_id)"
+    },
+    {
+      "table": "action_executions",
+      "definition": "FOREIGN KEY (compensates_execution_id, household_id, profile_id) REFERENCES action_executions(id, household_id, profile_id)"
+    },
+    {
+      "table": "action_outcomes",
+      "definition": "FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "action_outcomes",
+      "definition": "FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE RESTRICT"
+    },
+    {
+      "table": "dependencies",
+      "definition": "FOREIGN KEY (to_goal_id, household_id, profile_id) REFERENCES goals(id, household_id, profile_id) ON DELETE CASCADE"
+    },
+    {
+      "table": "action_outcomes",
+      "definition": "FOREIGN KEY (source_artifact_id, household_id, profile_id) REFERENCES source_artifacts(id, household_id, profile_id)"
+    },
+    {
+      "table": "action_outcomes",
+      "definition": "FOREIGN KEY (execution_id, household_id, profile_id) REFERENCES action_executions(id, household_id, profile_id)"
+    },
+    {
+      "table": "household_people",
+      "definition": "FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "household_people",
+      "definition": "FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "household_people",
+      "definition": "FOREIGN KEY (source_artifact_id, household_id, profile_id) REFERENCES source_artifacts(id, household_id, profile_id)"
+    },
+    {
+      "table": "responsibilities",
+      "definition": "FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "responsibilities",
+      "definition": "FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "responsibilities",
+      "definition": "FOREIGN KEY (source_artifact_id, household_id, profile_id) REFERENCES source_artifacts(id, household_id, profile_id)"
+    },
+    {
+      "table": "responsibilities",
+      "definition": "FOREIGN KEY (about_task_id, household_id) REFERENCES tasks(id, household_id)"
+    },
+    {
+      "table": "responsibilities",
+      "definition": "FOREIGN KEY (about_event_id, household_id) REFERENCES events(id, household_id)"
+    },
+    {
+      "table": "responsibilities",
+      "definition": "FOREIGN KEY (about_needs_me_id, household_id, profile_id) REFERENCES needs_me_items(id, household_id, profile_id)"
+    },
+    {
+      "table": "responsibilities",
+      "definition": "FOREIGN KEY (about_system_id, household_id) REFERENCES household_systems(id, household_id)"
+    },
+    {
+      "table": "responsibilities",
+      "definition": "FOREIGN KEY (about_meal_id, household_id) REFERENCES meal_plan_entries(id, household_id)"
+    },
+    {
+      "table": "responsibilities",
+      "definition": "FOREIGN KEY (about_goal_id, household_id, profile_id) REFERENCES goals(id, household_id, profile_id)"
+    },
+    {
+      "table": "responsibilities",
+      "definition": "FOREIGN KEY (responsible_person_id, household_id, profile_id) REFERENCES household_people(id, household_id, profile_id)"
+    },
+    {
+      "table": "responsibilities",
+      "definition": "FOREIGN KEY (responsible_child_id, household_id, responsible_child_type) REFERENCES household_members(id, household_id, member_type)"
+    },
+    {
+      "table": "responsibilities",
+      "definition": "FOREIGN KEY (previous_responsibility_id, household_id, profile_id) REFERENCES responsibilities(id, household_id, profile_id)"
+    },
+    {
+      "table": "dependencies",
+      "definition": "FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "dependencies",
+      "definition": "FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "dependencies",
+      "definition": "FOREIGN KEY (source_artifact_id, household_id, profile_id) REFERENCES source_artifacts(id, household_id, profile_id)"
+    },
+    {
+      "table": "dependencies",
+      "definition": "FOREIGN KEY (from_task_id, household_id) REFERENCES tasks(id, household_id) ON DELETE CASCADE"
+    },
+    {
+      "table": "dependencies",
+      "definition": "FOREIGN KEY (from_event_id, household_id) REFERENCES events(id, household_id) ON DELETE CASCADE"
+    },
+    {
+      "table": "dependencies",
+      "definition": "FOREIGN KEY (from_needs_me_id, household_id, profile_id) REFERENCES needs_me_items(id, household_id, profile_id) ON DELETE CASCADE"
+    },
+    {
+      "table": "dependencies",
+      "definition": "FOREIGN KEY (from_system_id, household_id) REFERENCES household_systems(id, household_id) ON DELETE CASCADE"
+    },
+    {
+      "table": "dependencies",
+      "definition": "FOREIGN KEY (from_meal_id, household_id) REFERENCES meal_plan_entries(id, household_id) ON DELETE CASCADE"
+    },
+    {
+      "table": "dependencies",
+      "definition": "FOREIGN KEY (from_goal_id, household_id, profile_id) REFERENCES goals(id, household_id, profile_id) ON DELETE CASCADE"
+    },
+    {
+      "table": "dependencies",
+      "definition": "FOREIGN KEY (to_task_id, household_id) REFERENCES tasks(id, household_id) ON DELETE CASCADE"
+    },
+    {
+      "table": "dependencies",
+      "definition": "FOREIGN KEY (to_event_id, household_id) REFERENCES events(id, household_id) ON DELETE CASCADE"
+    },
+    {
+      "table": "dependencies",
+      "definition": "FOREIGN KEY (to_needs_me_id, household_id, profile_id) REFERENCES needs_me_items(id, household_id, profile_id) ON DELETE CASCADE"
+    },
+    {
+      "table": "dependencies",
+      "definition": "FOREIGN KEY (to_system_id, household_id) REFERENCES household_systems(id, household_id) ON DELETE CASCADE"
+    },
+    {
+      "table": "dependencies",
+      "definition": "FOREIGN KEY (to_meal_id, household_id) REFERENCES meal_plan_entries(id, household_id) ON DELETE CASCADE"
+    },
+    {
+      "table": "recurrence_rules",
+      "definition": "FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "recurrence_rules",
+      "definition": "FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "recurrence_rules",
+      "definition": "FOREIGN KEY (source_artifact_id, household_id, profile_id) REFERENCES source_artifacts(id, household_id, profile_id)"
+    },
+    {
+      "table": "recurrence_rules",
+      "definition": "FOREIGN KEY (about_task_id, household_id) REFERENCES tasks(id, household_id) ON DELETE CASCADE"
+    },
+    {
+      "table": "recurrence_rules",
+      "definition": "FOREIGN KEY (about_event_id, household_id) REFERENCES events(id, household_id) ON DELETE CASCADE"
+    },
+    {
+      "table": "recurrence_rules",
+      "definition": "FOREIGN KEY (about_system_id, household_id) REFERENCES household_systems(id, household_id) ON DELETE CASCADE"
+    },
+    {
+      "table": "recurrence_rules",
+      "definition": "FOREIGN KEY (about_meal_id, household_id) REFERENCES meal_plan_entries(id, household_id) ON DELETE CASCADE"
+    },
+    {
+      "table": "goals",
+      "definition": "FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "goals",
+      "definition": "FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "goals",
+      "definition": "FOREIGN KEY (source_artifact_id, household_id, profile_id) REFERENCES source_artifacts(id, household_id, profile_id)"
+    },
+    {
+      "table": "goals",
+      "definition": "FOREIGN KEY (category_id, household_id) REFERENCES household_categories(id, household_id)"
+    },
+    {
+      "table": "system_steps",
+      "definition": "FOREIGN KEY (source_artifact_id, household_id, profile_id) REFERENCES source_artifacts(id, household_id, profile_id)"
+    },
+    {
+      "table": "system_steps",
+      "definition": "FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "system_steps",
+      "definition": "FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "system_steps",
+      "definition": "FOREIGN KEY (system_id, household_id) REFERENCES household_systems(id, household_id)"
+    },
+    {
+      "table": "capacity_profiles",
+      "definition": "FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "capacity_profiles",
+      "definition": "FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "capacity_profiles",
+      "definition": "FOREIGN KEY (source_artifact_id, household_id, profile_id) REFERENCES source_artifacts(id, household_id, profile_id)"
+    },
+    {
+      "table": "patterns",
+      "definition": "FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "patterns",
+      "definition": "FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "patterns",
+      "definition": "FOREIGN KEY (source_artifact_id, household_id, profile_id) REFERENCES source_artifacts(id, household_id, profile_id)"
+    },
+    {
+      "table": "patterns",
+      "definition": "FOREIGN KEY (about_task_id, household_id) REFERENCES tasks(id, household_id)"
+    },
+    {
+      "table": "patterns",
+      "definition": "FOREIGN KEY (about_event_id, household_id) REFERENCES events(id, household_id)"
+    },
+    {
+      "table": "patterns",
+      "definition": "FOREIGN KEY (about_needs_me_id, household_id, profile_id) REFERENCES needs_me_items(id, household_id, profile_id)"
+    },
+    {
+      "table": "patterns",
+      "definition": "FOREIGN KEY (about_system_id, household_id) REFERENCES household_systems(id, household_id)"
+    },
+    {
+      "table": "patterns",
+      "definition": "FOREIGN KEY (about_meal_id, household_id) REFERENCES meal_plan_entries(id, household_id)"
+    },
+    {
+      "table": "patterns",
+      "definition": "FOREIGN KEY (about_goal_id, household_id, profile_id) REFERENCES goals(id, household_id, profile_id)"
+    },
+    {
+      "table": "patterns",
+      "definition": "FOREIGN KEY (category_id, household_id) REFERENCES household_categories(id, household_id)"
+    },
+    {
+      "table": "evidence_links",
+      "definition": "FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "evidence_links",
+      "definition": "FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE RESTRICT"
+    },
+    {
+      "table": "evidence_links",
+      "definition": "FOREIGN KEY (source_artifact_id, household_id, profile_id) REFERENCES source_artifacts(id, household_id, profile_id)"
+    },
+    {
+      "table": "evidence_links",
+      "definition": "FOREIGN KEY (for_pattern_id, household_id, profile_id) REFERENCES patterns(id, household_id, profile_id)"
+    },
+    {
+      "table": "evidence_links",
+      "definition": "FOREIGN KEY (for_one_move_id, household_id, profile_id) REFERENCES one_move_records(id, household_id, profile_id)"
+    },
+    {
+      "table": "evidence_links",
+      "definition": "FOREIGN KEY (for_intent_id, household_id, profile_id) REFERENCES action_intents(id, household_id, profile_id)"
+    },
+    {
+      "table": "evidence_links",
+      "definition": "FOREIGN KEY (support_task_id, household_id) REFERENCES tasks(id, household_id)"
+    },
+    {
+      "table": "evidence_links",
+      "definition": "FOREIGN KEY (support_event_id, household_id) REFERENCES events(id, household_id)"
+    },
+    {
+      "table": "evidence_links",
+      "definition": "FOREIGN KEY (support_needs_me_id, household_id, profile_id) REFERENCES needs_me_items(id, household_id, profile_id)"
+    },
+    {
+      "table": "evidence_links",
+      "definition": "FOREIGN KEY (support_system_id, household_id) REFERENCES household_systems(id, household_id)"
+    },
+    {
+      "table": "evidence_links",
+      "definition": "FOREIGN KEY (support_meal_id, household_id) REFERENCES meal_plan_entries(id, household_id)"
+    },
+    {
+      "table": "evidence_links",
+      "definition": "FOREIGN KEY (support_goal_id, household_id, profile_id) REFERENCES goals(id, household_id, profile_id)"
+    },
+    {
+      "table": "evidence_links",
+      "definition": "FOREIGN KEY (support_responsibility_id, household_id, profile_id) REFERENCES responsibilities(id, household_id, profile_id)"
+    },
+    {
+      "table": "evidence_links",
+      "definition": "FOREIGN KEY (support_observation_id, household_id, profile_id) REFERENCES behavior_observations(id, household_id, profile_id)"
+    },
+    {
+      "table": "household_categories",
+      "definition": "FOREIGN KEY (source_artifact_id, household_id) REFERENCES source_artifacts(id, household_id)"
+    },
+    {
+      "table": "events",
+      "definition": "FOREIGN KEY (source_artifact_id, household_id) REFERENCES source_artifacts(id, household_id)"
+    },
+    {
+      "table": "tasks",
+      "definition": "FOREIGN KEY (source_artifact_id, household_id) REFERENCES source_artifacts(id, household_id)"
+    },
+    {
+      "table": "household_systems",
+      "definition": "FOREIGN KEY (source_artifact_id, household_id) REFERENCES source_artifacts(id, household_id)"
+    },
+    {
+      "table": "meal_plan_entries",
+      "definition": "FOREIGN KEY (source_artifact_id, household_id) REFERENCES source_artifacts(id, household_id)"
+    },
+    {
+      "table": "needs_me_items",
+      "definition": "FOREIGN KEY (source_artifact_id, household_id, profile_id) REFERENCES source_artifacts(id, household_id, profile_id)"
+    },
+    {
+      "table": "one_move_records",
+      "definition": "FOREIGN KEY (source_artifact_id, household_id, profile_id) REFERENCES source_artifacts(id, household_id, profile_id)"
+    },
+    {
+      "table": "discovery_records",
+      "definition": "FOREIGN KEY (source_artifact_id, household_id, profile_id) REFERENCES source_artifacts(id, household_id, profile_id)"
+    },
+    {
+      "table": "life_records",
+      "definition": "FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "onboarding_state",
+      "definition": "FOREIGN KEY (source_artifact_id, household_id, profile_id) REFERENCES source_artifacts(id, household_id, profile_id)"
+    },
+    {
+      "table": "one_move_records",
+      "definition": "FOREIGN KEY (target_task_id, household_id) REFERENCES tasks(id, household_id) ON DELETE CASCADE"
+    },
+    {
+      "table": "one_move_records",
+      "definition": "FOREIGN KEY (target_needs_me_id, household_id, profile_id) REFERENCES needs_me_items(id, household_id, profile_id) ON DELETE CASCADE"
+    },
+    {
+      "table": "one_move_records",
+      "definition": "FOREIGN KEY (target_event_id, household_id) REFERENCES events(id, household_id) ON DELETE CASCADE"
+    },
+    {
+      "table": "one_move_records",
+      "definition": "FOREIGN KEY (target_system_id, household_id) REFERENCES household_systems(id, household_id) ON DELETE CASCADE"
+    },
+    {
+      "table": "one_move_records",
+      "definition": "FOREIGN KEY (target_responsibility_id, household_id, profile_id) REFERENCES responsibilities(id, household_id, profile_id) ON DELETE CASCADE"
+    },
+    {
+      "table": "life_records",
+      "definition": "FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "life_records",
+      "definition": "FOREIGN KEY (subject_member_id, household_id, subject_member_type) REFERENCES household_members(id, household_id, member_type) ON DELETE RESTRICT"
+    },
+    {
+      "table": "life_records",
+      "definition": "FOREIGN KEY (source_artifact_id, household_id, profile_id) REFERENCES source_artifacts(id, household_id, profile_id)"
+    },
+    {
+      "table": "career_opportunities",
+      "definition": "FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "career_opportunities",
+      "definition": "FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "career_opportunities",
+      "definition": "FOREIGN KEY (source_artifact_id, household_id, profile_id) REFERENCES source_artifacts(id, household_id, profile_id)"
+    },
+    {
+      "table": "dependencies",
+      "definition": "FOREIGN KEY (from_opportunity_id, household_id, profile_id) REFERENCES career_opportunities(id, household_id, profile_id) ON DELETE CASCADE"
+    },
+    {
+      "table": "dependencies",
+      "definition": "FOREIGN KEY (to_opportunity_id, household_id, profile_id) REFERENCES career_opportunities(id, household_id, profile_id) ON DELETE CASCADE"
+    },
+    {
+      "table": "rebuild_focuses",
+      "definition": "FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "rebuild_focuses",
+      "definition": "FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "rebuild_focuses",
+      "definition": "FOREIGN KEY (source_artifact_id, household_id, profile_id) REFERENCES source_artifacts(id, household_id, profile_id)"
+    },
+    {
+      "table": "rebuild_focus_links",
+      "definition": "FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "rebuild_focus_links",
+      "definition": "FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "rebuild_focus_links",
+      "definition": "FOREIGN KEY (source_artifact_id, household_id, profile_id) REFERENCES source_artifacts(id, household_id, profile_id)"
+    },
+    {
+      "table": "rebuild_focus_links",
+      "definition": "FOREIGN KEY (focus_id, household_id, profile_id) REFERENCES rebuild_focuses(id, household_id, profile_id)"
+    },
+    {
+      "table": "rebuild_focus_links",
+      "definition": "FOREIGN KEY (target_task_id, household_id) REFERENCES tasks(id, household_id) ON DELETE CASCADE"
+    },
+    {
+      "table": "rebuild_focus_links",
+      "definition": "FOREIGN KEY (target_goal_id, household_id, profile_id) REFERENCES goals(id, household_id, profile_id) ON DELETE CASCADE"
+    },
+    {
+      "table": "rebuild_focus_links",
+      "definition": "FOREIGN KEY (target_system_id, household_id) REFERENCES household_systems(id, household_id) ON DELETE CASCADE"
+    },
+    {
+      "table": "rebuild_focus_links",
+      "definition": "FOREIGN KEY (target_event_id, household_id) REFERENCES events(id, household_id) ON DELETE CASCADE"
+    },
+    {
+      "table": "person_task_links",
+      "definition": "FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "life_record_task_links",
+      "definition": "FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "life_record_task_links",
+      "definition": "FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "life_record_task_links",
+      "definition": "FOREIGN KEY (life_record_id, household_id, profile_id) REFERENCES life_records(id, household_id, profile_id) ON DELETE CASCADE"
+    },
+    {
+      "table": "life_record_task_links",
+      "definition": "FOREIGN KEY (task_id, household_id) REFERENCES tasks(id, household_id) ON DELETE CASCADE"
+    },
+    {
+      "table": "life_record_task_links",
+      "definition": "FOREIGN KEY (source_artifact_id, household_id, profile_id) REFERENCES source_artifacts(id, household_id, profile_id)"
+    },
+    {
+      "table": "person_task_links",
+      "definition": "FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "person_contexts",
+      "definition": "FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "person_contexts",
+      "definition": "FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "person_contexts",
+      "definition": "FOREIGN KEY (source_artifact_id, household_id, profile_id) REFERENCES source_artifacts(id, household_id, profile_id)"
+    },
+    {
+      "table": "person_contexts",
+      "definition": "FOREIGN KEY (child_id, household_id, child_type) REFERENCES household_members(id, household_id, member_type)"
+    },
+    {
+      "table": "person_contexts",
+      "definition": "FOREIGN KEY (person_id, household_id, profile_id) REFERENCES household_people(id, household_id, profile_id)"
+    },
+    {
+      "table": "person_task_links",
+      "definition": "FOREIGN KEY (source_artifact_id, household_id, profile_id) REFERENCES source_artifacts(id, household_id, profile_id)"
+    },
+    {
+      "table": "person_task_links",
+      "definition": "FOREIGN KEY (context_id, household_id, profile_id) REFERENCES person_contexts(id, household_id, profile_id)"
+    },
+    {
+      "table": "person_task_links",
+      "definition": "FOREIGN KEY (follow_up_task_id, household_id) REFERENCES tasks(id, household_id) ON DELETE CASCADE"
+    },
+    {
+      "table": "calendar_oauth_states",
+      "definition": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "external_calendar_connections",
+      "definition": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "account_consents",
+      "definition": "FOREIGN KEY (account_id) REFERENCES auth.users(id) ON DELETE CASCADE"
+    }
+  ]
+}

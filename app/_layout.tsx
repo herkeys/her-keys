@@ -1,16 +1,19 @@
 import { SplashScreen, Stack } from 'expo-router';
+import { DeletionGate } from '../src/features/account/DeletionGate';
 import * as NativeSplashScreen from 'expo-splash-screen';
 import { useCallback, useEffect, type ReactNode } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { colors } from '../src/design/tokens';
 import { canOpenScreen, isSettled, type RootScreen } from '../src/domain/routeAccess';
+import { activeAccountId } from '../src/domain/account/authState';
 import { PremiumCheckoutAfterConsent } from '../src/monetization/PremiumCheckoutAfterConsent';
 import { WelcomeAuthSettling } from '../src/features/account/WelcomeAuthFlow';
 import { ConsentGate } from '../src/features/consent/ConsentFlow';
 import { PremiumReaderBridge } from '../src/features/smart-inbox/PremiumReaderBridge';
 import { PremiumStateProvider } from '../src/monetization/PremiumStateProvider';
 import { RevenueCatProvider, useEntitlement } from '../src/monetization/RevenueCatProvider';
-import { premiumAppVersion, premiumLedgerClient, premiumServerClient } from '../src/store/accountRuntimeInstance';
+import { accountRuntime, premiumAppVersion, premiumLedgerClient, premiumServerClient } from '../src/store/accountRuntimeInstance';
+import { deletionRuntime } from '../src/store/deletionRuntimeInstance';
 import { AccountProvider, useAccount } from '../src/store/AccountProvider';
 import { AppStateProvider, useStoreSnapshot } from '../src/store/AppStateProvider';
 import { appStore, internalTools } from '../src/store/appStoreInstance';
@@ -36,30 +39,43 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <RevenueCatProvider>
-        <PremiumIntentProvider>
           <AppStateProvider store={appStore}>
             <LocalNotificationProvider>
+              <DeletionGate>
               <AccountProvider>
+                <PremiumIntentBridge>
                 <PremiumStateBridge>
                   <RootNavigator />
                 </PremiumStateBridge>
+                </PremiumIntentBridge>
               </AccountProvider>
+              </DeletionGate>
             </LocalNotificationProvider>
           </AppStateProvider>
-        </PremiumIntentProvider>
       </RevenueCatProvider>
     </SafeAreaProvider>
   );
+}
+
+function PremiumIntentBridge({ children }: { children: ReactNode }) {
+  const account = useAccount();
+  return <PremiumIntentProvider accountId={activeAccountId(account.state)}>{children}</PremiumIntentProvider>;
 }
 
 /** Premium's server view follows the bound account: it exists only for one, and is dropped the moment it changes. */
 function PremiumStateBridge({ children }: { children: ReactNode }) {
   const account = useAccount();
   return (
-    <PremiumStateProvider client={premiumServerClient} accountState={account.state} ledger={premiumLedgerClient} appVersion={premiumAppVersion}>
+    <PremiumStateProvider client={premiumServerClient} accountState={account.state} ledger={premiumLedgerClient} appVersion={premiumAppVersion} isAccountCurrent={premiumAccountIsCurrent}>
       <PremiumReaderBridge>{children}</PremiumReaderBridge>
     </PremiumStateProvider>
   );
+}
+
+function premiumAccountIsCurrent(accountId: string, householdId: string): boolean {
+  const current = accountRuntime.getState();
+  return deletionRuntime.getSnapshot().kind === 'active' && current.kind === 'accountBound'
+    && current.session.accountId === accountId && current.householdId === householdId;
 }
 
 /**
@@ -191,11 +207,9 @@ function RootNavigator() {
     </PremiumCheckoutAfterConsent>
   );
 
-  // Opt-in staging activation only after the proposed RLS ledger has been
-  // reviewed and applied. While checking or saving mandatory legal receipts,
-  // NO protected Stack is mounted and deep links cannot bypass consent.
-  // Production is not silently activated by this development branch.
-  if (process.env.EXPO_PUBLIC_HERKEYS_V2_CONSENT_GATE === 'true' && account.state.kind === 'accountBound') {
+  // Mandatory consent is fail closed for every bound account, including an unset local build flag.
+  // No protected navigator or checkout mounts before the account's receipts are verified.
+  if (account.state.kind === 'accountBound') {
     return <ConsentGate session={account.state.session}>{afterConsent}</ConsentGate>;
   }
   return afterConsent;

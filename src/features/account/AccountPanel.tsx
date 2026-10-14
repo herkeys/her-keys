@@ -1,10 +1,12 @@
 import { ScrollView, StyleSheet, View } from 'react-native';
+import type { ReactNode } from 'react';
 import { AppText, Button, Overline } from '../../design/components';
 import { colors, spacing } from '../../design/tokens';
 import type { AuthProvider } from '../../domain/account/identity';
 import { CROSS_PLATFORM_NOTE, PROVIDER_LABELS, showsCrossPlatformNote, type AccountModalMode } from './accountModel';
 
 export interface AccountPanelProps {
+  onPrivacy?: () => void;
   mode: AccountModalMode;
   /** Providers this device reports available — asked of the adapters, never assumed from the platform. */
   providers: readonly AuthProvider[];
@@ -17,6 +19,7 @@ export interface AccountPanelProps {
   onRestore?: () => void;
   restoring?: boolean;
   restoreNotice?: string | null;
+  restoreControl?: ReactNode;
 }
 
 /**
@@ -25,7 +28,7 @@ export interface AccountPanelProps {
  * holds its own household is never merged into one (the server refuses it). Signing out keeps everything on this phone; the next sign-in
  * of the same account resumes it. Presentational only — the route supplies the actions, and they all go through AccountRuntime.
  */
-export function AccountPanel({ mode, providers, busy, failed, onSignIn, onSignOut, onClose, onRestore, restoring = false, restoreNotice }: AccountPanelProps) {
+export function AccountPanel({ mode, providers, busy, failed, onSignIn, onSignOut, onClose, onRestore, restoring = false, restoreNotice, restoreControl, onPrivacy }: AccountPanelProps) {
   const copy = COPY[mode];
   const offersProviders = mode === 'signIn' || mode === 'reconnect';
 
@@ -42,6 +45,7 @@ export function AccountPanel({ mode, providers, busy, failed, onSignIn, onSignOu
       </View>
 
       <View style={styles.footer}>
+        {mode === 'connected' && onPrivacy ? <Button label="Privacy & Data" variant="secondary" disabled={busy || restoring} onPress={onPrivacy} /> : null}
         {failed && offersProviders && (
           <AppText variant="bodySm" color={colors.textTertiary} style={styles.note} accessibilityLiveRegion="polite">
             That did not go through. Nothing on this device changed — you can try again.
@@ -59,7 +63,7 @@ export function AccountPanel({ mode, providers, busy, failed, onSignIn, onSignOu
             <Button key={provider} label={PROVIDER_LABELS[provider]} disabled={busy} onPress={() => onSignIn(provider)} />
           ))}
 
-        {mode === 'connected' && onRestore ? (
+        {mode === 'connected' && restoreControl ? restoreControl : mode === 'connected' && onRestore ? (
           <>
             <Button label={restoring ? 'Restoring purchases…' : 'Restore purchases'} variant="secondary" disabled={busy || restoring} onPress={onRestore} />
             {restoreNotice ? <AppText variant="bodySm" style={styles.note} accessibilityLiveRegion="polite">{restoreNotice}</AppText> : null}

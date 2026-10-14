@@ -80,6 +80,14 @@ describe('post-certification migration governance', () => {
       ['CAL_CONNECTIONS', '20260925141432_external_calendar_connections.sql'],
       ['WELCOME_EMAIL', '20261009020000_herkeys_welcome_email_receipts.sql'],
       ['V2_CONSENT', '20261009060000_v2_account_consents.sql'],
+      ['ACCOUNT_DELETION', '20261014002726_account_deletion_lifecycle.sql'],
+      ['ACCOUNT_DELETION_AUTH', '20261014012518_account_deletion_auth_reconciliation.sql'],
+      ['ACCOUNT_DELETION_IDENTITY', '20261014014020_account_deletion_terminal_identity.sql'],
+      ['ACCOUNT_DELETION_RETENTION', '20261014014620_account_deletion_proof_retention.sql'],
+      ['ACCOUNT_DELETION_HISTORY', '20261014015835_account_deletion_cancelled_history_cleanup.sql'],
+      ['ACCOUNT_DELETION_SHARED_RETRY', '20261014021410_account_deletion_shared_provider_retry.sql'],
+      ['ACCOUNT_DELETION_OTHER_OWNERS', '20261014112400_account_deletion_orphan_shared_ownership.sql'],
+      ['ACCOUNT_DELETION_HOUSEHOLD_LOCK', '20261014113517_account_deletion_household_lock.sql'],
       // Her Keys Premium Stage 1, governed by supabase/tests/82-premium-authorization.sql and 83-premium-decision-ledger.sql.
       ['PREMIUM_FOUNDATION', '20261015120000_premium_entitlement_foundation.sql'],
       ['PREMIUM_LEDGER', '20261015130000_premium_decision_ledger.sql'],
@@ -172,6 +180,9 @@ describe('a re-declaration never drops an earlier registration', () => {
       // no UPDATE/DELETE, and server-only receipt ID/timestamps. Keep the
       // feature-specific sync + change-log enforcement unchanged for all
       // existing migrations.
+      // Lifecycle control/credential tables are service-only operational data,
+      // covered by real-SQL denial tests; they must never enter household sync.
+      if (owner === 'V2_CONSENT' || owner.startsWith('ACCOUNT_DELETION')) continue;
       if (owner === 'V2_CONSENT') continue;
       // Likewise the Premium tables are NOT household-sync tables: they are service-only (entitlement, usage, audit, events) or an
       // owner-read receipt ledger, never pushed or pulled by sync_push/sync_pull. Their governance suites (82/83) verify RLS forced,

@@ -73,13 +73,22 @@ describe('[BV] the semantic-boundary scan', () => {
     assert.equal(isLineUnderTest('feature/x', ''), false);
   });
 
+  test('[BM5] only the owner-reviewed exact Premium import is registered; future tips and unrelated lanes still fail', () => {
+    const { isReviewedPremiumImport } = createRequire(import.meta.url)('../../scripts-dev/meals-boundary-scan.cjs');
+    const sha = 'e4462d2a5cb42706a8523f6ba45248ee9396d02e';
+    assert.equal(isReviewedPremiumImport('feature/herkeys-premium-stage1', sha, true), true);
+    assert.equal(isReviewedPremiumImport('feature/herkeys-premium-stage1', sha, false), false);
+    assert.equal(isReviewedPremiumImport('feature/unreviewed', sha, true), false);
+    assert.equal(isReviewedPremiumImport('feature/herkeys-premium-stage1', '1'.repeat(40), true), false);
+  });
+
   test('[BV6] who could have made a change decides what explains it: the Wave 2 line needs a Meals-line reason, a later change a later lane\'s (HK13-D11)', () => {
     const { account, MEALS_LINE } = createRequire(import.meta.url)('../../scripts-dev/meals-boundary-scan.cjs');
     const F10 = 'HK-FEATURE-10 (Work / Career OS)';
     const REFINEMENTS = 'HK-PROTOTYPE-REFINEMENTS (FR01 / Notifications / External Intelligence)';
     const POLISH = 'HK-FE-UI-02 (frontend UI / motion polish pass)';
     const WELCOME_AUTH = 'HK-WELCOME-AUTH-RUNTIME (welcome tree wired to the account runtime)';
-    const V2_CONSENT = 'V2-EMAIL-PASSWORD (2026-10-08)';
+    const V2_CONSENT = 'V2-POST-PASSWORD (integrated legal/email repairs)';
     const BUILD_2A = 'BUILD-2A (2026-10-12)';
     // useHousehold.ts carries only a Meals-line reason. Changed on the Wave 2 line, that explains it; changed after the checkpoint,
     // it does not — Meals was certified before any later lane branched, so a Meals reason there would be a misattribution.
@@ -94,7 +103,7 @@ describe('[BV] the semantic-boundary scan', () => {
     // in registry order.
     // The welcome auth integration (the account-settling gate in the root layout) registers after them.
     // Build 2A (Premium offer before account choice) mounts the intent holder and the checkout gate there.
-    assert.deepEqual(account('app/_layout.tsx', 'M', false, 'M').shared.lanes, [F10, REFINEMENTS, POLISH, WELCOME_AUTH, V2_CONSENT, BUILD_2A]);
+    assert.deepEqual(account('app/_layout.tsx', 'M', false, 'M').shared.lanes, [F10, REFINEMENTS, POLISH, WELCOME_AUTH, BUILD_2A, V2_CONSENT, 'HK-ACCOUNT-DELETION (autonomous lifecycle)']);
     assert.match(account('src/domain/taskLists.ts', 'M', false, 'M').findings.join(), /no later lane's reason/, 'no lane explains taskLists.ts');
     // A later lane's own file is its lane, not a shared change; a shared change registered by a later lane names both lanes.
     assert.deepEqual(account('src/features/work/WorkOverview.tsx', 'M', false, 'M').shared.lanes, [F10, POLISH]);

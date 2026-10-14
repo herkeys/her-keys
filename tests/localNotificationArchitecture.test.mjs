@@ -41,6 +41,7 @@ describe('local notification architecture boundary', () => {
 
   test('no application source registers for or handles remote push', () => {
     const walk = (dir) => readdirSync(dir).flatMap((name) => {
+      if (name === 'node_modules') return [];
       const path = `${dir}/${name}`;
       return statSync(path).isDirectory() ? walk(path) : /\.(ts|tsx)$/.test(name) ? [path] : [];
     });
@@ -68,6 +69,15 @@ describe('local notification architecture boundary', () => {
     // is registered here with what it does once it has been reviewed as carrying no delivery path, so a new function fails until
     // it is reviewed, and a function unrelated to notifications (herkeys-ai, Build 2) is allowed without loosening the boundary.
     const REVIEWED_FUNCTIONS = {
+      'request-account-deletion': 'authenticated request and recovery email queue, no push',
+      'restore-account': 'one-time restoration, no push',
+      'resend-restoration-email': 'transactional recovery email, no push',
+      'deletion-status': 'receipt-bound status, no push',
+      'process-account-deletions': 'cleanup and transactional email, no push',
+      'monitor-account-deletions': 'internal lifecycle checks and email alerts, no push',
+      'expire-account-deletion-proofs': 'internal minimal-proof retention cleanup, no push',
+      'capture-apple-credential': 'server authorization-code exchange, no push',
+      'begin-web-deletion': 'verification email, no push',
       _shared: 'shared crypto, HTTP and auth helpers',
       'calendar-data': 'authenticated Google Calendar read',
       'calendar-oauth': 'Google Calendar OAuth exchange',
@@ -81,7 +91,7 @@ describe('local notification architecture boundary', () => {
       'premium-ops': 'operator-secret backlog and reconcile endpoint; no notification path',
       'smart-inbox-extract': 'authenticated Premium extraction of typed proposals from pasted text; returns data to the caller, sends nothing',
     };
-    const functions = readdirSync('supabase/functions').filter((name) => statSync(`supabase/functions/${name}`).isDirectory());
+    const functions = readdirSync('supabase/functions').filter((name) => name !== 'node_modules' && statSync(`supabase/functions/${name}`).isDirectory());
     for (const name of functions) {
       assert.doesNotMatch(name, /push|notif|remind|fcm|apns|messag|deliver|cron|schedul/i, `supabase/functions/${name} is named as a remote notification backend`);
       assert.ok(Object.hasOwn(REVIEWED_FUNCTIONS, name), `supabase/functions/${name} is not reviewed: confirm it has no notification delivery path, then register it`);
