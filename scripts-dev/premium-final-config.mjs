@@ -50,12 +50,32 @@ async function row(table,columns,environment='staging') {
   return data;
 }
 async function probe(env) {
+  // Negative probes contain no real event and make no database writes.
   const missingWebhook=await http('POST',endpoint(env,'revenuecat-webhook'),{event:{type:'TEST',environment:'SANDBOX',id:'hk-probe'}});
-  const missingOps=await http('POST',endpoint(env,'premium-ops'),{action:'backlog',limit:0});
+  const missingOps=await http('POST',endpoint(env,'premium-ops'),{action:'invalid_preflight'});
   const unauthorized=await http('GET',endpoint(env,'premium-gate'));
+  const conf=localSecretConfig()[env];
+  let matchedWebhook=false, matchedOps=false;
+  if (conf?.REVENUECAT_WEBHOOK_AUTH && conf?.REVENUECAT_WEBHOOK_HMAC_SECRET?.length>=24) {
+    // Sign a deliberately invalid payload: successful authentication yields HTTP 400
+    // BEFORE any event can be persisted. This tests the actual installed Edge secrets.
+    const raw='{}';
+    const auth=await http('POST',endpoint(env,'revenuecat-webhook'),raw,{
+      Authorization:conf.REVENUECAT_WEBHOOK_AUTH,
+      'X-RevenueCat-Webhook-Signature':signWebhook(raw,conf.REVENUECAT_WEBHOOK_HMAC_SECRET),
+    });
+    matchedWebhook=auth.code===400 && auth.data?.error==='invalid_payload';
+  }
+  if(conf?.PREMIUM_OPS_SECRET){
+    const auth=await http('POST',endpoint(env,'premium-ops'),{action:'invalid_preflight'},
+      {'x-premium-ops-secret':conf.PREMIUM_OPS_SECRET});
+    matchedOps=auth.code===400 && auth.data?.error==='invalid_request';
+  }
   return {
     webhook_configured:missingWebhook.code===401,
     ops_configured:missingOps.code===401,
+    webhook_credentials_match:matchedWebhook,
+    ops_credentials_match:matchedOps,
     client_jwt_required:unauthorized.code===401,
     fail_closed_unconfigured:missingWebhook.code===503&&missingOps.code===503,
   };
@@ -77,6 +97,8 @@ async function localPreflight(env) {
     ...local.checks.crossEnvironment,
     webhook_configured:external.webhook_configured,
     ops_configured:external.ops_configured,
+    webhook_credentials_match:external.webhook_credentials_match,
+    ops_credentials_match:external.ops_credentials_match,
     client_jwt_required:external.client_jwt_required,
     db_environment_matches:db.environment_matches,
     db_state_expected:db.premium_state_correct,
@@ -92,7 +114,7 @@ async function requireActualPreflight() {
   const c=preflightLocal(localSecretConfig());
   if(!c.passed) throw new Error('per-environment secrets incomplete or not distinct; run preflight');
   const p=await probe('staging');
-  if(!p.webhook_configured||!p.ops_configured||!p.client_jwt_required)throw new Error('Staging live Edge endpoints are not configured securely');
+  if(!p.webhook_configured||!p.ops_configured||!p.webhook_credentials_match||!p.ops_credentials_match||!p.client_jwt_required)throw new Error('Staging live Edge secrets do not match operator credentials');
 }
 async function requireLiveStagingConfig() {
   const {data,error}=await client().from('premium_runtime_config').select('*').single();
