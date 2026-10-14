@@ -59,6 +59,31 @@ const check = (name, ok, detail = '') => {
   console.log(`  ${ok ? 'ok  ' : 'FAIL'}  ${name}${ok || !detail ? '' : ` — ${detail}`}`);
 };
 
+// --journey: the entitlement path over real HTTP on a PRIVATE PostgREST stack (database p1_stack, container p1_postgrest, private ports).
+if (arg === '--journey') {
+  process.env.HERKEYS_PRIVATE_STACK_DB ??= 'p1_stack';
+  process.env.HERKEYS_PRIVATE_REST_NAME ??= 'p1_postgrest';
+  process.env.HERKEYS_PRIVATE_REST_PORT ??= '54591';
+  process.env.HERKEYS_PRIVATE_API_PORT ??= '54592';
+  const { startPrivateStack } = await import(`file://${join(HERE, 'private-stack.mjs')}`);
+  const stack = await startPrivateStack();
+  const stackPsql = (db, sql, { label = '' } = {}) => {
+    try {
+      return docker(['exec', '-i', CONTAINER, 'psql', '-v', 'ON_ERROR_STOP=1', '-U', 'postgres', '-d', db, '-f', '-'], sql);
+    } catch (err) {
+      throw new Error(`${label} failed:\n${err.stdout ?? ''}${err.stderr ?? ''}`);
+    }
+  };
+  try {
+    const { premiumJourney } = await import(`file://${join(HERE, 'premium-journey.mjs')}`);
+    await premiumJourney({ check, stack, stackPsql });
+  } finally {
+    await stack.stop();
+  }
+  console.log(`\nPremium journey: ${passes} passed, ${failures} failed (${passes + failures} checks)`);
+  process.exit(failures === 0 ? 0 : 1);
+}
+
 admin(`DROP DATABASE IF EXISTS ${DB} WITH (FORCE);`);
 admin(`CREATE DATABASE ${DB};`);
 psql(readFileSync(join(HERE, 'helpers', '00-auth-stub.sql'), 'utf8'), 'auth stub');
@@ -74,6 +99,9 @@ try {
   if (arg === '--concurrency') {
     const { premiumConcurrency } = await import(`file://${join(HERE, 'premium-concurrency.mjs')}`);
     await premiumConcurrency({ check, psql, scalar, psqlAsync });
+  } else if (arg === '--parity') {
+    const { premiumParity } = await import(`file://${join(HERE, 'premium-parity.mjs')}`);
+    await premiumParity({ check, psql, scalar });
   } else {
     const matches = (f) => (arg ? f.startsWith(arg) : f.includes('premium'));
     const files = readdirSync(HERE).filter((f) => /^\d\d-.*\.sql$/.test(f)).filter(matches).sort();
