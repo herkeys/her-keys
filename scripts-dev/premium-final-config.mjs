@@ -173,11 +173,18 @@ async function signedSmoke(mode='TEST') {
     'X-RevenueCat-Webhook-Signature':signature,
   });
   const classification=classifyWebhookResult(req.code,req.data);
-  const accepted=req.code===200 && ['ignored_test','processing_halted','stored_processing_halted','processed','received','ignored_environment','pending_reconcile','needs_reconcile'].includes(classification);
-  out({status:accepted?'PASS':'FAIL',environment:'staging',type:mode,httpCode:req.code,receipt:classification,
+  const accepted=req.code===200 && ['ignored_test','processing_halted','stored_processing_halted','processed','received','pending_reconcile','needs_reconcile'].includes(classification);
+  let persisted=false;
+  if(accepted){
+    const {data,error}=await client().from('premium_events')
+      .select('event_id,environment,status').eq('event_id',fixture.event.id).eq('environment','SANDBOX').maybeSingle();
+    persisted=!error&&data?.event_id===fixture.event.id;
+  }
+  const receiptPassed=accepted&&persisted;
+  out({status:receiptPassed?'PASS':'FAIL',environment:'staging',type:mode,httpCode:req.code,receipt:classification,persisted,
     signed:true,actualPurchaseVerified:false,entitlementGrantVerified:false,
     note:'A locally signed synthetic event proves the transport ONLY. Genuine purchases require RevenueCat Sandbox and an authenticated subscriber reconciliation.'});
-  if(!accepted)process.exitCode=1;
+  if(!receiptPassed)process.exitCode=1;
 }
 async function reconcile() {
   requireStaging();await requireActualPreflight();
@@ -186,7 +193,7 @@ async function reconcile() {
   const config=localSecretConfig().staging;
   // This is the existing server-side authenticated RevenueCat reconciliation operation.
   const rcCall=await http('GET',`https://api.revenuecat.com/v1/subscribers/${encodeURIComponent(accountId)}`,undefined,
-    {Authorization:'Bearer '+config.REVENUECAT_SECRET_API_KEY,'X-Platform':'stripe'});
+    {Authorization:'Bearer '+config.REVENUECAT_SECRET_API_KEY});
   if(rcCall.code!==200)throw new Error('RevenueCat subscriber retrieval failed (redacted)');
   let projectionBefore=await readProjection(accountId);
   let diff=projectionComparison(rcCall.data,projectionBefore);
