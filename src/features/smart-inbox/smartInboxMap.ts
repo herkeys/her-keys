@@ -129,16 +129,20 @@ function mapOne(p: ExtractedProposal, input: MapInput): Proposal {
   if (wantsDay) steps.push({ kind: 'which_day', weekday: named.length === 1 ? named[0] : null });
 
   // ---- the kind: an appointment needs a day AND a time, or it is a dated note --------------------------------------------------
+  // When the DAY is the open question but she gave a time, the event is kept with a PROVISIONAL day (today) exactly as the local reader
+  // does: the open "which day?" question is what makes it unacceptable as it stands, and her answer then completes a real event with the
+  // time she said. Dropping to a note here would silently lose "6pm".
   let kind = p.kind;
-  if (kind === 'event' && (date === null || p.startMinutes === null)) kind = 'needsMe';
+  const eventDay: LocalDate | null = date ?? (wantsDay ? context.today : null);
+  if (kind === 'event' && (eventDay === null || p.startMinutes === null)) kind = 'needsMe';
 
   let startsAt: string | null = null;
   let endsAt: string | null = null;
   let durationMinutes: number | null = null;
-  if (kind === 'event' && date !== null && p.startMinutes !== null) {
+  if (kind === 'event' && eventDay !== null && p.startMinutes !== null) {
     const minutes = p.durationMinutes ?? (p.endMinutes !== null ? p.endMinutes - p.startMinutes : null);
     if (minutes === null) assumptions.push('end-time-assumed');
-    ({ startsAt, endsAt } = eventInstants(date, p.startMinutes, minutes ?? DEFAULT_ASSUMED_EVENT_MINUTES, context.timeZone));
+    ({ startsAt, endsAt } = eventInstants(eventDay, p.startMinutes, minutes ?? DEFAULT_ASSUMED_EVENT_MINUTES, context.timeZone));
   } else if (kind === 'task') {
     durationMinutes = p.durationMinutes;
   }

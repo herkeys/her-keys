@@ -89,9 +89,9 @@ describe('SI-MAP — the server answer is untrusted here too', () => {
   test("a model's weekday arithmetic is not taken on trust: a date that disagrees with the word she wrote is dropped and she is asked", () => {
     // 2026-09-19 is a Saturday; her words say Friday.
     const [p] = mapIt([prop({ date: '2026-09-19' })]).proposals;
-    assert.equal(p.kind, 'needsMe', 'an appointment with no confirmed day is not a calendar event');
+    assert.equal(p.kind, 'event', 'the time she gave is kept: answering the day completes a real event');
     assert.equal(p.dueDate, null);
-    assert.equal(p.startsAt, null);
+    assert.ok(p.startsAt, 'a provisional day carries the time while the question is open');
     assert.equal(p.clarification.steps[0].kind, 'which_day');
     assert.equal(p.clarification.steps[0].weekday, 5);
   });
@@ -105,9 +105,9 @@ describe('SI-MAP — the server answer is untrusted here too', () => {
 
   test('a date in the past is dropped, not scheduled', () => {
     const [p] = mapIt([prop({ date: '2026-01-02', quote: 'Dentist at 3pm', span: { start: 0, end: 14 } })], { text: 'Dentist at 3pm' }).proposals;
-    assert.equal(p.startsAt, null);
     assert.equal(p.dueDate, null);
     assert.equal(p.clarification.steps[0].kind, 'which_day');
+    assert.notEqual(p.startsAt && p.startsAt.slice(0, 10), '2026-01-02', 'the past date is not scheduled');
   });
 
   test('a child is only ever one of HER children, mapped from the ref; an unknown ref is no child', () => {
