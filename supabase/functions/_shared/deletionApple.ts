@@ -3,7 +3,7 @@ import { adminClient, requireUser, AuthError } from './supabaseAdmin.ts';
 import { encryptSecret } from './crypto.ts';
 import { json, options } from './http.ts';
 export async function appleClientSecret():Promise<string> {
- const clientId=Deno.env.get('APPLE_DELETION_CLIENT_ID'),team=Deno.env.get('APPLE_TEAM_ID'),kid=Deno.env.get('APPLE_KEY_ID'),pem=Deno.env.get('APPLE_PRIVATE_KEY');
+ const clientId=Deno.env.get('APPLE_DELETION_CLIENT_ID'),team=Deno.env.get('APPLE_DELETION_TEAM_ID'),kid=Deno.env.get('APPLE_DELETION_KEY_ID'),pem=Deno.env.get('APPLE_DELETION_PRIVATE_KEY');
  if(!clientId||!team||!kid||!pem) throw new Error('apple_revocation_unconfigured');
  const key=await importPKCS8(pem.replace(/\\n/g,'\n'),'ES256');
  return new SignJWT({}).setProtectedHeader({alg:'ES256',kid}).setIssuer(team).setAudience('https://appleid.apple.com')

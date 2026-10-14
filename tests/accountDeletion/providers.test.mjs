@@ -34,3 +34,12 @@ test('Google cleanup revokes the credential without modifying calendar events',a
  assert.equal(observed.url,'https://oauth2.googleapis.com/revoke');assert.equal(observed.init.method,'POST');
  assert.equal(observed.init.body.get('token'),'disposable-token');
 });
+
+test('Apple credential client-secret uses the approved four Staging/Production secret names',async()=>{
+ const {readFileSync}=await import('node:fs');
+ const source=readFileSync(new URL('../../supabase/functions/_shared/deletionApple.ts',import.meta.url),'utf8');
+ for(const key of ['APPLE_DELETION_CLIENT_ID','APPLE_DELETION_TEAM_ID','APPLE_DELETION_KEY_ID','APPLE_DELETION_PRIVATE_KEY'])
+  assert.ok(source.includes("Deno.env.get('"+key+"')"),'Missing approved secret: '+key);
+ for(const wrong of ['APPLE_TEAM_ID','APPLE_KEY_ID','APPLE_PRIVATE_KEY'])
+  assert.ok(!source.includes("Deno.env.get('"+wrong+"')"),'Legacy secret must not be read: '+wrong);
+});
