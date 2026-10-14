@@ -217,3 +217,18 @@ The other three actual SQL failures are `tests/accountDeletion/resourceCoverage.
 | Deletion / restoration entry | works (integrated source; not hosted) | On convergence baseline this was missing; now selectively integrated from deletion branch, AccountPanel/DeletionGate/restore single-mount guards in CP2; signed-in end-to-end NOT RUN | Build for client; deletion privacy [#9](https://github.com/herkeys/her-keys/issues/9) |
 
 No OAuth, App Store, RevenueCat, email-delivery or device test was run for this table. The consent-gate missing/false configuration is pending hostile source examination, not proof of a bypass. Keep conditional `deletion_pending` and fresh server-entitlement confirmation as source test obligations; do not grant a hosted PASS.
+
+
+## Open backend handoffs — Checkpoint 3 held (2026-10-14)
+
+These narrowly scoped issue threads replace the unspecific routing of existing umbrella [#11](https://github.com/herkeys/her-keys/issues/11) and [#12](https://github.com/herkeys/her-keys/issues/12) **for future owner replies; the umbrella issues remain preserved**. Owner role is explicitly written in each issue. All GitHub issues are assigned to repository maintainer `herkeys` for dispatch because backend/platform agent-specific GitHub identities have not been provided. Issue creation and linkage are **handoffs only**, not implementation, backend readiness, UI work, or approved Provider activation.
+
+| Artifact group | Dedicated issue | Routed owner | Required reply / status |
+|---|---|---|---|
+| Village — invitations/assignment/schema/RLS/replay | [#14](https://github.com/herkeys/her-keys/issues/14) | Premium backend | Accept exact DTO/schema/RPC contracts; deployed Staging proof required before future Pass B — BLOCKED |
+| Co-Parent Plus — relationship/shares/schedules/expenses/reimbursements/deletion | [#15](https://github.com/herkeys/her-keys/issues/15) | Premium backend + deletion policy review | Accept closed typed RPC/schema, RLS, CAS and deletion decisions — BLOCKED |
+| Hosted Staging — Edge secrets/Auth/HMAC/JWT/two accounts/Sandbox webhook | [#16](https://github.com/herkeys/her-keys/issues/16) | Premium backend with owner/RC dashboard | Secure configuration and exact-Staging-SHA readiness response; currently 503 not_configured on custom-auth POST — BLOCKED |
+| Native RevenueCat — store SKUs/default offering/transfer policy/native device proof | [#17](https://github.com/herkeys/her-keys/issues/17) | Platform/RevenueCat release owner | Store/RC readbacks, native Sandbox setup, transfer ownership decision — BLOCKED |
+| Permanent deletion privacy — Premium provider identity scrubbing and terminal proof | [existing #9](https://github.com/herkeys/her-keys/issues/9) | Deletion lifecycle owner | Exact Premium resource coverage/erasure query/fix SHA; DO NOT duplicate — OPEN P0 |
+
+Prior umbrella issues [#11](https://github.com/herkeys/her-keys/issues/11) and [#12](https://github.com/herkeys/her-keys/issues/12) remain open as historical coordination records and are cross-referenced by the dedicated issues. Integration/Expo source repair umbrella [#10](https://github.com/herkeys/her-keys/issues/10) remains assigned to build lane. All new issues carry the `premium-backend-handoff` label, exact last verified code SHA `0f27acfa44874e4d15b20888af23952a8d205fbf`, and proposed wire contract or hosted prerequisites. **This update does not move past held Checkpoint 3.**
