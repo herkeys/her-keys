@@ -37,6 +37,8 @@ export const ADDITIVE_CHAIN = [
   { file: '20260925141432_external_calendar_connections.sql', owner: 'CAL_CONNECTIONS', label: 'calendar' },
   { file: '20261009020000_herkeys_welcome_email_receipts.sql', owner: 'WELCOME_EMAIL', label: 'welcome-email' },
   { file: '20261009060000_v2_account_consents.sql', owner: 'V2_CONSENT', label: 'v2-consent' },
+  // Her Keys Premium Stage 1 (A1/A2): service-only entitlement projection, feature manifest, atomic quotas, authorization.
+  { file: '20261015120000_premium_entitlement_foundation.sql', owner: 'PREMIUM_FOUNDATION', label: 'premium-foundation' },
 ];
 
 /** WAVE3_BASE (363e473) ended at F05: the chain a WAVE3_BASE-era database was built with, and the populated-upgrade starting point. */
