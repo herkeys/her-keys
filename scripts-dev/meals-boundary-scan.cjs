@@ -1013,12 +1013,23 @@ const LATER_FEATURES = [
   "migrations": [
     "supabase/migrations/20261014002726_account_deletion_lifecycle.sql",
     "supabase/migrations/20261014012518_account_deletion_auth_reconciliation.sql"
+    ,"supabase/migrations/20261014014020_account_deletion_terminal_identity.sql"
+    ,"supabase/migrations/20261014014620_account_deletion_proof_retention.sql"
+    ,"supabase/migrations/20261014015835_account_deletion_cancelled_history_cleanup.sql"
+    ,"supabase/migrations/20261014021410_account_deletion_shared_provider_retry.sql"
   ],
   "schemas": [],
   "rootCollections": [],
   "syncKinds": [],
   "shared": [['supabase/blueprints/staging-deletion-fixture.ts', 'Temporary HMAC-authenticated Staging fixture harness; forbidden in Production.'],
     ['supabase/migrations/20261014012518_account_deletion_auth_reconciliation.sql', 'Additive session-revocation reconciliation verified against hosted Auth behavior.'],
+    ['supabase/migrations/20261014014020_account_deletion_terminal_identity.sql', 'Preserve receipt-to-namespace proof and reject deleted Auth identities.'],
+    ['supabase/migrations/20261014014620_account_deletion_proof_retention.sql', 'Apply owner-approved 365-day minimal terminal proof and daily expiry.'],
+    ['supabase/migrations/20261014015835_account_deletion_cancelled_history_cleanup.sql', 'Remove cancelled account-linked deletion history when a later purge completes.'],
+    ['supabase/migrations/20261014021410_account_deletion_shared_provider_retry.sql', 'Continue independent provider retries while explicit shared review remains pending.'],
+    ['supabase/functions/expire-account-deletion-proofs/index.ts', 'HMAC-authenticated daily expiry of minimal terminal proof; no customer purge authority.'],
+    ['supabase/blueprints/account_deletion_retention_scheduler_upgrade.sql', 'Disabled daily retention scheduler upgrade for an existing lifecycle installation.'],
+    ['supabase/blueprints/staging_deletion_storage_fixture.sql', 'Staging-only marked disposable-account upload policy; explicit teardown.'],
     ['tsconfig.json', 'Deno blueprints are checked by Deno rather than the Expo client compiler.'],
     ['.gitattributes', 'Pin the additive lifecycle migration to LF for exact deployment checksums.'],
     [
@@ -1349,7 +1360,11 @@ function scan() {
     const mergeBase = gitOk('merge-base', 'HEAD', tip).out.trim();
     // History shared only up to a certified integration checkpoint is the integration line itself (every Wave 3/4 feature branches
     // from it), not a sibling reaching HEAD. Anything shared ABOVE the checkpoint still is.
-    const integrationHistory = mergeBase && INTEGRATION_CHECKPOINTS.some((checkpoint) => gitOk('merge-base', '--is-ancestor', mergeBase, checkpoint).ok);
+    // Account deletion starts at the assignment's recorded integration ENTRY. A sibling
+    // may advance from that same entry; that does not import its later work here.
+    // Keep the exact boundary: sharing any commit above ENTRY still fails.
+    const assignmentEntry = 'ad72ccd5b517a83bde5e7bbf3bf658193a667b82';
+    const integrationHistory = mergeBase && (mergeBase === assignmentEntry || INTEGRATION_CHECKPOINTS.some((checkpoint) => gitOk('merge-base', '--is-ancestor', mergeBase, checkpoint).ok));
     if (mergeBase && !integrationHistory && !gitOk('merge-base', '--is-ancestor', mergeBase, BASE).ok) ancestry.push(`${branch}: shares history with HEAD above the baseline (${mergeBase.slice(0, 7)})`);
   }
   facts.siblingAncestry = ancestry;

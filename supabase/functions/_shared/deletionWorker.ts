@@ -2,13 +2,9 @@ import { adminClient } from './supabaseAdmin.ts';
 import { command, drainDeletionEmail, reconcileRestoration, deliveryRecipient } from './deletionService.ts';
 import { decryptSecret, encryptSecret } from './crypto.ts';
 import { safeCategory } from './deletionCore.ts';
+import {revokeGoogle,revokeApple,deleteRevenueCatCustomer} from './deletionProviders.ts';
 
 async function checked(query: any) { const {data,error}=await query; if(error) throw new Error('database_unavailable'); return data; }
-async function providerRequest(url:string, init:RequestInit) {
- const response=await fetch(url,{...init,signal:AbortSignal.timeout(15000)});
- if(!response.ok && response.status!==404) throw new Error('provider_unavailable');
- return response;
-}
 export async function processDeletions() {
  const admin=adminClient();
  // Auth deactivation and recovery are reconciled independently from the destructive switch.
@@ -34,44 +30,48 @@ export async function processDeletions() {
    await command('cleanup_safe',args);
    // Capture the completion recipient only in a restricted encrypted outbox before Auth disappears.
    const userResult=await admin.auth.admin.getUserById(request.account_id);
+   const authLookupUnavailable=!!userResult.error&&userResult.error.status!==404;
+   if(authLookupUnavailable)await evidence('auth_lookup_failure','requires_retry');
    if(userResult.data.user?.email) {
     const encrypted=await encryptSecret(JSON.stringify({email:deliveryRecipient(userResult.data.user.email)}));
     await command('prepare_completion',{...args,...encrypted});
    }
-   let providersComplete=true;
+   let providersComplete=!authLookupUnavailable;
    if(!request.evidence.providers) {
-    try {
+    async function provider(name:string,work:()=>Promise<void>) {
+     if(request.evidence[name]===true)return;
+     try {await work();await evidence(name,true);}
+     catch {providersComplete=false;await evidence(name,'requires_retry');}
+    }
+    await provider('google_revoked',async()=>{
      const connections=await checked(admin.from('external_calendar_connections').select('refresh_token_ciphertext,refresh_token_iv').eq('user_id',request.account_id));
      for(const connection of connections) {
       await fence();
       const token=await decryptSecret(connection.refresh_token_ciphertext,connection.refresh_token_iv);
-      await providerRequest('https://oauth2.googleapis.com/revoke',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
-       body:new URLSearchParams({token})});
+      await revokeGoogle(token);
      }
+    });
+    await provider('apple_revoked',async()=>{
+     if(authLookupUnavailable)throw new Error('apple_identity_unverified');
      const credentials=await checked(admin.from('apple_revocation_credentials').select('token_ciphertext,token_iv').eq('account_id',request.account_id));
      for(const credential of credentials) {
       const { appleClientSecret }=await import('./deletionApple.ts');
       await fence();
-      await providerRequest('https://appleid.apple.com/auth/revoke',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
-       body:new URLSearchParams({client_id:Deno.env.get('APPLE_DELETION_CLIENT_ID')!,client_secret:await appleClientSecret(),
-        token:await decryptSecret(credential.token_ciphertext,credential.token_iv),token_type_hint:'refresh_token'})});
+      await revokeApple(await decryptSecret(credential.token_ciphertext,credential.token_iv),Deno.env.get('APPLE_DELETION_CLIENT_ID')!,await appleClientSecret());
      }
-     if(!credentials.length && userResult.data.user?.identities?.some(i=>i.provider==='apple')) {
+     if(!credentials.length && (request.evidence.apple_legacy==='manual_revocation_required'||userResult.data.user?.identities?.some(i=>i.provider==='apple'))) {
       await evidence('apple_legacy','manual_revocation_required');
       throw new Error('apple_revocation_requires_action');
      }
+    });
+    await provider('revenuecat_deleted',async()=>{
      const rcKey=Deno.env.get('REVENUECAT_DELETION_API_KEY'), rcProject=Deno.env.get('REVENUECAT_PROJECT_ID');
      if(!rcKey || !rcProject) throw new Error('revenuecat_not_configured');
      await fence();
-     const rcUrl='https://api.revenuecat.com/v2/projects/'+encodeURIComponent(rcProject)+'/customers/'+encodeURIComponent(request.account_id);
-     await providerRequest(rcUrl,{method:'DELETE',headers:{Authorization:'Bearer '+rcKey}});
-     await fence();
-     const rcCheck=await providerRequest(rcUrl,{method:'GET',headers:{Authorization:'Bearer '+rcKey}});
-     if(rcCheck.status!==404) throw new Error('revenuecat_deletion_pending');
-     await evidence('providers',true);
-    } catch {
-     providersComplete=false; await evidence('provider_failure','requires_retry');
-    }
+     await deleteRevenueCatCustomer(request.account_id,rcKey,rcProject);
+    });
+    if(providersComplete)await evidence('providers',true);
+    else await evidence('provider_failure','requires_retry');
    }
    // Independent private-data cleanup continues while provider revocation is retried.
    // Keep revocation material only during the bounded retry budget; unresolved
@@ -99,7 +99,7 @@ export async function processDeletions() {
      await checked(admin.from('external_calendar_connections').delete().eq('user_id',request.account_id));
      await checked(admin.from('apple_revocation_credentials').delete().eq('account_id',request.account_id));
     }
-    await command('retry',{...args,category:'shared_resources_pending_review',permanent:!cleanup.more_work});
+    await command('retry',{...args,category:'shared_resources_pending_review',permanent:!cleanup.more_work&&providersComplete});
     continue;
    }
    if(!providersComplete && request.attempts<run.max_attempts) throw new Error('provider_retry_required');

@@ -39,6 +39,10 @@ export const ADDITIVE_CHAIN = [
   { file: '20261009060000_v2_account_consents.sql', owner: 'V2_CONSENT', label: 'v2-consent' },
   { file: '20261014002726_account_deletion_lifecycle.sql', owner: 'ACCOUNT_DELETION', label: 'account-deletion' },
   { file: '20261014012518_account_deletion_auth_reconciliation.sql', owner: 'ACCOUNT_DELETION_AUTH', label: 'account-deletion-auth' },
+  { file: '20261014014020_account_deletion_terminal_identity.sql', owner: 'ACCOUNT_DELETION_IDENTITY', label: 'account-deletion-identity' },
+  { file: '20261014014620_account_deletion_proof_retention.sql', owner: 'ACCOUNT_DELETION_RETENTION', label: 'account-deletion-retention' },
+  { file: '20261014015835_account_deletion_cancelled_history_cleanup.sql', owner: 'ACCOUNT_DELETION_HISTORY', label: 'account-deletion-history' },
+  { file: '20261014021410_account_deletion_shared_provider_retry.sql', owner: 'ACCOUNT_DELETION_SHARED_RETRY', label: 'account-deletion-shared-retry' },
 ];
 
 /** WAVE3_BASE (363e473) ended at F05: the chain a WAVE3_BASE-era database was built with, and the populated-upgrade starting point. */

@@ -1,5 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
 import {deletionDatabase} from '../../supabase/tests/deletion-database.mjs';
 const A='11111111-1111-4111-8111-111111111111',B='22222222-2222-4222-8222-222222222222';
 const SA='aaaaaaaa-1111-4111-8111-111111111111',SB='bbbbbbbb-2222-4222-8222-222222222222';
@@ -74,6 +75,7 @@ test('account deletion: real SQL state, privileges, recovery and purge',async t=
   await q('insert into auth.sessions(id,user_id) values($1,$2)',[SA,A]);
   request=await cmd('request',{...params,receipt_hash:'s'.repeat(43),recovery_hash:'x'.repeat(43)});
   assert.equal(request.duplicate,false);
+  assert.equal((await cmd('status',{receipt_hash:'s'.repeat(43)})).account_fingerprint,createHash('sha256').update('herkeys-deletion:'+A).digest('hex'));
  });
  await t.test('expired requests cannot restore; workers compete through claims',async()=>{
   await q("update public.account_deletion_requests set requested_at=now()-interval '31 days',grace_period_ends_at=now()-interval '1 day' where id=$1",[request.request_id]);
@@ -110,7 +112,13 @@ test('account deletion: real SQL state, privileges, recovery and purge',async t=
   await cmd('finish',{request_id:request.id,fence:request.fence});
   const status=await cmd('status',{receipt_hash:'s'.repeat(43)});
   assert.equal(status.status,'purged');assert.ok(status.purged_at);assert.ok(status.verified_at);
-  assert.equal((await q('select account_id from public.account_deletion_requests where id=$1',[request.id])).rows[0].account_id,null);
+  assert.equal('account_fingerprint' in status,false);
+  assert.equal((await as(A,()=>q('select public.account_access_status() as status'))).rows[0].status,'unauthorized');
+  await assert.rejects(as(A,()=>q("select public.bootstrap_account(gen_random_uuid(),'UTC',null)")),/account_deactivated/);
+  assert.equal((await q('select account_id from public.account_deletion_requests where id=$1',[request.id])).rows.length,0);
+  assert.equal((await q('select count(*) as n from public.account_deletion_requests where account_id=$1',[A])).rows[0].n,0);
+  const proof=(await q('select * from public.account_deletion_terminal_proofs where receipt_hash=$1',['s'.repeat(43)])).rows[0];
+  assert.deepEqual(Object.keys(proof).sort(),['receipt_hash','purged_at','verified_at','resource_counts','expires_at'].sort());
  });
  await t.test('resend rate limit has a bounded window and unknown receipts disclose nothing',async()=>{
   for(let i=0;i<5;i++)assert.equal((await cmd('rate_limit',{key_hash:'test'})).allowed,true);

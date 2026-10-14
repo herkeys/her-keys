@@ -450,3 +450,6 @@ verify_jwt = false
 verify_jwt = false
 [functions.monitor-account-deletions]
 verify_jwt = false
+
+[functions.expire-account-deletion-proofs]
+verify_jwt = false

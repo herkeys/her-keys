@@ -58,6 +58,14 @@ test('critical lifecycle negative controls detect unsafe guard mutations',async 
   assert.equal((await db.query('select count(*) as n from public.profiles')).rows[0].n,2);
   const repeated=await cmd('database_cleanup',{request_id:claim.id,fence:claim.fence});
   assert.equal(repeated.unresolved,partial.unresolved);
+  await mutation(async()=>{
+   await cmd('retry',{request_id:claim.id,fence:claim.fence,category:'shared_resources_pending_review',permanent:false});
+   assert.equal((await db.query('select status from public.account_deletion_requests where id=$1',[claim.id])).rows[0].status,'partial_purge_pending_review');
+   assert.equal((await cmd('status',{receipt_hash:'r'.repeat(43)})).status,'failed');
+   await db.query('update public.account_deletion_requests set retry_at=now() where id=$1',[claim.id]);
+   const next=(await cmd('claim')).requests[0];assert.equal(next.id,claim.id);assert.equal(next.fence,claim.fence+1);
+   await assert.rejects(cmd('check',{request_id:claim.id,fence:claim.fence}),/lease_or_control_refused/);
+  });
   const reviewCase=(await db.query("select id from public.account_deletion_cases where request_id=$1 and resource_table='household_members'",[claim.id])).rows[0];
   await assert.rejects(db.query('select public.herkeys_resolve_deletion_case($1,$2)',[reviewCase.id,'fixture-operator-review']),/resource_still_exists/);
   await assert.rejects(cmd('finish',{request_id:claim.id,fence:claim.fence}),/terminal_verification_failed/);

@@ -21,12 +21,14 @@ export async function pollDeletionDelivery() {
 export async function monitorDeletions() {
  await pollDeletionDelivery();
  const health=await command('health');
- const unhealthy=health.scheduler_stale||health.failed>0||health.overdue_cases>0||health.stale_leases>0||health.email_problems>0;
+ const unhealthy=health.scheduler_stale||health.failed>0||health.overdue_cases>0||health.stale_leases>0||health.email_problems>0
+  ||health.retention_stale||health.retention_failed||health.retention_overdue>0;
  if(!unhealthy)return {healthy:true};
  const recipient=Deno.env.get('DELETION_ALERT_RECIPIENT'),key=Deno.env.get('RESEND_API_KEY');
  if(!recipient||!key)throw new Error('deletion_alert_not_configured');
  const fingerprint=await sha256Base64Url(JSON.stringify({failed:health.failed,overdue_cases:health.overdue_cases,
-  scheduler_stale:health.scheduler_stale,stale_leases:health.stale_leases,email_problems:health.email_problems,hour:Math.floor(Date.now()/3600000)}));
+  scheduler_stale:health.scheduler_stale,stale_leases:health.stale_leases,email_problems:health.email_problems,
+  retention_stale:health.retention_stale,retention_failed:health.retention_failed,retention_overdue:health.retention_overdue,hour:Math.floor(Date.now()/3600000)}));
  const admin=adminClient();
  let claim=await admin.from('account_deletion_alerts').insert({fingerprint}).select('id').single();
  if(claim.error) {

@@ -2,7 +2,7 @@ import * as Crypto from 'expo-crypto';
 import {supabaseConfig} from '../config/supabase';
 import {createDeviceSecureStorage} from '../platform/secureStore';
 import {createSecureSessionStore} from '../domain/account/secureSession';
-import {parseDeletionReceipt,canEraseDeletedNamespace,type DeletionReceipt} from '../domain/account/deletion';
+import {parseDeletionReceipt,canEraseDeletedNamespace,canResetLocalNamespace,type DeletionReceipt} from '../domain/account/deletion';
 import {accountRuntime,syncRuntime} from './accountRuntimeInstance';
 import {appStore} from './appStoreInstance';
 import {createSupabaseClient} from '../platform/supabaseCloud';
@@ -94,7 +94,30 @@ export const deletionRuntime={
    throw error;
   }
  },
- async resend(email:string){return call('resend-restoration-email',{email});}
+ async resend(email:string){return call('resend-restoration-email',{email});},
+ async importReceipt(proof:string){
+  const accountId=appStore.currentIdentity().binding?.accountId;
+  if(!accountId||!/^[A-Za-z0-9_-]{43}$/.test(proof))throw new Error('receipt_namespace_required');
+  const status=await call('deletion-status',{receipt:proof});
+  const fingerprint=await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256,'herkeys-deletion:'+accountId);
+  if(status.account_fingerprint!==fingerprint)throw new Error('receipt_for_another_account');
+  await secure.setItem(KEY,JSON.stringify({accountId,proof,deadline:status.deadline}));
+  await check();
+ },
+ localAccountId(){return appStore.currentIdentity().binding?.accountId??null;},
+ async resetLocalData(confirmation:string,expectedAccountId:string|null){
+  try {
+  const permitted=()=>canResetLocalNamespace(confirmation,expectedAccountId,appStore.currentIdentity().binding?.accountId??null);
+  if(!permitted())throw new Error('local_reset_confirmation_required');
+  publish({kind:'checking'});syncRuntime.stop();await syncRuntime.idle();
+  if(!permitted())throw new Error('local_namespace_changed');
+  await accountRuntime.signOut();
+  if(!permitted()||!await appStore.reset())throw new Error('local_cleanup_unavailable');
+  const receipt=parseDeletionReceipt(await secure.getItem(KEY));
+  if(receipt?.accountId===expectedAccountId)await secure.deleteItem(KEY);
+  publish({kind:'active'});
+  } catch(error){publish({kind:'unavailable'});throw error;}
+ }
 };
 function base64Url(bytes:Uint8Array):string {
  const alphabet='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';let result='',bits=0,value=0;

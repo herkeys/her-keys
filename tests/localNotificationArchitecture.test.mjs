@@ -75,6 +75,7 @@ describe('local notification architecture boundary', () => {
       'deletion-status': 'receipt-bound status, no push',
       'process-account-deletions': 'cleanup and transactional email, no push',
       'monitor-account-deletions': 'internal lifecycle checks and email alerts, no push',
+      'expire-account-deletion-proofs': 'internal minimal-proof retention cleanup, no push',
       'capture-apple-credential': 'server authorization-code exchange, no push',
       'begin-web-deletion': 'verification email, no push',
       _shared: 'shared crypto, HTTP and auth helpers',

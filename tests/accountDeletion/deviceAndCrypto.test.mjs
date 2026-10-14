@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {parseDeletionReceipt,canEraseDeletedNamespace} from '../../src/domain/account/deletion.ts';
+import {parseDeletionReceipt,canEraseDeletedNamespace,canResetLocalNamespace} from '../../src/domain/account/deletion.ts';
 import {isOpaqueProof,recoveryEmail} from '../../supabase/functions/_shared/deletionCore.ts';
 import {randomUrlSafe,sha256Base64Url,encryptSecret,decryptSecret} from '../../supabase/functions/_shared/crypto.ts';
 import {harness,launch} from '../support/fixtures.mjs';
@@ -8,12 +8,20 @@ import {renameCategory} from '../../src/domain/categories.ts';
 const A='11111111-1111-4111-8111-111111111111',B='22222222-2222-4222-8222-222222222222';
 const receipt={accountId:A,proof:'a'.repeat(43)};
 test('local terminal cleanup requires matching namespace and verified timestamps',()=>{
- const status={status:'purged',purged_at:'2026-10-14T00:00:00Z',verified_at:'2026-10-14T00:00:01Z'};
- assert.equal(canEraseDeletedNamespace(status,receipt,A),true);
+ const status={status:'purged',purged_at:'2026-10-14T00:00:00Z',verified_at:'2026-10-14T00:00:01Z',expires_at:'2027-10-14T00:00:01Z'};
+ const now=Date.UTC(2026,9,14);
+ assert.equal(canEraseDeletedNamespace(status,receipt,A,now),true);
  for(const invalid of [null,{},'purged',{status:'pending'},{...status,purged_at:null},{...status,verified_at:'invalid'}])
-  assert.equal(canEraseDeletedNamespace(invalid,receipt,A),false);
+  assert.equal(canEraseDeletedNamespace(invalid,receipt,A,now),false);
  assert.equal(canEraseDeletedNamespace(status,receipt,B),false);
  assert.equal(canEraseDeletedNamespace(status,receipt,null),false);
+ assert.equal(canEraseDeletedNamespace(status,receipt,A,Date.UTC(2028,0,1)),false);
+});
+test('expired or unavailable proof never resets data; explicit local reset is namespace-bound',()=>{
+ assert.equal(canEraseDeletedNamespace({status:'unknown'},receipt,A),false);
+ assert.equal(canResetLocalNamespace('DELETE LOCAL DATA',A,A),true);
+ for(const [confirmation,expected,current] of [['',A,A],['DELETE',A,A],['DELETE LOCAL DATA',A,B],['DELETE LOCAL DATA',null,null]])
+  assert.equal(canResetLocalNamespace(confirmation,expected,current),false);
 });
 test('malformed local proof is a refusal, never evidence of erasure',()=>{
  assert.equal(parseDeletionReceipt(null),null);assert.deepEqual(parseDeletionReceipt(JSON.stringify(receipt)),receipt);

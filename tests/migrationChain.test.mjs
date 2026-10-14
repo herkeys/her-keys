@@ -82,6 +82,10 @@ describe('post-certification migration governance', () => {
       ['V2_CONSENT', '20261009060000_v2_account_consents.sql'],
       ['ACCOUNT_DELETION', '20261014002726_account_deletion_lifecycle.sql'],
       ['ACCOUNT_DELETION_AUTH', '20261014012518_account_deletion_auth_reconciliation.sql'],
+      ['ACCOUNT_DELETION_IDENTITY', '20261014014020_account_deletion_terminal_identity.sql'],
+      ['ACCOUNT_DELETION_RETENTION', '20261014014620_account_deletion_proof_retention.sql'],
+      ['ACCOUNT_DELETION_HISTORY', '20261014015835_account_deletion_cancelled_history_cleanup.sql'],
+      ['ACCOUNT_DELETION_SHARED_RETRY', '20261014021410_account_deletion_shared_provider_retry.sql'],
     ]);
     const sql = lf(POST_CERT_CHAIN[0].file);
     const executable = sql.replace(/--.*$/gm, '');
@@ -173,7 +177,7 @@ describe('a re-declaration never drops an earlier registration', () => {
       // existing migrations.
       // Lifecycle control/credential tables are service-only operational data,
       // covered by real-SQL denial tests; they must never enter household sync.
-      if (owner === 'V2_CONSENT' || owner === 'ACCOUNT_DELETION') continue;
+      if (owner === 'V2_CONSENT' || owner.startsWith('ACCOUNT_DELETION')) continue;
       const sql = lf(file);
       const created = [...sql.replace(/--.*$/gm, '').matchAll(/CREATE TABLE public\.(\w+)/g)].map((m) => m[1]);
       if (created.length === 0) continue;
