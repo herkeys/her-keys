@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Screen } from '../src/design/components';
 import type { AuthProvider } from '../src/domain/account/identity';
 import { AccountPanel } from '../src/features/account/AccountPanel';
@@ -7,7 +7,7 @@ import { accountModalMode } from '../src/features/account/accountModel';
 import { WelcomeAuthFlow } from '../src/features/account/WelcomeAuthFlow';
 import { accountProviders } from '../src/store/accountRuntimeInstance';
 import { useAccount } from '../src/store/AccountProvider';
-import { useEntitlement } from '../src/monetization/RevenueCatProvider';
+import { useRestorePurchases } from '../src/monetization/useRestorePurchases';
 
 /**
  * Your Account — the one account surface after the first run (the route keeps its `/sign-in` name).
@@ -24,41 +24,9 @@ export default function SignIn() {
   const { state, available, busy, signIn, signOut } = useAccount();
   const [providers, setProviders] = useState<AuthProvider[]>([]);
   const mode = accountModalMode(state, available);
-  const { restore } = useEntitlement();
   const accountId = state.kind === 'accountBound' ? state.session.accountId : null;
-  const currentAccount = useRef(accountId);
-  currentAccount.current = accountId;
-  const restoreInFlight = useRef(false);
-  const mounted = useRef(true);
-  const [restoring, setRestoring] = useState(false);
-  const [restoreResult, setRestoreResult] = useState<{ accountId: string; notice: string } | null>(null);
-
-  useEffect(() => {
-    mounted.current = true;
-    return () => { mounted.current = false; };
-  }, []);
-
-  const onRestore = async () => {
-    const owner = currentAccount.current;
-    if (owner === null || busy || restoreInFlight.current) return;
-    restoreInFlight.current = true;
-    setRestoring(true);
-    setRestoreResult(null);
-    try {
-      const outcome = await restore(owner);
-      if (!mounted.current || currentAccount.current !== owner) return;
-      const notice = outcome.kind === 'restored' ? 'Your Premium purchase was restored.'
-        : outcome.kind === 'no_purchases_found' ? 'No Premium purchase was found for this store account.'
-        : outcome.kind === 'unavailable' ? 'Purchases can’t be restored right now. Reconnect your account and try again.'
-        : 'Purchases couldn’t be restored. Try again.';
-      setRestoreResult({ accountId: owner, notice });
-    } catch {
-      if (mounted.current && currentAccount.current === owner) setRestoreResult({ accountId: owner, notice: 'Purchases couldn’t be restored. Try again.' });
-    } finally {
-      restoreInFlight.current = false;
-      if (mounted.current) setRestoring(false);
-    }
-  };
+  // Restore Purchases is the reusable account-level hook; this route only wires it into the panel's existing props.
+  const restorePurchases = useRestorePurchases(accountId, busy);
 
   // The reconnect flow mounts for a credential that has LAPSED, and then stays mounted through its own sign-in. Signing out
   // also passes through `authDegraded` for an instant (sync is stopped before the credential is ended), but that arrives
@@ -96,9 +64,9 @@ export default function SignIn() {
         onSignIn={(provider) => void signIn(provider)}
         onSignOut={() => void signOut()}
         onClose={() => router.back()}
-        onRestore={accountId === null ? undefined : () => void onRestore()}
-        restoring={restoring}
-        restoreNotice={restoreResult?.accountId === accountId ? restoreResult.notice : null}
+        onRestore={accountId === null ? undefined : () => void restorePurchases.restore()}
+        restoring={restorePurchases.restoring}
+        restoreNotice={restorePurchases.notice}
       />
     </Screen>
   );

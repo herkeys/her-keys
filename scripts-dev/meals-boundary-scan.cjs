@@ -910,6 +910,18 @@ const LATER_FEATURES = [
       ['docs/builds/HK_BUILD2B_SHARED_INTEGRATION_CLOSEOUT.md', 'Build 2B shared closeout: source handoff, authorized changes and release-policy awaiting-owner status'],
     ],
   },
+  {
+    id: 'HK-BUILD2-SHARED-CONSUMER (shared consumer blocker repair)',
+    branch: null,
+    owned: [],
+    migrations: [],
+    schemas: [],
+    rootCollections: [],
+    syncKinds: [],
+    shared: [
+      ['src/monetization/useRestorePurchases.ts', 'SC-02: reusable account-level Restore Purchases hook over the existing entitlement boundary (expected UUID, single-flight, owner-tagged feedback); extracted from app/sign-in.tsx with no behavior change'],
+    ],
+  },
 
 ];
 

@@ -100,7 +100,7 @@ export function SystemEditor({ systemId }: { systemId?: string }) {
           </AppText>
         ) : null}
         <Overline style={styles.label}>{copy.editor.subjectTitle}</Overline>
-        <View style={styles.chipRow} accessibilityLabel={copy.editor.subjectTitle}>
+        <View style={styles.chipRow} accessibilityRole="radiogroup" accessibilityLabel={copy.editor.subjectTitle}>
           <ChipToggle label={copy.editor.subjectHousehold} selected={draft.subjectMemberId === null} onPress={() => actions.setSubject(null)} />
           {e.subjectChoices.map((child) => (
             <ChipToggle key={child.id} label={copy.detail.forChild(child.name)} selected={draft.subjectMemberId === child.id} onPress={() => actions.setSubject(child.id)} />
