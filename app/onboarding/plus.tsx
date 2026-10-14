@@ -3,14 +3,19 @@ import { StyleSheet, View } from 'react-native';
 import { AppText, Button, Card, Overline, Screen } from '../../src/design/components';
 import { colors, spacing } from '../../src/design/tokens';
 import { canResolveOnboardingPlus, HER_KEYS_PREMIUM_DISPLAY_NAME, PAYWALL_POLICY } from '../../src/monetization/entitlement';
+import { PaywallNoticeView } from '../../src/monetization/PaywallNoticeView';
 import { useEntitlement } from '../../src/monetization/RevenueCatProvider';
+import { usePaywallAction } from '../../src/monetization/usePaywallAction';
 import { useOnboarding } from '../../src/store/OnboardingContext';
 
-const BENEFITS = [
-  'Deeper household intelligence and pattern recognition',
-  'More proactive planning and recommendations',
-  'Enhanced Talk It Out and Life OS intelligence',
-  'Future automation for repeatable work',
+/**
+ * What this screen may say about Premium. Only what the source supports: the paid entitlement (`her_keys_plus`) is purchasable and
+ * restorable, but no feature in the app or backend is gated on it yet (`featureAccess` has no consumer), so the screen does not list
+ * benefits. Naming a benefit here is a product decision that waits for a real, gated one (docs/audits/HK_BUILD2_SHARED_CONSUMER_REPAIR_LEDGER.md, OD-SC-03).
+ */
+const PREMIUM_STATUS = [
+  'Everything in Her Keys works without Premium.',
+  'Premium features are still being built, so nothing in the app is locked behind it today.',
 ];
 
 /**
@@ -21,11 +26,11 @@ const BENEFITS = [
  * are allowed to.
  */
 export default function HerKeysPlus() {
-  const { status, presentPaywall, restore } = useEntitlement();
+  const { status, restore } = useEntitlement();
+  const paywall = usePaywallAction('onboarding_complete');
   const { complete } = useOnboarding();
   const [busy, setBusy] = useState<'purchase' | 'restore' | 'continue' | null>(null);
   const [note, setNote] = useState<string | null>(null);
-  const [paywallUnavailable, setPaywallUnavailable] = useState(false);
   const resolving = useRef(false);
 
   const resolve = async (action: () => Promise<boolean>) => {
@@ -50,13 +55,10 @@ export default function HerKeysPlus() {
   const onSeePlus = async () => {
     setBusy('purchase');
     setNote(null);
-    const outcome = await presentPaywall('onboarding_complete');
-    if (outcome.kind === 'purchased' || outcome.kind === 'restored') {
+    // Every way the paywall can end (unavailable offering, failure, cancel) is worded by the hook's notice below.
+    const outcome = await paywall.present();
+    if (outcome?.kind === 'purchased' || outcome?.kind === 'restored') {
       await resolve(complete);
-    } else if (outcome.kind === 'no_offering' || outcome.kind === 'unavailable') {
-      setPaywallUnavailable(true);
-    } else if (outcome.kind === 'error') {
-      setNote(`${HER_KEYS_PREMIUM_DISPLAY_NAME} couldn’t open right now. You can continue without it for now.`);
     }
     setBusy(null);
   };
@@ -94,10 +96,10 @@ export default function HerKeysPlus() {
       </AppText>
 
       <Card tone="subtle" style={styles.benefits}>
-        <Overline>Your journey continues</Overline>
-        {BENEFITS.map((benefit) => (
-          <AppText key={benefit} variant="body" style={styles.benefit}>
-            {benefit}
+        <Overline>Where Premium stands</Overline>
+        {PREMIUM_STATUS.map((line) => (
+          <AppText key={line} variant="body" style={styles.benefit}>
+            {line}
           </AppText>
         ))}
       </Card>
@@ -105,6 +107,8 @@ export default function HerKeysPlus() {
       <AppText variant="bodySm" color={colors.textTertiary} style={styles.reassurance}>
         Premium remains optional. You can explore plans again whenever you’re ready.
       </AppText>
+
+      <PaywallNoticeView notice={paywall.notice} style={styles.paywallNotice} />
 
       {note && (
         <AppText variant="bodySm" color={colors.textSecondary} style={styles.note} accessibilityRole="alert">
@@ -118,9 +122,7 @@ export default function HerKeysPlus() {
           onPress={onContinueWithoutPlus}
           disabled={busy !== null}
         />
-        {!paywallUnavailable && (
-          <Button label={`Explore ${HER_KEYS_PREMIUM_DISPLAY_NAME}`} onPress={onSeePlus} variant="secondary" disabled={busy !== null} />
-        )}
+        <Button label={`Explore ${HER_KEYS_PREMIUM_DISPLAY_NAME}`} onPress={onSeePlus} variant="secondary" disabled={busy !== null} />
         <Button
           label="Restore purchases"
           variant="ghost"
@@ -138,6 +140,7 @@ const styles = StyleSheet.create({
   benefits: { gap: spacing.sm },
   benefit: { marginTop: spacing.sm },
   reassurance: { marginTop: spacing.lg, marginBottom: spacing.xl },
+  paywallNotice: { marginBottom: spacing.md },
   note: { marginBottom: spacing.md },
   actions: { gap: spacing.md, marginTop: spacing.md, marginBottom: spacing.xxl },
 });
