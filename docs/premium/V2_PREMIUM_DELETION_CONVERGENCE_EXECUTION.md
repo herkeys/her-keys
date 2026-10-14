@@ -42,3 +42,20 @@ I. Native: iPhone + Android fresh/reinstall/existing-account, purchase/restore/c
 - Unified integration code: NOT MERGED.
 - Public paid launch: BLOCKED.
 - Production auto deletion: OFF.
+
+---
+
+## Backend deployment & safeguards — 2026-10-14 recorded update
+
+**Hosted evidence:** [PREMIUM_STAGE1_STAGING_EVIDENCE_20261014.md](PREMIUM_STAGE1_STAGING_EVIDENCE_20261014.md), plus addendum to `PREMIUM_STAGE1_LEDGER.md`. Does not change previously recorded source-level pass/fail results.
+
+- `STAGING_PREMIUM_EDGE_FUNCTIONS=PASS`: all five Staging functions ACTIVE v1, JWT on for `premium-gate`, `premium-reconcile`, `smart-inbox-extract`; JWT off and custom authentication in `revenuecat-webhook`, `premium-ops`. Exact imported-file closure and deployed SHA-256 recorded in evidence.
+- `STAGING_PUBLIC_AUTH_NEGATIVE_GET=PASS`: 401/401/401/405/405 (HTTP requests 340–344). `STAGING_UNCONFIGURED_WEBHOOK_AND_OPS=BLOCKED`: the custom-authenticated endpoints return `503 not_configured` on both missing and invalid credentials (POST 346–349). This is a **fail-closed** response, not passing 401 after valid credentials.
+- `STAGING_RLS_RPC_SECURITY=PASS`: 11 RLS-forced tables, zero anonymous grants, four allowed authenticated RPCs, no fixture helper.
+- `PRODUCTION_PREMIUM_SECURITY=PASS` (read-only): 11 RLS-forced tables, zero anonymous grants, four authenticated RPCs, zero test fixtures, explicit structural CHECK; Premium and webhook OFF, deletion OFF.
+- `REVENUECAT_SANDBOX_WEBHOOK=BLOCKED`: dashboard must configure Authorization header and HMAC, and Staging Edge secrets must be set first. No insecure webhook registration was attempted.
+- `BACKEND_EVENT_MATRIX=BLOCKED`, `REAL_JWT_AUTH_MATRIX=BLOCKED`, `HOSTED_QUOTAS=NOT_RUN`, `OPERATIONS_REHEARSAL=BLOCKED`, `LIVE_SMART_INBOX_EVAL=NOT_RUN`.
+- `DELETION_PRIVACY_SIGNOFF=BLOCKED`: explicit deletion-owner issue [#9](https://github.com/herkeys/her-keys/issues/9). No deletion lifecycle source touched.
+- `PREMIUM_USER_FACING_INTEGRATION=NOT_RUN`: client integration and devices are the build/platform owner scopes; no premature Village or Co-Parent Plus release.
+
+**Next:** Owner sets Staging Edge secrets and RC Sandbox webhook credentials through dashboards, provider and platform owners furnish two authorized Staging test sessions. Backend agent then re-runs real security/receipt/quota/ops matrices and requests deletion-owner signoff. Production remains OFF.
