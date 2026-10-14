@@ -69,7 +69,7 @@ export function OcrReviewScreen({ visible, candidate, onUseValues, onManualEntry
 
   return (
     <Sheet visible={visible} onClose={onCancel} accessibilityLabel={COPY.reviewTitle}>
-      <ScrollView style={styles.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.scroll} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets showsVerticalScrollIndicator={false}>
         <Overline>{COPY.readByHerKeys}</Overline>
         <AppText variant="sectionTitle">{COPY.reviewTitle}</AppText>
         <AppText variant="body" color={colors.textSecondary} style={styles.intro}>

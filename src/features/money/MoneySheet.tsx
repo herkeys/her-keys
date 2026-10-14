@@ -52,7 +52,7 @@ export function MoneySheet(props: MoneySheetProps) {
 
   return (
     <Sheet visible={visible} onClose={onClose} accessibilityLabel={titleText}>
-      <ScrollView style={styles.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.scroll} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets showsVerticalScrollIndicator={false}>
         <AppText variant="sectionTitle">{titleText}</AppText>
         {notice ? (
           <View style={styles.block}>

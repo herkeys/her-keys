@@ -50,7 +50,7 @@ export function RecordTaskSheet({ visible, relation, recordTitle, renewBy, categ
 
   return (
     <Sheet visible={visible} onClose={onClose} accessibilityLabel={COPY.taskSheetTitle[relation]}>
-      <ScrollView style={styles.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.scroll} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets showsVerticalScrollIndicator={false}>
         <AppText variant="sectionTitle">{COPY.taskSheetTitle[relation]}</AppText>
         <AppText variant="supporting" color={colors.textSecondary} style={styles.block}>
           {COPY.taskSheetBody}

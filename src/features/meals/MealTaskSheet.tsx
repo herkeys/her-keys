@@ -42,7 +42,7 @@ export function MealTaskSheet({ visible, proposedDate, notice, busy, canWrite, o
 
   return (
     <Sheet visible={visible} onClose={onClose} accessibilityLabel={MEAL_COPY.taskSheetTitle}>
-      <ScrollView style={styles.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.scroll} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets showsVerticalScrollIndicator={false}>
         <AppText variant="sectionTitle">{MEAL_COPY.taskSheetTitle}</AppText>
         {notice ? (
           <View style={styles.block}>

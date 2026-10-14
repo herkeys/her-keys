@@ -9,6 +9,8 @@ on:
   push:
     branches:
       - integration/build2a-candidate
+      # iOS Build 2 candidate audit: the same gate on the audit branch's exact pushed SHA. Remove with the branch.
+      - audit/ios-build2-candidate
   workflow_dispatch:
 
 permissions:
