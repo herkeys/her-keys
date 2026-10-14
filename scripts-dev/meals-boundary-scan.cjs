@@ -923,6 +923,9 @@ const LATER_FEATURES = [
       ['src/features/talk-it-out/capture/fixForm.ts', 'SC-06: pure height rule for the capture Fix sheet scroll area (bounded by window height and font scale); no capture, approval or revision semantics change'],
       ['tests/talkItOutCapture.ui.test.mjs', 'SC-06: Fix sheet structure, small-screen and large-text regression; existing capture/apply semantics tests unchanged'],
       ['tests/systems/subject.sync.test.mjs', 'SC-01: pins the System child association through the existing sync projection/apply boundary; tests only'],
+      ['src/features/consent/ConsentFlow.tsx', 'SC-05: fail-closed recovery (Try again, Sign out, bounded read) and account-keyed consent state so token rotation never re-checks or unmounts the app; no consent policy, receipt or ledger change'],
+      ['tests/consentRecovery.test.mjs', 'SC-05: consent gate recovery, fail-closed, timeout and session-ownership regression; tests only'],
+      ['tests/support/consentGate/stubs.mjs', 'SC-05: scripted ledger/account/notification doubles for the real consent gate; tests only'],
     ],
   },
 
