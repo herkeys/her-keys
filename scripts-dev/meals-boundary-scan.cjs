@@ -926,6 +926,7 @@ const LATER_FEATURES = [
       ['src/features/consent/ConsentFlow.tsx', 'SC-05: fail-closed recovery (Try again, Sign out, bounded read) and account-keyed consent state so token rotation never re-checks or unmounts the app; no consent policy, receipt or ledger change'],
       ['tests/consentRecovery.test.mjs', 'SC-05: consent gate recovery, fail-closed, timeout and session-ownership regression; tests only'],
       ['tests/support/consentGate/stubs.mjs', 'SC-05: scripted ledger/account/notification doubles for the real consent gate; tests only'],
+      ['tests/platformParity/returningUserCopy.test.mjs', 'SC-04: pins account-panel copy to the implemented pristine-device adoption rule; lists the Welcome-owned strings it deliberately does not change; tests only'],
     ],
   },
 

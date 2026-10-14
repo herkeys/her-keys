@@ -21,8 +21,9 @@ export interface AccountPanelProps {
 
 /**
  * Your Account. Signing in is offered, never demanded: her household already works on this device, and an account is what
- * connects it to account-backed sync. Fresh-device household adoption is not implemented yet. Signing out keeps everything on this phone; the next sign-in of the same account
- * resumes it. Presentational only — the route supplies the actions, and they all go through AccountRuntime.
+ * connects it to account-backed sync. A new phone with nothing set up adopts the household the account already has and pulls its synced records; a phone that already
+ * holds its own household is never merged into one (the server refuses it). Signing out keeps everything on this phone; the next sign-in
+ * of the same account resumes it. Presentational only — the route supplies the actions, and they all go through AccountRuntime.
  */
 export function AccountPanel({ mode, providers, busy, failed, onSignIn, onSignOut, onClose, onRestore, restoring = false, restoreNotice }: AccountPanelProps) {
   const copy = COPY[mode];
@@ -76,7 +77,7 @@ const COPY: Record<AccountModalMode, { overline: string; title: string; lede: st
   signIn: {
     overline: 'Your account',
     title: 'Connect your\naccount.',
-    lede: 'Your information stays on this phone. Signing in connects eligible records to your account, but restoring this household on a new phone is not available yet.',
+    lede: 'Your information stays on this phone. Signing in connects eligible records to your account. On a new phone with nothing set up yet, signing in to an existing account brings its synced records here.',
   },
   reconnect: {
     overline: 'Reconnect',
@@ -86,7 +87,7 @@ const COPY: Record<AccountModalMode, { overline: string; title: string; lede: st
   connected: {
     overline: 'Your account',
     title: 'Your account\nis connected.',
-    lede: 'Your household is connected to this account on this phone. Eligible records can sync. New-phone household restoration is not available yet; signing out keeps this phone’s information.',
+    lede: 'Your household is connected to this account on this phone, and eligible records sync to it. On a new phone with nothing set up yet, signing in to this account brings those synced records here. Signing out keeps this phone’s information.',
   },
   resolving: {
     overline: 'Your account',
