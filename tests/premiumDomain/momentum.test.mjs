@@ -62,6 +62,24 @@ describe('MOM-PERIOD — the actual reporting period', () => {
     assert.equal(c.tasksCompleted, 2);
   });
 
+  test('a record from the FUTURE cannot change what already happened (a later "reopened" does not un-finish a task)', () => {
+    const rows = [done('a', '2026-09-26'), done('b', '2026-09-26'), done('c', '2026-09-27'), done('d', '2026-09-28'), done('e', '2026-09-29'), obs('task', 'a', 'reopened', '2026-10-05')];
+    const r = review(rows);
+    assert.equal(r.status, 'ready');
+    assert.equal(r.counts.tasksCompleted, 5);
+  });
+
+  test('a pattern stands on the whole four-week lookback, not just the seven days being reported', () => {
+    const older = [defer('slow', '2026-09-05', '2026-09-05', '2026-09-06'), defer('slow', '2026-09-12', '2026-09-12', '2026-09-13'), defer('slow', '2026-09-19', '2026-09-19', '2026-09-20')];
+    const recent = ['24', '25', '26', '27', '28'].map((d, i) => done(`r${i}`, `2026-09-${d}`));
+    const r = review([...older, ...recent]);
+    assert.equal(r.status, 'ready');
+    assert.equal(r.counts.postponements, 0, 'none of them is in this week');
+    const pattern = r.patterns.find((p) => p.kind === 'repeated_postponement');
+    assert.equal(pattern.tier, 'likely');
+    assert.equal(pattern.sightings, 3);
+  });
+
   test('a record from the FUTURE never enters a review', () => {
     const r = review([done('a', '2026-10-05'), done('b', '2026-10-06')]);
     assert.equal(r.status, 'insufficient_history');
@@ -151,6 +169,23 @@ describe('MOM-ATTRIBUTION — approved suggestions are not postponements, and ar
     assert.equal(c.totalEvents, 2);
   });
 
+  test('two approved moves each claim THEIR OWN observation — neither is left behind as her postponement', () => {
+    const d1 = decision({ id: 'dec-a', taskId: 't1' });
+    // Both decisions' windows cover both observations, and the SECOND decision is nearest the FIRST observation: only the rule that an
+    // observation is claimed once sends it to the other one.
+    const d2 = decision({ id: 'dec-b', taskId: 't1', proposedAtMs: Date.parse('2026-09-28T15:55:00Z'), appliedAtMs: Date.parse('2026-09-28T16:00:03Z'), updatedAtMs: Date.parse('2026-09-28T16:00:03Z') });
+    const first = defer('t1', '2026-09-28', '2026-09-28', '2026-09-29', { occurredAt: '2026-09-28T16:00:05.000Z' });
+    const second = defer('t1', '2026-09-28', '2026-09-28', '2026-09-29', { occurredAt: '2026-09-28T16:00:09.000Z' });
+    const c = countsOf([first, second], [d1, d2]);
+    assert.equal(c.postponements, 0);
+    assert.equal(c.suggestionsApplied, 2);
+  });
+
+  test('a move from a DIFFERENT starting day is not claimed even when it ends on the same day', () => {
+    const fromElsewhere = defer('t1', '2026-09-28', '2026-09-27', '2026-09-29', { occurredAt: '2026-09-28T16:00:05.000Z' });
+    assert.equal(countsOf([fromElsewhere], [decision()]).postponements, 1);
+  });
+
   test('a move to an EARLIER day writes no observation: the decision alone is the record', () => {
     const c = countsOf([], [decision({ afterDate: '2026-09-27' })]);
     assert.equal(c.suggestionsApplied, 1);
@@ -207,9 +242,9 @@ describe('MOM-COUNTS — what is counted, and only that', () => {
   });
 
   test('"finished after postponing" counts only tasks she actually postponed before finishing', () => {
-    const c = countsOf([defer('a', '2026-09-20', '2026-09-20', '2026-09-21'), done('a', '2026-09-26'), done('b', '2026-09-26')]);
-    assert.equal(c.finishedAfterPostponing, 1);
-    assert.equal(c.tasksCompleted, 2);
+    const c = countsOf([defer('a', '2026-09-20', '2026-09-20', '2026-09-21'), done('a', '2026-09-26'), done('b', '2026-09-26'), done('c', '2026-09-27')]);
+    assert.equal(c.finishedAfterPostponing, 1, 'only "a" had been put off');
+    assert.equal(c.tasksCompleted, 3);
   });
 });
 
@@ -391,6 +426,16 @@ describe('MOM-SNAPSHOT — what is kept after the review is generated', () => {
     const snapshot = toSnapshot(review(rows));
     assert.ok(new TextEncoder().encode(JSON.stringify(snapshot)).length <= THRESHOLDS.snapshotMaxBytes);
     assert.ok(snapshot.patterns.length <= THRESHOLDS.maxPatterns);
+  });
+
+  test('a receipt she could not read back is never written: an over-long reference makes the snapshot null', () => {
+    seq = 0;
+    const longId = 'x'.repeat(200);
+    const rows = [defer(longId, '2026-09-24', '2026-09-24', '2026-09-25'), defer(longId, '2026-09-26', '2026-09-26', '2026-09-27'), defer(longId, '2026-09-28', '2026-09-28', '2026-09-29'), ...['a', 'b', 'c'].map((id) => done(id, '2026-09-25'))];
+    const r = review(rows);
+    assert.equal(r.status, 'ready');
+    assert.ok(r.patterns.length > 0);
+    assert.equal(toSnapshot(r), null);
   });
 
   test('a tampered, extended or older-version snapshot is "not a report", never a guess', () => {

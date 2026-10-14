@@ -73,9 +73,9 @@ export function toSnapshot(report: MomentumReport): SavedReport | null {
     evidence: { observations: report.evidence.observationIds.length, decisions: report.evidence.decisionIds.length, truncated: report.evidence.truncated },
     generatedAtMs: report.generatedAtMs,
   };
-  // Never overflow the ledger column: drop the weakest patterns (they are last) until it fits.
-  while (sizeOf(saved) > THRESHOLDS.snapshotMaxBytes && saved.patterns.length > 0) saved.patterns = saved.patterns.slice(0, -1);
-  return sizeOf(saved) <= THRESHOLDS.snapshotMaxBytes ? saved : null;
+  // Never write a receipt she could not read back: it must satisfy the same strict schema the reader enforces, and fit the ledger column.
+  // (Counts and the pattern cap bound the size in practice; an unexpectedly long reference is the case this refuses.)
+  return SavedReportSchema.safeParse(saved).success && sizeOf(saved) <= THRESHOLDS.snapshotMaxBytes ? saved : null;
 }
 
 /** Strict: an unknown shape, an older version or a tampered value is "not a report", never a guess. */

@@ -942,6 +942,37 @@ const LATER_FEATURES = [
       ['tests/platformParity/returningUserCopy.test.mjs', 'SC-04: pins account-panel copy to the implemented pristine-device adoption rule; lists the Welcome-owned strings it deliberately does not change; tests only'],
     ],
   },
+  {
+    id: 'HK-PREMIUM-STAGE1 (Her Keys Premium Stage 1)',
+    // Committed on feature/herkeys-premium-stage1 (off c660e59), which already contains the integration lanes registered above: naming the branch here
+    // would make check H report every integration claim as "already held by this branch". So it is registered like the other lanes committed on the line.
+    branch: null,
+    owned: [
+      /^src\/domain\/premium\//, /^src\/features\/(momentum|smart-inbox)\//, /^src\/features\/daily-load\/premium\//,
+      /^src\/monetization\/(PremiumStateProvider\.tsx|premium[A-Z]\w+\.ts)$/,
+      /^supabase\/migrations\/2026101512\d+_premium_entitlement_foundation\.sql$/, /^supabase\/migrations\/2026101513\d+_premium_decision_ledger\.sql$/,
+      /^supabase\/tests\/(8[23]-premium|helpers\/30-premium|premium-|run-premium)/,
+      /^tests\/(premium|premiumDomain)\//, /^tests\/support\/(premium\/harness\.mjs|premiumDomain\.mjs|premiumLedger\.mjs)$/,
+      /^docs\/premium\//, /^scripts-dev\/smart-inbox-/,
+    ],
+    // Additive Premium-only tables and functions, created by the two migrations above and never synced: they are server authority over entitlement,
+    // usage and receipts, not household data, so no sync kind, root collection or domain schema is added.
+    migrations: [
+      'supabase/migrations/20261015120000_premium_entitlement_foundation.sql',
+      'supabase/migrations/20261015130000_premium_decision_ledger.sql',
+    ],
+    // SavedReportSchema validates a Momentum review snapshot stored as a decision-ledger receipt (aggregate counts and typed references). It is a
+    // receipt-reader schema, not a household entity: nothing in AppState, no collection and no sync kind uses it.
+    schemas: ['SavedReportSchema'],
+    rootCollections: [],
+    syncKinds: [],
+    shared: [
+      ['src/features/talk-it-out/capture/CaptureContext.tsx', 'Premium Stage 1 (Smart Inbox): the capture provider hands the coordinator an optional Premium reader read from a tiny context (null where Premium is not mounted); Free capture imports nothing from the Premium provider'],
+      ['src/features/talk-it-out/capture/types.ts', 'Premium Stage 1 (Smart Inbox): two assumption codes (premium-reading, possible-duplicate) so a Premium reading and a possible duplicate are shown as assumptions, never as something she said'],
+      ['tests/support/captureWorld.mjs', 'Premium Stage 1 (Smart Inbox): the capture test world accepts an optional enhancer; every existing suite passes none'],
+      ['scripts-dev/meals-boundary-scan.cjs', 'Premium Stage 1: register this lane and its changed files'],
+    ],
+  },
 
 ];
 
