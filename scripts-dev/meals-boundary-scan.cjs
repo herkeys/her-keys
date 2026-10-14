@@ -1017,6 +1017,7 @@ const LATER_FEATURES = [
     ,"supabase/migrations/20261014014620_account_deletion_proof_retention.sql"
     ,"supabase/migrations/20261014015835_account_deletion_cancelled_history_cleanup.sql"
     ,"supabase/migrations/20261014021410_account_deletion_shared_provider_retry.sql"
+    ,"supabase/migrations/20261014112400_account_deletion_orphan_shared_ownership.sql"
   ],
   "schemas": [],
   "rootCollections": [],
@@ -1027,6 +1028,7 @@ const LATER_FEATURES = [
     ['supabase/migrations/20261014014620_account_deletion_proof_retention.sql', 'Apply owner-approved 365-day minimal terminal proof and daily expiry.'],
     ['supabase/migrations/20261014015835_account_deletion_cancelled_history_cleanup.sql', 'Remove cancelled account-linked deletion history when a later purge completes.'],
     ['supabase/migrations/20261014021410_account_deletion_shared_provider_retry.sql', 'Continue independent provider retries while explicit shared review remains pending.'],
+    ['supabase/migrations/20261014112400_account_deletion_orphan_shared_ownership.sql', 'Preserve another adult ownership even after membership removal; never infer transfer consent.'],
     ['supabase/functions/expire-account-deletion-proofs/index.ts', 'HMAC-authenticated daily expiry of minimal terminal proof; no customer purge authority.'],
     ['supabase/blueprints/account_deletion_retention_scheduler_upgrade.sql', 'Disabled daily retention scheduler upgrade for an existing lifecycle installation.'],
     ['supabase/blueprints/staging_deletion_storage_fixture.sql', 'Staging-only marked disposable-account upload policy; explicit teardown.'],
