@@ -1,0 +1,95 @@
+worktree C:/Users/jsmit/Her Keys
+HEAD 69af50f9339f9449e6286cd7c18d8cbc59ca43db
+branch refs/heads/feature/welcome-tree-auth-frontend
+
+worktree C:/Users/jsmit/.codex/worktrees/account-deletion/Her Keys
+HEAD fecc7e2cdc4af103eb5efe45a109350a7e6730f5
+branch refs/heads/codex/account-deletion
+
+worktree C:/Users/jsmit/.codex/worktrees/build2b-shared-closeout/Her Keys
+HEAD ad72ccd5b517a83bde5e7bbf3bf658193a667b82
+branch refs/heads/codex/build2b-shared-integration
+
+worktree C:/Users/jsmit/.codex/worktrees/herkeys-android-smoke/Her Keys
+HEAD 2641898b6f0b96a2e8b1d0340160fd6fe9cef404
+detached
+
+worktree C:/Users/jsmit/.codex/worktrees/v2-parity-closeout/Her Keys
+HEAD 30511749a1f06682b913ec2e0da552688584245f
+branch refs/heads/repair/v2-audit-safe-closeouts-20261008
+
+worktree C:/Users/jsmit/.codex/worktrees/v2-password-runtime/Her Keys
+HEAD 42f1673cd476d7513d10f872c2bf065475a0f5e4
+branch refs/heads/feature/herkeys-email-password-20261008
+
+worktree C:/Users/jsmit/.codex/worktrees/v2-premium-pass-a/Her Keys
+HEAD 1a0d25e25b8ac0587b448eda392c7a12e6c682c0
+branch refs/heads/codex/v2-premium-pass-a
+
+worktree C:/Users/jsmit/Her-Keys-B2A
+HEAD 68f95096dfeab85404b2f65e196ddfbee85fe86b
+branch refs/heads/integration/build2a-candidate
+
+worktree C:/Users/jsmit/Her-Keys-B2SC
+HEAD c660e5927c934f7bd2c172df5fb691e2075d40ee
+branch refs/heads/integration/build2-shared-consumer-repair
+
+worktree C:/Users/jsmit/Her-Keys-CAL01
+HEAD 11c50bedabfdfaeb43f052d753c34845081fe1d5
+branch refs/heads/refinement/weather-calendar-scaffold
+
+worktree C:/Users/jsmit/Her-Keys-EI01
+HEAD 8eaaba1003cb787317ccd51dcedcf366e4ea8452
+branch refs/heads/docs/hk-external-intelligence-prebuild
+
+worktree C:/Users/jsmit/Her-Keys-F01-F13
+HEAD 6cc0d7754f2f8018681d9a0843b5dbeca84cb059
+branch refs/heads/integration/f01-f13-convergence
+
+worktree C:/Users/jsmit/Her-Keys-F09
+HEAD 17580d4b2feb8dab5a29925794eaced17aeb24a4
+branch refs/heads/feature/09-money-os
+
+worktree C:/Users/jsmit/Her-Keys-F10
+HEAD 8f2f7d4514d8509b126fb6d9fd3067680f8da425
+branch refs/heads/feature/10-work-career-os
+
+worktree C:/Users/jsmit/Her-Keys-F11
+HEAD 03585f99652c230c72fa1c213905be691a4daac1
+branch refs/heads/feature/11-me-rebuild-os
+
+worktree C:/Users/jsmit/Her-Keys-F12
+HEAD 54da29c0a8bef27ad51f05c805c316f29b55e974
+branch refs/heads/feature/12-life-admin-documents
+
+worktree C:/Users/jsmit/Her-Keys-F13
+HEAD 3eb2ba0e6f1aa9ee8fb1122da3575caf1553b10c
+branch refs/heads/feature/13-people-os
+
+worktree C:/Users/jsmit/Her-Keys-IOS01
+HEAD 925a9b445b75a3f34a7bd9a102167c65f6895f4b
+branch refs/heads/audit/ios-build2-candidate
+
+worktree C:/Users/jsmit/Her-Keys-OCR01
+HEAD 4b1e72e94ec2284954ee875d56f0b2e891e69c3f
+branch refs/heads/refinement/ocr-assist
+
+worktree C:/Users/jsmit/Her-Keys-P1
+HEAD e4462d2a5cb42706a8523f6ba45248ee9396d02e
+branch refs/heads/feature/herkeys-premium-stage1
+
+worktree C:/Users/jsmit/Her-Keys-PP01
+HEAD 2370229a3a58986d2a5ce6b43498f878c58a9f7c
+branch refs/heads/audit/ios-android-platform-parity
+
+worktree C:/Users/jsmit/Her-Keys-RG01
+HEAD 925d143cd40f4b471fad102174f3b876bd5727f6
+branch refs/heads/refinement/weather-device-location
+
+worktree C:/Users/jsmit/Her-Keys-W2I
+HEAD 363e473fdf053547a21a41a67b7f62bd9aa2bcdf
+branch refs/heads/integration/wave2-f01-f08
+
+worktree C:/Users/jsmit/Her-Keys-WA01
+HEAD dc56531a5457307471cbf996e0c3051dcc757047
+branch refs/heads/integration/welcome-tree-auth-runtime

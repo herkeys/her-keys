@@ -1,0 +1,16 @@
+.gitattributes
+app/_layout.tsx
+app/sign-in.tsx
+scripts-dev/meals-boundary-scan.cjs
+src/features/account/AccountPanel.tsx
+src/platform/appleProvider.ts
+supabase/config.toml
+supabase/tests/migration-chain.mjs
+tests/ios/appleNonce.test.mjs
+tests/localNotificationArchitecture.test.mjs
+tests/meals/boundary.test.mjs
+tests/migrationChain.test.mjs
+tests/support/googleAuth/expo-apple-authentication.mjs
+tests/support/googleAuth/expo-crypto.mjs
+tests/support/googleAuth/register.mjs
+tsconfig.json

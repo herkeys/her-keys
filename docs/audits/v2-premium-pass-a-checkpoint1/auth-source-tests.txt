@@ -1,0 +1,590 @@
+▶ secure session boundary
+  ✔ 1. the credential lives under its own key, never the household one (1.7288ms)
+  ✔ 2. a stored session round-trips, and every field is checked on the way back (1.9245ms)
+  ✔ 3. anything malformed is refused rather than half-trusted (11.1657ms)
+  ✔ 4. an unreadable credential is discarded; a store failure discards nothing (1.4756ms)
+  ✔ 5. expiry is reported, not acted on, by the store (0.4066ms)
+✔ secure session boundary (18.7988ms)
+▶ sign-in
+  ✔ 6. a cancelled sign-in returns her exactly where she was (7.8812ms)
+  ✔ 7. a misconfigured build is an unrecoverable auth error, a flaky provider a recoverable one (1.3157ms)
+  ✔ 8. a successful sign-in stores the credential and identifies the account before anything else (105.7377ms)
+  ✔ 9. an unknown provider is refused without reaching an adapter (0.6468ms)
+✔ sign-in (116.2835ms)
+▶ email/password shares the account boundary
+  ✔ confirmation-pending signup never creates a credential or a cloud household (1.2024ms)
+  ✔ confirmed password login adopts the exact same Supabase account binding path as Google/Apple (1.5845ms)
+  ✔ wrong password is a refusal; it does not bind, persist, or send records (0.505ms)
+✔ email/password shares the account boundary (3.6115ms)
+▶ bootstrap and claim
+  ✔ 10. an empty real household bootstraps and lands bound (1.2202ms)
+  ✔ 11. a real household with content claims, and carries its closure (2.4792ms)
+  ✔ 12. a demo household is never claimed, and stays usable (5.0097ms)
+  ✔ 13. the claim key is recorded BEFORE the request leaves (1.2002ms)
+  ✔ 14. the complete id map is durable before the account is called bound (1.011ms)
+  ✔ 15. a server refusal is not retried, and is recorded as the server worded it (0.7867ms)
+  ✔ 16. an unreachable server leaves a retryable receipt and no binding (0.5463ms)
+  ✔ 17. a retry reuses the SAME claim key rather than starting a second household (1.0503ms)
+  ✔ 18. a claim that succeeds but cannot be recorded stays retryable and does not claim to be bound (0.5786ms)
+  ✔ 19. an unreadable server answer is a failure, not an optimistic success (0.4878ms)
+✔ bootstrap and claim (15.1274ms)
+▶ fresh-device household adoption
+  ✔ an empty device durably binds the existing household with an unhydrated, empty outbound namespace (5.6346ms)
+  ✔ an invalid or missing cloud household id never binds (2.0276ms)
+  ✔ work created while bootstrap is in flight is preserved and prevents adoption (0.7136ms)
+  ✔ a failed adoption write stays unbound and preserves the retryable receipt and original namespace (0.9821ms)
+✔ fresh-device household adoption (9.7164ms)
+▶ restore, degrade, quarantine and switching
+  ✔ 20. a stored session restores and re-identifies the account (1.1641ms)
+  ✔ 21. an expired session degrades instead of signing her out, and local work continues (0.5792ms)
+  ✔ 22. a keychain that will not answer degrades a bound device rather than offering a fresh start (0.349ms)
+  ✔ 23. a second account is quarantined: nothing renders, nothing uploads, nothing is deleted (0.5679ms)
+  ✔ 24. signing out clears the credential but keeps the binding, so the same account resumes (1.1813ms)
+  ✔ 25. a RevenueCat failure never undoes a claim the server already committed (1.1083ms)
+✔ restore, degrade, quarantine and switching (5.4079ms)
+✔ all three required legal confirmations must match current document versions (33.0151ms)
+✔ AI consent is never inferred from Terms, account creation or a missing checkbox (1.7182ms)
+✔ latest decision wins, including withdrawal; a new AI policy requires fresh consent (0.3742ms)
+✔ server-side AI gateway enforces the same current version before provider invocation (3.2702ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-05 android: unreadable consent keeps the app closed and offers Try again and Sign out (64.5106ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-05 ios: unreadable consent keeps the app closed and offers Try again and Sign out (6.7584ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-05: Try again recovers once the network is back and only then opens the app (34.0574ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-05: Try again that fails again stays closed, says so, and can be repeated (18.5138ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-05: a double press of Try again makes one read, and a read that throws is a failure, not a hang (16.5787ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-05: an account that has not consented never reaches the app, and a consenting one does (9.933ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-05: Sign out is single-flight, disables the pair while pending and never opens the app (15.7454ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-05: a sign-out that fails does not crash the gate, leaves the app closed and gives the controls back (9.4972ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-05: a hung consent read is bounded: it becomes the recoverable error screen (6.8004ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-05 session ownership: a token rotation never re-checks consent or unmounts the open app (4.9984ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-05 session ownership: Try again uses the freshest tokens, not the ones the gate first saw (15.496ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-05 session ownership: another account never inherits the first account’s decision (9.301ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-05 session ownership: the app is never RENDERED for a new account before that account is confirmed (no one-frame leak) (12.4573ms)
+✔ SC-05 session ownership: a late answer for the previous account is ignored (5.734ms)
+▶ email OTP — requesting a code
+  ✔ 1. a request reaches the port and changes no account state (7.4066ms)
+  ✔ 2. RESEND is the same request again — and a rate-limit refusal is returned once, never retried (0.8078ms)
+  ✔ 3. every refusal comes back as itself: rejected, unreachable, and a port that throws anyway (2.8688ms)
+  ✔ 4. a build with no email backend refuses honestly, and never reaches a port (0.702ms)
+  ✔ 5. a code is only asked for from a state that could use one (5.8825ms)
+✔ email OTP — requesting a code (19.9083ms)
+▶ email OTP — verifying a code
+  ✔ 6. NEW EMAIL IDENTITY: a verified code bootstraps and lands bound — keyed on the Supabase user id, never the address (62.9356ms)
+  ✔ 7. PRIVACY: neither the address nor the code is stored, bound to, or reported — on success or on failure (2.4622ms)
+  ✔ 8. a code that is not accepted is not an account failure: she is exactly where she was, and may try again (1.7739ms)
+  ✔ 9. rate limit, network failure, no session, and a throwing port all leave the account untouched (1.0644ms)
+  ✔ 10. a verified code whose session cannot be activated is an account failure like any provider's — and nothing is stored (0.6605ms)
+✔ email OTP — verifying a code (69.6413ms)
+▶ email OTP — the same account rules as every other method
+  ✔ 11. RETURNING EMAIL IDENTITY: sign out, then the same email again — the same account, the same household, no second one (1.8186ms)
+  ✔ 12. one account, two methods: an email session for the SAME user id resumes the household an Apple sign-in bound (2.6703ms)
+  ✔ 13. BOUND_OTHER: an email code for another account on a bound device is quarantined — nothing renders, uploads, merges or is deleted (0.6617ms)
+  ✔ 14. ACCOUNT SWITCH by email: A → sign out → B is quarantined; back to A resumes A, with no claim sent for anyone (1.8505ms)
+  ✔ 15. AUTH DEGRADED: the same account reconnects by email and is bound again; the household never unbound in between (1.1788ms)
+  ✔ 16. AUTH DEGRADED, wrong actor: another account's code does not reconnect, replace or quarantine a degraded household (2.4462ms)
+✔ email OTP — the same account rules as every other method (11.4042ms)
+▶ stale answers — an authentication that outlives the state it started from
+  ✔ 17. a code check that returns after she signed out is dropped: no session is installed, stored, or bound (0.784ms)
+  ✔ 18. A's late provider answer cannot land on B: a superseded sign-in never becomes the account in force (2.4655ms)
+  ✔ 18b. A's answer arriving WHILE B is still signing in is dropped too: only the latest attempt may be answered (3.2178ms)
+  ✔ 19. a provider sheet cancelled or failed after a sign-out reports nothing and moves nothing (0.8758ms)
+✔ stale answers — an authentication that outlives the state it started from (7.7436ms)
+▶ email provenance in the credential store
+  ✔ 20. an email session round-trips; an unknown method is still refused rather than half-trusted (0.543ms)
+✔ email provenance in the credential store (0.7287ms)
+▶ requesting a code
+  ✔ sends exactly the passwordless request: the address as typed, sign-up allowed, and no redirect (4.9391ms)
+  ✔ a resend is the same request again, one call per press (0.502ms)
+  ✔ Supabase's real refusals are named for what they are (1.8841ms)
+  ✔ a client that throws is unreachable, and the thrown text goes nowhere (0.5743ms)
+✔ requesting a code (10.4365ms)
+▶ verifying a code
+  ✔ sends exactly the email verification and maps the session through the existing mapping, keyed on the user id (1.3812ms)
+  ✔ a wrong code and an expired code are one answer from Supabase, and are reported as one (0.5822ms)
+  ✔ other failures are not mistaken for a bad code (2.0474ms)
+  ✔ no session, or a user id that is not a uuid, is a failure — never a half-trusted success (1.5276ms)
+✔ verifying a code (7.7539ms)
+▶ nothing sensitive leaves through a result
+  ✔ no result ever carries Supabase's message, the address, or the code (1.2297ms)
+  ✔ the adapter logs nothing, persists nothing, and reads no secret from the environment (3.4597ms)
+  ✔ email rides the isolated provider client, and the welcome tree never calls the auth service itself (1131.8275ms)
+✔ nothing sensitive leaves through a result (1137.4977ms)
+▶ Supabase email/password adapter
+  ✔ signup under Confirm Email produces NO session and no invented account (3.9248ms)
+  ✔ confirmed sign-in gives the existing account runtime a mapped session (4.4998ms)
+  ✔ signup with Confirm Email off may receive an actual session (0.6637ms)
+  ✔ auth errors are code-only and do not leak email or passwords (1.1772ms)
+  ✔ timeout/service exceptions are bounded refusals, not sessions (1.9742ms)
+✔ Supabase email/password adapter (14.7551ms)
+▶ 1. iOS and Android execute the same Google OAuth path
+  ✔ the real provider produces an identical call trace and result on ios and android, and never reads Platform.OS (4.7055ms)
+  ✔ availability is the same on both platforms and needs no platform Google client id (0.7345ms)
+  ✔ the old per-platform OIDC machinery is gone from the identity path (2.7231ms)
+  ✔ no Google client id config remains for availability to depend on (1204.5794ms)
+  ✔ web is isolated at the composition root, not branched inside the provider (2.9314ms)
+✔ 1. iOS and Android execute the same Google OAuth path (1217.7986ms)
+▶ 2. the identity redirect is exactly herkeys://auth/callback
+  ✔ the constant, the Supabase request and the auth session all use it verbatim (0.7312ms)
+  ✔ the literal appears exactly once in client source — the one constant (906.9335ms)
+  ✔ only the exact route is accepted as the callback (0.5407ms)
+  ✔ a return to any other route is refused and nothing is exchanged (0.9544ms)
+  ✔ Android: the identity guard ignores only the identity callback; the router composes it (PP-D01 adds Calendar there) (3.6617ms)
+✔ 2. the identity redirect is exactly herkeys://auth/callback (913.4913ms)
+▶ 3 & 4. identity and Calendar redirects never cross
+  ✔ Google identity never uses herkeys://calendar-connected (4.2437ms)
+  ✔ Calendar never uses herkeys://auth/callback, and still uses its own route (6.2766ms)
+✔ 3 & 4. identity and Calendar redirects never cross (10.7491ms)
+▶ 5. no Google client secret exists in client code
+  ✔ no secret-shaped Google material in app source, public env or app config (472.004ms)
+  ✔ the identity request sends no secret of any kind (0.7283ms)
+✔ 5. no Google client secret exists in client code (472.9752ms)
+▶ 6. no token is persisted outside the existing secure-session boundary
+  ✔ the identity path imports no storage and writes nothing (2.1594ms)
+  ✔ the Supabase client keeps no session of its own and runs PKCE (1.3143ms)
+  ✔ the provider hands the session back only as a ProviderResult for the account runtime to own (1.5561ms)
+  ✔ a callback carrying tokens in the URL (implicit flow) is refused, never installed (1.5499ms)
+✔ 6. no token is persisted outside the existing secure-session boundary (7.0526ms)
+▶ 7. cancellation returns cancelled
+  ✔ an auth session that ends as cancel is cancelled on both platforms, with no exchange (0.8219ms)
+  ✔ an auth session that ends as dismiss is cancelled on both platforms, with no exchange (0.3415ms)
+✔ 7. cancellation returns cancelled (1.3834ms)
+▶ 8. provider / OAuth failure returns providerError
+  ✔ Supabase refuses to start the flow (0.7728ms)
+  ✔ Supabase returns no URL (0.2326ms)
+  ✔ signInWithOAuth throws (0.4106ms)
+  ✔ the auth session throws (0.4542ms)
+  ✔ the auth session is locked (0.3115ms)
+  ✔ Google denies access (query) (0.345ms)
+  ✔ Supabase reports an error (fragment) (0.2862ms)
+  ✔ the callback has no code (0.2947ms)
+  ✔ the code exchange fails (0.319ms)
+  ✔ the code exchange throws (0.3398ms)
+  ✔ the exchange yields no session (0.2417ms)
+  ✔ the account id is not a uuid (0.1933ms)
+  ✔ callback parsing: first value wins, both halves are read, malformed escapes are dropped (0.267ms)
+✔ 8. provider / OAuth failure returns providerError (5.1711ms)
+▶ 9. a successful OAuth return produces the same AccountSession shape as Apple
+  ✔ Google and Apple map one Supabase session to structurally identical AccountSessions (2.6403ms)
+  ✔ both go through the one sessionMapping boundary (2.6938ms)
+✔ 9. a successful OAuth return produces the same AccountSession shape as Apple (5.5025ms)
+▶ 10. no platform-specific Google redirect branch remains
+  ✔ the identity files never import react-native or mention a platform (1.6947ms)
+  ✔ there is no platform-suffixed Google provider file for Metro to pick instead (0.7828ms)
+✔ 10. no platform-specific Google redirect branch remains (2.8715ms)
+▶ the REAL supabase-js client: PKCE round trip with persistSession off
+  ✔ authorize URL, verifier/challenge pairing, in-memory session, and single-use code (99.0063ms)
+✔ the REAL supabase-js client: PKCE round trip with persistSession off (99.3126ms)
+▶ IOS-D01 the Apple request and the Supabase exchange share one nonce
+  ✔ Apple is sent the SHA-256 hex digest; Supabase is sent the raw nonce that digests to it (14.1432ms)
+  ✔ the raw nonce has at least 128 bits of entropy (32 random bytes) (1.1159ms)
+  ✔ every attempt gets a fresh nonce (0.8161ms)
+  ✔ the existing scopes are unchanged (name and email are still requested) (1.8416ms)
+✔ IOS-D01 the Apple request and the Supabase exchange share one nonce (20.35ms)
+▶ IOS-D01 failure handling
+  ✔ without a secure random source it fails CLOSED: no Apple sheet, no Supabase call, no unbound fallback (0.8659ms)
+  ✔ cancelling the Apple sheet is a cancellation, not an error, and nothing reaches Supabase (0.8332ms)
+  ✔ a provider failure from Apple is a providerError (0.6499ms)
+  ✔ a nonce mismatch rejected by Supabase is a providerError that carries neither nonce nor token (0.6208ms)
+  ✔ a success result carries no nonce anywhere (0.5734ms)
+  ✔ a missing identity token is still refused before Supabase (0.539ms)
+✔ IOS-D01 failure handling (4.8306ms)
+▶ IOS-D01 source guard
+  ✔ the nonce comes from expo-crypto, never from Math.random or Date (0.3659ms)
+  ✔ the provider never logs (a nonce or token must not reach any console) (0.1665ms)
+  ✔ both halves of the contract are in the one file (0.2483ms)
+✔ IOS-D01 source guard (0.9737ms)
+▶ isolated in-app password recovery
+  ✔ cannot update before recovery verification, then updates and closes the temporary session (5.6442ms)
+  ✔ invalid, expired and misbound verification cannot authorize a password change (1.2365ms)
+  ✔ requests do not reveal whether an account exists (0.74ms)
+  ✔ a failed password update does not falsely report success (0.5598ms)
+  ✔ unconfigured client fails closed (0.494ms)
+✔ isolated in-app password recovery (11.6218ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+▶ PP-D04 — Your Account is reachable for every household this device holds under an account
+  ✔ 1. a signed-out device signs in at the entry route, not in Your Account; the account model still names that state (1.8886ms)
+  ✔ 2. an accountBound user can open Your Account, and Today offers "Your account" (0.3098ms)
+  ✔ 5. an authDegraded user reaches Reconnect, and keeps the app (0.2258ms)
+  ✔ Your Account opens before onboarding finishes too, for a held household, without opening the app (0.233ms)
+  ✔ the entry opens the one existing route, and the modal route is the one guarded here (0.179ms)
+✔ PP-D04 — Your Account is reachable for every household this device holds under an account (4.7834ms)
+▶ PP-D04 — quarantine is not weakened
+  ✔ 6. boundOther cannot open Your Account, the app, or anything but account-conflict (0.3974ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ 6b. even rendered in quarantine, the panel offers no provider and no Sign out (37.824ms)
+  ✔ account-conflict is still the only screen that signs a quarantined device out (5.2079ms)
+✔ PP-D04 — quarantine is not weakened (43.9453ms)
+▶ PP-D21 — a provider flow in flight does not collapse the navigator
+  ✔ while authenticating, the screen running the flow stays open: the entry route, for a first sign-in (0.8488ms)
+  ✔ a reconnect in flight keeps Your Account and the app: the account stays degraded, and bound, until the same account returns (0.3318ms)
+  ✔ authenticating routes exactly like the signed-out state it started from (0.3342ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ resolving states keep the entry mounted, open nothing account-held, and offer nothing contradictory (9.3325ms)
+✔ PP-D21 — a provider flow in flight does not collapse the navigator (11.349ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+▶ PP-D04 — the Your Account panel
+  ✔ 3. connected: Sign out is offered and calls the supplied runtime action exactly once (5.2473ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ sign in: every available provider is offered; a failure says so and keeps the providers (3.9928ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ busy disables the account actions (4.6866ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ no customer-facing account id, token or backend term is shown in any mode (18.432ms)
+✔ PP-D04 — the Your Account panel (33.0185ms)
+▶ PP-D04 — sign-out and switching go through AccountRuntime
+  ✔ 4. the account surface never touches storage, sessions or Supabase; sign-out is useAccount → accountRuntime.signOut (19.0548ms)
+  ✔ 9. logout → sign in again: a bound device signs out, keeps its household and binding, and can sign straight back in (57.0479ms)
+  ✔ 10. account switch = Sign out, then Sign in as another account: the existing quarantine applies, nothing merges (8.6871ms)
+✔ PP-D04 — sign-out and switching go through AccountRuntime (85.0896ms)
+▶ PP-D04 — the Today entry, the same on iOS and Android
+  ✔ 7. Today renders the account entry beside its existing shell notices (4.2135ms)
+  ✔ 8. no platform input anywhere in account access (6.6958ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ the entry button opens Your Account, and renders nothing where no entry applies (5.9377ms)
+  ✔ a build with no account backend shows no entry (nothing it could open would work) (0.231ms)
+✔ PP-D04 — the Today entry, the same on iOS and Android (17.4228ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+▶ PP-D03 — the Apple cross-platform limitation is disclosed where Apple is offered
+  ✔ 7. iOS (Apple offered): the provider choice carries the cross-platform note (3.7141ms)
+  ✔ 3. Android (Apple not offered): no Apple action and no note (2.8551ms)
+  ✔ the note is not shown where she must return to the same account, or where no choice is offered (0.3496ms)
+✔ PP-D03 — the Apple cross-platform limitation is disclosed where Apple is offered (7.1966ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ B2B-N02 android: persistent account restore is reachable after onboarding and reports each outcome (173.294ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ B2B-N02 ios: persistent account restore is reachable after onboarding and reports each outcome (58.5086ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ B2B-N02: a pending restore is single-flight, disables contradictory actions, and ignores another account’s late result (27.8771ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ B2B-N02: throwing restore is recoverable and unmount never reports success to a new screen (23.6235ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ B2B-N02: reconnect, quarantine and busy account states cannot initiate restoration (22.2124ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-02 android: the control restores for the bound account, reports each outcome and tells its host when it is busy (64.5435ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-02 ios: the control restores for the bound account, reports each outcome and tells its host when it is busy (12.6979ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-02: the host is told while a restore is pending, and again when it ends (9.7262ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-02: nothing renders, and nothing can start, without a bound account (3.5653ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-02: a blocked host cannot start a restore (8.5705ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-02: loading state is single-flight and another account never receives the late result (9.0389ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-02: a restore that throws is recoverable, and an unmounted control ignores a late result (7.462ms)
+✔ SC-02: outcome words never leak an SDK message and cover every outcome kind (0.6962ms)
+✔ B2B-N02: anonymous and mismatched SDK identities never restore, open checkout, or expose entitlements (16.4143ms)
+✔ B2B-N02 android: correct identity restores only the canonical entitlement and recovers from store errors (3.0481ms)
+✔ B2B-N02 ios: correct identity restores only the canonical entitlement and recovers from store errors (0.7178ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ B2B-N02: account switching waits for the store transaction, and the previous account cannot restore afterward (15.5761ms)
+✔ B2B-N02: failed identity change clears prior restore authority, even if the SDK retains old data (0.9916ms)
+✔ B2B-N02: actual entitlement provider refreshes canonical CustomerInfo through its existing restore boundary (47.3043ms)
+▶ Route access
+  ✔ until state has loaded, nothing opens — protected or not (2.7075ms)
+  ✔ SESSION RESTORE: until the stored session is resolved nothing opens — not Welcome, not the audit, not the app (2.2869ms)
+  ✔ WELCOME REQUIRES AUTH BEFORE THE AUDIT: without an account, the welcome tree is the only screen — whatever onboarding says (1.0952ms)
+  ✔ SIGNED-OUT ONBOARDING GUARD: a deep link into the audit, or the app, is refused for a signed-out device (3.1774ms)
+  ✔ a signed-in session is not yet a held household: nothing account-held opens while ownership is still being decided (0.8556ms)
+  ✔ with onboarding unfinished, a held household is handed on to the audit and every app link is refused (0.5465ms)
+  ✔ RETURNING USER BYPASS: with onboarding finished, a held household opens the app — and neither Welcome nor the audit (0.5933ms)
+  ✔ recovery routes exactly like ready (3.9213ms)
+  ✔ AUTH DEGRADED: a bound account whose credential lapsed keeps its household locally and can reach Your Account to reconnect (0.7023ms)
+  ✔ PP-D04: a normally bound account can open Your Account (sign-in) to sign out; quarantine still opens only the conflict screen (3.2652ms)
+  ✔ PP-D21: a sign-in in flight keeps the screen it is running on (the root stack never empties mid sign-in) (0.5907ms)
+  ✔ a link cannot skip past an onboarding choice (2.3778ms)
+  ✔ internal tools open only in internal builds, independent of onboarding and of the account (0.5939ms)
+  ✔ NO GUEST PATH: in a release build, no state opens the audit or the app without a held household (2.902ms)
+  ✔ NO "WELCOME SEEN" PERSISTENCE: whether Welcome shows is derived from account, hydration and onboarding state alone (764.8038ms)
+  ✔ links resolve to the root screen whose guard applies (0.4015ms)
+  ✔ every root route is in the guard table, and the root layout wraps each one in its own guard (2.4023ms)
+  ✔ the root stack never names a guarded screen as its fixed initial route (0.6622ms)
+  ✔ ONE ROUTING AUTHORITY: no navigator mounts before the account settles, and the screens add no auth redirects of their own (15.5353ms)
+✔ Route access (813.4206ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+▶ the first run: Welcome → Premium offer → account choice → authenticate
+  ✔ Get Started shows the Premium offer BEFORE any account method, and both decisions go on to the account choice (63.0879ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ NO GUEST PATH: the tree offers account methods and nothing else — no skip, no guest, no "not now" (13.1779ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ iOS Apple choice remains visible without waiting for provider discovery (12.9078ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ ANDROID offers Google and email, and never Apple; IOS offers Apple, Google and email, with the Apple disclosure (29.7293ms)
+✔ the first run: Welcome → Premium offer → account choice → authenticate (121.3352ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+▶ email/password through the same runtime
+  ✔ the ONE visible email choice opens sign-in/password directly, not the code screen (25.4901ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ the new choice is offered and verified sign-in binds the real account (67.5658ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ reconnect permits email/password login, not registration as another person (15.3006ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ signup requiring email confirmation never binds a household (56.8076ms)
+✔ email/password through the same runtime (166.0259ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+▶ Google and Apple, through the runtime
+  ✔ GOOGLE SUCCESS: the tap becomes the runtime's sign-in, and a new account is bootstrapped and bound (37.58ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ APPLE SUCCESS on iOS takes the same path to the same kind of account (31.3091ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ CANCELLATION is not a failure: back at the account choice with no banner, no error state, and nothing mutated (60.3361ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ PROVIDER ERROR is calm and recoverable: one quiet line, nothing changed, and the next attempt works (42.8575ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ a method this device cannot run fails the same calm way (Apple tapped where the adapter is unavailable) (30.665ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ BOUND_OTHER: another account on a bound device is quarantined by the runtime; the tree shows no error and reveals nothing (31.247ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ a sign-in whose binding did not finish says so, and choosing a method again starts clean and completes (33.9263ms)
+✔ Google and Apple, through the runtime (269.0549ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+▶ email, through the runtime
+  ✔ EMAIL OTP END TO END: address → real request → code step → real verify → bound, keyed on the user id (43.97ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ an obviously malformed address never leaves the device (18.7144ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ a send that fails is one calm inline line, the address stays, and trying again asks again — once per press (114.9064ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ an address the auth service itself refuses as invalid reads as an invalid address (21.4045ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ WRONG OR EXPIRED CODE: one honest inline line (the service does not say which), still on the code step, and the next code works (43.8511ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ a code check that cannot reach the service, or is rate limited, is the calm generic line — not "wrong code" (76.3226ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ RESEND: a visible 30-second courtesy cooldown, then the same real request again; a rate-limit refusal is shown, never retried (12.1914ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ CHANGE EMAIL returns to the address step with what she typed, and a new address is what gets asked for (8.0006ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ a verified code for ANOTHER account on a bound device is quarantined, exactly as a provider sign-in is (10.5563ms)
+✔ email, through the runtime (351.1714ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+▶ back, on screen and on the Android hardware key
+  ✔ each step goes back one step, the address survives, and Welcome is the root (9.0208ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ hardware Back follows the same rule, and at Welcome it is left to the system — there is no audit behind it to fall into (12.8077ms)
+  ✔ the hardware listener is removed with the screen (1.3684ms)
+✔ back, on screen and on the Android hardware key (23.4727ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+▶ reconnect: a bound household whose credential lapsed
+  ✔ it opens on the calm reconnect header and the same choice — no Welcome, no back, and no "choose Google" nudge (2.6413ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ AN EMAIL ACCOUNT CAN RECONNECT: code step, verify, and the same account is bound again with no claim (9.9043ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ another account's code does not reconnect it: back at the reconnect choice, calmly, with the household still hers (6.4245ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ a provider reconnect for the same account recovers it in place (3.3849ms)
+✔ reconnect: a bound household whose credential lapsed (22.6873ms)
+▶ the controller model, pure
+  ✔ the first run starts at Welcome; a reconnect starts at the choice, which is its root (0.2579ms)
+  ✔ only one thing is ever in flight: a second start while waiting is ignored (0.1293ms)
+  ✔ Get Started goes to the Premium offer; I Already Have an Account goes straight to sign-in, skipping it (0.1127ms)
+  ✔ a cancellation never sets the failure line; an auth error or an unfinished binding does (0.0983ms)
+  ✔ the view never invents settling or conflict, and the cooldown is whole seconds that end in null (0.1999ms)
+  ✔ the model holds no code: no event carries one, and no state field could keep one (1.333ms)
+✔ the controller model, pure (2.2999ms)
+▶ settling, and the production wiring behind the stand-in
+  ✔ SETTLING shows the shell's own progress presentation: no step, no method, no Welcome, and nothing pressable (2.74ms)
+  ✔ the production provider forwards to the ONE runtime exactly as the test stand-in does, and derives `settled` from the restore (1.258ms)
+  ✔ the flow reaches the runtime only through useAccount, routes nothing, and touches no onboarding state (2.5272ms)
+✔ settling, and the production wiring behind the stand-in (6.6991ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+▶ Welcome and legacy Premium gallery preview
+  ✔ welcome offers exactly the two approved entry decisions (36.8526ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ the Premium offer records an intent and offers an equally visible free continuation (10.1015ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ the Premium offer never claims a purchase, a price, a plan or a trial (4.7922ms)
+  ✔ the welcome tree cannot start a checkout: no RevenueCat, Purchases or paywall anywhere under it (25.9778ms)
+✔ Welcome and legacy Premium gallery preview (80.2705ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+▶ provider set and order are a platform decision
+  ✔ Android offers Google + email, and never Apple (11.7898ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ iOS offers Apple + Google + email, Apple before Google (7.3295ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ account choice exposes both public Her Keys legal PDFs on both platforms (29.1653ms)
+  ✔ account-choice copy never promises unsupported new-device restoration (2.1497ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ one email choice opens password; legacy OTP has no direct selection (6.6126ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ unified email page offers Sign In / Sign Up tabs with masked password (9.6347ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ after a sign-up that needs email confirmation, and only then, she can move to sign-in without leaving the screen (27.0035ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ no button is ever labeled "Continue with Android" (18.8718ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ provider buttons announce the full provider name (11.8539ms)
+✔ provider set and order are a platform decision (125.8498ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+▶ callbacks report intent and carry no auth implementation
+  ✔ each provider press fires exactly its callback (7.8945ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ a cancelled provider flow returns to the choice with NO error presentation (28.1537ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ while a flow is pending every contradictory control is disabled (10.7179ms)
+✔ callbacks report intent and carry no auth implementation (47.2676ms)
+▶ welcome is the root and back never skips it
+  ✔ the back model: welcome has no back; each step returns one step (0.2953ms)
+  ✔ Android hardware Back uses the same model as the visible control (one function, one rule) (0.3152ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ Welcome shows no back affordance; later steps show one labeled control (13.5684ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ the back control reports intent through onBack (5.903ms)
+✔ welcome is the root and back never skips it (20.7602ms)
+▶ email entry
+  ✔ obvious-error validation: not empty, one @, content both sides, plausible suffix — as typed (0.6477ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ Continue is disabled until something is typed (10.31ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ an obvious format error shows inline and never reaches the controller (14.9369ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ a plausible email submits exactly as typed — never lowercased, never rewritten (8.3217ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ a send failure is inline, in words, near the field — and editing keeps the text (5.5883ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ the email field is labeled and keyboard-appropriate (5.2047ms)
+✔ email entry (45.7261ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+▶ OTP verification
+  ✔ one logical field: labeled, numeric keyboard, paste/autofill enabled, code length capped (5.4232ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ Verify is disabled until the code is complete (11.919ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ a complete code submits through onSubmitOtp (9.0111ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ wrong, expired and network failures each carry their own calm copy (16.8748ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ errors are announced (6.3092ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ the resend cooldown shows the countdown disabled, then enables "Resend code" (10.8221ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ change-email affordance reports upward, preserving the typed address in the controller (7.4492ms)
+✔ OTP verification (68.932ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+▶ hard presentations
+  ✔ settling implies no step: a labeled progress state and nothing else (3.0178ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ degraded keeps her information calm and still offers the same account choice (5.0212ms)
+  ✔ account-conflict is isolated: quarantine copy, Sign out, and no provider or email surface (3.21ms)
+✔ hard presentations (11.6568ms)
+▶ the shell can carry no auth, persistence, or invented design
+  ✔ no auth-shell source imports Supabase, SecureStore or AsyncStorage (19.9813ms)
+  ✔ no persisted welcome flag exists anywhere in the feature (18.4044ms)
+  ✔ no invented hex colors — the paper-and-ink tokens are the only palette (15.1701ms)
+  ✔ method labels reuse the account feature wording and add only email (0.2879ms)
+✔ the shell can carry no auth, persistence, or invented design (54.1802ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+▶ the controller: Premium offer state machine
+  ✔ Get Started opens the Premium offer; Select Premium and Continue Free each record an intent and go on to the account choice (3.5098ms)
+  ✔ the free continuation is never gated: it works from the offer with nothing else done (0.6443ms)
+  ✔ Premium events do nothing anywhere but the offer, so a stray event cannot invent an intent (0.5675ms)
+  ✔ an existing user skips the offer and carries no intent, even after backing out of a Premium selection (0.5901ms)
+  ✔ a reconnect has no Welcome, no offer and no intent (0.5257ms)
+  ✔ BACK NAVIGATION: new users return through the offer, existing users straight to Welcome, and going back withdraws the intent (0.4956ms)
+  ✔ stepping forward and back inside signup keeps the intent; only leaving the offer's far side withdraws it (0.5356ms)
+  ✔ INTERRUPTED SIGNUP: confirmation-required, a failed attempt and a mode switch all keep the intent; none binds anything (0.4764ms)
+  ✔ SESSION RECOVERY: a killed process restarts the tree at Welcome with no intent (nothing here is persisted) (1.357ms)
+  ✔ FUZZ: over every event, in any order, the Premium invariants hold (seeded, 3000 sequences) (50.0325ms)
+✔ the controller: Premium offer state machine (61.725ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+▶ the one place Premium intent is acted on
+  ✔ premium + bound account: one checkout, then the intent is consumed; the app is visible throughout (46.2936ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ premium but NOT bound: nothing happens until an account is bound — then exactly once (6.4158ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ a free intent offers nothing and is cleared; no intent does nothing at all (6.5112ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ a checkout that throws never blocks the app, and the intent is still consumed (6.3472ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ a NEW intent after the old one was cleared is acted on again (the guard resets with the intent) (10.0239ms)
+  ✔ PLACEMENT, by source: checkout is inside the consent gate, around the navigator, for the welcome_premium placement, from the entitlement layer only (5.4749ms)
+  ✔ the stable entitlement id and the display name are untouched (1.018ms)
+✔ the one place Premium intent is acted on (83.2035ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+▶ journeys through the real welcome flow and the real account runtime
+  ✔ NEW USER, SELECT PREMIUM: no checkout while signing up, none before consent, exactly one after it (92.7571ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ NEW USER, CONTINUE FREE: the app opens after consent and checkout is never offered (27.9275ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ EXISTING USER: straight to sign-in, never shown the offer, never checked out (16.4322ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ INTERRUPTED SIGNUP: the intent survives the confirmation round trip and is acted on once, after sign-in and consent (67.981ms)
+  ✔ BACK NAVIGATION withdraws the intent: Premium → choice → back → back → I Already Have an Account never checks out (39.9187ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ SESSION RECOVERY: a restored account goes straight to the app — no Welcome, no offer, no checkout (4.9108ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ ONE CHECKOUT PER INTENT: after sign-out, the same account signing back in is not offered a second checkout (49.2103ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ NO LEAK BETWEEN ACCOUNTS: a different account on a device bound to the first is quarantined and is never offered a checkout (37.8241ms)
+  ✔ A CHECKOUT FAILURE never blocks the app (17.9801ms)
+✔ journeys through the real welcome flow and the real account runtime (355.941ms)
+ℹ tests 313
+ℹ suites 56
+ℹ pass 313
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3595.4254
