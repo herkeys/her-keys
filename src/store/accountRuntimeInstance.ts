@@ -7,6 +7,7 @@ import { createSecureSessionStore } from '../domain/account/secureSession';
 import { deviceTimeZone } from '../domain/logicalDay';
 import type { SyncRuntime } from '../domain/sync/syncRuntime';
 import type { SyncTransport } from '../domain/sync/transport';
+import { createPremiumLedgerClient, UNCONFIGURED_PREMIUM_LEDGER } from '../monetization/premiumLedgerClient';
 import { createPremiumServerClient, UNCONFIGURED_PREMIUM_SERVER } from '../monetization/premiumServerClient';
 import { identifyRevenueCatAccount } from '../monetization/revenueCatClient';
 import { createAppleProvider } from '../platform/appleProvider';
@@ -81,6 +82,13 @@ export const herKeysAiClient = client === null ? UNCONFIGURED_HER_KEYS_AI : crea
  * function, so every call is made AS the bound account; the server never takes the account from a request body.
  */
 export const premiumServerClient = client === null ? UNCONFIGURED_PREMIUM_SERVER : createPremiumServerClient(client);
+
+/** The shared Premium decision ledger (receipts), over the same authenticated session. Owner-readable; written only via server functions. */
+export const premiumLedgerClient = client === null ? UNCONFIGURED_PREMIUM_LEDGER : createPremiumLedgerClient(client);
+
+/** The installed app version, sent so the server can enforce a feature's minimum version. Absent in a build that cannot say. */
+export const premiumAppVersion: string | undefined =
+  typeof Constants.expoConfig?.version === 'string' && /^[0-9]+\.[0-9]+\.[0-9]+$/.test(Constants.expoConfig.version) ? Constants.expoConfig.version : undefined;
 
 // Google identity is one Supabase OAuth path on iOS and Android. It is only
 // registered where the durable secure credential store exists; web has none, so

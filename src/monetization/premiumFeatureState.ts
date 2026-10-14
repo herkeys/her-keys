@@ -33,9 +33,6 @@ export interface FeatureStateInput {
   decision: GateDecision | null;
 }
 
-/** Decision reasons that are about the SUBSCRIPTION: they go stale the moment the server's own state says entitled. */
-const SUBSCRIPTION_REASONS = new Set(['requires_premium', 'entitlement_unknown', 'entitlement_expired']);
-
 export function deriveFeatureState(input: FeatureStateInput): PremiumFeatureState {
   const { accountBound, featureKey, snapshot, storeStatus, decision } = input;
   if (!accountBound || snapshot.accountId === null) return { kind: 'signed_out' };
@@ -45,9 +42,10 @@ export function deriveFeatureState(input: FeatureStateInput): PremiumFeatureStat
 
   const entitled = server !== null && isEntitledState(server.state);
 
-  // A decision the server actually MADE about this operation outranks any inference, except subscription reasons that the
-  // server's newer state has already overtaken.
-  if (decision !== null && decision.outcome === 'denied' && !(entitled && SUBSCRIPTION_REASONS.has(decision.reason))) {
+  // A decision the server actually MADE about this operation outranks any inference. The SUBSCRIPTION reasons (requires_premium,
+  // entitlement_unknown, entitlement_expired) are deliberately not acted on here: the server's current entitlement state, read
+  // below, is newer and more truthful than a denial about it (she may have bought Premium since).
+  if (decision !== null && decision.outcome === 'denied') {
     switch (decision.reason) {
       case 'requires_ai_consent':
         return { kind: 'consent_required' };
@@ -96,12 +94,15 @@ export function deriveFeatureState(input: FeatureStateInput): PremiumFeatureStat
   if (snapshot.verification === 'checking') return { kind: 'verification_pending', cause: 'checking', canRetry: false };
 
   if (storeStatus === 'plus') {
-    // The store says paid; the server disagrees. That is verification in progress, delayed, an outage, or a purchase on a different account.
+    // The store says paid; the server disagrees. While the bounded verification schedule is still running, that is simply
+    // "confirming": one read can race a late webhook, so Her Keys does not claim a mismatch (or an outage) on a single attempt.
+    if (snapshot.verification === 'idle' || snapshot.verification === 'pending') return { kind: 'verification_pending', cause: 'checking', canRetry: false };
+    // The whole schedule has been spent (`gave_up`). Now what the server last said is worth saying.
     if (snapshot.lastVerify === 'provider_unavailable' || snapshot.lastVerify === 'unreachable') return { kind: 'verification_pending', cause: 'outage', canRetry: true };
     if (snapshot.lastVerify === 'reconciled' && (server.state === 'free' || server.state === 'unknown')) {
       return { kind: 'verification_pending', cause: 'account_mismatch', canRetry: true };
     }
-    return { kind: 'verification_pending', cause: snapshot.verification === 'idle' ? 'checking' : 'delayed', canRetry: snapshot.verification !== 'idle' };
+    return { kind: 'verification_pending', cause: 'delayed', canRetry: true };
   }
 
   if (server.state === 'premium_expired') return { kind: 'subscription_expired', revoked: false };

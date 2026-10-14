@@ -49,6 +49,20 @@ RESET ROLE;
 SELECT CASE WHEN :'r' = 'requires_premium' AND :'e' LIKE '42501%' THEN 'PASS' ELSE 'FAIL' END || ' | a FREE account that was denied at the gate cannot write a Premium ledger row';
 ROLLBACK;
 
+-- One authorized review covers the decisions made UNDER it ("<key>:<suffix>"), but a similar-looking key does not.
+BEGIN;
+SELECT herkeys_test.premium_grant(:'ua', 'active');
+SELECT herkeys_test.authorize_as(:'ua', :'hh_a', 'ledger-review-0001') ->> 'outcome' AS o \gset
+SET LOCAL ROLE authenticated; SET LOCAL request.jwt.claims = '{"sub":"11111111-1111-4111-8111-111111111111"}';
+SELECT coalesce(herkeys_test.error_of(format($q$SELECT public.premium_decision_record(%L, 'daily_load_premium', 'daily_load.reschedule_task', 'ledger-review-0001:aaaa:1', '{"kind":"task","id":"t1"}', %L)$q$, :'hh_a', :'digest1')), '') AS e_derived \gset
+SELECT coalesce(herkeys_test.error_of(format($q$SELECT public.premium_decision_record(%L, 'daily_load_premium', 'daily_load.reschedule_task', 'ledger-review-0001:bbbb:1', '{"kind":"task","id":"t2"}', %L)$q$, :'hh_a', :'digest2')), '') AS e_derived2 \gset
+SELECT coalesce(herkeys_test.error_of(format($q$SELECT public.premium_decision_record(%L, 'daily_load_premium', 'daily_load.reschedule_task', 'ledger-review-0001-extra', '{"kind":"task","id":"t3"}', %L)$q$, :'hh_a', repeat('3', 64))), '') AS e_prefix \gset
+SELECT coalesce(herkeys_test.error_of(format($q$SELECT public.premium_decision_record(%L, 'daily_load_premium', 'daily_load.reschedule_task', 'ledger-other-0001:aaaa:1', '{"kind":"task","id":"t4"}', %L)$q$, :'hh_a', repeat('4', 64))), '') AS e_other \gset
+RESET ROLE;
+SELECT CASE WHEN :'e_derived' = '' AND :'e_derived2' = '' THEN 'PASS' ELSE 'FAIL' END || ' | two decisions derived from ONE authorized review are both accepted (got "' || :'e_derived' || '" / "' || :'e_derived2' || '")';
+SELECT CASE WHEN :'e_prefix' LIKE '42501%not_authorized%' AND :'e_other' LIKE '42501%not_authorized%' THEN 'PASS' ELSE 'FAIL' END || ' | a key that merely starts with an authorized key, or one authorized nowhere, is refused';
+ROLLBACK;
+
 -- ============ OWNERSHIP AND ISOLATION =============================================================================================
 BEGIN;
 SELECT herkeys_test.premium_grant(:'ua', 'active');

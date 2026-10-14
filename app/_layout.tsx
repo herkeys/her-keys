@@ -9,7 +9,7 @@ import { WelcomeAuthSettling } from '../src/features/account/WelcomeAuthFlow';
 import { ConsentGate } from '../src/features/consent/ConsentFlow';
 import { PremiumStateProvider } from '../src/monetization/PremiumStateProvider';
 import { RevenueCatProvider, useEntitlement } from '../src/monetization/RevenueCatProvider';
-import { premiumServerClient } from '../src/store/accountRuntimeInstance';
+import { premiumAppVersion, premiumLedgerClient, premiumServerClient } from '../src/store/accountRuntimeInstance';
 import { AccountProvider, useAccount } from '../src/store/AccountProvider';
 import { AppStateProvider, useStoreSnapshot } from '../src/store/AppStateProvider';
 import { appStore, internalTools } from '../src/store/appStoreInstance';
@@ -55,7 +55,7 @@ export default function RootLayout() {
 function PremiumStateBridge({ children }: { children: ReactNode }) {
   const account = useAccount();
   return (
-    <PremiumStateProvider client={premiumServerClient} accountState={account.state}>
+    <PremiumStateProvider client={premiumServerClient} accountState={account.state} ledger={premiumLedgerClient} appVersion={premiumAppVersion}>
       {children}
     </PremiumStateProvider>
   );

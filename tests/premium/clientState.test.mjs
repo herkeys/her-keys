@@ -58,7 +58,12 @@ describe('the unified Premium feature state', () => {
   test('the store says paid but the server has not agreed: verification, in each honest flavour', () => {
     const paid = (over) => derive({ storeStatus: 'plus', snapshot: snapshot(over) });
     assert.deepEqual(paid({ verification: 'checking' }), { kind: 'verification_pending', cause: 'checking', canRetry: false });
-    assert.deepEqual(paid({ verification: 'pending', lastVerify: 'rate_limited' }), { kind: 'verification_pending', cause: 'delayed', canRetry: true });
+    // MID-SCHEDULE (idle/pending) she is only ever told "confirming": a single read can race a late webhook, so no mismatch or outage is claimed yet.
+    for (const lastVerify of [null, 'rate_limited', 'reconciled', 'provider_unavailable', 'unreachable', 'conflict']) {
+      assert.deepEqual(paid({ verification: 'pending', lastVerify }), { kind: 'verification_pending', cause: 'checking', canRetry: false }, `pending/${lastVerify}`);
+      assert.deepEqual(paid({ verification: 'idle', lastVerify }), { kind: 'verification_pending', cause: 'checking', canRetry: false }, `idle/${lastVerify}`);
+    }
+    // ONLY once the whole schedule is spent does what the server last said become worth saying.
     assert.deepEqual(paid({ verification: 'gave_up', lastVerify: 'rate_limited' }), { kind: 'verification_pending', cause: 'delayed', canRetry: true });
     assert.deepEqual(paid({ verification: 'gave_up', lastVerify: 'provider_unavailable' }), { kind: 'verification_pending', cause: 'outage', canRetry: true });
     assert.deepEqual(paid({ verification: 'gave_up', lastVerify: 'unreachable' }), { kind: 'verification_pending', cause: 'outage', canRetry: true });

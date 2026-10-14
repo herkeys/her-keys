@@ -96,9 +96,12 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM public.household_members m WHERE m.household_id = p_household AND m.profile_id = v_account AND m.member_type = 'adult') THEN
     RAISE EXCEPTION 'ownership_denied' USING ERRCODE = '42501';
   END IF;
+  -- The key must be an operation the SERVER authorized — exactly, or DERIVED from one as "<authorized key>:<suffix>" (one authorized
+  -- review covers the decisions made under it: approve, reject, retry). A key that merely looks similar is not enough.
   IF NOT EXISTS (SELECT 1 FROM public.premium_usage_events e
-                  WHERE e.account_id = v_account AND e.feature_key = p_feature AND e.idempotency_key = p_idempotency_key
-                    AND e.status IN ('reserved', 'completed')) THEN
+                  WHERE e.account_id = v_account AND e.feature_key = p_feature AND e.status IN ('reserved', 'completed')
+                    AND (e.idempotency_key = p_idempotency_key
+                         OR left(p_idempotency_key, length(e.idempotency_key) + 1) = e.idempotency_key || ':')) THEN
     RAISE EXCEPTION 'not_authorized' USING ERRCODE = '42501';
   END IF;
 

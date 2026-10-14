@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { AccountEntry } from '../account/AccountEntry';
 import { DailyLoadCard } from '../daily-load/DailyLoadCard';
+import { PremiumDailyLoadEntry } from '../daily-load/premium/PremiumDailyLoadEntry';
 import { LoadMeter } from '../daily-load/LoadMeter';
 import { LifeStatusSummary } from '../life/LifeStatusSummary';
 import { OneMoveCard } from '../one-move/OneMoveCard';
@@ -80,7 +81,13 @@ function renderSection(key: SectionKey, view: TodayReady, completeOneMove: () =>
     case 'sparse':
       return view.sparse ? <TodayStateNotice kind={view.sparse.kind} entry={view.sparse.entry} /> : null;
     case 'decision':
-      return <DailyLoadCard />;
+      // The Free Daily Load speaks first and is unchanged; Her Keys Premium's review sits beneath it, only where the day needs it.
+      return (
+        <>
+          <DailyLoadCard />
+          <PremiumDailyLoadEntry />
+        </>
+      );
     case 'matters':
       return view.matters ? <TodayMatters section={view.matters} /> : null;
     case 'oneMove':

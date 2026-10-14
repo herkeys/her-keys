@@ -5,6 +5,7 @@ import type { PaywallOutcome, PaywallPlacement } from './entitlement';
 import { PremiumController, type PremiumSnapshot } from './premiumController';
 import { premiumCopyFor, purchaseOutcomeNotice, type PremiumCopy } from './premiumCopy';
 import { deriveFeatureState, isUsable, type PremiumFeatureState } from './premiumFeatureState';
+import { UNCONFIGURED_PREMIUM_LEDGER, type PremiumLedgerClient } from './premiumLedgerClient';
 import type { GateDecision, GateRequest, GateResult, PremiumServerClient } from './premiumTypes';
 import { useEntitlement } from './RevenueCatProvider';
 
@@ -12,6 +13,11 @@ export interface PremiumContextValue {
   snapshot: PremiumSnapshot;
   controller: PremiumController;
   accountBound: boolean;
+  /** The cloud household this bound account owns, or null. The ONLY household id a Premium request may carry (the server re-verifies it). */
+  householdId: string | null;
+  /** The shared decision ledger (receipts). Injected, so a feature never imports a platform client. */
+  ledger: PremiumLedgerClient;
+  appVersion: string | undefined;
   /** Latest authorization decision per feature, for the CURRENT account only. */
   decisions: Readonly<Record<string, GateDecision>>;
   recordDecision: (featureKey: string, decision: GateDecision | null) => void;
@@ -29,7 +35,19 @@ const PremiumContext = createContext<PremiumContextValue | null>(null);
  *  - When the store SDK reports an active entitlement but the server has not caught up, it verifies (bounded) — the store is a hint.
  *  - It persists nothing.
  */
-export function PremiumStateProvider({ client, accountState, children }: { client: PremiumServerClient; accountState: AccountState; children: ReactNode }) {
+export function PremiumStateProvider({
+  client,
+  accountState,
+  ledger = UNCONFIGURED_PREMIUM_LEDGER,
+  appVersion,
+  children,
+}: {
+  client: PremiumServerClient;
+  accountState: AccountState;
+  ledger?: PremiumLedgerClient;
+  appVersion?: string;
+  children: ReactNode;
+}) {
   const { status: storeStatus } = useEntitlement();
   const controller = useMemo(() => new PremiumController(client), [client]);
   const snapshot = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
@@ -93,9 +111,10 @@ export function PremiumStateProvider({ client, accountState, children }: { clien
     [client, controller, recordDecision],
   );
 
+  const householdId = accountState.kind === 'accountBound' ? accountState.householdId : null;
   const value = useMemo<PremiumContextValue>(
-    () => ({ snapshot, controller, accountBound, decisions, recordDecision, authorize }),
-    [snapshot, controller, accountBound, decisions, recordDecision, authorize],
+    () => ({ snapshot, controller, accountBound, householdId, ledger, appVersion, decisions, recordDecision, authorize }),
+    [snapshot, controller, accountBound, householdId, ledger, appVersion, decisions, recordDecision, authorize],
   );
   return <PremiumContext.Provider value={value}>{children}</PremiumContext.Provider>;
 }
