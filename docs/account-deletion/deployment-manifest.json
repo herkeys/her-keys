@@ -1,10 +1,10 @@
 {
-  "recorded_at": "2026-10-14T11:40:00Z",
+  "recorded_at": "2026-10-14T11:55:20.143714+00:00",
   "mobile_source_sha": "8b59fd99daeb73ee5bde68bfef5b8baac24939f3",
-  "website_source_sha": "8a99fdd6c58faa2d2c56f7c06b468483f56671a0",
+  "website_source_sha": "f4e1fab8b651107ee0ab6129dde65f6c6cb4caa2",
   "source_ci": {
     "mobile": "https://github.com/herkeys/her-keys/actions/runs/38558155165",
-    "website": "https://github.com/herkeys/her-keys-web/actions/runs/38555077652",
+    "website": "https://github.com/herkeys/her-keys-web/actions/runs/38560081035",
     "both": "success"
   },
   "staging": {
@@ -133,9 +133,9 @@
   },
   "production": {
     "project": "npykvnxnehlsdlbumzwk",
-    "inspection": "read-only",
-    "deletion_tables": 0,
-    "deletion_migrations": 0,
+    "inspection": "Post-migration read-only verification passed",
+    "deletion_tables": 11,
+    "deletion_migrations": 8,
     "cron_extension": false,
     "functions": [
       {
@@ -169,48 +169,67 @@
         "bundle_sha256": "cac0f22357e76f284be6b2f006e29372c2455562054db9e2726d5cd1597bacbb"
       }
     ],
-    "authorization": "none; no deletion deployment or activation"
+    "authorization": "Owner authorized eight canonical lifecycle SQL migrations; applied. No Edge deployment, scheduler installation, customer deletion or worker activation authorized.",
+    "controls": {
+      "dry_run": true,
+      "enabled": false,
+      "batch_size": 1,
+      "max_attempts": 8
+    },
+    "retention_control": {
+      "enabled": false
+    },
+    "business_counts_unchanged": true,
+    "active_account_access": "PASS"
   },
   "canonical_migrations": [
     {
       "file": "20261014002726_account_deletion_lifecycle.sql",
       "sha256": "d8454f89049c447f314acdfe320d72c80021b6866d6d90c46bba74427f1a9c31",
-      "staging_version": "20261014012151"
+      "staging_version": "20261014012151",
+      "production_version": "20261014115427"
     },
     {
       "file": "20261014012518_account_deletion_auth_reconciliation.sql",
       "sha256": "173203383eb1f0955ecf7cd7d0f89d6dc266473819bf664a0c87e2b25afa3bef",
-      "staging_version": "20261014012645"
+      "staging_version": "20261014012645",
+      "production_version": "20261014115429"
     },
     {
       "file": "20261014014020_account_deletion_terminal_identity.sql",
       "sha256": "edf6476f0d0697f0b1d3f6cfc5aac4174e4f68e5a03341407402ec378a478a2c",
-      "staging_version": "20261014014243"
+      "staging_version": "20261014014243",
+      "production_version": "20261014115432"
     },
     {
       "file": "20261014014620_account_deletion_proof_retention.sql",
       "sha256": "8d0796793140d9a97539413de7aa7500779af59ab462a4a72ebacc41e457455b",
-      "staging_version": "20261014015314"
+      "staging_version": "20261014015314",
+      "production_version": "20261014115434"
     },
     {
       "file": "20261014015835_account_deletion_cancelled_history_cleanup.sql",
       "sha256": "92101f016aaff9f2df3d33a527c301943f3828d59c45f38b63f751c42db095e0",
-      "staging_version": "20261014015954"
+      "staging_version": "20261014015954",
+      "production_version": "20261014115436"
     },
     {
       "file": "20261014021410_account_deletion_shared_provider_retry.sql",
       "sha256": "1009fb19928f05f3c25610fc5af133584021aec71d04ca0e9c0de3b7e214e982",
-      "staging_version": "20261014110526"
+      "staging_version": "20261014110526",
+      "production_version": "20261014115439"
     },
     {
       "file": "20261014112400_account_deletion_orphan_shared_ownership.sql",
       "sha256": "a33f0efc7eef38f48440827bade3df67a9dcc567591868335474dc7b99b9beda",
-      "staging_version": "20261014112526"
+      "staging_version": "20261014112526",
+      "production_version": "20261014115441"
     },
     {
       "file": "20261014113517_account_deletion_household_lock.sql",
       "sha256": "1a7c9804ef543ce6ed603152157d5eef316bcbba21b15a9e0fe6fc4053105ce7",
-      "staging_version": "20261014113628"
+      "staging_version": "20261014113628",
+      "production_version": "20261014115443"
     }
   ],
   "migration_history_note": "MCP generated Staging versions differ from canonical source filenames. Match names/checksums and reconcile history before CLI db push; never replay applied migrations. Scheduler and fixture upload/teardown are separately recorded operational blueprints."

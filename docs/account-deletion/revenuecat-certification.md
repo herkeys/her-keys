@@ -22,6 +22,6 @@ The restoration fixture retained its real RevenueCat customer after deactivation
 
 The adapter pins the project, targets only the claimed account UUID and accepts erasure only after GET 404. Automated tests cover wrong project, async deletion still present, unauthorized/forbidden, unavailable and rate-limited responses. Failures remain retryable. Deactivation and restoration never call the deletion adapter. Shared-household cleanup independently revokes providers while ownership cases remain nonterminal; see staging-certification.md.
 
-Staging is ready for further scoped disposable RevenueCat tests. Complete product certification still needs live Apple/Google revocation, native device checks, the complete resource fixture matrix and an operational public support path. Production mutations remain unauthorized.
+Staging is ready for further scoped disposable RevenueCat tests. Native device checks and the complete hosted resource matrix remain incomplete. The owner deferred live Apple/Google revocation tests; they are SKIPPED, never PASS. Public support is configured in website source. The owner later authorized and applied eight Production SQL migrations; RevenueCat customer deletion and worker activation remain unauthorized.
 
 Contract checked against the [RevenueCat customer API](https://www.revenuecat.com/docs/api-v2/customer). API acceptance alone is never erasure evidence.

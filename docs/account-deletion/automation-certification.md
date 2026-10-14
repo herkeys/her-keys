@@ -14,7 +14,7 @@ Actual scheduled evidence on 2026-10-14 UTC:
 
 Retention failure injection used a synthetic expired minimal-proof record. Temporarily refusing the service cleanup RPC caused actual scheduled endpoint failures at 01:58 and 01:59; the expired row remained. Monitoring delivered a retention-failure alert, provider message 01a13822-6b43-7377-b31a-e4961b8adab3. After restoring permission, actual scheduled cleanup at 02:00:06 UTC physically removed the proof: run 6b28c4ac-f4e1-4cb1-bc62-fb109d74ebe1, deleted 1, remaining 0. Daily 03:17 subsequently succeeded. The daily cadence was restored after temporary minute-level certification. Cron HTTP enqueue success is not treated as endpoint success; HTTP responses and retention runs supply that evidence.
 
-Recovery/restoration email delivery and operational alert delivery were observed through Resend. Acceptance and delivery are tracked separately. Only the owner-authorized Staging/alert inbox was used. A public support contact remains a release blocker.
+Recovery/restoration email delivery and operational alert delivery were observed through Resend. Acceptance and delivery are tracked separately. Only the owner-authorized Staging/alert inbox was used. The owner later approved that same inbox as public support; it is configured in website source. Production subsequently received the eight canonical database migrations only; no Production scheduler is installed.
 
 Emergency controls:
 ```sql

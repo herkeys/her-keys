@@ -1,6 +1,6 @@
-# Production gate â€” not ready for approval
+# Production handoff: database migrations applied; activation remains closed
 
-Target: npykvnxnehlsdlbumzwk. No Production mutation, customer deletion or worker activation is authorized. Read-only inspection found no lifecycle tables/migrations and no pg_cron extension. Existing Edge Function versions are captured in deployment-manifest.json. Production RevenueCat secret names and project-ID digest were independently inspected without revealing either key.
+Target: npykvnxnehlsdlbumzwk. The owner authorized the eight reviewed canonical lifecycle SQL migrations; all eight were applied on 2026-10-14. Customer deletion, Edge Function deployment, scheduler installation and worker activation remain unauthorized. The pre-apply read-only inspection found no lifecycle tables/migrations and no pg_cron extension. Existing Edge Function versions are captured in deployment-manifest.json. Production RevenueCat secret names and project-ID digest were independently inspected without revealing either key.
 
 Concrete candidate:
 - Mobile source 8b59fd99daeb73ee5bde68bfef5b8baac24939f3; exact-source CI https://github.com/herkeys/her-keys/actions/runs/38558155165 succeeded.
@@ -8,7 +8,7 @@ Concrete candidate:
 - Eight additive migrations in canonical filename order, with SHA-256 and Staging history mapping in deployment-manifest.json.
 - New functions: request-account-deletion, restore-account, resend-restoration-email, deletion-status, process-account-deletions, monitor-account-deletions, expire-account-deletion-proofs, capture-apple-credential, begin-web-deletion.
 - Redeploy calendar-oauth and all consumers of the changed shared requireUser guard: calendar-data, weather-context, herkeys-ai and herkeys-welcome-email. Pin dependencies and upload the reviewed shared files with every bundle.
-- Never deploy staging-deletion-fixture or its Storage policy to Production.
+- Never deploy staging-deletion-fixture, staging-deletion-lock-probe, their temporary RPC or Storage policy to Production.
 - Scheduler blueprint installs all jobs disabled. Set the verified Production target only after deployment authorization. Control defaults enabled=false, dry_run=true; effective claim batch is 1, lease five minutes, max attempts 8.
 - Daily proof retention is 365 days and daily 03:17 UTC; monitoring is separate. Production installation/activation of these jobs also requires deployment scope approval.
 
@@ -18,7 +18,7 @@ Approved policies: DELETE_ACCOUNT_OWNED_ESCALATE_SHARED; no automatic ownership 
 
 Production census: 45 public business tables; all are in the registered ownership model or the explicit households/profiles/discovery_answers paths. One existing legal-document bucket has three ownerless objects; there are no Storage objects owned by an existing Auth user. Public legal documents are not account-owned blobs and are not purge targets. The hosted privacy PDF remains unchanged; reviewed website disclosures are source changes awaiting release. Census details contain schema metadata only.
 
-Before requesting approval: complete native and Apple/Google live tests, hosted all-resource fixtures, hosted hostile/concurrency checks, independent watchdog, public support workflow and advisor review. No named disposable Production identity or accelerated expiry method is approved. A future concrete approval request must name its exact synthetic identity, time manipulation, allowed provider/Storage effects, deployed revisions and limits. After approved controlled Production certification, unattended destructive activation requires a second owner approval.
+Before requesting the remaining deployment/activation approvals: complete native checks, hosted all-resource fixtures, hosted hostile/concurrency checks, independent watchdog and advisor review. The owner has deferred live Apple/Google tests; disclose their unverified coverage without calling them PASS. Public support is configured in website source using herkeysnow@gmail.com. No named disposable Production identity or accelerated expiry method is approved. A future concrete approval request must name its exact synthetic identity, time manipulation, allowed provider/Storage effects, deployed revisions and limits. After approved controlled Production certification, unattended destructive activation requires a second owner approval.
 
 Emergency:
 ```sql
@@ -27,4 +27,4 @@ SELECT cron.alter_job(job_id:=(SELECT jobid FROM cron.job WHERE jobname='herkeys
 ```
 An in-flight bounded provider request may finish. Preserve pending restrictions, receipts, ledger, outbox and recovery. Restore only reviewed function revisions; never drop restrictions while requests remain pending, reverse a real purge, or claim external erasure is reversible.
 
-Migration safety: MCP-generated Staging versions differ from canonical source filenames. Reconcile version history by migration name/checksum before CLI db push. Do not replay applied migrations or apply Staging operational fixtures to Production. Production approval is not being requested while release checks remain open. EAS/store builds and publishing remain outside this assignment.
+Migration safety: MCP-generated Staging versions differ from canonical source filenames. Reconcile version history by migration name/checksum before CLI db push. Do not replay applied migrations or apply Staging operational fixtures to Production. The database-only approval has been exercised; no broader deployment or activation approval is inferred. EAS/store builds and publishing remain outside this assignment.

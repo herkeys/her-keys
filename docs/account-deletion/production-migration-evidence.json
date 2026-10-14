@@ -1,0 +1,360 @@
+{
+  "scope": "Owner authorized the eight passed canonical lifecycle SQL migrations only; no Edge deployment, scheduler installation, worker activation or customer deletion.",
+  "project": "npykvnxnehlsdlbumzwk",
+  "applied": [
+    {
+      "file": "20261014002726_account_deletion_lifecycle.sql",
+      "name": "account_deletion_lifecycle",
+      "sha256": "d8454f89049c447f314acdfe320d72c80021b6866d6d90c46bba74427f1a9c31"
+    },
+    {
+      "file": "20261014012518_account_deletion_auth_reconciliation.sql",
+      "name": "account_deletion_auth_reconciliation",
+      "sha256": "173203383eb1f0955ecf7cd7d0f89d6dc266473819bf664a0c87e2b25afa3bef"
+    },
+    {
+      "file": "20261014014020_account_deletion_terminal_identity.sql",
+      "name": "account_deletion_terminal_identity",
+      "sha256": "edf6476f0d0697f0b1d3f6cfc5aac4174e4f68e5a03341407402ec378a478a2c"
+    },
+    {
+      "file": "20261014014620_account_deletion_proof_retention.sql",
+      "name": "account_deletion_proof_retention",
+      "sha256": "8d0796793140d9a97539413de7aa7500779af59ab462a4a72ebacc41e457455b"
+    },
+    {
+      "file": "20261014015835_account_deletion_cancelled_history_cleanup.sql",
+      "name": "account_deletion_cancelled_history_cleanup",
+      "sha256": "92101f016aaff9f2df3d33a527c301943f3828d59c45f38b63f751c42db095e0"
+    },
+    {
+      "file": "20261014021410_account_deletion_shared_provider_retry.sql",
+      "name": "account_deletion_shared_provider_retry",
+      "sha256": "1009fb19928f05f3c25610fc5af133584021aec71d04ca0e9c0de3b7e214e982"
+    },
+    {
+      "file": "20261014112400_account_deletion_orphan_shared_ownership.sql",
+      "name": "account_deletion_orphan_shared_ownership",
+      "sha256": "a33f0efc7eef38f48440827bade3df67a9dcc567591868335474dc7b99b9beda"
+    },
+    {
+      "file": "20261014113517_account_deletion_household_lock.sql",
+      "name": "account_deletion_household_lock",
+      "sha256": "1a7c9804ef543ce6ed603152157d5eef316bcbba21b15a9e0fe6fc4053105ce7"
+    }
+  ],
+  "before": {
+    "extensions": [
+      {
+        "name": "pgcrypto",
+        "schema": "extensions"
+      }
+    ],
+    "business_counts": {
+      "goals": 0,
+      "tasks": 0,
+      "events": 0,
+      "patterns": 0,
+      "profiles": 1,
+      "change_log": 22,
+      "households": 1,
+      "dependencies": 0,
+      "life_records": 0,
+      "system_steps": 0,
+      "account_claims": 1,
+      "action_intents": 0,
+      "action_records": 0,
+      "evidence_links": 0,
+      "needs_me_items": 0,
+      "action_outcomes": 0,
+      "interpretations": 0,
+      "person_contexts": 0,
+      "rebuild_focuses": 0,
+      "account_consents": 4,
+      "household_people": 0,
+      "intent_decisions": 0,
+      "onboarding_state": 1,
+      "one_move_records": 0,
+      "recurrence_rules": 0,
+      "responsibilities": 0,
+      "source_artifacts": 0,
+      "action_executions": 0,
+      "capacity_profiles": 0,
+      "discovery_answers": 0,
+      "discovery_records": 0,
+      "household_members": 1,
+      "household_systems": 0,
+      "meal_plan_entries": 0,
+      "person_task_links": 0,
+      "external_references": 0,
+      "rebuild_focus_links": 0,
+      "career_opportunities": 0,
+      "household_categories": 8,
+      "behavior_observations": 0,
+      "calendar_oauth_states": 0,
+      "automation_authorities": 0,
+      "life_record_task_links": 0,
+      "external_calendar_connections": 0,
+      "herkeys_welcome_email_receipts": 0
+    },
+    "function_contracts": [
+      {
+        "name": "bootstrap_account",
+        "has_begin": true,
+        "log_anchor": false
+      },
+      {
+        "name": "claim_local_household",
+        "has_begin": true,
+        "log_anchor": false
+      },
+      {
+        "name": "log_row_change",
+        "has_begin": true,
+        "log_anchor": true
+      },
+      {
+        "name": "sync_pull",
+        "has_begin": true,
+        "log_anchor": false
+      },
+      {
+        "name": "sync_push",
+        "has_begin": true,
+        "log_anchor": false
+      }
+    ]
+  },
+  "after": {
+    "counts": {
+      "auth": 1,
+      "profiles": 1,
+      "households": 1,
+      "storage_objects": 3
+    },
+    "control": {
+      "dry_run": true,
+      "enabled": false,
+      "batch_size": 1,
+      "max_attempts": 8
+    },
+    "requests": 0,
+    "inspected_at": "2026-10-14T11:55:20.143714+00:00",
+    "cron_installed": false,
+    "business_counts": {
+      "goals": 0,
+      "tasks": 0,
+      "events": 0,
+      "patterns": 0,
+      "profiles": 1,
+      "change_log": 22,
+      "households": 1,
+      "dependencies": 0,
+      "life_records": 0,
+      "system_steps": 0,
+      "account_claims": 1,
+      "action_intents": 0,
+      "action_records": 0,
+      "evidence_links": 0,
+      "needs_me_items": 0,
+      "action_outcomes": 0,
+      "interpretations": 0,
+      "person_contexts": 0,
+      "rebuild_focuses": 0,
+      "account_consents": 4,
+      "household_people": 0,
+      "intent_decisions": 0,
+      "onboarding_state": 1,
+      "one_move_records": 0,
+      "recurrence_rules": 0,
+      "responsibilities": 0,
+      "source_artifacts": 0,
+      "action_executions": 0,
+      "capacity_profiles": 0,
+      "discovery_answers": 0,
+      "discovery_records": 0,
+      "household_members": 1,
+      "household_systems": 0,
+      "meal_plan_entries": 0,
+      "person_task_links": 0,
+      "external_references": 0,
+      "rebuild_focus_links": 0,
+      "career_opportunities": 0,
+      "household_categories": 8,
+      "behavior_observations": 0,
+      "calendar_oauth_states": 0,
+      "automation_authorities": 0,
+      "life_record_task_links": 0,
+      "external_calendar_connections": 0,
+      "herkeys_welcome_email_receipts": 0
+    },
+    "terminal_columns": [
+      "receipt_hash",
+      "purged_at",
+      "verified_at",
+      "resource_counts",
+      "expires_at"
+    ],
+    "retention_control": {
+      "enabled": false
+    },
+    "applied_migrations": [
+      {
+        "name": "account_deletion_lifecycle",
+        "version": "20261014115427"
+      },
+      {
+        "name": "account_deletion_auth_reconciliation",
+        "version": "20261014115429"
+      },
+      {
+        "name": "account_deletion_terminal_identity",
+        "version": "20261014115432"
+      },
+      {
+        "name": "account_deletion_proof_retention",
+        "version": "20261014115434"
+      },
+      {
+        "name": "account_deletion_cancelled_history_cleanup",
+        "version": "20261014115436"
+      },
+      {
+        "name": "account_deletion_shared_provider_retry",
+        "version": "20261014115439"
+      },
+      {
+        "name": "account_deletion_orphan_shared_ownership",
+        "version": "20261014115441"
+      },
+      {
+        "name": "account_deletion_household_lock",
+        "version": "20261014115443"
+      }
+    ],
+    "internal_privileges": [
+      {
+        "name": "herkeys_deletion_command",
+        "anon_execute": false,
+        "authenticated_execute": false
+      },
+      {
+        "name": "herkeys_expire_deletion_proofs",
+        "anon_execute": false,
+        "authenticated_execute": false
+      },
+      {
+        "name": "herkeys_resolve_deletion_case",
+        "anon_execute": false,
+        "authenticated_execute": false
+      },
+      {
+        "name": "herkeys_verify_deletion_worker",
+        "anon_execute": false,
+        "authenticated_execute": false
+      }
+    ],
+    "new_table_privileges": [
+      {
+        "rls": true,
+        "table": "account_deletion_requests",
+        "anon_read": false,
+        "auth_read": false
+      },
+      {
+        "rls": true,
+        "table": "account_deletion_control",
+        "anon_read": false,
+        "auth_read": false
+      },
+      {
+        "rls": true,
+        "table": "account_deletion_outbox",
+        "anon_read": false,
+        "auth_read": false
+      },
+      {
+        "rls": true,
+        "table": "account_deletion_runs",
+        "anon_read": false,
+        "auth_read": false
+      },
+      {
+        "rls": true,
+        "table": "account_deletion_rate_limits",
+        "anon_read": false,
+        "auth_read": false
+      },
+      {
+        "rls": true,
+        "table": "account_deletion_receipts",
+        "anon_read": false,
+        "auth_read": false
+      },
+      {
+        "rls": true,
+        "table": "account_deletion_alerts",
+        "anon_read": false,
+        "auth_read": false
+      },
+      {
+        "rls": true,
+        "table": "account_deletion_cases",
+        "anon_read": false,
+        "auth_read": false
+      },
+      {
+        "rls": true,
+        "table": "apple_revocation_credentials",
+        "anon_read": false,
+        "auth_read": false
+      },
+      {
+        "rls": true,
+        "table": "account_deletion_terminal_proofs",
+        "anon_read": false,
+        "auth_read": false
+      },
+      {
+        "rls": true,
+        "table": "account_deletion_retention_control",
+        "anon_read": false,
+        "auth_read": false
+      },
+      {
+        "rls": true,
+        "table": "account_deletion_retention_runs",
+        "anon_read": false,
+        "auth_read": false
+      }
+    ],
+    "private_scheduler_installed": false
+  },
+  "business_counts_unchanged": true,
+  "active_account_read_check": {
+    "account_access_status": "active",
+    "visible_profiles": 1,
+    "visible_households": 1
+  },
+  "advisors": [
+    {
+      "name": "rls_enabled_no_policy",
+      "level": "INFO",
+      "count": 14,
+      "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy"
+    },
+    {
+      "name": "authenticated_security_definer_function_executable",
+      "level": "WARN",
+      "count": 3,
+      "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable"
+    },
+    {
+      "name": "auth_leaked_password_protection",
+      "level": "WARN",
+      "count": 1,
+      "remediation": "https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection"
+    }
+  ]
+}
+
