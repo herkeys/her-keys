@@ -114,7 +114,7 @@ node scripts-dev/premium-final-config.mjs reconcile --account-id "$HK_STAGING_TE
 The runner fetches the current subscriber state through RC REST API (server secret), reads the Staging Premium projection via service role, and classifies `matched`, `missing`, `stale`, or `conflicting`. `--resync` calls existing `premium-ops` force-reconcile once, then rechecks. Any unresolved mismatch exits nonzero. A paid subscriber requires RC-provider verified state; synthetic webhook receipt does NOT suffice.
 
 ## 7. Controlled Staging activation, verification, rollback
-Only after authenticated signed TEST receipt, backend negative auth/HMAC checks, tester marker, guard migration and a real subscription reconciliation PASS, activate paid features for allowlisted Staging users.
+Only after authenticated signed TEST receipt, backend negative auth/HMAC checks, tester marker, guard migration and a real subscription reconciliation PASS, activate paid features for allowlisted Staging users. **The command independently verifies an authenticated TEST receipt less than 15 minutes old AND a currently provider-confirmed Premium entitlement for the named tester; the `--signed-smoke-passed` flag alone is never sufficient.**
 
 ```bash
 node scripts-dev/premium-final-config.mjs window enable --account-id "$HK_STAGING_TESTER_ACCOUNT_ID" --env staging --signed-smoke-passed
