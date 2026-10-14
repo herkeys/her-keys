@@ -248,3 +248,38 @@ Prior umbrella issues [#11](https://github.com/herkeys/her-keys/issues/11) and [
 | Momentum scope limits | `tests/premiumDomain/momentum.test.mjs`, `momentumCopy.test.mjs`, `momentumFlow.test.mjs`; explicit week/dedup/history tiers and no time-saved/score assertions; run 38630089798 | SOURCE FOUNDATION PASS; real household report NOT RUN; no invented numerical outcomes | Continue truthful copy and saved-review access after expiry; Staging account/household required to certify real proof | Build [#10](https://github.com/herkeys/her-keys/issues/10), backend [#16](https://github.com/herkeys/her-keys/issues/16) |
 
 **Owner directive:** issue #9 is NOT a blocker to the isolated Premium-only SOURCE CERTIFICATION lane or its source-executable hostile tests. It **remains** a documented combined-lane privacy P0, and Production deletion must remain disabled. Checkpoint 4 hosted/functional Premium activation remains separately gated by Staging secrets and webhook verification, and the Village/Co-Parent design contracts remain nonreleased.
+
+
+## Premium-only certification branch — independently certified 2026-10-14
+
+**Owner-authorized lane:** new branch `integration/premium-certification`, cut **exactly** from `feature/herkeys-premium-stage1` commit `e4462d2a5cb42706a8523f6ba45248ee9396d02e`. It was not based on `codex/v2-premium-pass-a` or `integration/v2-premium-deletion-convergence`. The branch's ONLY source changes were the eight-root Expo SDK57 package compatibility alignment, paired lockfile (PGlite deletion-only dev dependency excluded), one Calendar SDK peer guard preserving the original no-Reanimated-source-import rule, and a push trigger entry that adds the new branch to the **existing**, unweakened workflow. No deletion SQL, worker, registry or tests were imported; no application UI rewiring, feature flags, Production, RevenueCat catalog, EAS, native store, or device work.
+
+| Evidence field | Actual confirmed value |
+|---|---|
+| Branch | [`integration/premium-certification`](https://github.com/herkeys/her-keys/tree/integration/premium-certification) |
+| Base SHA | `e4462d2a5cb42706a8523f6ba45248ee9396d02e` |
+| Certified pushed HEAD SHA | `4be74a99423ae620c586b5a8f92abf1a954068c7` |
+| Workflow name | **Her Keys V2 Integration Gate** |
+| Run URL | [38630089798](https://github.com/herkeys/her-keys/actions/runs/38630089798) |
+| Exact job result | `v2-repository-validation: success` on Node22 |
+| Mandatory steps | checkout PASS; npm ci PASS; backend boundary PASS; release identity PASS; TypeScript PASS; full application `npm test` PASS; Expo install compatibility PASS; Expo Doctor PASS; public/native Expo config PASS; evidence boundary PASS |
+| CI status | **PREMIUM_ONLY_SOURCE_CI=PASS**; no mandatory skipped, softened, rebaselined or removed tests |
+| Hosted/device/source limitations | `PREMIUM_STAGING_VERIFIED=BLOCKED`; `PREMIUM_DEVICE_VERIFIED=NOT RUN`; real native purchase `BLOCKED` |
+
+**Independent Premium source certification is real, while Unified V2 remains a separate lane with open deletion P0 [#9](https://github.com/herkeys/her-keys/issues/9) and failed CI.** This green source run does not certify the deletion integration, hosted authorization/webhook/RevenueCat, or customer-facing device use. The original Stage1 source e446 CI was red on Expo patch drift; this strict patch/peer port resolves that without importing deletion.
+
+### Steps 4–7 — held Checkpoint 3, authorized source evidence
+
+| Step | Status | Evidence producer | Environment / evidence SHA |
+|---|---|---|---|
+| 4. Typed backend contracts and issue mapping | **PASS (document)** | `docs/premium/PREMIUM_BACKEND_HANDOFF_REQUIRED.md`, original proposed schema/RPC sections plus append-only artifact map linked to [#14](https://github.com/herkeys/her-keys/issues/14), [#15](https://github.com/herkeys/her-keys/issues/15), [#16](https://github.com/herkeys/her-keys/issues/16), [#17](https://github.com/herkeys/her-keys/issues/17), existing [#9](https://github.com/herkeys/her-keys/issues/9) | GitHub source doc; not deployed; app baseline `0f27acfa` |
+| 5. Agent G reconciliation | **PASS (six named findings reconciled, reconstruction caveat)** | `Agent G findings reconciliation — owner-authorized disposition` appended above, source reconciliation and issue links; original chat text not directly accessible | GitHub/source/local plus [independent CI 38630089798](https://github.com/herkeys/her-keys/actions/runs/38630089798); `4be74a99` |
+| 6. Hostile source-executable Premium matrix | **PASS for executed cases, NOT RUN for unexecuted cases** | `docs/audits/HK_V2_PREMIUM_HOSTILE_FEATURE_CERTIFICATION.md` Step 6, individually named existing test files and assertions; `npm test` in [CI 38630089798](https://github.com/herkeys/her-keys/actions/runs/38630089798) | SOURCE_VALIDATED `4be74a99423ae620c586b5a8f92abf1a954068c7`; hosted attack column BLOCKED |
+| 7. Premium copy-claim audit | **PASS in bounded inspected Premium surfaces** | Same audit report Step 7; read-only source inspection of named UI/copy files and `tests/premiumDomain/momentumCopy.test.mjs`, `tests/premium/clientState.test.mjs`, `tests/premium/smartInboxEval.test.mjs` | SOURCE_VALIDATED `4be74a99`; no real device/marketing site review |
+| Independent Premium-only full exact-SHA CI | **PASS** | Her Keys V2 Integration Gate run 38630089798, job/step list | GitHub Actions Node22 @ `4be74a99423ae620c586b5a8f92abf1a954068c7` |
+| Unified V2 full exact-SHA CI | **FAIL (separate)** | last combined run [38626302663](https://github.com/herkeys/her-keys/actions/runs/38626302663), 6 deletion child tests + 2 Node parent aggregations; doc-only reruns do not supersede successful source certification | GitHub Actions Node22 @ `0f27acfa44874e4d15b20888af23952a8d205fbf`; issue #9 |
+| Checkpoint 4 hosted feature/activation | **BLOCKED / NOT RUN** | Secure secrets/webhook, real JWT A/B tests, provider Sandbox, explicit owner authorization missing | Staging [#16](https://github.com/herkeys/her-keys/issues/16), native RC [#17](https://github.com/herkeys/her-keys/issues/17) |
+
+**Source hostile caveats:** Smart Inbox can still pass a plausible model-invented time to **explicit human review**; measured live model accuracy NOT RUN. Invalid/expired real JWT, physical offline mode, true keyboard/VoiceOver/TalkBack, account switch mid-provider call and real hosted quotas remain BLOCKED or NOT RUN; do not quietly promote existing mocked/unit results. No new Premium-source P0 confirmed by the inspected/tested cases; existing deletion privacy P0 #9 stays open. Village and Co-Parent Plus remain contracts only, nonreleased, without UI.
+
+**Manager stopping rule:** this owner grant authorizes source evidence and independent Premium-only certification without waiting for issue #9; it does **not** authorize unified release acceptance, Staging activation, Pass B, Production changes or device builds. Retain strict combined CI; no deleted/relaxed tests. Further Checkpoint 4 requires separate owner confirmation that Staging secrets and secure Sandbox webhook are live.
