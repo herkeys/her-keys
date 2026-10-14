@@ -87,6 +87,7 @@ describe('post-certification migration governance', () => {
       ['ACCOUNT_DELETION_HISTORY', '20261014015835_account_deletion_cancelled_history_cleanup.sql'],
       ['ACCOUNT_DELETION_SHARED_RETRY', '20261014021410_account_deletion_shared_provider_retry.sql'],
       ['ACCOUNT_DELETION_OTHER_OWNERS', '20261014112400_account_deletion_orphan_shared_ownership.sql'],
+      ['ACCOUNT_DELETION_HOUSEHOLD_LOCK', '20261014113517_account_deletion_household_lock.sql'],
     ]);
     const sql = lf(POST_CERT_CHAIN[0].file);
     const executable = sql.replace(/--.*$/gm, '');

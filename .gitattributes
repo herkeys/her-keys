@@ -45,3 +45,4 @@ supabase/migrations/20261014014620_account_deletion_proof_retention.sql text eol
 supabase/migrations/20261014015835_account_deletion_cancelled_history_cleanup.sql text eol=lf
 supabase/migrations/20261014021410_account_deletion_shared_provider_retry.sql text eol=lf
 supabase/migrations/20261014112400_account_deletion_orphan_shared_ownership.sql text eol=lf
+supabase/migrations/20261014113517_account_deletion_household_lock.sql text eol=lf

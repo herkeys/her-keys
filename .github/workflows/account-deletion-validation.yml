@@ -29,5 +29,5 @@ jobs:
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
-      - run: deno check --config supabase/functions/deno.json supabase/functions/expire-account-deletion-proofs/index.ts supabase/blueprints/staging-deletion-fixture.ts
+      - run: deno check --config supabase/functions/deno.json supabase/functions/expire-account-deletion-proofs/index.ts supabase/blueprints/staging-deletion-fixture.ts supabase/blueprints/staging-deletion-lock-probe.ts
       - run: deno check --config supabase/functions/deno.json supabase/functions/request-account-deletion/index.ts supabase/functions/restore-account/index.ts supabase/functions/process-account-deletions/index.ts supabase/functions/monitor-account-deletions/index.ts supabase/functions/capture-apple-credential/index.ts supabase/functions/begin-web-deletion/index.ts

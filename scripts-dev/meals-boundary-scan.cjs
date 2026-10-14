@@ -1018,6 +1018,7 @@ const LATER_FEATURES = [
     ,"supabase/migrations/20261014015835_account_deletion_cancelled_history_cleanup.sql"
     ,"supabase/migrations/20261014021410_account_deletion_shared_provider_retry.sql"
     ,"supabase/migrations/20261014112400_account_deletion_orphan_shared_ownership.sql"
+    ,"supabase/migrations/20261014113517_account_deletion_household_lock.sql"
   ],
   "schemas": [],
   "rootCollections": [],
@@ -1029,9 +1030,12 @@ const LATER_FEATURES = [
     ['supabase/migrations/20261014015835_account_deletion_cancelled_history_cleanup.sql', 'Remove cancelled account-linked deletion history when a later purge completes.'],
     ['supabase/migrations/20261014021410_account_deletion_shared_provider_retry.sql', 'Continue independent provider retries while explicit shared review remains pending.'],
     ['supabase/migrations/20261014112400_account_deletion_orphan_shared_ownership.sql', 'Preserve another adult ownership even after membership removal; never infer transfer consent.'],
+    ['supabase/migrations/20261014113517_account_deletion_household_lock.sql', 'Serialize ownership classification with concurrent household membership/content insertion.'],
     ['supabase/functions/expire-account-deletion-proofs/index.ts', 'HMAC-authenticated daily expiry of minimal terminal proof; no customer purge authority.'],
     ['supabase/blueprints/account_deletion_retention_scheduler_upgrade.sql', 'Disabled daily retention scheduler upgrade for an existing lifecycle installation.'],
     ['supabase/blueprints/staging_deletion_storage_fixture.sql', 'Staging-only marked disposable-account upload policy; explicit teardown.'],
+    ['supabase/blueprints/staging_deletion_lock_probe.sql', 'Temporary service-only Staging RPC for real concurrent ownership-lock certification; explicit teardown.'],
+    ['supabase/blueprints/staging-deletion-lock-probe.ts', 'HMAC Staging-only disposable ownership race probe; removes its row and is retired afterward.'],
     ['tsconfig.json', 'Deno blueprints are checked by Deno rather than the Expo client compiler.'],
     ['.gitattributes', 'Pin the additive lifecycle migration to LF for exact deployment checksums.'],
     [
