@@ -984,13 +984,13 @@ const LATER_FEATURES = [
     owned: [
       /^scripts-dev\/premium-final-config(?:\.mjs|\/)/,
       /^tests\/premiumFinalConfig\//,
-      /^supabase\/operator\/premium\//,
-      /^docs\/premium\/PREMIUM_FINAL_CONFIG_RUNBOOK\.md$/,
+      // Guard SQL stays inside the existing Premium backend owner namespace.
+      /^docs\/premium\/PREMIUM_FINAL_CONFIG_(?:RUNBOOK|EVIDENCE_20261014)\.md$/,
     ],
     migrations: [], schemas: [], rootCollections: [], syncKinds: [],
     shared: [
       ['.github/workflows/v2-integration-validation.yml', 'Premium final-config certification: include the new exact-SHA source-only branch without weakening workflow checks'],
-      ['scripts-dev/meals-boundary-scan.cjs', 'Premium final-config: register owned tooling, tests and Staging-only SQL operator artifact; no extra shared durable schema or production migration'],
+      ['scripts-dev/meals-boundary-scan.cjs', 'Premium final-config: register owned tooling, tests and human documents; Staging SQL remains in existing Premium backend namespace, not Production migration chain'],
     ],
   },
 
