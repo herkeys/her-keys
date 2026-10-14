@@ -29,11 +29,14 @@ function requiredValue(name) {
   if (!value) throw new Error('missing operator environment variable: '+name);
   return value;
 }
-function client() {
-  const ref=PROJECTS.staging;
-  const key=requiredValue('HK_STAGING_SUPABASE_SERVICE_ROLE_KEY');
+function clientFor(environment) {
+  // This helper performs read operations for both projects. Mutating CLI paths
+  // call client() only AFTER requireStaging(); Production cannot be a write target.
+  const ref=environmentRef(environment);
+  const key=requiredValue(`HK_${environment.toUpperCase()}_SUPABASE_SERVICE_ROLE_KEY`);
   return createClient(`https://${ref}.supabase.co`,key,{auth:{autoRefreshToken:false,persistSession:false,detectSessionInUrl:false}});
 }
+function client() {return clientFor('staging');}
 async function http(method,url,body,headers={}) {
   const opts={method,headers:{...(body===undefined?{}:{'Content-Type':'application/json'}),...headers},signal:AbortSignal.timeout(12000)};
   if(body!==undefined) opts.body=typeof body==='string'?body:JSON.stringify(body);
@@ -41,8 +44,8 @@ async function http(method,url,body,headers={}) {
   const data=await res.json().catch(()=>({}));
   return {code:res.status,data}; // Never return Response headers; they may contain tokens.
 }
-async function row(table,columns) {
-  const c=client(); const {data,error}=await c.from(table).select(columns).limit(1).maybeSingle();
+async function row(table,columns,environment='staging') {
+  const c=clientFor(environment); const {data,error}=await c.from(table).select(columns).limit(1).maybeSingle();
   if(error)throw new Error('Staging database read failed: '+table);
   return data;
 }
@@ -62,17 +65,12 @@ async function localPreflight(env) {
   const local=preflightLocal(localSecretConfig());
   const selected=local.checks[env];
   const external=await probe(env);
-  let db={environment_matches:false,premium_state_correct:false,webhook_inactive:true};
-  if(env==='staging'){
-    try{
-      const r=await row('premium_runtime_config','environment,premium_enabled,webhook_processing,allow_test_fixtures');
-      db={environment_matches:r?.environment==='staging',premium_state_correct:r?.premium_enabled===true,webhook_inactive:r?.webhook_processing===false,fixtures_prohibited:r?.allow_test_fixtures===false};
-    }catch{db={environment_matches:false,premium_state_correct:false,webhook_inactive:false,fixtures_prohibited:false};}
-  } else {
-    // Production is inspected over an unauthenticated read-only probe. An operator
-    // with access to the Production SQL Editor must check the DB fields in runbook.
-    db={database_identity_sql_not_verifiable_without_production_admin:true};
-  }
+  let db={environment_matches:false,premium_state_correct:false,webhook_inactive:false,fixtures_prohibited:false};
+  try{
+    const r=await row('premium_runtime_config','environment,premium_enabled,webhook_processing,allow_test_fixtures',env);
+    db={environment_matches:r?.environment===env,premium_state_correct:r?.premium_enabled===(env==='staging'),
+      webhook_inactive:r?.webhook_processing===false,fixtures_prohibited:r?.allow_test_fixtures===false};
+  }catch{ /* preflight fails closed when remote DB secrets/access are unavailable */ }
   const checks={local_secrets:selected,cross_environment:local.checks.crossEnvironment,live_http:external,database:db};
   const blockingChecks=Object.entries({
     ...selected,
@@ -80,11 +78,13 @@ async function localPreflight(env) {
     webhook_configured:external.webhook_configured,
     ops_configured:external.ops_configured,
     client_jwt_required:external.client_jwt_required,
-    db_environment_matches:env==='staging'?db.environment_matches:false,
-    db_fixtures_prohibited:env==='staging'?db.fixtures_prohibited:false,
+    db_environment_matches:db.environment_matches,
+    db_state_expected:db.premium_state_correct,
+    db_fixtures_prohibited:db.fixtures_prohibited,
+    db_webhook_paused:db.webhook_inactive,
   });
   const ready=blockingChecks.every(([,v])=>v===true);
-  out({status:ready?'PASS':'FAIL',environment:env,checks,readyForStagingActivation:env==='staging'&&ready,notes:'Production is read-only and cannot be certified solely through this CLI; see SQL read-back in runbook.'});
+  out({status:ready?'PASS':'FAIL',environment:env,checks,readyForStagingActivation:env==='staging'&&ready,notes:'Both projects are read-only during preflight; mutations are hard-pinned to Staging.'});
   if(!ready)process.exitCode=1;
   return ready;
 }
