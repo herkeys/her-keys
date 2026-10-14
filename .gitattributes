@@ -38,3 +38,7 @@ supabase/migrations/20260925141432_external_calendar_connections.sql text eol=lf
 
 supabase/migrations/20261009020000_herkeys_welcome_email_receipts.sql text eol=lf
 supabase/migrations/20261009060000_v2_account_consents.sql text eol=lf
+
+# Premium Stage 1 migrations: LF on every platform (chain governance hashes LF-normalised text).
+supabase/migrations/20261015120000_premium_entitlement_foundation.sql text eol=lf
+supabase/migrations/20261015130000_premium_decision_ledger.sql text eol=lf

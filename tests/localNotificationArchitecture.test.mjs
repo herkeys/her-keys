@@ -74,6 +74,11 @@ describe('local notification architecture boundary', () => {
       'herkeys-ai': 'authenticated Gemini request/response proxy',
       'herkeys-welcome-email': 'authenticated first-account welcome email over Resend, no push token or OS notification path',
       'weather-context': 'weather lookup',
+      // Her Keys Premium Stage 1. Reviewed: each reads or writes entitlement, usage or receipts only; none sends, schedules or delivers a notification.
+      'revenuecat-webhook': 'inbound RevenueCat subscription webhook from an authenticated sender; writes the entitlement projection, sends nothing',
+      'premium-gate': 'authenticated Premium authorization decision; no notification path',
+      'premium-reconcile': 'authenticated "verify my subscription" read of RevenueCat; no notification path',
+      'premium-ops': 'operator-secret backlog and reconcile endpoint; no notification path',
     };
     const functions = readdirSync('supabase/functions').filter((name) => statSync(`supabase/functions/${name}`).isDirectory());
     for (const name of functions) {

@@ -80,6 +80,9 @@ describe('post-certification migration governance', () => {
       ['CAL_CONNECTIONS', '20260925141432_external_calendar_connections.sql'],
       ['WELCOME_EMAIL', '20261009020000_herkeys_welcome_email_receipts.sql'],
       ['V2_CONSENT', '20261009060000_v2_account_consents.sql'],
+      // Her Keys Premium Stage 1, governed by supabase/tests/82-premium-authorization.sql and 83-premium-decision-ledger.sql.
+      ['PREMIUM_FOUNDATION', '20261015120000_premium_entitlement_foundation.sql'],
+      ['PREMIUM_LEDGER', '20261015130000_premium_decision_ledger.sql'],
     ]);
     const sql = lf(POST_CERT_CHAIN[0].file);
     const executable = sql.replace(/--.*$/gm, '');
@@ -170,6 +173,10 @@ describe('a re-declaration never drops an earlier registration', () => {
       // feature-specific sync + change-log enforcement unchanged for all
       // existing migrations.
       if (owner === 'V2_CONSENT') continue;
+      // Likewise the Premium tables are NOT household-sync tables: they are service-only (entitlement, usage, audit, events) or an
+      // owner-read receipt ledger, never pushed or pulled by sync_push/sync_pull. Their governance suites (82/83) verify RLS forced,
+      // no client grant beyond the receipt read, and that no customer-data policy references them.
+      if (owner === 'PREMIUM_FOUNDATION' || owner === 'PREMIUM_LEDGER') continue;
       const sql = lf(file);
       const created = [...sql.replace(/--.*$/gm, '').matchAll(/CREATE TABLE public\.(\w+)/g)].map((m) => m[1]);
       if (created.length === 0) continue;

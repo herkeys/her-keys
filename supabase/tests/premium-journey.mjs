@@ -10,10 +10,8 @@ import { handleGate } from '../functions/_shared/premium/gateHandler.ts';
 import { handleWebhook, processBacklog } from '../functions/_shared/premium/webhookHandler.ts';
 
 const JWT_SECRET = process.env.HERKEYS_LOCAL_JWT_SECRET ?? 'super-secret-jwt-token-with-at-least-32-characters-long';
-const ANON_KEY =
-  process.env.HERKEYS_LOCAL_ANON_KEY ??
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0';
 const b64 = (value) => Buffer.from(value).toString('base64url');
+// Every key is MINTED from the published local-development secret at run time: no JWT literal is committed.
 function mint(role, sub) {
   const header = b64(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
   const body = { role, aud: role === 'service_role' ? undefined : 'authenticated', iss: 'supabase-demo', iat: Math.floor(Date.now() / 1000) - 10, exp: Math.floor(Date.now() / 1000) + 3600 };
@@ -21,6 +19,7 @@ function mint(role, sub) {
   const payload = b64(JSON.stringify(body));
   return `${header}.${payload}.${createHmac('sha256', JWT_SECRET).update(`${header}.${payload}`).digest('base64url')}`;
 }
+const ANON_KEY = process.env.HERKEYS_LOCAL_ANON_KEY ?? mint('anon');
 
 const UA = '11111111-1111-4111-8111-111111111111';
 const UB = '22222222-2222-4222-8222-222222222222';

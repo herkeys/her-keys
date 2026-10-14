@@ -214,11 +214,27 @@ test('PBP-1: no feature is gated on her_keys_plus — outside src/monetization t
   assert.deepEqual(gates, [], 'usePremiumGate / checkFeatureAccess have no consumer: advanced_daily_load_patterns and momentum_insights gate nothing');
 });
 
-test('PBP-2: the backend does not enforce Premium either (no function or migration reads the entitlement)', () => {
-  const backend = readdirSync('supabase', { recursive: true }).map((f) => `supabase/${String(f).replaceAll('\\', '/')}`).filter((f) => /\.(ts|sql)$/.test(f));
+test('PBP-1b (Premium Stage 1): the ONLY server-authoritative consumers of Premium state outside src/monetization are the Premium features themselves', () => {
+  // Stage 1 contract (docs/premium/PREMIUM_STAGE1_A0_ARCHITECTURE.md section 3): a protected operation asks `usePremiumFeature`, whose answer is
+  // the SERVER's, and the server decides again when the operation runs. Add a feature here only with its server gate and its tests.
+  const consumers = sources
+    .filter((f) => !f.startsWith('src/monetization/'))
+    .filter((f) => /\busePremiumFeature\b|\busePremiumUpgrade\b/.test(read(f)))
+    .sort();
+  assert.deepEqual(consumers, ['src/features/daily-load/premium/usePremiumDailyLoad.ts']);
+});
+
+test('PBP-2 (evolved in Premium Stage 1): the backend enforces Premium ONLY inside the Premium namespace — no Free function, calendar, weather, AI, welcome-email or sync path reads the entitlement', () => {
+  const backend = readdirSync('supabase', { recursive: true }).map((f) => `supabase/${String(f).replaceAll('\\', '/')}`).filter((f) => /\.(ts|sql|toml|example)$/.test(f));
   assert.ok(backend.length > 10, 'the scan is not vacuous');
-  const mentions = backend.filter((f) => /her_keys_plus|revenuecat/i.test(read(f)));
-  assert.deepEqual(mentions, []);
+  const mentions = backend.filter((f) => /her_keys_plus|revenuecat|premium_(entitlements|authorize|usage|derive_state|my_entitlement)/i.test(read(f)));
+  const PREMIUM_BACKEND = /^supabase\/(migrations\/\d{14}_premium_[a-z_]+\.sql|functions\/(_shared\/premium\/|premium-[a-z]+\/|revenuecat-webhook\/|smart-inbox-[a-z-]+\/|\.env\.example$|_shared\/supabaseAdmin\.ts$)|config\.toml$|tests\/)/;
+  assert.deepEqual(mentions.filter((f) => !PREMIUM_BACKEND.test(f)), [], 'a function or migration outside the Premium namespace reads or enforces the entitlement');
+  assert.ok(mentions.some((f) => f.startsWith('supabase/functions/premium-gate/') || f.startsWith('supabase/functions/_shared/premium/')), 'and the Premium namespace really does carry the enforcement');
+  // The Free functions are named, so a future edit that quietly gates one fails here by name.
+  for (const free of ['herkeys-ai', 'calendar-data', 'calendar-oauth', 'weather-context', 'herkeys-welcome-email']) {
+    assert.doesNotMatch(readdirSync(`supabase/functions/${free}`).map((n) => read(`supabase/functions/${free}/${n}`)).join('\n'), /her_keys_plus|revenuecat|premium_/i, `${free} must stay Free`);
+  }
 });
 
 test('PBP-3: outside the Welcome Tree, no source copy claims Premium benefits the app does not deliver', () => {
