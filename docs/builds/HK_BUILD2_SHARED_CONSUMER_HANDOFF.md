@@ -5,7 +5,7 @@ benefit map, the owner decision register and the full unresolved list are in
 `docs/audits/HK_BUILD2_SHARED_CONSUMER_REPAIR_LEDGER.md`. The release-branch policy patch is in `docs/release/`.
 
 No EAS command was run. No merge into Production, no backend change, no RevenueCat dashboard change, no store or Supabase setting change.
-`app.json` was not edited. The deletion workstream, the Welcome Tree workstream, iOS native permissions, Apple credential handling and the
+`app.json` was not edited by this work (its only change on this line is the merged iOS audit commit `26dbbbe`, light appearance). The deletion workstream, the Welcome Tree workstream, iOS native permissions, Apple credential handling and the
 Production schema/RLS/functions were not modified.
 
 ## Verdicts
@@ -19,7 +19,7 @@ CONSENT_RECOVERY_UX=PASS
 TALK_IT_OUT_SHEET=PASS
 RELEASE_BRANCH_POLICY=OWNER_APPROVAL_REQUIRED
 ANDROID_IOS_REGRESSION=PASS
-EXACT_SHA_CI=<filled from the CI run below>
+EXACT_SHA_CI=PASS
 SHARED_CONSUMER_BLOCKERS=REMAINING
 ```
 
@@ -66,4 +66,19 @@ existing 26 welcome-premium tests passing unchanged; (d) the boundary scan lane 
 
 ## Gate evidence
 
-(completed from the final run — see below)
+Code state `842b23f9223f0c81f1df2fbb0934ceceb26ab08c` (everything after it is documentation).
+
+| Gate | Result |
+|---|---|
+| Exact-SHA GitHub CI, workflow "Her Keys V2 Integration Gate", run `38493190846` on `842b23f` | **success**: backend boundary protection, release identity, TypeScript, full application suite, `expo install --check`, Expo Doctor, public and introspected config |
+| `tsc --noEmit` (local) | exit 0 |
+| `npm run verify:release-identity` (local) | `RELEASE_IDENTITY=PASS` (Android `com.heykeys.app`, iOS `com.herkeys.app`, EAS project unchanged) |
+| `npm test` (local, Node 24 / npm 11) | 4110 / 4112 pass. The 2 failures are the Meals boundary scan checks BV1 and BV7 **only** because a stale local branch ref (`feature/herkeys-email-password-20261008`, `42f1673`) is checked out in another worktree; the scan's only finding is that "lane claims a change the branch never made". With those stale claims filtered, the scan reports zero findings. The same tests pass in CI's fresh clone |
+| `expo-doctor` | 21 / 21 |
+| `expo install --check`; `expo config --type public`; `expo config --type introspect` | clean / resolve / resolve |
+| Baseline for comparison (merged tree before any change) | 4061 tests, 4058 pass; same BV1/BV7 and one wall-clock timing test (calendar combinatorics) that did not fail in the final run |
+
+New or extended tests: restoreControl 8, consentRecovery 14, premiumFeedback 14, returningUserCopy 3, subject.sync 5, talkItOutCapture.ui +6 (SC-06). Mutation checks: consent 6/7 killed (1 equivalent), premium 9/9, Fix sheet 1/1.
+Focused regressions run and passing: platformParity (all), tests/ios (3 files), systems (all), accountRuntime 32, syncComposition 55, routeAccess 19, monetization 23, welcomePremiumFlow 26, welcomeAuthShell/Flow, releaseIdentity 10.
+
+Not run (and not claimed): native sandbox purchase/restore/paywall; physical-device keyboard, IME, large-font and small-screen passes; live Supabase consent reads; live two-device household adoption; native iOS/Android builds; the Docker backend harness (a shared DB other sessions use).
