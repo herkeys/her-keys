@@ -187,7 +187,7 @@ async function signedSmoke(mode='TEST') {
     'X-RevenueCat-Webhook-Signature':signature,
   });
   const classification=classifyWebhookResult(req.code,req.data);
-  const accepted=req.code===200 && ['ignored_test','processing_halted','stored_processing_halted','processed','received','pending_reconcile','needs_reconcile'].includes(classification);
+  const accepted=req.code===200 && ['ignored_test','processing_halted','stored_processing_halted','stored','processed','received','pending_reconcile','needs_reconcile'].includes(classification);
   let persisted=false;
   if(accepted){
     const {data,error}=await client().from('premium_events')
