@@ -17,6 +17,7 @@ on:
       - feature/herkeys-premium-stage1
       # Premium-only source certification; no deletion work is included.
       - integration/premium-certification
+      - codex/v2-premium-final-config
       # Final-config isolated implementation and strict evidence lane.
       - codex/v2-premium-final-config
   workflow_dispatch:
