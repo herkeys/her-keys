@@ -34,3 +34,13 @@ test('signed-event transport does not claim it verifies a customer purchase',()=
   assert.match(core,/not_configured/);
   assert.match(cli,/signed TEST smoke/);
 });
+
+test('activation and verification independently require Production to remain fail-closed',()=>{
+  assert.match(cli,/async function assertProductionFailClosed\(\)/);
+  assert.match(cli,/r\.premium_enabled!==false/);
+  assert.match(cli,/r\.webhook_processing!==false/);
+  assert.match(cli,/r\.allow_test_fixtures!==false/);
+  assert.match(cli,/rows\.some\(f=>f\.enabled\|\|f\.released\)/);
+  const activation=cli.substring(cli.indexOf('async function setWindow'),cli.indexOf('async function signedSmoke'));
+  assert.ok(activation.split('await assertProductionFailClosed()').length>=3);
+});
