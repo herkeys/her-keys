@@ -1,0 +1,9 @@
+Producer: gh run view 38626302663 / 38626302655 --log-failed; exact SHA 0f27acfa44874e4d15b20888af23952a8d205fbf; full-suite summary
+v2-repository-validation	Full application test suite	2026-10-14T19:47:10.4256948Z # tests 4655
+v2-repository-validation	Full application test suite	2026-10-14T19:47:10.4257289Z # pass 4647
+v2-repository-validation	Full application test suite	2026-10-14T19:47:10.4257453Z # fail 8
+v2-repository-validation	Full application test suite	2026-10-14T19:47:10.4257791Z # skipped 0
+validate	Run npm test	2026-10-14T19:46:34.1721132Z ℹ tests 4655
+validate	Run npm test	2026-10-14T19:46:34.1721512Z ℹ pass 4647
+validate	Run npm test	2026-10-14T19:46:34.1721694Z ℹ fail 8
+validate	Run npm test	2026-10-14T19:46:34.1722041Z ℹ skipped 0
