@@ -1,9 +1,9 @@
 {
-  "recorded_at": "2026-10-14T11:32:00Z",
-  "mobile_source_sha": "3402624b3c4ff6246753d181d1199f324625effa",
+  "recorded_at": "2026-10-14T11:40:00Z",
+  "mobile_source_sha": "8b59fd99daeb73ee5bde68bfef5b8baac24939f3",
   "website_source_sha": "8a99fdd6c58faa2d2c56f7c06b468483f56671a0",
   "source_ci": {
-    "mobile": "https://github.com/herkeys/her-keys/actions/runs/38557089436",
+    "mobile": "https://github.com/herkeys/her-keys/actions/runs/38558155165",
     "website": "https://github.com/herkeys/her-keys-web/actions/runs/38555077652",
     "both": "success"
   },
@@ -100,6 +100,13 @@
         "version": 2,
         "verify_jwt": false,
         "bundle_sha256": "fa1c58c74e37e634f63b7bab824b4be4f3acc103f2243b8392c7e66e0e3968c0"
+      },
+      {
+        "name": "staging-deletion-lock-probe",
+        "version": 2,
+        "verify_jwt": true,
+        "bundle_sha256": "f3a633bf95b73163f2fa7aa8c5c23a7cbba0e454dfb4dc51be9d5255268e36fd",
+        "state": "retired; inert 410"
       }
     ],
     "destructive_control": {
@@ -115,7 +122,14 @@
       "utc_schedule": "17 3 * * *"
     },
     "fixture_upload_policy": "removed",
-    "fixture_endpoint": "retired v9; JWT required; inert 410 body"
+    "fixture_endpoint": "retired v9; JWT required; inert 410 body",
+    "lock_probe": {
+      "rpc": "removed",
+      "fixture_rows": 0,
+      "insert_wait_ms": 3381,
+      "parent_lock_ms": 4000,
+      "concurrency_verified": true
+    }
   },
   "production": {
     "project": "npykvnxnehlsdlbumzwk",
@@ -192,6 +206,11 @@
       "file": "20261014112400_account_deletion_orphan_shared_ownership.sql",
       "sha256": "a33f0efc7eef38f48440827bade3df67a9dcc567591868335474dc7b99b9beda",
       "staging_version": "20261014112526"
+    },
+    {
+      "file": "20261014113517_account_deletion_household_lock.sql",
+      "sha256": "1a7c9804ef543ce6ed603152157d5eef316bcbba21b15a9e0fe6fc4053105ce7",
+      "staging_version": "20261014113628"
     }
   ],
   "migration_history_note": "MCP generated Staging versions differ from canonical source filenames. Match names/checksums and reconcile history before CLI db push; never replay applied migrations. Scheduler and fixture upload/teardown are separately recorded operational blueprints."

@@ -3,9 +3,9 @@
 Target: npykvnxnehlsdlbumzwk. No Production mutation, customer deletion or worker activation is authorized. Read-only inspection found no lifecycle tables/migrations and no pg_cron extension. Existing Edge Function versions are captured in deployment-manifest.json. Production RevenueCat secret names and project-ID digest were independently inspected without revealing either key.
 
 Concrete candidate:
-- Mobile source 3402624b3c4ff6246753d181d1199f324625effa; exact-source CI https://github.com/herkeys/her-keys/actions/runs/38557089436 succeeded.
+- Mobile source 8b59fd99daeb73ee5bde68bfef5b8baac24939f3; exact-source CI https://github.com/herkeys/her-keys/actions/runs/38558155165 succeeded.
 - Website source 8a99fdd6c58faa2d2c56f7c06b468483f56671a0; exact-source CI https://github.com/herkeys/her-keys-web/actions/runs/38555077652 succeeded.
-- Seven additive migrations in canonical filename order, with SHA-256 and Staging history mapping in deployment-manifest.json.
+- Eight additive migrations in canonical filename order, with SHA-256 and Staging history mapping in deployment-manifest.json.
 - New functions: request-account-deletion, restore-account, resend-restoration-email, deletion-status, process-account-deletions, monitor-account-deletions, expire-account-deletion-proofs, capture-apple-credential, begin-web-deletion.
 - Redeploy calendar-oauth and all consumers of the changed shared requireUser guard: calendar-data, weather-context, herkeys-ai and herkeys-welcome-email. Pin dependencies and upload the reviewed shared files with every bundle.
 - Never deploy staging-deletion-fixture or its Storage policy to Production.
