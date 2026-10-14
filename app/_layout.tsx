@@ -1,4 +1,5 @@
 import { SplashScreen, Stack } from 'expo-router';
+import { DeletionGate } from '../src/features/account/DeletionGate';
 import * as NativeSplashScreen from 'expo-splash-screen';
 import { useCallback, useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -36,9 +37,9 @@ export default function RootLayout() {
         <PremiumIntentProvider>
           <AppStateProvider store={appStore}>
             <LocalNotificationProvider>
-              <AccountProvider>
+              <DeletionGate><AccountProvider>
                 <RootNavigator />
-              </AccountProvider>
+              </AccountProvider></DeletionGate>
             </LocalNotificationProvider>
           </AppStateProvider>
         </PremiumIntentProvider>

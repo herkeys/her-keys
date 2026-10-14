@@ -5,6 +5,7 @@ import type { AuthProvider } from '../../domain/account/identity';
 import { CROSS_PLATFORM_NOTE, PROVIDER_LABELS, showsCrossPlatformNote, type AccountModalMode } from './accountModel';
 
 export interface AccountPanelProps {
+  onPrivacy?: () => void;
   mode: AccountModalMode;
   /** Providers this device reports available — asked of the adapters, never assumed from the platform. */
   providers: readonly AuthProvider[];
@@ -24,7 +25,7 @@ export interface AccountPanelProps {
  * connects it to account-backed sync. Fresh-device household adoption is not implemented yet. Signing out keeps everything on this phone; the next sign-in of the same account
  * resumes it. Presentational only — the route supplies the actions, and they all go through AccountRuntime.
  */
-export function AccountPanel({ mode, providers, busy, failed, onSignIn, onSignOut, onClose, onRestore, restoring = false, restoreNotice }: AccountPanelProps) {
+export function AccountPanel({ mode, providers, busy, failed, onSignIn, onSignOut, onClose, onRestore, restoring = false, restoreNotice, onPrivacy }: AccountPanelProps) {
   const copy = COPY[mode];
   const offersProviders = mode === 'signIn' || mode === 'reconnect';
 
@@ -41,6 +42,7 @@ export function AccountPanel({ mode, providers, busy, failed, onSignIn, onSignOu
       </View>
 
       <View style={styles.footer}>
+        {mode === 'connected' && onPrivacy ? <Button label="Privacy & Data" variant="secondary" disabled={busy || restoring} onPress={onPrivacy} /> : null}
         {failed && offersProviders && (
           <AppText variant="bodySm" color={colors.textTertiary} style={styles.note} accessibilityLiveRegion="polite">
             That did not go through. Nothing on this device changed — you can try again.

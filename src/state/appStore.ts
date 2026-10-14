@@ -66,6 +66,8 @@ export type StoreDiagnostic =
   | { type: 'identity_saved' };
 
 export interface AppStore {
+  /** Account lifecycle restriction; does not erase recoverable local state. */
+  setAccountAccessBlocked(blocked: boolean): void;
   getSnapshot(): StoreSnapshot;
   subscribe(listener: () => void): () => void;
   /** Loads once; calling again returns the same promise. */
@@ -117,6 +119,7 @@ export interface AppStoreOptions {
 }
 
 export function createAppStore(options: AppStoreOptions): AppStore {
+  let accountAccessBlocked = false;
   const now = options.now ?? Date.now;
   const timeZone = options.timeZone ?? deviceTimeZone;
   const createId = options.createId ?? sequentialIds(now);
@@ -345,6 +348,7 @@ export function createAppStore(options: AppStoreOptions): AppStore {
   }
 
   return {
+    setAccountAccessBlocked(blocked) { accountAccessBlocked = blocked; },
     getSnapshot: () => snapshot,
 
     subscribe(listener) {
@@ -358,20 +362,22 @@ export function createAppStore(options: AppStoreOptions): AppStore {
     },
 
     dispatch(transition) {
+      if (accountAccessBlocked) return;
       // While a commit is saving, its change isn't shown yet. Applying this one
       // now would be overwritten when the commit publishes, so it waits its turn.
       if (serialized > 0) {
-        void inTurn(() => applyNow(transition));
+        void inTurn(() => { if (!accountAccessBlocked) applyNow(transition); });
         return;
       }
       applyNow(transition);
     },
 
     commit(transition) {
-      return inTurn(() => commitNow(transition));
+      return inTurn(() => accountAccessBlocked ? Promise.resolve(false) : commitNow(transition));
     },
 
     refreshDay() {
+      if (accountAccessBlocked) return;
       const { state, today } = snapshot;
       if (!state || !today || serialized > 0) return;
       const current = todayFor(state);
@@ -410,6 +416,7 @@ export function createAppStore(options: AppStoreOptions): AppStore {
 
     applySync(work) {
       return inTurn(async () => {
+        if (accountAccessBlocked) return false;
         const { state } = snapshot;
         if (state === null) return false;
         const before = snapshot.identity;

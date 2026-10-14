@@ -11,7 +11,7 @@ import { onboardedState } from '../support/fixtures.mjs';
 
 const stub = new URL('./support/restoreRoute.mjs', import.meta.url).href;
 registerHooks({ resolve(specifier, context, next) {
-  if (/\/(AccountProvider|RevenueCatProvider|accountRuntimeInstance|WelcomeAuthFlow)$/.test(specifier) || specifier === 'expo-router') return next(stub, context);
+  if (/\/(AccountProvider|RevenueCatProvider|accountRuntimeInstance|deletionRuntimeInstance|WelcomeAuthFlow)$/.test(specifier) || specifier === 'expo-router') return next(stub, context);
   return next(specifier, context);
 } });
 const { default: AccountScreen } = await import('../../app/sign-in.tsx');

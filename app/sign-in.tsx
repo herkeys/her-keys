@@ -1,4 +1,5 @@
 import { router } from 'expo-router';
+import { DeleteAccountPanel } from '../src/features/account/DeleteAccountPanel';
 import { useEffect, useRef, useState } from 'react';
 import { Screen } from '../src/design/components';
 import type { AuthProvider } from '../src/domain/account/identity';
@@ -21,6 +22,7 @@ import { useEntitlement } from '../src/monetization/RevenueCatProvider';
  * (`boundOther`) never reaches here: the route guard sends that state to `account-conflict` alone.
  */
 export default function SignIn() {
+  const [privacy, setPrivacy] = useState(false);
   const { state, available, busy, signIn, signOut } = useAccount();
   const [providers, setProviders] = useState<AuthProvider[]>([]);
   const mode = accountModalMode(state, available);
@@ -85,10 +87,12 @@ export default function SignIn() {
   }, []);
 
   if (shouldReconnect) return <WelcomeAuthFlow mode="reconnect" />;
+  if (privacy) return <Screen scroll={false}><DeleteAccountPanel onBack={() => setPrivacy(false)} /></Screen>;
 
   return (
     <Screen scroll={false}>
       <AccountPanel
+        onPrivacy={() => setPrivacy(true)}
         mode={mode}
         providers={providers}
         busy={busy}

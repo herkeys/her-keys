@@ -80,6 +80,7 @@ describe('post-certification migration governance', () => {
       ['CAL_CONNECTIONS', '20260925141432_external_calendar_connections.sql'],
       ['WELCOME_EMAIL', '20261009020000_herkeys_welcome_email_receipts.sql'],
       ['V2_CONSENT', '20261009060000_v2_account_consents.sql'],
+      ['ACCOUNT_DELETION', '20261014002726_account_deletion_lifecycle.sql'],
     ]);
     const sql = lf(POST_CERT_CHAIN[0].file);
     const executable = sql.replace(/--.*$/gm, '');
@@ -169,7 +170,9 @@ describe('a re-declaration never drops an earlier registration', () => {
       // no UPDATE/DELETE, and server-only receipt ID/timestamps. Keep the
       // feature-specific sync + change-log enforcement unchanged for all
       // existing migrations.
-      if (owner === 'V2_CONSENT') continue;
+      // Lifecycle control/credential tables are service-only operational data,
+      // covered by real-SQL denial tests; they must never enter household sync.
+      if (owner === 'V2_CONSENT' || owner === 'ACCOUNT_DELETION') continue;
       const sql = lf(file);
       const created = [...sql.replace(/--.*$/gm, '').matchAll(/CREATE TABLE public\.(\w+)/g)].map((m) => m[1]);
       if (created.length === 0) continue;
