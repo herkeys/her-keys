@@ -970,8 +970,9 @@ const LATER_FEATURES = [
       ['src/features/talk-it-out/capture/CaptureContext.tsx', 'Premium Stage 1 (Smart Inbox): the capture provider hands the coordinator an optional Premium reader read from a tiny context (null where Premium is not mounted); Free capture imports nothing from the Premium provider'],
       ['src/features/talk-it-out/capture/types.ts', 'Premium Stage 1 (Smart Inbox): two assumption codes (premium-reading, possible-duplicate) so a Premium reading and a possible duplicate are shown as assumptions, never as something she said'],
       ['tests/support/captureWorld.mjs', 'Premium Stage 1 (Smart Inbox): the capture test world accepts an optional enhancer; every existing suite passes none'],
-      ['scripts-dev/meals-boundary-scan.cjs', 'Premium Stage 1: register this lane and its changed files'],
+      ['scripts-dev/meals-boundary-scan.cjs', 'Premium Stage 1: register this lane and its changed files; check G exempts the branch being scanned (the line under test), exactly as it exempts the Meals line, so a CI push checkout is not reported as its own sibling — every other branch is still judged by ancestry'],
       ['.github/workflows/v2-integration-validation.yml', 'Premium Stage 1: exact-SHA CI push trigger for the Premium branch (remove with the branch)'],
+      ['tests/meals/boundary.test.mjs', 'Premium Stage 1: [BM4] pins that check G exempts the branch being scanned and nothing else'],
     ],
   },
 
@@ -1218,8 +1219,11 @@ function scan() {
   // `feature/*`, not `feature/0*`: a Feature 10+ branch reaching HEAD unregistered is exactly what this asks about. A registered later
   // lane's branch is merged into this line on purpose, and everything it changed is accounted for above (checks A-E) and below (H).
   const laneBranches = new Set(LATER_FEATURES.map((feature) => feature.branch).filter(Boolean));
+  // The branch being scanned is the line under test, not a sibling reaching it (a CI push checkout and a developer's own branch both create a
+  // local `feature/*` ref at HEAD). It is exempt exactly as `feature/08-meals-os` is; every OTHER branch is still judged by ancestry.
+  const checkedOut = gitOk('rev-parse', '--abbrev-ref', 'HEAD').out.trim();
   for (const branch of git('branch', '--list', 'feature/*', 'validate/*', 'audit/hk-*').split('\n').map((b) => b.replace(/^[*+ ]+/, '').trim()).filter(Boolean)) {
-    if (branch === 'feature/08-meals-os' || laneBranches.has(branch)) continue;
+    if (branch === 'feature/08-meals-os' || isLineUnderTest(branch, checkedOut) || laneBranches.has(branch)) continue;
     const tip = git('rev-parse', branch).trim();
     if (gitOk('merge-base', '--is-ancestor', tip, 'HEAD').ok) {
       // A tip at or below the baseline is the baseline's own history (IR01 forked from an audit tip); only history ABOVE it is a sibling.
@@ -1281,8 +1285,13 @@ function scan() {
   return { ok: findings.length === 0, base: BASE, findings, facts };
 }
 
+/** The checked-out branch is the line being scanned. `git rev-parse --abbrev-ref HEAD` answers "HEAD" when detached: then nothing is exempt. */
+function isLineUnderTest(branch, checkedOut) {
+  return checkedOut !== '' && checkedOut !== 'HEAD' && branch === checkedOut;
+}
+
 // Required (not run) by tests/meals/boundary.test.mjs, which holds account() to its rules on files the real tree does not exercise.
-module.exports = { account, laneRegister, LATER_FEATURES, MEALS_LINE };
+module.exports = { account, laneRegister, LATER_FEATURES, MEALS_LINE, isLineUnderTest };
 if (require.main !== module) return;
 
 const result = scan();

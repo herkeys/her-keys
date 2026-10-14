@@ -65,6 +65,14 @@ describe('[BV] the semantic-boundary scan', () => {
     }
   });
 
+  test('[BM4] the checked-out branch is the line under test, never its own sibling — and a detached HEAD or any OTHER branch is not exempt', () => {
+    const { isLineUnderTest } = createRequire(import.meta.url)('../../scripts-dev/meals-boundary-scan.cjs');
+    assert.equal(isLineUnderTest('feature/herkeys-premium-stage1', 'feature/herkeys-premium-stage1'), true);
+    assert.equal(isLineUnderTest('feature/other-lane', 'feature/herkeys-premium-stage1'), false, 'a different branch reaching HEAD is still a sibling');
+    assert.equal(isLineUnderTest('HEAD', 'HEAD'), false, 'a detached checkout exempts nothing');
+    assert.equal(isLineUnderTest('feature/x', ''), false);
+  });
+
   test('[BV6] who could have made a change decides what explains it: the Wave 2 line needs a Meals-line reason, a later change a later lane\'s (HK13-D11)', () => {
     const { account, MEALS_LINE } = createRequire(import.meta.url)('../../scripts-dev/meals-boundary-scan.cjs');
     const F10 = 'HK-FEATURE-10 (Work / Career OS)';
