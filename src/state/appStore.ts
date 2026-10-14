@@ -84,7 +84,7 @@ export interface AppStore {
   /** Pick up a new logical day if midnight has passed. */
   refreshDay(): void;
   /** Resolves false when reset could destroy state this session deliberately preserved. */
-  reset(): Promise<boolean>;
+  reset(expectedAccountId?: string): Promise<boolean>;
   flush(): Promise<void>;
   /** Stop writing for the rest of the session (used after simulating stored-state damage). */
   suspendPersistence(): void;
@@ -441,12 +441,14 @@ export function createAppStore(options: AppStoreOptions): AppStore {
       });
     },
 
-    reset() {
+    reset(expectedAccountId) {
       return inTurn(async () => {
+        const namespaceMatches = () => expectedAccountId === undefined || options.repository.currentIdentity().binding?.accountId === expectedAccountId;
         // A memory-only recovery session must not overwrite state it is preserving.
-        if (snapshot.persistence === 'disabled') return false;
+        if (snapshot.persistence === 'disabled' || !namespaceMatches()) return false;
 
         await queue.flush();
+        if (!namespaceMatches()) return false;
         try {
           await options.repository.resetAppState();
         } catch {

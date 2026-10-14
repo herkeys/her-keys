@@ -16,6 +16,41 @@ test('local terminal cleanup requires matching namespace and verified timestamps
  assert.equal(canEraseDeletedNamespace(status,receipt,B),false);
  assert.equal(canEraseDeletedNamespace(status,receipt,null),false);
  assert.equal(canEraseDeletedNamespace(status,receipt,A,Date.UTC(2028,0,1)),false);
+ assert.equal(canEraseDeletedNamespace({...status,verified_at:'2026-10-13T23:59:59Z'},receipt,A,now),false);
+ assert.equal(canEraseDeletedNamespace({...status,expires_at:'2030-10-14T00:00:01Z'},receipt,A,now),false);
+ assert.equal(canEraseDeletedNamespace(status,receipt,A,Date.UTC(2026,0,1)),false);
+});
+
+test('queued local reset cannot erase an account that replaced the expected namespace',async()=>{
+ const h=harness();const store=await launch(h);
+ const identity=actor=>({...store.currentIdentity(),binding:{accountId:actor,householdId:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',boundAt:'2026-10-14T00:00:00Z',kind:'bootstrap',idMap:{}}});
+ store.setIdentity(identity(A));await store.saveIdentity();
+ const before=store.getSnapshot().state;
+ const resetting=store.reset(A);
+ store.setIdentity(identity(B));
+ assert.equal(await resetting,false);
+ assert.equal(store.getSnapshot().state,before);
+ assert.equal(store.currentIdentity().binding.accountId,B);
+});
+
+test('namespace change while reset waits for persistence preserves the replacement account',async()=>{
+ const h=harness();const store=await launch(h);
+ const identity=actor=>({...store.currentIdentity(),binding:{accountId:actor,householdId:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',boundAt:'2026-10-14T00:00:00Z',kind:'bootstrap',idMap:{}}});
+ store.setIdentity(identity(A));await store.saveIdentity();
+ let unblock,started;
+ const blocked=new Promise(resolve=>{unblock=resolve;});
+ const writing=new Promise(resolve=>{started=resolve;});
+ const write=h.storage.write.bind(h.storage);
+ h.storage.write=async(key,value)=>{started();await blocked;return write(key,value);};
+ store.dispatch(state=>renameCategory(state,'cat-kids','Preserved replacement household'));
+ await writing;
+ const before=store.getSnapshot().state;
+ const resetting=store.reset(A);
+ await Promise.resolve();
+ store.setIdentity(identity(B));unblock();
+ assert.equal(await resetting,false);
+ assert.equal(store.getSnapshot().state,before);
+ assert.equal(store.currentIdentity().binding.accountId,B);
 });
 test('expired or unavailable proof never resets data; explicit local reset is namespace-bound',()=>{
  assert.equal(canEraseDeletedNamespace({status:'unknown'},receipt,A),false);

@@ -40,12 +40,13 @@ async function check() {
   if(receipt) {
    const status=await call('deletion-status',{receipt:receipt.proof});
    if(status.status==='purged') {
-    const identity=appStore.currentIdentity();
-    if(canEraseDeletedNamespace(status,receipt,identity.binding?.accountId??null)) {
-     syncRuntime.stop();await syncRuntime.idle();await accountRuntime.signOut();
-     if(!await appStore.reset())throw new Error('local_cleanup_unavailable');
-     await secure.deleteItem(KEY);
-    }
+    const permitted=()=>canEraseDeletedNamespace(status,receipt,appStore.currentIdentity().binding?.accountId??null);
+    if(!permitted())throw new Error('terminal_proof_cannot_authorize_this_namespace');
+    syncRuntime.stop();await syncRuntime.idle();
+    if(!permitted())throw new Error('local_namespace_changed');
+    await accountRuntime.signOut();
+    if(!permitted()||!await appStore.reset(receipt.accountId))throw new Error('local_cleanup_unavailable');
+    await secure.deleteItem(KEY);
     publish({kind:'purged'});return;
    }
    if(status.status==='restored') {
@@ -112,7 +113,7 @@ export const deletionRuntime={
   publish({kind:'checking'});syncRuntime.stop();await syncRuntime.idle();
   if(!permitted())throw new Error('local_namespace_changed');
   await accountRuntime.signOut();
-  if(!permitted()||!await appStore.reset())throw new Error('local_cleanup_unavailable');
+  if(!permitted()||!await appStore.reset(expectedAccountId!))throw new Error('local_cleanup_unavailable');
   const receipt=parseDeletionReceipt(await secure.getItem(KEY));
   if(receipt?.accountId===expectedAccountId)await secure.deleteItem(KEY);
   publish({kind:'active'});

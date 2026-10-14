@@ -9,9 +9,10 @@ export function parseDeletionReceipt(raw:string|null):DeletionReceipt|null {
 export function canEraseDeletedNamespace(status:unknown,receipt:DeletionReceipt,boundAccountId:string|null,now:number=Date.now()):boolean {
  if(!status || typeof status!=='object' || receipt.accountId!==boundAccountId)return false;
  const value=status as {status?:string;purged_at?:unknown;verified_at?:unknown;expires_at?:unknown};
- return value.status==='purged' && typeof value.purged_at==='string' && Number.isFinite(Date.parse(value.purged_at))
-  && typeof value.verified_at==='string' && Number.isFinite(Date.parse(value.verified_at))
-  && typeof value.expires_at==='string' && Date.parse(value.expires_at)>now;
+ if(value.status!=='purged'||typeof value.purged_at!=='string'||typeof value.verified_at!=='string'||typeof value.expires_at!=='string')return false;
+ const purged=Date.parse(value.purged_at),verified=Date.parse(value.verified_at),expires=Date.parse(value.expires_at);
+ return Number.isFinite(purged)&&Number.isFinite(verified)&&verified>=purged&&verified<=now+300000
+  && expires===verified+365*86400000&&expires>now;
 }
 export function canResetLocalNamespace(confirmation:string,expected:string|null,current:string|null):boolean {
  return confirmation==='DELETE LOCAL DATA' && expected!==null && expected===current;
