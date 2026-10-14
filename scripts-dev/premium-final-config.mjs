@@ -218,6 +218,9 @@ async function signedSmoke(mode='TEST') {
   if(mode!=='TEST'){
     if(!flag('--synthetic-only')||!isUuid(uuid)||!await testerIsAllowed(uuid))throw new Error('INITIAL_PURCHASE fixture requires --synthetic-only and allowlisted Staging --account-id; cannot grant subscription');
   }
+  // Synthetic INITIAL_PURCHASE must report real projection before/after without
+  // claiming that a fabricated event proves a provider purchase or entitlement.
+  const projectionBefore=mode==='INITIAL_PURCHASE' ? await readProjection(uuid) : null;
   const fixture=eventFixture(mode,{accountId:uuid});
   const raw=JSON.stringify(fixture);
   const signature=signWebhook(raw,conf.REVENUECAT_WEBHOOK_HMAC_SECRET);
@@ -234,7 +237,10 @@ async function signedSmoke(mode='TEST') {
     persisted=!error&&data?.event_id===fixture.event.id;
   }
   const receiptPassed=accepted&&persisted;
+  const projectionAfter=mode==='INITIAL_PURCHASE' ? await readProjection(uuid) : null;
+  const projectionUpdated=mode==='INITIAL_PURCHASE' && JSON.stringify(projectionBefore)!==JSON.stringify(projectionAfter);
   out({status:receiptPassed?'PASS':'FAIL',environment:'staging',type:mode,httpCode:req.code,receipt:classification,persisted,
+    projectionUpdated,projectionBefore:projectionBefore?.state??null,projectionAfter:projectionAfter?.state??null,
     signed:true,actualPurchaseVerified:false,entitlementGrantVerified:false,
     note:'A locally signed synthetic event proves the transport ONLY. Genuine purchases require RevenueCat Sandbox and an authenticated subscriber reconciliation.'});
   if(!receiptPassed)process.exitCode=1;
