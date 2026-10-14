@@ -221,7 +221,9 @@ test('PBP-1b (Premium Stage 1): the ONLY server-authoritative consumers of Premi
     .filter((f) => !f.startsWith('src/monetization/'))
     .filter((f) => /\busePremiumFeature\b|\busePremiumUpgrade\b/.test(read(f)))
     .sort();
-  assert.deepEqual(consumers, ['src/features/daily-load/premium/usePremiumDailyLoad.ts']);
+  // Daily Load review (gate `daily_load_premium`) and the Momentum weekly review (gate `momentum_report`). Smart Inbox reaches the server through the
+  // capture seam (`src/features/smart-inbox/PremiumReaderBridge.tsx`, which publishes only the server-confirmed entitlement), not through this hook.
+  assert.deepEqual(consumers, ['src/features/daily-load/premium/usePremiumDailyLoad.ts', 'src/features/momentum/premium/usePremiumMomentum.ts']);
 });
 
 test('PBP-2 (evolved in Premium Stage 1): the backend enforces Premium ONLY inside the Premium namespace — no Free function, calendar, weather, AI, welcome-email or sync path reads the entitlement', () => {
