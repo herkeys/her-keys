@@ -1,7 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useRef, type ReactNode } from 'react';
-import { useOptionalPremiumState } from '../../../monetization/PremiumStateProvider';
-import { isEntitledState } from '../../../monetization/premiumTypes';
 import { useAppStore, useStoreSnapshot } from '../../../store/AppStateProvider';
+import { usePremiumReaderView } from '../../smart-inbox/premiumReaderContext';
 import { createSmartInboxEnhancer } from '../../smart-inbox/smartInboxEnhancer';
 import { createCaptureCoordinator, type CaptureCoordinator } from './coordinator';
 import { localInterpreter } from './port';
@@ -28,25 +27,12 @@ export function CaptureProvider({ children, now = Date.now }: { children: ReactN
   const store = useAppStore();
   // The coordinator holds this session's readings in memory, so it must NOT be rebuilt when Premium's state changes: the enhancer reads
   // the latest Premium view through a ref at call time instead.
-  const premium = useOptionalPremiumState();
+  const premium = usePremiumReaderView();
   const premiumRef = useRef(premium);
   premiumRef.current = premium;
   const value = useMemo<CaptureContextValue>(() => {
     const text = createMemoryCaptureTextStore();
-    const enhance = createSmartInboxEnhancer({
-      premium: () => {
-        const p = premiumRef.current;
-        if (!p) return null;
-        return {
-          accountBound: p.accountBound,
-          householdId: p.householdId,
-          entitled: p.snapshot.server !== null && isEntitledState(p.snapshot.server.state),
-          appVersion: p.appVersion,
-          extract: p.extract,
-        };
-      },
-      state: () => store.getSnapshot().state,
-    });
+    const enhance = createSmartInboxEnhancer({ premium: () => premiumRef.current, state: () => store.getSnapshot().state });
     return { text, now, coordinator: createCaptureCoordinator({ store, interpreter: localInterpreter, text, now, enhance }) };
   }, [store, now]);
 

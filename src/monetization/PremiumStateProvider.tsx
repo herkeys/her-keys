@@ -139,11 +139,6 @@ export function usePremiumState(): PremiumContextValue {
   return value;
 }
 
-/** For code that must keep working where Premium is not mounted (Free features, tests): null instead of throwing. */
-export function useOptionalPremiumState(): PremiumContextValue | null {
-  return useContext(PremiumContext);
-}
-
 export interface PremiumFeatureApi {
   state: PremiumFeatureState;
   copy: PremiumCopy;

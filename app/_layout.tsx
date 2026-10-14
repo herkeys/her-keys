@@ -7,6 +7,7 @@ import { canOpenScreen, isSettled, type RootScreen } from '../src/domain/routeAc
 import { PremiumCheckoutAfterConsent } from '../src/monetization/PremiumCheckoutAfterConsent';
 import { WelcomeAuthSettling } from '../src/features/account/WelcomeAuthFlow';
 import { ConsentGate } from '../src/features/consent/ConsentFlow';
+import { PremiumReaderBridge } from '../src/features/smart-inbox/PremiumReaderBridge';
 import { PremiumStateProvider } from '../src/monetization/PremiumStateProvider';
 import { RevenueCatProvider, useEntitlement } from '../src/monetization/RevenueCatProvider';
 import { premiumAppVersion, premiumLedgerClient, premiumServerClient } from '../src/store/accountRuntimeInstance';
@@ -56,7 +57,7 @@ function PremiumStateBridge({ children }: { children: ReactNode }) {
   const account = useAccount();
   return (
     <PremiumStateProvider client={premiumServerClient} accountState={account.state} ledger={premiumLedgerClient} appVersion={premiumAppVersion}>
-      {children}
+      <PremiumReaderBridge>{children}</PremiumReaderBridge>
     </PremiumStateProvider>
   );
 }
