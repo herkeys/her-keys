@@ -99,6 +99,21 @@ async function requireLiveStagingConfig() {
   if(error||data.environment!=='staging'||data.allow_test_fixtures)throw new Error('database identity/fixture guard failed');
   return data;
 }
+async function assertProductionFailClosed() {
+  // Read-only query against a different project. No Production mutating API
+  // is reachable by the tester/feature-window command paths.
+  const c=clientFor('production');
+  const [{data:r,error:e1},{data:rows,error:e2}]=await Promise.all([
+    c.from('premium_runtime_config').select('environment,premium_enabled,webhook_processing,allow_test_fixtures').single(),
+    c.from('premium_feature_config').select('feature_key,enabled,released').in('feature_key',FEATURES),
+  ]);
+  if(e1||e2||r?.environment!=='production'||r.premium_enabled!==false||
+     r.webhook_processing!==false||r.allow_test_fixtures!==false||
+     rows?.length!==FEATURES.length||rows.some(f=>f.enabled||f.released)){
+    throw new Error('Production Premium fail-closed read-back failed; abort Staging activation');
+  }
+  return true;
+}
 async function getTester(userId) {
   const {data,error}=await client().auth.admin.getUserById(userId);
   if(error||!data?.user)throw new Error('Staging test user not found');
@@ -125,6 +140,7 @@ async function setWindow(mode) {
   const config=await requireLiveStagingConfig();
   const c=client();
   if(mode==='verify'){
+    await assertProductionFailClosed();
     const {data,error}=await c.from('premium_feature_config').select('feature_key,enabled,released,rollout_status').in('feature_key',FEATURES);
     if(error)throw new Error('feature read failed');
     const okay=data.length===FEATURES.length&&data.every(x=>x.enabled&&x.released&&x.rollout_status==='staging_only');
@@ -141,6 +157,7 @@ async function setWindow(mode) {
   }
   if(mode!=='enable')throw new Error('window mode must be enable, verify, or disable');
   await requireActualPreflight();
+  await assertProductionFailClosed();
   const accountId=getFlag('--account-id');
   if(!isUuid(accountId)||!await testerIsAllowed(accountId))throw new Error('must supply an allowlisted Staging --account-id');
   // Schema guard MUST be installed to guarantee server-side allowlist enforcement.
