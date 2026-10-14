@@ -13,6 +13,8 @@ on:
       - audit/ios-build2-candidate
       # Build 2 shared consumer blocker repair (Android + iOS audit repairs converged): the same gate on its exact pushed SHA. Remove with the branch.
       - integration/build2-shared-consumer-repair
+      # Her Keys Premium Stage 1: the same gate on its exact pushed SHA. Remove with the branch.
+      - feature/herkeys-premium-stage1
   workflow_dispatch:
 
 permissions:

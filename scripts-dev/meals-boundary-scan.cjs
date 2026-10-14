@@ -971,6 +971,7 @@ const LATER_FEATURES = [
       ['src/features/talk-it-out/capture/types.ts', 'Premium Stage 1 (Smart Inbox): two assumption codes (premium-reading, possible-duplicate) so a Premium reading and a possible duplicate are shown as assumptions, never as something she said'],
       ['tests/support/captureWorld.mjs', 'Premium Stage 1 (Smart Inbox): the capture test world accepts an optional enhancer; every existing suite passes none'],
       ['scripts-dev/meals-boundary-scan.cjs', 'Premium Stage 1: register this lane and its changed files'],
+      ['.github/workflows/v2-integration-validation.yml', 'Premium Stage 1: exact-SHA CI push trigger for the Premium branch (remove with the branch)'],
     ],
   },
 
