@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 const cli=readFileSync(new URL('../../scripts-dev/premium-final-config.mjs',import.meta.url),'utf8');
+const core=readFileSync(new URL('../../scripts-dev/premium-final-config/core.mjs',import.meta.url),'utf8');
 const sql=readFileSync(new URL('../../supabase/migrations/20261015140000_premium_staging_tester_guard.sql',import.meta.url),'utf8');
 
 test('mutating CLI targets the Staging project only',()=>{
@@ -30,6 +31,6 @@ test('release targets only three actual Premium features, not Village or CoParen
 });
 test('signed-event transport does not claim it verifies a customer purchase',()=>{
   assert.match(cli,/actualPurchaseVerified:false,entitlementGrantVerified:false/);
-  assert.match(cli,/not_configured/);
+  assert.match(core,/not_configured/);
   assert.match(cli,/signed TEST smoke/);
 });
