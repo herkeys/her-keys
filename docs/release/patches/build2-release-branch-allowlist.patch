@@ -1,0 +1,45 @@
+diff --git a/scripts/verify-release-identity.mjs b/scripts/verify-release-identity.mjs
+index 5fcca13..b5ebeec 100644
+--- a/scripts/verify-release-identity.mjs
++++ b/scripts/verify-release-identity.mjs
+@@ -18,7 +18,7 @@ export const CANONICAL_IDENTITY = Object.freeze({
+ });
+ 
+ // Branches a production store build may be cut from. Changing this list is an owner decision.
+-export const RELEASE_BRANCHES = Object.freeze(['build/02-gemini-integration']);
++export const RELEASE_BRANCHES = Object.freeze(['build/02-gemini-integration', 'codex/build2b-release-candidate']);
+ 
+ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+ 
+diff --git a/tests/releaseIdentity.test.mjs b/tests/releaseIdentity.test.mjs
+index dff1a31..da260a3 100644
+--- a/tests/releaseIdentity.test.mjs
++++ b/tests/releaseIdentity.test.mjs
+@@ -74,6 +74,27 @@ describe('Release identity guard', () => {
+     assert.match(checkProvenance({ ...good, upstreamHead: '' }).join('\n'), /no upstream/);
+   });
+ 
++  test('the converged Build 2 release candidate branch is authorized, and nothing broader is', () => {
++    assert.deepEqual([...RELEASE_BRANCHES], ['build/02-gemini-integration', 'codex/build2b-release-candidate']);
++    for (const branch of RELEASE_BRANCHES) assert.doesNotMatch(branch, /[*?\[\]{}]/, 'every entry is a literal branch name, never a pattern');
++    const ok = { branch: 'codex/build2b-release-candidate', trackedChanges: [], head: 'a', upstreamHead: 'a' };
++    assert.deepEqual(checkProvenance(ok), []);
++    for (const branch of [
++      'codex/build2b-shared-integration', 'integration/build2-shared-consumer-repair', 'audit/ios-build2-candidate',
++      'codex/build2b-android-candidate-audit', 'codex/build2b-release-candidate-2', 'codex/build2b-release-candidate/x', 'main', 'HEAD', '',
++    ]) assert.match(checkProvenance({ ...ok, branch }).join('\n'), /not an authorized release branch/, branch);
++  });
++
++  test('admitting the candidate branch keeps every other provenance safeguard', () => {
++    const ok = { branch: 'codex/build2b-release-candidate', trackedChanges: [], head: 'a', upstreamHead: 'a' };
++    assert.match(checkProvenance({ ...ok, trackedChanges: ['app.json'] }).join('\n'), /tracked changes/);
++    assert.match(checkProvenance({ ...ok, upstreamHead: 'b' }).join('\n'), /differs from upstream/);
++    assert.match(checkProvenance({ ...ok, upstreamHead: '' }).join('\n'), /no upstream/);
++    const targetOk = { EXPO_PUBLIC_HERKEYS_BACKEND: 'production', EXPO_PUBLIC_SUPABASE_URL: 'https://npykvnxnehlsdlbumzwk.supabase.co', EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'k', EXPO_PUBLIC_HERKEYS_DATA_MODE: 'empty', EXPO_PUBLIC_HERKEYS_V2_CONSENT_GATE: 'true' };
++    assert.deepEqual(checkBackendTarget(targetOk), []);
++    assert.ok(checkBackendTarget({ ...targetOk, EXPO_PUBLIC_HERKEYS_V2_CONSENT_GATE: 'false' }).length > 0, 'the consent flag stays mandatory');
++  });
++
+   test('the parity registry agrees with the guard', () => {
+     const registry = JSON.parse(read('docs/audits/HK_PLATFORM_PARITY_REGISTRY.json'));
+     assert.equal(registry.nativeIdentity.androidPackage, CANONICAL_IDENTITY.androidPackage);

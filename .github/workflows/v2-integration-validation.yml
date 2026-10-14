@@ -11,6 +11,8 @@ on:
       - integration/build2a-candidate
       # iOS Build 2 candidate audit: the same gate on the audit branch's exact pushed SHA. Remove with the branch.
       - audit/ios-build2-candidate
+      # Build 2 shared consumer blocker repair (Android + iOS audit repairs converged): the same gate on its exact pushed SHA. Remove with the branch.
+      - integration/build2-shared-consumer-repair
   workflow_dispatch:
 
 permissions:
