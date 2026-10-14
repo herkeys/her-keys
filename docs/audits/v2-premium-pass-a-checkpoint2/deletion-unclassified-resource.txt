@@ -1,0 +1,326 @@
+▶ account deletion: real SQL state, privileges, recovery and purge
+  ✔ internal command is denied to authenticated and anon (17.4706ms)
+  ✔ stale auth cannot request deletion (10.3152ms)
+  ✔ request records exactly 30 days and queues encrypted recovery (14.4232ms)
+  ✔ duplicate requests preserve deadline and do not queue another email (5.4783ms)
+  ✔ previously issued JWT loses ordinary RLS access and RPC authority (16.3563ms)
+  ✔ worker disabled and dry-run cannot claim (7.126ms)
+  ✔ enabled worker cannot delete before the deadline (6.2189ms)
+  ✔ replacement recovery invalidates previous token without extending deadline (6.566ms)
+  ✔ single-use recovery reserves against purge but does not falsely restore (24.8016ms)
+  ✔ new lifecycle after restoration has a new deadline (9.7085ms)
+  ✔ expired requests cannot restore; workers compete through claims (10.1736ms)
+  ✔ wrong fencing token and kill switch refuse destructive work (7.379ms)
+  ✔ false terminal success is refused (2.0449ms)
+  ✔ expired lease can be reclaimed and old worker loses authority (4.6669ms)
+  ✖ complete database cleanup preserves the other account (7.5534ms)
+  ✖ purged requires Auth absence and independent resource evidence (78.0172ms)
+  ✔ resend rate limit has a bounded window and unknown receipts disclose nothing (9.0006ms)
+✖ account deletion: real SQL state, privileges, recovery and purge (10025.2101ms)
+✔ local terminal cleanup requires matching namespace and verified timestamps (2.1842ms)
+✔ queued local reset cannot erase an account that replaced the expected namespace (202.7381ms)
+✔ namespace change while reset waits for persistence preserves the replacement account (13.9538ms)
+✔ expired or unavailable proof never resets data; explicit local reset is namespace-bound (0.7287ms)
+✔ malformed local proof is a refusal, never evidence of erasure (5.0498ms)
+✔ pending account blocks local mutation and sync without losing recoverable data (11.9073ms)
+✔ recovery proof has 256-bit entropy input, fixed length, no collisions in a sample (45.7584ms)
+✔ outbox encryption authenticates payload and refuses a tampered ciphertext (8.6591ms)
+✔ recovery email has an explicit confirmation link, deadline, plain text and subscription guidance (1.9203ms)
+▶ critical lifecycle negative controls detect unsafe guard mutations
+  ✔ removing the restrictive policy exposes stale-JWT profile access (16.3183ms)
+  ✔ granting command execution to authenticated crosses the worker authority boundary (9.2561ms)
+  ✔ removing expiry eligibility makes an early purge claim possible (23.2159ms)
+  ✖ approved shared policy deletes private records, restricts ambiguous records and preserves the other adult (45.2868ms)
+✖ critical lifecycle negative controls detect unsafe guard mutations (9918.2251ms)
+✔ OAuth endpoint absence never certifies credential revocation (64.182ms)
+✔ RevenueCat deletion requires a subsequent authoritative absence check (6.2819ms)
+✔ provider outages and unrelated project configuration cannot become purge proof (4.9384ms)
+✔ Google cleanup revokes the credential without modifying calendar events (0.5077ms)
+✔ Apple credential client-secret uses the approved four Staging/Production secret names (3.9068ms)
+✖ all 43 registered resources: shared and unrelated isolation (10559.0564ms)
+ℹ Populated resources: account_claims, account_consents, action_executions, action_intents, action_outcomes, action_records, apple_revocation_credentials, automation_authorities, behavior_observations, calendar_oauth_states, capacity_profiles, career_opportunities, change_log, dependencies, discovery_records, events, evidence_links, external_calendar_connections, external_references, goals, herkeys_welcome_email_receipts, household_categories, household_members, household_people, household_systems, intent_decisions, interpretations, life_record_task_links, life_records, meal_plan_entries, needs_me_items, onboarding_state, one_move_records, patterns, person_contexts, person_task_links, rebuild_focus_links, rebuild_focuses, recurrence_rules, responsibilities, source_artifacts, system_steps, tasks
+✖ all 43 registered resources: former_member and unrelated isolation (4427.6474ms)
+ℹ Populated resources: account_claims, account_consents, action_executions, action_intents, action_outcomes, action_records, apple_revocation_credentials, automation_authorities, behavior_observations, calendar_oauth_states, capacity_profiles, career_opportunities, change_log, dependencies, discovery_records, events, evidence_links, external_calendar_connections, external_references, goals, herkeys_welcome_email_receipts, household_categories, household_members, household_people, household_systems, intent_decisions, interpretations, life_record_task_links, life_records, meal_plan_entries, needs_me_items, onboarding_state, one_move_records, patterns, person_contexts, person_task_links, rebuild_focus_links, rebuild_focuses, recurrence_rules, responsibilities, source_artifacts, system_steps, tasks
+✖ all 43 registered resources: single and unrelated isolation (3858.1888ms)
+ℹ Populated resources: account_claims, account_consents, action_executions, action_intents, action_outcomes, action_records, apple_revocation_credentials, automation_authorities, behavior_observations, calendar_oauth_states, capacity_profiles, career_opportunities, change_log, dependencies, discovery_records, events, evidence_links, external_calendar_connections, external_references, goals, herkeys_welcome_email_receipts, household_categories, household_members, household_people, household_systems, intent_decisions, interpretations, life_record_task_links, life_records, meal_plan_entries, needs_me_items, onboarding_state, one_move_records, patterns, person_contexts, person_task_links, rebuild_focus_links, rebuild_focuses, recurrence_rules, responsibilities, source_artifacts, system_steps, tasks
+✔ terminal proof retention: exact whitelist, expiry refusal, actual deletion and nonterminal preservation (9934.3338ms)
+▶ the migration chain
+  ✔ the migrations directory holds exactly the registered chain, in order, and nothing else (2.8393ms)
+  ✔ every migration version is unique and strictly increasing (no two files claim one version) (0.6088ms)
+  ✔ no migration that existed at WAVE3_BASE has changed by a single byte (an applied migration is never edited) (26.7631ms)
+  ✔ every migration the integration adds is LF on disk, pinned LF by .gitattributes, and opens, closes and asserts (14.5657ms)
+✔ the migration chain (46.5471ms)
+▶ post-certification migration governance
+  ✔ the environment-alignment migration stays registered, additive, and function-only at the schema level (4.7095ms)
+  ✔ the Google Calendar migration is byte-identical to its reviewed blueprint, never edited, and service-only (4.6685ms)
+✔ post-certification migration governance (9.7242ms)
+▶ a re-declaration never drops an earlier registration
+  ✔ change_log_entity_table_check: each re-declaration is a superset of the one before it (68.9237ms)
+  ✔ the sync_push owner-private allow-list: each re-declaration is a superset of the one before it (42.8135ms)
+  ✔ the sync_push no-revision list: each re-declaration is a superset of the one before it (39.5223ms)
+  ✔ after the whole chain, the change-log check and the sync_push allow-list name every feature table (314.5833ms)
+  ✔ HK13-D24: after the whole chain, each owner-private uniqueness rule is PER OWNER (its last definition names profile_id) (314.8943ms)
+  ✔ each feature migration registers its own tables in the SAME file that creates them (so every prefix of the chain works) (20.9647ms)
+✔ a re-declaration never drops an earlier registration (802.5307ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ B2B-N02 android: persistent account restore is reachable after onboarding and reports each outcome (152.6697ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ B2B-N02 ios: persistent account restore is reachable after onboarding and reports each outcome (59.2838ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ B2B-N02: a pending restore is single-flight, disables contradictory actions, and ignores another account’s late result (29.2035ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ B2B-N02: throwing restore is recoverable and unmount never reports success to a new screen (43.1264ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ B2B-N02: reconnect, quarantine and busy account states cannot initiate restoration (36.8168ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-02 android: the control restores for the bound account, reports each outcome and tells its host when it is busy (48.1298ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-02 ios: the control restores for the bound account, reports each outcome and tells its host when it is busy (10.9052ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-02: the host is told while a restore is pending, and again when it ends (10.7788ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-02: nothing renders, and nothing can start, without a bound account (4.2315ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-02: a blocked host cannot start a restore (6.4241ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-02: loading state is single-flight and another account never receives the late result (8.1325ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-02: a restore that throws is recoverable, and an unmounted control ignores a late result (8.3602ms)
+✔ SC-02: outcome words never leak an SDK message and cover every outcome kind (0.5342ms)
+ℹ tests 66
+ℹ suites 3
+ℹ pass 58
+ℹ fail 8
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 19458.8572
+
+✖ failing tests:
+
+test at tests\accountDeletion\database.test.mjs:124:11
+✖ complete database cleanup preserves the other account (7.5534ms)
+  error: unclassified_resource
+      at pe.Ue (file:///C:/Users/jsmit/.codex/worktrees/v2-premium-pass-a/Her%20Keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:17959)
+      at pe.tt (file:///C:/Users/jsmit/.codex/worktrees/v2-premium-pass-a/Her%20Keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:15347)
+      at pe.parse (file:///C:/Users/jsmit/.codex/worktrees/v2-premium-pass-a/Her%20Keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:14021)
+      at D.Ne (file:///C:/Users/jsmit/.codex/worktrees/v2-premium-pass-a/Her%20Keys/node_modules/@electric-sql/pglite/dist/index.js:5:1763)
+      at file:///C:/Users/jsmit/.codex/worktrees/v2-premium-pass-a/Her%20Keys/node_modules/@electric-sql/pglite/dist/index.js:5:1155
+      at wasm://wasm/0269e01e:wasm-function[10979]:0x5ad057
+      at wasm://wasm/0269e01e:wasm-function[3598]:0x281dd2
+      at wasm://wasm/0269e01e:wasm-function[3640]:0x289ccf
+      at wasm://wasm/0269e01e:wasm-function[3650]:0x289f2b
+      at wasm://wasm/0269e01e:wasm-function[9956]:0x556968 {
+    length: 164,
+    severity: 'ERROR',
+    code: 'P0001',
+    detail: undefined,
+    hint: undefined,
+    position: undefined,
+    internalPosition: undefined,
+    internalQuery: undefined,
+    where: 'PL/pgSQL function public.herkeys_deletion_command(text,jsonb) line 200 at RAISE',
+    schema: undefined,
+    table: undefined,
+    column: undefined,
+    dataType: undefined,
+    constraint: undefined,
+    file: 'pl_exec.c',
+    line: '3923',
+    routine: 'exec_stmt_raise',
+    query: 'select public.herkeys_deletion_command($1,$2::jsonb) as r',
+    params: [ 'database_cleanup', '{"request_id":"d8ced3ad-a17a-44da-9184-9f91435ed71b","fence":2}' ],
+    queryOptions: undefined
+  }
+
+test at tests\accountDeletion\database.test.mjs:129:11
+✖ purged requires Auth absence and independent resource evidence (78.0172ms)
+  error: terminal_verification_failed
+      at pe.Ue (file:///C:/Users/jsmit/.codex/worktrees/v2-premium-pass-a/Her%20Keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:17959)
+      at pe.tt (file:///C:/Users/jsmit/.codex/worktrees/v2-premium-pass-a/Her%20Keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:15347)
+      at pe.parse (file:///C:/Users/jsmit/.codex/worktrees/v2-premium-pass-a/Her%20Keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:14021)
+      at D.Ne (file:///C:/Users/jsmit/.codex/worktrees/v2-premium-pass-a/Her%20Keys/node_modules/@electric-sql/pglite/dist/index.js:5:1763)
+      at file:///C:/Users/jsmit/.codex/worktrees/v2-premium-pass-a/Her%20Keys/node_modules/@electric-sql/pglite/dist/index.js:5:1155
+      at wasm://wasm/0269e01e:wasm-function[10979]:0x5ad057
+      at wasm://wasm/0269e01e:wasm-function[3598]:0x281dd2
+      at wasm://wasm/0269e01e:wasm-function[3640]:0x289ccf
+      at wasm://wasm/0269e01e:wasm-function[3650]:0x289f2b
+      at wasm://wasm/0269e01e:wasm-function[9956]:0x556968 {
+    length: 171,
+    severity: 'ERROR',
+    code: 'P0001',
+    detail: undefined,
+    hint: undefined,
+    position: undefined,
+    internalPosition: undefined,
+    internalQuery: undefined,
+    where: 'PL/pgSQL function public.herkeys_deletion_command(text,jsonb) line 232 at RAISE',
+    schema: undefined,
+    table: undefined,
+    column: undefined,
+    dataType: undefined,
+    constraint: undefined,
+    file: 'pl_exec.c',
+    line: '3923',
+    routine: 'exec_stmt_raise',
+    query: 'select public.herkeys_deletion_command($1,$2::jsonb) as r',
+    params: [ 'finish', '{"request_id":"d8ced3ad-a17a-44da-9184-9f91435ed71b","fence":2}' ],
+    queryOptions: undefined
+  }
+
+test at tests\accountDeletion\mutations.test.mjs:49:11
+✖ approved shared policy deletes private records, restricts ambiguous records and preserves the other adult (45.2868ms)
+  error: unclassified_resource
+      at pe.Ue (file:///C:/Users/jsmit/.codex/worktrees/v2-premium-pass-a/Her%20Keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:17959)
+      at pe.tt (file:///C:/Users/jsmit/.codex/worktrees/v2-premium-pass-a/Her%20Keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:15347)
+      at pe.parse (file:///C:/Users/jsmit/.codex/worktrees/v2-premium-pass-a/Her%20Keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:14021)
+      at D.Ne (file:///C:/Users/jsmit/.codex/worktrees/v2-premium-pass-a/Her%20Keys/node_modules/@electric-sql/pglite/dist/index.js:5:1763)
+      at file:///C:/Users/jsmit/.codex/worktrees/v2-premium-pass-a/Her%20Keys/node_modules/@electric-sql/pglite/dist/index.js:5:1155
+      at wasm://wasm/0269e01e:wasm-function[10979]:0x5ad057
+      at wasm://wasm/0269e01e:wasm-function[3598]:0x281dd2
+      at wasm://wasm/0269e01e:wasm-function[3640]:0x289ccf
+      at wasm://wasm/0269e01e:wasm-function[3650]:0x289f2b
+      at wasm://wasm/0269e01e:wasm-function[9956]:0x556968 {
+    length: 164,
+    severity: 'ERROR',
+    code: 'P0001',
+    detail: undefined,
+    hint: undefined,
+    position: undefined,
+    internalPosition: undefined,
+    internalQuery: undefined,
+    where: 'PL/pgSQL function public.herkeys_deletion_command(text,jsonb) line 200 at RAISE',
+    schema: undefined,
+    table: undefined,
+    column: undefined,
+    dataType: undefined,
+    constraint: undefined,
+    file: 'pl_exec.c',
+    line: '3923',
+    routine: 'exec_stmt_raise',
+    query: 'select public.herkeys_deletion_command($1,$2::jsonb) as r',
+    params: [ 'database_cleanup', '{"request_id":"9b8af17a-9f76-400d-aad6-7c5dc6b22997","fence":1}' ],
+    queryOptions: undefined
+  }
+
+test at tests\accountDeletion\resourceCoverage.test.mjs:69:63
+✖ all 43 registered resources: shared and unrelated isolation (10559.0564ms)
+  error: unclassified_resource
+      at pe.Ue (file:///C:/Users/jsmit/.codex/worktrees/v2-premium-pass-a/Her%20Keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:17959)
+      at pe.tt (file:///C:/Users/jsmit/.codex/worktrees/v2-premium-pass-a/Her%20Keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:15347)
+      at pe.parse (file:///C:/Users/jsmit/.codex/worktrees/v2-premium-pass-a/Her%20Keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:14021)
+      at D.Ne (file:///C:/Users/jsmit/.codex/worktrees/v2-premium-pass-a/Her%20Keys/node_modules/@electric-sql/pglite/dist/index.js:5:1763)
+      at file:///C:/Users/jsmit/.codex/worktrees/v2-premium-pass-a/Her%20Keys/node_modules/@electric-sql/pglite/dist/index.js:5:1155
+      at wasm://wasm/0269e01e:wasm-function[10979]:0x5ad057
+      at wasm://wasm/0269e01e:wasm-function[3598]:0x281dd2
+      at wasm://wasm/0269e01e:wasm-function[3640]:0x289ccf
+      at wasm://wasm/0269e01e:wasm-function[3650]:0x289f2b
+      at wasm://wasm/0269e01e:wasm-function[9956]:0x556968 {
+    length: 164,
+    severity: 'ERROR',
+    code: 'P0001',
+    detail: undefined,
+    hint: undefined,
+    position: undefined,
+    internalPosition: undefined,
+    internalQuery: undefined,
+    where: 'PL/pgSQL function public.herkeys_deletion_command(text,jsonb) line 200 at RAISE',
+    schema: undefined,
+    table: undefined,
+    column: undefined,
+    dataType: undefined,
+    constraint: undefined,
+    file: 'pl_exec.c',
+    line: '3923',
+    routine: 'exec_stmt_raise',
+    query: 'select public.herkeys_deletion_command($1,$2::jsonb) as r',
+    params: [ 'database_cleanup', '{"request_id":"1fa62e70-2e36-48f5-a990-45affc8fe05f","fence":1}' ],
+    queryOptions: undefined
+  }
+
+test at tests\accountDeletion\resourceCoverage.test.mjs:69:63
+✖ all 43 registered resources: former_member and unrelated isolation (4427.6474ms)
+  error: unclassified_resource
+      at pe.Ue (file:///C:/Users/jsmit/.codex/worktrees/v2-premium-pass-a/Her%20Keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:17959)
+      at pe.tt (file:///C:/Users/jsmit/.codex/worktrees/v2-premium-pass-a/Her%20Keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:15347)
+      at pe.parse (file:///C:/Users/jsmit/.codex/worktrees/v2-premium-pass-a/Her%20Keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:14021)
+      at D.Ne (file:///C:/Users/jsmit/.codex/worktrees/v2-premium-pass-a/Her%20Keys/node_modules/@electric-sql/pglite/dist/index.js:5:1763)
+      at file:///C:/Users/jsmit/.codex/worktrees/v2-premium-pass-a/Her%20Keys/node_modules/@electric-sql/pglite/dist/index.js:5:1155
+      at wasm://wasm/0269e01e:wasm-function[10979]:0x5ad057
+      at wasm://wasm/0269e01e:wasm-function[3598]:0x281dd2
+      at wasm://wasm/0269e01e:wasm-function[3640]:0x289ccf
+      at wasm://wasm/0269e01e:wasm-function[3650]:0x289f2b
+      at wasm://wasm/0269e01e:wasm-function[9956]:0x556968 {
+    length: 164,
+    severity: 'ERROR',
+    code: 'P0001',
+    detail: undefined,
+    hint: undefined,
+    position: undefined,
+    internalPosition: undefined,
+    internalQuery: undefined,
+    where: 'PL/pgSQL function public.herkeys_deletion_command(text,jsonb) line 200 at RAISE',
+    schema: undefined,
+    table: undefined,
+    column: undefined,
+    dataType: undefined,
+    constraint: undefined,
+    file: 'pl_exec.c',
+    line: '3923',
+    routine: 'exec_stmt_raise',
+    query: 'select public.herkeys_deletion_command($1,$2::jsonb) as r',
+    params: [ 'database_cleanup', '{"request_id":"b52dabb2-291e-4d9d-a664-6dd0086ee762","fence":1}' ],
+    queryOptions: undefined
+  }
+
+test at tests\accountDeletion\resourceCoverage.test.mjs:69:63
+✖ all 43 registered resources: single and unrelated isolation (3858.1888ms)
+  error: unclassified_resource
+      at pe.Ue (file:///C:/Users/jsmit/.codex/worktrees/v2-premium-pass-a/Her%20Keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:17959)
+      at pe.tt (file:///C:/Users/jsmit/.codex/worktrees/v2-premium-pass-a/Her%20Keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:15347)
+      at pe.parse (file:///C:/Users/jsmit/.codex/worktrees/v2-premium-pass-a/Her%20Keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:14021)
+      at D.Ne (file:///C:/Users/jsmit/.codex/worktrees/v2-premium-pass-a/Her%20Keys/node_modules/@electric-sql/pglite/dist/index.js:5:1763)
+      at file:///C:/Users/jsmit/.codex/worktrees/v2-premium-pass-a/Her%20Keys/node_modules/@electric-sql/pglite/dist/index.js:5:1155
+      at wasm://wasm/0269e01e:wasm-function[10979]:0x5ad057
+      at wasm://wasm/0269e01e:wasm-function[3598]:0x281dd2
+      at wasm://wasm/0269e01e:wasm-function[3640]:0x289ccf
+      at wasm://wasm/0269e01e:wasm-function[3650]:0x289f2b
+      at wasm://wasm/0269e01e:wasm-function[9956]:0x556968 {
+    length: 164,
+    severity: 'ERROR',
+    code: 'P0001',
+    detail: undefined,
+    hint: undefined,
+    position: undefined,
+    internalPosition: undefined,
+    internalQuery: undefined,
+    where: 'PL/pgSQL function public.herkeys_deletion_command(text,jsonb) line 200 at RAISE',
+    schema: undefined,
+    table: undefined,
+    column: undefined,
+    dataType: undefined,
+    constraint: undefined,
+    file: 'pl_exec.c',
+    line: '3923',
+    routine: 'exec_stmt_raise',
+    query: 'select public.herkeys_deletion_command($1,$2::jsonb) as r',
+    params: [ 'database_cleanup', '{"request_id":"7366c3f4-97cd-4c3d-b771-bb13c8797852","fence":1}' ],
+    queryOptions: undefined
+  }

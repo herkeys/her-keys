@@ -1,0 +1,320 @@
+{
+  "baseline": "420365ac64f5d189a1eb3f5f2d77ed4fb8b7fe17",
+  "changes": [
+    {
+      "path": "node_modules/@expo/devcert",
+      "before": "1.2.1",
+      "after": "1.2.2",
+      "reason": "npm-selected compatible transitive resolution in Expo installation/dedupe graph; no unrelated root API upgrade",
+      "requiredBy": [
+        "node_modules/expo/node_modules/@expo/cli"
+      ]
+    },
+    {
+      "path": "node_modules/@expo/metro-runtime",
+      "before": "57.0.16",
+      "after": "57.0.17",
+      "reason": "npm-selected compatible transitive resolution in Expo installation/dedupe graph; no unrelated root API upgrade",
+      "requiredBy": [
+        "node_modules/expo",
+        "node_modules/expo-router",
+        "node_modules/expo/node_modules/@expo/cli/node_modules/@expo/router-server"
+      ]
+    },
+    {
+      "path": "node_modules/@expo/prebuild-config",
+      "before": "57.0.18",
+      "after": "57.0.19",
+      "reason": "npm-selected compatible transitive resolution in Expo installation/dedupe graph; no unrelated root API upgrade",
+      "requiredBy": [
+        "node_modules/expo/node_modules/@expo/cli"
+      ]
+    },
+    {
+      "path": "node_modules/@expo/ui",
+      "before": "57.0.23",
+      "after": "57.0.24",
+      "reason": "npm-selected compatible transitive resolution in Expo installation/dedupe graph; no unrelated root API upgrade",
+      "requiredBy": [
+        "node_modules/expo-router"
+      ]
+    },
+    {
+      "path": "node_modules/@expo/xcpretty",
+      "before": "4.4.5",
+      "after": "4.4.7",
+      "reason": "npm-selected compatible transitive resolution in Expo installation/dedupe graph; no unrelated root API upgrade",
+      "requiredBy": [
+        "node_modules/expo/node_modules/@expo/cli"
+      ]
+    },
+    {
+      "path": "node_modules/expo",
+      "before": "57.0.28",
+      "after": "57.0.29",
+      "reason": "Expo SDK 57 compatibility check requires this patch",
+      "requiredBy": [
+        "project",
+        "node_modules/@expo/dom-webview",
+        "node_modules/@expo/log-box",
+        "node_modules/@expo/metro-config",
+        "node_modules/@expo/metro-runtime",
+        "node_modules/@expo/ui",
+        "node_modules/babel-preset-expo",
+        "node_modules/expo-apple-authentication",
+        "node_modules/expo-application",
+        "node_modules/expo-asset",
+        "node_modules/expo-constants",
+        "node_modules/expo-crypto",
+        "node_modules/expo-file-system",
+        "node_modules/expo-font",
+        "node_modules/expo-glass-effect",
+        "node_modules/expo-image-loader",
+        "node_modules/expo-image-manipulator",
+        "node_modules/expo-image-picker",
+        "node_modules/expo-location",
+        "node_modules/expo-notifications",
+        "node_modules/expo-ocr-kit",
+        "node_modules/expo-router",
+        "node_modules/expo-secure-store",
+        "node_modules/expo-splash-screen",
+        "node_modules/expo-status-bar",
+        "node_modules/expo-symbols",
+        "node_modules/expo-web-browser",
+        "node_modules/expo/node_modules/@expo/cli",
+        "node_modules/expo/node_modules/@expo/cli/node_modules/@expo/router-server",
+        "node_modules/expo/node_modules/expo-keep-awake"
+      ]
+    },
+    {
+      "path": "node_modules/expo-asset",
+      "before": "57.0.19",
+      "after": "57.0.20",
+      "reason": "npm-selected compatible transitive resolution in Expo installation/dedupe graph; no unrelated root API upgrade",
+      "requiredBy": [
+        "node_modules/expo"
+      ]
+    },
+    {
+      "path": "node_modules/expo-auth-session",
+      "before": "57.0.15",
+      "after": "57.0.16",
+      "reason": "Expo SDK 57 compatibility check requires this patch",
+      "requiredBy": [
+        "project"
+      ]
+    },
+    {
+      "path": "node_modules/expo-constants",
+      "before": "57.0.21",
+      "after": "57.0.22",
+      "reason": "Expo SDK 57 compatibility check requires this patch",
+      "requiredBy": [
+        "project",
+        "node_modules/expo",
+        "node_modules/expo-asset",
+        "node_modules/expo-auth-session",
+        "node_modules/expo-linking",
+        "node_modules/expo-notifications",
+        "node_modules/expo-router",
+        "node_modules/expo/node_modules/@expo/cli/node_modules/@expo/router-server"
+      ]
+    },
+    {
+      "path": "node_modules/expo-linking",
+      "before": "57.0.12",
+      "after": "57.0.13",
+      "reason": "Expo SDK 57 compatibility check requires this patch",
+      "requiredBy": [
+        "project",
+        "node_modules/expo-auth-session",
+        "node_modules/expo-router"
+      ]
+    },
+    {
+      "path": "node_modules/expo-modules-autolinking",
+      "before": "57.0.15",
+      "after": "57.0.16",
+      "reason": "npm-selected compatible transitive resolution in Expo installation/dedupe graph; no unrelated root API upgrade",
+      "requiredBy": [
+        "node_modules/@expo/prebuild-config",
+        "node_modules/expo"
+      ]
+    },
+    {
+      "path": "node_modules/expo-modules-core",
+      "before": "57.0.22",
+      "after": "57.0.23",
+      "reason": "SDK 57.0.29 requires native core 57.0.23; keep one root-resolvable transitive copy",
+      "requiredBy": [
+        "node_modules/expo"
+      ]
+    },
+    {
+      "path": "node_modules/expo-notifications",
+      "before": "57.0.22",
+      "after": "57.0.23",
+      "reason": "Expo SDK 57 compatibility check requires this patch",
+      "requiredBy": [
+        "project"
+      ]
+    },
+    {
+      "path": "node_modules/expo-router",
+      "before": "57.0.26",
+      "after": "57.0.27",
+      "reason": "Expo SDK 57 compatibility check requires this patch",
+      "requiredBy": [
+        "project",
+        "node_modules/expo/node_modules/@expo/cli",
+        "node_modules/expo/node_modules/@expo/cli/node_modules/@expo/router-server"
+      ]
+    },
+    {
+      "path": "node_modules/expo-router/node_modules/react-is",
+      "before": "19.3.0",
+      "after": "19.3.1",
+      "reason": "npm-selected compatible transitive resolution in Expo installation/dedupe graph; no unrelated root API upgrade",
+      "requiredBy": [
+        "node_modules/expo-router",
+        "node_modules/pretty-format",
+        "node_modules/react-test-renderer"
+      ]
+    },
+    {
+      "path": "node_modules/expo/node_modules/@expo/cli",
+      "before": "57.0.29",
+      "after": "57.0.30",
+      "reason": "npm-selected compatible transitive resolution in Expo installation/dedupe graph; no unrelated root API upgrade",
+      "requiredBy": [
+        "node_modules/expo"
+      ]
+    },
+    {
+      "path": "node_modules/expo/node_modules/@expo/ws-tunnel",
+      "before": "2.0.0",
+      "after": "2.0.1",
+      "reason": "npm-selected compatible transitive resolution in Expo installation/dedupe graph; no unrelated root API upgrade",
+      "requiredBy": [
+        "node_modules/expo/node_modules/@expo/cli"
+      ]
+    },
+    {
+      "path": "node_modules/expo/node_modules/ws",
+      "before": "8.21.3",
+      "after": "8.22.0",
+      "reason": "npm-selected compatible transitive resolution in Expo installation/dedupe graph; no unrelated root API upgrade",
+      "requiredBy": [
+        "node_modules/@react-native/dev-middleware",
+        "node_modules/expo/node_modules/@expo/cli",
+        "node_modules/expo/node_modules/@expo/ws-tunnel",
+        "node_modules/metro",
+        "node_modules/react-devtools-core",
+        "node_modules/react-native"
+      ]
+    },
+    {
+      "path": "node_modules/nanoid",
+      "before": "3.3.19",
+      "after": "3.3.20",
+      "reason": "npm-selected compatible transitive resolution in Expo installation/dedupe graph; no unrelated root API upgrade",
+      "requiredBy": [
+        "node_modules/expo-router",
+        "node_modules/postcss"
+      ]
+    },
+    {
+      "path": "node_modules/path-scurry/node_modules/lru-cache",
+      "before": "11.5.2",
+      "after": "11.5.3",
+      "reason": "npm-selected compatible transitive resolution in Expo installation/dedupe graph; no unrelated root API upgrade",
+      "requiredBy": [
+        "node_modules/@babel/helper-compilation-targets",
+        "node_modules/hosted-git-info",
+        "node_modules/path-scurry"
+      ]
+    },
+    {
+      "path": "node_modules/postcss",
+      "before": "8.5.28",
+      "after": "8.5.30",
+      "reason": "npm-selected compatible transitive resolution in Expo installation/dedupe graph; no unrelated root API upgrade",
+      "requiredBy": [
+        "node_modules/@expo/metro-config"
+      ]
+    },
+    {
+      "path": "node_modules/react-native-reanimated",
+      "before": "4.6.0",
+      "after": "4.5.1",
+      "reason": "Pin SDK 57 supported native peer pair; replace incompatible floating auto-installed peers",
+      "requiredBy": [
+        "project",
+        "node_modules/expo-router",
+        "node_modules/react-native-drawer-layout"
+      ]
+    },
+    {
+      "path": "node_modules/react-native-worklets",
+      "before": "0.12.2",
+      "after": "0.10.1",
+      "reason": "Pin SDK 57 supported native peer pair; replace incompatible floating auto-installed peers",
+      "requiredBy": [
+        "project",
+        "node_modules/@expo/ui",
+        "node_modules/expo-modules-core",
+        "node_modules/react-native-reanimated"
+      ]
+    },
+    {
+      "path": "node_modules/react-test-renderer/node_modules/react-is",
+      "before": "19.3.0",
+      "after": "19.3.1",
+      "reason": "npm-selected compatible transitive resolution in Expo installation/dedupe graph; no unrelated root API upgrade",
+      "requiredBy": [
+        "node_modules/expo-router",
+        "node_modules/pretty-format",
+        "node_modules/react-test-renderer"
+      ]
+    },
+    {
+      "path": "node_modules/source-map-js",
+      "before": "1.2.1",
+      "after": "1.2.2",
+      "reason": "npm-selected compatible transitive resolution in Expo installation/dedupe graph; no unrelated root API upgrade",
+      "requiredBy": [
+        "node_modules/postcss"
+      ]
+    },
+    {
+      "path": "node_modules/vaul/node_modules/@radix-ui/react-dialog",
+      "before": "1.3.0",
+      "after": "1.3.1",
+      "reason": "npm-selected compatible transitive resolution in Expo installation/dedupe graph; no unrelated root API upgrade",
+      "requiredBy": [
+        "node_modules/vaul"
+      ]
+    },
+    {
+      "path": "node_modules/vaul/node_modules/@radix-ui/react-dismissable-layer",
+      "before": "1.2.0",
+      "after": "1.2.1",
+      "reason": "npm-selected compatible transitive resolution in Expo installation/dedupe graph; no unrelated root API upgrade",
+      "requiredBy": [
+        "node_modules/vaul/node_modules/@radix-ui/react-dialog"
+      ]
+    },
+    {
+      "path": "node_modules/vaul/node_modules/@radix-ui/react-focus-scope",
+      "before": "1.3.0",
+      "after": "1.3.1",
+      "reason": "npm-selected compatible transitive resolution in Expo installation/dedupe graph; no unrelated root API upgrade",
+      "requiredBy": [
+        "node_modules/vaul/node_modules/@radix-ui/react-dialog"
+      ]
+    }
+  ],
+  "corePaths": [
+    "node_modules/expo-modules-core"
+  ]
+}

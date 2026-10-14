@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { AppText, Button, Card, Overline, Screen } from '../../src/design/components';
 import { colors, spacing } from '../../src/design/tokens';
@@ -26,10 +27,10 @@ const PREMIUM_STATUS = [
  * are allowed to.
  */
 export default function HerKeysPlus() {
-  const { status, restore } = useEntitlement();
+  const { status } = useEntitlement();
   const paywall = usePaywallAction('onboarding_complete');
   const { complete } = useOnboarding();
-  const [busy, setBusy] = useState<'purchase' | 'restore' | 'continue' | null>(null);
+  const [busy, setBusy] = useState<'purchase' | 'continue' | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const resolving = useRef(false);
 
@@ -59,20 +60,6 @@ export default function HerKeysPlus() {
     const outcome = await paywall.present();
     if (outcome?.kind === 'purchased' || outcome?.kind === 'restored') {
       await resolve(complete);
-    }
-    setBusy(null);
-  };
-
-  const onRestore = async () => {
-    setBusy('restore');
-    setNote(null);
-    const outcome = await restore();
-    if (outcome.kind === 'restored') {
-      await resolve(complete);
-    } else if (outcome.kind === 'no_purchases_found') {
-      setNote(`No previous ${HER_KEYS_PREMIUM_DISPLAY_NAME} purchase was found on this device.`);
-    } else {
-      setNote('Her Keys couldn’t check for previous purchases right now.');
     }
     setBusy(null);
   };
@@ -124,9 +111,9 @@ export default function HerKeysPlus() {
         />
         <Button label={`Explore ${HER_KEYS_PREMIUM_DISPLAY_NAME}`} onPress={onSeePlus} variant="secondary" disabled={busy !== null} />
         <Button
-          label="Restore purchases"
+          label="Your Account & purchases"
           variant="ghost"
-          onPress={onRestore}
+          onPress={() => router.push('/sign-in')}
           disabled={busy !== null}
         />
       </View>

@@ -37,6 +37,14 @@ export const ADDITIVE_CHAIN = [
   { file: '20260925141432_external_calendar_connections.sql', owner: 'CAL_CONNECTIONS', label: 'calendar' },
   { file: '20261009020000_herkeys_welcome_email_receipts.sql', owner: 'WELCOME_EMAIL', label: 'welcome-email' },
   { file: '20261009060000_v2_account_consents.sql', owner: 'V2_CONSENT', label: 'v2-consent' },
+  { file: '20261014002726_account_deletion_lifecycle.sql', owner: 'ACCOUNT_DELETION', label: 'account-deletion' },
+  { file: '20261014012518_account_deletion_auth_reconciliation.sql', owner: 'ACCOUNT_DELETION_AUTH', label: 'account-deletion-auth' },
+  { file: '20261014014020_account_deletion_terminal_identity.sql', owner: 'ACCOUNT_DELETION_IDENTITY', label: 'account-deletion-identity' },
+  { file: '20261014014620_account_deletion_proof_retention.sql', owner: 'ACCOUNT_DELETION_RETENTION', label: 'account-deletion-retention' },
+  { file: '20261014015835_account_deletion_cancelled_history_cleanup.sql', owner: 'ACCOUNT_DELETION_HISTORY', label: 'account-deletion-history' },
+  { file: '20261014021410_account_deletion_shared_provider_retry.sql', owner: 'ACCOUNT_DELETION_SHARED_RETRY', label: 'account-deletion-shared-retry' },
+  { file: '20261014112400_account_deletion_orphan_shared_ownership.sql', owner: 'ACCOUNT_DELETION_OTHER_OWNERS', label: 'account-deletion-other-owners' },
+  { file: '20261014113517_account_deletion_household_lock.sql', owner: 'ACCOUNT_DELETION_HOUSEHOLD_LOCK', label: 'account-deletion-household-lock' },
   // Her Keys Premium Stage 1 (A1/A2): service-only entitlement projection, feature manifest, atomic quotas, authorization.
   { file: '20261015120000_premium_entitlement_foundation.sql', owner: 'PREMIUM_FOUNDATION', label: 'premium-foundation' },
   // Her Keys Premium Stage 1 (A4): the shared decision ledger (owner-readable receipts) and service-only operational views.

@@ -44,6 +44,25 @@ const { WelcomeAuthFlow } = await import('../src/features/account/WelcomeAuthFlo
 
 const ACCOUNT_A = '11111111-1111-4111-8111-111111111111';
 const ACCOUNT_B = '22222222-2222-4222-8222-222222222222';
+
+test('V2 integration: welcome intent follows the first identity, then is discarded on sign-out or account switch', async () => {
+  let intent;
+  function IntentProbe() { intent = usePremiumIntent(); return null; }
+  const tree = (id) => <PremiumIntentProvider accountId={id}><IntentProbe /></PremiumIntentProvider>;
+  const r = await render(tree(null));
+  try {
+    await TestRenderer.act(async () => intent.setChoice('premium'));
+    await TestRenderer.act(async () => r.update(tree(ACCOUNT_A)));
+    assert.equal(intent.choice, 'premium', 'new-user choice survives initial binding and consent');
+    await TestRenderer.act(async () => r.update(tree(ACCOUNT_B)));
+    assert.equal(intent.choice, null, 'B cannot inherit A\'s unfinished checkout');
+    await TestRenderer.act(async () => intent.setChoice('premium'));
+    await TestRenderer.act(async () => r.update(tree(null)));
+    assert.equal(intent.choice, null);
+    await TestRenderer.act(async () => r.update(tree(ACCOUNT_A)));
+    assert.equal(intent.choice, null, 'same-account reauthentication starts clean');
+  } finally { await TestRenderer.act(async () => r.unmount()); }
+});
 const HOUSEHOLD_A = '33333333-3333-4333-8333-333333333333';
 const NOW = Date.UTC(2026, 9, 12, 12, 0, 0);
 const EMAIL = 'Rowan.Sentinel@Example.test';

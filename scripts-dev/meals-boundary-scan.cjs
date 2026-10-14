@@ -617,42 +617,10 @@ const LATER_FEATURES = [
     rootCollections: [],
     syncKinds: [],
     shared: [
-      ['eas.json', 'V2 production release candidate: require versioned legal and AI consent on shipping and smoke APK profiles'],
-      ['tests/productionConsentBuildProfile.test.mjs', 'V2 production profile: CI verifies mandatory legal/AI gate and prevents shipping client secrets'],
-      ['supabase/email-templates/herkeys-confirm-signup.html', 'V2 signup email: versioned branded Supabase confirmation link, never direct client credentials'],
-      ['docs/builds/HK_V2_SMOKE_P0_P1_CLOSEOUT_20261009.md', 'V2 P0/P1 closeout: precise production SMTP, redirects, secret activation, emulator stability and consent evidence handoff'],
-      ['supabase/migrations/20261009060000_v2_account_consents.sql', 'V2 consent: additive account-scoped audit ledger with restrictive RLS, append-only columns, and server-authoritative timestamps'],
-      ['supabase/tests/migration-chain.mjs', 'V2 consent: register the new independent additive ledger migration in the canonical backend harness'],
-      ['tests/migrationChain.test.mjs', 'V2 consent: extend strict post-certification migration registry with consent ledger'],
-      ['.gitattributes', 'V2 consent: retain LF migration pin without modifying previously applied migrations'],
-      ['tests/consentDatabaseGovernance.test.mjs', 'V2 consent: assert private append-only ledger structure, client column restrictions, and explicit account-bound policies'],
-      ['docs/builds/HK_V2_PRODUCTION_ANDROID_SMOKE_20261008.md', 'V2 Android emulator smoke: new later-lane execution contract for internal Production-backend APK, one authorized disposable account, real signup and recovery email evidence, and fail-closed launch gates; no Meals-domain change'],
-      ['.gitattributes', 'Production transactional email: pin the reviewed new migration LF for reproducibility'],
-      ['supabase/tests/migration-chain.mjs', 'Production transactional email: register new additive ledger migration in the canonical ordered harness'],
-      ['tests/migrationChain.test.mjs', 'Production transactional email: assert newest migration is tracked without altering certified historical migrations'],
-      ['tests/hk-f01f13/support/account-runtime-instance-stub.mjs', 'Production transactional email: inert welcome operation in unconfigured screen test stub'],
-      ['tests/localNotificationArchitecture.test.mjs', 'Production transactional email: whitelist email-only Edge Function after verifying no remote push behavior'],
-      ['supabase/migrations/20261009020000_herkeys_welcome_email_receipts.sql', 'Production welcome: idempotent per-account service-role delivery ledger, not a Meals change'],
-      ['supabase/functions/herkeys-welcome-email/index.ts', 'Production welcome: one verified new account, JWT and project checks, secret-only server Resend sender'],
-      ['supabase/email-templates/herkeys-recovery.html', 'Production recovery: Supabase Auth six-digit token template formatted with Her Keys branding'],
-      ['src/platform/welcomeEmailClient.ts', 'Production welcome: account-bound client requests cannot send from Staging or another backend'],
       ['src/store/accountRuntimeInstance.ts', 'Production welcome: reuse the authenticated account transport without copying sessions or app data'],
       ['src/store/AccountProvider.tsx', 'Production welcome: request only after account binding without blocking sign-in'],
-      ['tests/welcomeEmailClient.test.mjs', 'Production welcome: backend identity restrictions and idempotent server guard regression tests'],
-      ['docs/builds/HK_V2_PRODUCTION_EMAIL_INTEGRATION.md', 'Production email: verified sender, SMTP and secrets activation plan, honest deployment evidence'],
-      ['supabase/functions/herkeys-ai/index.ts', 'V2 consent: staging-activated Edge Function checks latest account-owned AI opt-in before transferring Gemini request'],
-      ['app/_layout.tsx', 'V2 onboarding: stage account-scoped mandatory consent check before protected navigation, activation blocked until Staging ledger verified'],
-      ['src/domain/consent.ts', 'V2 consent: current-version mandatory and optional decisions with fail-closed AI default'],
-      ['src/platform/consentBackend.ts', 'V2 consent: isolated account-scoped ledger client and acknowledgment-before-progress verification'],
-      ['src/features/consent/ConsentFlow.tsx', 'V2 consent: explicit Terms, Privacy, adult declaration, optional AI choice and permission explanation'],
-      ['tests/consent.test.mjs', 'V2 consent: reject stale policy and absent AI choices; latest revocation wins'],
-      ['docs/builds/HK_V2_CONSENT_SCHEMA_STAGING_BLUEPRINT.sql', 'V2 consent: unapplied Staging ledger blueprint with append-only account RLS and server-owned timestamps'],
-      ['src/platform/herKeysAiClient.ts', 'V2 consent: with staged gate enabled, deny external AI invocation absent current affirmative consent'],
-      ['src/platform/emailOtpProvider.ts', 'V2 recovery: put code verification beside existing OTP transport, using an isolated temporary session'],
       ['.github/workflows/v2-integration-validation.yml', 'Password auth: run the same repository gate against the stacked repair branch'],
       ['docs/builds/HK_EMAIL_PASSWORD_AUTH_20261008.md', 'Password auth: implementation, confirmation and runtime acceptance limits'],
-      ['docs/audits/HK_PLATFORM_PARITY_REGISTRY.json', 'iOS Apple blocker: register PC-09 so the platform check cannot silently hide the native Apple button'],
-      ['docs/audits/HK_IOS_ANDROID_PLATFORM_PARITY.md', 'iOS Apple blocker: report PC-09 and pending physical-device certification'],
       ['scripts-dev/meals-boundary-scan.cjs', 'Password auth: register only this stacked branch and its actual changed files'],
       ['src/design/components/TextField.tsx', 'Password auth: masked input and password autofill props'],
       ['src/domain/account/accountRuntime.ts', 'Password auth: use the existing session adoption and account authority'],
@@ -675,8 +643,6 @@ const LATER_FEATURES = [
       ['tests/support/welcomeFlow/AccountProvider.tsx', 'Password auth: component host models password operations'],
       ['tests/welcomeAuthFlow.test.mjs', 'Password auth: wiring, confirmation and no credential persistence checks'],
       ['tests/welcomeAuthShell.test.mjs', 'Password auth: password screen choices and transient field behavior'],
-      ['src/platform/passwordRecoveryProvider.ts', 'Password recovery: dedicated ephemeral non-persisted Supabase client, recovery OTP verified before update, local-only session close'],
-      ['tests/passwordRecovery.test.mjs', 'Password recovery: rejection of premature changes, invalid codes, temporary session disposal, non-enumerating request behavior'],
     ],
   },
   {
@@ -976,6 +942,296 @@ const LATER_FEATURES = [
     ],
   },
 
+{
+  id: 'HK-V2-PREMIUM-PASS-A (owner-approved client convergence)',
+  branch: null,
+  owned: [/^docs\/audits\/HK_V2_PREMIUM_/, /^docs\/audits\/v2-premium-pass-a-checkpoint[123]\//],
+  migrations: [], schemas: [], rootCollections: [], syncKinds: [],
+  shared: [
+    ['app/_layout.tsx', 'Pass A: compose unchanged deletion lifecycle gate with Premium/auth/consent providers; actor-bound intent and synchronous processing fence; preserve protected navigation'],
+    ['app/sign-in.tsx', 'Pass A: combine deletion Settings entry with one reusable Restore Purchases control and contradictory-action hold'],
+    ['app/onboarding/plus.tsx', 'Pass A: route to the single Account restore control instead of mounting a second custom transaction control'],
+    ['src/features/account/AccountPanel.tsx', 'Pass A: restore-control slot without duplicating the legacy restore action; preserve new-phone copy and Privacy & Data'],
+    ['src/monetization/RevenueCatProvider.tsx', 'Pass A: clear SDK presentation on every identity generation; discard late purchase/offering results'],
+    ['src/monetization/revenueCatClient.ts', 'Pass A: synchronous identity invalidation before queued native operations; stale generation and exact UUID guard'],
+    ['src/monetization/PremiumStateProvider.tsx', 'Pass A: reset whole consumer subtree per actor/household; fence stale ledger, authorization and extraction callbacks'],
+    ['src/monetization/premiumController.ts', 'Pass A: disposal discards server snapshot and prevents old verification work'],
+    ['src/monetization/useRestorePurchases.ts', 'Pass A: distinguish a store restore from server confirmation in user copy'],
+    ['src/store/PremiumIntentContext.tsx', 'Pass A: retain a new-user choice through first identity binding only; clear on sign-out and account switch'],
+    ['src/features/daily-load/premium/usePremiumDailyLoad.ts', 'Pass A: fence asynchronous canonical mutation on current actor/lifecycle, without changing review or reschedule rules'],
+    ['tests/premium/clientProvider.test.mjs', 'Pass A: every-render privacy, same-household A-B-A replay, lifecycle denial, restored verification and late-purchase regressions'],
+    ['tests/premium/clientState.test.mjs', 'Pass A: exact server/client enum comparison accepts LF/CRLF delimiters and still fails missing types or changed sets'],
+    ['tests/productionConsentBuildProfile.test.mjs', 'Pass A: stricter mandatory bound-account consent guard rejects environment-conditional bypass'],
+    ['tests/platformParity/restoreIdentity.test.mjs', 'Pass A: mounted provider clears on identity change; stricter late-restore rejection'],
+    ['tests/welcomePremiumFlow.test.mjs', 'Pass A: intent follows first bound identity only and cannot survive sign-out or switch'],
+    ['tests/premiumFeedback.test.mjs', 'Pass A: onboarding navigation reaches the one Account restore control; real route is stubbed at platform boundary'],
+    ['tests/support/premium/stubs.mjs', 'Pass A: script the router boundary for the existing onboarding surface tests'],
+    ['tests/meals/boundary.test.mjs', 'Pass A: pin reviewed exact Premium ancestry import and reject advanced/unrelated branch tips'],
+    ['tests/platformParity/persistentRestore.test.mjs', 'Pass A: Settings has exactly one restore control and reachable deletion entry'],
+    ['.gitattributes', 'Pass A: preserve both migration families LF pins'],
+    ['supabase/config.toml', 'Pass A: retain both function inventories and existing JWT flags; no hosted configuration mutation'],
+    ['supabase/tests/migration-chain.mjs', 'Pass A: combine both reviewed migration registries in strict version order; no SQL edits'],
+    ['tests/migrationChain.test.mjs', 'Pass A: pin combined migration sequence and distinct non-sync authorities without weakening ownership checks'],
+    ['package.json', 'Pass A: import deletion-owner PGlite dependency and minimal Expo SDK 57 compatible patches'],
+    ['package-lock.json', 'Pass A: exact dependency parity for deletion tests and Expo compatibility repair; inspect native transitive graph'],
+    ['scripts-dev/meals-boundary-scan.cjs', 'Pass A: register only this reviewed client/documentation integration scope; keep ancestry, privilege and release guards intact'],
+    ['.github/workflows/v2-integration-validation.yml', 'Pass A: run the unchanged mandatory validation steps for the exact integration SHA'],
+    ['.github/workflows/account-deletion-validation.yml', 'Pass A: run the unchanged deletion source-validation steps for the exact integration SHA'],
+  ],
+},
+{
+  "id": "V2-POST-PASSWORD (integrated legal/email repairs)",
+  "branch": null,
+  "owned": [],
+  "migrations": [],
+  "schemas": [],
+  "rootCollections": [],
+  "syncKinds": [],
+  "shared": [
+    [
+      "eas.json",
+      "V2 production release candidate: require versioned legal and AI consent on shipping and smoke APK profiles"
+    ],
+    [
+      "tests/productionConsentBuildProfile.test.mjs",
+      "V2 production profile: CI verifies mandatory legal/AI gate and prevents shipping client secrets"
+    ],
+    [
+      "supabase/email-templates/herkeys-confirm-signup.html",
+      "V2 signup email: versioned branded Supabase confirmation link, never direct client credentials"
+    ],
+    [
+      "docs/builds/HK_V2_SMOKE_P0_P1_CLOSEOUT_20261009.md",
+      "V2 P0/P1 closeout: precise production SMTP, redirects, secret activation, emulator stability and consent evidence handoff"
+    ],
+    [
+      "supabase/migrations/20261009060000_v2_account_consents.sql",
+      "V2 consent: additive account-scoped audit ledger with restrictive RLS, append-only columns, and server-authoritative timestamps"
+    ],
+    [
+      "supabase/tests/migration-chain.mjs",
+      "V2 consent: register the new independent additive ledger migration in the canonical backend harness"
+    ],
+    [
+      "tests/migrationChain.test.mjs",
+      "V2 consent: extend strict post-certification migration registry with consent ledger"
+    ],
+    [
+      ".gitattributes",
+      "V2 consent: retain LF migration pin without modifying previously applied migrations"
+    ],
+    [
+      "tests/consentDatabaseGovernance.test.mjs",
+      "V2 consent: assert private append-only ledger structure, client column restrictions, and explicit account-bound policies"
+    ],
+    [
+      "docs/builds/HK_V2_PRODUCTION_ANDROID_SMOKE_20261008.md",
+      "V2 Android emulator smoke: new later-lane execution contract for internal Production-backend APK, one authorized disposable account, real signup and recovery email evidence, and fail-closed launch gates; no Meals-domain change"
+    ],
+    [
+      ".gitattributes",
+      "Production transactional email: pin the reviewed new migration LF for reproducibility"
+    ],
+    [
+      "supabase/tests/migration-chain.mjs",
+      "Production transactional email: register new additive ledger migration in the canonical ordered harness"
+    ],
+    [
+      "tests/migrationChain.test.mjs",
+      "Production transactional email: assert newest migration is tracked without altering certified historical migrations"
+    ],
+    [
+      "tests/hk-f01f13/support/account-runtime-instance-stub.mjs",
+      "Production transactional email: inert welcome operation in unconfigured screen test stub"
+    ],
+    [
+      "tests/localNotificationArchitecture.test.mjs",
+      "Production transactional email: whitelist email-only Edge Function after verifying no remote push behavior"
+    ],
+    [
+      "supabase/migrations/20261009020000_herkeys_welcome_email_receipts.sql",
+      "Production welcome: idempotent per-account service-role delivery ledger, not a Meals change"
+    ],
+    [
+      "supabase/functions/herkeys-welcome-email/index.ts",
+      "Production welcome: one verified new account, JWT and project checks, secret-only server Resend sender"
+    ],
+    [
+      "supabase/email-templates/herkeys-recovery.html",
+      "Production recovery: Supabase Auth six-digit token template formatted with Her Keys branding"
+    ],
+    [
+      "src/platform/welcomeEmailClient.ts",
+      "Production welcome: account-bound client requests cannot send from Staging or another backend"
+    ],
+    [
+      "tests/welcomeEmailClient.test.mjs",
+      "Production welcome: backend identity restrictions and idempotent server guard regression tests"
+    ],
+    [
+      "docs/builds/HK_V2_PRODUCTION_EMAIL_INTEGRATION.md",
+      "Production email: verified sender, SMTP and secrets activation plan, honest deployment evidence"
+    ],
+    [
+      "supabase/functions/herkeys-ai/index.ts",
+      "V2 consent: staging-activated Edge Function checks latest account-owned AI opt-in before transferring Gemini request"
+    ],
+    [
+      "app/_layout.tsx",
+      "V2 onboarding: stage account-scoped mandatory consent check before protected navigation, activation blocked until Staging ledger verified"
+    ],
+    [
+      "src/domain/consent.ts",
+      "V2 consent: current-version mandatory and optional decisions with fail-closed AI default"
+    ],
+    [
+      "src/platform/consentBackend.ts",
+      "V2 consent: isolated account-scoped ledger client and acknowledgment-before-progress verification"
+    ],
+    [
+      "src/features/consent/ConsentFlow.tsx",
+      "V2 consent: explicit Terms, Privacy, adult declaration, optional AI choice and permission explanation"
+    ],
+    [
+      "tests/consent.test.mjs",
+      "V2 consent: reject stale policy and absent AI choices; latest revocation wins"
+    ],
+    [
+      "docs/builds/HK_V2_CONSENT_SCHEMA_STAGING_BLUEPRINT.sql",
+      "V2 consent: unapplied Staging ledger blueprint with append-only account RLS and server-owned timestamps"
+    ],
+    [
+      "src/platform/herKeysAiClient.ts",
+      "V2 consent: with staged gate enabled, deny external AI invocation absent current affirmative consent"
+    ],
+    [
+      "src/platform/emailOtpProvider.ts",
+      "V2 recovery: put code verification beside existing OTP transport, using an isolated temporary session"
+    ],
+    [
+      "docs/audits/HK_PLATFORM_PARITY_REGISTRY.json",
+      "iOS Apple blocker: register PC-09 so the platform check cannot silently hide the native Apple button"
+    ],
+    [
+      "docs/audits/HK_IOS_ANDROID_PLATFORM_PARITY.md",
+      "iOS Apple blocker: report PC-09 and pending physical-device certification"
+    ],
+    [
+      "src/platform/passwordRecoveryProvider.ts",
+      "Password recovery: dedicated ephemeral non-persisted Supabase client, recovery OTP verified before update, local-only session close"
+    ],
+    [
+      "tests/passwordRecovery.test.mjs",
+      "Password recovery: rejection of premature changes, invalid codes, temporary session disposal, non-enumerating request behavior"
+    ]
+  ]
+},
+{
+  "id": "HK-ACCOUNT-DELETION (autonomous lifecycle)",
+  "branch": null,
+  "owned": [/^supabase\/migrations\/20261014002726_account_deletion_lifecycle\.sql$/,/^docs\/account-deletion\//,/^tests\/accountDeletion\//,/^src\/domain\/account\/deletion\.ts/,/^src\/store\/deletionRuntimeInstance\.ts/,/^src\/features\/account\/DeletionGate\.tsx/,/^src\/features\/account\/DeleteAccountPanel\.tsx/,/^supabase\/functions\/request-account-deletion\//,/^supabase\/functions\/restore-account\//,/^supabase\/functions\/resend-restoration-email\//,/^supabase\/functions\/deletion-status\//,/^supabase\/functions\/process-account-deletions\//,/^supabase\/functions\/monitor-account-deletions\//,/^supabase\/functions\/capture-apple-credential\//,/^supabase\/functions\/begin-web-deletion\//,/^supabase\/functions\/_shared\/deletion/,/^supabase\/functions\/deno\./,/^supabase\/tests\/deletion-database\.mjs/,/^supabase\/blueprints\/account_deletion_scheduler\.sql/,/^\.github\/workflows\/account-deletion/],
+  "migrations": [
+    "supabase/migrations/20261014002726_account_deletion_lifecycle.sql",
+    "supabase/migrations/20261014012518_account_deletion_auth_reconciliation.sql"
+    ,"supabase/migrations/20261014014020_account_deletion_terminal_identity.sql"
+    ,"supabase/migrations/20261014014620_account_deletion_proof_retention.sql"
+    ,"supabase/migrations/20261014015835_account_deletion_cancelled_history_cleanup.sql"
+    ,"supabase/migrations/20261014021410_account_deletion_shared_provider_retry.sql"
+    ,"supabase/migrations/20261014112400_account_deletion_orphan_shared_ownership.sql"
+    ,"supabase/migrations/20261014113517_account_deletion_household_lock.sql"
+  ],
+  "schemas": [],
+  "rootCollections": [],
+  "syncKinds": [],
+  "shared": [['supabase/blueprints/staging-deletion-fixture.ts', 'Temporary HMAC-authenticated Staging fixture harness; forbidden in Production.'],
+    ['supabase/migrations/20261014012518_account_deletion_auth_reconciliation.sql', 'Additive session-revocation reconciliation verified against hosted Auth behavior.'],
+    ['supabase/migrations/20261014014020_account_deletion_terminal_identity.sql', 'Preserve receipt-to-namespace proof and reject deleted Auth identities.'],
+    ['supabase/migrations/20261014014620_account_deletion_proof_retention.sql', 'Apply owner-approved 365-day minimal terminal proof and daily expiry.'],
+    ['supabase/migrations/20261014015835_account_deletion_cancelled_history_cleanup.sql', 'Remove cancelled account-linked deletion history when a later purge completes.'],
+    ['supabase/migrations/20261014021410_account_deletion_shared_provider_retry.sql', 'Continue independent provider retries while explicit shared review remains pending.'],
+    ['supabase/migrations/20261014112400_account_deletion_orphan_shared_ownership.sql', 'Preserve another adult ownership even after membership removal; never infer transfer consent.'],
+    ['supabase/migrations/20261014113517_account_deletion_household_lock.sql', 'Serialize ownership classification with concurrent household membership/content insertion.'],
+    ['supabase/functions/expire-account-deletion-proofs/index.ts', 'HMAC-authenticated daily expiry of minimal terminal proof; no customer purge authority.'],
+    ['supabase/blueprints/account_deletion_retention_scheduler_upgrade.sql', 'Disabled daily retention scheduler upgrade for an existing lifecycle installation.'],
+    ['supabase/blueprints/staging_deletion_storage_fixture.sql', 'Staging-only marked disposable-account upload policy; explicit teardown.'],
+    ['supabase/blueprints/staging_deletion_lock_probe.sql', 'Temporary service-only Staging RPC for real concurrent ownership-lock certification; explicit teardown.'],
+    ['supabase/blueprints/staging-deletion-lock-probe.ts', 'HMAC Staging-only disposable ownership race probe; removes its row and is retired afterward.'],
+    ['tsconfig.json', 'Deno blueprints are checked by Deno rather than the Expo client compiler.'],
+    ['.gitattributes', 'Pin the additive lifecycle migration to LF for exact deployment checksums.'],
+    [
+      "app/_layout.tsx",
+      "Account deletion: lifecycle gate before protected UI."
+    ],
+    [
+      "app/sign-in.tsx",
+      "Account deletion: persistent privacy entry."
+    ],
+    [
+      "src/features/account/AccountPanel.tsx",
+      "Account deletion: optional privacy entry."
+    ],
+    [
+      "src/platform/appleProvider.ts",
+      "IOS-D01 nonce repair and server credential capture."
+    ],
+    [
+      "src/state/appStore.ts",
+      "Account deletion: canonical mutation restriction."
+    ],
+    ["tests/migrationChain.test.mjs", "Register lifecycle control tables as service-only operational data; database tests verify denied client access."],
+    ["tests/platformParity/persistentRestore.test.mjs", "Isolate lifecycle platform composition in existing Restore Purchases screen tests."],
+    ["tests/platformParity/support/restoreRoute.mjs", "Refuse any deletion operation in the Restore Purchases test fixture."],
+    [
+      "supabase/config.toml",
+      "Account deletion endpoint auth boundaries."
+    ],
+    [
+      "supabase/functions/_shared/crypto.ts",
+      "BufferSource typing for cryptographic helpers."
+    ],
+    [
+      "supabase/functions/_shared/supabaseAdmin.ts",
+      "Pending account restriction at privileged service boundary."
+    ],
+    [
+      "supabase/functions/calendar-oauth/index.ts",
+      "Pending account OAuth callback guard."
+    ],
+    [
+      "supabase/tests/migration-chain.mjs",
+      "Register additive lifecycle migration."
+    ],
+    [
+      "tests/ios/appleNonce.test.mjs",
+      "Nonce repair regression."
+    ],
+    [
+      "tests/support/googleAuth/expo-apple-authentication.mjs",
+      "Nonce provider fixture."
+    ],
+    [
+      "tests/support/googleAuth/expo-crypto.mjs",
+      "Nonce crypto fixture."
+    ],
+    [
+      "tests/support/googleAuth/register.mjs",
+      "Nonce fixture loader."
+    ],
+    [
+      "tests/localNotificationArchitecture.test.mjs",
+      "Review lifecycle transactional email endpoints without granting push paths."
+    ],
+    [
+      "tests/meals/boundary.test.mjs",
+      "Expected provenance follows corrected post-password lane and lifecycle lane."
+    ],
+    [
+      "scripts-dev/meals-boundary-scan.cjs",
+      "Register lifecycle and repair existing provenance overclaims."
+    ]
+  ]
+},
+
 ];
 
 /**
@@ -1225,6 +1481,8 @@ function scan() {
   for (const branch of git('branch', '--list', 'feature/*', 'validate/*', 'audit/hk-*').split('\n').map((b) => b.replace(/^[*+ ]+/, '').trim()).filter(Boolean)) {
     if (branch === 'feature/08-meals-os' || isLineUnderTest(branch, checkedOut) || laneBranches.has(branch)) continue;
     const tip = git('rev-parse', branch).trim();
+    // Pass A explicitly imports this reviewed immutable Premium tip. A later tip or another branch remains a sibling violation.
+    if (isReviewedPremiumImport(branch, tip, gitOk('merge-base', '--is-ancestor', tip, 'HEAD').ok)) continue;
     if (gitOk('merge-base', '--is-ancestor', tip, 'HEAD').ok) {
       // A tip at or below the baseline is the baseline's own history (IR01 forked from an audit tip); only history ABOVE it is a sibling.
       if (!gitOk('merge-base', '--is-ancestor', tip, BASE).ok) ancestry.push(`${branch} (${tip.slice(0, 7)}) is an ancestor of HEAD`);
@@ -1233,7 +1491,11 @@ function scan() {
     const mergeBase = gitOk('merge-base', 'HEAD', tip).out.trim();
     // History shared only up to a certified integration checkpoint is the integration line itself (every Wave 3/4 feature branches
     // from it), not a sibling reaching HEAD. Anything shared ABOVE the checkpoint still is.
-    const integrationHistory = mergeBase && INTEGRATION_CHECKPOINTS.some((checkpoint) => gitOk('merge-base', '--is-ancestor', mergeBase, checkpoint).ok);
+    // Account deletion starts at the assignment's recorded integration ENTRY. A sibling
+    // may advance from that same entry; that does not import its later work here.
+    // Keep the exact boundary: sharing any commit above ENTRY still fails.
+    const assignmentEntry = 'ad72ccd5b517a83bde5e7bbf3bf658193a667b82';
+    const integrationHistory = mergeBase && (mergeBase === assignmentEntry || INTEGRATION_CHECKPOINTS.some((checkpoint) => gitOk('merge-base', '--is-ancestor', mergeBase, checkpoint).ok));
     if (mergeBase && !integrationHistory && !gitOk('merge-base', '--is-ancestor', mergeBase, BASE).ok) ancestry.push(`${branch}: shares history with HEAD above the baseline (${mergeBase.slice(0, 7)})`);
   }
   facts.siblingAncestry = ancestry;
@@ -1290,8 +1552,12 @@ function isLineUnderTest(branch, checkedOut) {
   return checkedOut !== '' && checkedOut !== 'HEAD' && branch === checkedOut;
 }
 
+function isReviewedPremiumImport(branch, tip, reachable) {
+  return reachable && branch === 'feature/herkeys-premium-stage1' && tip === 'e4462d2a5cb42706a8523f6ba45248ee9396d02e';
+}
+
 // Required (not run) by tests/meals/boundary.test.mjs, which holds account() to its rules on files the real tree does not exercise.
-module.exports = { account, laneRegister, LATER_FEATURES, MEALS_LINE, isLineUnderTest };
+module.exports = { account, laneRegister, LATER_FEATURES, MEALS_LINE, isLineUnderTest, isReviewedPremiumImport };
 if (require.main !== module) return;
 
 const result = scan();

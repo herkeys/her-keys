@@ -24,6 +24,8 @@ export interface PremiumContextValue {
   authorize: (request: GateRequest) => Promise<GateResult>;
   /** Smart Inbox: the server authorizes, runs and meters one extraction. An answer that arrives after the account changed is discarded. */
   extract: (request: ExtractRequest) => Promise<ExtractResult>;
+  /** Synchronous account/lifecycle fence for an asynchronous canonical write. */
+  isCurrent: () => boolean;
 }
 
 const PremiumContext = createContext<PremiumContextValue | null>(null);
@@ -37,24 +39,63 @@ const PremiumContext = createContext<PremiumContextValue | null>(null);
  *  - When the store SDK reports an active entitlement but the server has not caught up, it verifies (bounded) — the store is a hint.
  *  - It persists nothing.
  */
-export function PremiumStateProvider({
+type PremiumStateProviderProps = {
+  client: PremiumServerClient;
+  accountState: AccountState;
+  ledger?: PremiumLedgerClient;
+  appVersion?: string;
+  isAccountCurrent?: (accountId: string, householdId: string) => boolean;
+  children: ReactNode;
+};
+
+/** Reset the entire consumer subtree on actor/household change, before its first render can expose the previous actor. */
+export function PremiumStateProvider(props: PremiumStateProviderProps) {
+  const key = props.accountState.kind === 'accountBound'
+    ? `${props.accountState.session.accountId}:${props.accountState.householdId}` : props.accountState.kind;
+  const scope = useRef({ key });
+  if (scope.current.key !== key) scope.current = { key };
+  const owner = scope.current;
+  const current = useCallback(() => scope.current === owner, [owner]);
+  return <PremiumAccountState key={key} {...props} scopeIsCurrent={current} />;
+}
+
+function PremiumAccountState({
   client,
   accountState,
   ledger = UNCONFIGURED_PREMIUM_LEDGER,
   appVersion,
   children,
-}: {
-  client: PremiumServerClient;
-  accountState: AccountState;
-  ledger?: PremiumLedgerClient;
-  appVersion?: string;
-  children: ReactNode;
-}) {
+  isAccountCurrent,
+  scopeIsCurrent,
+}: PremiumStateProviderProps & { scopeIsCurrent: () => boolean }) {
   const { status: storeStatus } = useEntitlement();
   const controller = useMemo(() => new PremiumController(client), [client]);
   const snapshot = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
   const accountId = activeAccountId(accountState);
   const accountBound = accountState.kind === 'accountBound';
+  const householdId = accountState.kind === 'accountBound' ? accountState.householdId : null;
+  const live = useRef(true);
+  useEffect(() => { live.current = true; return () => { live.current = false; }; }, []);
+  const isCurrent = useCallback(() => live.current && scopeIsCurrent() && accountBound && accountId !== null && householdId !== null
+    && (isAccountCurrent?.(accountId, householdId) ?? true), [scopeIsCurrent, accountBound, accountId, householdId, isAccountCurrent]);
+  // Old flows cannot invoke a new account's transport after an await, including a shared-household account switch.
+  const scopedLedger = useMemo<PremiumLedgerClient>(() => ({
+    async record(input) {
+      if (!isCurrent() || input.householdId !== householdId) return { kind: 'unavailable' };
+      const result = await ledger.record(input);
+      return isCurrent() ? result : { kind: 'unavailable' };
+    },
+    async transition(...args) {
+      if (!isCurrent()) return { kind: 'unavailable' };
+      const result = await ledger.transition(...args);
+      return isCurrent() ? result : { kind: 'unavailable' };
+    },
+    async list(feature, household, limit) {
+      if (!isCurrent() || household !== householdId) return { kind: 'unavailable' };
+      const result = await ledger.list(feature, household, limit);
+      return isCurrent() ? result : { kind: 'unavailable' };
+    },
+  }), [ledger, isCurrent, householdId]);
   const [decisionStore, setDecisionStore] = useState<{ accountId: string | null; byFeature: Record<string, GateDecision> }>({ accountId: null, byFeature: {} });
 
   // A bound account is the only one that may hold Premium state; authDegraded keeps its last server view out of reach.
@@ -103,30 +144,31 @@ export function PremiumStateProvider({
 
   const authorize = useCallback(
     async (request: GateRequest): Promise<GateResult> => {
+      if (!isCurrent() || request.householdId !== householdId || controller.getSnapshot().server?.state === 'deletion_pending') return { kind: 'unavailable' };
       const owner = controller.getSnapshot().accountId;
       const result = await client.authorize(request);
       // An answer that arrives after the account changed belongs to nobody on screen now.
-      if (controller.getSnapshot().accountId !== owner) return { kind: 'unavailable' };
+      if (!isCurrent() || controller.getSnapshot().accountId !== owner) return { kind: 'unavailable' };
       if (result.kind === 'decision') recordDecision(request.feature, result.decision);
       return result;
     },
-    [client, controller, recordDecision],
+    [client, controller, recordDecision, isCurrent, householdId],
   );
 
   const extract = useCallback(
     async (request: ExtractRequest): Promise<ExtractResult> => {
+      if (!isCurrent() || request.householdId !== householdId || controller.getSnapshot().server?.state === 'deletion_pending') return { kind: 'unavailable', reason: 'account_changed' };
       const owner = controller.getSnapshot().accountId;
       const result = await client.extract(request);
-      if (controller.getSnapshot().accountId !== owner) return { kind: 'unavailable', reason: 'account_changed' };
+      if (!isCurrent() || controller.getSnapshot().accountId !== owner) return { kind: 'unavailable', reason: 'account_changed' };
       return result;
     },
-    [client, controller],
+    [client, controller, isCurrent, householdId],
   );
 
-  const householdId = accountState.kind === 'accountBound' ? accountState.householdId : null;
   const value = useMemo<PremiumContextValue>(
-    () => ({ snapshot, controller, accountBound, householdId, ledger, appVersion, decisions, recordDecision, authorize, extract }),
-    [snapshot, controller, accountBound, householdId, ledger, appVersion, decisions, recordDecision, authorize, extract],
+    () => ({ snapshot, controller, accountBound, householdId, ledger: scopedLedger, appVersion, decisions, recordDecision, authorize, extract, isCurrent }),
+    [snapshot, controller, accountBound, householdId, scopedLedger, appVersion, decisions, recordDecision, authorize, extract, isCurrent],
   );
   return <PremiumContext.Provider value={value}>{children}</PremiumContext.Provider>;
 }
@@ -156,7 +198,7 @@ export interface PremiumFeatureApi {
 
 /** The one hook every Premium pillar uses to know what she can do, and to ask the server to do it. */
 export function usePremiumFeature(featureKey: string, featureName: string): PremiumFeatureApi {
-  const { snapshot, controller, accountBound, decisions, recordDecision, authorize } = usePremiumState();
+  const { snapshot, controller, accountBound, decisions, recordDecision, authorize, isCurrent } = usePremiumState();
   const { status: storeStatus } = useEntitlement();
   const decision = decisions[featureKey] ?? null;
   const state = useMemo(
@@ -169,8 +211,8 @@ export function usePremiumFeature(featureKey: string, featureName: string): Prem
     copy,
     usable: isUsable(state),
     authorize: useCallback((request) => authorize({ ...request, feature: featureKey }), [authorize, featureKey]),
-    refresh: useCallback(() => controller.refresh(), [controller]),
-    verify: useCallback(() => controller.startVerification(), [controller]),
+    refresh: useCallback(() => isCurrent() ? controller.refresh() : Promise.resolve(), [controller, isCurrent]),
+    verify: useCallback(() => isCurrent() ? controller.startVerification() : Promise.resolve(), [controller, isCurrent]),
     decision,
     clearDecision: useCallback(() => recordDecision(featureKey, null), [recordDecision, featureKey]),
   };
@@ -189,7 +231,7 @@ export interface PremiumUpgradeApi {
  */
 export function usePremiumUpgrade(placement: PaywallPlacement): PremiumUpgradeApi {
   const { presentPaywall } = useEntitlement();
-  const { controller } = usePremiumState();
+  const { controller, isCurrent } = usePremiumState();
   const inFlight = useRef(false);
   const mounted = useRef(true);
   const [presenting, setPresenting] = useState(false);
@@ -203,7 +245,7 @@ export function usePremiumUpgrade(placement: PaywallPlacement): PremiumUpgradeAp
   }, []);
 
   const start = useCallback(async (): Promise<PaywallOutcome> => {
-    if (inFlight.current) return { kind: 'unavailable' };
+    if (inFlight.current || !isCurrent() || controller.getSnapshot().server?.state === 'deletion_pending') return { kind: 'unavailable' };
     inFlight.current = true;
     setPresenting(true);
     setNotice(null);
@@ -215,13 +257,14 @@ export function usePremiumUpgrade(placement: PaywallPlacement): PremiumUpgradeAp
     } finally {
       inFlight.current = false;
     }
+    if (!isCurrent()) return { kind: 'unavailable' };
     if (outcome.kind === 'purchased' || outcome.kind === 'restored' || outcome.kind === 'already_entitled') void controller.startVerification();
     if (mounted.current) {
       setPresenting(false);
       setNotice(purchaseOutcomeNotice(outcome));
     }
     return outcome;
-  }, [controller, placement, presentPaywall]);
+  }, [controller, placement, presentPaywall, isCurrent]);
 
   return { start, presenting, notice };
 }

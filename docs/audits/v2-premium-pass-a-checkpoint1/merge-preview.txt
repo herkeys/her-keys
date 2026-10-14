@@ -1,0 +1,38 @@
+b293ecfe6d28367125320c9a44c5be5276baceb5
+100644 a547a2a6c9accc2c8701159f01a14f01dd881c0e 1	.gitattributes
+100644 2e6de34a0f80f35918b8ea469a5578bd1f85469f 2	.gitattributes
+100644 1a4552c642cbdc56cac4ffe9eb799b4237f1a235 3	.gitattributes
+100644 f0ed1f28a8b44a010e1ae6f95a38802e2877f706 1	app/_layout.tsx
+100644 e463fe8f44c21987c70d859bc742c2bc1476ae59 2	app/_layout.tsx
+100644 10d5f9d1ac76e336e8a0c73652b44ef3da4f42b1 3	app/_layout.tsx
+100644 4ec357e9135d66c31200431a2de4acccc9809261 1	app/sign-in.tsx
+100644 3c436de38d08dd63aac5e56264d11b495bad6e1f 2	app/sign-in.tsx
+100644 dc6f3ef48560e914cf89a1b2a047c8a4553b465a 3	app/sign-in.tsx
+100644 63db665276c170dc2bb0fc3431235de38d26ef26 1	supabase/config.toml
+100644 36575818615f2cc9e132597e293b79ef118c072f 2	supabase/config.toml
+100644 bd9a62d6606116b8484f8a1ff15806e6336721e6 3	supabase/config.toml
+100644 425b9499b08e7d7497adddc37cc6fc215c9a13ff 1	supabase/tests/migration-chain.mjs
+100644 41793841814245005a4356ce7b6909d3a6fe4746 2	supabase/tests/migration-chain.mjs
+100644 8586fea04e6d2a5860bf9bf670ecb2475a58affe 3	supabase/tests/migration-chain.mjs
+100644 d27be18810740618a331477e3438af8822832501 1	tests/migrationChain.test.mjs
+100644 8b80eb1ca396599535f097ae75cb1f27376f8332 2	tests/migrationChain.test.mjs
+100644 e403ae44d5c2a72288afca520f2c15e7b5b359fc 3	tests/migrationChain.test.mjs
+
+Auto-merging .gitattributes
+CONFLICT (content): Merge conflict in .gitattributes
+Auto-merging app/_layout.tsx
+CONFLICT (content): Merge conflict in app/_layout.tsx
+Auto-merging app/sign-in.tsx
+CONFLICT (content): Merge conflict in app/sign-in.tsx
+Auto-merging scripts-dev/meals-boundary-scan.cjs
+Auto-merging src/features/account/AccountPanel.tsx
+Auto-merging src/platform/appleProvider.ts
+Auto-merging supabase/config.toml
+CONFLICT (content): Merge conflict in supabase/config.toml
+Auto-merging supabase/tests/migration-chain.mjs
+CONFLICT (content): Merge conflict in supabase/tests/migration-chain.mjs
+Auto-merging tests/localNotificationArchitecture.test.mjs
+Auto-merging tests/meals/boundary.test.mjs
+Auto-merging tests/migrationChain.test.mjs
+CONFLICT (content): Merge conflict in tests/migrationChain.test.mjs
+Auto-merging tsconfig.json

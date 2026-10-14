@@ -1,0 +1,138 @@
+[
+  [
+    "eas.json",
+    "V2 production release candidate: require versioned legal and AI consent on shipping and smoke APK profiles"
+  ],
+  [
+    "tests/productionConsentBuildProfile.test.mjs",
+    "V2 production profile: CI verifies mandatory legal/AI gate and prevents shipping client secrets"
+  ],
+  [
+    "supabase/email-templates/herkeys-confirm-signup.html",
+    "V2 signup email: versioned branded Supabase confirmation link, never direct client credentials"
+  ],
+  [
+    "docs/builds/HK_V2_SMOKE_P0_P1_CLOSEOUT_20261009.md",
+    "V2 P0/P1 closeout: precise production SMTP, redirects, secret activation, emulator stability and consent evidence handoff"
+  ],
+  [
+    "supabase/migrations/20261009060000_v2_account_consents.sql",
+    "V2 consent: additive account-scoped audit ledger with restrictive RLS, append-only columns, and server-authoritative timestamps"
+  ],
+  [
+    "supabase/tests/migration-chain.mjs",
+    "V2 consent: register the new independent additive ledger migration in the canonical backend harness"
+  ],
+  [
+    "tests/migrationChain.test.mjs",
+    "V2 consent: extend strict post-certification migration registry with consent ledger"
+  ],
+  [
+    ".gitattributes",
+    "V2 consent: retain LF migration pin without modifying previously applied migrations"
+  ],
+  [
+    "tests/consentDatabaseGovernance.test.mjs",
+    "V2 consent: assert private append-only ledger structure, client column restrictions, and explicit account-bound policies"
+  ],
+  [
+    "docs/builds/HK_V2_PRODUCTION_ANDROID_SMOKE_20261008.md",
+    "V2 Android emulator smoke: new later-lane execution contract for internal Production-backend APK, one authorized disposable account, real signup and recovery email evidence, and fail-closed launch gates; no Meals-domain change"
+  ],
+  [
+    ".gitattributes",
+    "Production transactional email: pin the reviewed new migration LF for reproducibility"
+  ],
+  [
+    "supabase/tests/migration-chain.mjs",
+    "Production transactional email: register new additive ledger migration in the canonical ordered harness"
+  ],
+  [
+    "tests/migrationChain.test.mjs",
+    "Production transactional email: assert newest migration is tracked without altering certified historical migrations"
+  ],
+  [
+    "tests/hk-f01f13/support/account-runtime-instance-stub.mjs",
+    "Production transactional email: inert welcome operation in unconfigured screen test stub"
+  ],
+  [
+    "tests/localNotificationArchitecture.test.mjs",
+    "Production transactional email: whitelist email-only Edge Function after verifying no remote push behavior"
+  ],
+  [
+    "supabase/migrations/20261009020000_herkeys_welcome_email_receipts.sql",
+    "Production welcome: idempotent per-account service-role delivery ledger, not a Meals change"
+  ],
+  [
+    "supabase/functions/herkeys-welcome-email/index.ts",
+    "Production welcome: one verified new account, JWT and project checks, secret-only server Resend sender"
+  ],
+  [
+    "supabase/email-templates/herkeys-recovery.html",
+    "Production recovery: Supabase Auth six-digit token template formatted with Her Keys branding"
+  ],
+  [
+    "src/platform/welcomeEmailClient.ts",
+    "Production welcome: account-bound client requests cannot send from Staging or another backend"
+  ],
+  [
+    "tests/welcomeEmailClient.test.mjs",
+    "Production welcome: backend identity restrictions and idempotent server guard regression tests"
+  ],
+  [
+    "docs/builds/HK_V2_PRODUCTION_EMAIL_INTEGRATION.md",
+    "Production email: verified sender, SMTP and secrets activation plan, honest deployment evidence"
+  ],
+  [
+    "supabase/functions/herkeys-ai/index.ts",
+    "V2 consent: staging-activated Edge Function checks latest account-owned AI opt-in before transferring Gemini request"
+  ],
+  [
+    "app/_layout.tsx",
+    "V2 onboarding: stage account-scoped mandatory consent check before protected navigation, activation blocked until Staging ledger verified"
+  ],
+  [
+    "src/domain/consent.ts",
+    "V2 consent: current-version mandatory and optional decisions with fail-closed AI default"
+  ],
+  [
+    "src/platform/consentBackend.ts",
+    "V2 consent: isolated account-scoped ledger client and acknowledgment-before-progress verification"
+  ],
+  [
+    "src/features/consent/ConsentFlow.tsx",
+    "V2 consent: explicit Terms, Privacy, adult declaration, optional AI choice and permission explanation"
+  ],
+  [
+    "tests/consent.test.mjs",
+    "V2 consent: reject stale policy and absent AI choices; latest revocation wins"
+  ],
+  [
+    "docs/builds/HK_V2_CONSENT_SCHEMA_STAGING_BLUEPRINT.sql",
+    "V2 consent: unapplied Staging ledger blueprint with append-only account RLS and server-owned timestamps"
+  ],
+  [
+    "src/platform/herKeysAiClient.ts",
+    "V2 consent: with staged gate enabled, deny external AI invocation absent current affirmative consent"
+  ],
+  [
+    "src/platform/emailOtpProvider.ts",
+    "V2 recovery: put code verification beside existing OTP transport, using an isolated temporary session"
+  ],
+  [
+    "docs/audits/HK_PLATFORM_PARITY_REGISTRY.json",
+    "iOS Apple blocker: register PC-09 so the platform check cannot silently hide the native Apple button"
+  ],
+  [
+    "docs/audits/HK_IOS_ANDROID_PLATFORM_PARITY.md",
+    "iOS Apple blocker: report PC-09 and pending physical-device certification"
+  ],
+  [
+    "src/platform/passwordRecoveryProvider.ts",
+    "Password recovery: dedicated ephemeral non-persisted Supabase client, recovery OTP verified before update, local-only session close"
+  ],
+  [
+    "tests/passwordRecovery.test.mjs",
+    "Password recovery: rejection of premature changes, invalid codes, temporary session disposal, non-enumerating request behavior"
+  ]
+]

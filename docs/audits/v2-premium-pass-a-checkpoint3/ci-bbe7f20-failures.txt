@@ -1,0 +1,236 @@
+Producer: gh run view 38625443847 --log-failed; failure section only; exact SHA bbe7f209e3f731d81717d76ce24bafe3f5c8835e
+validate	Run npm test	2026-10-14T19:41:03.1803499Z ✖ failing tests:
+validate	Run npm test	2026-10-14T19:41:03.1803726Z
+validate	Run npm test	2026-10-14T19:41:03.1803977Z test at tests/accountDeletion/database.test.mjs:124:11
+validate	Run npm test	2026-10-14T19:41:03.1804561Z ✖ complete database cleanup preserves the other account (6.539573ms)
+validate	Run npm test	2026-10-14T19:41:03.1804971Z   error: unclassified_resource
+validate	Run npm test	2026-10-14T19:41:03.1805583Z       at pe.Ue (file:///home/runner/work/her-keys/her-keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:17959)
+validate	Run npm test	2026-10-14T19:41:03.1806395Z       at pe.tt (file:///home/runner/work/her-keys/her-keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:15347)
+validate	Run npm test	2026-10-14T19:41:03.1807188Z       at pe.parse (file:///home/runner/work/her-keys/her-keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:14021)
+validate	Run npm test	2026-10-14T19:41:03.1807948Z       at D.Ne (file:///home/runner/work/her-keys/her-keys/node_modules/@electric-sql/pglite/dist/index.js:5:1763)
+validate	Run npm test	2026-10-14T19:41:03.1808861Z       at file:///home/runner/work/her-keys/her-keys/node_modules/@electric-sql/pglite/dist/index.js:5:1155
+validate	Run npm test	2026-10-14T19:41:03.1809528Z       at wasm://wasm/0269e01e:wasm-function[10979]:0x5ad057
+validate	Run npm test	2026-10-14T19:41:03.1810363Z       at wasm://wasm/0269e01e:wasm-function[3598]:0x281dd2
+validate	Run npm test	2026-10-14T19:41:03.1811093Z       at wasm://wasm/0269e01e:wasm-function[3640]:0x289ccf
+validate	Run npm test	2026-10-14T19:41:03.1811949Z       at wasm://wasm/0269e01e:wasm-function[3650]:0x289f2b
+validate	Run npm test	2026-10-14T19:41:03.1812481Z       at wasm://wasm/0269e01e:wasm-function[9956]:0x556968 {
+validate	Run npm test	2026-10-14T19:41:03.1813302Z     length: 164,
+validate	Run npm test	2026-10-14T19:41:03.1813655Z     severity: 'ERROR',
+validate	Run npm test	2026-10-14T19:41:03.1814010Z     code: 'P0001',
+validate	Run npm test	2026-10-14T19:41:03.1814329Z     detail: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1814660Z     hint: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1815005Z     position: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1815405Z     internalPosition: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1815831Z     internalQuery: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1816536Z     where: 'PL/pgSQL function public.herkeys_deletion_command(text,jsonb) line 200 at RAISE',
+validate	Run npm test	2026-10-14T19:41:03.1817181Z     schema: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1817517Z     table: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1817849Z     column: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1818180Z     dataType: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1818556Z     constraint: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1818895Z     file: 'pl_exec.c',
+validate	Run npm test	2026-10-14T19:41:03.1819233Z     line: '3923',
+validate	Run npm test	2026-10-14T19:41:03.1819601Z     routine: 'exec_stmt_raise',
+validate	Run npm test	2026-10-14T19:41:03.1820293Z     query: 'select public.herkeys_deletion_command($1,$2::jsonb) as r',
+validate	Run npm test	2026-10-14T19:41:03.1821084Z     params: [ 'database_cleanup', '{"request_id":"28c1b4bb-3a4f-4d4b-aded-4702260d6583","fence":2}' ],
+validate	Run npm test	2026-10-14T19:41:03.1821687Z     queryOptions: undefined
+validate	Run npm test	2026-10-14T19:41:03.1821988Z   }
+validate	Run npm test	2026-10-14T19:41:03.1822132Z
+validate	Run npm test	2026-10-14T19:41:03.1822401Z test at tests/accountDeletion/database.test.mjs:129:11
+validate	Run npm test	2026-10-14T19:41:03.1823579Z ✖ purged requires Auth absence and independent resource evidence (60.131479ms)
+validate	Run npm test	2026-10-14T19:41:03.1824156Z   error: terminal_verification_failed
+validate	Run npm test	2026-10-14T19:41:03.1825262Z       at pe.Ue (file:///home/runner/work/her-keys/her-keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:17959)
+validate	Run npm test	2026-10-14T19:41:03.1826302Z       at pe.tt (file:///home/runner/work/her-keys/her-keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:15347)
+validate	Run npm test	2026-10-14T19:41:03.1827433Z       at pe.parse (file:///home/runner/work/her-keys/her-keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:14021)
+validate	Run npm test	2026-10-14T19:41:03.1828949Z       at D.Ne (file:///home/runner/work/her-keys/her-keys/node_modules/@electric-sql/pglite/dist/index.js:5:1763)
+validate	Run npm test	2026-10-14T19:41:03.1830112Z       at file:///home/runner/work/her-keys/her-keys/node_modules/@electric-sql/pglite/dist/index.js:5:1155
+validate	Run npm test	2026-10-14T19:41:03.1830873Z       at wasm://wasm/0269e01e:wasm-function[10979]:0x5ad057
+validate	Run npm test	2026-10-14T19:41:03.1831439Z       at wasm://wasm/0269e01e:wasm-function[3598]:0x281dd2
+validate	Run npm test	2026-10-14T19:41:03.1831955Z       at wasm://wasm/0269e01e:wasm-function[3640]:0x289ccf
+validate	Run npm test	2026-10-14T19:41:03.1832529Z       at wasm://wasm/0269e01e:wasm-function[3650]:0x289f2b
+validate	Run npm test	2026-10-14T19:41:03.1833238Z       at wasm://wasm/0269e01e:wasm-function[9956]:0x556968 {
+validate	Run npm test	2026-10-14T19:41:03.1833638Z     length: 171,
+validate	Run npm test	2026-10-14T19:41:03.1833914Z     severity: 'ERROR',
+validate	Run npm test	2026-10-14T19:41:03.1834162Z     code: 'P0001',
+validate	Run npm test	2026-10-14T19:41:03.1834395Z     detail: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1834626Z     hint: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1834849Z     position: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1835117Z     internalPosition: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1835377Z     internalQuery: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1835829Z     where: 'PL/pgSQL function public.herkeys_deletion_command(text,jsonb) line 232 at RAISE',
+validate	Run npm test	2026-10-14T19:41:03.1836254Z     schema: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1836482Z     table: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1836703Z     column: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1836925Z     dataType: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1837157Z     constraint: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1837388Z     file: 'pl_exec.c',
+validate	Run npm test	2026-10-14T19:41:03.1837644Z     line: '3923',
+validate	Run npm test	2026-10-14T19:41:03.1837888Z     routine: 'exec_stmt_raise',
+validate	Run npm test	2026-10-14T19:41:03.1838301Z     query: 'select public.herkeys_deletion_command($1,$2::jsonb) as r',
+validate	Run npm test	2026-10-14T19:41:03.1838839Z     params: [ 'finish', '{"request_id":"28c1b4bb-3a4f-4d4b-aded-4702260d6583","fence":2}' ],
+validate	Run npm test	2026-10-14T19:41:03.1839383Z     queryOptions: undefined
+validate	Run npm test	2026-10-14T19:41:03.1839617Z   }
+validate	Run npm test	2026-10-14T19:41:03.1839731Z
+validate	Run npm test	2026-10-14T19:41:03.1839946Z test at tests/accountDeletion/mutations.test.mjs:49:11
+validate	Run npm test	2026-10-14T19:41:03.1840771Z ✖ approved shared policy deletes private records, restricts ambiguous records and preserves the other adult (33.238938ms)
+validate	Run npm test	2026-10-14T19:41:03.1841317Z   error: unclassified_resource
+validate	Run npm test	2026-10-14T19:41:03.1841863Z       at pe.Ue (file:///home/runner/work/her-keys/her-keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:17959)
+validate	Run npm test	2026-10-14T19:41:03.1842633Z       at pe.tt (file:///home/runner/work/her-keys/her-keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:15347)
+validate	Run npm test	2026-10-14T19:41:03.1843680Z       at pe.parse (file:///home/runner/work/her-keys/her-keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:14021)
+validate	Run npm test	2026-10-14T19:41:03.1844437Z       at D.Ne (file:///home/runner/work/her-keys/her-keys/node_modules/@electric-sql/pglite/dist/index.js:5:1763)
+validate	Run npm test	2026-10-14T19:41:03.1845146Z       at file:///home/runner/work/her-keys/her-keys/node_modules/@electric-sql/pglite/dist/index.js:5:1155
+validate	Run npm test	2026-10-14T19:41:03.1845670Z       at wasm://wasm/0269e01e:wasm-function[10979]:0x5ad057
+validate	Run npm test	2026-10-14T19:41:03.1846094Z       at wasm://wasm/0269e01e:wasm-function[3598]:0x281dd2
+validate	Run npm test	2026-10-14T19:41:03.1846459Z       at wasm://wasm/0269e01e:wasm-function[3640]:0x289ccf
+validate	Run npm test	2026-10-14T19:41:03.1846824Z       at wasm://wasm/0269e01e:wasm-function[3650]:0x289f2b
+validate	Run npm test	2026-10-14T19:41:03.1847195Z       at wasm://wasm/0269e01e:wasm-function[9956]:0x556968 {
+validate	Run npm test	2026-10-14T19:41:03.1847492Z     length: 164,
+validate	Run npm test	2026-10-14T19:41:03.1847708Z     severity: 'ERROR',
+validate	Run npm test	2026-10-14T19:41:03.1848037Z     code: 'P0001',
+validate	Run npm test	2026-10-14T19:41:03.1848247Z     detail: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1848467Z     hint: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1848685Z     position: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1848943Z     internalPosition: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1849205Z     internalQuery: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1849659Z     where: 'PL/pgSQL function public.herkeys_deletion_command(text,jsonb) line 200 at RAISE',
+validate	Run npm test	2026-10-14T19:41:03.1850074Z     schema: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1850296Z     table: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1850509Z     column: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1850727Z     dataType: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1850967Z     constraint: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1851197Z     file: 'pl_exec.c',
+validate	Run npm test	2026-10-14T19:41:03.1851414Z     line: '3923',
+validate	Run npm test	2026-10-14T19:41:03.1851646Z     routine: 'exec_stmt_raise',
+validate	Run npm test	2026-10-14T19:41:03.1852028Z     query: 'select public.herkeys_deletion_command($1,$2::jsonb) as r',
+validate	Run npm test	2026-10-14T19:41:03.1852592Z     params: [ 'database_cleanup', '{"request_id":"3fffb0d1-3640-4d59-827d-4d6882c1f4dd","fence":1}' ],
+validate	Run npm test	2026-10-14T19:41:03.1853224Z     queryOptions: undefined
+validate	Run npm test	2026-10-14T19:41:03.1853463Z   }
+validate	Run npm test	2026-10-14T19:41:03.1853568Z
+validate	Run npm test	2026-10-14T19:41:03.1853815Z test at tests/accountDeletion/resourceCoverage.test.mjs:69:63
+validate	Run npm test	2026-10-14T19:41:03.1854439Z ✖ all 43 registered resources: shared and unrelated isolation (6975.983845ms)
+validate	Run npm test	2026-10-14T19:41:03.1854843Z   error: unclassified_resource
+validate	Run npm test	2026-10-14T19:41:03.1855389Z       at pe.Ue (file:///home/runner/work/her-keys/her-keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:17959)
+validate	Run npm test	2026-10-14T19:41:03.1856159Z       at pe.tt (file:///home/runner/work/her-keys/her-keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:15347)
+validate	Run npm test	2026-10-14T19:41:03.1856936Z       at pe.parse (file:///home/runner/work/her-keys/her-keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:14021)
+validate	Run npm test	2026-10-14T19:41:03.1857677Z       at D.Ne (file:///home/runner/work/her-keys/her-keys/node_modules/@electric-sql/pglite/dist/index.js:5:1763)
+validate	Run npm test	2026-10-14T19:41:03.1858376Z       at file:///home/runner/work/her-keys/her-keys/node_modules/@electric-sql/pglite/dist/index.js:5:1155
+validate	Run npm test	2026-10-14T19:41:03.1858894Z       at wasm://wasm/0269e01e:wasm-function[10979]:0x5ad057
+validate	Run npm test	2026-10-14T19:41:03.1859268Z       at wasm://wasm/0269e01e:wasm-function[3598]:0x281dd2
+validate	Run npm test	2026-10-14T19:41:03.1859719Z       at wasm://wasm/0269e01e:wasm-function[3640]:0x289ccf
+validate	Run npm test	2026-10-14T19:41:03.1860083Z       at wasm://wasm/0269e01e:wasm-function[3650]:0x289f2b
+validate	Run npm test	2026-10-14T19:41:03.1860459Z       at wasm://wasm/0269e01e:wasm-function[9956]:0x556968 {
+validate	Run npm test	2026-10-14T19:41:03.1860752Z     length: 164,
+validate	Run npm test	2026-10-14T19:41:03.1860964Z     severity: 'ERROR',
+validate	Run npm test	2026-10-14T19:41:03.1861186Z     code: 'P0001',
+validate	Run npm test	2026-10-14T19:41:03.1861398Z     detail: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1861623Z     hint: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1861851Z     position: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1862113Z     internalPosition: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1862376Z     internalQuery: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1862949Z     where: 'PL/pgSQL function public.herkeys_deletion_command(text,jsonb) line 200 at RAISE',
+validate	Run npm test	2026-10-14T19:41:03.1863381Z     schema: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1863605Z     table: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1863833Z     column: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1864062Z     dataType: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1864300Z     constraint: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1864531Z     file: 'pl_exec.c',
+validate	Run npm test	2026-10-14T19:41:03.1864746Z     line: '3923',
+validate	Run npm test	2026-10-14T19:41:03.1864976Z     routine: 'exec_stmt_raise',
+validate	Run npm test	2026-10-14T19:41:03.1865369Z     query: 'select public.herkeys_deletion_command($1,$2::jsonb) as r',
+validate	Run npm test	2026-10-14T19:41:03.1865937Z     params: [ 'database_cleanup', '{"request_id":"89ec1a66-6168-49bc-a2aa-04d48a42f331","fence":1}' ],
+validate	Run npm test	2026-10-14T19:41:03.1866370Z     queryOptions: undefined
+validate	Run npm test	2026-10-14T19:41:03.1866598Z   }
+validate	Run npm test	2026-10-14T19:41:03.1866704Z
+validate	Run npm test	2026-10-14T19:41:03.1866932Z test at tests/accountDeletion/resourceCoverage.test.mjs:69:63
+validate	Run npm test	2026-10-14T19:41:03.1867655Z ✖ all 43 registered resources: former_member and unrelated isolation (5170.763847ms)
+validate	Run npm test	2026-10-14T19:41:03.1868066Z   error: unclassified_resource
+validate	Run npm test	2026-10-14T19:41:03.1868596Z       at pe.Ue (file:///home/runner/work/her-keys/her-keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:17959)
+validate	Run npm test	2026-10-14T19:41:03.1869366Z       at pe.tt (file:///home/runner/work/her-keys/her-keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:15347)
+validate	Run npm test	2026-10-14T19:41:03.1870131Z       at pe.parse (file:///home/runner/work/her-keys/her-keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:14021)
+validate	Run npm test	2026-10-14T19:41:03.1870883Z       at D.Ne (file:///home/runner/work/her-keys/her-keys/node_modules/@electric-sql/pglite/dist/index.js:5:1763)
+validate	Run npm test	2026-10-14T19:41:03.1871555Z       at file:///home/runner/work/her-keys/her-keys/node_modules/@electric-sql/pglite/dist/index.js:5:1155
+validate	Run npm test	2026-10-14T19:41:03.1872071Z       at wasm://wasm/0269e01e:wasm-function[10979]:0x5ad057
+validate	Run npm test	2026-10-14T19:41:03.1872445Z       at wasm://wasm/0269e01e:wasm-function[3598]:0x281dd2
+validate	Run npm test	2026-10-14T19:41:03.1873009Z       at wasm://wasm/0269e01e:wasm-function[3640]:0x289ccf
+validate	Run npm test	2026-10-14T19:41:03.1873402Z       at wasm://wasm/0269e01e:wasm-function[3650]:0x289f2b
+validate	Run npm test	2026-10-14T19:41:03.1873775Z       at wasm://wasm/0269e01e:wasm-function[9956]:0x556968 {
+validate	Run npm test	2026-10-14T19:41:03.1874083Z     length: 164,
+validate	Run npm test	2026-10-14T19:41:03.1874299Z     severity: 'ERROR',
+validate	Run npm test	2026-10-14T19:41:03.1874539Z     code: 'P0001',
+validate	Run npm test	2026-10-14T19:41:03.1874754Z     detail: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1874978Z     hint: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1875201Z     position: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1875460Z     internalPosition: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1875718Z     internalQuery: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1876161Z     where: 'PL/pgSQL function public.herkeys_deletion_command(text,jsonb) line 200 at RAISE',
+validate	Run npm test	2026-10-14T19:41:03.1876579Z     schema: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1876797Z     table: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1877014Z     column: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1877235Z     dataType: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1877505Z     constraint: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1877830Z     file: 'pl_exec.c',
+validate	Run npm test	2026-10-14T19:41:03.1878121Z     line: '3923',
+validate	Run npm test	2026-10-14T19:41:03.1878457Z     routine: 'exec_stmt_raise',
+validate	Run npm test	2026-10-14T19:41:03.1879409Z     query: 'select public.herkeys_deletion_command($1,$2::jsonb) as r',
+validate	Run npm test	2026-10-14T19:41:03.1880418Z     params: [ 'database_cleanup', '{"request_id":"9822a73f-7ad9-4ea4-aa14-4a29734e15e9","fence":1}' ],
+validate	Run npm test	2026-10-14T19:41:03.1881064Z     queryOptions: undefined
+validate	Run npm test	2026-10-14T19:41:03.1881361Z   }
+validate	Run npm test	2026-10-14T19:41:03.1881489Z
+validate	Run npm test	2026-10-14T19:41:03.1881801Z test at tests/accountDeletion/resourceCoverage.test.mjs:69:63
+validate	Run npm test	2026-10-14T19:41:03.1882643Z ✖ all 43 registered resources: single and unrelated isolation (4850.575797ms)
+validate	Run npm test	2026-10-14T19:41:03.1883320Z   error: unclassified_resource
+validate	Run npm test	2026-10-14T19:41:03.1884075Z       at pe.Ue (file:///home/runner/work/her-keys/her-keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:17959)
+validate	Run npm test	2026-10-14T19:41:03.1885265Z       at pe.tt (file:///home/runner/work/her-keys/her-keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:15347)
+validate	Run npm test	2026-10-14T19:41:03.1886318Z       at pe.parse (file:///home/runner/work/her-keys/her-keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:14021)
+validate	Run npm test	2026-10-14T19:41:03.1887417Z       at D.Ne (file:///home/runner/work/her-keys/her-keys/node_modules/@electric-sql/pglite/dist/index.js:5:1763)
+validate	Run npm test	2026-10-14T19:41:03.1888538Z       at file:///home/runner/work/her-keys/her-keys/node_modules/@electric-sql/pglite/dist/index.js:5:1155
+validate	Run npm test	2026-10-14T19:41:03.1889332Z       at wasm://wasm/0269e01e:wasm-function[10979]:0x5ad057
+validate	Run npm test	2026-10-14T19:41:03.1889935Z       at wasm://wasm/0269e01e:wasm-function[3598]:0x281dd2
+validate	Run npm test	2026-10-14T19:41:03.1890563Z       at wasm://wasm/0269e01e:wasm-function[3640]:0x289ccf
+validate	Run npm test	2026-10-14T19:41:03.1891216Z       at wasm://wasm/0269e01e:wasm-function[3650]:0x289f2b
+validate	Run npm test	2026-10-14T19:41:03.1891881Z       at wasm://wasm/0269e01e:wasm-function[9956]:0x556968 {
+validate	Run npm test	2026-10-14T19:41:03.1892542Z     length: 164,
+validate	Run npm test	2026-10-14T19:41:03.1893025Z     severity: 'ERROR',
+validate	Run npm test	2026-10-14T19:41:03.1893406Z     code: 'P0001',
+validate	Run npm test	2026-10-14T19:41:03.1893763Z     detail: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1894120Z     hint: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1894627Z     position: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1895237Z     internalPosition: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1895680Z     internalQuery: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1896407Z     where: 'PL/pgSQL function public.herkeys_deletion_command(text,jsonb) line 200 at RAISE',
+validate	Run npm test	2026-10-14T19:41:03.1897070Z     schema: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1897400Z     table: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1897749Z     column: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1898097Z     dataType: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1898459Z     constraint: undefined,
+validate	Run npm test	2026-10-14T19:41:03.1898828Z     file: 'pl_exec.c',
+validate	Run npm test	2026-10-14T19:41:03.1899162Z     line: '3923',
+validate	Run npm test	2026-10-14T19:41:03.1899532Z     routine: 'exec_stmt_raise',
+validate	Run npm test	2026-10-14T19:41:03.1900172Z     query: 'select public.herkeys_deletion_command($1,$2::jsonb) as r',
+validate	Run npm test	2026-10-14T19:41:03.1901049Z     params: [ 'database_cleanup', '{"request_id":"fef16527-5610-4893-8e02-0f5834485196","fence":1}' ],
+validate	Run npm test	2026-10-14T19:41:03.1901729Z     queryOptions: undefined
+validate	Run npm test	2026-10-14T19:41:03.1902084Z   }
+validate	Run npm test	2026-10-14T19:41:03.1902290Z
+validate	Run npm test	2026-10-14T19:41:03.1902583Z test at tests/calendarActionsUi.test.mjs:190:3
+validate	Run npm test	2026-10-14T19:41:03.1903502Z ✖ no new dependency was added for Calendar (1.514157ms)
+validate	Run npm test	2026-10-14T19:41:03.1904154Z   AssertionError [ERR_ASSERTION]: react-native-reanimated
+validate	Run npm test	2026-10-14T19:41:03.1904638Z
+validate	Run npm test	2026-10-14T19:41:03.1904920Z   true !== false
+validate	Run npm test	2026-10-14T19:41:03.1905236Z
+validate	Run npm test	2026-10-14T19:41:03.1905981Z       at TestContext.<anonymous> (file:///home/runner/work/her-keys/her-keys/tests/calendarActionsUi.test.mjs:193:14)
+validate	Run npm test	2026-10-14T19:41:03.1906870Z       at Test.runInAsyncScope (node:async_hooks:227:14)
+validate	Run npm test	2026-10-14T19:41:03.1907465Z       at Test.run (node:internal/test_runner/test:1402:25)
+validate	Run npm test	2026-10-14T19:41:03.1908194Z       at Suite.processPendingSubtests (node:internal/test_runner/test:974:18)
+validate	Run npm test	2026-10-14T19:41:03.1908951Z       at Test.postRun (node:internal/test_runner/test:1542:19)
+validate	Run npm test	2026-10-14T19:41:03.1909584Z       at Test.run (node:internal/test_runner/test:1467:12)
+validate	Run npm test	2026-10-14T19:41:03.1910147Z       at async Promise.all (index 0)
+validate	Run npm test	2026-10-14T19:41:03.1910892Z       at async Suite.run (node:internal/test_runner/test:1905:7)
+validate	Run npm test	2026-10-14T19:41:03.1911674Z       at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+validate	Run npm test	2026-10-14T19:41:03.1912327Z     generatedMessage: false,
+validate	Run npm test	2026-10-14T19:41:03.1912823Z     code: 'ERR_ASSERTION',
+validate	Run npm test	2026-10-14T19:41:03.1913192Z     actual: true,
+validate	Run npm test	2026-10-14T19:41:03.1913642Z     expected: false,
+validate	Run npm test	2026-10-14T19:41:03.1914170Z     operator: 'strictEqual',
+validate	Run npm test	2026-10-14T19:41:03.1914623Z     diff: 'simple'
+validate	Run npm test	2026-10-14T19:41:03.1914930Z   }
+validate	Run npm test	2026-10-14T19:41:03.2041447Z ##[error]Process completed with exit code 1.

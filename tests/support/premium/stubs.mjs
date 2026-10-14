@@ -3,9 +3,11 @@
  * The surfaces and hooks under test are the real ones.
  */
 export const fixture = {
+  navigation: [],
   entitlement: { status: 'free', isPlus: false, presentPaywall: async () => ({ kind: 'cancelled' }), restore: async () => ({ kind: 'no_purchases_found' }), refresh: async () => {} },
   onboarding: { completeCalls: 0, complete: async () => true },
 };
+export const router = { push: (path) => fixture.navigation.push(path) };
 
 export const useEntitlement = () => fixture.entitlement;
 export const useOnboarding = () => ({

@@ -29,6 +29,25 @@ const B = '22222222-2222-4222-8222-222222222222';
 const premium = { entitlements: { active: { her_keys_plus: {} } } };
 client.configureRevenueCat();
 
+test('V2 integration: identity change clears the mounted provider before a manual refresh', async () => {
+  await client.identifyRevenueCatAccount(A);
+  sdk.info = premium;
+  let value;
+  function Probe() { value = useEntitlement(); return null; }
+  const r = await render(<RevenueCatProvider><Probe /></RevenueCatProvider>);
+  try {
+    assert.equal(value.isPlus, true);
+    sdk.info = { entitlements: { active: {} } };
+    await TestRenderer.act(async () => { await client.identifyRevenueCatAccount(B); });
+    assert.equal(value.isPlus, false, 'B must not receive A\'s cached purchase display');
+    await TestRenderer.act(async () => { await client.identifyRevenueCatAccount(null); });
+    assert.equal(value.isPlus, false, 'signed out means no Premium display');
+  } finally {
+    await TestRenderer.act(async () => { r.unmount(); await client.identifyRevenueCatAccount(null); });
+    sdk.calls.length = 0;
+  }
+});
+
 test('B2B-N02: anonymous and mismatched SDK identities never restore, open checkout, or expose entitlements', async () => {
   assert.deepEqual(await client.restoreRevenueCatPurchases(A), { kind: 'unavailable' });
   assert.equal(await client.fetchActiveEntitlementIds(), null);
@@ -67,7 +86,7 @@ test('B2B-N02: account switching waits for the store transaction, and the previo
   await new Promise((resolve) => setImmediate(resolve));
   assert.equal(sdk.id, A, 'login cannot interleave inside the native transaction');
   settle(premium);
-  assert.deepEqual(await restoring, { kind: 'restored' });
+  assert.deepEqual(await restoring, { kind: 'unavailable' }, 'a result from before the switch is discarded');
   assert.equal(await switching, 'identified');
   assert.equal(sdk.id, B);
   sdk.restoreWait = null;

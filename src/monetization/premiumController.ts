@@ -86,6 +86,7 @@ export class PremiumController {
     if (this.timer !== null) this.scheduler.clearTimeout(this.timer);
     this.timer = null;
     this.listeners.clear();
+    this.snapshot = EMPTY;
   }
 
   /** Re-reads the caller's own server state and the display manifest. Single-flight; a result for a departed account is dropped. */

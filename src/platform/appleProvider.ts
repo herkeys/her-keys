@@ -79,6 +79,11 @@ export function createAppleProvider(client: SupabaseClient): AuthProviderAdapter
       });
       if (error) return { kind: 'providerError', detail: error.message };
       if (!data.session) return { kind: 'providerError', detail: 'Apple sign-in produced no session' };
+      // Code exchange is server-only. The authorization code is never persisted on the device.
+      // A legacy/unconfigured revocation service cannot break the nonce-bound sign-in contract.
+      if (credential.authorizationCode && client.functions?.invoke) {
+        await client.functions.invoke('capture-apple-credential', { body: { code: credential.authorizationCode } }).catch(() => undefined);
+      }
 
       const accountId = toAccountId(data.session.user?.id);
       if (accountId === null) return { kind: 'providerError', detail: 'the account id was not a usable uuid' };

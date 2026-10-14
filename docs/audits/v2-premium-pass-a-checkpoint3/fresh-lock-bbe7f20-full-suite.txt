@@ -1,0 +1,19 @@
+Producer: npm ci --no-audit --no-fund then npm test; local Node 24; exact SHA bbe7f209e3f731d81717d76ce24bafe3f5c8835e; exit 1
+✖ account deletion: real SQL state, privileges, recovery and purge (33858.4996ms)
+✖ critical lifecycle negative controls detect unsafe guard mutations (34280.9302ms)
+✖ all 43 registered resources: shared and unrelated isolation (35802.9612ms)
+✖ all 43 registered resources: former_member and unrelated isolation (19018.7732ms)
+✖ all 43 registered resources: single and unrelated isolation (20065.7971ms)
+✖ no drag and drop (section 33) (186.1959ms)
+ℹ tests 4655
+ℹ pass 4646
+ℹ fail 9
+ℹ skipped 0
+✖ failing tests:
+✖ complete database cleanup preserves the other account (93.4861ms)
+✖ purged requires Auth absence and independent resource evidence (440.0713ms)
+✖ approved shared policy deletes private records, restricts ambiguous records and preserves the other adult (267.3602ms)
+✖ all 43 registered resources: shared and unrelated isolation (35802.9612ms)
+✖ all 43 registered resources: former_member and unrelated isolation (19018.7732ms)
+✖ all 43 registered resources: single and unrelated isolation (20065.7971ms)
+✖ no new dependency was added for Calendar (61.9873ms)

@@ -1,0 +1,38 @@
+name: Account deletion source validation
+on:
+  push:
+    branches: [codex/account-deletion, codex/v2-premium-pass-a]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CI: '1'
+      EXPO_NO_TELEMETRY: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm run verify:release-identity
+      - run: npm run typecheck
+      - run: npm test
+      - run: npx expo install --check
+        if: ${{ !cancelled() }}
+      - run: npx expo-doctor
+        if: ${{ !cancelled() }}
+      - uses: denoland/setup-deno@v2
+        if: ${{ !cancelled() }}
+        with:
+          deno-version: v2.x
+      - run: deno check --config supabase/functions/deno.json supabase/functions/expire-account-deletion-proofs/index.ts supabase/blueprints/staging-deletion-fixture.ts supabase/blueprints/staging-deletion-lock-probe.ts
+        if: ${{ !cancelled() }}
+      - run: deno check --config supabase/functions/deno.json supabase/functions/request-account-deletion/index.ts supabase/functions/restore-account/index.ts supabase/functions/process-account-deletions/index.ts supabase/functions/monitor-account-deletions/index.ts supabase/functions/capture-apple-credential/index.ts supabase/functions/begin-web-deletion/index.ts
+        if: ${{ !cancelled() }}

@@ -1,0 +1,50 @@
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+▶ recommendations are the foundation’s offers, needing her yes
+  ✔ N: the one move the foundation offers is shown as a recommendation that needs approval (47.522ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ pressing the primary action opens a preview; it never applies anything (8.9943ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ “Not today” records her decision to keep the plan (7.8873ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ O: capacity pressure offers shortening for the task the verdict names, with dropping as the alternative (8.5845ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ B (two fixed commitments): nothing is offered — no fake action (4.3958ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ another day: the same state offers nothing, because the foundation only acts on today (SAFE-UNAVAILABLE) (2.8654ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ read-only: without actions a day renders no recommendation and no Protect, whatever the foundation would offer (7.2883ms)
+✔ recommendations are the foundation’s offers, needing her yes (88.6933ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+▶ PROTECT appears only inside Details, only for what the action map allows
+  ✔ a flexible item offers Protect after opening Details; a fixed one does not (14.6004ms)
+✔ PROTECT appears only inside Details, only for what the action map allows (15.0032ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+▶ the preview panel
+  ✔ it is marked as a preview, speaks in the conditional, and says what tomorrow would look like (8.5002ms)
+  ✔ a collision at the destination is shown BEFORE anything is applied (2.0944ms)
+  ✔ DROP says it cannot be restored here; PROTECT says how to undo it; SHORTEN says the numbers (6.1158ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ accept and cancel call back; a busy panel cannot be accepted twice (4.7229ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ AG: a stale preview says so, cannot be accepted, and offers to preview again (5.5086ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+  ✔ AG: a recomputed preview says it was updated (5.4742ms)
+  ✔ every accept label is a verb phrase that names the change (0.1939ms)
+✔ the preview panel (33.0838ms)
+▶ undo
+  ✔ a move made today shows a quiet undo, and pressing it calls back (3.0664ms)
+✔ undo (3.1916ms)
+▶ no drag and drop (section 33)
+  ✔ Calendar contains no drag, pan or long-press interaction and no gesture library (24.1588ms)
+  ✔ Calendar adds no library; Router native peers match the installed Expo SDK (1.7688ms)
+✔ no drag and drop (section 33) (26.0691ms)
+ℹ tests 18
+ℹ suites 5
+ℹ pass 18
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 912.2061

@@ -451,3 +451,24 @@ verify_jwt = true
 # AI Data Processing consent and quota are then checked by the server before any model call.
 [functions.smart-inbox-extract]
 verify_jwt = true
+[functions.request-account-deletion]
+verify_jwt = true
+[functions.capture-apple-credential]
+verify_jwt = true
+# Public flows validate opaque proof or apply generic/rate-limited email verification.
+[functions.restore-account]
+verify_jwt = false
+[functions.resend-restoration-email]
+verify_jwt = false
+[functions.deletion-status]
+verify_jwt = false
+[functions.begin-web-deletion]
+verify_jwt = false
+# Internal worker authenticates an expiring database-signed invocation.
+[functions.process-account-deletions]
+verify_jwt = false
+[functions.monitor-account-deletions]
+verify_jwt = false
+
+[functions.expire-account-deletion-proofs]
+verify_jwt = false
