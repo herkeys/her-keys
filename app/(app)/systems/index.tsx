@@ -14,6 +14,8 @@ import { usePaywallAction } from '../../../src/monetization/usePaywallAction';
 export default function SystemsScreen() {
   const { isPlus } = useEntitlement();
   const paywall = usePaywallAction('systems_upgrade');
+  // The paywall is a full-screen sheet while it is open; the control is only ever held for that one in-flight action.
+  const busy = paywall.presenting;
 
   return (
     <Screen>
@@ -30,7 +32,7 @@ export default function SystemsScreen() {
             variant="secondary"
             size="sm"
             style={styles.upgradeButton}
-            disabled={paywall.presenting}
+            disabled={busy}
             onPress={() => void paywall.present()}
           />
           <PaywallNoticeView notice={paywall.notice} style={styles.upgradeNotice} />
