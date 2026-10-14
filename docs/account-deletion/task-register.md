@@ -1,23 +1,23 @@
 # Requirement and evidence register
 
-Task PASS means the complete exit evidence exists; implementation alone does not pass a task.
+PASS requires the task's complete exit evidence. A scoped test PASS does not imply release acceptance.
 
-| Task | Appendix requirements | Dependencies | Implementation and acceptance evidence | State |
-| --- | --- | --- | --- | --- |
-| T00 | Assignment, isolation, platform instructions | None | execution-state.json; isolated branches; Expo 57 docs read | PASS |
-| T01 | Schema, storage, providers, immutable ledgers, sharing | T00 | staging-schema-census.json; resource-registry.md; Production census still gated | IN_PROGRESS |
-| T02 | State machine, contracts, deadline, failure semantics | T01 | architecture.md; approved shared-household-policy.md; audit retention unresolved | IN_PROGRESS |
-| T03 | Request, reauthentication, deactivation, stale JWT/RLS/RPC, outbox | T02 | database.test.mjs; service-only command and restrictive policies; hosted evidence pending | IN_PROGRESS |
-| T04 | Restoration, lost email, rotation, status, enumeration/rate limits | T03 | database.test.mjs; deletionService.ts; web restore; full hosted concurrency matrix pending | IN_PROGRESS |
-| T05 | Worker, resources, leases, fencing, retry, terminal proof, dry-run | T01–T04 | SQL tests and mutation controls; deletionWorker.ts; scheduler blueprint; hosted certification pending | IN_PROGRESS |
-| T06 | Apple nonce/capture/revoke, Google revoke, RevenueCat, subscriptions, branded email | T03–T05 | nonce tests; server-only adapters and encrypted outbox; real provider credentials/certification blocked | BLOCKED |
-| T07 | Mobile entry/confirm/pending, startup/resume/offline, namespace cleanup | T03–T04 | DeletionGate and runtime; deviceAndCrypto tests; native/reinstall/remote-receipt checks remain | IN_PROGRESS |
-| T08 | Web ownership, confirmation, pending/status, explicit restore/resend | T03–T04 | website components; production build/lint/typecheck; live browser journey pending | IN_PROGRESS |
-| T09 | Security, negative controls, mutation, isolation, complete source gates | T03–T08 | full application 4066/4066; website build/lint/typecheck; exact-SHA CI and missing runtime tests pending | IN_PROGRESS |
-| T10 | Verified Staging target, disposable scope, safe exact deployment | T09 | verified project and zero household baseline; only marked disposable fixtures permitted; deployment manifest pending | IN_PROGRESS |
-| T11 | Real schedule, alerts, delivery, kill switch, cleanup/isolation | T10 | automation-certification.md; no recurring runtime PASS yet | TODO |
-| T12 | Production manifest, rollback, concrete owner approval package | T09–T11 | production-handoff.md; gate remains closed | IN_PROGRESS |
-| T13 | Approved Production deployment and disposable certification | Explicit approval | No Production mutations authorized or performed | BLOCKED |
-| T14 | Separate destructive Production activation approval | T13 and explicit approval | No Production scheduler activation authorized or performed | BLOCKED |
+| Task | Requirements | Evidence and remaining exit work | State |
+| --- | --- | --- | --- |
+| T00 | Assignment, isolation, platform instructions | Recorded ENTRY SHAs; separate codex branches; Expo 57 docs read; auditor/main checkouts untouched | PASS |
+| T01 | Schema, storage, providers, immutable ledgers, sharing | Staging/Production schema census; 43-resource registry plus explicit household/profile/discovery-answer paths; private Storage ownership and provider identity census | PASS |
+| T02 | States, contracts, deadlines, retention and shared ownership | architecture.md; approved conservative policy; approved five-field/365-day retention; explicit partial/review states and seven-day target | PASS |
+| T03 | Request, recent auth, deactivation, stale JWT/RLS/RPC, outbox | Real SQL and hosted Auth ban/session reconciliation, stale RLS/bootstrap refusal; complete hosted hostile-service matrix remains | IN_PROGRESS |
+| T04 | Recovery, resend, rotation, status, abuse and concurrency | Single-use/deadline/replacement SQL; delivered links and browser restoration/replay refusal; full hosted race/abuse matrix remains | IN_PROGRESS |
+| T05 | Cleanup, leases/fences, retries, verification, dry-run | All 43 registered resources populated in local SQL for single/shared/former-member scenarios; other-account byte preservation; actual scheduled Staging storage/provider/shared/manual cleanup; full hosted resource/failure matrix remains | IN_PROGRESS |
+| T06 | Apple/Google/RevenueCat, subscriptions and transactional email | RevenueCat disposable E2E PASS; real email delivery; Apple nonce preserved; live Apple/Google revocation needs dedicated test identities and Apple credentials | BLOCKED |
+| T07 | Mobile entry, restriction, startup/resume/offline and local cleanup | Source/device logic and account-switch reset race tests pass; native runtime, reinstall and offline UI evidence unavailable | BLOCKED |
+| T08 | Accessible web deletion, ownership, pending, restore/resend | Website build/lint/types and exact-revision CI pass; pending/restored browser screenshots; public support channel and complete hosted abuse matrix remain | IN_PROGRESS |
+| T09 | Integration, security, negative/mutation/isolation checks | Full local suite and exact-source CI; resource coverage and reset races; native/provider/hosted matrix/advisor limitations prevent acceptance | IN_PROGRESS |
+| T10 | Exact Staging target, isolated fixtures and deployment | deployment-manifest.json captures migration mapping/checksums and runtime bundle hashes; scoped Staging evidence exists; complete dependency acceptance remains | IN_PROGRESS |
+| T11 | Scheduler, monitoring, kill switch, complete verification | Actual scheduler run IDs, delivered alerts, failure/recovery, daily physical proof deletion, live shared/manual/Storage E2E; independent watchdog/full matrix remain | IN_PROGRESS |
+| T12 | Concrete Production manifest and rollback package | production-handoff.md and deployment-manifest.json; candidate is reviewable, approval gate stays closed until missing checks pass | IN_PROGRESS |
+| T13 | Owner-approved Production deployment and disposable certification | No Production mutation or customer deletion authorized/performed | BLOCKED |
+| T14 | Separately approved destructive Production activation | No Production scheduler installed or activated | BLOCKED |
 
-The appendix's security, request/restoration/worker, isolation and platform test lists map to T03–T11. Each unexecuted native/provider/scheduler check remains a release failure until evidenced; a local mock never substitutes for live certification. See certification-results.txt for the separate certification levels.
+All appendix functional/security/platform requirements map to T03–T11. Native/provider gaps remain unexecuted release requirements; they cannot be passed by mocks. Production authority is not inferred from source or Staging results. See certification-results.txt and the linked evidence reports.

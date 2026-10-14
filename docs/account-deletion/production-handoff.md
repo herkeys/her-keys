@@ -1,9 +1,30 @@
-# Production gate — NOT READY FOR APPROVAL
+# Production gate â€” not ready for approval
 
-Do not deploy to npykvnxnehlsdlbumzwk or enable destructive processing from this branch. This is an implementation in progress. No Production change or store/EAS action is authorized by source completion.
+Target: npykvnxnehlsdlbumzwk. No Production mutation, customer deletion or worker activation is authorized. Read-only inspection found no lifecycle tables/migrations and no pg_cron extension. Existing Edge Function versions are captured in deployment-manifest.json. Production RevenueCat secret names and project-ID digest were independently inspected without revealing either key.
 
-Before requesting deployment approval: complete missing security/data-isolation/provider tests; certify iOS/Android/web consumers and actual Staging request/recovery/purge/retry/scheduled runs; obtain exact-SHA green CI in both repositories; reconcile the Production schema/provider/storage census; approve shared-household and retention contracts; configure and verify alerts.
+Concrete candidate:
+- Mobile source 3402624b3c4ff6246753d181d1199f324625effa; exact-source CI https://github.com/herkeys/her-keys/actions/runs/38557089436 succeeded.
+- Website source 8a99fdd6c58faa2d2c56f7c06b468483f56671a0; exact-source CI https://github.com/herkeys/her-keys-web/actions/runs/38555077652 succeeded.
+- Seven additive migrations in canonical filename order, with SHA-256 and Staging history mapping in deployment-manifest.json.
+- New functions: request-account-deletion, restore-account, resend-restoration-email, deletion-status, process-account-deletions, monitor-account-deletions, expire-account-deletion-proofs, capture-apple-credential, begin-web-deletion.
+- Redeploy calendar-oauth and all consumers of the changed shared requireUser guard: calendar-data, weather-context, herkeys-ai and herkeys-welcome-email. Pin dependencies and upload the reviewed shared files with every bundle.
+- Never deploy staging-deletion-fixture or its Storage policy to Production.
+- Scheduler blueprint installs all jobs disabled. Set the verified Production target only after deployment authorization. Control defaults enabled=false, dry_run=true; effective claim batch is 1, lease five minutes, max attempts 8.
+- Daily proof retention is 365 days and daily 03:17 UTC; monitoring is separate. Production installation/activation of these jobs also requires deployment scope approval.
 
-The concrete package must identify both repository SHAs, migration checksum/order, modified existing functions, new functions, only required secret NAMES, environment target, scheduler installation in disabled mode, allowed disposable Production account and test expiry method, expected effects, rollback/kill-switch commands and residual risks. Production worker activation requires a second explicit approval after approved disposable-account certification.
+Required secret NAMES only: EXTERNAL_TOKEN_ENCRYPTION_KEY_B64, RESEND_API_KEY, DELETION_EMAIL_ENABLED, DELETION_RECOVERY_BASE_URL, DELETION_ALERT_RECIPIENT, REVENUECAT_PROJECT_ID, REVENUECAT_DELETION_API_KEY, APPLE_DELETION_CLIENT_ID, APPLE_TEAM_ID, APPLE_KEY_ID, APPLE_PRIVATE_KEY, GOOGLE_CALENDAR_CLIENT_ID, GOOGLE_CALENDAR_CLIENT_SECRET. Preserve the existing HERKEYS_CALENDAR_APP_REDIRECT_URI setting and verify Google OAuth configuration independently. DELETION_STAGING_RECIPIENT is Staging-only. No secret value belongs in a manifest, client, log or approval message.
 
-Rollback preference: disable destructive processing and scheduling immediately; preserve lifecycle ledger/receipts/outbox and pending restrictions; restore only reviewed endpoint revisions if needed. Never remove pending-account guards while any request is pending. Do not reverse a real purge or claim deleted provider data can be recovered.
+Approved policies: DELETE_ACCOUNT_OWNED_ESCALATE_SHARED; no automatic ownership transfer; never delete another adult's data; never issue false terminal purge. Shared cases target seven days. Only verified terminal proof receives the approved five-field/365-day retention treatment. Legal obligations require separate governance.
+
+Production census: 45 public business tables; all are in the registered ownership model or the explicit households/profiles/discovery_answers paths. One existing legal-document bucket has three ownerless objects; there are no Storage objects owned by an existing Auth user. Public legal documents are not account-owned blobs and are not purge targets. The hosted privacy PDF remains unchanged; reviewed website disclosures are source changes awaiting release. Census details contain schema metadata only.
+
+Before requesting approval: complete native and Apple/Google live tests, hosted all-resource fixtures, hosted hostile/concurrency checks, independent watchdog, public support workflow and advisor review. No named disposable Production identity or accelerated expiry method is approved. A future concrete approval request must name its exact synthetic identity, time manipulation, allowed provider/Storage effects, deployed revisions and limits. After approved controlled Production certification, unattended destructive activation requires a second owner approval.
+
+Emergency:
+```sql
+UPDATE public.account_deletion_control SET enabled=false,dry_run=true WHERE singleton;
+SELECT cron.alter_job(job_id:=(SELECT jobid FROM cron.job WHERE jobname='herkeys-account-deletion'),active:=false);
+```
+An in-flight bounded provider request may finish. Preserve pending restrictions, receipts, ledger, outbox and recovery. Restore only reviewed function revisions; never drop restrictions while requests remain pending, reverse a real purge, or claim external erasure is reversible.
+
+Migration safety: MCP-generated Staging versions differ from canonical source filenames. Reconcile version history by migration name/checksum before CLI db push. Do not replay applied migrations or apply Staging operational fixtures to Production. Production approval is not being requested while release checks remain open. EAS/store builds and publishing remain outside this assignment.

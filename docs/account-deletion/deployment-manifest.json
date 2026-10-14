@@ -1,0 +1,198 @@
+{
+  "recorded_at": "2026-10-14T11:32:00Z",
+  "mobile_source_sha": "3402624b3c4ff6246753d181d1199f324625effa",
+  "website_source_sha": "8a99fdd6c58faa2d2c56f7c06b468483f56671a0",
+  "source_ci": {
+    "mobile": "https://github.com/herkeys/her-keys/actions/runs/38557089436",
+    "website": "https://github.com/herkeys/her-keys-web/actions/runs/38555077652",
+    "both": "success"
+  },
+  "staging": {
+    "project": "fhhudicklmpofuzkxeqe",
+    "deployment_mode": "incremental; bundle hashes identify deployed artifacts",
+    "functions": [
+      {
+        "name": "weather-context",
+        "version": 10,
+        "verify_jwt": true,
+        "bundle_sha256": "b3945bfa107081c52c9c1724bd60068356133ef2f024159733e9858ce00545ee"
+      },
+      {
+        "name": "calendar-oauth",
+        "version": 9,
+        "verify_jwt": false,
+        "bundle_sha256": "473376eb543b5ae23990db01823301d6974742a9fc1d3f56187446254028dffd"
+      },
+      {
+        "name": "calendar-data",
+        "version": 9,
+        "verify_jwt": true,
+        "bundle_sha256": "d39ba4819d16ad2737200175ea6948acd2c01abf7f00c188c911c475aa7c2ace"
+      },
+      {
+        "name": "herkeys-ai",
+        "version": 10,
+        "verify_jwt": true,
+        "bundle_sha256": "573da13ac3031fabdf92da94eb8a703f20f8c62006cb2eb91fcd3b998699daf5"
+      },
+      {
+        "name": "deletion-status",
+        "version": 3,
+        "verify_jwt": false,
+        "bundle_sha256": "3ed8fbdbc965c02a1cc65ebb159c889268c1a79d9291488bc24b1cf414918456"
+      },
+      {
+        "name": "herkeys-welcome-email",
+        "version": 2,
+        "verify_jwt": true,
+        "bundle_sha256": "78a70fe56b0d4be0af5db2b13ecd3e830db19223ecf720278d83e87b73f9e173"
+      },
+      {
+        "name": "capture-apple-credential",
+        "version": 2,
+        "verify_jwt": true,
+        "bundle_sha256": "d00bf6d8c89282023fdfc104f51fb3bdf12704f4e4d5ca3d66645405378551dc"
+      },
+      {
+        "name": "request-account-deletion",
+        "version": 3,
+        "verify_jwt": true,
+        "bundle_sha256": "486ea981446453c6a9236d9f44d197ff08c6e64a1e8b07d3f950aa34f4a07621"
+      },
+      {
+        "name": "restore-account",
+        "version": 3,
+        "verify_jwt": false,
+        "bundle_sha256": "4529f53d511c582117bfce1444a10a074e36e3757bba5dcebc971b8b8592a6ed"
+      },
+      {
+        "name": "resend-restoration-email",
+        "version": 3,
+        "verify_jwt": false,
+        "bundle_sha256": "ca78c586fd932579062bebffa24899dc4afe13220bdea0504576a47e69063c84"
+      },
+      {
+        "name": "begin-web-deletion",
+        "version": 2,
+        "verify_jwt": false,
+        "bundle_sha256": "26f66f9b8c687e49cd832ff05b3c0a5152bc3d2a68f06242ba75df92325f7fca"
+      },
+      {
+        "name": "process-account-deletions",
+        "version": 5,
+        "verify_jwt": false,
+        "bundle_sha256": "75c3dd4e79b1d85092100043d6960d96f11d2fa67af1980b1f289736117ba8ee"
+      },
+      {
+        "name": "monitor-account-deletions",
+        "version": 4,
+        "verify_jwt": false,
+        "bundle_sha256": "de65c9cb1c51f2762091a351e8573f8e283b8722510a35330f0a96dcdd85bee3"
+      },
+      {
+        "name": "staging-deletion-fixture",
+        "version": 9,
+        "verify_jwt": true,
+        "bundle_sha256": "d7dd982952224cf894a5507bc4b2c33573861d41b8dad2ea47e5c49ea2d2243b"
+      },
+      {
+        "name": "expire-account-deletion-proofs",
+        "version": 2,
+        "verify_jwt": false,
+        "bundle_sha256": "fa1c58c74e37e634f63b7bab824b4be4f3acc103f2243b8392c7e66e0e3968c0"
+      }
+    ],
+    "destructive_control": {
+      "enabled": false,
+      "dry_run": true,
+      "batch_size": 1,
+      "scheduler_active": false
+    },
+    "monitor_active": true,
+    "retention": {
+      "active": true,
+      "days": 365,
+      "utc_schedule": "17 3 * * *"
+    },
+    "fixture_upload_policy": "removed",
+    "fixture_endpoint": "retired v9; JWT required; inert 410 body"
+  },
+  "production": {
+    "project": "npykvnxnehlsdlbumzwk",
+    "inspection": "read-only",
+    "deletion_tables": 0,
+    "deletion_migrations": 0,
+    "cron_extension": false,
+    "functions": [
+      {
+        "name": "weather-context",
+        "version": 5,
+        "verify_jwt": true,
+        "bundle_sha256": "0c89c0341b677575d711fb75fcdc1af8c64896d641ce5f1656f4e33f6ef1c893"
+      },
+      {
+        "name": "calendar-oauth",
+        "version": 4,
+        "verify_jwt": false,
+        "bundle_sha256": "91907303dc5b3bb7a40bd01b0b6301ecdbb3daa44706563ad0681ed301e2c6cd"
+      },
+      {
+        "name": "calendar-data",
+        "version": 4,
+        "verify_jwt": true,
+        "bundle_sha256": "0dd36b9cdbc4dcffb765d47d7e0d18bdcf7cba20d15b72b61d599ccf931fce3a"
+      },
+      {
+        "name": "herkeys-ai",
+        "version": 5,
+        "verify_jwt": true,
+        "bundle_sha256": "1e43c8c918abfb484b1e5a089e71c262ffac943a18c103bd91a009d3aa92f246"
+      },
+      {
+        "name": "herkeys-welcome-email",
+        "version": 3,
+        "verify_jwt": true,
+        "bundle_sha256": "cac0f22357e76f284be6b2f006e29372c2455562054db9e2726d5cd1597bacbb"
+      }
+    ],
+    "authorization": "none; no deletion deployment or activation"
+  },
+  "canonical_migrations": [
+    {
+      "file": "20261014002726_account_deletion_lifecycle.sql",
+      "sha256": "d8454f89049c447f314acdfe320d72c80021b6866d6d90c46bba74427f1a9c31",
+      "staging_version": "20261014012151"
+    },
+    {
+      "file": "20261014012518_account_deletion_auth_reconciliation.sql",
+      "sha256": "173203383eb1f0955ecf7cd7d0f89d6dc266473819bf664a0c87e2b25afa3bef",
+      "staging_version": "20261014012645"
+    },
+    {
+      "file": "20261014014020_account_deletion_terminal_identity.sql",
+      "sha256": "edf6476f0d0697f0b1d3f6cfc5aac4174e4f68e5a03341407402ec378a478a2c",
+      "staging_version": "20261014014243"
+    },
+    {
+      "file": "20261014014620_account_deletion_proof_retention.sql",
+      "sha256": "8d0796793140d9a97539413de7aa7500779af59ab462a4a72ebacc41e457455b",
+      "staging_version": "20261014015314"
+    },
+    {
+      "file": "20261014015835_account_deletion_cancelled_history_cleanup.sql",
+      "sha256": "92101f016aaff9f2df3d33a527c301943f3828d59c45f38b63f751c42db095e0",
+      "staging_version": "20261014015954"
+    },
+    {
+      "file": "20261014021410_account_deletion_shared_provider_retry.sql",
+      "sha256": "1009fb19928f05f3c25610fc5af133584021aec71d04ca0e9c0de3b7e214e982",
+      "staging_version": "20261014110526"
+    },
+    {
+      "file": "20261014112400_account_deletion_orphan_shared_ownership.sql",
+      "sha256": "a33f0efc7eef38f48440827bade3df67a9dcc567591868335474dc7b99b9beda",
+      "staging_version": "20261014112526"
+    }
+  ],
+  "migration_history_note": "MCP generated Staging versions differ from canonical source filenames. Match names/checksums and reconcile history before CLI db push; never replay applied migrations. Scheduler and fixture upload/teardown are separately recorded operational blueprints."
+}

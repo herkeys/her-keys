@@ -1,48 +1,71 @@
 {
-  "phase": "implementation",
+  "phase": "source_committed_scoped_staging_certified_release_checks_blocked",
   "repositories": {
     "mobile": {
       "path": "C:/Users/jsmit/.codex/worktrees/account-deletion/Her Keys",
       "branch": "codex/account-deletion",
-      "entrySha": "ad72ccd5b517a83bde5e7bbf3bf658193a667b82"
+      "entrySha": "ad72ccd5b517a83bde5e7bbf3bf658193a667b82",
+      "sourceSha": "3402624b3c4ff6246753d181d1199f324625effa",
+      "sourceCi": "https://github.com/herkeys/her-keys/actions/runs/38557089436",
+      "sourceCiResult": "success"
     },
     "website": {
       "path": "C:/Users/jsmit/Her-Keys-Web-Deletion",
       "branch": "codex/account-deletion",
-      "entrySha": "b8939095f5a1aec9877864635a7cafcfa521d1a2"
+      "entrySha": "b8939095f5a1aec9877864635a7cafcfa521d1a2",
+      "sourceSha": "8a99fdd6c58faa2d2c56f7c06b468483f56671a0",
+      "sourceCi": "https://github.com/herkeys/her-keys-web/actions/runs/38555077652",
+      "sourceCiResult": "success"
     }
   },
   "staging": {
     "project": "fhhudicklmpofuzkxeqe",
-    "identityVerified": true,
-    "deployedRevision": null
+    "deployedRevision": "incremental_bundle_hashes_in_deployment_manifest",
+    "destructiveEnabled": false,
+    "dryRun": true,
+    "schedulerActive": false,
+    "monitorActive": true,
+    "dailyRetentionActive": true,
+    "evidence": "scoped request/restore/provider/storage/shared/manual/terminal/retention failure-recovery certified; complete matrix remains open"
   },
   "production": {
     "project": "npykvnxnehlsdlbumzwk",
     "approved": false,
-    "scheduler": "NOT_DEPLOYED"
+    "mutations": "NONE",
+    "scheduler": "NOT_INSTALLED",
+    "configuration": "RevenueCat names and project-ID digest verified read-only"
   },
   "tasks": {
     "T00": "PASS",
-    "T01": "IN_PROGRESS",
-    "T02": "IN_PROGRESS",
+    "T01": "PASS",
+    "T02": "PASS",
     "T03": "IN_PROGRESS",
-    "T04": "TODO",
-    "T05": "TODO",
-    "T06": "TODO",
-    "T07": "TODO",
-    "T08": "TODO",
-    "T09": "TODO",
-    "T10": "TODO",
-    "T11": "TODO",
-    "T12": "TODO",
-    "T13": "TODO",
-    "T14": "TODO"
+    "T04": "IN_PROGRESS",
+    "T05": "IN_PROGRESS",
+    "T06": "BLOCKED",
+    "T07": "BLOCKED",
+    "T08": "IN_PROGRESS",
+    "T09": "IN_PROGRESS",
+    "T10": "IN_PROGRESS",
+    "T11": "IN_PROGRESS",
+    "T12": "IN_PROGRESS",
+    "T13": "BLOCKED",
+    "T14": "BLOCKED"
   },
   "blockers": [
-    "Her Keys RevenueCat server credentials unavailable; connected account exposes only K Scan",
-    "Native runtime and full live provider certification not yet executed",
-    "Remote-device receipt reacquisition and terminal audit retention still require completion"
+    "Native Expo dev-server command rejected by automatic approval review; iOS xcrun unavailable",
+    "Live Apple/Google revocation requires dedicated identities and Staging Apple credentials",
+    "Full hosted resource/adversarial/concurrency matrix incomplete; all 43 resources covered locally",
+    "Public customer support channel unconfigured",
+    "Independent scheduler watchdog and pg_net advisor review outstanding"
   ],
-  "nextSafeAction": "Deploy exact source to verified Staging with destructive processing disabled; certify disposable fixtures"
+  "nextSafeAction": "Complete hosted hostile/concurrency/resource matrix and independent watchdog; use owner-provided provider test access and public support channel when available. Never enable Production without separate approval.",
+  "evidence": [
+    "deployment-manifest.json",
+    "staging-certification.md",
+    "retention-policy.md",
+    "revenuecat-certification.md",
+    "production-schema-census.json",
+    "certification-results.txt"
+  ]
 }
