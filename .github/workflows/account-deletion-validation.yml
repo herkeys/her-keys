@@ -25,9 +25,14 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npx expo install --check
+        if: ${{ !cancelled() }}
       - run: npx expo-doctor
+        if: ${{ !cancelled() }}
       - uses: denoland/setup-deno@v2
+        if: ${{ !cancelled() }}
         with:
           deno-version: v2.x
       - run: deno check --config supabase/functions/deno.json supabase/functions/expire-account-deletion-proofs/index.ts supabase/blueprints/staging-deletion-fixture.ts supabase/blueprints/staging-deletion-lock-probe.ts
+        if: ${{ !cancelled() }}
       - run: deno check --config supabase/functions/deno.json supabase/functions/request-account-deletion/index.ts supabase/functions/restore-account/index.ts supabase/functions/process-account-deletions/index.ts supabase/functions/monitor-account-deletions/index.ts supabase/functions/capture-apple-credential/index.ts supabase/functions/begin-web-deletion/index.ts
+        if: ${{ !cancelled() }}

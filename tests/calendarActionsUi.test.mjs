@@ -189,10 +189,17 @@ describe('no drag and drop (section 33)', () => {
     }
   });
 
-  test('no new dependency was added for Calendar', () => {
+  test('Calendar adds no library; Router native peers match the installed Expo SDK', () => {
     const pkg = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8'));
-    for (const banned of ['react-native-calendars', 'date-fns', 'dayjs', 'moment', 'luxon', 'react-native-draggable-flatlist', 'react-native-gesture-handler', 'react-native-reanimated']) {
+    for (const banned of ['react-native-calendars', 'date-fns', 'dayjs', 'moment', 'luxon', 'react-native-draggable-flatlist', 'react-native-gesture-handler']) {
       assert.equal(banned in { ...pkg.dependencies, ...pkg.devDependencies }, false, banned);
+    }
+    // Router's SDK 57 native peers are app infrastructure. Calendar itself is
+    // still forbidden from importing Reanimated by the source guard above.
+    const bundled = JSON.parse(readFileSync(join(ROOT, 'node_modules', 'expo', 'bundledNativeModules.json'), 'utf8'));
+    for (const peer of ['react-native-reanimated', 'react-native-worklets']) {
+      assert.equal(pkg.dependencies[peer], bundled[peer], `${peer} must use Expo's exact native version`);
+      assert.equal(peer in pkg.devDependencies, false, peer);
     }
   });
 });

@@ -64,6 +64,7 @@ jobs:
         run: npm test
 
       - name: Expo install compatibility
+        if: ${{ !cancelled() }}
         run: npx expo install --check
 
       - name: Expo Doctor
@@ -79,4 +80,5 @@ jobs:
         run: npx expo config --type introspect > /dev/null
 
       - name: Evidence boundary
+        if: ${{ !cancelled() }}
         run: echo "Repository validation only. Live Her Keys Staging RLS, auth, provider calls, native behavior and migrations require separate certification; nothing was deployed."
