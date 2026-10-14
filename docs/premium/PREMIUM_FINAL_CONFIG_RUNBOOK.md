@@ -72,7 +72,7 @@ node scripts-dev/premium-final-config.mjs preflight --env production
 Production preflight is READ-ONLY; it should verify `premium_enabled=false`, `webhook_processing=false`, fixture prohibition and environment identity. Never run an activation command against Production.
 
 ## 3. Staging-only server enforcement migration
-The source contains additive Staging-only server guard `supabase/migrations/20261015140000_premium_staging_tester_guard.sql`. This overrides `premium_authorize` while preserving the original account lifecycle, entitlement, quota, consent and RLS requirements. It only adds a check that a Staging Premium account's `auth.users.raw_app_meta_data.herkeys_premium_tester` is `true` when a feature has `rollout_status='staging_only'`.
+The source contains a governed Staging-only operator SQL artifact (already applied in Staging; intentionally outside the shared, cross-environment migration chain): `supabase/operator/premium/20261015140000_premium_staging_tester_guard.sql`. This overrides `premium_authorize` while preserving the original account lifecycle, entitlement, quota, consent and RLS requirements. It only adds a check that a Staging Premium account's `auth.users.raw_app_meta_data.herkeys_premium_tester` is `true` when a feature has `rollout_status='staging_only'`.
 
 **Deployment read-back, October 14:** this migration was applied to Staging **only** and `SELECT public.premium_staging_allowlist_guard_ready()` returned `true`. Production has no such guard function, and its Premium/webhook switches remain OFF. Future operators should verify the same query before activating and should **not re-apply** the migration. **Do not apply to Production in this sprint.**
 

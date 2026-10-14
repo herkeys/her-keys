@@ -976,6 +976,24 @@ const LATER_FEATURES = [
     ],
   },
 
+  {
+    id: 'HK-PREMIUM-FINAL-CONFIG (sandbox preflight and Staging-only operator controls)',
+    // This independent lane is stacked on the certified Premium-only branch.
+    // No new household data, synchronised kind, or change to Meals.
+    branch: null,
+    owned: [
+      /^scripts-dev\/premium-final-config(?:\.mjs|\/)/,
+      /^tests\/premiumFinalConfig\//,
+      /^supabase\/operator\/premium\//,
+      /^docs\/premium\/PREMIUM_FINAL_CONFIG_RUNBOOK\.md$/,
+    ],
+    migrations: [], schemas: [], rootCollections: [], syncKinds: [],
+    shared: [
+      ['.github/workflows/v2-integration-validation.yml', 'Premium final-config certification: include the new exact-SHA source-only branch without weakening workflow checks'],
+      ['scripts-dev/meals-boundary-scan.cjs', 'Premium final-config: register owned tooling, tests and Staging-only SQL operator artifact; no extra shared durable schema or production migration'],
+    ],
+  },
+
 ];
 
 /**
