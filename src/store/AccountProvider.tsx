@@ -46,6 +46,9 @@ export interface AccountContextValue {
 
 const AccountContext = createContext<AccountContextValue | null>(null);
 
+/** Longer than the runtime's own bounds for read + activate + persist + one binding request, so the runtime answers first. */
+export const RESTORE_FALLBACK_MS = 75_000;
+
 export function AccountProvider({ children }: { children: ReactNode }) {
   const snapshot = useStoreSnapshot();
   const [state, setState] = useState<AccountState>(INITIAL_ACCOUNT_STATE);
@@ -61,6 +64,14 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     if (!hydrated || !accountsAvailable) return;
     let live = true;
     setBusy(true);
+    // Defence in depth. The runtime bounds every step of a restore, so this should never fire; if some path still fails to
+    // answer, launch must not stay on the settling screen. The household is local and intact, and a restore that answers
+    // later still reaches the app through the runtime subscription above.
+    const fallback = setTimeout(() => {
+      if (!live) return;
+      setBusy(false);
+      setSettled(true);
+    }, RESTORE_FALLBACK_MS);
     accountRuntime
       .restore()
       .then((next) => {
@@ -75,9 +86,11 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         setBusy(false);
         // Settled however the restore ended: signed out, bound, degraded and quarantined are all answers.
         setSettled(true);
+        clearTimeout(fallback);
       });
     return () => {
       live = false;
+      clearTimeout(fallback);
     };
   }, [hydrated]);
 

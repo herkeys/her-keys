@@ -1274,6 +1274,27 @@ const LATER_FEATURES = [
       ['scripts-dev/meals-boundary-scan.cjs', 'Premium home: register the lane'],
     ],
   },
+  {
+    id: 'HK-P0-AUTH-RECOVERY (every account operation ends; Welcome tree sign-in recovery)',
+    // Client-only reliability work on the existing account path. No household data, synchronised kind, schema or Meals change.
+    branch: null,
+    owned: [
+      /^src\/domain\/account\/deadline\.ts$/,
+      /^src\/platform\/(?:timeoutFetch|authDiagnostics)\.ts$/,
+      /^tests\/authBoundedOperations\.test\.mjs$/,
+    ],
+    migrations: [], schemas: [], rootCollections: [], syncKinds: [],
+    shared: [
+      ['src/domain/account/accountRuntime.ts', 'P0 auth recovery: bounded activation, SecureStore, RPC, provider and email stages; stale answers cannot rebind; same claim key replays after a timeout'],
+      ['src/platform/googleIdentityOAuth.ts', 'P0 auth recovery: the authorize and code-exchange network steps end'],
+      ['src/platform/supabaseCloud.ts', 'P0 auth recovery: every Supabase request carries a timeout so a dead socket rejects instead of pending'],
+      ['src/store/AccountProvider.tsx', 'P0 auth recovery: restore fallback so launch can never sit on the settling screen'],
+      ['src/store/accountRuntimeInstance.ts', 'P0 auth recovery: stage-timing diagnostics sink (durations and stage names only)'],
+      ['src/features/consent/ConsentFlow.tsx', 'P0 auth recovery: the consent save is bounded like the consent read'],
+      ['scripts-dev/meals-boundary-scan.cjs', 'P0 auth recovery: register the lane'],
+      ['.github/workflows/v2-integration-validation.yml', 'P0 auth recovery: run the same gate on the repair branch exact pushed SHA'],
+    ],
+  },
 
 ];
 

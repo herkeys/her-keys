@@ -24,13 +24,14 @@ import {
   type BindingDecision,
   type ClaimOutcome,
 } from './claim';
-import type { CloudAccountClient } from './cloudClient';
+import type { CloudAccountClient, CloudCall } from './cloudClient';
+import { DEFAULT_ACCOUNT_DEADLINES, withDeadline, type AccountDeadlines } from './deadline';
 import { UNAVAILABLE_EMAIL_PASSWORD, type EmailPasswordMode, type EmailPasswordPort, type EmailPasswordResult } from './emailPassword';
 import { UNAVAILABLE_EMAIL_OTP, type EmailOtpPort, type EmailOtpRequestResult, type EmailOtpVerifyResult } from './emailOtp';
-import { toAccountId, type AccountId, type AccountSession, type AuthProvider } from './identity';
+import { toAccountId, type AccountId, type AccountSession, type AuthProvider, type ProviderResult } from './identity';
 import type { ProviderRegistry } from './provider';
 import type { SecureSessionStore } from './secureSession';
-import { NOOP_ACCOUNT_SESSION_CLIENT, type AccountSessionClient } from './sessionClient';
+import { NOOP_ACCOUNT_SESSION_CLIENT, type AccountSessionClient, type SessionActivation } from './sessionClient';
 import { namespaceForNewDevice, namespaceFromClaim } from '../sync/claimSeam';
 
 /**
@@ -76,10 +77,17 @@ export interface AccountRuntimeOptions {
   /** A fresh uuid for a claim key. Injected so a claim is reproducible in a test. */
   newClaimKey(): string;
   deviceId?: string | null;
+  /** Override how long each operation may stay unanswered. Tests shrink these; production uses the defaults. */
+  deadlines?: Partial<AccountDeadlines>;
   /** Told which account is signed in, before any paywall is shown. */
   onAccountIdentified?: (accountId: AccountId | null) => Promise<void>;
   onStateChange?: (state: AccountState) => void;
   report?: (event: { type: string; detail?: string }) => void;
+  /**
+   * Stage timing for diagnosis, kept apart from `report` so the account-event channel stays a record of what happened to the
+   * account. Carries only stage names, outcome codes and elapsed milliseconds: never a token, code, address or household content.
+   */
+  trace?: (event: { type: string; detail?: string }) => void;
 }
 
 /**
@@ -134,6 +142,64 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
   const apply = (event: AccountEvent): AccountState => replaceState(accountReducer(state, event));
 
   const report = (type: string, detail?: string) => options.report?.({ type, detail });
+
+  const trace = (type: string, detail?: string) => options.trace?.({ type, detail });
+
+  const deadlines: AccountDeadlines = { ...DEFAULT_ACCOUNT_DEADLINES, ...options.deadlines };
+
+  /**
+   * Run a stage with a deadline and report its outcome and duration. Only
+   * stage names, outcome codes and elapsed milliseconds are reported: never a
+   * token, code, address or household content.
+   */
+  const stage = async <T>(name: string, ms: number, work: () => Promise<T>): Promise<{ timedOut: true } | { timedOut: false; value: T }> => {
+    const started = options.now();
+    trace(`auth.${name}.started`);
+    try {
+      const result = await withDeadline(work, ms);
+      trace(`auth.${name}.${result.timedOut ? 'timeout' : 'completed'}`, `ms=${options.now() - started}`);
+      return result;
+    } catch (error) {
+      trace(`auth.${name}.threw`, `ms=${options.now() - started}`);
+      throw error;
+    }
+  };
+
+  /** A store call that must either finish or fail, never hang. Callers already treat a throw as a store failure. */
+  const bounded = async <T>(name: string, work: () => Promise<T>): Promise<T> => {
+    const result = await stage(name, deadlines.secureStoreMs, work);
+    if (result.timedOut) throw new Error(`${name}_timeout`);
+    return result.value;
+  };
+
+  /**
+   * Install a session on the transport client, bounded. A timed-out activation
+   * may still finish later; if it does and nobody holds that account any more,
+   * the stray credential is removed. Only the NEWEST activation may do so, or a
+   * retry's freshly installed session would be signed out from under it.
+   */
+  let activationEpoch = 0;
+  const activateBounded = async (session: AccountSession): Promise<SessionActivation> => {
+    const epoch = (activationEpoch += 1);
+    const pending = sessionClient.activate(session);
+    const result = await stage('session.activate', deadlines.activateMs, () => pending).catch(
+      (error): { timedOut: false; value: SessionActivation } => ({
+        timedOut: false,
+        value: { kind: 'unreachable', detail: error instanceof Error ? error.message : String(error) },
+      })
+    );
+    if (!result.timedOut) return result.value;
+    void pending.then(
+      (late) => {
+        if (late.kind !== 'active' || epoch !== activationEpoch) return;
+        if (accountIdOf(state) === late.session.accountId) return;
+        trace('auth.session.activate.late_discarded');
+        void sessionClient.signOut().catch(() => undefined);
+      },
+      () => undefined
+    );
+    return { kind: 'unreachable', detail: 'session_activation_timeout' };
+  };
 
   /**
    * The authenticated Supabase actor is sent to RevenueCat, but store identity
@@ -234,7 +300,8 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
    * — Apple, Google and email alike — so wrong-actor refusal, quarantine,
    * activation, durable storage and binding cannot differ by how she signed in.
    */
-  const adoptSession = async (session: AccountSession, degraded: Degraded | null): Promise<AccountState> => {
+  const adoptSession = async (session: AccountSession, attempt: AuthAttempt): Promise<AccountState> => {
+    const { degraded } = attempt;
     if (degraded !== null && session.accountId !== degraded.accountId) {
       report('account.reauth_wrong_actor');
       return state;
@@ -243,13 +310,26 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
     // Signing in as B on a device bound to A is a real account conflict, but
     // B must never become the transport credential for A.
     if (degraded === null && bindingFor(session).mode === 'quarantine') {
-      await options.sessions.write(session);
+      try {
+        await bounded('session.persist', () => options.sessions.write(session));
+      } catch (error) {
+        report('account.session_store_failed', error instanceof Error ? error.message : String(error));
+        return apply({ type: 'authFailed', detail: 'could not safely store the account session', recoverable: true });
+      }
+      if (superseded(attempt)) return state;
       identify(session.accountId);
       apply({ type: 'sessionEstablished', session });
       return runtime.resolveBinding();
     }
 
-    const activated = await sessionClient.activate(session);
+    const activated = await activateBounded(session);
+    // She may have signed out, or started again, while the transport answered.
+    // A credential for an attempt nobody is waiting on is removed, not adopted.
+    if (superseded(attempt)) {
+      report('account.auth_superseded');
+      if (activated.kind === 'active') void sessionClient.signOut().catch(() => undefined);
+      return state;
+    }
     if (activated.kind !== 'active') {
       report('account.session_activate_failed', activated.detail);
       if (degraded !== null) return state;
@@ -257,12 +337,21 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
     }
 
     try {
-      await options.sessions.write(activated.session);
+      await bounded('session.persist', () => options.sessions.write(activated.session));
     } catch (error) {
-      await sessionClient.signOut();
+      await bounded('session.transport_signout', () => sessionClient.signOut()).catch(() => undefined);
       report('account.session_store_failed', error instanceof Error ? error.message : String(error));
       if (degraded !== null) return state;
       return apply({ type: 'authFailed', detail: 'could not safely store the account session', recoverable: true });
+    }
+    if (superseded(attempt)) {
+      // Signed out while the credential was being written: do not leave it behind.
+      report('account.auth_superseded');
+      if (state.kind === 'unauthenticated') {
+        await bounded('session.persist_clear', () => options.sessions.clear()).catch(() => undefined);
+        void sessionClient.signOut().catch(() => undefined);
+      }
+      return state;
     }
 
     identify(activated.session.accountId);
@@ -271,6 +360,9 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
     apply({ type: 'sessionEstablished', session: activated.session });
     return runtime.resolveBinding();
   };
+
+  /** Read through a function so a check made before an await is not narrowed past it. */
+  const signInOwnsAccount = (): boolean => state.kind === 'authenticating';
 
   const unexpectedAuthFailure = (event: string): AccountState => {
     // Only the authenticated runtime can end an in-flight attempt. Clearing a
@@ -306,7 +398,14 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
     },
 
     async restore() {
-      const loaded = await options.sessions.read(options.now());
+      let loaded: Awaited<ReturnType<SecureSessionStore['read']>>;
+      try {
+        loaded = await bounded('session.read', () => options.sessions.read(options.now()));
+      } catch (error) {
+        loaded = { kind: 'unavailable', detail: error instanceof Error ? error.message : String(error) };
+      }
+      // A sign-in that started while the store was answering owns the account now.
+      if (signInOwnsAccount()) return state;
 
       if (loaded.kind === 'none') return apply({ type: 'signedOut' });
 
@@ -348,13 +447,17 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
 
       // Install/refresh BEFORE resolveBinding can produce accountBound. Since
       // accountBound is what starts sync, no launch can race an anonymous RPC.
-      const activated = await sessionClient.activate(loaded.session);
+      const activated = await activateBounded(loaded.session);
+      if (signInOwnsAccount()) {
+        if (activated.kind === 'active') void sessionClient.signOut().catch(() => undefined);
+        return state;
+      }
       if (activated.kind !== 'active') {
         report('account.session_restore_failed', activated.detail);
         if (bound !== null && bound.accountId === loaded.session.accountId) {
           if (activated.kind === 'invalid') {
             try {
-              await options.sessions.clear();
+              await bounded('session.clear', () => options.sessions.clear());
             } catch (error) {
               report('account.session_clear_failed', error instanceof Error ? error.message : String(error));
             }
@@ -370,7 +473,7 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
 
         if (activated.kind === 'invalid') {
           try {
-            await options.sessions.clear();
+            await bounded('session.clear', () => options.sessions.clear());
           } catch {
             // Nothing account-bound exists here; signed out remains the safest state.
           }
@@ -380,10 +483,10 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
 
       try {
         // setSession may have rotated an expired pair. Durable first, bound second.
-        await options.sessions.write(activated.session);
+        await bounded('session.persist', () => options.sessions.write(activated.session));
       } catch (error) {
         report('account.session_store_failed', error instanceof Error ? error.message : String(error));
-        await sessionClient.signOut();
+        await bounded('session.transport_signout', () => sessionClient.signOut()).catch(() => undefined);
         if (bound !== null && bound.accountId === activated.session.accountId) {
           replaceState({
             kind: 'authDegraded',
@@ -407,7 +510,9 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
       const { degraded } = attempt;
 
       try {
-        const result = await options.providers.signIn(provider);
+        const timed = await stage('provider.sheet', deadlines.providerSheetMs, () => options.providers.signIn(provider));
+        // A sheet that never returns is a failed attempt she can retry, not a permanent spinner.
+        const result: ProviderResult = timed.timedOut ? { kind: 'providerError', detail: 'provider_timeout' } : timed.value;
 
         if (superseded(attempt)) {
           report('account.auth_superseded');
@@ -434,7 +539,7 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
             break;
         }
 
-        return await adoptSession(result.session, degraded);
+        return await adoptSession(result.session, attempt);
       } catch {
         if (superseded(attempt)) return state;
         return unexpectedAuthFailure('account.provider_unexpected_failure');
@@ -455,7 +560,8 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
 
       let result: EmailPasswordResult;
       try {
-        result = await emailPassword.authenticate(mode, email, password);
+        const timed = await stage('email.password', deadlines.emailRequestMs, () => emailPassword.authenticate(mode, email, password));
+        result = timed.timedOut ? { kind: 'unreachable', detail: 'email_password_request_timeout' } : timed.value;
       } catch {
         result = { kind: 'unreachable', detail: 'email_password_request_threw' };
       }
@@ -469,7 +575,7 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
         return { state, outcome: result };
       }
       try {
-        return { state: await adoptSession(result.session, attempt.degraded), outcome: { kind: 'authenticated' } };
+        return { state: await adoptSession(result.session, attempt), outcome: { kind: 'authenticated' } };
       } catch {
         return { state: unexpectedAuthFailure('account.password_binding_unexpected_failure'), outcome: { kind: 'unreachable', detail: 'account_binding_unavailable' } };
       }
@@ -484,7 +590,8 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
 
       let result: EmailOtpRequestResult;
       try {
-        result = await emailOtp.request(email);
+        const timed = await stage('email.otp_request', deadlines.emailRequestMs, () => emailOtp.request(email));
+        result = timed.timedOut ? { kind: 'unreachable', detail: 'email_otp_request_timeout' } : timed.value;
       } catch {
         // A port that throws anyway never reached an answer. The thrown text is
         // not kept: it is the one place an address could ride into a log.
@@ -503,7 +610,8 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
 
       let result: EmailOtpVerifyResult;
       try {
-        result = await emailOtp.verify(email, code);
+        const timed = await stage('email.otp_verify', deadlines.emailRequestMs, () => emailOtp.verify(email, code));
+        result = timed.timedOut ? { kind: 'unreachable', detail: 'email_otp_verify_timeout' } : timed.value;
       } catch {
         result = { kind: 'unreachable', detail: 'email_otp_verify_threw' };
       }
@@ -523,7 +631,7 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
       }
 
       try {
-        return { state: await adoptSession(result.session, degraded), outcome: { kind: 'verified' } };
+        return { state: await adoptSession(result.session, attempt), outcome: { kind: 'verified' } };
       } catch {
         return { state: unexpectedAuthFailure('account.email_binding_unexpected_failure'), outcome: { kind: 'failed', detail: 'account_binding_unavailable' } };
       }
@@ -590,19 +698,29 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
       const claimedState = options.localState();
       const payload = kind === 'claim' ? buildClaimPayload(claimedState) : null;
 
-      const call =
-        kind === 'bootstrap'
-          ? await options.cloud.bootstrapAccount({
-              claimKey: receipt.claimKey,
-              timezone: options.timezone(),
-              deviceId: options.deviceId ?? null,
-            })
-          : await options.cloud.claimLocalHousehold({
-              claimKey: receipt.claimKey,
-              timezone: options.timezone(),
-              deviceId: options.deviceId ?? null,
-              payload: payload as NonNullable<typeof payload>,
-            });
+      // Bounded. A request that never answers may still commit on the server, so
+      // it is reported as unreachable: the receipt above is kept, and the retry
+      // replays the SAME claim key, which the server resolves to the same household.
+      let call: CloudCall;
+      try {
+        const timed = await stage('binding.' + kind, deadlines.bindingRpcMs, () =>
+          kind === 'bootstrap'
+            ? options.cloud.bootstrapAccount({
+                claimKey: receipt.claimKey,
+                timezone: options.timezone(),
+                deviceId: options.deviceId ?? null,
+              })
+            : options.cloud.claimLocalHousehold({
+                claimKey: receipt.claimKey,
+                timezone: options.timezone(),
+                deviceId: options.deviceId ?? null,
+                payload: payload as NonNullable<typeof payload>,
+              })
+        );
+        call = timed.timedOut ? { kind: 'unreachable', detail: 'binding_request_timeout' } : timed.value;
+      } catch (error) {
+        call = { kind: 'unreachable', detail: error instanceof Error ? error.message : String(error) };
+      }
 
       // A late bootstrap/claim result cannot bind after logout or an account
       // switch. The next authenticated attempt can replay its durable key.
@@ -719,14 +837,23 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
       // Stop sync before the client credential is ended.
       if (state.kind === 'accountBound') apply({ type: 'sessionDegraded', reason: 'refreshFailed' });
 
-      const ended = await sessionClient.signOut();
+      // The transport credential lives in memory only. If its sign-out never
+      // answers, leaving must still be possible: the durable credential is the
+      // one that matters, and the next activation replaces the in-memory one.
+      let ended: { kind: 'ok' } | { kind: 'error'; detail: string };
+      try {
+        const timed = await stage('session.signout', deadlines.activateMs, () => sessionClient.signOut());
+        ended = timed.timedOut ? { kind: 'ok' } : timed.value;
+      } catch (error) {
+        ended = { kind: 'error', detail: error instanceof Error ? error.message : String(error) };
+      }
       if (ended.kind === 'error') {
         report('account.sign_out_client_failed', ended.detail);
         return state;
       }
 
       try {
-        await options.sessions.clear();
+        await bounded('session.clear', () => options.sessions.clear());
       } catch (error) {
         report('account.sign_out_store_failed', error instanceof Error ? error.message : String(error));
         return state;

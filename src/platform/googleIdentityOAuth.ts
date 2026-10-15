@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { withDeadline } from '../domain/account/deadline';
 import { toAccountId, type ProviderResult } from '../domain/account/identity';
 import { sessionFromSupabase } from './sessionMapping';
 
@@ -111,19 +112,30 @@ function decode(value: string): string | null {
   }
 }
 
+/** The two network steps of the flow. The browser sheet in between is bounded by the runtime, not here. */
+export const GOOGLE_AUTHORIZE_DEADLINE_MS = 30_000;
+export const GOOGLE_EXCHANGE_DEADLINE_MS = 30_000;
+
 export async function signInWithGoogleOAuth(
   client: SupabaseClient,
-  openAuthSession: OpenAuthSession
+  openAuthSession: OpenAuthSession,
+  deadlines: { authorizeMs?: number; exchangeMs?: number } = {}
 ): Promise<ProviderResult> {
   let authorizeUrl: string;
   try {
-    const { data, error } = await client.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: GOOGLE_IDENTITY_REDIRECT,
-        skipBrowserRedirect: true,
-      },
-    });
+    const timed = await withDeadline(
+      () =>
+        client.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: GOOGLE_IDENTITY_REDIRECT,
+            skipBrowserRedirect: true,
+          },
+        }),
+      deadlines.authorizeMs ?? GOOGLE_AUTHORIZE_DEADLINE_MS
+    );
+    if (timed.timedOut) return { kind: 'providerError', detail: 'google_authorize_timeout' };
+    const { data, error } = timed.value;
     if (error) return { kind: 'providerError', detail: error.message };
     if (!data?.url) return { kind: 'providerError', detail: 'Supabase returned no Google authorization URL' };
     authorizeUrl = data.url;
@@ -163,7 +175,10 @@ export async function signInWithGoogleOAuth(
 
   let session;
   try {
-    const { data, error } = await client.auth.exchangeCodeForSession(callback.code);
+    const code = callback.code;
+    const timed = await withDeadline(() => client.auth.exchangeCodeForSession(code), deadlines.exchangeMs ?? GOOGLE_EXCHANGE_DEADLINE_MS);
+    if (timed.timedOut) return { kind: 'providerError', detail: 'google_code_exchange_timeout' };
+    const { data, error } = timed.value;
     if (error) return { kind: 'providerError', detail: error.message };
     session = data.session;
   } catch (error) {

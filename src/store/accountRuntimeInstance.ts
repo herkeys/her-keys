@@ -18,6 +18,7 @@ import { createHerKeysAiClient, UNCONFIGURED_HER_KEYS_AI } from '../platform/her
 import { createExternalIntelligenceClient, UNCONFIGURED_EXTERNAL_INTELLIGENCE } from '../platform/externalIntelligenceClient';
 import { createDeviceSecureStorage, secureStorageAvailable } from '../platform/secureStore';
 import { createSupabaseAccountClient, createSupabaseClient } from '../platform/supabaseCloud';
+import { recordAuthDiagnostic } from '../platform/authDiagnostics';
 import { createSupabaseSessionClient } from '../platform/supabaseSessionClient';
 import { createSupabaseSyncTransport } from '../platform/supabaseSyncTransport';
 import { requestProductionWelcomeEmail } from '../platform/welcomeEmailClient';
@@ -140,6 +141,8 @@ const app = composeAccountApp({
       await identifyRevenueCatAccount(accountId);
     },
     report,
+    // Stage names and durations only; see authDiagnostics.ts for what it refuses to carry.
+    trace: recordAuthDiagnostic,
   },
   sync: {
     transport: client === null ? unconfiguredTransport : createSupabaseSyncTransport(client),

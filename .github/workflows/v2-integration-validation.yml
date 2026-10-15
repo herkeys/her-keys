@@ -28,6 +28,8 @@ on:
       # P0 Welcome sign-in repair (PR #21) and its integration with the Premium source candidate, each on its exact SHA.
       - repair/p0-welcome-auth-rc-nonblocking-20261015
       - repair/android-auth-p0-device-20261015
+      # P0 auth recovery: every account operation ends (bounded activation, storage, RPC, provider and email), exact pushed SHA.
+      - repair/p0-auth-recovery-20261015
   workflow_dispatch:
 
 permissions:

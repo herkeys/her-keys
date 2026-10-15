@@ -17,6 +17,7 @@ type Stage = 'loading' | 'error' | 'legal' | 'permissions' | 'ready';
  * Sign out). It never grants access: only a ledger that answers "legal accepted and AI decision recorded" opens the app.
  */
 export const CONSENT_READ_TIMEOUT_MS = 15_000;
+export const CONSENT_WRITE_TIMEOUT_MS = 45_000;
 
 function readWithTimeout(read: () => Promise<ConsentReadResult>, ms: number): Promise<ConsentReadResult> {
   return new Promise((resolve) => {
@@ -93,12 +94,17 @@ export function ConsentGate({ session, children }: { session: AccountSession; ch
     if (saving || !terms || !privacy || !adult || ai === null) return;
     setSaving(true);
     setIssue(null);
-    const result = await createConsentLedger(sessionRef.current).record([
-      { consent_type: 'terms', granted: true },
-      { consent_type: 'privacy', granted: true },
-      { consent_type: 'age18', granted: true },
-      { consent_type: 'ai_processing', granted: ai },
-    ]);
+    // Bounded like the read: a save that never answers is a failed save she can retry, not a frozen button.
+    const result = await readWithTimeout(
+      () =>
+        createConsentLedger(sessionRef.current).record([
+          { consent_type: 'terms', granted: true },
+          { consent_type: 'privacy', granted: true },
+          { consent_type: 'age18', granted: true },
+          { consent_type: 'ai_processing', granted: ai },
+        ]),
+      CONSENT_WRITE_TIMEOUT_MS
+    );
     setSaving(false);
     if (result.kind !== 'ok') {
       setIssue('We could not securely save your selections. Check your connection and try again.');

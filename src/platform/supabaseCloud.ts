@@ -2,6 +2,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { supabaseConfig, isSupabaseConfigured } from '../config/supabase';
 import type { BootstrapInput, ClaimInput, CloudAccountClient, CloudCall } from '../domain/account/cloudClient';
 import type { AccountSession } from '../domain/account/identity';
+import { createTimeoutFetch } from './timeoutFetch';
 
 /**
  * The Supabase transport.
@@ -27,6 +28,9 @@ export function createSupabaseClient(): SupabaseClient | null {
       detectSessionInUrl: false,
       flowType: 'pkce',
     },
+    // Every request ends: a socket that never answers becomes a rejected fetch, which
+    // supabase-js reports as a retryable error instead of leaving its promise pending.
+    global: { fetch: createTimeoutFetch((input, init) => globalThis.fetch(input, init)) },
   });
 }
 
