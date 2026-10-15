@@ -86,6 +86,9 @@ test('B2B-N02: account switching waits for the store transaction, and the previo
   await new Promise((resolve) => setImmediate(resolve));
   assert.equal(sdk.id, A, 'login cannot interleave inside the native transaction');
   settle(premium);
+  // As soon as an account switch is requested, the former actor loses
+  // restore authority, even if their native restore call was already running.
+  // The SDK transaction still finishes before the new actor logs in.
   assert.deepEqual(await restoring, { kind: 'unavailable' }, 'a result from before the switch is discarded');
   assert.equal(await switching, 'identified');
   assert.equal(sdk.id, B);

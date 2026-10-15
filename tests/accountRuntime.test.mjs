@@ -77,6 +77,7 @@ function runtimeFor({
   saveFails = false,
   saveFailsAt = null,
   now = NOW,
+  onAccountIdentified,
 } = {}) {
   const calls = [];
   const identified = [];
@@ -119,7 +120,7 @@ function runtimeFor({
     now: () => now,
     newClaimKey: () => '88888888-8888-4888-8888-888888888888',
     deviceId: null,
-    onAccountIdentified: async (accountId) => identified.push(accountId),
+    onAccountIdentified: onAccountIdentified ?? (async (accountId) => { identified.push(accountId); }),
   });
 
   return {
@@ -567,5 +568,70 @@ describe('restore, degrade, quarantine and switching', () => {
     const next = await runtime.signIn('apple');
     assert.equal(next.kind, 'accountBound', 'entitlement is not identity');
     assert.equal(stored.binding.householdId, HOUSEHOLD_A);
+  });
+});
+
+
+describe('P0: billing SDK never blocks Free authentication or secure household binding', () => {
+  // If the RevenueCat native SDK never resolves, the Supabase session and its
+  // durable household binding still have to complete. No timer or fake Premium
+  // entitlement is used to force the login result.
+  const within = (operation) => Promise.race([
+    operation,
+    new Promise((resolve) => setTimeout(() => resolve({ kind: 'timedOut' }), 250)),
+  ]);
+
+  test('Apple/Google provider login binds while RevenueCat identify remains pending', async () => {
+    const ids = [];
+    const never = new Promise(() => {});
+    const h = runtimeFor({
+      onAccountIdentified: (id) => { ids.push(id); return never; },
+    });
+    const result = await within(h.runtime.signIn('apple'));
+    assert.equal(result.kind, 'accountBound', 'RevenueCat must not delay the authenticated household');
+    assert.deepEqual(ids, [ACCOUNT_A], 'store identity is still requested for the exact account UUID');
+    assert.equal(h.onDisk().binding.accountId, ACCOUNT_A);
+    assert.deepEqual(h.calls.map((call) => call.fn), ['bootstrap']);
+    const out = await within(h.runtime.signOut());
+    assert.equal(out.kind, 'unauthenticated', 'logout must not await the same failed RevenueCat SDK');
+    assert.deepEqual(ids, [ACCOUNT_A, null], 'anonymous reset is still requested');
+  });
+
+  test('password sign-in also finishes when RevenueCat identify never resolves', async () => {
+    const ids = [];
+    const h = runtimeFor({
+      passwordResults: [{ kind: 'success', session: sessionFor(ACCOUNT_A, {
+        provider: { provider: 'email', subject: null, suggestedDisplayName: null },
+      }) }],
+      onAccountIdentified: (id) => { ids.push(id); return new Promise(() => {}); },
+    });
+    const result = await within(h.runtime.authenticateEmailPassword('signIn', 'user@example.test', 'password-is-not-retained'));
+    assert.equal(result.state?.kind, 'accountBound');
+    assert.equal(result.outcome?.kind, 'authenticated');
+    assert.deepEqual(ids, [ACCOUNT_A]);
+    assert.equal(h.onDisk().binding.householdId, HOUSEHOLD_A);
+  });
+
+  test('cold-start restore resumes a secure household despite an unresponsive billing SDK', async () => {
+    const ids = [];
+    const h = runtimeFor({
+      secureInitial: { [SECURE_SESSION_KEY]: JSON.stringify(sessionFor(ACCOUNT_A)) },
+      onAccountIdentified: (id) => { ids.push(id); return new Promise(() => {}); },
+    });
+    const result = await within(h.runtime.restore());
+    assert.equal(result.kind, 'accountBound');
+    assert.deepEqual(ids, [ACCOUNT_A]);
+    assert.equal(h.onDisk().binding.accountId, ACCOUNT_A);
+  });
+
+  test('provider failure is finite and retryable, never leaves authenticating behind', async () => {
+    const h = runtimeFor({
+      providerResults: [{ kind: 'providerError', detail: 'provider_did_not_finish' }, { kind: 'success', session: sessionFor(ACCOUNT_A) }],
+    });
+    const denied = await within(h.runtime.signIn('apple'));
+    assert.equal(denied.kind, 'authError');
+    const retry = await within(h.runtime.signIn('apple'));
+    assert.equal(retry.kind, 'accountBound');
+    assert.equal(h.onDisk().binding.accountId, ACCOUNT_A);
   });
 });

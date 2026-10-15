@@ -25,6 +25,9 @@ on:
       - integration/premium-source-convergence-20261014
       # Premium home and account management (WP-1): the same gate on its exact pushed SHA.
       - feature/premium-home-account-20261014
+      # P0 Welcome sign-in repair (PR #21) and its integration with the Premium source candidate, each on its exact SHA.
+      - repair/p0-welcome-auth-rc-nonblocking-20261015
+      - repair/android-auth-p0-device-20261015
   workflow_dispatch:
 
 permissions:
