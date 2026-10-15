@@ -19,6 +19,7 @@ on:
       - integration/premium-certification
       - codex/v2-premium-final-config
       - engineering/premium-stage1-completion-20261014
+      - repair/p0-welcome-auth-rc-nonblocking-20261015
       # Final-config isolated implementation and strict evidence lane.
       - codex/v2-premium-final-config
   workflow_dispatch:
