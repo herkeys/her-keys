@@ -128,7 +128,7 @@ export function stagingActivationProof(subscriberResponse, projection, accountId
   const s=subscriberResponse?.subscriber;
   if (!s || typeof s!=='object' || Array.isArray(s)) return deny('missing_subscriber');
   // An account's alias history may represent a transfer. Never guess ownership.
-  if ((s.original_app_user_id && s.original_app_user_id!==accountId) ||
+  if (s.original_app_user_id!==accountId ||
       (s.aliases!==undefined && (!Array.isArray(s.aliases) ||
         s.aliases.some(alias=>alias!==accountId)))) return deny('ambiguous_provider_identity');
   const ent=s.entitlements?.her_keys_plus;
