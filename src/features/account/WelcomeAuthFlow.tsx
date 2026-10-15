@@ -71,9 +71,15 @@ export function WelcomeAuthFlow({ mode, onPremiumChoice }: { mode: WelcomeFlowMo
     if (flow.inFlight !== null) return;
     dispatch({ type: 'providerStarted', method });
     void (async () => {
-      await clearStrandedSession();
-      const next = await account.signIn(method);
-      send({ type: 'providerSettled', account: next.kind });
+      try {
+        await clearStrandedSession();
+        const next = await account.signIn(method);
+        send({ type: 'providerSettled', account: next.kind });
+      } catch {
+        // Unexpected provider/binding failures must not pin the entire choice
+        // screen behind a permanent loading indicator.
+        send({ type: 'providerSettled', account: 'authError' });
+      }
     })();
   };
 
@@ -106,9 +112,13 @@ export function WelcomeAuthFlow({ mode, onPremiumChoice }: { mode: WelcomeFlowMo
       if (flow.inFlight !== null) return;
       dispatch({ type: 'passwordStarted' });
       void (async () => {
-        await clearStrandedSession();
-        const result = await account.authenticateEmailPassword(mode, email, password);
-        send({ type: 'passwordSettled', outcome: result.outcome, account: result.state.kind });
+        try {
+          await clearStrandedSession();
+          const result = await account.authenticateEmailPassword(mode, email, password);
+          send({ type: 'passwordSettled', outcome: result.outcome, account: result.state.kind });
+        } catch {
+          send({ type: 'passwordSettled', outcome: { kind: 'unreachable', detail: 'auth_request_failed' }, account: 'authError' });
+        }
       })();
     },
     onChangeEmail: () => dispatch({ type: 'changeEmail' }),
@@ -117,9 +127,13 @@ export function WelcomeAuthFlow({ mode, onPremiumChoice }: { mode: WelcomeFlowMo
       if (flow.inFlight !== null) return;
       dispatch({ type: 'emailSubmitted', email });
       void (async () => {
-        await clearStrandedSession();
-        const result = await account.requestEmailOtp(email);
-        send({ type: 'emailRequestSettled', result, now: Date.now() });
+        try {
+          await clearStrandedSession();
+          const result = await account.requestEmailOtp(email);
+          send({ type: 'emailRequestSettled', result, now: Date.now() });
+        } catch {
+          send({ type: 'emailRequestSettled', result: { kind: 'unreachable', detail: 'otp_request_failed' }, now: Date.now() });
+        }
       })();
     },
 
@@ -127,9 +141,13 @@ export function WelcomeAuthFlow({ mode, onPremiumChoice }: { mode: WelcomeFlowMo
       if (flow.inFlight !== null) return;
       dispatch({ type: 'resendStarted' });
       void (async () => {
-        // The same request again. The service's own rate limit is the authority; one refusal is shown, never retried.
-        const result = await account.requestEmailOtp(flow.email);
-        send({ type: 'resendSettled', result, now: Date.now() });
+        try {
+          // The service's own rate limit is authoritative: never auto-retry.
+          const result = await account.requestEmailOtp(flow.email);
+          send({ type: 'resendSettled', result, now: Date.now() });
+        } catch {
+          send({ type: 'resendSettled', result: { kind: 'unreachable', detail: 'otp_resend_failed' }, now: Date.now() });
+        }
       })();
     },
 
@@ -137,9 +155,13 @@ export function WelcomeAuthFlow({ mode, onPremiumChoice }: { mode: WelcomeFlowMo
       if (flow.inFlight !== null) return;
       dispatch({ type: 'codeSubmitted' });
       void (async () => {
-        // The code goes from the field to the runtime and is held nowhere in between.
-        const { state: next, outcome } = await account.verifyEmailOtp(flow.email, code);
-        send({ type: 'codeSettled', outcome, account: next.kind });
+        try {
+          // The code goes from the field to the runtime and is held nowhere in between.
+          const { state: next, outcome } = await account.verifyEmailOtp(flow.email, code);
+          send({ type: 'codeSettled', outcome, account: next.kind });
+        } catch {
+          send({ type: 'codeSettled', outcome: { kind: 'failed', detail: 'otp_verify_failed' }, account: 'authError' });
+        }
       })();
     },
   };
