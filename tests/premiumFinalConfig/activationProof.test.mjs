@@ -46,6 +46,7 @@ test('synthetic fixture, missing provider, missing entitlement and false account
 test('identity aliases, account switch, and transfer uncertainty deny',()=>{
   assert.equal(check(p=>{p.subscriber.aliases.push(otherId);}).reason,'ambiguous_provider_identity');
   assert.equal(check(p=>{p.subscriber.original_app_user_id=otherId;}).reason,'ambiguous_provider_identity');
+  assert.equal(check(p=>{delete p.subscriber.original_app_user_id;}).reason,'ambiguous_provider_identity');
   assert.equal(check(p=>{delete p.subscriber.aliases;}).eligible,true); // Official REST v1 response omits aliases.
   assert.equal(check(p=>{p.subscriber.aliases='unknown';}).reason,'ambiguous_provider_identity');
 });
