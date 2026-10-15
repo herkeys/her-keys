@@ -147,8 +147,20 @@ ROLLBACK;
 
 BEGIN;
 SELECT herkeys_test.premium_grant(:'ua', 'active');
-CREATE TABLE public.account_deletion_requests (account_id uuid, status text);
-INSERT INTO public.account_deletion_requests VALUES (:'ua', 'deactivated');
+-- The deletion lifecycle owns this table. Where its migration is in the chain (the converged lineage) use the REAL table; only a
+-- lineage without it needs the two-column stand-in that the lifecycle seam reads (account_id, status).
+SELECT set_config('herkeys.ua', :'ua', true);
+DO $stub$
+BEGIN
+  IF to_regclass('public.account_deletion_requests') IS NULL THEN
+    CREATE TABLE public.account_deletion_requests (account_id uuid, status text);
+    INSERT INTO public.account_deletion_requests VALUES (current_setting('herkeys.ua')::uuid, 'deactivated');
+  ELSE
+    INSERT INTO public.account_deletion_requests (account_id, status, receipt_hash, requested_at, grace_period_ends_at)
+    VALUES (current_setting('herkeys.ua')::uuid, 'deactivated', repeat('d', 43), now(), now() + interval '30 days');
+  END IF;
+END
+$stub$;
 SELECT public.premium_authorize(:'ua', 'daily_load_premium', :'hh_a', 'k-life-1') AS d \gset
 SELECT CASE WHEN (:'d'::jsonb ->> 'reason') = 'account_deactivated' AND (:'d'::jsonb ->> 'entitlementState') = 'deletion_pending' THEN 'PASS' ELSE 'FAIL' END || ' | an open deletion request overrides an active subscription (account_deactivated / deletion_pending)';
 UPDATE public.account_deletion_requests SET status = 'restored';
