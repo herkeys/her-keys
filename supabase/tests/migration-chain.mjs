@@ -49,6 +49,8 @@ export const ADDITIVE_CHAIN = [
   { file: '20261015120000_premium_entitlement_foundation.sql', owner: 'PREMIUM_FOUNDATION', label: 'premium-foundation' },
   // Her Keys Premium Stage 1 (A4): the shared decision ledger (owner-readable receipts) and service-only operational views.
   { file: '20261015130000_premium_decision_ledger.sql', owner: 'PREMIUM_LEDGER', label: 'premium-ledger' },
+  // Premium engineering: dirty and stale server-authoritative subscriber projections must fail closed before paid work.
+  { file: '20261015140000_premium_stale_projection_guard.sql', owner: 'PREMIUM_FRESHNESS', label: 'premium-freshness' },
 ];
 
 /** WAVE3_BASE (363e473) ended at F05: the chain a WAVE3_BASE-era database was built with, and the populated-upgrade starting point. */

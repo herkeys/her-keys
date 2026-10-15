@@ -917,6 +917,7 @@ const LATER_FEATURES = [
       /^src\/domain\/premium\//, /^src\/features\/(momentum|smart-inbox)\//, /^src\/features\/daily-load\/premium\//,
       /^src\/monetization\/(PremiumStateProvider\.tsx|premium[A-Z]\w+\.ts)$/,
       /^supabase\/migrations\/2026101512\d+_premium_entitlement_foundation\.sql$/, /^supabase\/migrations\/2026101513\d+_premium_decision_ledger\.sql$/,
+      /^supabase\/migrations\/20261015140000_premium_stale_projection_guard\.sql$/,
       /^supabase\/tests\/(8[23]-premium|helpers\/30-premium|premium-|run-premium)/,
       /^tests\/(premium|premiumDomain)\//, /^tests\/support\/(premium\/harness\.mjs|premiumDomain\.mjs|premiumLedger\.mjs)$/,
       /^docs\/premium\//, /^scripts-dev\/smart-inbox-/,
@@ -926,6 +927,8 @@ const LATER_FEATURES = [
     migrations: [
       'supabase/migrations/20261015120000_premium_entitlement_foundation.sql',
       'supabase/migrations/20261015130000_premium_decision_ledger.sql',
+      // This engineering-lane migration preserves every old migration and only tightens trusted paid-state read authorization.
+      'supabase/migrations/20261015140000_premium_stale_projection_guard.sql',
     ],
     // SavedReportSchema validates a Momentum review snapshot stored as a decision-ledger receipt (aggregate counts and typed references). It is a
     // receipt-reader schema, not a household entity: nothing in AppState, no collection and no sync kind uses it.
@@ -933,6 +936,8 @@ const LATER_FEATURES = [
     rootCollections: [],
     syncKinds: [],
     shared: [
+      ['supabase/tests/migration-chain.mjs', 'Premium Stage 1 engineering: register the additive provider-freshness authorization guard in the exact canonical migration chain for disposable DB, upgrades, and version governance'],
+      ['tests/migrationChain.test.mjs', 'Premium Stage 1 engineering: assert the new source-only paid freshness migration is explicitly owned and ordered without editing already applied SQL'],
       ['src/features/talk-it-out/capture/CaptureContext.tsx', 'Premium Stage 1 (Smart Inbox): the capture provider hands the coordinator an optional Premium reader read from a tiny context (null where Premium is not mounted); Free capture imports nothing from the Premium provider'],
       ['src/features/talk-it-out/capture/types.ts', 'Premium Stage 1 (Smart Inbox): two assumption codes (premium-reading, possible-duplicate) so a Premium reading and a possible duplicate are shown as assumptions, never as something she said'],
       ['tests/support/captureWorld.mjs', 'Premium Stage 1 (Smart Inbox): the capture test world accepts an optional enhancer; every existing suite passes none'],
@@ -1231,6 +1236,23 @@ const LATER_FEATURES = [
     ]
   ]
 },
+  {
+    id: 'HK-PREMIUM-FINAL-CONFIG (sandbox preflight and Staging-only operator controls)',
+    // This independent lane is stacked on the certified Premium-only branch.
+    // No new household data, synchronised kind, or change to Meals.
+    branch: null,
+    owned: [
+      /^scripts-dev\/premium-final-config(?:\.mjs|\/)/,
+      /^tests\/premiumFinalConfig\//,
+      // Guard SQL stays inside the existing Premium backend owner namespace.
+      /^docs\/premium\/PREMIUM_FINAL_CONFIG_(?:RUNBOOK|EVIDENCE_20261014)\.md$/,
+    ],
+    migrations: [], schemas: [], rootCollections: [], syncKinds: [],
+    shared: [
+      ['.github/workflows/v2-integration-validation.yml', 'Premium final-config certification: include the new exact-SHA source-only branch without weakening workflow checks'],
+      ['scripts-dev/meals-boundary-scan.cjs', 'Premium final-config: register owned tooling, tests and human documents; Staging SQL remains in existing Premium backend namespace, not Production migration chain'],
+    ],
+  },
 
 ];
 

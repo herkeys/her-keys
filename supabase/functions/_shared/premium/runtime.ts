@@ -17,7 +17,7 @@ export function readWebhookAuthConfig(deployment: DeploymentEnvironment): Webhoo
   return {
     authorizationSecret: Deno.env.get('REVENUECAT_WEBHOOK_AUTH') ?? null,
     hmacSecret: hmac && hmac.length > 0 ? hmac : null,
-    requireHmac: deployment === 'production',
+    requireHmac: deployment === 'production' || deployment === 'staging',
     toleranceSeconds: DEFAULT_TOLERANCE_SECONDS,
   };
 }

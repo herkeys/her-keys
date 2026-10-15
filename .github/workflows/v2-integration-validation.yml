@@ -17,6 +17,12 @@ on:
       - feature/herkeys-premium-stage1
       # Owner-approved Pass A convergence: certify the exact integration commit with the same mandatory steps.
       - codex/v2-premium-pass-a
+      # Premium-only source certification; no deletion work is included.
+      - integration/premium-certification
+      - codex/v2-premium-final-config
+      - engineering/premium-stage1-completion-20261014
+      # Premium source convergence: Stage 1 completion + Pass A account/lifecycle, exact pushed SHA.
+      - integration/premium-source-convergence-20261014
   workflow_dispatch:
 
 permissions:
