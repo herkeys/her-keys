@@ -44,6 +44,14 @@ Remote branches inspected via GitHub:
 
 **Note:** These changes do NOT provide cryptographic attestation of where a TEST event originated. The missing externally sourced dashboard evidence must be supplied and recorded by the operator. Do not close #18 until exact-SHA CI and a genuine Staging activation/rollback rehearsal succeed.
 
+## Newly closed source defect: dirty provider projection could still authorize work
+
+The existing `premium_authorize` obtains the effective state from `premium_entitlement_state`. The original function read `premium_entitlements.needs_reconcile` but did NOT use it: a previously active projection flagged by an ambiguous transfer or failed webhook could remain `premium_active`. That was a **P1 source authorization defect**.
+
+New additive migration `supabase/migrations/20261015140000_premium_stale_projection_guard.sql` makes `premium_entitlement_state` return `unknown` for ANY existing projection with `needs_reconcile=true`, after the deletion lifecycle overlay and before the original derivation. The same function is used by both the foundation and Staging allowlist implementations of `premium_authorize`; no customer-data RLS/read paths changed. `supabase/tests/82-premium-authorization.sql` now asserts denied Daily Load and Smart Inbox operations for a dirty active projection. `tests/premiumFinalConfig/staleProjectionGuard.test.mjs` pins source contracts.
+
+**Deployment dependency:** this is a new MIGRATION in source, **not installed into Staging or Production** in this sprint. It must be applied, database-tested and read back on Staging before any Premium feature is enabled. Production remains disabled; applying after separate owner-controlled release approvals only. **Residual architectural limit:** this flag detects explicitly known projection dirtiness but does not by itself force renewal of an old projection where all webhooks were silently missed. A bounded provider freshness policy across protected functions must be decided and verified before Public release. Never claim full stale entitlement protection solely from the flag.
+
 ## Live nonsecret read-back, October 14, 2026
 
 - RevenueCat project `proj93809efe`: two entitlements including `her_keys_plus`; current `default` offering has monthly, annual, lifetime **Test Store** products only; no App Store or Google Play native package products.
@@ -64,7 +72,7 @@ Remote branches inspected via GitHub:
 | 6 | Product-owner decision | P2 | Product owner | Approve Premium quota/cost/free-allowance settings, RC restore/transfer mode, Momentum thresholds (5 records/3 days; 28-day lookback), paywall benefit copy and Store metadata. |
 | 7 | Device verification | P1 | iOS & Android QA | Native Sandbox purchase/restore, Welcome Tree, Apple/Google/email auth, account switching, offline, cancelled/expired/grace, save/undo persistence and keyboard/back tests. No EAS build authorized here. |
 | 8 | Account deletion convergence | P0 | Deletion owner | Issue #9: per-account Premium table erasure, provider-ID/payload scrubbing in `premium_events`, transfer handling, 30-day recovery, zero-data terminal proof. Do NOT touch deletion worker/resource registry from this branch. |
-| 9 | Production/store release | P0 | Release owner | Separate hostile certification, full account-deletion signoff, approved pricing/metadata, store submissions and protected Production rollout. Production paid runtime and webhook processing remain OFF. |
+| 9 | Production/store release | P0 | Release owner | Separate hostile certification, full account-deletion signoff, approved pricing/metadata, store submissions and protected Production rollout. Production paid runtime and webhook processing remain OFF. |\n| 10 | Missing integration deployment | P1 | Premium backend owner | Install and negative-test additive `20261015140000_premium_stale_projection_guard.sql` in Staging before activating; do not mistake committed migration for hosted deployment. |\n| 11 | Missing freshness contract | P1 | Premium backend + product owner | Define age-based server provider re-verification when signed webhooks are missing, including outage behavior and bounded cost; `premium_entitlement_state`, `premium_authorize`, `smartInbox/handler.ts`. Existing `needs_reconcile` flag alone does not detect silent webhook loss. |
 
 ### Account-deletion owner's required data inventory
 
