@@ -18,6 +18,7 @@ on:
       # Premium-only source certification; no deletion work is included.
       - integration/premium-certification
       - codex/v2-premium-final-config
+      - engineering/premium-stage1-completion-20261014
       # Final-config isolated implementation and strict evidence lane.
       - codex/v2-premium-final-config
   workflow_dispatch:
