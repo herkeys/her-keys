@@ -307,6 +307,7 @@ This section summarizes [`HK_PLATFORM_PARITY_REGISTRY.json`](HK_PLATFORM_PARITY_
 | PC-06 | `src/features/systems/editor/SystemEditor.tsx` | 1 | E | Keyboard avoidance; Android relies on `adjustResize` (PP-D10, RT-18) |
 | PC-07 | — | — | — | RETIRED in Build 2A (commit `2641898`): the welcome-tree email entry no longer has a platform conditional. All four email/password/OTP/recovery screens use `padding` keyboard avoidance on iOS and Android (`EMAIL_AUTH_KEYBOARD_BEHAVIOR`), so no difference remains to approve. Pinned by `tests/androidAuthKeyboard.test.mjs` |
 | PC-08 | — | — | — | RETIRED in Build 2A (commit `2641898`): the welcome-tree OTP entry uses `padding` on both platforms, for the same reason. Device proof (RT-18) is still pending |
+| PC-PH-01 | `src/features/premium/usePremiumHome.ts` | 1 | A | Manage subscription opens the App Store or Google Play subscriptions page; everything else is shared |
 
 No class C (parity defect) or D (dead) conditional remains.
 

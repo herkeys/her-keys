@@ -58,24 +58,24 @@ export function premiumCopyFor(state: PremiumFeatureState, featureName: string, 
     case 'free_allowance':
       return { title: `${featureName} is open to you`, body: `You can use ${featureName} on your Free plan. ${PREMIUM} lifts the limit on how much Her Keys does for you.`, action: 'none', actionLabel: null, ...none, tone: 'info' };
     case 'upgrade_required':
-      return { title: `${featureName} is part of ${PREMIUM}`, body: `${PREMIUM} has Her Keys do more of the work for you. ${FREE_UNTOUCHED}`, action: 'upgrade', actionLabel: `See ${PREMIUM}`, secondaryAction: 'restore', secondaryLabel: 'Restore purchases', tone: 'info' };
+      return { title: `${featureName} is part of ${PREMIUM}`, body: `${PREMIUM} has Her Keys do more of the work for you. ${FREE_UNTOUCHED}`, action: 'upgrade', actionLabel: `See ${PREMIUM}`, secondaryAction: 'restore', secondaryLabel: 'Restore in Your Account', tone: 'info' };
     case 'verification_pending':
       switch (state.cause) {
         case 'checking':
           return { title: 'Confirming your purchase…', body: `The store says your purchase went through. Her Keys is confirming it with your account, which usually takes a few seconds. ${FREE_UNTOUCHED}`, action: 'none', actionLabel: null, ...none, tone: 'info' };
         case 'delayed':
-          return { title: 'Your purchase isn’t confirmed yet', body: `The store says you purchased ${PREMIUM}, but Her Keys hasn’t been able to confirm it yet. You haven’t lost anything and you won’t be charged twice. ${FREE_UNTOUCHED}`, action: 'verify', actionLabel: 'Check again', secondaryAction: 'restore', secondaryLabel: 'Restore purchases', tone: 'attention' };
+          return { title: 'Your purchase isn’t confirmed yet', body: `The store says you purchased ${PREMIUM}, but Her Keys hasn’t been able to confirm it yet. You haven’t lost anything and you won’t be charged twice. ${FREE_UNTOUCHED}`, action: 'verify', actionLabel: 'Check again', secondaryAction: 'restore', secondaryLabel: 'Restore in Your Account', tone: 'attention' };
         case 'outage':
           return { title: `Can’t reach ${PREMIUM} right now`, body: `Her Keys couldn’t confirm your subscription just now. Nothing has changed on your account. ${FREE_UNTOUCHED} Try again in a moment.`, action: 'verify', actionLabel: 'Try again', ...none, tone: 'attention' };
         case 'account_mismatch':
-          return { title: 'This purchase isn’t on this account', body: `The store has a ${PREMIUM} purchase, but it isn’t attached to the Her Keys account you’re signed in to. If it belongs to another Her Keys account, sign in to that one. Otherwise tap Restore purchases. ${FREE_UNTOUCHED}`, action: 'restore', actionLabel: 'Restore purchases', secondaryAction: 'verify', secondaryLabel: 'Check again', tone: 'attention' };
+          return { title: 'This purchase isn’t on this account', body: `The store has a ${PREMIUM} purchase, but it isn’t attached to the Her Keys account you’re signed in to. If it belongs to another Her Keys account, sign in to that one. Otherwise tap Restore purchases. ${FREE_UNTOUCHED}`, action: 'restore', actionLabel: 'Restore in Your Account', secondaryAction: 'verify', secondaryLabel: 'Check again', tone: 'attention' };
       }
       break;
     case 'subscription_expired':
       return {
         title: state.revoked ? `Your ${PREMIUM} purchase was refunded` : `Your ${PREMIUM} has ended`,
         body: `New ${featureName} work is paused. ${DATA_SAFE} ${FREE_UNTOUCHED}`,
-        action: 'upgrade', actionLabel: `Get ${PREMIUM} again`, secondaryAction: 'restore', secondaryLabel: 'Restore purchases', tone: 'info',
+        action: 'upgrade', actionLabel: `Get ${PREMIUM} again`, secondaryAction: 'restore', secondaryLabel: 'Restore in Your Account', tone: 'info',
       };
     case 'feature_unavailable':
       switch (state.cause) {

@@ -20,6 +20,11 @@ export interface AccountPanelProps {
   restoring?: boolean;
   restoreNotice?: string | null;
   restoreControl?: ReactNode;
+  /**
+   * Her Keys Premium (status, the three tools, purchase and manage). When present, the ONE Restore Purchases control is placed directly
+   * beneath it instead of in the footer — it is moved, never duplicated.
+   */
+  premiumSection?: ReactNode;
 }
 
 /**
@@ -28,9 +33,17 @@ export interface AccountPanelProps {
  * holds its own household is never merged into one (the server refuses it). Signing out keeps everything on this phone; the next sign-in
  * of the same account resumes it. Presentational only — the route supplies the actions, and they all go through AccountRuntime.
  */
-export function AccountPanel({ mode, providers, busy, failed, onSignIn, onSignOut, onClose, onRestore, restoring = false, restoreNotice, restoreControl, onPrivacy }: AccountPanelProps) {
+export function AccountPanel({ mode, providers, busy, failed, onSignIn, onSignOut, onClose, onRestore, restoring = false, restoreNotice, restoreControl, onPrivacy, premiumSection }: AccountPanelProps) {
   const copy = COPY[mode];
   const offersProviders = mode === 'signIn' || mode === 'reconnect';
+  const premiumShown = mode === 'connected' && premiumSection != null;
+  const restoreBlock =
+    mode === 'connected' && restoreControl ? restoreControl : mode === 'connected' && onRestore ? (
+      <>
+        <Button label={restoring ? 'Restoring purchases…' : 'Restore purchases'} variant="secondary" disabled={busy || restoring} onPress={onRestore} />
+        {restoreNotice ? <AppText variant="bodySm" style={styles.note} accessibilityLiveRegion="polite">{restoreNotice}</AppText> : null}
+      </>
+    ) : null;
 
   return (
     <ScrollView contentContainerStyle={styles.root}>
@@ -43,6 +56,13 @@ export function AccountPanel({ mode, providers, busy, failed, onSignIn, onSignOu
           {copy.lede}
         </AppText>
       </View>
+
+      {premiumShown ? (
+        <View style={styles.premium}>
+          {premiumSection}
+          {restoreBlock}
+        </View>
+      ) : null}
 
       <View style={styles.footer}>
         {mode === 'connected' && onPrivacy ? <Button label="Privacy & Data" variant="secondary" disabled={busy || restoring} onPress={onPrivacy} /> : null}
@@ -63,12 +83,7 @@ export function AccountPanel({ mode, providers, busy, failed, onSignIn, onSignOu
             <Button key={provider} label={PROVIDER_LABELS[provider]} disabled={busy} onPress={() => onSignIn(provider)} />
           ))}
 
-        {mode === 'connected' && restoreControl ? restoreControl : mode === 'connected' && onRestore ? (
-          <>
-            <Button label={restoring ? 'Restoring purchases…' : 'Restore purchases'} variant="secondary" disabled={busy || restoring} onPress={onRestore} />
-            {restoreNotice ? <AppText variant="bodySm" style={styles.note} accessibilityLiveRegion="polite">{restoreNotice}</AppText> : null}
-          </>
-        ) : null}
+        {premiumShown ? null : restoreBlock}
         {mode === 'connected' && <Button label="Sign out" variant="secondary" disabled={busy || restoring} onPress={onSignOut} />}
 
         <Button label={mode === 'connected' ? 'Done' : 'Not now'} variant="ghost" onPress={onClose} disabled={restoring || (busy && mode !== 'resolving')} />
@@ -115,6 +130,7 @@ const styles = StyleSheet.create({
   body: { flex: 1, justifyContent: 'center', paddingHorizontal: spacing.xl },
   title: { marginTop: spacing.md },
   lede: { marginTop: spacing.lg },
+  premium: { paddingHorizontal: spacing.xl, paddingVertical: spacing.xl, gap: spacing.md },
   footer: { paddingHorizontal: spacing.xl, paddingBottom: spacing.xxxl, gap: spacing.md },
   note: { textAlign: 'center' },
 });

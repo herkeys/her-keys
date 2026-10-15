@@ -233,7 +233,9 @@ test('PBP-1b (Premium Stage 1): the ONLY server-authoritative consumers of Premi
     .sort();
   // Daily Load review (gate `daily_load_premium`) and the Momentum weekly review (gate `momentum_report`). Smart Inbox reaches the server through the
   // capture seam (`src/features/smart-inbox/PremiumReaderBridge.tsx`, which publishes only the server-confirmed entitlement), not through this hook.
-  assert.deepEqual(consumers, ['src/features/daily-load/premium/usePremiumDailyLoad.ts', 'src/features/momentum/premium/usePremiumMomentum.ts']);
+  // The Premium home (Your Account) is a PURCHASE surface, not a protected operation: it opens the store's purchase interface through `usePremiumUpgrade`
+  // and gates nothing. It must never use `usePremiumFeature` (pinned in tests/premiumHome/structure.test.mjs).
+  assert.deepEqual(consumers, ['src/features/daily-load/premium/usePremiumDailyLoad.ts', 'src/features/momentum/premium/usePremiumMomentum.ts', 'src/features/premium/usePremiumHome.ts']);
 });
 
 test('PBP-2 (evolved in Premium Stage 1): the backend enforces Premium ONLY inside the Premium namespace — no Free function, calendar, weather, AI, welcome-email or sync path reads the entitlement', () => {

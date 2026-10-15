@@ -181,6 +181,11 @@ export function usePremiumState(): PremiumContextValue {
   return value;
 }
 
+/** For a surface that is useful without Premium (the Account screen): the Premium state, or null where no provider is mounted. */
+export function usePremiumStateIfMounted(): PremiumContextValue | null {
+  return useContext(PremiumContext);
+}
+
 export interface PremiumFeatureApi {
   state: PremiumFeatureState;
   copy: PremiumCopy;

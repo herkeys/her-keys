@@ -114,6 +114,17 @@
       "iosAndroidEquivalent": false,
       "exception": "EX-01",
       "evidence": "Native iOS requires Apple option; app.json usesAppleSignIn=true, expo-apple-authentication plugin is present, tests/welcomeAuthFlow.test.mjs asserts iOS button; device proof pending."
+    },
+    {
+      "id": "PC-PH-01",
+      "file": "src/features/premium/usePremiumHome.ts",
+      "count": 1,
+      "expression": "Platform.OS -> the store's own subscriptions screen (App Store / Google Play) for Manage subscription",
+      "class": "A",
+      "capability": "Manage subscription",
+      "difference": "Each store has its own subscriptions page. The state, the words, the single-flight behaviour and the failure notice are shared; only the destination URL differs (src/monetization/subscriptionManagement.ts).",
+      "iosAndroidEquivalent": true,
+      "evidence": "tests/premiumHome/subscriptionManagement.test.mjs and tests/premiumHome/home.test.mjs open the iOS and Android destinations through the same control. The real store screens are NOT RUN (no device, no store build)."
     }
   ],
   "platformFiles": [],

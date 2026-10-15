@@ -3,6 +3,7 @@ import { AppText, Button, Card, Divider, Sheet, Tag } from '../../../design/comp
 import { colors, spacing } from '../../../design/tokens';
 import type { MomentumReport } from '../../../domain/premium/momentum/model';
 import type { SavedReport } from '../../../domain/premium/momentum/snapshot';
+import { openAccountToRestore } from '../../../monetization/accountNavigation';
 import type { PremiumCopy } from '../../../monetization/premiumCopy';
 import {
   COPY,
@@ -81,9 +82,9 @@ function Actions({ api, copy }: { api: PremiumMomentumApi; copy: PremiumCopy }) 
     <View>
       {copy.action === 'upgrade' && primary !== null ? <Button label={primary} onPress={() => void upgrade.start()} disabled={upgrade.presenting} style={styles.primaryButton} /> : null}
       {(copy.action === 'verify' || copy.action === 'retry') && primary !== null ? <Button label={primary} onPress={() => void feature.verify()} style={styles.primaryButton} /> : null}
-      {copy.action === 'restore' && primary !== null ? <Button label={primary} onPress={() => void upgrade.start()} disabled={upgrade.presenting} style={styles.primaryButton} /> : null}
+      {copy.action === 'restore' && primary !== null ? <Button label={primary} onPress={() => void openAccountToRestore()} style={styles.primaryButton} /> : null}
       {copy.secondaryAction === 'verify' && copy.secondaryLabel !== null ? <Button label={copy.secondaryLabel} variant="ghost" size="sm" onPress={() => void feature.verify()} /> : null}
-      {copy.secondaryAction === 'restore' && copy.secondaryLabel !== null ? <Button label={copy.secondaryLabel} variant="ghost" size="sm" onPress={() => void upgrade.start()} disabled={upgrade.presenting} /> : null}
+      {copy.secondaryAction === 'restore' && copy.secondaryLabel !== null ? <Button label={copy.secondaryLabel} variant="ghost" size="sm" onPress={() => void openAccountToRestore()} /> : null}
     </View>
   );
 }

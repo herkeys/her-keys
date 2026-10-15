@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import { AppText, Button, Card, ConfirmationSheet, Divider, Sheet, Tag } from '../../../design/components';
 import { colors, spacing } from '../../../design/tokens';
 import type { DailyLoadReview, RescheduleProposal } from '../../../domain/premium/dailyLoadReview';
+import { openAccountToRestore } from '../../../monetization/accountNavigation';
 import type { PremiumCopy } from '../../../monetization/premiumCopy';
 import { COPY, assumptionLine, consideredLine, dayTitle, evidenceGapLine, pressureResponsibleLine, pressureSentence, proposalHeadline, proposalImpactLines } from './copy';
 import { usePremiumDailyLoad, type Notice, type PremiumDailyLoadApi, type ReceiptView } from './usePremiumDailyLoad';
@@ -84,9 +85,9 @@ function Actions({ api, copy }: { api: PremiumDailyLoadApi; copy: PremiumCopy })
     <View>
       {copy.action === 'upgrade' && primary !== null ? <Button label={primary} onPress={() => void upgrade.start()} disabled={upgrade.presenting} style={styles.primaryButton} /> : null}
       {(copy.action === 'verify' || copy.action === 'retry') && primary !== null ? <Button label={primary} onPress={() => void feature.verify()} style={styles.primaryButton} /> : null}
-      {copy.action === 'restore' && primary !== null ? <Button label={primary} onPress={() => void upgrade.start()} disabled={upgrade.presenting} style={styles.primaryButton} /> : null}
+      {copy.action === 'restore' && primary !== null ? <Button label={primary} onPress={() => void openAccountToRestore()} style={styles.primaryButton} /> : null}
       {copy.secondaryAction === 'verify' && copy.secondaryLabel !== null ? <Button label={copy.secondaryLabel} variant="ghost" size="sm" onPress={() => void feature.verify()} /> : null}
-      {copy.secondaryAction === 'restore' && copy.secondaryLabel !== null ? <Button label={copy.secondaryLabel} variant="ghost" size="sm" onPress={() => void upgrade.start()} disabled={upgrade.presenting} /> : null}
+      {copy.secondaryAction === 'restore' && copy.secondaryLabel !== null ? <Button label={copy.secondaryLabel} variant="ghost" size="sm" onPress={() => void openAccountToRestore()} /> : null}
     </View>
   );
 }

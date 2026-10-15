@@ -9,6 +9,7 @@ import { WelcomeAuthFlow } from '../src/features/account/WelcomeAuthFlow';
 import { accountProviders } from '../src/store/accountRuntimeInstance';
 import { useAccount } from '../src/store/AccountProvider';
 import { RestorePurchasesControl } from '../src/features/account/RestorePurchasesControl';
+import { PremiumHome } from '../src/features/premium/PremiumHome';
 
 /**
  * Your Account — the one account surface after the first run (the route keeps its `/sign-in` name).
@@ -68,6 +69,7 @@ export default function SignIn() {
         onSignOut={() => void signOut()}
         onClose={() => router.back()}
         restoring={restoring}
+        premiumSection={<PremiumHome key={accountId} hold={busy || restoring} />}
         restoreControl={<RestorePurchasesControl key={accountId} accountId={accountId} blocked={busy} onRestoringChange={setRestoring} />}
       />
     </Screen>

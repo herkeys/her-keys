@@ -1253,6 +1253,27 @@ const LATER_FEATURES = [
       ['scripts-dev/meals-boundary-scan.cjs', 'Premium final-config: register owned tooling, tests and human documents; Staging SQL remains in existing Premium backend namespace, not Production migration chain'],
     ],
   },
+  {
+    id: 'HK-PREMIUM-HOME (Premium status, tools, purchase and manage inside Your Account)',
+    // A client-only surface over the existing server-confirmed Premium state. No new household data, synchronised kind, schema or Meals change.
+    branch: null,
+    owned: [
+      /^src\/features\/premium\//,
+      /^tests\/premiumHome\//,
+      /^src\/monetization\/(?:accountNavigation|subscriptionManagement)\.ts$/,
+    ],
+    migrations: [], schemas: [], rootCollections: [], syncKinds: [],
+    shared: [
+      ['src/features/account/AccountPanel.tsx', 'Premium home: a Premium section slot that MOVES the one Restore control beneath it; never a second control'],
+      ['app/sign-in.tsx', 'Premium home: mount the Premium section in Your Account; the single RestorePurchasesControl stays here'],
+      ['src/monetization/PremiumStateProvider.tsx', 'Premium home: a read-only optional accessor so the Account screen renders without the provider'],
+      ['src/monetization/premiumCopy.ts', 'Premium home: a feature notice says where to restore (Your Account) instead of mislabeling the paywall as a restore'],
+      ['src/features/daily-load/premium/PremiumDailyLoadSection.tsx', 'Premium home: its restore affordance navigates to the single Account control instead of opening the paywall'],
+      ['src/features/momentum/premium/PremiumMomentumSection.tsx', 'Premium home: its restore affordance navigates to the single Account control instead of opening the paywall'],
+      ['tests/premiumFeedback.test.mjs', 'Premium home: the Premium-state consumer allow-list names the purchase surface that opens the store paywall and gates nothing'],
+      ['scripts-dev/meals-boundary-scan.cjs', 'Premium home: register the lane'],
+    ],
+  },
 
 ];
 

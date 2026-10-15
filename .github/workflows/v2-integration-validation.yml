@@ -23,6 +23,8 @@ on:
       - engineering/premium-stage1-completion-20261014
       # Premium source convergence: Stage 1 completion + Pass A account/lifecycle, exact pushed SHA.
       - integration/premium-source-convergence-20261014
+      # Premium home and account management (WP-1): the same gate on its exact pushed SHA.
+      - feature/premium-home-account-20261014
   workflow_dispatch:
 
 permissions:
