@@ -114,14 +114,16 @@ node scripts-dev/premium-final-config.mjs reconcile --account-id "$HK_STAGING_TE
 The runner fetches the current subscriber state through RC REST API (server secret), reads the Staging Premium projection via service role, and classifies `matched`, `missing`, `stale`, or `conflicting`. `--resync` calls existing `premium-ops` force-reconcile once, then rechecks. Any unresolved mismatch exits nonzero. A paid subscriber requires RC-provider verified state; synthetic webhook receipt does NOT suffice.
 
 ## 7. Controlled Staging activation, verification, rollback
-Only after authenticated signed TEST receipt, backend negative auth/HMAC checks, tester marker, guard migration and a real subscription reconciliation PASS, activate paid features for allowlisted Staging users. **The command independently verifies an authenticated TEST receipt less than 15 minutes old AND a currently provider-confirmed Premium entitlement for the named tester; the `--signed-smoke-passed` flag alone is never sufficient.**
+Only after authenticated signed TEST receipt, backend negative auth/HMAC checks, tester marker, guard migration and a real subscription reconciliation PASS, activate paid features for allowlisted Staging users. **The command requires an operator-attested, separately initiated RevenueCat Dashboard TEST event ID with a matching recent hosted receipt (a local `hk-preflight-*` event can never qualify), plus a NEW authenticated RevenueCat subscriber API lookup in the enable path for the exact tester UUID. The response must show a current native `app_store`/`play_store` Sandbox subscription, no ambiguous ownership or refund, and a matching non-synthetic server projection reconciled within five minutes. The TEST receipt does not cryptographically authenticate its initiation source; do not claim it does.**
 
 ```bash
-node scripts-dev/premium-final-config.mjs window enable --account-id "$HK_STAGING_TESTER_ACCOUNT_ID" --env staging --signed-smoke-passed
+node scripts-dev/premium-final-config.mjs reconcile --account-id "$HK_STAGING_TESTER_ACCOUNT_ID" --env staging
+# Obtain the actual TEST event ID from an independent RevenueCat Dashboard delivery and check its durable Staging receipt.
+node scripts-dev/premium-final-config.mjs window enable --account-id "$HK_STAGING_TESTER_ACCOUNT_ID" --provider-test-event-id "$HK_RC_EXTERNAL_TEST_EVENT_ID" --env staging --signed-smoke-passed
 node scripts-dev/premium-final-config.mjs window verify --env staging
 ```
 
-This updates only Staging's three paid rows `daily_load_premium`, `smart_inbox_extract`, `momentum_report` to `enabled=true`, `released=true`, `rollout_status='staging_only'` and resumes Staging webhook processing. The server `premium_authorize` guard refuses nonallowlisted accounts and still requires real entitlements, correct household ownership, AI consent and quota.
+This requires a REAL Apple/Google Sandbox subscription, not RevenueCat Test Store or a locally signed fixture; with only Test Store catalog entries this command must FAIL CLOSED. This updates only Staging's three paid rows `daily_load_premium`, `smart_inbox_extract`, `momentum_report` to `enabled=true`, `released=true`, `rollout_status='staging_only'` and resumes Staging webhook processing. The server `premium_authorize` guard refuses nonallowlisted accounts and still requires real entitlements, correct household ownership, AI consent and quota.
 
 **Immediate Staging fail-closed rollback, safe without secret preflight:**
 
@@ -136,6 +138,6 @@ Certification checklist: missing/wrong auth 401; missing/bad/stale signature 401
 
 If any of these fails: execute the rollback command above, preserve event/decision evidence, do not delete rows or fake an entitlement. Production remains with `premium_enabled=false`, `webhook_processing=false`, account deletion disabled/dry-run.
 
-**Evidence levels:** source implementation and local fixtures are not `STAGING_VERIFIED`. Only signed live RC deliveries, actual JWT testers, durable rows and a store Sandbox purchase count as hosted certification.
+**Evidence levels:** source implementation and local fixtures are not `STAGING_VERIFIED`. Only independently initiated actual RC Dashboard deliveries, actual JWT testers, durable rows and a native-store Sandbox purchase count as hosted certification. A known event ID matched to a database row is operator attestation, not proof of transport origin; retain the provider-side screenshot/log separately.
 
 **Final operational blocker:** human security setup plus RC test delivery and actual Staging subscriber context. This runbook cannot create real paid store products; existing offering only has Test Store products, and Play/Apple provider readiness must be checked separately.
