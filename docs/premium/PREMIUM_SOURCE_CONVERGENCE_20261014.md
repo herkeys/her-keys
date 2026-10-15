@@ -81,7 +81,7 @@ protections) and Stage 1's server freshness/authorization protections therefore 
 | `run-premium.mjs` (SQL suites 82/83) | **126/126** after the repair in section 5 (it aborted at the 82 suite before) |
 | `run-premium.mjs --concurrency` | 11/11 |
 | `run-premium.mjs --parity` | 2/2 (SQL and TypeScript agree on 4000 generated rows, all 7 derivable states reached) |
-| `run-premium.mjs --journey` | 26 pass, **2 fail** before repair: see D2. A repair is written but NOT run or committed (section 5). |
+| `run-premium.mjs --journey` | 26 pass, 2 fail before repair (D2); **30/30** after the repair in section 5. |
 
 ## 5. Repairs
 
@@ -90,10 +90,10 @@ protections) and Stage 1's server freshness/authorization protections therefore 
    that table, so the run died with `relation "account_deletion_requests" already exists` and no Premium SQL assertion ran. It now inserts a valid row
    into the real table (explicit `receipt_hash`, `requested_at`, `grace_period_ends_at` to satisfy the real CHECKs) and creates the
    stand-in only when the table is absent. No assertion removed; no deletion-owned file touched.
-2. **D2 written, not committed:** `supabase/tests/premium-journey.mjs` (working-tree edit). Stage 1's 24h freshness guard
+2. **D2 fixed (journey 30/30):** `supabase/tests/premium-journey.mjs`. Stage 1's 24h freshness guard
    (correctly) makes a webhook-only purchase `entitlement_unknown`. The journey still expected `premium_active` straight after the webhook. The edit adds a
    proof of that denial (`entitlement_unknown` / `retry_verification`), reconciles A through the RevenueCat fake with `reconcileAccount`, then keeps the
-   original assertions. The run to verify it was refused by the session's permission classifier, so it is unverified and left uncommitted for the owner's decision.
+   original assertions. Run and committed with the owner's approval.
 
 ## 6. The eight deletion failures: reproduced, root cause separated
 
@@ -132,7 +132,7 @@ terminal erasure to the deletion owner).** Suggested repair for that build, in t
 | ID | Defect | Class | Location | Status |
 |---|---|---|---|---|
 | D1 | Premium suite 82 collided with the real deletion table, aborting every Premium SQL assertion | functional defect (test composition) | `supabase/tests/82-premium-authorization.sql:150` | FIXED `95d71ab` |
-| D2 | Journey asserts webhook-only purchase is `premium_active`; contradicts the 24h freshness guard | missing test proof | `supabase/tests/premium-journey.mjs:112-117` | Repair written, unverified, uncommitted |
+| D2 | Journey asserts webhook-only purchase is `premium_active`; contradicts the 24h freshness guard | missing test proof | `supabase/tests/premium-journey.mjs:112-117` | FIXED, journey 30/30 |
 | D3 | Premium tables unclassified in deletion registry; 8 test failures; no provider-id erasure | functional defect (deletion-owned) | registry above; issue #9 | DEFERRED to next build (owner); CI stays red |
 | D4 | No Premium home, plan status or manage/cancel entry. Premium is reachable only through Today sections and silent Talk It Out enhancement; Account has no Premium status or "manage subscription" | UX improvement | `src/features/account/AccountPanel.tsx` (no Premium reference), `src/features/today/TodayBriefing.tsx` | Backlog WP-1 |
 | D5 | Client verifies once per account session automatically; after the 24h freshness window a returning subscriber who is offline on that attempt is denied (`entitlement_unknown`) until a manual retry. Copy for this state is not proven | UX improvement + missing test proof | `src/monetization/premiumController.ts` (verify), `premiumCopy.ts` | Backlog WP-2 |
@@ -169,7 +169,7 @@ Acceptance: attribution of deferrals to the ledger (no double count), thresholds
 
 ## 9. Next gates, in order
 
-1. Decide D2: allow the journey edit to be verified and committed (it is additive).
+1. (done) D2 verified and committed.
 2. Push and read exact-SHA CI; expect only the 8 deletion failures.
 3. Owner authorizes Staging per `PREMIUM_STAGE1_STAGING_PLAN.md`; device testing then covers D6 and D7.
 4. Next build: deletion owner closes #9 (section 6), then the integrated suite must be 0 failures before any V2 release.
