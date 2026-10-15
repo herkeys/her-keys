@@ -136,18 +136,23 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
   const report = (type: string, detail?: string) => options.report?.({ type, detail });
 
   /**
-   * RevenueCat is told the Supabase account id and nothing else on identity
-   * activation. An earlier anonymous welcome purchase is not proof of this
-   * account's entitlement until RevenueCat has linked and refreshed it.
-   * A failure here is logged and stepped over:
-   * entitlement is not identity, and it must not be able to undo a claim the
-   * server already committed.
+   * The authenticated Supabase actor is sent to RevenueCat, but store identity
+   * is NOT on the critical path for Free account login, bootstrap, restore or
+   * logout. A native SDK request can stall indefinitely when billing is offline.
+   * Report its failure asynchronously; all paid operations independently require
+   * the exact actor to have been identified before checkout or entitlement use.
    */
-  const identify = async (accountId: AccountId | null) => {
+  const identify = (accountId: AccountId | null): void => {
     try {
-      await options.onAccountIdentified?.(accountId);
-    } catch (error) {
-      report('account.identify_failed', error instanceof Error ? error.message : String(error));
+      const pending = options.onAccountIdentified?.(accountId);
+      if (pending) {
+        void pending.catch(() => {
+          // A store outage can never prevent the account/household from binding.
+          report('account.identify_failed', 'revenuecat_identity_unavailable');
+        });
+      }
+    } catch {
+      report('account.identify_failed', 'revenuecat_identity_unavailable');
     }
   };
 
@@ -239,7 +244,7 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
     // B must never become the transport credential for A.
     if (degraded === null && bindingFor(session).mode === 'quarantine') {
       await options.sessions.write(session);
-      await identify(session.accountId);
+      identify(session.accountId);
       apply({ type: 'sessionEstablished', session });
       return runtime.resolveBinding();
     }
@@ -260,11 +265,26 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
       return apply({ type: 'authFailed', detail: 'could not safely store the account session', recoverable: true });
     }
 
-    await identify(activated.session.accountId);
+    identify(activated.session.accountId);
     if (degraded !== null) return apply({ type: 'sessionRecovered', session: activated.session });
 
     apply({ type: 'sessionEstablished', session: activated.session });
     return runtime.resolveBinding();
+  };
+
+  const unexpectedAuthFailure = (event: string): AccountState => {
+    // Only the authenticated runtime can end an in-flight attempt. Clearing a
+    // visual spinner without resetting its state would prevent all retries.
+    report(event);
+    if (state.kind === 'authenticating') {
+      return apply({ type: 'authFailed', detail: 'authentication_unavailable', recoverable: true });
+    }
+    if (state.kind === 'bootstrapping' || state.kind === 'claiming') {
+      // The durable claim key/receipt is kept so retry cannot duplicate a
+      // household if the server completed before the transport failed.
+      return apply({ type: 'bindingFailed', detail: 'account_binding_unavailable', recoverable: true });
+    }
+    return state;
   };
 
   const runtime: AccountRuntime = {
@@ -321,7 +341,7 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
       // A credential for another account may describe a real sign-in, but it
       // is never installed in the data-transport client for this household.
       if (bound !== null && bound.accountId !== loaded.session.accountId) {
-        await identify(loaded.session.accountId);
+        identify(loaded.session.accountId);
         apply({ type: 'sessionEstablished', session: loaded.session });
         return this.resolveBinding();
       }
@@ -376,7 +396,7 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
         return apply({ type: 'signedOut' });
       }
 
-      await identify(activated.session.accountId);
+      identify(activated.session.accountId);
       apply({ type: 'sessionEstablished', session: activated.session });
       return this.resolveBinding();
     },
@@ -386,34 +406,39 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
       if (attempt === null) return state;
       const { degraded } = attempt;
 
-      const result = await options.providers.signIn(provider);
+      try {
+        const result = await options.providers.signIn(provider);
 
-      if (superseded(attempt)) {
-        report('account.auth_superseded');
-        return state;
+        if (superseded(attempt)) {
+          report('account.auth_superseded');
+          return state;
+        }
+
+        switch (result.kind) {
+          case 'cancelled':
+            return degraded === null ? apply({ type: 'authCancelled' }) : state;
+          case 'unavailable':
+          case 'configurationError':
+            if (degraded !== null) {
+              report('account.reauth_failed', result.detail);
+              return state;
+            }
+            return apply({ type: 'authFailed', detail: result.detail, recoverable: false });
+          case 'providerError':
+            if (degraded !== null) {
+              report('account.reauth_failed', result.detail);
+              return state;
+            }
+            return apply({ type: 'authFailed', detail: result.detail, recoverable: true });
+          case 'success':
+            break;
+        }
+
+        return await adoptSession(result.session, degraded);
+      } catch {
+        if (superseded(attempt)) return state;
+        return unexpectedAuthFailure('account.provider_unexpected_failure');
       }
-
-      switch (result.kind) {
-        case 'cancelled':
-          return degraded === null ? apply({ type: 'authCancelled' }) : state;
-        case 'unavailable':
-        case 'configurationError':
-          if (degraded !== null) {
-            report('account.reauth_failed', result.detail);
-            return state;
-          }
-          return apply({ type: 'authFailed', detail: result.detail, recoverable: false });
-        case 'providerError':
-          if (degraded !== null) {
-            report('account.reauth_failed', result.detail);
-            return state;
-          }
-          return apply({ type: 'authFailed', detail: result.detail, recoverable: true });
-        case 'success':
-          break;
-      }
-
-      return adoptSession(result.session, degraded);
     },
 
     emailOtpAvailable: () => emailOtp.isAvailable(),
@@ -443,7 +468,11 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
         if (attempt.degraded === null) apply({ type: 'authCancelled' });
         return { state, outcome: result };
       }
-      return { state: await adoptSession(result.session, attempt.degraded), outcome: { kind: 'authenticated' } };
+      try {
+        return { state: await adoptSession(result.session, attempt.degraded), outcome: { kind: 'authenticated' } };
+      } catch {
+        return { state: unexpectedAuthFailure('account.password_binding_unexpected_failure'), outcome: { kind: 'unreachable', detail: 'account_binding_unavailable' } };
+      }
     },
 
     async requestEmailOtp(email) {
@@ -493,7 +522,11 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
         return { state, outcome: result };
       }
 
-      return { state: await adoptSession(result.session, degraded), outcome: { kind: 'verified' } };
+      try {
+        return { state: await adoptSession(result.session, degraded), outcome: { kind: 'verified' } };
+      } catch {
+        return { state: unexpectedAuthFailure('account.email_binding_unexpected_failure'), outcome: { kind: 'failed', detail: 'account_binding_unavailable' } };
+      }
     },
 
     async resolveBinding() {
@@ -699,7 +732,7 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
         return state;
       }
 
-      await identify(null);
+      identify(null);
       // The binding stays. Signing out is not leaving the account, and the next
       // sign-in of the same account must resume rather than claim again.
       return apply({ type: 'signedOut' });
