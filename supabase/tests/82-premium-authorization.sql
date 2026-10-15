@@ -17,6 +17,20 @@ RESET ROLE;
 SELECT hm.household_id AS hh_a FROM public.household_members hm WHERE hm.profile_id = :'ua' AND hm.role = 'owner' \gset
 SELECT hm.household_id AS hh_c FROM public.household_members hm WHERE hm.profile_id = :'uc' AND hm.role = 'owner' \gset
 
+-- Pending provider reconciliation must block all new paid work.
+BEGIN;
+SELECT herkeys_test.premium_grant(:'ua', 'active');
+UPDATE public.premium_entitlements SET needs_reconcile = true WHERE account_id = :'ua';
+SELECT CASE WHEN public.premium_entitlement_state(:'ua') = 'unknown' THEN 'PASS' ELSE 'FAIL' END
+  || ' | needs_reconcile denies a previously active projection';
+SELECT public.premium_authorize(:'ua', 'daily_load_premium', :'hh_a', 'k-reconcile-dirty-01') AS dirty_decision \gset
+SELECT CASE WHEN (:'dirty_decision'::jsonb ->> 'reason') = 'entitlement_unknown' THEN 'PASS' ELSE 'FAIL' END
+  || ' | pending provider reconciliation cannot authorize Daily Load computation';
+SELECT public.premium_authorize(:'ua', 'smart_inbox_extract', :'hh_a', 'k-reconcile-dirty-02') AS dirty_ai_decision \gset
+SELECT CASE WHEN (:'dirty_ai_decision'::jsonb ->> 'reason') = 'entitlement_unknown' THEN 'PASS' ELSE 'FAIL' END
+  || ' | pending provider reconciliation cannot authorize Smart Inbox AI spending';
+ROLLBACK;
+
 -- ============ STATE DERIVATION (the pure function; mirrored by entitlementState.ts) =============================================
 SELECT CASE WHEN public.premium_derive_state(false, null, null, null, null, null, null, null, true, now()) = 'unknown' THEN 'PASS' ELSE 'FAIL' END || ' | derive: no projection row is unknown, never free';
 SELECT CASE WHEN public.premium_derive_state(true, 'reconcile', false, null, null, null, null, null, false, now()) = 'free' THEN 'PASS' ELSE 'FAIL' END || ' | derive: a reconciled non-subscriber is free';
