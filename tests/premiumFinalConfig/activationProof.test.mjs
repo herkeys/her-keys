@@ -51,7 +51,7 @@ test('identity aliases, account switch, and transfer uncertainty deny',()=>{
   assert.equal(check(p=>{p.subscriber.aliases='unknown';}).reason,'ambiguous_provider_identity');
 });
 test('expired, refunded, invalid provider dates deny including missing subscription expiry',()=>{
-  assert.equal(check((p,d)=>{p.subscriber.entitlements.her_keys_plus.expires_date=iso(now-1000);d.expires_at=iso(now-1000);}).reason,'expired_provider_entitlement');
+  assert.equal(check((p,d)=>{p.subscriber.entitlements.her_keys_plus.expires_date=iso(now-1000);p.subscriber.subscriptions['native.test.monthly'].expires_date=iso(now-1000);d.expires_at=iso(now-1000);}).reason,'expired_provider_entitlement');
   assert.equal(check(p=>{p.subscriber.subscriptions['native.test.monthly'].refunded_at=iso(now-1000);}).reason,'provider_refund');
   assert.equal(check(p=>{p.subscriber.subscriptions['native.test.monthly'].expires_date=null;}).reason,'invalid_provider_dates');
   assert.equal(check(p=>{p.subscriber.subscriptions['native.test.monthly'].expires_date=iso(now+day*3);}).reason,'invalid_provider_dates');
