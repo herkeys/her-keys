@@ -46,7 +46,8 @@ test('synthetic fixture, missing provider, missing entitlement and false account
 test('identity aliases, account switch, and transfer uncertainty deny',()=>{
   assert.equal(check(p=>{p.subscriber.aliases.push(otherId);}).reason,'ambiguous_provider_identity');
   assert.equal(check(p=>{p.subscriber.original_app_user_id=otherId;}).reason,'ambiguous_provider_identity');
-  assert.equal(check(p=>{delete p.subscriber.aliases;}).reason,'ambiguous_provider_identity');
+  assert.equal(check(p=>{delete p.subscriber.aliases;}).eligible,true); // Official REST v1 response omits aliases.
+  assert.equal(check(p=>{p.subscriber.aliases='unknown';}).reason,'ambiguous_provider_identity');
 });
 test('expired, refunded, invalid provider dates deny including missing subscription expiry',()=>{
   assert.equal(check((p,d)=>{p.subscriber.entitlements.her_keys_plus.expires_date=iso(now-1000);d.expires_at=iso(now-1000);}).reason,'expired_provider_entitlement');
