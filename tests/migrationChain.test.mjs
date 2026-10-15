@@ -83,6 +83,7 @@ describe('post-certification migration governance', () => {
       // Her Keys Premium Stage 1, governed by supabase/tests/82-premium-authorization.sql and 83-premium-decision-ledger.sql.
       ['PREMIUM_FOUNDATION', '20261015120000_premium_entitlement_foundation.sql'],
       ['PREMIUM_LEDGER', '20261015130000_premium_decision_ledger.sql'],
+      ['PREMIUM_FRESHNESS', '20261015140000_premium_stale_projection_guard.sql'],
     ]);
     const sql = lf(POST_CERT_CHAIN[0].file);
     const executable = sql.replace(/--.*$/gm, '');
