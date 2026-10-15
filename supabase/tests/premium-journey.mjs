@@ -8,6 +8,7 @@ import { createClient } from '@supabase/supabase-js';
 import { createSupabaseStore } from '../functions/_shared/premium/supabasePorts.ts';
 import { handleGate } from '../functions/_shared/premium/gateHandler.ts';
 import { handleWebhook, processBacklog } from '../functions/_shared/premium/webhookHandler.ts';
+import { reconcileAccount } from '../functions/_shared/premium/reconcileService.ts';
 
 const JWT_SECRET = process.env.HERKEYS_LOCAL_JWT_SECRET ?? 'super-secret-jwt-token-with-at-least-32-characters-long';
 const b64 = (value) => Buffer.from(value).toString('base64url');
@@ -111,6 +112,12 @@ export async function premiumJourney({ check, stack, stackPsql }) {
   const purchase = rcBody({ id: 'journey-purchase-1' });
   const first = await hook(purchase);
   check('an authenticated INITIAL_PURCHASE is processed (200)', first.status === 200 && first.body.status === 'processed', JSON.stringify(first));
+  // Provider-freshness policy: a signed webhook alone never authorizes NEW paid computation. Until RevenueCat's subscriber record has
+  // been read recently, the gate answers entitlement_unknown and tells the client to retry verification.
+  const beforeReconcile = await gate(UA, { feature: 'daily_load_premium', householdId: hhA, idempotencyKey: op() });
+  check('a webhook-only purchase is NOT yet authorized: the gate says entitlement_unknown / retry_verification', beforeReconcile.body.outcome === 'denied' && beforeReconcile.body.reason === 'entitlement_unknown' && beforeReconcile.body.nextAction === 'retry_verification', JSON.stringify(beforeReconcile.body));
+  rcRecords.set(UA, subscriber());
+  check('reading RevenueCat\'s subscriber record for A reconciles the projection', (await reconcileAccount(deps, UA, { force: true })) === 'reconciled');
   check('A\'s own client reads premium_active through premium_my_entitlement', (await mine(UA)) === 'premium_active');
   check('B (same household, no purchase) does NOT inherit Premium', (await mine(UB)) === 'unknown');
   const allowedA = await gate(UA, { feature: 'daily_load_premium', householdId: hhA, idempotencyKey: op() });
