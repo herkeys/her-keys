@@ -24,6 +24,9 @@ export interface ConfigureResult {
 
 let configured = false;
 let identifiedAccountId: string | null = null;
+// Changed synchronously on every auth transition. An in-flight SDK call for
+// the previous account must immediately lose permission to read or purchase.
+let requestedAccountId: string | null = null;
 // Account changes must not interleave with a restore or a paywall's store transaction.
 let accountSdkOperation: Promise<void> = Promise.resolve();
 function withAccountSdkOperation<T>(operation: () => Promise<T>): Promise<T> {
@@ -33,7 +36,7 @@ function withAccountSdkOperation<T>(operation: () => Promise<T>): Promise<T> {
 }
 
 async function matchesIdentifiedAccount(expected: string | null): Promise<boolean> {
-  return configured && expected !== null && identifiedAccountId === expected && await Purchases.getAppUserID() === expected;
+  return configured && expected !== null && requestedAccountId === expected && identifiedAccountId === expected && await Purchases.getAppUserID() === expected && requestedAccountId === expected;
 }
 
 function currentPlatformApiKey(): string | undefined {
@@ -84,17 +87,24 @@ export type IdentifyResult = 'identified' | 'signed_out' | 'not_configured' | 's
  * RevenueCat outage must not be able to undo a claim the server has already
  * committed, so the caller logs this and carries on.
  */
-export async function identifyRevenueCatAccount(accountId: string | null): Promise<IdentifyResult> {
+export function identifyRevenueCatAccount(accountId: string | null): Promise<IdentifyResult> {
+  // Invalidate the previous actor BEFORE queueing any native operation. This
+  // also works if an earlier SDK call never settles: billing remains denied,
+  // while Supabase login/logout is independently allowed to finish.
+  requestedAccountId = accountId;
+  identifiedAccountId = null;
   return withAccountSdkOperation(async () => {
-    identifiedAccountId = null;
     if (!configured) return 'not_configured';
     try {
       if (accountId === null) {
         await Purchases.logOut();
         return 'signed_out';
       }
+      // Superseded queued logins must never re-identify an earlier account.
+      if (requestedAccountId !== accountId) return 'sdk_error';
       await Purchases.logIn(accountId);
-      if (await Purchases.getAppUserID() !== accountId) return 'sdk_error';
+      if (requestedAccountId !== accountId) return 'sdk_error';
+      if (await Purchases.getAppUserID() !== accountId || requestedAccountId !== accountId) return 'sdk_error';
       identifiedAccountId = accountId;
       return 'identified';
     } catch {
