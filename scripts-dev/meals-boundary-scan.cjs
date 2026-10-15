@@ -1282,6 +1282,7 @@ const LATER_FEATURES = [
       /^src\/domain\/account\/deadline\.ts$/,
       /^src\/platform\/(?:timeoutFetch|authDiagnostics)\.ts$/,
       /^tests\/authBoundedOperations\.test\.mjs$/,
+      /^tests\/onboardingLayout\.test\.mjs$/,
     ],
     migrations: [], schemas: [], rootCollections: [], syncKinds: [],
     shared: [
@@ -1291,6 +1292,10 @@ const LATER_FEATURES = [
       ['src/store/AccountProvider.tsx', 'P0 auth recovery: restore fallback so launch can never sit on the settling screen'],
       ['src/store/accountRuntimeInstance.ts', 'P0 auth recovery: stage-timing diagnostics sink (durations and stage names only)'],
       ['src/features/consent/ConsentFlow.tsx', 'P0 auth recovery: the consent save is bounded like the consent read'],
+      ['src/design/components/Screen.tsx', 'Welcome Tree layout: explicit bottom clearance always adds the system inset; tab-bar clearance stays the default'],
+      ['src/features/onboarding/OnboardingScaffold.tsx', 'Welcome Tree layout: Continue follows its content instead of the viewport bottom'],
+      ['app/onboarding/plus.tsx', 'Welcome Tree layout: no tab-bar clearance on the final onboarding step'],
+      ['app/onboarding/profile.tsx', 'Welcome Tree layout: no tab-bar clearance on the operating profile'],
       ['scripts-dev/meals-boundary-scan.cjs', 'P0 auth recovery: register the lane'],
       ['.github/workflows/v2-integration-validation.yml', 'P0 auth recovery: run the same gate on the repair branch exact pushed SHA'],
     ],
