@@ -112,4 +112,54 @@ export function projectionComparison(subscriber, projection, nowMs=Date.now()) {
   if (!rcActive && state==='unknown') return {matched:false,category:'stale',expected:'free'};
   return {matched:true,category:'matched',expected:rcActive?'premium_active':'free'};
 }
+
+/**
+ * Fail-closed Staging-only ACTIVATION proof. Synthetic signed webhook receipts, SDK
+ * CustomerInfo, and an old server projection are not purchase evidence. This
+ * checks a fresh authenticated RevenueCat subscriber lookup against the matching
+ * server-owned projection, without mutating any entitlement.
+ *
+ * Only native-store Sandbox subscriptions qualify. Test Store products are
+ * intentionally ineligible for the native paid-feature activation window.
+ */
+export function stagingActivationProof(subscriberResponse, projection, accountId, nowMs=Date.now()) {
+  const deny = (reason) => ({eligible:false,reason});
+  if (!isUuid(accountId) || !Number.isFinite(nowMs)) return deny('invalid_account');
+  const s=subscriberResponse?.subscriber;
+  if (!s || typeof s!=='object' || Array.isArray(s)) return deny('missing_subscriber');
+  // An account's alias history may represent a transfer. Never guess ownership.
+  if ((s.original_app_user_id && s.original_app_user_id!==accountId) ||
+      !Array.isArray(s.aliases) ||
+      s.aliases.some(alias=>alias!==accountId)) return deny('ambiguous_provider_identity');
+  const ent=s.entitlements?.her_keys_plus;
+  if (!ent || typeof ent.product_identifier!=='string' || !ent.product_identifier) return deny('missing_provider_entitlement');
+  const sub=s.subscriptions?.[ent.product_identifier];
+  if (!sub || sub.is_sandbox!==true || !['APP_STORE','PLAY_STORE'].includes(String(sub.store??'').toUpperCase())) {
+    return deny('unverified_native_sandbox_store');
+  }
+  const expiry=Date.parse(ent.expires_date);
+  const subscriptionExpiry=Date.parse(sub.expires_date);
+  const grace=ent.grace_period_expires_date ? Date.parse(ent.grace_period_expires_date) :
+    sub.grace_period_expires_date ? Date.parse(sub.grace_period_expires_date) : NaN;
+  if (!Number.isFinite(expiry) || !Number.isFinite(subscriptionExpiry) ||
+      Math.abs(expiry-subscriptionExpiry)>60_000) return deny('invalid_provider_dates');
+  if (expiry<=nowMs && !(Number.isFinite(grace) && grace>nowMs)) return deny('expired_provider_entitlement');
+  if (sub.refunded_at) return deny('provider_refund');
+  if (!projection || projection.account_id!==accountId || projection.source!=='reconcile' ||
+      projection.environment!=='SANDBOX' || projection.needs_reconcile!==false ||
+      projection.has_entitlement!==true || projection.revoked_at) return deny('untrusted_projection');
+  const reconciled=Date.parse(projection.last_reconciled_at);
+  if (!Number.isFinite(reconciled) || reconciled>nowMs+30_000 || nowMs-reconciled>300_000) {
+    return deny('stale_projection');
+  }
+  if (projection.product_id!==ent.product_identifier ||
+      String(projection.store??'').toUpperCase()!==String(sub.store).toUpperCase()) return deny('projection_provider_mismatch');
+  if (!['premium_active','premium_canceled_active','premium_billing_grace'].includes(projection.state)) return deny('not_entitled');
+  const projectedExpiry=Date.parse(projection.expires_at);
+  if (!Number.isFinite(projectedExpiry) || Math.abs(projectedExpiry-expiry)>60_000) return deny('projection_expiry_mismatch');
+  const projectedGrace=projection.grace_expires_at ? Date.parse(projection.grace_expires_at) : NaN;
+  if (expiry<=nowMs && (!Number.isFinite(projectedGrace) || projectedGrace<=nowMs)) return deny('projection_grace_mismatch');
+  return {eligible:true,reason:'native_sandbox_provider_and_projection_match'};
+}
+
 export function statusLine(name,ok) { return {check:name,passed:Boolean(ok)}; }
