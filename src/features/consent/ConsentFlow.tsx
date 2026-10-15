@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Linking, ScrollView, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText, Button, Overline, ChipToggle } from '../../design/components';
 import { color, spacing } from '../../design/tokens';
 import { HER_KEYS_LEGAL_URLS } from '../../config/legal';
@@ -57,6 +58,9 @@ export function ConsentGate({ session, children }: { session: AccountSession; ch
   const [issue, setIssue] = useState<string | null>(null);
   const notification = useLocalNotifications();
   const { signOut } = useAccount();
+  // The gate renders above the app's own safe-area shell, so it carries the system insets itself (status bar, gesture/3-button bar).
+  const insets = useSafeAreaInsets();
+  const inset = { paddingTop: insets.top + spacing.xxl, paddingBottom: insets.bottom + spacing.xxl };
 
   useEffect(() => {
     let active = true;
@@ -113,9 +117,9 @@ export function ConsentGate({ session, children }: { session: AccountSession; ch
     setStage('permissions');
   };
   if (stage === 'ready') return <>{children}</>;
-  if (stage === 'loading') return <View style={styles.center}><AppText variant="body">Checking your account setup…</AppText></View>;
+  if (stage === 'loading') return <View style={[styles.center, inset]}><AppText variant="body">Checking your account setup…</AppText></View>;
   if (stage === 'error') {
-    return <ScrollView contentContainerStyle={styles.recover}>
+    return <ScrollView contentContainerStyle={[styles.recover, inset]}>
       <AppText variant="title" accessibilityRole="header">We could not verify your account’s policy choices.</AppText>
       <AppText variant="body" color={color.text.secondary}>Your household remains protected. Her Keys stays closed until your choices can be confirmed. Check your connection and try again, or sign out.</AppText>
       {retried ? <AppText variant="body" color={color.status.risk} accessibilityRole="alert" accessibilityLiveRegion="polite">We still couldn’t reach your account. Check your connection and try again.</AppText> : null}
@@ -124,7 +128,7 @@ export function ConsentGate({ session, children }: { session: AccountSession; ch
     </ScrollView>;
   }
   if (stage === 'permissions') {
-    return <ScrollView contentContainerStyle={styles.content}>
+    return <ScrollView contentContainerStyle={[styles.content, inset]}>
       <Overline>Optional permissions</Overline>
       <AppText variant="display">Set things up your way.</AppText>
       <AppText variant="body">Notifications can remind you about plans you chose. You can turn them on now or later.</AppText>
@@ -137,7 +141,7 @@ export function ConsentGate({ session, children }: { session: AccountSession; ch
       <Button label="Continue to Life Systems Audit" onPress={() => setStage('ready')} />
     </ScrollView>;
   }
-  return <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
+  return <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.content, inset]}>
     <Overline>Before we begin</Overline>
     <AppText variant="display">A little clarity goes a long way.</AppText>
     <AppText variant="body">Please review the complete Terms and Privacy Policy, and confirm your choices before using Her Keys.</AppText>

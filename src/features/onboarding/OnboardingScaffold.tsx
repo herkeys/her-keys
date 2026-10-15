@@ -25,7 +25,7 @@ export function OnboardingScaffold({
   continueDisabled,
 }: OnboardingScaffoldProps) {
   return (
-    <Screen>
+    <Screen bottomClearance={spacing.xxl}>
       <View style={styles.progress}>
         <View style={styles.progressHeader}>
           <Overline>Life systems audit</Overline>
@@ -59,5 +59,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   description: { marginTop: spacing.md },
-  content: { marginTop: spacing.xxl, marginBottom: spacing.xxl, flexGrow: 1 },
+  // No flexGrow: spare height belongs below Continue, not between the answers and the action it belongs to.
+  content: { marginTop: spacing.xxl, marginBottom: spacing.xxl },
 });

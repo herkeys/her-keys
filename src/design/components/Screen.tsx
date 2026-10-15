@@ -6,7 +6,10 @@ import { color, sizing, spacing } from '../tokens';
 export interface ScreenProps {
   children: ReactNode;
   scroll?: boolean;
-  /** Extra clearance at the bottom when no tab bar is present (e.g. modals). */
+  /**
+   * Clearance below the content when no tab bar is present (onboarding, consent, sign-in, modals). The system bottom inset (gesture
+   * bar or three-button bar) is always added, so the last control never sits under system chrome.
+   */
   bottomClearance?: number;
 }
 
@@ -17,7 +20,7 @@ export interface ScreenProps {
  */
 export function Screen({ children, scroll = true, bottomClearance }: ScreenProps) {
   const insets = useSafeAreaInsets();
-  const bottom = bottomClearance ?? spacing.xxxl + 68 + insets.bottom;
+  const bottom = (bottomClearance ?? spacing.xxxl + 68) + insets.bottom;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>

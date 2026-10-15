@@ -10,7 +10,7 @@ export default function ProfileResult() {
   const profile = buildOperatingProfile(answers, selected.struggleIds);
 
   return (
-    <Screen>
+    <Screen bottomClearance={spacing.xxl}>
       <Overline>Life operating profile</Overline>
       <AppText variant="hero" style={styles.title}>
         Here’s what I understand so far.

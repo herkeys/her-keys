@@ -73,7 +73,7 @@ export default function HerKeysPlus() {
   };
 
   return (
-    <Screen>
+    <Screen bottomClearance={spacing.xxl}>
       <Overline>{HER_KEYS_PREMIUM_DISPLAY_NAME}</Overline>
       <AppText variant="hero" style={styles.title}>
         You’re ready to begin.
