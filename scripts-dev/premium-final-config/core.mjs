@@ -129,8 +129,8 @@ export function stagingActivationProof(subscriberResponse, projection, accountId
   if (!s || typeof s!=='object' || Array.isArray(s)) return deny('missing_subscriber');
   // An account's alias history may represent a transfer. Never guess ownership.
   if ((s.original_app_user_id && s.original_app_user_id!==accountId) ||
-      !Array.isArray(s.aliases) ||
-      s.aliases.some(alias=>alias!==accountId)) return deny('ambiguous_provider_identity');
+      (s.aliases!==undefined && (!Array.isArray(s.aliases) ||
+        s.aliases.some(alias=>alias!==accountId)))) return deny('ambiguous_provider_identity');
   const ent=s.entitlements?.her_keys_plus;
   if (!ent || typeof ent.product_identifier!=='string' || !ent.product_identifier) return deny('missing_provider_entitlement');
   const sub=s.subscriptions?.[ent.product_identifier];
