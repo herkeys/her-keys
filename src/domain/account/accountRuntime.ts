@@ -272,6 +272,21 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
     return runtime.resolveBinding();
   };
 
+  const unexpectedAuthFailure = (event: string): AccountState => {
+    // Only the authenticated runtime can end an in-flight attempt. Clearing a
+    // visual spinner without resetting its state would prevent all retries.
+    report(event);
+    if (state.kind === 'authenticating') {
+      return apply({ type: 'authFailed', detail: 'authentication_unavailable', recoverable: true });
+    }
+    if (state.kind === 'bootstrapping' || state.kind === 'claiming') {
+      // The durable claim key/receipt is kept so retry cannot duplicate a
+      // household if the server completed before the transport failed.
+      return apply({ type: 'bindingFailed', detail: 'account_binding_unavailable', recoverable: true });
+    }
+    return state;
+  };
+
   const runtime: AccountRuntime = {
     getState: () => state,
     lastClaimOutcome: () => lastOutcome,
@@ -391,34 +406,39 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
       if (attempt === null) return state;
       const { degraded } = attempt;
 
-      const result = await options.providers.signIn(provider);
+      try {
+        const result = await options.providers.signIn(provider);
 
-      if (superseded(attempt)) {
-        report('account.auth_superseded');
-        return state;
+        if (superseded(attempt)) {
+          report('account.auth_superseded');
+          return state;
+        }
+
+        switch (result.kind) {
+          case 'cancelled':
+            return degraded === null ? apply({ type: 'authCancelled' }) : state;
+          case 'unavailable':
+          case 'configurationError':
+            if (degraded !== null) {
+              report('account.reauth_failed', result.detail);
+              return state;
+            }
+            return apply({ type: 'authFailed', detail: result.detail, recoverable: false });
+          case 'providerError':
+            if (degraded !== null) {
+              report('account.reauth_failed', result.detail);
+              return state;
+            }
+            return apply({ type: 'authFailed', detail: result.detail, recoverable: true });
+          case 'success':
+            break;
+        }
+
+        return await adoptSession(result.session, degraded);
+      } catch {
+        if (superseded(attempt)) return state;
+        return unexpectedAuthFailure('account.provider_unexpected_failure');
       }
-
-      switch (result.kind) {
-        case 'cancelled':
-          return degraded === null ? apply({ type: 'authCancelled' }) : state;
-        case 'unavailable':
-        case 'configurationError':
-          if (degraded !== null) {
-            report('account.reauth_failed', result.detail);
-            return state;
-          }
-          return apply({ type: 'authFailed', detail: result.detail, recoverable: false });
-        case 'providerError':
-          if (degraded !== null) {
-            report('account.reauth_failed', result.detail);
-            return state;
-          }
-          return apply({ type: 'authFailed', detail: result.detail, recoverable: true });
-        case 'success':
-          break;
-      }
-
-      return adoptSession(result.session, degraded);
     },
 
     emailOtpAvailable: () => emailOtp.isAvailable(),
@@ -448,7 +468,11 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
         if (attempt.degraded === null) apply({ type: 'authCancelled' });
         return { state, outcome: result };
       }
-      return { state: await adoptSession(result.session, attempt.degraded), outcome: { kind: 'authenticated' } };
+      try {
+        return { state: await adoptSession(result.session, attempt.degraded), outcome: { kind: 'authenticated' } };
+      } catch {
+        return { state: unexpectedAuthFailure('account.password_binding_unexpected_failure'), outcome: { kind: 'unreachable', detail: 'account_binding_unavailable' } };
+      }
     },
 
     async requestEmailOtp(email) {
@@ -498,7 +522,11 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
         return { state, outcome: result };
       }
 
-      return { state: await adoptSession(result.session, degraded), outcome: { kind: 'verified' } };
+      try {
+        return { state: await adoptSession(result.session, degraded), outcome: { kind: 'verified' } };
+      } catch {
+        return { state: unexpectedAuthFailure('account.email_binding_unexpected_failure'), outcome: { kind: 'failed', detail: 'account_binding_unavailable' } };
+      }
     },
 
     async resolveBinding() {
