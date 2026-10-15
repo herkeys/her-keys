@@ -1,6 +1,6 @@
 # Her Keys Premium — Final configuration and Staging certification runbook
 **Environment:** Staging `fhhudicklmpofuzkxeqe`, Production `npykvnxnehlsdlbumzwk`.
-**Source lane:** `codex/v2-premium-final-config` based on independent Premium CI.
+**Source lane:** `engineering/premium-stage1-completion-20261014` (inherits `codex/v2-premium-final-config`), with authenticated Staging database-freshness evidence.
 **Operating rule:** All secrets are entered ONLY in their secure dashboards or the operator's ephemeral shell environment, NEVER chat, Git, source, a committed dotenv, or command arguments. Production new Premium computation, webhook processing, and account deletion remain OFF in this sprint.
 
 ## 0. First read-back (safe before credentials)
@@ -114,14 +114,19 @@ node scripts-dev/premium-final-config.mjs reconcile --account-id "$HK_STAGING_TE
 The runner fetches the current subscriber state through RC REST API (server secret), reads the Staging Premium projection via service role, and classifies `matched`, `missing`, `stale`, or `conflicting`. `--resync` calls existing `premium-ops` force-reconcile once, then rechecks. Any unresolved mismatch exits nonzero. A paid subscriber requires RC-provider verified state; synthetic webhook receipt does NOT suffice.
 
 ## 7. Controlled Staging activation, verification, rollback
-Only after authenticated signed TEST receipt, backend negative auth/HMAC checks, tester marker, guard migration and a real subscription reconciliation PASS, activate paid features for allowlisted Staging users. **The command independently verifies an authenticated TEST receipt less than 15 minutes old AND a currently provider-confirmed Premium entitlement for the named tester; the `--signed-smoke-passed` flag alone is never sufficient.**
+
+**Staging database gate APPLIED and VERIFIED (October 14, 2026):** The source migration `supabase/migrations/20261015140000_premium_stale_projection_guard.sql` was applied to **Staging only**, with the managed Supabase migration-history identity `20261015015427_premium_stale_projection_guard` (single row). Do **not** apply it again to Staging. Read-back confirms `max_reconciled_age_seconds=86400`, constraint `[300,86400]`, a server-only `premium_entitlement_state` with dirty/stale/missing/future-data denial, and unchanged OFF paid-feature/webhook flags. Real Postgres transaction/rollback negative probes covered all three features, fresh/dirty/old/absent/future timestamps, shorter TTL, account isolation, canceled-active, and revocation, with **zero persisted test entitlement/usage/audit rows**. The broader disposable DB harness `supabase/tests/82-premium-authorization.sql` is still a separate release-validation requirement and has not been run end-to-end here. The 24-hour TTL still needs owner approval. **A separate authorized Production parity deployment has since installed this same additive schema guard in Production** as managed migration `20261015020810_premium_stale_projection_guard`, while leaving `premium_enabled=false`, `webhook_processing=false`, all three paid feature flags OFF, account deletion `enabled=false,dry_run=true`, and customer data unchanged. Do **not** reapply this migration to either project. Staging and Production normalized entitlement function digests now match. Source file `20261015140000_...` has a different timestamp than each managed migration record; reconcile CLI migration-history planning before future automatic pushes. Neither this migration nor parity inspection activated Production Premium. See `docs/premium/PREMIUM_PRODUCTION_PARITY_20261014.md`.** Repository file timestamp and managed applied timestamp differ: reconcile the migration-history mapping before a future CLI-driven rollout; do not edit an applied version manually. Evidence: `docs/premium/PREMIUM_STAGE1_ENGINEERING_20261014.md`. A migration's existence is not evidence of a real purchased subscription.
+
+Only after authenticated signed TEST receipt, backend negative auth/HMAC checks, tester marker, guard migration and a real subscription reconciliation PASS, activate paid features for allowlisted Staging users. **The command requires an operator-attested, separately initiated RevenueCat Dashboard TEST event ID with a matching recent hosted receipt (a local `hk-preflight-*` event can never qualify), plus a NEW authenticated RevenueCat subscriber API lookup in the enable path for the exact tester UUID. The response must show a current native `app_store`/`play_store` Sandbox subscription, no ambiguous ownership or refund, and a matching non-synthetic server projection reconciled within five minutes. The TEST receipt does not cryptographically authenticate its initiation source; do not claim it does.**
 
 ```bash
-node scripts-dev/premium-final-config.mjs window enable --account-id "$HK_STAGING_TESTER_ACCOUNT_ID" --env staging --signed-smoke-passed
+node scripts-dev/premium-final-config.mjs reconcile --account-id "$HK_STAGING_TESTER_ACCOUNT_ID" --env staging
+# Obtain the actual TEST event ID from an independent RevenueCat Dashboard delivery and check its durable Staging receipt.
+node scripts-dev/premium-final-config.mjs window enable --account-id "$HK_STAGING_TESTER_ACCOUNT_ID" --provider-test-event-id "$HK_RC_EXTERNAL_TEST_EVENT_ID" --env staging --signed-smoke-passed
 node scripts-dev/premium-final-config.mjs window verify --env staging
 ```
 
-This updates only Staging's three paid rows `daily_load_premium`, `smart_inbox_extract`, `momentum_report` to `enabled=true`, `released=true`, `rollout_status='staging_only'` and resumes Staging webhook processing. The server `premium_authorize` guard refuses nonallowlisted accounts and still requires real entitlements, correct household ownership, AI consent and quota.
+This requires a REAL Apple/Google Sandbox subscription, not RevenueCat Test Store or a locally signed fixture; with only Test Store catalog entries this command must FAIL CLOSED. This updates only Staging's three paid rows `daily_load_premium`, `smart_inbox_extract`, `momentum_report` to `enabled=true`, `released=true`, `rollout_status='staging_only'` and resumes Staging webhook processing. The server `premium_authorize` guard refuses nonallowlisted accounts and still requires real entitlements, correct household ownership, AI consent and quota.
 
 **Immediate Staging fail-closed rollback, safe without secret preflight:**
 
@@ -136,6 +141,6 @@ Certification checklist: missing/wrong auth 401; missing/bad/stale signature 401
 
 If any of these fails: execute the rollback command above, preserve event/decision evidence, do not delete rows or fake an entitlement. Production remains with `premium_enabled=false`, `webhook_processing=false`, account deletion disabled/dry-run.
 
-**Evidence levels:** source implementation and local fixtures are not `STAGING_VERIFIED`. Only signed live RC deliveries, actual JWT testers, durable rows and a store Sandbox purchase count as hosted certification.
+**Evidence levels:** source implementation and local fixtures are not `STAGING_VERIFIED`. Only independently initiated actual RC Dashboard deliveries, actual JWT testers, durable rows and a native-store Sandbox purchase count as hosted certification. A known event ID matched to a database row is operator attestation, not proof of transport origin; retain the provider-side screenshot/log separately.
 
 **Final operational blocker:** human security setup plus RC test delivery and actual Staging subscriber context. This runbook cannot create real paid store products; existing offering only has Test Store products, and Play/Apple provider readiness must be checked separately.

@@ -8,7 +8,7 @@ import { createClient } from '@supabase/supabase-js';
 import {
   PROJECTS, FEATURES, localSecretConfig, preflightLocal, endpoint,
   environmentRef, eventFixture, isUuid, signWebhook, redactError,
-  classifyWebhookResult, projectionComparison,
+  classifyWebhookResult, projectionComparison, stagingActivationProof,
 } from './premium-final-config/core.mjs';
 
 const args = process.argv.slice(2);
@@ -165,9 +165,10 @@ async function setWindow(mode) {
     await assertProductionFailClosed();
     const {data,error}=await c.from('premium_feature_config').select('feature_key,enabled,released,rollout_status').in('feature_key',FEATURES);
     if(error)throw new Error('feature read failed');
-    const okay=data.length===FEATURES.length&&data.every(x=>x.enabled&&x.released&&x.rollout_status==='staging_only');
+    const okay=config.environment==='staging' && config.premium_enabled===true && config.webhook_processing===true && config.allow_test_fixtures===false &&
+      data.length===FEATURES.length&&data.every(x=>x.enabled&&x.released&&x.rollout_status==='staging_only');
     out({status:okay?'PASS':'FAIL',environment:'staging',features:data,webhookProcessing:config.webhook_processing,productionUnchanged:'Production not accessed'});
-    if(!okay)process.exitCode=1;return;
+    if(!okay)process.exitCode=1;return okay;
   }
   if(mode==='disable') {
     // Order matters: stop new protected work even if later feature write fails.
@@ -185,22 +186,32 @@ async function setWindow(mode) {
   // Schema guard MUST be installed to guarantee server-side allowlist enforcement.
   const {data:guard,error:guardError}=await c.rpc('premium_staging_allowlist_guard_ready');
   if(guardError||guard!==true)throw new Error('Staging database allowlist guard migration has not been applied');
-  // Require a valid signed-event TEST smoke receipt from the current session before enabling.
+  // Local smoke receipts carry hk-preflight-* ids: transport evidence ONLY.
+  // Require an operator-supplied ID from an externally triggered RevenueCat
+  // Dashboard TEST delivery, and match that exact recent hosted webhook receipt.
+  // This is an operator-attested receipt, NOT cryptographic proof of its origin.
   if(!flag('--signed-smoke-passed'))throw new Error('run signed TEST smoke and explicitly pass --signed-smoke-passed');
-  // The operator flag is NOT security evidence; prove a recent authenticated
-  // receipt was durably written by the actual hosted webhook handler.
-  const {data:smokeRow,error:smokeError}=await c.from('premium_events')
-    .select('id').eq('environment','SANDBOX').eq('event_type','TEST')
-    .in('status',['received','ignored_test']).gte('received_at',new Date(Date.now()-15*60*1000).toISOString())
-    .order('received_at',{ascending:false}).limit(1).maybeSingle();
-  if(smokeError||!smokeRow)throw new Error('no recent authenticated signed TEST receipt in Staging');
-  // A tester flag is NOT a Premium grant. At least one real RC-confirmed
-  // subscription must be projected before a test feature window may open.
-  const projected=await readProjection(accountId);
-  if(!projected || projected.needs_reconcile ||
-     !['premium_active','premium_canceled_active','premium_billing_grace'].includes(projected.state)) {
-    throw new Error('Staging tester has no currently verified Premium entitlement');
+  const providerEventId=getFlag('--provider-test-event-id');
+  if(typeof providerEventId!=='string' || providerEventId.length<8 || providerEventId.length>200 ||
+     providerEventId.startsWith('hk-preflight-')) {
+    throw new Error('Staging requires an external RevenueCat Dashboard TEST event ID; synthetic smoke is transport-only');
   }
+  const {data:smokeRow,error:smokeError}=await c.from('premium_events')
+    .select('event_id').eq('event_id',providerEventId).eq('environment','SANDBOX').eq('event_type','TEST')
+    .in('status',['received','ignored_test']).gte('received_at',new Date(Date.now()-15*60*1000).toISOString())
+    .maybeSingle();
+  if(smokeError||!smokeRow)throw new Error('Staging external TEST receipt was not durably recorded or is stale');
+  // Mandatory FRESH RevenueCat API read in THIS enable invocation. The Staging
+  // projection must be recently reconciled, account-bound, non-synthetic, and
+  // match a real APP_STORE/PLAY_STORE Sandbox subscription. Never trust only a
+  // stored event, client cache, or operator flag to grant or release Premium.
+  const rcConfig=localSecretConfig().staging;
+  const rcCall=await http('GET',`https://api.revenuecat.com/v1/subscribers/${encodeURIComponent(accountId)}`,undefined,
+    {Authorization:'Bearer '+rcConfig.REVENUECAT_SECRET_API_KEY});
+  if(rcCall.code!==200)throw new Error('Staging RevenueCat subscriber verification unavailable');
+  const projected=await readProjection(accountId);
+  const proof=stagingActivationProof(rcCall.data,projected,accountId);
+  if(!proof.eligible)throw new Error('Staging RevenueCat subscriber/projection proof denied: '+proof.reason);
   const w=await c.from('premium_feature_config').update({enabled:true,released:true,rollout_status:'staging_only'}).in('feature_key',FEATURES);
   if(w.error)throw new Error('Staging feature activation failed');
   const rt=await c.from('premium_runtime_config').update({premium_enabled:true,webhook_processing:true}).eq('singleton',true);
@@ -208,7 +219,15 @@ async function setWindow(mode) {
     await c.from('premium_feature_config').update({enabled:false,released:false}).in('feature_key',FEATURES);
     throw new Error('Staging runtime activation failed; features reverted');
   }
-  await setWindow('verify');
+  try {
+    const verified=await setWindow('verify');
+    if(!verified)throw new Error('Staging activation read-back failed');
+  } catch {
+    // Fail closed even after a partial feature/runtime write or failed verification.
+    await c.from('premium_runtime_config').update({premium_enabled:false,webhook_processing:false}).eq('singleton',true);
+    await c.from('premium_feature_config').update({enabled:false,released:false,rollout_status:'not_released'}).in('feature_key',FEATURES);
+    throw new Error('Staging activation verification failed; fail-closed rollback attempted');
+  }
 }
 async function signedSmoke(mode='TEST') {
   requireStaging();
@@ -271,11 +290,11 @@ async function reconcile() {
 async function readProjection(id) {
   const c=client();
   const [{data,error},{data:state,error:stateErr}]=await Promise.all([
-    c.from('premium_entitlements').select('account_id,needs_reconcile').eq('account_id',id).maybeSingle(),
+    c.from('premium_entitlements').select('account_id,source,environment,store,product_id,has_entitlement,expires_at,grace_expires_at,revoked_at,last_reconciled_at,needs_reconcile').eq('account_id',id).maybeSingle(),
     c.rpc('premium_entitlement_state',{p_account:id}),
   ]);
   if(error||stateErr)throw new Error('projection read failed');
-  return data ? {state,needs_reconcile:data.needs_reconcile}:null;
+  return data ? {...data,state}:null;
 }
 async function main() {
   try{
