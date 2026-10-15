@@ -30,6 +30,7 @@ on:
       - repair/android-auth-p0-device-20261015
       # P0 auth recovery: every account operation ends (bounded activation, storage, RPC, provider and email), exact pushed SHA.
       - repair/p0-auth-recovery-20261015
+      - integration/premium-paywall-layout-20261015
   workflow_dispatch:
 
 permissions:
