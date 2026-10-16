@@ -3,7 +3,9 @@ import { DeletionGate } from '../src/features/account/DeletionGate';
 import * as NativeSplashScreen from 'expo-splash-screen';
 import { useCallback, useEffect, type ReactNode } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { colors } from '../src/design/tokens';
+import { AppearanceProvider, useTheme } from '../src/design/theme';
+import { SystemChrome, ThemedNavigation } from '../src/design/theme/SystemChrome';
+import { appearanceStorage } from '../src/platform/appearanceStorage';
 import { canOpenScreen, isSettled, type RootScreen } from '../src/domain/routeAccess';
 import { activeAccountId } from '../src/domain/account/authState';
 import { PremiumCheckoutAfterConsent } from '../src/monetization/PremiumCheckoutAfterConsent';
@@ -40,6 +42,11 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
+      {/* HK-FE-UI-02-DM: the appearance provider is the OUTERMOST provider after safe areas, so Welcome, consent and every pre-auth screen
+          are themed, and it owns nothing about accounts, households or purchases. */}
+      <AppearanceProvider storage={appearanceStorage}>
+      <SystemChrome />
+      <ThemedNavigation>
       <RevenueCatProvider>
           <AppStateProvider store={appStore}>
             <LocalNotificationProvider>
@@ -55,6 +62,8 @@ export default function RootLayout() {
             </LocalNotificationProvider>
           </AppStateProvider>
       </RevenueCatProvider>
+      </ThemedNavigation>
+      </AppearanceProvider>
     </SafeAreaProvider>
   );
 }
@@ -88,6 +97,7 @@ function premiumAccountIsCurrent(accountId: string, householdId: string): boolea
  * screen.
  */
 function RootNavigator() {
+  const { colors } = useTheme();
   const snapshot = useStoreSnapshot();
   const account = useAccount();
   const { refresh: refreshPremium, presentPaywall } = useEntitlement();
