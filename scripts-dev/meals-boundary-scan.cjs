@@ -1670,6 +1670,26 @@ const LATER_FEATURES = [
     ],
   },
   // END HK-FE-UI-02 LANE
+  {
+    id: 'HK-V2-UI02-RC-AI-CONVERGENCE (source-only reviewed integration)',
+    // The UI02-DM branch is the exact parent. No migrations, persistence, meals, sync kinds or store activation.
+    // This additive lane owns only its integration report; all shared changes have explicit safety/test/CI reasons.
+    branch: null,
+    owned: [
+      /^docs\\/integration\\/V2_UI02_DM_RC_AI_CONVERGENCE_20261016\\.md$/,
+    ],
+    migrations: [], schemas: [], rootCollections: [], syncKinds: [],
+    shared: [
+      ['src/monetization/revenueCatClient.ts', 'Reviewed RC identity safety: preserve native quarantine, verify actor epoch across bounded SDK reads and safely rebind only a current account after readable drift'],
+      ['tests/platformParity/purchaseReadiness.test.mjs', 'RC integration regression: SDK drift, slow-read account switch and no native relogin on unreadable identity'],
+      ['tests/platformParity/support/purchases.mjs', 'RC integration fixture: controlled held native identity read without replacing prior quarantine tests'],
+      ['supabase/functions/herkeys-ai/index.ts', 'AI consent P1: unconditional server-side current affirmative consent before Gemini, no optional deployment flag'],
+      ['tests/productionConsentBuildProfile.test.mjs', 'AI consent P1: prevent regression to conditional server consent and pin authorization ordering'],
+      ['tests/consent.test.mjs', 'AI consent: update legacy optional-gate assertion to require unconditional server enforcement before provider request'],
+      ['.github/workflows/v2-integration-validation.yml', 'Unified source exact-SHA test only: allowlist this integration branch; preserve full suite and no EAS build/deploy'],
+      ['scripts-dev/meals-boundary-scan.cjs', 'Register this exact reviewed integration scope without altering Meals boundary checks, protected files or inherited lane claims'],
+    ],
+  },
 
 ];
 
