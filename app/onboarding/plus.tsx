@@ -8,6 +8,7 @@ import { PaywallNoticeView } from '../../src/monetization/PaywallNoticeView';
 import { useEntitlement } from '../../src/monetization/RevenueCatProvider';
 import { usePaywallAction } from '../../src/monetization/usePaywallAction';
 import { useOnboarding } from '../../src/store/OnboardingContext';
+import { usePremiumIntent } from '../../src/store/PremiumIntentContext';
 
 /**
  * What this screen may say about Premium. Only what the source supports: the paid entitlement (`her_keys_plus`) is purchasable and
@@ -30,6 +31,7 @@ export default function HerKeysPlus() {
   const { status } = useEntitlement();
   const paywall = usePaywallAction('onboarding_complete');
   const { complete } = useOnboarding();
+  const intent = usePremiumIntent();
   const [busy, setBusy] = useState<'purchase' | 'continue' | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const resolving = useRef(false);
@@ -50,6 +52,19 @@ export default function HerKeysPlus() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]);
+
+  // Premium chosen on the Welcome tree was only an intent. This is the one decision point it is acted on for a new user: after the
+  // audit and profile, once, and the intent is spent either way so no second presentation can follow (see `deferred` in
+  // PremiumCheckoutAfterConsent). Dismissing it leaves her on this screen with Continue, never blocked.
+  const intentHandled = useRef(false);
+  useEffect(() => {
+    if (intent.choice === null || intentHandled.current) return;
+    intentHandled.current = true;
+    const wantsPremium = intent.choice === 'premium';
+    intent.clear();
+    if (wantsPremium && status !== 'plus') void onSeePlus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [intent.choice]);
 
   if (status === 'plus') return null;
 

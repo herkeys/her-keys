@@ -18,6 +18,7 @@ import { AccountProvider, useAccount } from '../src/store/AccountProvider';
 import { AppStateProvider, useStoreSnapshot } from '../src/store/AppStateProvider';
 import { appStore, internalTools } from '../src/store/appStoreInstance';
 import { OnboardingProvider } from '../src/store/OnboardingContext';
+import { isOnboardingComplete } from '../src/domain/onboarding';
 import { OneMoveProvider } from '../src/store/OneMoveContext';
 import { PremiumIntentProvider, usePremiumIntent } from '../src/store/PremiumIntentContext';
 import { LocalNotificationProvider } from '../src/store/LocalNotificationProvider';
@@ -199,6 +200,7 @@ function RootNavigator() {
   const afterConsent = (
     <PremiumCheckoutAfterConsent
       accountBound={account.state.kind === 'accountBound'}
+      deferred={!isOnboardingComplete(snapshot.state.onboarding)}
       choice={premiumIntent.choice}
       present={presentWelcomeCheckout}
       onSettled={premiumIntent.clear}

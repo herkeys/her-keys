@@ -12,6 +12,7 @@
 import Purchases, { LOG_LEVEL, type CustomerInfo, type PurchasesOffering } from 'react-native-purchases';
 import RevenueCatUI, { PAYWALL_RESULT } from 'react-native-purchases-ui';
 import { Platform } from 'react-native';
+import { withDeadline } from '../domain/account/deadline';
 import { hasConfiguredApiKey, revenueCatApiKeys } from './config';
 import { HER_KEYS_PLUS_ENTITLEMENT, type PaywallOutcome, type RestoreOutcome } from './entitlement';
 
@@ -22,7 +23,15 @@ export interface ConfigureResult {
   reason: ConfigureReason;
 }
 
+/**
+ * Every SDK call that is not a customer's own interaction ends. A native call that never answers would otherwise hold the
+ * serialized account queue below forever, so the next sign-in, restore or paywall would wait behind it. A timeout does not cancel
+ * the native work; each caller treats a late answer as stale via the identity checks already in this file.
+ */
+export const REVENUECAT_DEADLINES = { identifyMs: 15_000, readMs: 15_000, restoreMs: 60_000 } as const;
+
 let configured = false;
+let desiredAccountId: string | null = null;
 let identifiedAccountId: string | null = null;
 export interface RevenueCatIdentity { accountId: string | null; epoch: number }
 let identity: RevenueCatIdentity = { accountId: null, epoch: 0 };
@@ -98,6 +107,7 @@ export type IdentifyResult = 'identified' | 'signed_out' | 'not_configured' | 's
  */
 export async function identifyRevenueCatAccount(accountId: string | null): Promise<IdentifyResult> {
   // Invalidate display and pending results immediately, before the serialized native operation can start.
+  desiredAccountId = accountId;
   const epoch = identity.epoch + 1;
   publishIdentity({ accountId: null, epoch });
   return withAccountSdkOperation(async () => {
@@ -105,21 +115,38 @@ export async function identifyRevenueCatAccount(accountId: string | null): Promi
     identifiedAccountId = null;
     if (!configured) return 'not_configured';
     try {
-      if (accountId === null) {
-        if (!(await Purchases.getAppUserID()).startsWith('$RCAnonymousID:')) await Purchases.logOut();
-        return 'signed_out';
-      }
-      const previousId = await Purchases.getAppUserID();
-      if (previousId !== accountId && !previousId.startsWith('$RCAnonymousID:')) await Purchases.logOut();
-      await Purchases.logIn(accountId);
-      if (identity.epoch !== epoch || await Purchases.getAppUserID() !== accountId) return 'sdk_error';
-      identifiedAccountId = accountId;
-      publishIdentity({ accountId, epoch });
-      return 'identified';
+      const done = await withDeadline(async (): Promise<IdentifyResult> => {
+        if (accountId === null) {
+          if (!(await Purchases.getAppUserID()).startsWith('$RCAnonymousID:')) await Purchases.logOut();
+          return 'signed_out';
+        }
+        const previousId = await Purchases.getAppUserID();
+        if (previousId !== accountId && !previousId.startsWith('$RCAnonymousID:')) await Purchases.logOut();
+        await Purchases.logIn(accountId);
+        if (identity.epoch !== epoch || await Purchases.getAppUserID() !== accountId) return 'sdk_error';
+        identifiedAccountId = accountId;
+        publishIdentity({ accountId, epoch });
+        return 'identified';
+      }, REVENUECAT_DEADLINES.identifyMs);
+      return done.timedOut ? 'sdk_error' : done.value;
     } catch {
       return 'sdk_error';
     }
   });
+}
+
+/**
+ * Purchase readiness, identity half. Sign-in never waits on RevenueCat, so an identify that failed or timed out at bind time is
+ * simply retried here, at the moment a purchase is actually about to be offered. Resolves true only when the SDK is bound to the
+ * account that is signed in NOW; anything else (signed out, SDK not configured, still failing) is false and the caller shows
+ * "unavailable" rather than letting a purchase run under an anonymous or previous identity.
+ */
+export async function ensureRevenueCatIdentity(): Promise<boolean> {
+  if (!configured || desiredAccountId === null) return false;
+  const wanted = desiredAccountId;
+  if (identity.accountId === wanted && identifiedAccountId === wanted) return true;
+  const result = await identifyRevenueCatAccount(wanted);
+  return result === 'identified' && desiredAccountId === wanted && identity.accountId === wanted;
 }
 
 export function isRevenueCatConfigured(): boolean {
@@ -137,8 +164,9 @@ export async function fetchActiveEntitlementIds(): Promise<string[] | null> {
     const owner = scope.accountId;
     try {
       if (identity !== scope || !await matchesIdentifiedAccount(owner)) return null;
-      const info = await Purchases.getCustomerInfo();
-      return identity === scope && await matchesIdentifiedAccount(owner) ? activeEntitlementIds(info) : null;
+      const read = await withDeadline(() => Purchases.getCustomerInfo(), REVENUECAT_DEADLINES.readMs);
+      if (read.timedOut) return null;
+      return identity === scope && await matchesIdentifiedAccount(owner) ? activeEntitlementIds(read.value) : null;
     } catch {
       return null;
     }
@@ -148,8 +176,8 @@ export async function fetchActiveEntitlementIds(): Promise<string[] | null> {
 export async function fetchCurrentOffering(): Promise<PurchasesOffering | null> {
   if (!configured) return null;
   try {
-    const offerings = await Purchases.getOfferings();
-    return offerings.current ?? null;
+    const read = await withDeadline(() => Purchases.getOfferings(), REVENUECAT_DEADLINES.readMs);
+    return read.timedOut ? null : (read.value.current ?? null);
   } catch {
     return null;
   }
@@ -202,9 +230,10 @@ export async function restoreRevenueCatPurchases(expectedAccountId?: string): Pr
     if (!configured) return { kind: 'unavailable' };
     try {
       if (identity !== scope || !await matchesIdentifiedAccount(owner)) return { kind: 'unavailable' };
-      const info = await Purchases.restorePurchases();
+      const restored = await withDeadline(() => Purchases.restorePurchases(), REVENUECAT_DEADLINES.restoreMs);
+      if (restored.timedOut) return { kind: 'unavailable' };
       if (identity !== scope || !await matchesIdentifiedAccount(owner)) return { kind: 'unavailable' };
-      const active = activeEntitlementIds(info);
+      const active = activeEntitlementIds(restored.value);
       return active.includes(HER_KEYS_PLUS_ENTITLEMENT) ? { kind: 'restored' } : { kind: 'no_purchases_found' };
     } catch (error) {
       return { kind: 'error', message: error instanceof Error ? error.message : 'unknown_error' };

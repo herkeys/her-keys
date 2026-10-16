@@ -28,12 +28,15 @@ import { paywallNoticeFor, type PaywallNotice } from './paywallFeedback';
  */
 export function PremiumCheckoutAfterConsent({
   accountBound,
+  deferred = false,
   choice,
   present,
   onSettled,
   children,
 }: {
   accountBound: boolean;
+  /** True while the new user is still inside the Life Systems Audit: the intent is kept and the final onboarding step presents instead. */
+  deferred?: boolean;
   choice: PremiumChoice | null;
   present: () => Promise<PaywallOutcome>;
   onSettled: () => void;
@@ -59,7 +62,7 @@ export function PremiumCheckoutAfterConsent({
       running.current = false;
       return;
     }
-    if (!accountBound || running.current) return;
+    if (!accountBound || deferred || running.current) return;
     running.current = true;
     void (async () => {
       try {
@@ -74,7 +77,7 @@ export function PremiumCheckoutAfterConsent({
         settledRef.current();
       }
     })();
-  }, [accountBound, choice]);
+  }, [accountBound, deferred, choice]);
 
   return (
     <>

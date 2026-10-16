@@ -16,6 +16,7 @@ import { fixture } from './support/premium/stubs.mjs';
 import { render } from './support/render.tsx';
 import { paywallNoticeFor } from '../src/monetization/paywallFeedback.ts';
 import { PremiumCheckoutAfterConsent } from '../src/monetization/PremiumCheckoutAfterConsent.tsx';
+import { PremiumIntentProvider } from '../src/store/PremiumIntentContext.tsx';
 
 const stub = new URL('./support/premium/stubs.mjs', import.meta.url).href;
 registerHooks({ resolve(specifier, context, next) {
@@ -51,7 +52,7 @@ test('SC-03: every paywall outcome has words in the right tone, and none leak th
 
 test('V2 integration: onboarding routes to Account for restore rather than mounting a second transaction control', async () => {
   reset(); fixture.navigation.length = 0;
-  const r = await render(<PlusStep />);
+  const r = await render(<PremiumIntentProvider><PlusStep /></PremiumIntentProvider>);
   try {
     assert.equal(button(r, 'Restore purchases'), undefined);
     await act(() => button(r, 'Your Account & purchases').props.onPress());
@@ -123,7 +124,7 @@ test('SC-03: the onboarding step words an unavailable offering, a failure and a 
   for (const outcome of OUTCOMES.filter((o) => ['cancelled', 'no_offering', 'unavailable', 'error'].includes(o.kind))) {
     reset();
     fixture.entitlement.presentPaywall = async () => outcome;
-    const r = await render(<PlusStep />);
+    const r = await render(<PremiumIntentProvider><PlusStep /></PremiumIntentProvider>);
     await act(() => button(r, 'Explore Her Keys Premium').props.onPress());
     await settle();
     assert.ok(text(r).includes(paywallNoticeFor(outcome).message), outcome.kind);
@@ -138,14 +139,14 @@ test('SC-03: the onboarding step completes on purchase or restore, once, and on 
   for (const kind of ['purchased', 'restored']) {
     reset();
     fixture.entitlement.presentPaywall = async () => ({ kind });
-    const r = await render(<PlusStep />);
+    const r = await render(<PremiumIntentProvider><PlusStep /></PremiumIntentProvider>);
     await act(() => button(r, 'Explore Her Keys Premium').props.onPress());
     await settle();
     assert.equal(fixture.onboarding.completeCalls, 1, kind);
     await act(() => r.unmount());
   }
   reset();
-  const free = await render(<PlusStep />);
+  const free = await render(<PremiumIntentProvider><PlusStep /></PremiumIntentProvider>);
   await act(() => button(free, 'Continue to Her Keys').props.onPress());
   await settle();
   assert.equal(fixture.onboarding.completeCalls, 1);
@@ -154,7 +155,7 @@ test('SC-03: the onboarding step completes on purchase or restore, once, and on 
 
 test('SC-03: the onboarding step no longer lists benefits nothing delivers', async () => {
   reset();
-  const r = await render(<PlusStep />);
+  const r = await render(<PremiumIntentProvider><PlusStep /></PremiumIntentProvider>);
   const shown = text(r);
   assert.doesNotMatch(shown, /household intelligence|proactive planning|Enhanced Talk It Out|automation for repeatable work|journey continues/i);
   assert.match(shown, /Everything in Her Keys works without Premium/);

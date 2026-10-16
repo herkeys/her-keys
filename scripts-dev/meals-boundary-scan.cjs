@@ -1283,6 +1283,8 @@ const LATER_FEATURES = [
       /^src\/platform\/(?:timeoutFetch|authDiagnostics)\.ts$/,
       /^tests\/authBoundedOperations\.test\.mjs$/,
       /^tests\/onboardingLayout\.test\.mjs$/,
+      /^tests\/premiumSequencing\.test\.mjs$/,
+      /^src\/monetization\/purchaseReadiness\.ts$/,
     ],
     migrations: [], schemas: [], rootCollections: [], syncKinds: [],
     shared: [

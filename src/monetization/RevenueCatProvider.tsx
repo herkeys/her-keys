@@ -9,6 +9,7 @@ import {
 } from './entitlement';
 import {
   configureRevenueCat,
+  ensureRevenueCatIdentity,
   fetchActiveEntitlementIds,
   fetchCurrentOffering,
   presentRevenueCatPaywall,
@@ -17,6 +18,7 @@ import {
   subscribeRevenueCatIdentity,
   type RevenueCatIdentity,
 } from './revenueCatClient';
+import { assessOffering } from './purchaseReadiness';
 
 /** `'loading'` only while the very first check is in flight; afterward this always settles to one of `EntitlementState`. */
 export type EntitlementStatus = 'loading' | EntitlementState;
@@ -62,12 +64,18 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
 
   const presentPaywall = useCallback(
     async (placement: PaywallPlacement): Promise<PaywallOutcome> => {
+      configureRevenueCat();
+      // Readiness, in order: the signed-in account is bound in RevenueCat (retried here if the bind-time identify failed), then
+      // the offering resolves to real priced packages. Free access is never gated on any of it; each miss is a bounded, worded
+      // "unavailable".
+      if (!(await ensureRevenueCatIdentity())) return { kind: 'unavailable' };
       const owner = getRevenueCatIdentity();
       if (owner.accountId === null) return { kind: 'unavailable' };
       if (statusRef.current === 'plus') return { kind: 'already_entitled' };
 
       const offering = await fetchCurrentOffering();
       if (owner !== getRevenueCatIdentity()) return { kind: 'unavailable' };
+      if (!assessOffering(offering).ready) return { kind: 'no_offering' };
       const outcome = await presentRevenueCatPaywall(offering, owner.accountId);
       if (owner !== getRevenueCatIdentity()) return { kind: 'unavailable' };
       if (outcome.kind === 'purchased' || outcome.kind === 'restored') await refresh();
