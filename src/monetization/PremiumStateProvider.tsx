@@ -4,6 +4,7 @@ import { activeAccountId, type AccountState } from '../domain/account/authState'
 import type { PaywallOutcome, PaywallPlacement } from './entitlement';
 import { PremiumController, type PremiumSnapshot } from './premiumController';
 import { premiumCopyFor, purchaseOutcomeNotice, type PremiumCopy } from './premiumCopy';
+import { premiumLaunchState } from './premiumLaunchState';
 import { deriveFeatureState, isUsable, type PremiumFeatureState } from './premiumFeatureState';
 import { UNCONFIGURED_PREMIUM_LEDGER, type PremiumLedgerClient } from './premiumLedgerClient';
 import type { ExtractRequest, ExtractResult, GateDecision, GateRequest, GateResult, PremiumServerClient } from './premiumTypes';
@@ -251,6 +252,15 @@ export function usePremiumUpgrade(placement: PaywallPlacement): PremiumUpgradeAp
 
   const start = useCallback(async (): Promise<PaywallOutcome> => {
     if (inFlight.current || !isCurrent() || controller.getSnapshot().server?.state === 'deletion_pending') return { kind: 'unavailable' };
+    // A paid offer requires server-confirmed release of the actual three benefits.
+    // Store entitlement alone never makes an unreleased product commercially ready.
+    if (!premiumLaunchState(controller.getSnapshot().manifest).ready) {
+      if (mounted.current) setNotice({
+        tone: 'attention',
+        message: 'Her Keys Premium is not available for purchase here yet. Your Free tools are unaffected.',
+      });
+      return { kind: 'unavailable' };
+    }
     inFlight.current = true;
     setPresenting(true);
     setNotice(null);
