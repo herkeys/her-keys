@@ -56,13 +56,14 @@ Compared with PR #31 `f88648b`, the convergence modifies **only**:
 3. `tests/platformParity/support/purchases.mjs` — synthetic held identity read;
 4. `supabase/functions/herkeys-ai/index.ts` — server-side consent guard;
 5. `tests/productionConsentBuildProfile.test.mjs` — consent guard regression tests;
-6. this integration report.
+6. `.github/workflows/v2-integration-validation.yml` — adds only the exact unified branch to the existing validation-only push allowlist, preserving full tests and **without** triggering EAS builds or deployment;
+7. this integration report.
 
 No design token, UI component, navigation, feature-gate, EAS configuration, Supabase migration, deletion logic or deployed function was changed in this convergence layer.
 
 ## Required certification before advancement
 
-1. **Exact-SHA CI**: fresh `npm ci`; `npx tsc --noEmit`; `npx expo install --check`; `npx expo-doctor`; full JS test suite, platform parity, welcome/auth/consent, UI02 theme boundary and rendered contrast, account isolation, premium lifecycle, release identity and backend checks. Tests were **not executable in this connector-only integration workspace**. No CI PASS claimed.
+1. **Exact-SHA CI** (validation-only workflow registered for this branch; completion/conclusion must be independently inspected): fresh `npm ci`; `npx tsc --noEmit`; `npx expo install --check`; `npx expo-doctor`; full JS test suite, platform parity, welcome/auth/consent, UI02 theme boundary and rendered contrast, account isolation, premium lifecycle, release identity and backend checks. Tests were **not executable in this connector-only integration workspace**. No CI PASS claimed.
 2. **Native RevenueCat actor races**: timed-out/hung identity read, late native login/logout, SDK ID drift, account A→B while verifying, account B restore and purchase boundaries, Free path unaffected. The checkout flag remains OFF.
 3. **Server AI consent certification**: deploy to Staging only after TypeScript/Deno checks; test a legitimate synthetic opted-in account and declined/missing/outdated consent, then review Production promotion. No real LLM invocation was made by this integration work.
 4. **UI02 adaptive appearance**: new native binary and physical-device Light/Dark/System startup and switching, real Your Account, final Premium choice and review sheets, iOS and Android chrome/splash. Expo Go gallery is not native certification.
