@@ -27,11 +27,17 @@ test('latest decision wins, including withdrawal; a new AI policy requires fresh
 test('server-side AI gateway enforces the same current version before provider invocation', async () => {
   const { readFileSync } = await import('node:fs');
   const source = readFileSync('supabase/functions/herkeys-ai/index.ts', 'utf8');
-  assert.match(source, /HER_KEYS_AI_REQUIRE_CONSENT/);
+  assert.doesNotMatch(source, /HER_KEYS_AI_REQUIRE_CONSENT/,
+    'AI Data Processing consent must be enforced at the server, never conditionally enabled by a secret');
   assert.match(source, /\.eq\('account_id', user\.id\)/);
   assert.match(source, /\.eq\('consent_type', 'ai_processing'\)/);
   assert.match(source, /\.granted !== true/);
   assert.match(source, /adminClient\(\)/);
   assert.ok(source.includes(`policy_version !== '${V.ai_processing}'`), 'client/server AI policy version must match');
-  assert.ok(source.indexOf('HER_KEYS_AI_REQUIRE_CONSENT') < source.indexOf('await providerRequest('), 'authorization precedes third-party data transfer');
+  const authenticated = source.indexOf('const user = await requireUser(req);');
+  const receipt = source.indexOf(".from('account_consents')", authenticated);
+  const refused = source.indexOf("reason: 'ai_processing_consent_required'", receipt);
+  const provider = source.indexOf('await providerRequest(', refused);
+  assert.ok(authenticated >= 0 && receipt > authenticated && refused > receipt && provider > refused,
+    'every authenticated AI request must check current affirmative consent before third-party data transfer');
 });

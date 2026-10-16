@@ -1,13 +1,18 @@
 export const sdk = {
   id: '$RCAnonymousID:test', calls: [], info: { entitlements: { active: {} } },
-  failLogin: false, failRestore: false, restoreWait: null, loginWait: null, logoutWait: null,
+  failLogin: false, failRestore: false, restoreWait: null, loginWait: null, logoutWait: null, identityReadWait: null,
   // Failure injection: a native call that never answers, and the offering the store resolved.
   hang: { login: false, identityRead: false, customerInfo: false, offerings: false, restore: false }, offering: null,
 };
 export const LOG_LEVEL = { INFO: 'INFO' };
 export default {
   configure: () => {}, setLogLevel: async () => {},
-  getAppUserID: async () => sdk.hang.identityRead ? new Promise(() => {}) : sdk.id,
+  getAppUserID: async () => {
+    if (sdk.hang.identityRead) return new Promise(() => {});
+    const pending = sdk.identityReadWait;
+    if (pending) await pending;
+    return sdk.id;
+  },
   logIn: async (id) => { sdk.calls.push(['login', id]); if (sdk.loginWait) await sdk.loginWait; if (sdk.hang.login) return new Promise(() => {}); if (sdk.failLogin) throw new Error('login failed'); sdk.id = id; },
   logOut: async () => { sdk.calls.push(['logout']); if (sdk.logoutWait) await sdk.logoutWait; sdk.id = '$RCAnonymousID:test'; },
   getCustomerInfo: async () => sdk.hang.customerInfo ? new Promise(() => {}) : sdk.info,

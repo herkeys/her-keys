@@ -39,6 +39,8 @@ on:
       - repair/premium-journey-backend-cert-20261016
       # V2 controlled Production feature rollout and governed paid-checkout-off migration.
       - repair/v2-production-premium-rollout-readiness-20261016
+      # UI02 + adaptive appearance + reviewed RC identity safety + AI-consent convergence, exact pushed SHA.
+      - integration/v2-ui02dm-rc-ai-convergence-20261016
   workflow_dispatch:
 
 permissions:
