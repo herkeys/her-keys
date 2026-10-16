@@ -26,15 +26,15 @@ import type { SavedReview } from './momentumFlow';
 import { usePremiumMomentum, type MomentumView, type PremiumMomentumApi } from './usePremiumMomentum';
 
 /**
- * Her Keys Premium's weekly review, on Today. Shown for an account that has Premium, or that already has saved reviews (they stay
- * readable after a subscription ends). It renders nothing for a signed-out device, while the server's answer is loading, or for a
- * Free account with no saved reviews — there is no standing upsell here.
+ * Her Keys Premium's weekly review, on Today. Discovery is visible to Free accounts ONLY when the server manifest
+ * has released this feature. Existing saved reviews always remain available after a subscription ends.
+ * A signed-out device, an unresolved server view, or an unreleased feature with no saved records renders nothing.
  */
 export function PremiumMomentumSection() {
   const api = usePremiumMomentum();
   const { feature } = api;
   if (feature.state.kind === 'signed_out' || feature.state.kind === 'loading') return null;
-  if (!feature.usable && api.saved.length === 0) return null;
+  if (!feature.usable && feature.state.kind !== 'upgrade_required' && api.saved.length === 0) return null;
   return <PremiumMomentumPanel api={api} />;
 }
 
