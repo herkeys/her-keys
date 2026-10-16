@@ -31,7 +31,8 @@ Object.assign(client.REVENUECAT_DEADLINES, { identifyMs: 40, readMs: 40, restore
 
 afterEach(async () => {
   Object.assign(sdk, { failLogin: false, failRestore: false, restoreWait: null, offering: null, info: { entitlements: { active: {} } } });
-  Object.assign(sdk.hang, { login: false, customerInfo: false, offerings: false, restore: false });
+  Object.assign(sdk.hang, { login: false, customerInfo: false, offerings: false, restore: false, userId: false });
+  Object.assign(sdk.hold, { login: null, userId: null });
   await client.identifyRevenueCatAccount(null);
   sdk.calls.length = 0;
 });
@@ -68,6 +69,75 @@ describe('every SDK call ends', () => {
     assert.equal(await client.fetchCurrentOffering(), null);
     sdk.hang.restore = true;
     assert.deepEqual(await client.restoreRevenueCatPurchases(A), { kind: 'unavailable' });
+  });
+});
+
+describe('identity reads and abandoned native calls', () => {
+  const deferred = () => { let release; const promise = new Promise((resolve) => { release = resolve; }); return { promise, release }; };
+  const nap = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  test('a getAppUserID that never answers ends every read path and does not hold the queue', async () => {
+    assert.equal(await client.identifyRevenueCatAccount(A), 'identified');
+    sdk.hang.userId = true;
+    assert.equal(await client.fetchActiveEntitlementIds(), null, 'unverifiable identity is never a read');
+    assert.deepEqual(await client.restoreRevenueCatPurchases(A), { kind: 'unavailable' });
+    assert.deepEqual(await client.presentRevenueCatPaywall(nativeOffering, A), { kind: 'unavailable' });
+    assert.equal(await client.ensureRevenueCatIdentity(), false, 'cannot claim readiness it could not verify');
+    sdk.hang.userId = false;
+    assert.equal(await client.ensureRevenueCatIdentity(), true, 'the queue was never stuck');
+    assert.equal(sdk.calls.filter(([kind]) => kind === 'paywall').length, 0, 'no store sheet under an unverified identity');
+  });
+
+  test('a timed-out logIn that lands late cannot change the identity a newer purchase uses', async () => {
+    const hold = deferred();
+    sdk.hold.login = hold.promise;
+    assert.equal(await client.identifyRevenueCatAccount(A), 'sdk_error', 'abandoned at the deadline');
+    assert.equal(await client.identifyRevenueCatAccount(B), 'identified');
+    hold.release();
+    await nap(15);
+    assert.equal(sdk.id, A, 'the stale native logIn really did land last (the hazard being tested)');
+    assert.equal(client.getRevenueCatIdentity().accountId, B, 'but it never claimed or published the account');
+    assert.equal(await client.fetchActiveEntitlementIds(), null, 'a read under drifted SDK identity is refused');
+    assert.deepEqual(await client.restoreRevenueCatPurchases(B), { kind: 'unavailable' });
+    assert.equal(await client.ensureRevenueCatIdentity(), true, 're-identified to the CURRENT account');
+    assert.equal(sdk.id, B);
+    const h = await (async () => {
+      let value;
+      function Probe() { value = useEntitlement(); return null; }
+      sdk.offering = nativeOffering;
+      const view = await render(<RevenueCatProvider><Probe /></RevenueCatProvider>);
+      return { view, get api() { return value; } };
+    })();
+    try {
+      await TestRenderer.act(async () => { await h.api.presentPaywall('onboarding_complete'); });
+      assert.deepEqual(sdk.calls.filter(([kind]) => kind === 'paywall'), [['paywall', B]], 'the paywall ran under B only');
+    } finally {
+      await TestRenderer.act(async () => { h.view.unmount(); });
+    }
+  });
+
+  test('an abandoned identify never issues its next native call after a newer operation began', async () => {
+    const hold = deferred();
+    sdk.hold.userId = hold.promise;
+    assert.equal(await client.identifyRevenueCatAccount(A), 'sdk_error');
+    assert.equal(await client.identifyRevenueCatAccount(B), 'identified');
+    hold.release();
+    await nap(15);
+    assert.equal(sdk.calls.some(([kind, id]) => kind === 'login' && id === A), false, 'logIn(A) was never issued');
+    assert.equal(sdk.id, B);
+    assert.equal(client.getRevenueCatIdentity().accountId, B);
+  });
+
+  test('a stale logOut cannot follow a newer logIn', async () => {
+    assert.equal(await client.identifyRevenueCatAccount(A), 'identified');
+    const hold = deferred();
+    sdk.hold.userId = hold.promise;
+    assert.equal(await client.identifyRevenueCatAccount(null), 'sdk_error', 'abandoned while reading the id');
+    assert.equal(await client.identifyRevenueCatAccount(B), 'identified');
+    hold.release();
+    await nap(15);
+    assert.equal(sdk.calls.some(([kind]) => kind === 'logout') && sdk.id !== B, false, 'a late logout did not undo B');
+    assert.equal(sdk.id, B);
   });
 });
 

@@ -53,8 +53,26 @@ function withAccountSdkOperation<T>(operation: () => Promise<T>): Promise<T> {
   return result;
 }
 
+/** The SDK's current App User ID, or null when it could not be read in time. A read that never answers must not hold the queue. */
+async function readAppUserId(): Promise<string | null> {
+  try {
+    const read = await withDeadline(() => Purchases.getAppUserID(), REVENUECAT_DEADLINES.readMs);
+    return read.timedOut ? null : read.value;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * True only when we identified `expected` AND the SDK still reports it. An unreadable id is "not verified" (false). A readable id
+ * that differs means a stale native logIn/logOut landed after us; the claim is withdrawn so the next purchase re-identifies.
+ */
 async function matchesIdentifiedAccount(expected: string | null): Promise<boolean> {
-  return configured && expected !== null && identifiedAccountId === expected && await Purchases.getAppUserID() === expected;
+  if (!configured || expected === null || identifiedAccountId !== expected) return false;
+  const sdkId = await readAppUserId();
+  if (sdkId === expected) return true;
+  if (sdkId !== null && identifiedAccountId === expected) identifiedAccountId = null;
+  return false;
 }
 
 function currentPlatformApiKey(): string | undefined {
@@ -114,22 +132,38 @@ export async function identifyRevenueCatAccount(accountId: string | null): Promi
     if (identity.epoch !== epoch) return 'sdk_error';
     identifiedAccountId = null;
     if (!configured) return 'not_configured';
+    // A timeout cannot cancel the native work, so this operation is marked dead the moment it is abandoned (or superseded) and every
+    // later step re-checks before it issues another native call or touches identity. A stale logIn/logOut therefore cannot start
+    // late, and a stale result cannot claim or publish an account.
+    let abandoned = false;
+    const current = () => !abandoned && identity.epoch === epoch;
     try {
       const done = await withDeadline(async (): Promise<IdentifyResult> => {
         if (accountId === null) {
-          if (!(await Purchases.getAppUserID()).startsWith('$RCAnonymousID:')) await Purchases.logOut();
-          return 'signed_out';
+          const before = await Purchases.getAppUserID();
+          if (!current()) return 'sdk_error';
+          if (!before.startsWith('$RCAnonymousID:')) await Purchases.logOut();
+          return current() ? 'signed_out' : 'sdk_error';
         }
         const previousId = await Purchases.getAppUserID();
-        if (previousId !== accountId && !previousId.startsWith('$RCAnonymousID:')) await Purchases.logOut();
+        if (!current()) return 'sdk_error';
+        if (previousId !== accountId && !previousId.startsWith('$RCAnonymousID:')) {
+          await Purchases.logOut();
+          if (!current()) return 'sdk_error';
+        }
         await Purchases.logIn(accountId);
-        if (identity.epoch !== epoch || await Purchases.getAppUserID() !== accountId) return 'sdk_error';
+        if (!current() || await Purchases.getAppUserID() !== accountId || !current()) return 'sdk_error';
         identifiedAccountId = accountId;
         publishIdentity({ accountId, epoch });
         return 'identified';
       }, REVENUECAT_DEADLINES.identifyMs);
-      return done.timedOut ? 'sdk_error' : done.value;
+      if (done.timedOut) {
+        abandoned = true;
+        return 'sdk_error';
+      }
+      return done.value;
     } catch {
+      abandoned = true;
       return 'sdk_error';
     }
   });
@@ -144,7 +178,10 @@ export async function identifyRevenueCatAccount(accountId: string | null): Promi
 export async function ensureRevenueCatIdentity(): Promise<boolean> {
   if (!configured || desiredAccountId === null) return false;
   const wanted = desiredAccountId;
-  if (identity.accountId === wanted && identifiedAccountId === wanted) return true;
+  if (identity.accountId === wanted && identifiedAccountId === wanted) {
+    // Trust, but verify against the SDK (bounded): a stale native call may have changed it since we identified.
+    if (await withAccountSdkOperation(() => matchesIdentifiedAccount(wanted))) return desiredAccountId === wanted && identity.accountId === wanted;
+  }
   const result = await identifyRevenueCatAccount(wanted);
   return result === 'identified' && desiredAccountId === wanted && identity.accountId === wanted;
 }
