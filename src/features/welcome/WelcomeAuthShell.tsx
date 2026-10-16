@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { AppText, Screen } from '../../design/components';
+import { AppText, BotanicalSprig, CurvedWave, Screen } from '../../design/components';
 import { color, interaction, sizing, spacing } from '../../design/tokens';
 import { WELCOME_AUTH_COPY as COPY } from './copy';
 import { stepAfterBack, type WelcomeAuthCallbacks, type WelcomeAuthViewState } from './model';
@@ -53,6 +53,7 @@ export function WelcomeAuthShell({ state, onBegin, onExistingAccount, onSelectPr
 
   return (
     <Screen scroll={false} bottomClearance={spacing.xxxl}>
+      {state.presentation === 'normal' && <StepDecoration step={state.step} />}
       {canGoBack && <BackControl onBack={onBack} />}
 
       {state.presentation === 'auth-degraded' && <DegradedHeader />}
@@ -116,6 +117,24 @@ export function WelcomeAuthShell({ state, onBegin, onExistingAccount, onSelectPr
       )}
     </Screen>
   );
+}
+
+/**
+ * Faint ornament for the steps that have an empty region to put it in (HK-FE-UI-02 §8–§9). It is rendered FIRST so every
+ * control and line of text paints above it, and it renders nothing on compact windows or at large text. The form steps
+ * (email, password, code, recovery) get no ornament at all — a form never has a decoration behind it.
+ */
+function StepDecoration({ step }: { step: WelcomeAuthViewState['step'] }) {
+  if (step === 'welcome') {
+    return (
+      <>
+        <CurvedWave edge="top" height={110} />
+        <BotanicalSprig corner="topRight" size={150} />
+      </>
+    );
+  }
+  if (step === 'premium' || step === 'account-choice') return <BotanicalSprig corner="topRight" />;
+  return null;
 }
 
 /** The one back control: quiet, labeled, and identical in behavior to Android hardware Back. */

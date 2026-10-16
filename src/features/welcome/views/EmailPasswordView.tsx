@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { KeyboardAvoidingView, ScrollView, StyleSheet, View } from 'react-native';
 import { AppText, Button, Overline, TextField } from '../../../design/components';
+import { HeaderBadge } from '../HeaderBadge';
 import { color, spacing } from '../../../design/tokens';
 import type { EmailPasswordMode } from '../../../domain/account/emailPassword';
 import { emailObviousError } from '../model';
@@ -54,6 +55,7 @@ export function EmailPasswordView({ mode, notice, pending, onSubmit, onForgotPas
   return (
     <KeyboardAvoidingView style={styles.flex} behavior={EMAIL_AUTH_KEYBOARD_BEHAVIOR}>
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.container}>
+        <HeaderBadge icon="lock-closed-outline" />
         <Overline>{COPY.password.overline}</Overline>
         <AppText variant="display" style={styles.heading}>{create ? COPY.password.createTitle : COPY.password.signInTitle}</AppText>
         <AppText variant="supporting" color={color.text.secondary} style={styles.lede}>

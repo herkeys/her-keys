@@ -2,6 +2,7 @@ import { StyleSheet, View } from 'react-native';
 import { AppText, Button, LoadingState, Overline } from '../../../design/components';
 import { color, spacing } from '../../../design/tokens';
 import { WELCOME_AUTH_COPY as COPY } from '../copy';
+import { HeaderBadge } from '../HeaderBadge';
 
 /**
  * The hard presentations. Each replaces the step tree rather than decorating
@@ -26,6 +27,7 @@ export function SettlingView() {
 export function DegradedHeader() {
   return (
     <View style={styles.degraded}>
+      <HeaderBadge icon="cloud-offline-outline" />
       <Overline>{COPY.degraded.overline}</Overline>
       <AppText variant="hero" style={styles.degradedTitle}>
         {COPY.degraded.title}
@@ -53,6 +55,7 @@ export function ConflictView({ busy, onSignOut }: ConflictViewProps) {
   return (
     <>
       <View style={styles.body}>
+        <HeaderBadge icon="shield-checkmark-outline" />
         <Overline>{COPY.conflict.overline}</Overline>
         <AppText variant="hero" style={styles.title}>
           {COPY.conflict.title}

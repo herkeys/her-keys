@@ -68,7 +68,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     borderRadius: radius.pill,
     backgroundColor: color.surface.primary,
-    borderWidth: StyleSheet.hairlineWidth,
+    borderWidth: 1,
     borderColor: color.border.control,
   },
   icon: { width: sizing.icon.lg, alignItems: 'center' },

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, StyleSheet, View } from 'react-native';
 import { AppText, Button, Overline, TextField } from '../../../design/components';
+import { HeaderBadge } from '../HeaderBadge';
 import { color, sizing, spacing } from '../../../design/tokens';
 import { WELCOME_AUTH_COPY as COPY } from '../copy';
 import { OTP_CODE_LENGTH, type OtpErrorKind } from '../model';
@@ -48,6 +49,7 @@ export function OtpEntryView({ email, error, pending, resendSecondsLeft, onSubmi
   return (
     <KeyboardAvoidingView style={styles.flex} behavior="padding">
       <View style={styles.body}>
+        <HeaderBadge icon="keypad-outline" />
         <Overline>{COPY.otp.overline}</Overline>
         <AppText variant="display" style={styles.title}>
           {COPY.otp.title}

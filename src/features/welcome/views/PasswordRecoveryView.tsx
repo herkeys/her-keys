@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { KeyboardAvoidingView, ScrollView, StyleSheet, View } from 'react-native';
 import { AppText, Button, Overline, TextField } from '../../../design/components';
+import { HeaderBadge } from '../HeaderBadge';
 import { color, spacing } from '../../../design/tokens';
 import type { RecoveryResult } from '../../../platform/passwordRecoveryProvider';
 import { emailObviousError } from '../model';
@@ -96,6 +97,7 @@ export function PasswordRecoveryView({ initialEmail, request, verify, updatePass
   return (
     <KeyboardAvoidingView style={styles.flex} behavior={EMAIL_AUTH_KEYBOARD_BEHAVIOR}>
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.container}>
+        <HeaderBadge icon="key-outline" />
         <Overline>Account recovery</Overline>
         <AppText variant="display" style={styles.heading}>
           {stage === 'request' ? 'Forgot your password?' : stage === 'verify' ? 'Check your email.' : stage === 'newPassword' ? 'Create a new password.' : 'Password updated.'}
