@@ -51,7 +51,11 @@ async function world({ serverState = 'premium_active', gate = null, ledgerDown =
       // This UI test simulates that explicit readiness and never initiates a real store transaction.
       purchaseReadiness: async () => ({ ready: true, reason: 'ready' }),
       entitlement: async () => ({ kind: 'ok', value: { state: server.state, expiresAt: '2026-11-13T00:00:00Z', graceExpiresAt: null, canceled: false, needsReconcile: false, checkedAt: '' } }),
-      manifest: async () => ({ kind: 'ok', entries: [{ featureKey: 'daily_load_premium', displayName: 'Daily Load', tier: 'premium', available: true, requiresAiConsent: false, minAppVersion: null }] }),
+      manifest: async () => ({ kind: 'ok', entries: [
+        { featureKey: 'daily_load_premium', displayName: 'Daily Load', tier: 'premium', available: true, requiresAiConsent: false, minAppVersion: null },
+        { featureKey: 'smart_inbox_extract', displayName: 'Smart Inbox', tier: 'premium', available: true, requiresAiConsent: true, minAppVersion: null },
+        { featureKey: 'momentum_report', displayName: 'Momentum', tier: 'premium', available: true, requiresAiConsent: false, minAppVersion: null },
+      ] }),
       verify: async () => { server.verifyCalls += 1; return { kind: 'ok', status: 'reconciled' }; },
       authorize: async (request) => {
         server.gateCalls.push(request);
