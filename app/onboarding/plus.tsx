@@ -59,12 +59,16 @@ export default function HerKeysPlus() {
   const intentHandled = useRef(false);
   useEffect(() => {
     if (intent.choice === null || intentHandled.current) return;
+    // A Premium choice made before account setup is not a purchase. Wait until the
+    // server feature manifest settles before spending that intent, otherwise a
+    // transient first-render "checking" result silently drops the only paywall.
+    if (intent.choice === 'premium' && release.kind === 'checking') return;
     intentHandled.current = true;
     const wantsPremium = intent.choice === 'premium';
     intent.clear();
     if (wantsPremium && status !== 'plus') void onSeePlus();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [intent.choice]);
+  }, [intent.choice, release.kind]);
 
   if (status === 'plus') return null;
 
@@ -87,6 +91,10 @@ export default function HerKeysPlus() {
 
   const onContinueWithoutPlus = async () => {
     if (!canResolveOnboardingPlus('continued_without_plus', PAYWALL_POLICY)) return;
+    // Continuing Free also consumes a deferred Premium intent while the server
+    // manifest is still loading; it may not open a delayed upsell in the main app.
+    intentHandled.current = true;
+    intent.clear();
     setBusy('continue');
     setNote(null);
     await resolve(complete);
