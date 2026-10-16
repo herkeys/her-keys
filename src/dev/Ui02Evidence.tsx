@@ -29,6 +29,7 @@ import {
 import { brandPalette, color, radius, spacing, type as typeScale } from '../design/tokens';
 import { ConsentErrorView, ConsentLegalView, ConsentPermissionsView } from '../features/consent/ConsentViews';
 import { OnboardingScaffold } from '../features/onboarding/OnboardingScaffold';
+import { PremiumEvidence } from './Ui02PremiumEvidence';
 import { WelcomeAuthGalleryPreview, type SceneKey } from '../features/welcome/WelcomeAuthGalleryPreview';
 
 /**
@@ -40,7 +41,7 @@ import { WelcomeAuthGalleryPreview, type SceneKey } from '../features/welcome/We
  * Modes: tokens · components · ai · assets · welcome(&scene=&platform=) · consent(&stage=) · audit(&step=)
  */
 
-export const EVIDENCE_MODES = ['tokens', 'components', 'ai', 'assets', 'welcome', 'consent', 'audit'] as const;
+export const EVIDENCE_MODES = ['tokens', 'components', 'ai', 'assets', 'welcome', 'consent', 'audit', 'premium'] as const;
 export type EvidenceMode = (typeof EVIDENCE_MODES)[number];
 
 export function isEvidenceMode(value: unknown): value is EvidenceMode {
@@ -52,6 +53,7 @@ interface Params {
   platform?: string;
   stage?: string;
   step?: string;
+  state?: string;
 }
 
 
@@ -67,6 +69,8 @@ export function Ui02Evidence({ mode, params }: { mode: EvidenceMode; params: Par
       return <ConsentEvidence stage={params.stage ?? 'legal'} />;
     case 'audit':
       return <AuditEvidence step={Number(params.step ?? 1)} />;
+    case 'premium':
+      return <PremiumEvidence state={params.state ?? 'home-active'} />;
     case 'tokens':
       return <TokenGuide />;
     case 'components':

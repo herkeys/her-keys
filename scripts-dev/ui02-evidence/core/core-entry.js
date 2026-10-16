@@ -73,7 +73,7 @@ function Host() {
   __setParams({ id: param(url, 'id') });
   let body;
   if (screen === 'ui' && isEvidenceMode(param(url, 'mode'))) {
-    body = <Ui02Evidence mode={param(url, 'mode')} params={{ scene: param(url, 'scene'), platform: param(url, 'platform'), stage: param(url, 'stage'), step: param(url, 'step') }} />;
+    body = <Ui02Evidence mode={param(url, 'mode')} params={{ scene: param(url, 'scene'), platform: param(url, 'platform'), stage: param(url, 'stage'), step: param(url, 'step'), state: param(url, 'state') }} />;
   } else if (screen.startsWith('tab:')) { __tabs.current = screen.slice(4); body = <AppTabsLayout />; }
   else { const C = STANDALONE[screen]; body = C ? <C /> : <Text>unknown screen {screen}</Text>; }
   return (

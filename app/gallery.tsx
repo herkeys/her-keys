@@ -23,7 +23,7 @@ export default function DesignGallery() {
   const [chips, setChips] = useState(['Cooking']);
   const [draft, setDraft] = useState('');
   // HK-FE-UI-02 source-rendered evidence screens: /gallery?mode=tokens|components|ai|assets|welcome|consent|audit
-  const params = useLocalSearchParams<{ mode?: string; scene?: string; platform?: string; stage?: string; step?: string }>();
+  const params = useLocalSearchParams<{ mode?: string; scene?: string; platform?: string; stage?: string; step?: string; state?: string }>();
 
   if (!__DEV__) return null;
   if (isEvidenceMode(params.mode)) return <Ui02Evidence mode={params.mode} params={params} />;

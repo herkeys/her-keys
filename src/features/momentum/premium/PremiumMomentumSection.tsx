@@ -1,5 +1,5 @@
 import { StyleSheet, View } from 'react-native';
-import { AppText, Button, Card, Divider, Sheet, Tag } from '../../../design/components';
+import { AiMark, AppText, Button, Card, Divider, InlineNotice, PremiumBadge, Sheet, Tag } from '../../../design/components';
 import { colors, spacing } from '../../../design/tokens';
 import type { MomentumReport } from '../../../domain/premium/momentum/model';
 import type { SavedReport } from '../../../domain/premium/momentum/snapshot';
@@ -43,7 +43,12 @@ export function PremiumMomentumPanel({ api }: { api: PremiumMomentumApi }) {
   const open = view.kind === 'review' || view.kind === 'saved';
   return (
     <Card tone="accent" style={styles.card}>
-      <Tag label="Her Keys Premium" tone="accent" />
+      <View style={styles.brandRow}>
+        <PremiumBadge />
+        <View>
+          <Tag label="Her Keys Premium" tone="accent" />
+        </View>
+      </View>
       <AppText variant="screenTitle" style={styles.headline}>
         {feature.usable ? COPY.entry.title : feature.copy.title}
       </AppText>
@@ -135,9 +140,8 @@ function SheetBody({ api, view }: { api: PremiumMomentumApi; view: MomentumView 
         <AppText variant="supporting" color={colors.textSecondary} style={styles.gap}>
           {periodLabel(report.period)}
         </AppText>
-        <AppText variant="body" color={colors.textSecondary} style={styles.block}>
-          {insufficientBody(report.reason, report.have, report.needs)}
-        </AppText>
+        {/* INSUFFICIENT EVIDENCE: stated plainly with the waiting icon — no pattern, score or accomplishment is implied. */}
+        <InlineNotice tone="waiting" title={insufficientBody(report.reason, report.have, report.needs)} style={styles.block} />
         <Button label={COPY.sheet.close} variant="secondary" onPress={api.close} style={styles.closeButton} />
       </View>
     );
@@ -184,8 +188,12 @@ function ReadyBody({ api, report, saved, nextApproved }: { api: PremiumMomentumA
           </AppText>
         ) : (
           report.patterns.map((pattern, index) => (
-            <View key={`${pattern.kind}-${pattern.about?.id ?? pattern.weekday}-${index}`} style={styles.pattern}>
-              <Tag label={tierLabel[pattern.tier]} tone={pattern.tier === 'possible' ? 'neutral' : 'accent'} />
+            // INFERRED READING: dashed outline + the unconfirmed-reading mark, beside its existing tier tag. A pattern is never styled as a fact.
+            <View key={`${pattern.kind}-${pattern.about?.id ?? pattern.weekday}-${index}`} style={[styles.pattern, styles.inferred]}>
+              <View style={styles.inferredHead}>
+                <AiMark kind="noticed" />
+                <Tag label={tierLabel[pattern.tier]} tone={pattern.tier === 'possible' ? 'neutral' : 'accent'} />
+              </View>
               <AppText variant="body" style={styles.line}>
                 {patternLine(pattern, api.titleOf)}
               </AppText>
@@ -203,7 +211,11 @@ function ReadyBody({ api, report, saved, nextApproved }: { api: PremiumMomentumA
             {COPY.noNextStep}
           </AppText>
         ) : (
-          <View>
+          // RECOMMENDATION: solid Berry rail + lightbulb mark; approval below is a separate, explicit action.
+          <View style={styles.recommended}>
+            <View style={styles.inferredHead}>
+              <AiMark kind="suggests" />
+            </View>
             <AppText variant="body">{nextStepHeadline(api.titleOf(next.about))}</AppText>
             <AppText variant="supporting" color={colors.textSecondary} style={styles.gap}>
               {nextStepBody}
@@ -261,8 +273,11 @@ function SavedBody({ api, review }: { api: PremiumMomentumApi; review: SavedRevi
           </AppText>
         ) : (
           report.patterns.map((pattern, index) => (
-            <View key={`${pattern.kind}-${pattern.about?.id ?? pattern.weekday}-${index}`} style={styles.pattern}>
-              <Tag label={tierLabel[pattern.tier]} tone={pattern.tier === 'possible' ? 'neutral' : 'accent'} />
+            <View key={`${pattern.kind}-${pattern.about?.id ?? pattern.weekday}-${index}`} style={[styles.pattern, styles.inferred]}>
+              <View style={styles.inferredHead}>
+                <AiMark kind="noticed" />
+                <Tag label={tierLabel[pattern.tier]} tone={pattern.tier === 'possible' ? 'neutral' : 'accent'} />
+              </View>
               <AppText variant="body" style={styles.line}>
                 {patternLine(pattern, api.titleOf)}
               </AppText>
@@ -299,5 +314,9 @@ const styles = StyleSheet.create({
   line: { marginTop: spacing.xs },
   gap: { marginTop: spacing.xs },
   pattern: { marginTop: spacing.sm },
+  brandRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  inferred: { borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.accentBorder, borderRadius: 16, padding: spacing.md },
+  inferredHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  recommended: { borderLeftWidth: 4, borderLeftColor: colors.accent, paddingLeft: spacing.md },
   closeButton: { marginTop: spacing.xl },
 });

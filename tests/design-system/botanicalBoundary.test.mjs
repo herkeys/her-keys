@@ -37,7 +37,8 @@ test('sage is not a brand colour and is not reachable through any functional tok
   assert.deepEqual(offenders, []);
 });
 
-test('the three sage tokens are muted greens, not blue and not a saturated hue', () => {
+test('the three sage tokens are the owner-confirmed values (2026-10-16), muted greens, not blue and not a saturated hue', () => {
+  assert.deepEqual({ ...botanicalPalette }, { sageOutline: '#7E9C86', sageTip: '#5F8A6B', sageWhisper: '#A8C3AE' });
   for (const hex of Object.values(botanicalPalette)) {
     const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
     assert.ok(g > r && g > b, `${hex} is green-dominant`);

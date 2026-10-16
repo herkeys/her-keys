@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import {
+  AiMark,
   AppText,
   Button,
   Card,
@@ -105,9 +106,13 @@ function ProposalCard({
 }) {
   const [why, setWhy] = useState(false);
   return (
-    <Card tone="surface" style={styles.card}>
+    // AI EXTRACTION awaiting her decision: the dashed unconfirmed-reading outline + mark. The submitted source card above is plain.
+    <Card tone="surface" style={[styles.card, styles.reading]}>
       <View style={styles.header}>
-        <Overline color={color.ai.insight}>{copy.review.eyebrow}</Overline>
+        <View style={styles.markRow}>
+          <AiMark kind="understood" />
+          <Overline color={color.ai.insight}>{copy.review.eyebrow}</Overline>
+        </View>
         {vm.confidence && <ConfidenceBadge level={vm.confidence} />}
       </View>
       <AppText variant="metadata" color={color.text.muted} style={styles.kind}>
@@ -157,8 +162,12 @@ function ClarificationChoice({
 }) {
   const [text, setText] = useState('');
   return (
-    <Card tone="surface" style={styles.card}>
-      <Overline color={color.ai.insight}>{copy.clarify.eyebrow}</Overline>
+    // UNCERTAIN INTERPRETATION: dashed outline + the asks mark.
+    <Card tone="surface" style={[styles.card, styles.reading]}>
+      <View style={styles.markRow}>
+        <AiMark kind="asks" />
+        <Overline color={color.ai.insight}>{copy.clarify.eyebrow}</Overline>
+      </View>
       <AppText variant="body" style={styles.prompt}>
         {question.prompt}
       </AppText>
@@ -424,6 +433,8 @@ const styles = StyleSheet.create({
   block: { marginTop: spacing.md },
   card: { marginTop: spacing.md },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  reading: { borderWidth: 1.5, borderStyle: 'dashed', borderColor: color.ai.insightBorder },
+  markRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexShrink: 1 },
   kind: { marginTop: spacing.sm },
   fact: { marginTop: spacing.md },
   quote: { marginTop: spacing.sm },

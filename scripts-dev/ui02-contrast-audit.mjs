@@ -29,6 +29,7 @@ for (const f of files) {
   for (const finding of j.findings) {
     const key = `${finding.kind}|${finding.fg}|${finding.bg}|${finding.sample}`;
     const row = rows.get(key) ?? { ...finding, tests: new Set() };
+    if (/contrastAudit.test.mjs$/.test(j.file)) continue; // the audit's own synthetic negative case
     row.tests.add(j.file.replace(/^.*[\/]tests[\/]/, 'tests/'));
     rows.set(key, row);
   }

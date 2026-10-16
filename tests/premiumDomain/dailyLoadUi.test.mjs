@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 import { registerHooks } from 'node:module';
 import { afterEach, describe, test } from 'node:test';
 import React from 'react';
+import { StyleSheet } from 'react-native';
 import TestRenderer from 'react-test-renderer';
 import { fixture } from '../support/premium/stubs.mjs';
 import { render } from '../support/render.tsx';
@@ -397,6 +398,55 @@ describe('Free Daily Load is untouched', () => {
     await act(() => button(r, 'See Her Keys Premium').props.onPress());
     await settle();
     assert.equal(JSON.stringify(w.store.getSnapshot().state), before, 'opening the paywall changes nothing in the household');
+    await act(() => r.unmount());
+  });
+});
+
+// ---------------------------------------------------------------------------
+// HK-FE-UI-02 Phase 3 — the truth structure of the Premium Daily Load presentation.
+// Observation → proposed change → approval → applied → undo must stay visually distinct, with Luxury Black limited to one small badge.
+// ---------------------------------------------------------------------------
+describe('HK-FE-UI-02 presentation: observation, proposal, approval, applied change', () => {
+  const marks = (root) => [...new Set(root.findAll((n) => typeof n.props.testID === 'string' && n.props.testID.startsWith('ai-mark-')).map((n) => n.props.testID))];
+  const icons = (root) => root.findAllByType('Ionicons').map((n) => n.props.name);
+  const sheetNode = (r) => modal(r, 'Daily Load review');
+
+  test('the card carries the small Luxury Black Premium badge — and no other black', async () => {
+    const w = await world();
+    const r = await mount(w);
+    assert.equal(r.root.findAll((n) => n.props.testID === 'premium-badge' && typeof n.type === 'string').length, 1);
+    const blacks = r.root.findAll((n) => typeof n.type === 'string').filter((n) => {
+      const st = StyleSheet.flatten(typeof n.props.style === 'function' ? n.props.style({ pressed: false }) : n.props.style) ?? {};
+      return st.backgroundColor === '#1E1B1D';
+    });
+    assert.equal(blacks.length, 1, 'exactly one Luxury Black element: the badge disc');
+    await act(() => r.unmount());
+  });
+
+  test('a proposed change wears the recommendation structure; pressures and evidence gaps (observations) wear no AI mark', async () => {
+    const w = await world();
+    const r = await mount(w);
+    await act(() => button(r, 'Review this day').props.onPress());
+    await settle();
+    const sheet = sheetNode(r);
+    assert.deepEqual(marks(sheet), ['ai-mark-suggests'], 'only the proposal carries a mark');
+    assert.ok(!marks(sheet).includes('ai-mark-confirmed'), 'a proposal never looks done');
+    assert.ok(button(r, 'Approve this change'), 'approval stays its own explicit control');
+    await act(() => r.unmount());
+  });
+
+  test('the applied change is a RECEIPT (neutral glyph, no confirmed check) that sits beside its Undo', async () => {
+    const w = await world();
+    const r = await mount(w);
+    await act(() => button(r, 'Review this day').props.onPress());
+    await settle();
+    await act(() => button(r, 'Approve this change').props.onPress());
+    await settle();
+    await act(() => button(r, 'Yes, make this change').props.onPress());
+    await settle(20);
+    assert.ok(icons(r.root).includes('receipt-outline'), 'receipt glyph');
+    assert.ok(!marks(r.root).includes('ai-mark-confirmed'), 'no solid check: an undone receipt must not read as confirmed');
+    assert.ok(button(r, 'Undo'));
     await act(() => r.unmount());
   });
 });
