@@ -2,7 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { AppText, Button, Card, FadeIn, InsightBlock, Overline, RecommendationBlock, WhyThis } from '../../design/components';
-import { color, radius, sizing, spacing } from '../../design/tokens';
+import { radius, sizing, spacing } from '../../design/tokens';
+import { createThemedStyles, useTheme } from '../../design/theme';
 import type { OneMoveCompletion, OneMoveSection } from '../today/model';
 import { durationMeta } from '../today/model/phrases';
 import { TodayDisclosure } from '../today/TodayDisclosure';
@@ -34,6 +35,8 @@ const COMPLETION_TEXT: Record<OneMoveCompletion, string> = {
  * (MP-02), so no affordance implies one.
  */
 export function OneMoveCard({ section, onComplete }: { section: OneMoveSection; onComplete: () => void }) {
+  const { color } = useTheme();
+  const styles = useStyles();
   if (section.status === 'completed') {
     // The completion settles in rather than snapping: a deliberate entrance on
     // the resolved card, with a quiet check that names the state in shape and
@@ -117,7 +120,7 @@ export function OneMoveCard({ section, onComplete }: { section: OneMoveSection; 
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(({ color }) => StyleSheet.create({
   doneHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   // Sized by padding, never a fixed height, so larger text settings can't clip it.
   doneMark: {
@@ -134,4 +137,4 @@ const styles = StyleSheet.create({
   deeper: { marginTop: spacing.sm },
   evidenceRow: { marginTop: spacing.xs },
   open: { alignSelf: 'flex-start', marginTop: spacing.sm },
-});
+}));

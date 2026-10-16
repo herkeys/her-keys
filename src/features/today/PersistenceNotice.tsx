@@ -1,6 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 import { AppText } from '../../design/components';
-import { colors, spacing } from '../../design/tokens';
+import { spacing } from '../../design/tokens';
+import { useTheme } from '../../design/theme';
 import { useStoreSnapshot } from '../../store/AppStateProvider';
 
 /**
@@ -8,6 +9,7 @@ import { useStoreSnapshot } from '../../store/AppStateProvider';
  * used and Her Keys started over. Nothing at all when everything is fine.
  */
 export function PersistenceNotice() {
+  const { colors } = useTheme();
   const { recovery, persistenceDegraded } = useStoreSnapshot();
 
   const lines: string[] = [];

@@ -8,8 +8,8 @@ import { describe, test } from 'node:test';
 /**
  * The RESOLVED native iOS configuration (`expo config --type introspect`, i.e. every config plugin's mod evaluated), not a grep
  * of app.json. macOS/Xcode are not available to the audit, so this is the strongest executable evidence of what the iOS binary
- * will declare. It pins the iOS identity, the Apple sign-in entitlement, the exact permission surface and the light-only
- * appearance (IOS-D02).
+ * will declare. It pins the iOS identity, the Apple sign-in entitlement, the exact permission surface and the adaptive
+ * appearance configuration (HK-FE-UI-02-DM; it supersedes the earlier light-only guard IOS-D02).
  */
 
 const require = createRequire(import.meta.url);
@@ -50,45 +50,68 @@ describe('iOS identity and Sign in with Apple', () => {
   });
 });
 
-describe('IOS-D02 the iOS app is light-only, as app.json declares', () => {
-  test('the resolved Info.plist forces Light (it was Automatic: the dark splash block silently overrode it)', () => {
-    assert.equal(appJson.userInterfaceStyle, 'light', 'the declared product intent');
-    assert.equal(infoPlist.UIUserInterfaceStyle, 'Light');
+describe('adaptive appearance (HK-FE-UI-02-DM supersedes the light-only policy IOS-D02)', () => {
+  const splash = () => appJson.plugins.find((p) => Array.isArray(p) && p[0] === 'expo-splash-screen')[1];
+  // The plugin's internals are not in the package `exports` map, so they are loaded by file path.
+  const plugin = (name) => require(join(process.cwd(), 'node_modules/expo-splash-screen/plugin/build', `${name}.js`));
+
+  test('Expo declares automatic appearance and the resolved Info.plist is Automatic (not forced Light)', () => {
+    assert.equal(appJson.userInterfaceStyle, 'automatic', 'the declared product intent: Light, Dark or System, chosen in Settings');
+    assert.equal(appJson.ios.infoPlist.UIUserInterfaceStyle, undefined, 'no hand-written forced style in app.json');
+    assert.equal(infoPlist.UIUserInterfaceStyle, 'Automatic');
+    assert.notEqual(appJson.android.userInterfaceStyle, 'light');
   });
 
-  test('the app has no dark theme and mounts no StatusBar, so it must never be put in dark mode by the system', () => {
-    // Under Automatic and the default status-bar style an iPhone in dark mode draws a white clock/battery on the ivory background and
-    // a dark keyboard and system sheets over a light UI. If a dark theme is ever built, this guard is the one to retire.
+  test('Android user-interface-style needs expo-system-ui: it is installed at the Expo-resolved SDK 57 version', () => {
+    const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
+    assert.match(pkg.dependencies['expo-system-ui'] ?? '', /^~57\./);
+    assert.ok(JSON.parse(readFileSync('node_modules/expo-system-ui/package.json', 'utf8')).version.startsWith('57.'));
+  });
+
+  test('the expo-system-ui config plugin is registered and, run for real, writes Android "automatic" and an iOS root background', () => {
+    // SDK 57 docs: under CNG the package must be in `plugins`; Android's userInterfaceStyle is baked into strings.xml (new binary only).
+    assert.ok(appJson.plugins.includes('expo-system-ui'));
+    const android = require(join(process.cwd(), 'node_modules/expo-system-ui/plugin/build/withAndroidUserInterfaceStyle.js'));
+    const props = android.resolveProps({ userInterfaceStyle: appJson.userInterfaceStyle, android: appJson.android });
+    assert.deepEqual(props, { userInterfaceStyle: 'automatic' });
+    const strings = android.setStrings({ resources: {} }, props);
+    const item = [strings.resources.string ?? []].flat().find((s) => s.$?.name === 'expo_system_ui_user_interface_style');
+    assert.equal(item?._, 'automatic', 'strings.xml carries expo_system_ui_user_interface_style=automatic');
+  });
+
+  test('only the theme provider and system-chrome module read or set the colour scheme or mount the StatusBar', () => {
     const files = ['app', 'src'].flatMap((dir) => readdirSync(dir, { recursive: true }).map((f) => `${dir}/${String(f).replaceAll('\\', '/')}`));
     const readers = files
       .filter((f) => /\.(ts|tsx)$/.test(f))
-      .filter((f) => /useColorScheme|Appearance\.|from 'expo-status-bar'/.test(readFileSync(f, 'utf8')));
-    assert.deepEqual(readers, [], 'something now reads or sets the colour scheme: re-decide light-only');
+      .filter((f) => /useColorScheme|Appearance\.|from 'expo-status-bar'|expo-system-ui/.test(readFileSync(f, 'utf8')))
+      .sort();
+    assert.deepEqual(readers, ['src/design/theme/SystemChrome.tsx', 'src/design/theme/ThemeProvider.tsx']);
   });
 
-  test('the iOS-only splash override removes the dark variant for iOS and changes nothing for Android', () => {
-    const splash = appJson.plugins.find((p) => Array.isArray(p) && p[0] === 'expo-splash-screen')[1];
-    // The plugin's internals are not in the package `exports` map, so they are loaded by file path.
-    const plugin = (name) => require(join(process.cwd(), 'node_modules/expo-splash-screen/plugin/build', `${name}.js`));
+  test('the launch screen has coordinated light and dark configurations on BOTH platforms', () => {
     const { getIosSplashConfig } = plugin('getIosSplashConfig');
     const { getAndroidSplashConfig } = plugin('getAndroidSplashConfig');
     const { setSplashInfoPlist } = plugin('withIosSplashInfoPlist');
-
-    const ios = getIosSplashConfig(splash);
-    assert.ok(!ios.dark.backgroundColor && !ios.dark.image, 'no iOS dark splash');
-    assert.notEqual(setSplashInfoPlist({ ios: {}, userInterfaceStyle: 'light' }, {}, ios).UIUserInterfaceStyle, 'Automatic');
-
-    const { ios: _ios, ...withoutIosKey } = splash;
-    assert.deepEqual(getAndroidSplashConfig(splash), getAndroidSplashConfig(withoutIosKey), 'Android splash is byte-identical with or without the iOS override');
-    const android = getAndroidSplashConfig(splash);
-    assert.equal(android.dark?.backgroundColor, '#0B0A08', 'Android keeps its (identical) dark splash resources');
+    const config = splash();
+    assert.equal(config.backgroundColor, '#FDF8F5', 'light launch: the Warm Off-White ground');
+    assert.equal(config.image, './assets/splash-brand-tile.png', 'light launch: the approved brand mark as a rounded tile');
+    assert.equal(config.dark.backgroundColor, '#0B0A08', 'dark launch: the brand mark on its own near-black field (seamless)');
+    assert.equal(config.dark.image, './assets/splash-brand.png');
+    assert.equal(config.ios, undefined, 'no iOS-only override: iOS follows the same two configurations');
+    const ios = getIosSplashConfig(config);
+    assert.ok(ios.dark.backgroundColor && ios.dark.image, 'iOS has a dark splash');
+    assert.equal(setSplashInfoPlist({ ios: {}, userInterfaceStyle: 'automatic' }, {}, ios).UIUserInterfaceStyle, 'Automatic');
+    const android = getAndroidSplashConfig(config);
+    assert.equal(android.dark?.backgroundColor, '#0B0A08');
+    assert.equal(android.backgroundColor, '#FDF8F5');
+    for (const asset of [config.image, config.dark.image]) assert.ok(readFileSync(asset.replace('./', '')).length > 1000, asset);
   });
 
-  test('the override is scoped to iOS keys only', () => {
-    const splash = appJson.plugins.find((p) => Array.isArray(p) && p[0] === 'expo-splash-screen')[1];
-    assert.deepEqual(Object.keys(splash.ios), ['dark']);
-    assert.deepEqual(appJson.ios.infoPlist.UIUserInterfaceStyle, 'Light');
-    assert.equal(appJson.android.userInterfaceStyle, undefined);
+  test('the light tile is the SAME approved artwork with transparent rounded corners (a corner mask only)', () => {
+    const png = readFileSync('assets/splash-brand-tile.png');
+    assert.equal(png[25], 6, 'RGBA');
+    assert.equal(png.readUInt32BE(16), 512);
+    assert.equal(png.readUInt32BE(20), 512);
   });
 });
 

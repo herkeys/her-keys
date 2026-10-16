@@ -1,9 +1,11 @@
 import { ScrollView, StyleSheet, View } from 'react-native';
 import type { ReactNode } from 'react';
 import { AppText, Button, Overline } from '../../design/components';
-import { colors, spacing } from '../../design/tokens';
+import { spacing } from '../../design/tokens';
+import { useTheme } from '../../design/theme';
 import type { AuthProvider } from '../../domain/account/identity';
 import { CROSS_PLATFORM_NOTE, PROVIDER_LABELS, showsCrossPlatformNote, type AccountModalMode } from './accountModel';
+import { AppearanceSection } from './AppearanceSection';
 
 export interface AccountPanelProps {
   onPrivacy?: () => void;
@@ -34,6 +36,7 @@ export interface AccountPanelProps {
  * of the same account resumes it. Presentational only — the route supplies the actions, and they all go through AccountRuntime.
  */
 export function AccountPanel({ mode, providers, busy, failed, onSignIn, onSignOut, onClose, onRestore, restoring = false, restoreNotice, restoreControl, onPrivacy, premiumSection }: AccountPanelProps) {
+  const { colors } = useTheme();
   const copy = COPY[mode];
   const offersProviders = mode === 'signIn' || mode === 'reconnect';
   const premiumShown = mode === 'connected' && premiumSection != null;
@@ -63,6 +66,11 @@ export function AccountPanel({ mode, providers, busy, failed, onSignIn, onSignOu
           {restoreBlock}
         </View>
       ) : null}
+
+      {/* Appearance is device-local and needs no account, so every account-panel state offers it. */}
+      <View style={styles.appearance}>
+        <AppearanceSection />
+      </View>
 
       <View style={styles.footer}>
         {mode === 'connected' && onPrivacy ? <Button label="Privacy & Data" variant="secondary" disabled={busy || restoring} onPress={onPrivacy} /> : null}
@@ -131,6 +139,7 @@ const styles = StyleSheet.create({
   title: { marginTop: spacing.md },
   lede: { marginTop: spacing.lg },
   premium: { paddingHorizontal: spacing.xl, paddingVertical: spacing.xl, gap: spacing.md },
+  appearance: { paddingHorizontal: spacing.xl, paddingVertical: spacing.xl },
   footer: { paddingHorizontal: spacing.xl, paddingBottom: spacing.xxxl, gap: spacing.md },
   note: { textAlign: 'center' },
 });

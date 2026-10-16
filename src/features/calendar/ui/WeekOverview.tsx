@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { AppText } from '../../../design/components';
-import { colors, interaction, sizing, spacing } from '../../../design/tokens';
+import { sizing, spacing } from '../../../design/tokens';
+import { createThemedStyles, useTheme } from '../../../design/theme';
 import type { LocalDate } from '../../../domain/logicalDay';
 import { COPY, weekDayLabel, weekDayLines } from '../copy';
 import { formatDayNumber, formatWeekdayShort } from '../format';
@@ -23,6 +24,8 @@ export function WeekOverview({ week, today, onSelectDay }: { week: CalendarWeekV
 }
 
 export function WeekDayRow({ day, isToday, last, onPress }: { day: WeekDaySummary; isToday: boolean; last: boolean; onPress: () => void }) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const { word, lines } = weekDayLines(day);
   const label = `${weekDayLabel(day)}${isToday ? ', today' : ''}${day.isSelected ? ', currently open' : ''}`;
   return (
@@ -59,11 +62,11 @@ export function WeekDayRow({ day, isToday, last, onPress }: { day: WeekDaySummar
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(({ colors, interaction }) => StyleSheet.create({
   row: { flexDirection: 'row', gap: spacing.lg, minHeight: sizing.minTouchTarget + spacing.md, paddingVertical: spacing.md },
   divider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderSubtle },
   pressed: { opacity: interaction.pressedOpacity },
   date: { width: 44, alignItems: 'center' },
   body: { flex: 1 },
   line: { marginTop: spacing.xxs },
-});
+}));

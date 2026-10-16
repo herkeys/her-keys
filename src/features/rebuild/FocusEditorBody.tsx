@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { AppText, Button, TextField } from '../../design/components';
-import { colors, spacing } from '../../design/tokens';
+import { spacing } from '../../design/tokens';
+import { useTheme } from '../../design/theme';
 import { focusInputProblem, type FocusInputProblem } from '../../domain/rebuild/commands';
 import { REBUILD_FOCUS_NOTE_MAX, REBUILD_FOCUS_TITLE_MAX } from '../../domain/rebuild/schema';
 import { REBUILD_COPY } from './copy';
@@ -25,6 +26,7 @@ const MESSAGE: Record<FocusInputProblem, string> = {
  * category, no goal, no next step. The Focus / Goal distinction is shown as plain copy; nothing here classifies what she writes.
  */
 export function FocusEditorBody({ canWrite, onSave, onCancel }: FocusEditorBodyProps) {
+  const { colors } = useTheme();
   const [title, setTitle] = useState('');
   const [note, setNote] = useState('');
   const [problem, setProblem] = useState<FocusInputProblem | null>(null);

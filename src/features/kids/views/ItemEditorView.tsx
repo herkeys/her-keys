@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { AppText, Button, ChipToggle, InlineNotice, Overline, TextField } from '../../../design/components';
-import { color, spacing } from '../../../design/tokens';
+import { spacing } from '../../../design/tokens';
+import { useTheme } from '../../../design/theme';
 import type { DurationKnowledge } from '../../../domain/foundation/duration';
 import { FIELD_LIMITS } from '../../../domain/state';
 import { FORM, HANDOFF, timeHint } from '../copy';
@@ -53,6 +54,7 @@ export interface ItemEditorViewProps {
  * field is the place provenance is decided: it starts as the planning default she was shown, and only touching it makes it hers.
  */
 export function ItemEditorView(props: ItemEditorViewProps) {
+  const { color } = useTheme();
   const { kind, mode, timeZone, childChoices, initial, people } = props;
   const [childId, setChildId] = useState<string | null>(initial.childId);
   const [title, setTitle] = useState(initial.title);

@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { AppText, Button, Overline, Screen, SegmentBar } from '../../design/components';
-import { colors, spacing } from '../../design/tokens';
+import { spacing } from '../../design/tokens';
+import { useTheme } from '../../design/theme';
 
 interface OnboardingScaffoldProps {
   step: number;
@@ -24,6 +25,7 @@ export function OnboardingScaffold({
   continueLabel = 'Continue',
   continueDisabled,
 }: OnboardingScaffoldProps) {
+  const { colors } = useTheme();
   return (
     <Screen bottomClearance={spacing.xxl}>
       <View style={styles.progress}>

@@ -2,7 +2,8 @@ import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { AppText, Button, ChipToggle, EmptyState, Overline, Screen, TextField } from '../../design/components';
-import { colors, spacing } from '../../design/tokens';
+import { spacing } from '../../design/tokens';
+import { useTheme } from '../../design/theme';
 import { FIELD_LIMITS } from '../../domain/state';
 import { useAppStore, useHouseholdState } from '../../store/AppStateProvider';
 import { HOME_COPY, REFUSAL_COPY, describeRepeat } from './copy';
@@ -28,6 +29,7 @@ export function HomeTaskEditor() {
 }
 
 function TaskEditorForm({ taskId, onReload }: { taskId?: string; onReload: () => void }) {
+  const { colors } = useTheme();
   const store = useAppStore();
   const { state } = useHouseholdState();
   const existing = taskId ? (state.tasks.find((task) => task.id === taskId) ?? null) : null;

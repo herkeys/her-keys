@@ -1,7 +1,8 @@
 import { router } from 'expo-router';
 import { Pressable, StyleSheet } from 'react-native';
 import { AppText } from '../../design/components';
-import { color, interaction, radius, sizing, spacing } from '../../design/tokens';
+import { radius, sizing, spacing } from '../../design/tokens';
+import { createThemedStyles, useTheme } from '../../design/theme';
 import type { OnYourMind } from './model';
 
 /**
@@ -13,6 +14,8 @@ import type { OnYourMind } from './model';
  * due today are rows in the attention block instead), so the chip only presents.
  */
 export function NeedsMeChip({ onYourMind }: { onYourMind: OnYourMind }) {
+  const { color } = useTheme();
+  const styles = useStyles();
   const { count, oldestTitle } = onYourMind;
   return (
     <Pressable
@@ -30,7 +33,7 @@ export function NeedsMeChip({ onYourMind }: { onYourMind: OnYourMind }) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(({ color, interaction }) => StyleSheet.create({
   chip: {
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
@@ -40,4 +43,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   pressed: { opacity: interaction.pressedOpacity },
-});
+}));

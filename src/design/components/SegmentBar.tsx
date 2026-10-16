@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { Animated, Easing, StyleSheet, View, type ViewStyle } from 'react-native';
 import { durationFor, motionDuration, useReduceMotion } from '../motion';
-import { colors, radius } from '../tokens';
+import { radius } from '../tokens';
+import { themed, useTheme } from '../theme';
 
 type Tone = 'accent' | 'attention' | 'neutral';
 
@@ -14,11 +15,11 @@ interface SegmentBarProps {
   style?: ViewStyle;
 }
 
-const toneColor: Record<Tone, string> = {
+const toneColorFor = themed<Record<Tone, string>>(({ colors }) => ({
   accent: colors.accent,
   attention: colors.attention,
   neutral: colors.textTertiary,
-};
+}));
 
 /**
  * Discrete segments rather than a continuous percentage bar: the underlying
@@ -26,6 +27,8 @@ const toneColor: Record<Tone, string> = {
  * implying measurement.
  */
 export function SegmentBar({ filled, total, tone = 'accent', animated = false, style }: SegmentBarProps) {
+  const { colors } = useTheme();
+  const toneColor = toneColorFor(useTheme());
   return (
     <View style={[styles.row, style]}>
       {Array.from({ length: total }, (_, i) =>
@@ -50,6 +53,7 @@ export function SegmentBar({ filled, total, tone = 'accent', animated = false, s
  * collapses the transition to an immediate state change.
  */
 function AnimatedSegment({ filled, color, index }: { filled: boolean; color: string; index: number }) {
+  const { colors } = useTheme();
   const reduceMotion = useReduceMotion();
   const progress = useRef(new Animated.Value(filled ? 1 : 0)).current;
 

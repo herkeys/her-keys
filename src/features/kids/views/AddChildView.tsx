@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { AppText, Button, TextField } from '../../../design/components';
-import { color, spacing } from '../../../design/tokens';
+import { spacing } from '../../../design/tokens';
+import { useTheme } from '../../../design/theme';
 import { FORM } from '../copy';
 import { createSingleFlight } from '../singleFlight';
 
@@ -9,6 +10,7 @@ export type AddChildResult = { ok: true } | { ok: false; message: string };
 
 /** Name and birth date: the two facts Her Keys needs to keep one child apart from another. Nothing else is asked. */
 export function AddChildView({ onSubmit }: { onSubmit: (name: string, birthDate: string) => Promise<AddChildResult> }) {
+  const { color } = useTheme();
   const [name, setName] = useState('');
   const [birthDate, setBirthDate] = useState('');
   const [error, setError] = useState<string | null>(null);

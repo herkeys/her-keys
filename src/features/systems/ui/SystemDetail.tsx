@@ -16,7 +16,8 @@ import {
   ProvenanceLabel,
   Sheet,
 } from '../../../design/components';
-import { color, spacing } from '../../../design/tokens';
+import { spacing } from '../../../design/tokens';
+import { useTheme } from '../../../design/theme';
 import type { Transition } from '../../../state/appStore';
 import { useAppStore, useStoreSnapshot } from '../../../store/AppStateProvider';
 import { assignResponsibility, reassignResponsibility, recordAnswer, takeBackResponsibility, type Answer, type HolderChoice as Holder } from '../commands/responsibility';
@@ -41,6 +42,7 @@ type HolderSheet = 'assign' | 'reassign' | null;
  * simply absent (the projection lists them as unavailable, with reasons, for the evidence).
  */
 export function SystemDetail({ systemId }: { systemId: string }) {
+  const { color } = useTheme();
   const store = useAppStore();
   const snapshot = useStoreSnapshot();
   const availability = availabilityOf(snapshot);

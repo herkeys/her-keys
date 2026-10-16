@@ -6,6 +6,11 @@ Floor: **4.5:1 for every text pairing (no large-text exemption)** and 3:1 for co
 
 Supersedes the HK-FE-UI-01 clay/ivory matrix. Anything not listed is **not** an allowed pairing.
 
+Two schemes are measured with the SAME pair list: **Light** (the approved, locked set) and **Dark** (HK-FE-UI-02-DM, Midnight Plum).
+The Dark section is gated by `tests/design-system/contrastDark.test.mjs`; the Light section by `contrast.test.mjs`.
+
+# LIGHT scheme
+
 ## Owner-pinned measurements
 
 | Pairing | Ratio | Rule it creates |
@@ -100,6 +105,96 @@ Supersedes the HK-FE-UI-01 clay/ivory matrix. Anything not listed is **not** an 
 | border.control | #86627D | background | #FDF8F5 | 4.91:1 | PASS |
 | border.control | #86627D | surface.primary | #FFFFFF | 5.18:1 | PASS |
 | border.control | #86627D | surface.tint | #EADFEA | 4.00:1 | PASS |
+
+# DARK scheme (Midnight Plum)
+
+Same pairings, same floors. Dark values come from `src/design/theme/palettes.ts`.
+
+## Text × surface pairings (Dark)
+
+| Text token | Value | Surface | Value | Ratio | Verdict |
+|---|---|---|---|---|---|
+| text.primary | #F7F1F6 | background | #211B25 | 15.12:1 | PASS |
+| text.primary | #F7F1F6 | surface.primary | #302633 | 13.01:1 | PASS |
+| text.primary | #F7F1F6 | surface.secondary | #2A222E | 13.81:1 | PASS |
+| text.primary | #F7F1F6 | surface.elevated | #382C3B | 11.85:1 | PASS |
+| text.primary | #F7F1F6 | surface.tint | #403344 | 10.63:1 | PASS |
+| text.primary | #F7F1F6 | status.infoSoft | #2E2533 | 13.21:1 | PASS |
+| text.primary | #F7F1F6 | ai.insightSoft | #2B2230 | 13.73:1 | PASS |
+| text.secondary | #D1C2D0 | background | #211B25 | 9.89:1 | PASS |
+| text.secondary | #D1C2D0 | surface.primary | #302633 | 8.51:1 | PASS |
+| text.secondary | #D1C2D0 | surface.secondary | #2A222E | 9.03:1 | PASS |
+| text.secondary | #D1C2D0 | surface.elevated | #382C3B | 7.75:1 | PASS |
+| text.secondary | #D1C2D0 | surface.tint | #403344 | 6.95:1 | PASS |
+| text.muted | #B8A6B7 | background | #211B25 | 7.35:1 | PASS |
+| text.muted | #B8A6B7 | surface.primary | #302633 | 6.33:1 | PASS |
+| text.muted | #B8A6B7 | surface.secondary | #2A222E | 6.71:1 | PASS |
+| text.muted | #B8A6B7 | surface.elevated | #382C3B | 5.77:1 | PASS |
+| text.muted | #B8A6B7 | surface.tint | #403344 | 5.17:1 | PASS |
+| text.muted | #B8A6B7 | status.attentionSoft | #3A3022 | 5.64:1 | PASS |
+| text.muted | #B8A6B7 | status.successSoft | #243229 | 5.87:1 | PASS |
+| text.muted | #B8A6B7 | status.waitingSoft | #33293A | 6.04:1 | PASS |
+| text.muted | #B8A6B7 | status.infoSoft | #2E2533 | 6.42:1 | PASS |
+| text.muted | #B8A6B7 | ai.insightSoft | #2B2230 | 6.68:1 | PASS |
+| text.muted | #B8A6B7 | ai.confirmationSoft | #243229 | 5.87:1 | PASS |
+| text.muted | #B8A6B7 | ai.actionSoft | #2B2230 | 6.68:1 | PASS |
+| action.primary | #CC84AC | background | #211B25 | 5.98:1 | PASS |
+| action.primary | #CC84AC | surface.primary | #302633 | 5.14:1 | PASS |
+| action.primary | #CC84AC | surface.secondary | #2A222E | 5.46:1 | PASS |
+| action.primary | #CC84AC | surface.elevated | #382C3B | 4.69:1 | PASS |
+| action.primary | #CC84AC | ai.actionSoft | #2B2230 | 5.43:1 | PASS |
+| action.onSoft | #E8B3CF | background | #211B25 | 9.44:1 | PASS |
+| action.onSoft | #E8B3CF | surface.primary | #302633 | 8.12:1 | PASS |
+| action.onSoft | #E8B3CF | surface.secondary | #2A222E | 8.62:1 | PASS |
+| action.onSoft | #E8B3CF | surface.elevated | #382C3B | 7.40:1 | PASS |
+| action.onSoft | #E8B3CF | surface.tint | #403344 | 6.64:1 | PASS |
+| action.onSoft | #E8B3CF | action.primarySoft | #403344 | 6.64:1 | PASS |
+| action.disabledText | #AD9BAD | action.disabled | #3A2F3D | 4.88:1 | PASS |
+| status.attention | #E6C07F | background | #211B25 | 9.78:1 | PASS |
+| status.attention | #E6C07F | surface.primary | #302633 | 8.42:1 | PASS |
+| status.attention | #E6C07F | surface.secondary | #2A222E | 8.93:1 | PASS |
+| status.attention | #E6C07F | status.attentionSoft | #3A3022 | 7.51:1 | PASS |
+| status.risk | #F0A698 | background | #211B25 | 8.50:1 | PASS |
+| status.risk | #F0A698 | surface.primary | #302633 | 7.32:1 | PASS |
+| status.risk | #F0A698 | surface.secondary | #2A222E | 7.77:1 | PASS |
+| status.risk | #F0A698 | status.riskSoft | #3C2527 | 7.14:1 | PASS |
+| status.success | #A8D1B0 | background | #211B25 | 9.94:1 | PASS |
+| status.success | #A8D1B0 | surface.primary | #302633 | 8.56:1 | PASS |
+| status.success | #A8D1B0 | surface.secondary | #2A222E | 9.08:1 | PASS |
+| status.success | #A8D1B0 | status.successSoft | #243229 | 7.94:1 | PASS |
+| status.waiting | #CDB8CC | background | #211B25 | 9.07:1 | PASS |
+| status.waiting | #CDB8CC | surface.primary | #302633 | 7.81:1 | PASS |
+| status.waiting | #CDB8CC | surface.secondary | #2A222E | 8.29:1 | PASS |
+| status.waiting | #CDB8CC | status.waitingSoft | #33293A | 7.45:1 | PASS |
+| status.info | #F1E4EF | background | #211B25 | 13.69:1 | PASS |
+| status.info | #F1E4EF | surface.primary | #302633 | 11.78:1 | PASS |
+| status.info | #F1E4EF | status.infoSoft | #2E2533 | 11.96:1 | PASS |
+| ai.insight | #EBDDE9 | background | #211B25 | 12.86:1 | PASS |
+| ai.insight | #EBDDE9 | surface.primary | #302633 | 11.06:1 | PASS |
+| ai.insight | #EBDDE9 | ai.insightSoft | #2B2230 | 11.68:1 | PASS |
+| ai.inference | #E6C07F | background | #211B25 | 9.78:1 | PASS |
+| ai.inference | #E6C07F | surface.primary | #302633 | 8.42:1 | PASS |
+| ai.inference | #E6C07F | ai.inferenceSoft | #3A3022 | 7.51:1 | PASS |
+| ai.confirmation | #A8D1B0 | background | #211B25 | 9.94:1 | PASS |
+| ai.confirmation | #A8D1B0 | surface.primary | #302633 | 8.56:1 | PASS |
+| ai.confirmation | #A8D1B0 | ai.confirmationSoft | #243229 | 7.94:1 | PASS |
+| ai.action | #CC84AC | background | #211B25 | 5.98:1 | PASS |
+| ai.action | #CC84AC | surface.primary | #302633 | 5.14:1 | PASS |
+| ai.action | #CC84AC | ai.actionSoft | #2B2230 | 5.43:1 | PASS |
+| neutral.deep | #F1E4EF | background | #211B25 | 13.69:1 | PASS |
+| neutral.deep | #F1E4EF | surface.primary | #302633 | 11.78:1 | PASS |
+| neutral.deep | #F1E4EF | ai.insightSoft | #2B2230 | 12.43:1 | PASS |
+| text.inverse | #211B25 | action.primary | #CC84AC | 5.98:1 | PASS |
+| text.inverse | #211B25 | action.primaryPressed | #DB9CBD | 7.61:1 | PASS |
+| luxury.glyph | #C7A6BB | luxury.black | #161219 | 8.46:1 | PASS |
+
+## Component-identifying boundaries (Dark — 3:1)
+
+| Boundary | Value | Adjacent | Value | Ratio | Verdict |
+|---|---|---|---|---|---|
+| border.control | #9C879C | background | #211B25 | 5.09:1 | PASS |
+| border.control | #9C879C | surface.primary | #302633 | 4.38:1 | PASS |
+| border.control | #9C879C | surface.tint | #403344 | 3.58:1 | PASS |
 
 ## Notes
 

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
-import { colors, elevation, radius, spacing } from '../tokens';
+import { radius, spacing } from '../tokens';
+import { themed, useTheme } from '../theme';
 
 type Tone = 'surface' | 'subtle' | 'accent' | 'attention' | 'success' | 'risk';
 
@@ -12,16 +13,18 @@ interface CardProps {
   children: ReactNode;
 }
 
-const toneStyles: Record<Tone, { backgroundColor: string; borderColor: string }> = {
+const toneStylesFor = themed<Record<Tone, { backgroundColor: string; borderColor: string }>>(({ colors }) => ({
   surface: { backgroundColor: colors.surface, borderColor: colors.borderSubtle },
   subtle: { backgroundColor: colors.surfaceSubtle, borderColor: 'transparent' },
   accent: { backgroundColor: colors.accentSoft, borderColor: colors.accentBorder },
   attention: { backgroundColor: colors.attentionSoft, borderColor: colors.attentionBorder },
   success: { backgroundColor: colors.successSoft, borderColor: colors.successBorder },
   risk: { backgroundColor: colors.riskSoft, borderColor: colors.riskBorder },
-};
+}));
 
 export function Card({ tone = 'surface', raised = false, style, children }: CardProps) {
+  const { elevation } = useTheme();
+  const toneStyles = toneStylesFor(useTheme());
   return <View style={[styles.card, toneStyles[tone], raised ? elevation.raised : null, style]}>{children}</View>;
 }
 

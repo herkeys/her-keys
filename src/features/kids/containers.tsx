@@ -1,7 +1,8 @@
 import { router, useLocalSearchParams, useNavigation } from 'expo-router';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { AppText, Button, EmptyState, InlineNotice, Overline, StatusList } from '../../design/components';
-import { color, spacing } from '../../design/tokens';
+import { spacing } from '../../design/tokens';
+import { useTheme } from '../../design/theme';
 import { StyleSheet, View } from 'react-native';
 import { isCoparentingHandoff } from '../../domain/handoffs';
 import { logicalDateAt } from '../../domain/logicalDay';
@@ -72,6 +73,7 @@ function finish(): SubmitResult {
 // -------------------------------------------------------------------- hub ---
 
 export function KidsHub() {
+  const { color } = useTheme();
   const { state } = useHouseholdState();
   const { identity } = useStoreSnapshot();
   const nowMs = useNowMs();

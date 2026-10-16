@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { AppText, Button, Card, Overline, PremiumBadge, Screen } from '../../src/design/components';
-import { colors, spacing } from '../../src/design/tokens';
+import { spacing } from '../../src/design/tokens';
+import { useTheme } from '../../src/design/theme';
 import { canResolveOnboardingPlus, HER_KEYS_PREMIUM_DISPLAY_NAME, PAYWALL_POLICY } from '../../src/monetization/entitlement';
 import { PaywallNoticeView } from '../../src/monetization/PaywallNoticeView';
 import { useEntitlement } from '../../src/monetization/RevenueCatProvider';
@@ -26,6 +27,7 @@ import { usePremiumIntent } from '../../src/store/PremiumIntentContext';
  * are allowed to.
  */
 export default function HerKeysPlus() {
+  const { colors } = useTheme();
   const { status } = useEntitlement();
   const paywall = usePaywallAction('onboarding_complete');
   const { complete } = useOnboarding();

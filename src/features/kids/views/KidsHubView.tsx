@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { AppText, Button, Card, EmptyState, HubHeader, InlineNotice, Tag } from '../../../design/components';
-import { color, interaction, radius, sizing, spacing } from '../../../design/tokens';
+import { radius, sizing, spacing } from '../../../design/tokens';
+import { useTheme } from '../../../design/theme';
 import { HUB, cardTags, nextLine } from '../copy';
 import type { ChildCard, KidsView } from '../types';
 
@@ -22,6 +23,7 @@ function cardSummary(card: ChildCard, today: string): string {
 }
 
 export function KidsHubView({ view, canAddChild, onOpenChild, onAddChild }: KidsHubViewProps) {
+  const { color, interaction } = useTheme();
   if (view.status === 'household_mismatch') {
     return <InlineNotice tone="attention" title="Nothing to show" body={HUB.mismatch} />;
   }

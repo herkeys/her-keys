@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { AppText, Button, Card, EmptyState, InlineNotice, LoadingState, Overline, StatusList } from '../../design/components';
-import { colors, spacing } from '../../design/tokens';
+import { spacing } from '../../design/tokens';
+import { useTheme } from '../../design/theme';
 import type { RebuildAvailability } from './availability';
 import { REBUILD_COPY } from './copy';
 import type { FocusCardView, RebuildHomeView } from './model';
@@ -25,6 +26,7 @@ const C = REBUILD_COPY;
  * An empty section is never drawn, and with no active Focus the screen is one calm question (Addendum Q).
  */
 export function RebuildHomeBody({ gate, view, onAddFocus, onNotNow, onOpenFocus, onAddNextStep }: RebuildHomeBodyProps) {
+  const { colors } = useTheme();
   if (gate.kind === 'loading') return <LoadingState label={C.availability.loading} />;
   if (gate.kind === 'unrecovered') return <EmptyState title={C.availability.unrecoveredTitle} body={C.availability.unrecoveredBody} />;
   if (gate.kind === 'other_account') return <EmptyState title={C.availability.otherAccountTitle} body={C.availability.otherAccountBody} />;
@@ -109,6 +111,7 @@ function FocusCard({
   onOpenFocus: (id: string) => void;
   onAddNextStep: (id: string) => void;
 }) {
+  const { colors } = useTheme();
   return (
     <Card style={styles.card}>
       <Pressable accessibilityRole="button" accessibilityLabel={C.home.openFocus(focus.title)} onPress={() => onOpenFocus(focus.id)}>

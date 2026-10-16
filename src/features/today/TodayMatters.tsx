@@ -1,7 +1,8 @@
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { AppText, Card } from '../../design/components';
-import { color, interaction, sizing, spacing } from '../../design/tokens';
+import { sizing, spacing } from '../../design/tokens';
+import { createThemedStyles, useTheme } from '../../design/theme';
 import type { MatterItem, MattersSection } from './model';
 import { SectionLabel } from './TodayDisclosure';
 import { sourceLabelOf, TodaySourceLine } from './TodaySourceLine';
@@ -12,6 +13,8 @@ import { sourceLabelOf, TodaySourceLine } from './TodaySourceLine';
  * corrected through the existing editor — Today changes nothing by being tapped.
  */
 export function TodayMatters({ section }: { section: MattersSection }) {
+  const { color } = useTheme();
+  const styles = useStyles();
   return (
     <Card tone="surface">
       <SectionLabel>What matters today</SectionLabel>
@@ -30,6 +33,8 @@ export function TodayMatters({ section }: { section: MattersSection }) {
 }
 
 function MatterRow({ item, last }: { item: MatterItem; last: boolean }) {
+  const { color } = useTheme();
+  const styles = useStyles();
   const meta = item.isNext ? 'Next up' : item.dueToday ? 'Due today' : null;
   // The row is itself a button, so its label hides the badge inside it from a screen reader: an unconfirmed claim is said here too.
   const label = [item.title, item.timeLabel, item.isNext ? 'next up' : null, item.dueToday ? 'due today' : null, item.source?.uncertain ? sourceLabelOf(item.source) : null].filter(Boolean).join(', ');
@@ -57,7 +62,7 @@ function MatterRow({ item, last }: { item: MatterItem; last: boolean }) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(({ color, interaction }) => StyleSheet.create({
   list: { marginTop: spacing.sm },
   row: { flexDirection: 'row', gap: spacing.md, paddingVertical: spacing.md, minHeight: sizing.minTouchTarget },
   divider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: color.border.subtle },
@@ -65,4 +70,4 @@ const styles = StyleSheet.create({
   body: { flex: 1 },
   more: { marginTop: spacing.xs },
   pressed: { opacity: interaction.pressedOpacity },
-});
+}));

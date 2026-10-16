@@ -1,6 +1,7 @@
 import { StyleSheet } from 'react-native';
 import { AppText, Button, Card, Overline, Screen } from '../../../src/design/components';
-import { color, spacing } from '../../../src/design/tokens';
+import { spacing } from '../../../src/design/tokens';
+import { useTheme } from '../../../src/design/theme';
 import { SystemsHub } from '../../../src/features/systems/ui/SystemsHub';
 import { useEntitlement } from '../../../src/monetization/RevenueCatProvider';
 import { HER_KEYS_PREMIUM_DISPLAY_NAME } from '../../../src/monetization/entitlement';
@@ -14,6 +15,7 @@ import { premiumLaunchState } from '../../../src/monetization/premiumLaunchState
  * monetization card; every way its paywall can end now has words (unavailable, failed, cancelled), where it used to be silent.
  */
 export default function SystemsScreen() {
+  const { color } = useTheme();
   const { isPlus } = useEntitlement();
   const paywall = usePaywallAction('systems_upgrade');
   const premium = usePremiumStateIfMounted();

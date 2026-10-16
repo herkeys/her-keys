@@ -1,6 +1,6 @@
 import { writeFileSync } from 'node:fs';
 import { brandPalette, color, radius } from '../src/design/tokens.ts';
-import { BOUNDARIES, BOUNDARY_FLOOR, INTENT, NORMAL_TEXT_FLOOR, SURFACES, TEXT, ratio } from '../tests/design-system/contrastPairs.mjs';
+import { BOUNDARIES, BOUNDARY_FLOOR, INTENT, NORMAL_TEXT_FLOOR, SCHEMES, SURFACES, TEXT, ratio } from '../tests/design-system/contrastPairs.mjs';
 
 let md = `# Her Keys — WCAG AA Contrast Matrix (HK-FE-UI-02)
 
@@ -9,6 +9,11 @@ Generated from \`src/design/tokens.ts\` by \`scripts-dev/gen-contrast-matrix.mjs
 Floor: **${NORMAL_TEXT_FLOOR}:1 for every text pairing (no large-text exemption)** and ${BOUNDARY_FLOOR}:1 for component-identifying boundaries.
 
 Supersedes the HK-FE-UI-01 clay/ivory matrix. Anything not listed is **not** an allowed pairing.
+
+Two schemes are measured with the SAME pair list: **Light** (the approved, locked set) and **Dark** (HK-FE-UI-02-DM, Midnight Plum).
+The Dark section is gated by \`tests/design-system/contrastDark.test.mjs\`; the Light section by \`contrast.test.mjs\`.
+
+# LIGHT scheme
 
 ## Owner-pinned measurements
 
@@ -46,6 +51,39 @@ for (const [name, { value, against }] of Object.entries(BOUNDARIES)) {
     const r = ratio(value, SURFACES[bgName]);
     if (r < BOUNDARY_FLOOR) allPass = false;
     md += `| ${name} | ${value} | ${bgName} | ${SURFACES[bgName]} | ${r.toFixed(2)}:1 | ${r >= BOUNDARY_FLOOR ? 'PASS' : 'FAIL'} |\n`;
+  }
+}
+
+const D = SCHEMES.dark;
+md += `
+# DARK scheme (Midnight Plum)
+
+Same pairings, same floors. Dark values come from \`src/design/theme/palettes.ts\`.
+
+## Text × surface pairings (Dark)
+
+| Text token | Value | Surface | Value | Ratio | Verdict |
+|---|---|---|---|---|---|
+`;
+for (const [fgName, bgList] of Object.entries(INTENT)) {
+  for (const bgName of bgList) {
+    const r = ratio(D.TEXT[fgName], D.SURFACES[bgName]);
+    const pass = r >= NORMAL_TEXT_FLOOR;
+    if (!pass) allPass = false;
+    md += `| ${fgName} | ${D.TEXT[fgName]} | ${bgName} | ${D.SURFACES[bgName]} | ${r.toFixed(2)}:1 | ${pass ? 'PASS' : 'FAIL'} |\n`;
+  }
+}
+md += `
+## Component-identifying boundaries (Dark — ${BOUNDARY_FLOOR}:1)
+
+| Boundary | Value | Adjacent | Value | Ratio | Verdict |
+|---|---|---|---|---|---|
+`;
+for (const [name, { value, against }] of Object.entries(D.BOUNDARIES)) {
+  for (const bgName of against) {
+    const r = ratio(value, D.SURFACES[bgName]);
+    if (r < BOUNDARY_FLOOR) allPass = false;
+    md += `| ${name} | ${value} | ${bgName} | ${D.SURFACES[bgName]} | ${r.toFixed(2)}:1 | ${r >= BOUNDARY_FLOOR ? 'PASS' : 'FAIL'} |\n`;
   }
 }
 

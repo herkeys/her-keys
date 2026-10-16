@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { AppText, Card, Divider } from '../../../design/components';
-import { colors, interaction, sizing, spacing } from '../../../design/tokens';
+import { sizing, spacing } from '../../../design/tokens';
+import { createThemedStyles, useTheme } from '../../../design/theme';
 import type { TransitionRowPresentation } from '../present';
 import { Lines, TagRow } from './parts';
 
@@ -9,6 +10,8 @@ import { Lines, TagRow } from './parts';
  * presentation carries none, so there is nothing here to leak. The whole row opens the handoff.
  */
 export function TransitionRow({ row, onPress, large = false }: { row: TransitionRowPresentation; onPress: (id: string) => void; large?: boolean }) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   return (
     <Pressable
       onPress={() => onPress(row.id)}
@@ -43,7 +46,7 @@ export function TransitionList({ rows, onPress }: { rows: readonly TransitionRow
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(({ interaction }) => StyleSheet.create({
   row: { minHeight: sizing.minTouchTarget, paddingVertical: spacing.xs },
   pressed: { opacity: interaction.pressedOpacity },
-});
+}));

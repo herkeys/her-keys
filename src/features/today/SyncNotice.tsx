@@ -1,6 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 import { AppText } from '../../design/components';
-import { colors, spacing } from '../../design/tokens';
+import { spacing } from '../../design/tokens';
+import { useTheme } from '../../design/theme';
 import { needsSyncAttention, needsSyncAttentionCount } from '../../domain/sync/syncTypes';
 import { useAccount } from '../../store/AccountProvider';
 import { syncNoticeLine } from './syncNoticeLine';
@@ -16,6 +17,7 @@ import { syncNoticeLine } from './syncNoticeLine';
  * a later wave's job; noticing them is this one's.
  */
 export function SyncNotice() {
+  const { colors } = useTheme();
   const { syncNamespace } = useAccount();
   if (!needsSyncAttention(syncNamespace)) return null;
 

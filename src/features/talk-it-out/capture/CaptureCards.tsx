@@ -14,7 +14,8 @@ import {
   TextField,
   WhyThis,
 } from '../../../design/components';
-import { color, spacing } from '../../../design/tokens';
+import { spacing } from '../../../design/tokens';
+import { createThemedStyles, useTheme } from '../../../design/theme';
 import { logicalDateAt } from '../../../domain/logicalDay';
 import { useStoreSnapshot } from '../../../store/AppStateProvider';
 import { useCapture, useCaptureVM } from './CaptureContext';
@@ -35,6 +36,8 @@ import type { ClarificationAnswer, ProposalKind } from './types';
 // ------------------------------------------------------------------ pieces ---
 
 function SourceEcho({ source }: { source: NonNullable<ReturnType<typeof useCaptureVM>>['source'] }) {
+  const { color } = useTheme();
+  const styles = useStyles();
   const [expanded, setExpanded] = useState(false);
   if (source.kind === 'unavailable') {
     return (
@@ -58,6 +61,8 @@ function SourceEcho({ source }: { source: NonNullable<ReturnType<typeof useCaptu
 }
 
 function Facts({ fields }: { fields: ProposalVM['fields'] }) {
+  const { color } = useTheme();
+  const styles = useStyles();
   return (
     <View>
       {fields.map((field) => (
@@ -73,6 +78,8 @@ function Facts({ fields }: { fields: ProposalVM['fields'] }) {
 }
 
 function AreaChips({ area, onChange }: { area: NonNullable<ProposalVM['area']>; onChange: (categoryId: string) => void }) {
+  const { color } = useTheme();
+  const styles = useStyles();
   return (
     <View style={styles.block}>
       <AppText variant="metadata" color={area.needed ? color.status.attention : color.text.muted}>
@@ -104,6 +111,8 @@ function ProposalCard({
   onArea: (categoryId: string) => void;
   busy: boolean;
 }) {
+  const { color } = useTheme();
+  const styles = useStyles();
   const [why, setWhy] = useState(false);
   return (
     // AI EXTRACTION awaiting her decision: the dashed unconfirmed-reading outline + mark. The submitted source card above is plain.
@@ -160,6 +169,8 @@ function ClarificationChoice({
   onFix: () => void;
   busy: boolean;
 }) {
+  const { color } = useTheme();
+  const styles = useStyles();
   const [text, setText] = useState('');
   return (
     // UNCERTAIN INTERPRETATION: dashed outline + the asks mark.
@@ -221,6 +232,8 @@ const KIND_CHOICES: Array<{ kind: ProposalKind; label: string }> = [
 ];
 
 function FixSheet({ readingId, onClose, onFixed }: { readingId: string; onClose: () => void; onFixed: (message: string) => void }) {
+  const { color } = useTheme();
+  const styles = useStyles();
   const { coordinator, now } = useCapture();
   const { state } = useStoreSnapshot();
   const reading = state?.interpretations.find((r) => r.id === readingId);
@@ -335,6 +348,8 @@ function FixSheet({ readingId, onClose, onFixed }: { readingId: string; onClose:
  * "resolved" until every reading has a final disposition.
  */
 export function CaptureGroup({ captureId, onLater, showSource = true }: { captureId: string; onLater?: () => void; showSource?: boolean }) {
+  const { color } = useTheme();
+  const styles = useStyles();
   const { coordinator } = useCapture();
   const [areaChoice, setAreaChoice] = useState<Record<string, string>>({});
   const [failures, setFailures] = useState<Record<string, number>>({});
@@ -429,7 +444,7 @@ export function CaptureGroup({ captureId, onLater, showSource = true }: { captur
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(({ color }) => StyleSheet.create({
   block: { marginTop: spacing.md },
   card: { marginTop: spacing.md },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
@@ -444,4 +459,4 @@ const styles = StyleSheet.create({
   option: { paddingHorizontal: spacing.lg },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, alignItems: 'center', marginTop: spacing.lg },
   decided: { marginTop: spacing.md },
-});
+}));

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { AppState, StyleSheet, View } from 'react-native';
 import { AppText, Button, Overline, Sheet } from '../../design/components';
-import { colors, spacing } from '../../design/tokens';
+import { spacing } from '../../design/tokens';
+import { useTheme } from '../../design/theme';
 import { EMPTY_OCR_CANDIDATE, type OcrCandidate } from './ocrCandidate';
 import { OCR_COPY as COPY } from './ocrCopy';
 import { OcrReviewScreen } from './OcrReviewScreen';
@@ -26,6 +27,7 @@ export interface ScanEntryPointProps {
  * trusted, and nothing is saved either way.
  */
 export function ScanEntryPoint({ visible, onUseValues, onManualEntry, onClose }: ScanEntryPointProps) {
+  const { colors } = useTheme();
   const [phase, setPhase] = useState<Phase>('choose');
   const [candidate, setCandidate] = useState<OcrCandidate>(EMPTY_OCR_CANDIDATE);
   const [errorMessage, setErrorMessage] = useState('');

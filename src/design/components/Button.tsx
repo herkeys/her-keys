@@ -1,5 +1,6 @@
 import { Platform, Pressable, StyleSheet, View, type ViewStyle } from 'react-native';
-import { color, elevation, interaction, radius, sizing, spacing } from '../tokens';
+import { radius, sizing, spacing, type ColorTokens } from '../tokens';
+import { createThemedStyles, useTheme } from '../theme';
 import { AppText } from './AppText';
 
 /**
@@ -44,6 +45,9 @@ export function Button({
   accessibilityHint,
   style,
 }: ButtonProps) {
+  const { color } = useTheme();
+  const styles = useStyles();
+  const variantStyles = useVariantStyles();
   return (
     <Pressable
       onPress={onPress}
@@ -65,7 +69,7 @@ export function Button({
       {variant === 'primary' && !disabled ? <View pointerEvents="none" style={styles.highlight} /> : null}
       <AppText
         variant={size === 'sm' ? 'metadata' : 'actionLabel'}
-        color={disabled ? color.action.disabledText : textColor(variant)}
+        color={disabled ? color.action.disabledText : textColor(variant, color)}
       >
         {label}
       </AppText>
@@ -73,13 +77,13 @@ export function Button({
   );
 }
 
-function textColor(variant: ButtonVariant): string {
-  if (variant === 'primary') return color.text.inverse;
-  if (variant === 'secondary') return color.action.primary; // Berry on white = 5.37:1
-  return color.text.secondary;
+function textColor(variant: ButtonVariant, c: ColorTokens): string {
+  if (variant === 'primary') return c.text.inverse;
+  if (variant === 'secondary') return c.action.primary; // Berry on white = 5.37:1 (light); luminous Berry on the dark ground (dark)
+  return c.text.secondary;
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(({ color, interaction }) => StyleSheet.create({
   base: {
     borderRadius: radius.pill,
     alignItems: 'center',
@@ -116,9 +120,9 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: color.action.primaryHighlight,
   },
-});
+}));
 
-const variantStyles = StyleSheet.create({
+const useVariantStyles = createThemedStyles(({ color, elevation }) => StyleSheet.create({
   primary: {
     backgroundColor: color.action.primary,
     borderWidth: 1,
@@ -131,4 +135,4 @@ const variantStyles = StyleSheet.create({
     borderColor: color.action.primaryBorder,
   },
   ghost: { backgroundColor: 'transparent' },
-});
+}));

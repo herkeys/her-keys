@@ -1,7 +1,8 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText, BotanicalSprig, CurvedWave, Screen } from '../../design/components';
-import { color, interaction, sizing, spacing } from '../../design/tokens';
+import { sizing, spacing } from '../../design/tokens';
+import { createThemedStyles, useTheme } from '../../design/theme';
 import { WELCOME_AUTH_COPY as COPY } from './copy';
 import { stepAfterBack, type WelcomeAuthCallbacks, type WelcomeAuthViewState } from './model';
 import { AccountChoiceView } from './views/AccountChoiceView';
@@ -139,6 +140,8 @@ function StepDecoration({ step }: { step: WelcomeAuthViewState['step'] }) {
 
 /** The one back control: quiet, labeled, and identical in behavior to Android hardware Back. */
 function BackControl({ onBack }: { onBack: () => void }) {
+  const { color } = useTheme();
+  const styles = useStyles();
   return (
     <Pressable
       onPress={onBack}
@@ -155,7 +158,7 @@ function BackControl({ onBack }: { onBack: () => void }) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(({ interaction }) => StyleSheet.create({
   back: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -165,4 +168,4 @@ const styles = StyleSheet.create({
     gap: spacing.xxs,
   },
   backPressed: { opacity: interaction.pressedOpacity },
-});
+}));

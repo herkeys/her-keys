@@ -7,7 +7,8 @@
  * Every pairing is held to the NORMAL-TEXT floor (4.5:1). HK-FE-UI-01's test computed its floor in a way that silently
  * degraded every pairing to the 3:1 large-text floor; that looseness is removed here — no pairing is exempt.
  */
-import { color } from '../../src/design/tokens.ts';
+import { color as lightColor } from '../../src/design/tokens.ts';
+import { darkColor } from '../../src/design/theme/palettes.ts';
 
 function lum(hex) {
   const h = hex.replace('#', '');
@@ -26,7 +27,7 @@ export function ratio(fg, bg) {
 export const NORMAL_TEXT_FLOOR = 4.5;
 export const BOUNDARY_FLOOR = 3;
 
-export const SURFACES = {
+export const surfacesFor = (color) => ({
   background: color.background,
   'surface.primary': color.surface.primary,
   'surface.secondary': color.surface.secondary,
@@ -46,9 +47,9 @@ export const SURFACES = {
   'ai.actionSoft': color.ai.actionSoft,
   'action.disabled': color.action.disabled,
   'luxury.black': color.luxury.black,
-};
+});
 
-export const TEXT = {
+export const textFor = (color) => ({
   'text.primary': color.text.primary,
   'text.secondary': color.text.secondary,
   'text.muted': color.text.muted,
@@ -67,7 +68,7 @@ export const TEXT = {
   'ai.action': color.ai.action,
   'neutral.deep': color.neutral.deep,
   'luxury.glyph': color.luxury.glyph,
-};
+});
 
 const LIGHT_SURFACES = ['background', 'surface.primary', 'surface.secondary', 'surface.elevated', 'surface.tint'];
 
@@ -98,9 +99,18 @@ export const INTENT = {
 };
 
 /** Component-identifying boundary × adjacent surfaces (WCAG 1.4.11, 3:1). */
-export const BOUNDARIES = {
+export const boundariesFor = (color) => ({
   'border.control': {
     value: color.border.control,
     against: ['background', 'surface.primary', 'surface.tint'],
   },
+});
+
+/** The approved LIGHT set (the original exports, unchanged) and the DARK set measured by the very same matrix. */
+export const SURFACES = surfacesFor(lightColor);
+export const TEXT = textFor(lightColor);
+export const BOUNDARIES = boundariesFor(lightColor);
+export const SCHEMES = {
+  light: { color: lightColor, SURFACES, TEXT, BOUNDARIES },
+  dark: { color: darkColor, SURFACES: surfacesFor(darkColor), TEXT: textFor(darkColor), BOUNDARIES: boundariesFor(darkColor) },
 };

@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { AppText, ChipToggle, InlineNotice, Overline, Tag } from '../../../design/components';
-import { colors, spacing } from '../../../design/tokens';
+import { spacing } from '../../../design/tokens';
+import { useTheme } from '../../../design/theme';
 import { COPY } from '../copy';
 import type { TransitionRowPresentation } from '../present';
 import type { BlockedReason } from '../types';
@@ -26,6 +27,7 @@ export function Heading({ children }: { children: string }) {
 }
 
 export function Caption({ children }: { children: string }) {
+  const { colors } = useTheme();
   return (
     <AppText variant="metadata" color={colors.textTertiary}>
       {children}
@@ -34,6 +36,7 @@ export function Caption({ children }: { children: string }) {
 }
 
 export function Lines({ lines }: { lines: readonly string[] }) {
+  const { colors } = useTheme();
   if (lines.length === 0) return null;
   return (
     <View style={styles.lines}>
@@ -67,6 +70,7 @@ export function Section({ title, children }: { title: string; children: ReactNod
 }
 
 export function ErrorLine({ text }: { text: string | null | undefined }) {
+  const { colors } = useTheme();
   if (text === null || text === undefined || text === '') return null;
   return (
     <AppText variant="supporting" color={colors.attention} accessibilityRole="alert" style={styles.error}>

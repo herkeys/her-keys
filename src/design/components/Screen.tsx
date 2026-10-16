@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { color, sizing, spacing } from '../tokens';
+import { sizing, spacing } from '../tokens';
+import { createThemedStyles } from '../theme';
 
 export interface ScreenProps {
   children: ReactNode;
@@ -19,6 +20,7 @@ export interface ScreenProps {
  * past it so the last row is never trapped underneath.
  */
 export function Screen({ children, scroll = true, bottomClearance }: ScreenProps) {
+  const styles = useStyles();
   const insets = useSafeAreaInsets();
   const bottom = (bottomClearance ?? spacing.xxxl + 68) + insets.bottom;
 
@@ -42,7 +44,7 @@ export function Screen({ children, scroll = true, bottomClearance }: ScreenProps
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(({ color }) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: color.background },
   flex: { flex: 1 },
   scrollContent: {
@@ -55,4 +57,4 @@ const styles = StyleSheet.create({
     width: '100%',
     alignSelf: 'center',
   },
-});
+}));

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState as NativeAppState, Image, Linking, StyleSheet, View } from 'react-native';
 import { AppText, Button, Card, Overline } from '../../design/components';
-import { color, spacing } from '../../design/tokens';
+import { spacing } from '../../design/tokens';
+import { useTheme } from '../../design/theme';
 import type { WeatherSnapshot } from '../../external/types';
 import {
   openLocationSettings,
@@ -40,6 +41,7 @@ function accessFor(location: WeatherLocationResult, askedNow: boolean): Location
 }
 
 export function WeatherContextCard() {
+  const { color } = useTheme();
   const account = useOptionalAccount();
   const { state } = useHouseholdState();
   const timezone = state.user.timezone;

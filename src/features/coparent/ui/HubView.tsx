@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { AppText, Button, Card, Divider, EmptyState, InlineNotice } from '../../../design/components';
-import { colors, interaction, sizing, spacing } from '../../../design/tokens';
+import { sizing, spacing } from '../../../design/tokens';
+import { createThemedStyles, useTheme } from '../../../design/theme';
 import { COPY } from '../copy';
 import type { HubPresentation } from '../present';
 import { Caption, ErrorLine, Lines, Section } from './parts';
@@ -39,6 +40,8 @@ export function HubView({
   onCompletePrep,
   onShowMoreUpcoming,
 }: HubViewProps) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const addDisabled = busy || !canCreate || p.blocked.length > 0;
   const followUpIds = new Set(p.money.map((entry) => entry.taskId));
   const hasReview = p.needsReview.length > 0 || p.needsReviewTasks.length > 0;
@@ -229,7 +232,7 @@ export function HubView({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(({ interaction }) => StyleSheet.create({
   header: { marginBottom: spacing.xl },
   subtitle: { marginTop: spacing.sm },
   zone: { marginTop: spacing.sm },
@@ -245,4 +248,4 @@ const styles = StyleSheet.create({
   itemAction: { alignSelf: 'flex-start', marginTop: spacing.sm },
   completed: { gap: spacing.md },
   footer: { marginTop: spacing.xxxl, gap: spacing.xs },
-});
+}));

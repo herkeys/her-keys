@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { AppText, Button } from '../../../design/components';
-import { colors, interaction, sizing, spacing } from '../../../design/tokens';
+import { sizing, spacing } from '../../../design/tokens';
+import { createThemedStyles, useTheme } from '../../../design/theme';
 import { COPY, detailLines, itemAccessibilityLabel, itemLine, responsibilityLine, type CopyContext } from '../copy';
 import type { DayItem, ItemRef } from '../model/types';
 import { DetailLines, ToggleLink } from './Disclosure';
@@ -39,6 +40,8 @@ export function AgendaList({ items, ctx, onOpenItem, protectable, onProtect }: A
 }
 
 export function AgendaRow({ item, ctx, last, onOpen, onProtect }: { item: DayItem; ctx: CopyContext; last: boolean; onOpen: () => void; onProtect?: () => void }) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const [open, setOpen] = useState(false);
   const details = detailLines(item);
   const responsibility = item.responsibility === null ? null : responsibilityLine(item.responsibility);
@@ -93,7 +96,7 @@ export function AgendaRow({ item, ctx, last, onOpen, onProtect }: { item: DayIte
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(({ colors, interaction }) => StyleSheet.create({
   row: { paddingTop: spacing.sm },
   divider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderSubtle },
   main: { flexDirection: 'row', gap: spacing.md, minHeight: sizing.minTouchTarget, paddingVertical: spacing.sm },
@@ -103,4 +106,4 @@ const styles = StyleSheet.create({
   line: { marginTop: spacing.xxs },
   detailsWrap: { paddingLeft: 76 + spacing.md },
   protect: { alignSelf: 'flex-start', marginTop: spacing.sm },
-});
+}));

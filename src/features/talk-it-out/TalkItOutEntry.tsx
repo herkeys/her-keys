@@ -1,7 +1,8 @@
 import { router } from 'expo-router';
 import { Pressable, StyleSheet } from 'react-native';
 import { AppText, Overline } from '../../design/components';
-import { color, colors, interaction, radius, spacing } from '../../design/tokens';
+import { radius, spacing } from '../../design/tokens';
+import { createThemedStyles, useTheme } from '../../design/theme';
 
 /**
  * Inline entry point rather than a floating button: an overlay pill covered
@@ -9,6 +10,8 @@ import { color, colors, interaction, radius, spacing } from '../../design/tokens
  * This keeps a contextual way in without adding chrome on top of content.
  */
 export function TalkItOutEntry() {
+  const { color, colors } = useTheme();
+  const styles = useStyles();
   return (
     <Pressable
       accessibilityRole="button"
@@ -25,7 +28,7 @@ export function TalkItOutEntry() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(({ colors, interaction }) => StyleSheet.create({
   surface: {
     marginTop: spacing.xxl,
     padding: spacing.xl,
@@ -37,4 +40,4 @@ const styles = StyleSheet.create({
   },
   copy: { marginTop: spacing.sm },
   pressed: { opacity: interaction.pressedOpacity },
-});
+}));

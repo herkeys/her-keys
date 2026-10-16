@@ -1,7 +1,8 @@
 import { useState, type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { AppText, Button, HubHeader, InlineNotice, LoadingState, Overline, StatusList } from '../../design/components';
-import { colors, spacing } from '../../design/tokens';
+import { spacing } from '../../design/tokens';
+import { useTheme } from '../../design/theme';
 import { needsAttention as taskNeedsAttention, openTaskLabel } from '../life/openTaskLabel';
 import type { MoneyGate } from './moneyGate';
 import type { MoneyHomeView, MoneyItemView } from './projection';
@@ -164,6 +165,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 }
 
 function Empty({ text }: { text: string }) {
+  const { colors } = useTheme();
   return (
     <AppText variant="body" color={colors.textSecondary}>
       {text}

@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { AppText, Button, ChipToggle, InlineNotice, Overline, Sheet, TextField } from '../../design/components';
-import { colors, spacing } from '../../design/tokens';
+import { spacing } from '../../design/tokens';
+import { useTheme } from '../../design/theme';
 import { checkLifeRecordTitle } from '../../domain/lifeRecords';
 import { isLocalDate } from '../../domain/logicalDay';
 import { LIFE_RECORD_LIMITS, type LifeRecordKind } from '../../domain/state';
@@ -63,6 +64,7 @@ const DATE_FIELDS = [
  * types: nothing is suggested, derived or corrected, and no renewal window is invented.
  */
 export function RecordSheet({ visible, mode, initial, childOptions, notice, busy, canWrite, onSubmit, onClose }: RecordSheetProps) {
+  const { colors } = useTheme();
   const [values, setValues] = useState<RecordSheetValues>(initial);
   const hasDetails = Object.entries(initial).some(([key, value]) => key !== 'title' && key !== 'kind' && value !== '' && value !== null);
   const [details, setDetails] = useState(mode === 'edit' || hasDetails);

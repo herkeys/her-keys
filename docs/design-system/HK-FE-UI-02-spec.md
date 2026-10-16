@@ -171,6 +171,10 @@ plums. No script fonts.
 
 ## 8. Light-mode policy
 
+> **SUPERSEDED by HK-FE-UI-02-DM** ([adaptive appearance](HK-FE-UI-02-DM-adaptive-appearance.md)): the app now offers Light, Dark and
+> System. The Light palette described by this spec is unchanged and locked; only the "Light-only" enforcement below is replaced.
+> The text is kept as the historical record of the earlier decision.
+
 Light-only for this release. Enforced today by `app.json` (`userInterfaceStyle: "light"`, iOS `UIUserInterfaceStyle: Light`); this
 workstream did not edit `app.json`. Known/likely mismatches to carry to a later brand-asset pass (listed, not built): the **native
 splash is charcoal with the gold brand mark** and cross-fades into the Warm Off-White app (a black→light transition); the Expo

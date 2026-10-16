@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { AppText, Button, Card, InlineNotice } from '../../../design/components';
-import { colors, spacing } from '../../../design/tokens';
+import { spacing } from '../../../design/tokens';
+import { useTheme } from '../../../design/theme';
 import { COPY } from '../copy';
 import { presentPrepItem, presentTransitionRow, type PresentationContext, type ResponsibilityAction, type TransitionDetailPresentation } from '../present';
 import type { PrepItemView, TransitionDetailView as TransitionDetailModel } from '../types';
@@ -34,6 +35,7 @@ export interface TransitionDetailViewProps {
  * Every sentence comes from the presentation; every button is a recording of what SHE says, and none of them contacts anyone.
  */
 export function TransitionDetailView(props: TransitionDetailViewProps) {
+  const { colors } = useTheme();
   const { householdId, presentation: p, detail, presentationCtx, busy, error } = props;
   const transition = detail.transition;
   const revealKey = `${householdId}:${transition?.id ?? ''}`;

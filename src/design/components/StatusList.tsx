@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, View, type ViewStyle } from 'react-native';
-import { colors, radius, spacing } from '../tokens';
+import { radius, spacing } from '../tokens';
+import { createThemedStyles, useTheme } from '../theme';
 import { AppText } from './AppText';
 
 export interface StatusItem {
@@ -19,6 +20,7 @@ export interface StatusItem {
  * different screens.
  */
 export function StatusList({ items, style }: { items: StatusItem[]; style?: ViewStyle }) {
+  const styles = useStyles();
   return (
     <View style={[styles.surface, style]}>
       {items.map((item, index) => (
@@ -29,6 +31,8 @@ export function StatusList({ items, style }: { items: StatusItem[]; style?: View
 }
 
 function Row({ item, isLast }: { item: StatusItem; isLast: boolean }) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const content = (
     <View style={[styles.row, isLast ? null : styles.rowDivider]}>
       <AppText variant="bodyStrong" style={styles.label}>
@@ -75,7 +79,7 @@ function Row({ item, isLast }: { item: StatusItem; isLast: boolean }) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(({ colors }) => StyleSheet.create({
   surface: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
@@ -98,4 +102,4 @@ const styles = StyleSheet.create({
   dot: { width: 6, height: 6, borderRadius: radius.pill, backgroundColor: colors.attention },
   chevron: { marginLeft: spacing.xxs },
   pressed: { opacity: 0.6 },
-});
+}));

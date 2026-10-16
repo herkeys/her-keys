@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { AppText, Button, Card, EmptyState, InlineNotice, LoadingState, Tag } from '../../../design/components';
-import { color, spacing } from '../../../design/tokens';
+import { spacing } from '../../../design/tokens';
+import { useTheme } from '../../../design/theme';
 import { CaptureGroup } from './CaptureCards';
 import { useCapture, useLifeInbox } from './CaptureContext';
 import { copy } from './copy';
@@ -14,6 +15,7 @@ import type { InboxItemVM } from './viewModel';
  */
 
 function ItemCard({ item, open, onToggle, onSayAgain }: { item: InboxItemVM; open: boolean; onToggle: () => void; onSayAgain: () => void }) {
+  const { color } = useTheme();
   const { coordinator } = useCapture();
   const urgency = item.passed ? copy.inbox.passed : copy.inbox.urgency[item.urgency];
   return (
@@ -58,6 +60,7 @@ function ItemCard({ item, open, onToggle, onSayAgain }: { item: InboxItemVM; ope
 
 /** `onSayAgain` opens Talk It Out; the route supplies it so this view carries no navigation of its own. */
 export function LifeInboxView({ onSayAgain }: { onSayAgain: () => void }) {
+  const { color } = useTheme();
   const vm = useLifeInbox();
   const [openId, setOpenId] = useState<string | null>(null);
 

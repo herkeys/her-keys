@@ -14,12 +14,12 @@ const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const walk = (dir) => readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(join(dir, e.name)) : /\.(tsx?|js)$/.test(e.name) ? [join(dir, e.name)] : []));
 const SAGE = /botanicalPalette|color\.botanical|sageOutline|sageTip|sageWhisper|botanicalOpacity|botanicalStroke/;
 
-test('only tokens.ts and Botanical.tsx name the sage tokens in app or src', () => {
+test('only tokens.ts, the theme palettes and Botanical.tsx name the sage tokens in app or src', () => {
   const users = [...walk(join(ROOT, 'src')), ...walk(join(ROOT, 'app'))]
     .filter((f) => SAGE.test(readFileSync(f, 'utf8')))
     .map((f) => relative(ROOT, f).split(sep).join('/'))
     .sort();
-  assert.deepEqual(users, ['src/design/components/Botanical.tsx', 'src/design/tokens.ts']);
+  assert.deepEqual(users, ['src/design/components/Botanical.tsx', 'src/design/theme/palettes.ts', 'src/design/tokens.ts']);
 });
 
 test('sage is not a brand colour and is not reachable through any functional token group', () => {

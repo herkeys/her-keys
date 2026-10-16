@@ -1,6 +1,7 @@
 import { Alert, StyleSheet, View } from 'react-native';
 import { AppText, Button, Card, Overline, Tag } from '../../design/components';
-import { color, spacing } from '../../design/tokens';
+import { spacing } from '../../design/tokens';
+import { useTheme } from '../../design/theme';
 import type { ExternalCalendarEvent } from '../../external/types';
 import { useGoogleCalendarBridge } from './useGoogleCalendarBridge';
 
@@ -13,6 +14,7 @@ export function GoogleCalendarPanel({
   timezone: string;
   showEvents: boolean;
 }) {
+  const { color } = useTheme();
   const bridge = useGoogleCalendarBridge(selectedDate, timezone, showEvents);
 
   if (bridge.availability === 'checking' || bridge.availability === 'dormant') return null;
@@ -117,6 +119,7 @@ export function GoogleCalendarPanel({
 }
 
 function ExternalEvents({ events, timezone }: { events: ExternalCalendarEvent[]; timezone: string }) {
+  const { color } = useTheme();
   return (
     <Card tone="surface">
       <View style={styles.row}>

@@ -1,7 +1,8 @@
 import { router, Stack } from 'expo-router';
 import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
 import { AppText, Button, Card, ChipToggle, Divider, EmptyState, InlineNotice, Overline, Screen, TextField } from '../../../design/components';
-import { color, spacing } from '../../../design/tokens';
+import { spacing } from '../../../design/tokens';
+import { useTheme } from '../../../design/theme';
 import { SYSTEM_LIMITS, type DraftIssue } from '../commands/draft';
 import { MAX_STEPS_PER_SYSTEM } from '../commands/stepOrder';
 import { copy, issueMessage } from '../copy';
@@ -26,6 +27,7 @@ const FREQUENCIES: Array<[ScheduleFrequency, string]> = [
  * on the last. Nothing is disabled to look like something it is not.
  */
 export function SystemEditor({ systemId }: { systemId?: string }) {
+  const { color } = useTheme();
   const e = useSystemEditor(systemId);
   const { draft } = e;
 

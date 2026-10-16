@@ -2,7 +2,8 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { ActionStateBlock, AppText, Button, Card, ConfirmationSheet, Tag } from '../../design/components';
-import { color, spacing } from '../../design/tokens';
+import { spacing } from '../../design/tokens';
+import { createThemedStyles, useTheme } from '../../design/theme';
 import type { ConsequenceLevel, Reversibility } from '../../domain/foundation/authorization';
 import type { AttentionRow, AttentionSection, TodayAction } from './model';
 import { TodayDisclosure } from './TodayDisclosure';
@@ -41,6 +42,8 @@ const REVERSIBILITY_TEXT: Record<Reversibility, string> = {
  * At most three rows are first-level; the rest are counted and one disclosure away.
  */
 export function TodayAttention({ section, onTakeBack, onDecide, busy, note }: TodayAttentionProps) {
+  const { color } = useTheme();
+  const styles = useStyles();
   const [reviewing, setReviewing] = useState<AttentionRow | null>(null);
 
   const renderRows = (rows: AttentionRow[]) => {
@@ -104,6 +107,8 @@ export function TodayAttention({ section, onTakeBack, onDecide, busy, note }: To
 }
 
 function AttentionRowView({ row, last, busy, onTakeBack }: { row: AttentionRow; last: boolean; busy: boolean; onTakeBack: (id: string) => Promise<boolean> }) {
+  const { color } = useTheme();
+  const styles = useStyles();
   return (
     <View style={[styles.row, last ? null : styles.divider]}>
       <AppText variant="body">{row.statement}</AppText>
@@ -143,11 +148,11 @@ function ActionButton({ action, busy, onTakeBack }: { action: TodayAction; busy:
   return null;
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(({ color }) => StyleSheet.create({
   card: { marginBottom: spacing.md },
   row: { paddingVertical: spacing.md },
   divider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: color.status.attentionBorder },
   meta: { marginTop: spacing.xs },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.md },
   note: { marginTop: spacing.sm },
-});
+}));

@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { StyleSheet } from 'react-native';
 import { AppText, Button, Overline, StatusList } from '../../design/components';
-import { colors, spacing } from '../../design/tokens';
+import { spacing } from '../../design/tokens';
+import { useTheme } from '../../design/theme';
 import { CLOSED_REASON_LABEL, STAGE_LABEL, type CareerLists } from './careerLists';
 
 export interface CareerNextProps {
@@ -17,6 +18,7 @@ export interface CareerNextProps {
  * Every row opens the opportunity, where she can move its stage or restore it. Pure: the Work screen supplies the lists and actions.
  */
 export function CareerNext({ lists, hasNextAction, onOpen, onAdd }: CareerNextProps) {
+  const { colors } = useTheme();
   const [showArchived, setShowArchived] = useState(false);
   return (
     <>

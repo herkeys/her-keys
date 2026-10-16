@@ -26,7 +26,9 @@ import {
   Tag,
   TextField,
 } from '../design/components';
-import { brandPalette, color, radius, spacing, type as typeScale } from '../design/tokens';
+import { brandPalette, radius, spacing, type as typeScale } from '../design/tokens';
+import { AppearanceSection } from '../features/account/AppearanceSection';
+import { createThemedStyles, useTheme } from '../design/theme';
 import { ConsentErrorView, ConsentLegalView, ConsentPermissionsView } from '../features/consent/ConsentViews';
 import { OnboardingScaffold } from '../features/onboarding/OnboardingScaffold';
 import { PremiumEvidence } from './Ui02PremiumEvidence';
@@ -38,10 +40,12 @@ import { WelcomeAuthGalleryPreview, type SceneKey } from '../features/welcome/We
  * capture of it is a capture of the implementation. This is a design-review harness: it authenticates nothing, saves nothing,
  * and starts no purchase.
  *
- * Modes: tokens · components · ai · assets · welcome(&scene=&platform=) · consent(&stage=) · audit(&step=)
+ * Modes: tokens · components · ai · assets · welcome(&scene=&platform=) · consent(&stage=) · audit(&step=) · appearance
+ * Scheme (HK-FE-UI-02-DM): the capture entry wraps everything in an AppearanceProvider seeded from `&scheme=light|dark`, so the same
+ * mode can be captured in both schemes.
  */
 
-export const EVIDENCE_MODES = ['tokens', 'components', 'ai', 'assets', 'welcome', 'consent', 'audit', 'premium'] as const;
+export const EVIDENCE_MODES = ['tokens', 'components', 'ai', 'assets', 'welcome', 'consent', 'audit', 'premium', 'appearance'] as const;
 export type EvidenceMode = (typeof EVIDENCE_MODES)[number];
 
 export function isEvidenceMode(value: unknown): value is EvidenceMode {
@@ -58,11 +62,20 @@ interface Params {
 
 
 export function Ui02Evidence({ mode, params }: { mode: EvidenceMode; params: Params }) {
+  const styles = useStyles();
+  const insets = useSafeAreaInsets();
   switch (mode) {
     case 'welcome':
       return (
         <View style={styles.full}>
           <WelcomeAuthGalleryPreview bare initialScene={(params.scene as SceneKey) ?? 'welcome'} initialPlatform={params.platform === 'android' ? 'android' : 'ios'} />
+        </View>
+      );
+    case 'appearance':
+      return (
+        // Padded like the Your Account panel it lives in (spacing.xl gutters), so the capture shows the real in-panel look.
+        <View style={[styles.full, { paddingTop: insets.top + spacing.xl, paddingHorizontal: spacing.xl }]}>
+          <AppearanceSection />
         </View>
       );
     case 'consent':
@@ -117,6 +130,8 @@ const STEPS = [
 ] as const;
 
 function AuditEvidence({ step }: { step: number }) {
+  const { color } = useTheme();
+  const styles = useStyles();
   const [picked, setPicked] = useState<string[]>([]);
   if (step === 4) {
     return (
@@ -167,6 +182,8 @@ function AuditEvidence({ step }: { step: number }) {
 // ---------------------------------------------------------------------------
 
 function Swatch({ name, value, note }: { name: string; value: string; note?: string }) {
+  const { color } = useTheme();
+  const styles = useStyles();
   return (
     <View style={styles.swatchRow}>
       <View style={[styles.swatch, { backgroundColor: value }]} />
@@ -179,6 +196,8 @@ function Swatch({ name, value, note }: { name: string; value: string; note?: str
 }
 
 function TokenGuide() {
+  const { color } = useTheme();
+  const styles = useStyles();
   return (
     <Screen bottomClearance={spacing.xxl}>
       <Overline>HK-FE-UI-02 · token guide</Overline>
@@ -221,6 +240,8 @@ function TokenGuide() {
 }
 
 function ComponentSheet() {
+  const { color } = useTheme();
+  const styles = useStyles();
   const [text, setText] = useState('');
   return (
     <Screen bottomClearance={spacing.xxl}>
@@ -270,6 +291,8 @@ function ComponentSheet() {
 }
 
 function AiSheet() {
+  const { color } = useTheme();
+  const styles = useStyles();
   return (
     <Screen bottomClearance={spacing.xxl}>
       <Overline>HK-FE-UI-02 · AI language: label + shape + icon</Overline>
@@ -306,6 +329,7 @@ function AiSheet() {
 }
 
 function AssetSheet() {
+  const styles = useStyles();
   return (
     <Screen bottomClearance={spacing.xxl}>
       <Overline>HK-FE-UI-02 · icon + botanical asset sheet</Overline>
@@ -330,6 +354,7 @@ function AssetSheet() {
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  const styles = useStyles();
   return (
     <View style={styles.section}>
       <Overline style={styles.sectionLabel}>{title}</Overline>
@@ -338,7 +363,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(({ color }) => StyleSheet.create({
   full: { flex: 1, backgroundColor: color.background },
   top: { marginTop: spacing.sm },
   line: { marginTop: spacing.md },
@@ -355,4 +380,4 @@ const styles = StyleSheet.create({
   markCell: { alignItems: 'center', gap: spacing.xs, minWidth: 72 },
   panel: { height: 150, borderRadius: radius.lg, backgroundColor: color.background, borderWidth: StyleSheet.hairlineWidth, borderColor: color.border.default, overflow: 'hidden', justifyContent: 'flex-end', padding: spacing.lg },
   panelText: { color: color.text.secondary },
-});
+}));

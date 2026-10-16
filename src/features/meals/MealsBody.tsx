@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { AppText, Button, Card, Divider, HubHeader, InlineNotice, LoadingState, Overline, StatusList } from '../../design/components';
-import { colors, sizing, spacing } from '../../design/tokens';
+import { sizing, spacing } from '../../design/tokens';
+import { useTheme } from '../../design/theme';
 import { MEAL_COPY, SLOT_LABEL, moreLater, moreTasks } from './mealCopy';
 import { shortDate } from './mealDates';
 import type { MealsGate } from './mealsGate';
@@ -24,6 +25,7 @@ export interface MealsBodyProps {
  * and a blank day is never drawn as a gap: there is no count, colour or wording that treats an empty day as a problem.
  */
 export function MealsBody({ gate, view, flash, onAddMeal, onOpenEntry, onPlanAgain, onAddTask, onOpenTask }: MealsBodyProps) {
+  const { colors } = useTheme();
   if (gate.state === 'loading') return <LoadingState label={MEAL_COPY.loading} />;
   if (gate.state === 'recovery') return <InlineNotice tone="attention" title={MEAL_COPY.recoveryTitle} body={MEAL_COPY.recoveryBody} />;
 
@@ -143,6 +145,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 }
 
 function DayGroup({ day, onOpenEntry, showBlank = false }: { day: MealDayView; onOpenEntry: (id: string) => void; showBlank?: boolean }) {
+  const { colors } = useTheme();
   return (
     <View style={styles.dayGroup}>
       <AppText variant="bodyStrong" accessibilityRole="header" accessibilityLabel={day.longLabel}>
@@ -169,6 +172,7 @@ function DayGroup({ day, onOpenEntry, showBlank = false }: { day: MealDayView; o
 }
 
 function EntryRow({ entry, onPress, caption }: { entry: MealEntryView; onPress: () => void; caption?: string }) {
+  const { colors } = useTheme();
   const second = [caption, entry.subtitle].filter((part): part is string => Boolean(part)).join(' · ');
   return (
     <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={entry.a11yLabel} accessibilityHint={MEAL_COPY.openHint} style={styles.row}>

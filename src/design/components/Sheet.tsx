@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
-import { color, opacity, radius, spacing, withAlpha } from '../tokens';
+import { opacity, radius, spacing, withAlpha } from '../tokens';
+import { createThemedStyles, useTheme } from '../theme';
 import { AppText } from './AppText';
 import { Button } from './Button';
 
@@ -19,6 +20,7 @@ export interface SheetProps {
 }
 
 export function Sheet({ visible, onClose, accessibilityLabel, children }: SheetProps) {
+  const styles = useStyles();
   return (
     <Modal
       visible={visible}
@@ -60,6 +62,8 @@ export function ConfirmationSheet({
   onCancel,
   onConfirm,
 }: ConfirmationSheetProps) {
+  const { color } = useTheme();
+  const styles = useStyles();
   return (
     <Sheet visible={visible} onClose={onCancel} accessibilityLabel={title}>
       <AppText variant="sectionTitle" style={styles.title}>
@@ -76,7 +80,7 @@ export function ConfirmationSheet({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(({ color }) => StyleSheet.create({
   backdrop: {
     flex: 1,
     // Plum-black scrim (never pure black): the one translucent layer, and it never sits behind measured text.
@@ -103,4 +107,4 @@ const styles = StyleSheet.create({
   body: { marginTop: spacing.sm, marginBottom: spacing.xl },
   actions: { flexDirection: 'row', justifyContent: 'flex-end', gap: spacing.sm },
   action: { paddingHorizontal: spacing.lg },
-});
+}));

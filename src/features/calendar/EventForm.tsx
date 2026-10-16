@@ -2,7 +2,8 @@ import { router } from 'expo-router';
 import { useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { AppText, Button, ChipToggle, Overline, Screen, TextField } from '../../design/components';
-import { colors, spacing } from '../../design/tokens';
+import { spacing } from '../../design/tokens';
+import { useTheme } from '../../design/theme';
 import { scopeForNewRow } from '../../domain/categories';
 import { addEvent, removeEvent, updateEvent } from '../../domain/events';
 import { isCoparentingHandoff } from '../../domain/handoffs';
@@ -48,6 +49,7 @@ export function EventForm({ eventId }: { eventId?: string }) {
 }
 
 function EventFormBody({ eventId }: { eventId?: string }) {
+  const { colors } = useTheme();
   const store = useAppStore();
   const { state, today } = useHouseholdState();
   const { categories } = useHousehold();

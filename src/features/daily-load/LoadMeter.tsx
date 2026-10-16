@@ -1,6 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 import { AppText, Overline, SegmentBar } from '../../design/components';
-import { color, spacing } from '../../design/tokens';
+import { spacing } from '../../design/tokens';
+import { useTheme } from '../../design/theme';
 import type { LoadEstimate } from '../../types';
 
 /**
@@ -17,6 +18,7 @@ import type { LoadEstimate } from '../../types';
  * apply (TODAY-FD-001): the reading says which day it used.
  */
 export function LoadMeter({ load, note }: { load: LoadEstimate; note?: string | null }) {
+  const { color } = useTheme();
   const tight = load.level === 'tight' || load.level === 'full';
   const valueColor = tight ? color.status.attention : color.text.primary;
 

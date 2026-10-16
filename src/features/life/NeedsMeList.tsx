@@ -1,12 +1,14 @@
 import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { AppText, Button, Card } from '../../design/components';
-import { colors, spacing } from '../../design/tokens';
+import { spacing } from '../../design/tokens';
+import { useTheme } from '../../design/theme';
 import { resolveNeedsMeItem } from '../../domain/needsMe';
 import { useAppStore, useHouseholdState } from '../../store/AppStateProvider';
 
 /** The full inbox: everything captured and not yet resolved, in capture order. Classification is optional and always later. */
 export function NeedsMeList() {
+  const { colors } = useTheme();
   const store = useAppStore();
   const { state } = useHouseholdState();
   const open = [...state.needsMe].filter((item) => item.status === 'open').sort((a, b) => a.createdAt.localeCompare(b.createdAt));

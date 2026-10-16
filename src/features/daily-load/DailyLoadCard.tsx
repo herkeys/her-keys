@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { AppText, Button, Card, Overline, Tag, WhyThis } from '../../design/components';
-import { colors, spacing } from '../../design/tokens';
+import { spacing } from '../../design/tokens';
+import { createThemedStyles, useTheme } from '../../design/theme';
 import { CAPACITY_DAY_END_MINUTES, CAPACITY_DAY_START_MINUTES } from '../../domain/dailyLoadIssues';
 import { canShortenTask } from '../../domain/recommendationActions';
 import { useHouseholdState } from '../../store/AppStateProvider';
@@ -12,6 +13,8 @@ const CAPACITY_ACTION_TYPES = new Set(['daily_load.drop_task', 'daily_load.short
 const DAY_WINDOW = `${formatTime(CAPACITY_DAY_START_MINUTES)} and ${formatTime(CAPACITY_DAY_END_MINUTES)}`;
 
 export function DailyLoadCard() {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const schedule = useSchedule();
   const { events, tasks, issues, decision, candidates, candidateIndex, appliedMove, showNextCandidate, moveRecommendedTask, keepAsPlanned, moveEvent, dropTask, shortenTask, keepCapacity, protectItem } = schedule;
   const { state, today } = useHouseholdState();
@@ -306,7 +309,7 @@ export function DailyLoadCard() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(({ colors }) => StyleSheet.create({
   card: { marginBottom: spacing.xxl },
   headline: { marginTop: spacing.md },
   impact: { marginTop: spacing.sm },
@@ -321,4 +324,4 @@ const styles = StyleSheet.create({
   },
   secondaryRow: { flexDirection: 'row', marginTop: spacing.xs, gap: spacing.sm },
   secondaryButton: { flex: 1 },
-});
+}));

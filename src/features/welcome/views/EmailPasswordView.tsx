@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { KeyboardAvoidingView, ScrollView, StyleSheet, View } from 'react-native';
 import { AppText, Button, Overline, TextField } from '../../../design/components';
 import { HeaderBadge } from '../HeaderBadge';
-import { color, spacing } from '../../../design/tokens';
+import { spacing } from '../../../design/tokens';
+import { useTheme } from '../../../design/theme';
 import type { EmailPasswordMode } from '../../../domain/account/emailPassword';
 import { emailObviousError } from '../model';
 import { WELCOME_AUTH_COPY as COPY } from '../copy';
@@ -30,6 +31,7 @@ export interface EmailPasswordViewProps {
  * No fake session is created while email confirmation is pending.
  */
 export function EmailPasswordView({ mode, notice, pending, onSubmit, onForgotPassword, onGoToSignIn }: EmailPasswordViewProps) {
+  const { color } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');

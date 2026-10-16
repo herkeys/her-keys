@@ -3,7 +3,8 @@ import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Ui02Evidence, isEvidenceMode } from '../src/dev/Ui02Evidence';
 import { ActionStateBlock, AppText, Button, Card, ChipToggle, ClarificationPrompt, ConfidenceBadge, ConfirmationSheet, Divider, EmptyState, ErrorState, InlineNotice, InsightBlock, InterpretationReview, LoadingState, OfflineState, Overline, ProvenanceLabel, RecommendationBlock, Screen, SegmentBar, Sheet, StatusList, Tag, TextField, WhyThis } from '../src/design/components';
-import { color, radius, spacing, type as typeScale } from '../src/design/tokens';
+import { radius, spacing, type as typeScale } from '../src/design/tokens';
+import { createThemedStyles, useTheme } from '../src/design/theme';
 import { WelcomeAuthGalleryPreview } from '../src/features/welcome/WelcomeAuthGalleryPreview';
 
 /**
@@ -18,6 +19,8 @@ import { WelcomeAuthGalleryPreview } from '../src/features/welcome/WelcomeAuthGa
  */
 
 export default function DesignGallery() {
+  const { color } = useTheme();
+  const styles = useStyles();
   const [sheetVisible, setSheetVisible] = useState(false);
   const [confirmVisible, setConfirmVisible] = useState(false);
   const [chips, setChips] = useState(['Cooking']);
@@ -252,6 +255,7 @@ export default function DesignGallery() {
 }
 
 function GallerySection({ title, children }: { title: string; children: React.ReactNode }) {
+  const styles = useStyles();
   return (
     <View style={styles.section}>
       <Overline style={styles.sectionLabel}>{title}</Overline>
@@ -260,7 +264,7 @@ function GallerySection({ title, children }: { title: string; children: React.Re
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(({ color }) => StyleSheet.create({
   block: { marginTop: spacing.sm },
   section: { marginTop: spacing.xxxl },
   sectionLabel: { marginBottom: spacing.md },
@@ -270,4 +274,4 @@ const styles = StyleSheet.create({
   swatchRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginTop: spacing.xs },
   swatch: { width: 28, height: 28, borderRadius: radius.xs, borderWidth: StyleSheet.hairlineWidth, borderColor: color.border.default },
   typeRow: { marginTop: spacing.md },
-});
+}));

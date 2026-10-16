@@ -1,6 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 import { AiMark, AppText, Button, Card, Divider, InlineNotice, PremiumBadge, Sheet, Tag } from '../../../design/components';
-import { colors, spacing } from '../../../design/tokens';
+import { spacing } from '../../../design/tokens';
+import { createThemedStyles, useTheme } from '../../../design/theme';
 import type { MomentumReport } from '../../../domain/premium/momentum/model';
 import type { SavedReport } from '../../../domain/premium/momentum/snapshot';
 import { openAccountToRestore } from '../../../monetization/accountNavigation';
@@ -39,6 +40,8 @@ export function PremiumMomentumSection() {
 }
 
 export function PremiumMomentumPanel({ api }: { api: PremiumMomentumApi }) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const { feature, view } = api;
   const open = view.kind === 'review' || view.kind === 'saved';
   return (
@@ -78,6 +81,7 @@ export function PremiumMomentumPanel({ api }: { api: PremiumMomentumApi }) {
 }
 
 function Actions({ api, copy }: { api: PremiumMomentumApi; copy: PremiumCopy }) {
+  const styles = useStyles();
   const { feature, upgrade } = api;
   if (feature.usable) {
     return <Button label={api.view.kind === 'opening' ? COPY.entry.opening : COPY.entry.open} onPress={() => void api.open()} disabled={api.view.kind === 'opening'} style={styles.primaryButton} />;
@@ -95,6 +99,8 @@ function Actions({ api, copy }: { api: PremiumMomentumApi; copy: PremiumCopy }) 
 }
 
 function Earlier({ api }: { api: PremiumMomentumApi }) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   if (api.saved.length === 0) return null;
   return (
     <View style={styles.block}>
@@ -118,6 +124,8 @@ function Earlier({ api }: { api: PremiumMomentumApi }) {
 }
 
 function SheetBody({ api, view }: { api: PremiumMomentumApi; view: MomentumView }) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   if (view.kind === 'saved') return <SavedBody api={api} review={view.review} />;
   if (view.kind !== 'review') return null;
   const { outcome } = view;
@@ -150,6 +158,8 @@ function SheetBody({ api, view }: { api: PremiumMomentumApi; view: MomentumView 
 }
 
 function ReadyBody({ api, report, saved, nextApproved }: { api: PremiumMomentumApi; report: Extract<MomentumReport, { status: 'ready' }>; saved: 'recorded' | 'already_saved' | 'pending'; nextApproved: boolean }) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const lines = countLines(report.counts);
   const next = report.nextStep;
   return (
@@ -251,6 +261,8 @@ function ReadyBody({ api, report, saved, nextApproved }: { api: PremiumMomentumA
 }
 
 function SavedBody({ api, review }: { api: PremiumMomentumApi; review: SavedReview }) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const report: SavedReport = review.report;
   const lines = countLines(report.counts);
   return (
@@ -291,6 +303,7 @@ function SavedBody({ api, review }: { api: PremiumMomentumApi; review: SavedRevi
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  const styles = useStyles();
   return (
     <View style={styles.block}>
       <AppText variant="sectionTitle" style={styles.sectionTitle}>
@@ -301,7 +314,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(({ colors }) => StyleSheet.create({
   card: { marginBottom: spacing.lg },
   headline: { marginTop: spacing.md },
   body: { marginTop: spacing.sm },
@@ -319,4 +332,4 @@ const styles = StyleSheet.create({
   inferredHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   recommended: { borderLeftWidth: 4, borderLeftColor: colors.accent, paddingLeft: spacing.md },
   closeButton: { marginTop: spacing.xl },
-});
+}));

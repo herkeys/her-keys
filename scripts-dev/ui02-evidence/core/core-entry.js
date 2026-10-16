@@ -5,6 +5,7 @@ import { registerRootComponent } from 'expo';
 import React, { useEffect, useState } from 'react';
 import { Linking, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { AppearanceProvider } from './src/design/theme';
 import { __setParams, __tabs } from 'expo-router';
 import { AppStateProvider, useStoreSnapshot } from './src/store/AppStateProvider';
 import { isSettled } from './src/domain/routeAccess';
@@ -76,8 +77,11 @@ function Host() {
     body = <Ui02Evidence mode={param(url, 'mode')} params={{ scene: param(url, 'scene'), platform: param(url, 'platform'), stage: param(url, 'stage'), step: param(url, 'step'), state: param(url, 'state') }} />;
   } else if (screen.startsWith('tab:')) { __tabs.current = screen.slice(4); body = <AppTabsLayout />; }
   else { const C = STANDALONE[screen]; body = C ? <C /> : <Text>unknown screen {screen}</Text>; }
+  // HK-FE-UI-02-DM: &scheme=dark|light seeds the appearance provider (no storage: a capture never writes the device preference)
+  const scheme = param(url, 'scheme') === 'dark' ? 'dark' : 'light';
   return (
     <SafeAreaProvider>
+      <AppearanceProvider initialPreference={scheme}>
       <RevenueCatProvider>
       <AppStateProvider store={appStore}>
         <Settled>
@@ -97,6 +101,7 @@ function Host() {
         </Settled>
       </AppStateProvider>
       </RevenueCatProvider>
+      </AppearanceProvider>
     </SafeAreaProvider>
   );
 }

@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { AppText, Card, Overline, Tag } from '../../../design/components';
-import { colors, interaction, sizing, spacing } from '../../../design/tokens';
+import { sizing, spacing } from '../../../design/tokens';
+import { createThemedStyles, useTheme } from '../../../design/theme';
 import { COPY, itemLine, unplacedCopy, type CopyContext } from '../copy';
 import type { DayItem, ItemRef, UnplacedItem } from '../model/types';
 import { WhyDisclosure } from './Disclosure';
@@ -20,6 +21,7 @@ export function NotScheduledSection({
   ctx: CopyContext;
   onOpenItem: (ref: ItemRef) => void;
 }) {
+  const styles = useStyles();
   const rows = view.dayItems
     .filter((item) => item.timing.kind === 'date_only')
     .map((item) => ({ item, unplaced: view.unplacedItems.find((u) => u.itemRef.kind === item.ref.kind && u.itemRef.id === item.ref.id) }))
@@ -37,6 +39,8 @@ export function NotScheduledSection({
 }
 
 export function UnplacedRow({ item, unplaced, ctx, onOpen }: { item: DayItem; unplaced: UnplacedItem; ctx: CopyContext; onOpen: () => void }) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const copy = unplacedCopy(unplaced, ctx);
   const needsPlace = unplaced.state === 'needs_a_place';
   return (
@@ -66,7 +70,7 @@ export function UnplacedRow({ item, unplaced, ctx, onOpen }: { item: DayItem; un
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(({ interaction }) => StyleSheet.create({
   section: { marginTop: spacing.xl, gap: spacing.md },
   heading: { marginBottom: spacing.xs },
   card: { gap: spacing.xs },
@@ -75,4 +79,4 @@ const styles = StyleSheet.create({
   line: { marginTop: spacing.xxs },
   tag: { marginTop: spacing.sm },
   sentence: { marginTop: spacing.xs },
-});
+}));

@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { AppText, Button, Card, Overline } from '../../../design/components';
-import { color, interaction, sizing, spacing } from '../../../design/tokens';
+import { sizing, spacing } from '../../../design/tokens';
+import { useTheme } from '../../../design/theme';
 import type { LocalDate } from '../../../domain/logicalDay';
 import { refKey } from '../../../domain/foundation/typedRef';
 import { DETAIL, attentionLine } from '../copy';
@@ -43,6 +44,7 @@ export interface ChildDetailViewProps {
  * changes. Sections appear only when they have something real to say; nothing here is a placeholder.
  */
 export function ChildDetailView({ detail, today, onOpenItem, onAddTask, onAddEvent, onAddPlanStep }: ChildDetailViewProps) {
+  const { color, interaction } = useTheme();
   const name = detail.label.displayName;
   const byRef = itemsByRef(detail);
   const open = (item: ItemFact) => onOpenItem(item.ref);

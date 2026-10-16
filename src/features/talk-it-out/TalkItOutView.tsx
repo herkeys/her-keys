@@ -2,7 +2,8 @@ import { router } from 'expo-router';
 import { Fragment, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { AppText, Button, ConfidenceBadge, InlineNotice, Overline, WhyThis } from '../../design/components';
-import { colors, radius, sizing, spacing, type as typeScale } from '../../design/tokens';
+import { radius, sizing, spacing, type as typeScale } from '../../design/tokens';
+import { createThemedStyles, useTheme } from '../../design/theme';
 import { useTalkItOut } from '../../store/TalkItOutContext';
 import type { TalkItOutMessage, TalkItOutStage } from '../../types';
 import { CaptureGroup } from './capture/CaptureCards';
@@ -13,6 +14,7 @@ import { copy } from './capture/copy';
  * dropped and never treated as decided.
  */
 function CaptureEntry({ captureId }: { captureId: string }) {
+  const styles = useStyles();
   const [parked, setParked] = useState(false);
   if (!parked) return <CaptureGroup captureId={captureId} onLater={() => setParked(true)} />;
   return (
@@ -27,6 +29,8 @@ function CaptureEntry({ captureId }: { captureId: string }) {
 }
 
 export function TalkItOutView({ showHeader = false }: { showHeader?: boolean }) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const { messages, quickReplies, captures, isThinking, serviceNotice, canRetry, retryLastTurn, canRestart, sendMessage, selectQuickReply, restart } = useTalkItOut();
   const [draft, setDraft] = useState('');
   const scrollRef = useRef<ScrollView>(null);
@@ -160,6 +164,8 @@ const stageLabels: Partial<Record<TalkItOutStage, string>> = {
 };
 
 function Bubble({ message, previous }: { message: TalkItOutMessage; previous?: TalkItOutMessage }) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const isUser = message.speaker === 'user';
   // Tight spacing inside one turn, generous spacing between turns.
   const continuesTurn = previous?.speaker === message.speaker;
@@ -210,7 +216,7 @@ function Bubble({ message, previous }: { message: TalkItOutMessage; previous?: T
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(({ colors }) => StyleSheet.create({
   container: { flex: 1 },
   messages: { flex: 1 },
   messagesContent: { paddingHorizontal: spacing.xl, paddingTop: spacing.xl, paddingBottom: spacing.xl },
@@ -265,4 +271,4 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   disclaimer: { marginTop: spacing.sm },
-});
+}));

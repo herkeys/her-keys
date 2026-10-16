@@ -1,6 +1,7 @@
 import { useState, type ComponentProps } from 'react';
 import { StyleSheet, TextInput, View, type KeyboardTypeOptions } from 'react-native';
-import { color, radius, sizing, spacing } from '../tokens';
+import { radius, sizing, spacing } from '../tokens';
+import { createThemedStyles, useTheme } from '../theme';
 import { AppText, Overline } from './AppText';
 
 export interface TextFieldProps {
@@ -53,6 +54,8 @@ export function TextField({
   onSubmitEditing,
   errorAccessibilityLiveRegion,
 }: TextFieldProps) {
+  const { color } = useTheme();
+  const styles = useStyles();
   const [focused, setFocused] = useState(false);
 
   return (
@@ -100,7 +103,7 @@ export function TextField({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(({ color }) => StyleSheet.create({
   wrap: { marginBottom: spacing.lg },
   label: { marginBottom: spacing.sm },
   input: {
@@ -124,4 +127,4 @@ const styles = StyleSheet.create({
   },
   inputError: { borderColor: color.status.attention },
   error: { marginTop: spacing.xs },
-});
+}));

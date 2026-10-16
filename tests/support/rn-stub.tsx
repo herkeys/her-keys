@@ -41,6 +41,7 @@ export const Platform = { OS: 'ios', select: (map: AnyProps) => map.ios ?? map.d
 export const StyleSheet = {
   create: (styles: AnyProps) => styles,
   hairlineWidth: 1,
+  absoluteFill: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 } as AnyProps,
   // Recursive, like RN's real flatten: style arrays nest (Card composes a
   // caller style array into its own), and tests read resolved properties.
   flatten: (style: AnyProps): AnyProps => {
@@ -121,9 +122,47 @@ export const Animated = {
   timing: (_value: unknown, _config: AnyProps) => ({ start: (cb?: (r: { finished: boolean }) => void) => cb?.({ finished: true }) }),
 };
 
+/**
+ * Appearance, as the platform exposes it: the DEVICE's scheme, an app-level OVERRIDE (what Appearance.setColorScheme sets), and the
+ * effective value hooks read. Tests change the device with `setSystemColorScheme`, exactly like the user flipping her phone's setting.
+ */
+export const appearanceState: { system: 'light' | 'dark'; override: 'light' | 'dark' | null; listeners: Set<() => void> } = { system: 'light', override: null, listeners: new Set() };
+const effectiveScheme = () => appearanceState.override ?? appearanceState.system;
+const notifyAppearance = () => appearanceState.listeners.forEach((l) => l());
+export const setSystemColorScheme = (scheme: 'light' | 'dark') => {
+  appearanceState.system = scheme;
+  notifyAppearance();
+};
+export const resetAppearance = () => {
+  appearanceState.system = 'light';
+  appearanceState.override = null;
+};
+export const Appearance = {
+  getColorScheme: () => effectiveScheme(),
+  setColorScheme: (scheme: 'light' | 'dark' | 'unspecified' | null) => {
+    appearanceState.override = scheme === 'light' || scheme === 'dark' ? scheme : null;
+    notifyAppearance();
+  },
+  addChangeListener: (listener: (e: { colorScheme: 'light' | 'dark' }) => void) => {
+    const wrapped = () => listener({ colorScheme: effectiveScheme() });
+    appearanceState.listeners.add(wrapped);
+    return { remove: () => appearanceState.listeners.delete(wrapped) };
+  },
+};
+export function useColorScheme(): 'light' | 'dark' {
+  return React.useSyncExternalStore(
+    (onChange) => {
+      appearanceState.listeners.add(onChange);
+      return () => appearanceState.listeners.delete(onChange);
+    },
+    effectiveScheme,
+    effectiveScheme,
+  );
+}
+
 const rn = {
   View, Text, ScrollView, Pressable, TextInput, KeyboardAvoidingView, Modal,
   SafeAreaView, ActivityIndicator, useSafeAreaInsets, useWindowDimensions, Platform, StyleSheet, AppState, Linking,
-  Easing, AccessibilityInfo, Animated, BackHandler,
+  Easing, AccessibilityInfo, Animated, BackHandler, Appearance, useColorScheme,
 };
 export default rn;

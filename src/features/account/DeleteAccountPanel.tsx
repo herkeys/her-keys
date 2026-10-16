@@ -1,13 +1,16 @@
 import {useState} from 'react';
 import {Linking,ScrollView,TextInput,View} from 'react-native';
 import {AppText,Button} from '../../design/components';
-import {color,radius} from '../../design/tokens';
+import { radius } from '../../design/tokens';
+import { themed, useTheme } from '../../design/theme';
 
 // Presentation only (HK-FE-UI-02): the two entry fields used a grey literal; they now use the control-border token.
-const fieldStyle={borderWidth:1,borderColor:color.border.control,backgroundColor:color.surface.primary,color:color.text.primary,padding:14,borderRadius:radius.md} as const;
+const fieldStyleFor=themed(({color})=>({borderWidth:1,borderColor:color.border.control,backgroundColor:color.surface.primary,color:color.text.primary,padding:14,borderRadius:radius.md} as const));
 import {useAccount} from '../../store/AccountProvider';
 import {deletionRuntime} from '../../store/deletionRuntimeInstance';
 export function DeleteAccountPanel({onBack}:{onBack:()=>void}) {
+  const { color } = useTheme();
+ const fieldStyle=fieldStyleFor(useTheme());
  const [email,setEmail]=useState(''),[code,setCode]=useState(''),[busy,setBusy]=useState(false),[notice,setNotice]=useState('');
  const account=useAccount();
  async function work(fn:()=>Promise<unknown>){if(busy)return;setBusy(true);try{await fn();}catch{setNotice('This did not complete. Verify your identity recently and try again. Your deletion status is checked before access resumes.');}finally{setBusy(false);}}

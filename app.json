@@ -6,15 +6,14 @@
     "scheme": "herkeys",
     "orientation": "portrait",
     "icon": "./assets/her-keys-4-house.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": false,
       "usesAppleSignIn": true,
       "bundleIdentifier": "com.herkeys.app",
       "buildNumber": "2",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false,
-        "UIUserInterfaceStyle": "Light"
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -40,6 +39,7 @@
     "plugins": [
       "expo-router",
       "expo-status-bar",
+      "expo-system-ui",
       "expo-notifications",
       "expo-apple-authentication",
       [
@@ -72,19 +72,13 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#0B0A08",
-          "image": "./assets/splash-brand.png",
+          "backgroundColor": "#FDF8F5",
+          "image": "./assets/splash-brand-tile.png",
           "imageWidth": 220,
           "resizeMode": "contain",
           "dark": {
             "backgroundColor": "#0B0A08",
             "image": "./assets/splash-brand.png"
-          },
-          "ios": {
-            "dark": {
-              "backgroundColor": null,
-              "image": null
-            }
           }
         }
       ],

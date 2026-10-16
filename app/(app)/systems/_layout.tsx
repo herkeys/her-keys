@@ -1,5 +1,5 @@
 import { Stack } from 'expo-router';
-import { color } from '../../../src/design/tokens';
+import { useTheme } from '../../../src/design/theme';
 
 // Keeps the hub underneath any Systems screen opened from outside this stack (a link), so Back and
 // the Systems tab can always reach it — the same shape the Life tab already uses.
@@ -13,6 +13,7 @@ export const unstable_settings = {
  * guard — `/systems/...` already resolves to the `(app)` guard by its first segment.
  */
 export default function SystemsLayout() {
+  const { color } = useTheme();
   return (
     <Stack
       screenOptions={{
