@@ -65,7 +65,7 @@ export function PremiumHomeView({ home, hold }: PremiumHomeViewProps) {
       </Card>
 
       <AppText variant="label" color={colors.textTertiary} style={styles.listLabel}>
-        What it gives you
+        Premium tools and availability
       </AppText>
       {capabilities.map((capability) => (
         <Card key={capability.key} tone="surface" style={styles.capability}>
