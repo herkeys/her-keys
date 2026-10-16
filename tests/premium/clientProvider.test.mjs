@@ -33,7 +33,11 @@ function makeServer() {
   };
   server.client = {
     entitlement: async () => { server.calls.entitlement += 1; return entitlement(server.states.get(server.who) ?? 'free'); },
-    manifest: async () => ({ kind: 'ok', entries: [{ featureKey: 'daily_load_premium', displayName: 'Daily Load', tier: 'premium', available: true, requiresAiConsent: false, minAppVersion: null }] }),
+    manifest: async () => ({ kind: 'ok', entries: [
+      { featureKey: 'daily_load_premium', displayName: 'Daily Load', tier: 'premium', available: true, requiresAiConsent: false, minAppVersion: null },
+      { featureKey: 'smart_inbox_extract', displayName: 'Smart Inbox', tier: 'premium', available: true, requiresAiConsent: true, minAppVersion: null },
+      { featureKey: 'momentum_report', displayName: 'Momentum', tier: 'premium', available: true, requiresAiConsent: false, minAppVersion: null },
+    ] }),
     verify: async () => { server.calls.verify += 1; server.verified.push(server.who); return { kind: 'ok', status: 'reconciled' }; },
     authorize: async (request) => {
       server.calls.authorize += 1;
