@@ -120,6 +120,10 @@ const derived = {
   scrim: '#2A1A27',
 } as const;
 
+/** Widens every literal colour string so a second colour set (dark) can satisfy the same shape. */
+type Widen<T> = T extends string ? string : { -readonly [K in keyof T]: Widen<T[K]> };
+export type ColorTokens = Widen<typeof color>;
+
 export const color = {
   background: brandPalette.warmOffWhite,
 
@@ -235,7 +239,7 @@ export const color = {
 // Color — flat view (legacy consumer names; values now come from the palette)
 // ---------------------------------------------------------------------------
 
-export const colors = {
+export const flatColors = (color: ColorTokens) => ({
   background: color.background,
   surface: color.surface.primary,
   surfaceSubtle: color.surface.secondary,
@@ -270,7 +274,10 @@ export const colors = {
 
   controlBorder: color.border.control,
   track: color.track,
-} as const;
+}) as const;
+
+/** The LIGHT flat view — the legacy static export. Components must read the live theme (`useTheme().colors`), never this. */
+export const colors = flatColors(color);
 
 // ---------------------------------------------------------------------------
 // Spacing — preserved 1:1 from the pre-system scale
@@ -359,6 +366,7 @@ export const typography = {
 // Elevation — one soft lift for the dominant surface, one small lift for the primary button
 // ---------------------------------------------------------------------------
 
+/** The LIGHT elevation (legacy static export). Read the live theme's `elevation`. */
 export const elevation = {
   raised: {
     shadowColor: brandPalette.deepPlumGray,
@@ -381,6 +389,7 @@ export const elevation = {
 // Interaction states — canonicalized
 // ---------------------------------------------------------------------------
 
+/** The LIGHT interaction colours (legacy static export). Read the live theme's `interaction`. */
 export const interaction = {
   /** Pressed feedback for non-filled controls: quick opacity dip. Filled Berry buttons swap to `action.primaryPressed`. */
   pressedOpacity: 0.75,
