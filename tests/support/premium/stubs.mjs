@@ -4,6 +4,7 @@
  */
 export const fixture = {
   navigation: [],
+  purchaseReady: true,
   entitlement: { status: 'free', isPlus: false, presentPaywall: async () => ({ kind: 'cancelled' }), restore: async () => ({ kind: 'no_purchases_found' }), refresh: async () => {} },
   onboarding: { completeCalls: 0, complete: async () => true },
   manifest: ['daily_load_premium', 'smart_inbox_extract', 'momentum_report'].map((featureKey) => ({ featureKey, tier: 'premium', available: true })),
@@ -20,4 +21,4 @@ export const useOnboarding = () => ({
 export const SystemsHub = () => null;
 
 /** Controlled server manifest stub for onboarding's read-only launch gate. */
-export const usePremiumStateIfMounted = () => ({ snapshot: { manifest: fixture.manifest } });
+export const usePremiumStateIfMounted = () => ({ snapshot: { manifest: fixture.manifest }, canOfferPurchase: async () => fixture.purchaseReady });
