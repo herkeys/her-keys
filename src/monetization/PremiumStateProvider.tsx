@@ -27,6 +27,8 @@ export interface PremiumContextValue {
   extract: (request: ExtractRequest) => Promise<ExtractResult>;
   /** Synchronous account/lifecycle fence for an asynchronous canonical write. */
   isCurrent: () => boolean;
+  /** Per-account, backend-authorized permission to PRESENT a new paid offer. */
+  canOfferPurchase: () => Promise<boolean>;
 }
 
 const PremiumContext = createContext<PremiumContextValue | null>(null);
@@ -167,9 +169,16 @@ function PremiumAccountState({
     [client, controller, isCurrent, householdId],
   );
 
+  const canOfferPurchase = useCallback(async () => {
+    if (!isCurrent() || controller.getSnapshot().server?.state === 'deletion_pending') return false;
+    const owner = controller.getSnapshot().accountId;
+    const readiness = await client.purchaseReadiness?.();
+    return isCurrent() && controller.getSnapshot().accountId === owner && readiness?.ready === true;
+  }, [client, controller, isCurrent]);
+
   const value = useMemo<PremiumContextValue>(
-    () => ({ snapshot, controller, accountBound, householdId, ledger: scopedLedger, appVersion, decisions, recordDecision, authorize, extract, isCurrent }),
-    [snapshot, controller, accountBound, householdId, scopedLedger, appVersion, decisions, recordDecision, authorize, extract, isCurrent],
+    () => ({ snapshot, controller, accountBound, householdId, ledger: scopedLedger, appVersion, decisions, recordDecision, authorize, extract, isCurrent, canOfferPurchase }),
+    [snapshot, controller, accountBound, householdId, scopedLedger, appVersion, decisions, recordDecision, authorize, extract, isCurrent, canOfferPurchase],
   );
   return <PremiumContext.Provider value={value}>{children}</PremiumContext.Provider>;
 }
@@ -237,7 +246,7 @@ export interface PremiumUpgradeApi {
  */
 export function usePremiumUpgrade(placement: PaywallPlacement): PremiumUpgradeApi {
   const { presentPaywall } = useEntitlement();
-  const { controller, isCurrent } = usePremiumState();
+  const { controller, isCurrent, canOfferPurchase } = usePremiumState();
   const inFlight = useRef(false);
   const mounted = useRef(true);
   const [presenting, setPresenting] = useState(false);
@@ -266,7 +275,9 @@ export function usePremiumUpgrade(placement: PaywallPlacement): PremiumUpgradeAp
     setNotice(null);
     let outcome: PaywallOutcome;
     try {
-      outcome = await presentPaywall(placement);
+      const ready = await canOfferPurchase();
+      outcome = ready && isCurrent() ? await presentPaywall(placement) : { kind: 'unavailable' };
+    
     } catch {
       outcome = { kind: 'error', message: 'paywall_threw' };
     } finally {
@@ -279,7 +290,7 @@ export function usePremiumUpgrade(placement: PaywallPlacement): PremiumUpgradeAp
       setNotice(purchaseOutcomeNotice(outcome));
     }
     return outcome;
-  }, [controller, placement, presentPaywall, isCurrent]);
+  }, [controller, placement, presentPaywall, isCurrent, canOfferPurchase]);
 
   return { start, presenting, notice };
 }
