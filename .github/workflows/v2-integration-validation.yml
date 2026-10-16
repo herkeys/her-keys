@@ -35,6 +35,8 @@ on:
       - repair/premium-sdk-identity-fence-20261015
       # Stage 1 server-directed Premium launch UI and truthful feature availability.
       - integration/premium-stage1-feature-ui-20261016
+      # Subscription fulfillment readiness, actor isolation, and Premium feature journeys.
+      - repair/premium-journey-backend-cert-20261016
   workflow_dispatch:
 
 permissions:

@@ -122,10 +122,12 @@ const savedRow = (over = {}) => ({
 });
 
 describe('who sees the card', () => {
-  test('a Free account with no saved review sees nothing — there is no standing upsell here', async () => {
+  test('a Free account sees a preview of a released Momentum review, without a premature store purchase', async () => {
     const w = await world({ serverState: 'free' });
     const r = await mount(w);
-    assert.equal(r.toJSON(), null);
+    assert.match(allText(r), /Her Keys Premium/);
+    assert.ok(button(r, 'See Her Keys Premium'), 'a visible path to the offer exists on Today');
+    assert.equal(w.server.gateCalls.length, 0, 'preview does not consume a paid analysis or quota');
     await act(() => r.unmount());
   });
 

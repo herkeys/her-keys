@@ -126,8 +126,28 @@ async function bodyOf(data: unknown, error: unknown): Promise<unknown> {
   }
 }
 
+const PurchaseReadinessSchema = z.object({ ready: z.boolean(), reason: z.string().max(48) });
+
 export function createPremiumServerClient(client: SupabaseClient): PremiumServerClient {
   return {
+    async purchaseReadiness() {
+      let deadline: ReturnType<typeof setTimeout> | null = null;
+      try {
+        const answer = await Promise.race([
+          client.rpc('premium_purchase_readiness'),
+          new Promise<{ data: null; error: Error }>((resolve) => {
+            deadline = setTimeout(() => resolve({ data: null, error: new Error('purchase_readiness_timeout') }), 8000);
+          }),
+        ]);
+        if (answer.error) return { ready: false, reason: 'unavailable' };
+        const parsed = PurchaseReadinessSchema.safeParse(answer.data);
+        return parsed.success ? parsed.data : { ready: false, reason: 'malformed' };
+      } catch {
+        return { ready: false, reason: 'unavailable' };
+      } finally {
+        if (deadline !== null) clearTimeout(deadline);
+      }
+    },
     async entitlement() {
       try {
         const { data, error } = await client.rpc('premium_my_entitlement');
