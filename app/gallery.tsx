@@ -1,5 +1,7 @@
+import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
+import { Ui02Evidence, isEvidenceMode } from '../src/dev/Ui02Evidence';
 import { ActionStateBlock, AppText, Button, Card, ChipToggle, ClarificationPrompt, ConfidenceBadge, ConfirmationSheet, Divider, EmptyState, ErrorState, InlineNotice, InsightBlock, InterpretationReview, LoadingState, OfflineState, Overline, ProvenanceLabel, RecommendationBlock, Screen, SegmentBar, Sheet, StatusList, Tag, TextField, WhyThis } from '../src/design/components';
 import { color, radius, spacing, type as typeScale } from '../src/design/tokens';
 import { WelcomeAuthGalleryPreview } from '../src/features/welcome/WelcomeAuthGalleryPreview';
@@ -20,15 +22,18 @@ export default function DesignGallery() {
   const [confirmVisible, setConfirmVisible] = useState(false);
   const [chips, setChips] = useState(['Cooking']);
   const [draft, setDraft] = useState('');
+  // HK-FE-UI-02 source-rendered evidence screens: /gallery?mode=tokens|components|ai|assets|welcome|consent|audit
+  const params = useLocalSearchParams<{ mode?: string; scene?: string; platform?: string; stage?: string; step?: string }>();
 
   if (!__DEV__) return null;
+  if (isEvidenceMode(params.mode)) return <Ui02Evidence mode={params.mode} params={params} />;
 
   return (
     <Screen>
       <Overline>Design gallery · development only</Overline>
-      <AppText variant="display" style={styles.block}>Paper and ink</AppText>
+      <AppText variant="display" style={styles.block}>Dusty Mauve + Luxury Black</AppText>
       <AppText variant="supporting" color={color.text.secondary}>
-        The permanent Her Keys front-end system. Every sample uses real Her Keys language.
+        The permanent Her Keys front-end system (HK-FE-UI-02, Airy Edition). Every sample uses real Her Keys language.
       </AppText>
 
       <GallerySection title="Palette">
@@ -41,7 +46,7 @@ export default function DesignGallery() {
           ['status.risk', color.status.risk],
           ['status.success', color.status.success],
           ['status.waiting', color.status.waiting],
-          ['neutral.deep (plum)', color.neutral.deep],
+          ['neutral.deep (Deep Plum Gray)', color.neutral.deep],
         ] as const).map(([name, value]) => (
           <View key={name} style={styles.swatchRow}>
             <View style={[styles.swatch, { backgroundColor: value }]} />

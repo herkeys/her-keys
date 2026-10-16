@@ -120,35 +120,62 @@ export function ConsentGate({ session, children }: { session: AccountSession; ch
   if (stage === 'ready') return <>{children}</>;
   if (stage === 'loading') return <View style={[styles.center, inset]}><AppText variant="body">Checking your account setup…</AppText></View>;
   if (stage === 'error') {
-    return <ScrollView style={styles.ground} contentContainerStyle={[styles.recover, inset]}>
-      <HeaderBadge icon="shield-checkmark-outline" />
-      <AppText variant="title" accessibilityRole="header">We could not verify your account’s policy choices.</AppText>
-      <AppText variant="body" color={color.text.secondary}>Your household remains protected. Her Keys stays closed until your choices can be confirmed. Check your connection and try again, or sign out.</AppText>
-      {retried ? <AppText variant="body" color={color.status.risk} accessibilityRole="alert" accessibilityLiveRegion="polite">We still couldn’t reach your account. Check your connection and try again.</AppText> : null}
-      <Button label="Try again" disabled={leaving} onPress={retry} />
-      <Button label={leaving ? 'Signing out…' : 'Sign out'} variant="secondary" disabled={leaving} onPress={() => void leave()} />
-    </ScrollView>;
+    return <ConsentErrorView inset={inset} retried={retried} leaving={leaving} onRetry={retry} onLeave={() => void leave()} />;
   }
   if (stage === 'permissions') {
-    return <ScrollView style={styles.ground} contentContainerStyle={[styles.content, inset]}>
-      <Overline>Optional permissions</Overline>
-      <AppText variant="display">Set things up your way.</AppText>
-      <Card style={styles.section}>
-        <AppText variant="body">Notifications can remind you about plans you chose. You can turn them on now or later.</AppText>
-        <Button label="Enable Notifications" disabled={notification.busy} onPress={() => void notification.enable()} />
-        <Button label="Maybe Later" variant="ghost" onPress={() => setStage('ready')} />
-      </Card>
-      <Card tone="subtle" style={styles.section}>
-        <AppText variant="body">Location can improve weather experiences. Her Keys only needs approximate foreground location when you request it.</AppText>
-        <AppText variant="body" color={color.text.secondary}>You can enable location when you use Weather. No background location is requested here.</AppText>
-      </Card>
-      <Card tone="subtle" style={styles.section}>
-        <AppText variant="body">Google Calendar is a separate read-only OAuth connection, not an operating-system permission. Connect it later when you’re ready.</AppText>
-        <AppText variant="body">AI Data Processing is a separate account choice you just made, not an operating-system permission.</AppText>
-      </Card>
-      <Button label="Continue to Life Systems Audit" onPress={() => setStage('ready')} />
-    </ScrollView>;
+    return <ConsentPermissionsView inset={inset} notificationsBusy={notification.busy} onEnableNotifications={() => void notification.enable()} onContinue={() => setStage('ready')} />;
   }
+  return <ConsentLegalView
+    inset={inset}
+    terms={terms} privacy={privacy} adult={adult} ai={ai} saving={saving} issue={issue}
+    onToggleTerms={() => setTerms(!terms)} onTogglePrivacy={() => setPrivacy(!privacy)} onToggleAdult={() => setAdult(!adult)}
+    onChooseAi={setAi} onCommit={() => void commit()}
+  />;
+}
+
+// ---------------------------------------------------------------------------
+// Presentational stage views. They own no state, no ledger and no navigation: the gate above decides everything and passes
+// values and handlers in. They are exported so the design gallery can render the REAL components with fixed props.
+// ---------------------------------------------------------------------------
+
+type Inset = { paddingTop: number; paddingBottom: number };
+
+export function ConsentErrorView({ inset, retried, leaving, onRetry, onLeave }: { inset: Inset; retried: boolean; leaving: boolean; onRetry: () => void; onLeave: () => void }) {
+  return <ScrollView style={styles.ground} contentContainerStyle={[styles.recover, inset]}>
+    <HeaderBadge icon="shield-checkmark-outline" />
+    <AppText variant="title" accessibilityRole="header">We could not verify your account’s policy choices.</AppText>
+    <AppText variant="body" color={color.text.secondary}>Your household remains protected. Her Keys stays closed until your choices can be confirmed. Check your connection and try again, or sign out.</AppText>
+    {retried ? <AppText variant="body" color={color.status.risk} accessibilityRole="alert" accessibilityLiveRegion="polite">We still couldn’t reach your account. Check your connection and try again.</AppText> : null}
+    <Button label="Try again" disabled={leaving} onPress={onRetry} />
+    <Button label={leaving ? 'Signing out…' : 'Sign out'} variant="secondary" disabled={leaving} onPress={onLeave} />
+  </ScrollView>;
+}
+
+export function ConsentPermissionsView({ inset, notificationsBusy, onEnableNotifications, onContinue }: { inset: Inset; notificationsBusy: boolean; onEnableNotifications: () => void; onContinue: () => void }) {
+  return <ScrollView style={styles.ground} contentContainerStyle={[styles.content, inset]}>
+    <Overline>Optional permissions</Overline>
+    <AppText variant="display">Set things up your way.</AppText>
+    <Card style={styles.section}>
+      <AppText variant="body">Notifications can remind you about plans you chose. You can turn them on now or later.</AppText>
+      <Button label="Enable Notifications" disabled={notificationsBusy} onPress={onEnableNotifications} />
+      <Button label="Maybe Later" variant="ghost" onPress={onContinue} />
+    </Card>
+    <Card tone="subtle" style={styles.section}>
+      <AppText variant="body">Location can improve weather experiences. Her Keys only needs approximate foreground location when you request it.</AppText>
+      <AppText variant="body" color={color.text.secondary}>You can enable location when you use Weather. No background location is requested here.</AppText>
+    </Card>
+    <Card tone="subtle" style={styles.section}>
+      <AppText variant="body">Google Calendar is a separate read-only OAuth connection, not an operating-system permission. Connect it later when you’re ready.</AppText>
+      <AppText variant="body">AI Data Processing is a separate account choice you just made, not an operating-system permission.</AppText>
+    </Card>
+    <Button label="Continue to Life Systems Audit" onPress={onContinue} />
+  </ScrollView>;
+}
+
+export function ConsentLegalView({ inset, terms, privacy, adult, ai, saving, issue, onToggleTerms, onTogglePrivacy, onToggleAdult, onChooseAi, onCommit }: {
+  inset: Inset; terms: boolean; privacy: boolean; adult: boolean; ai: boolean | null; saving: boolean; issue: string | null;
+  onToggleTerms: () => void; onTogglePrivacy: () => void; onToggleAdult: () => void; onChooseAi: (value: boolean) => void; onCommit: () => void;
+}) {
   return <ScrollView style={styles.ground} keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.content, inset]}>
     <Overline>Before we begin</Overline>
     <AppText variant="display">A little clarity goes a long way.</AppText>
@@ -158,9 +185,9 @@ export function ConsentGate({ session, children }: { session: AccountSession; ch
       <Button variant="ghost" label="Read Privacy Policy" onPress={() => void Linking.openURL(HER_KEYS_LEGAL_URLS.privacy)} />
     </View>
     <Card style={styles.section}>
-      <ChipToggle label="I agree to the Terms and Conditions" selected={terms} onPress={() => setTerms(!terms)} />
-      <ChipToggle label="I acknowledge the Privacy Policy" selected={privacy} onPress={() => setPrivacy(!privacy)} />
-      <ChipToggle label="I confirm that I am 18 or older" selected={adult} onPress={() => setAdult(!adult)} />
+      <ChipToggle label="I agree to the Terms and Conditions" selected={terms} onPress={onToggleTerms} />
+      <ChipToggle label="I acknowledge the Privacy Policy" selected={privacy} onPress={onTogglePrivacy} />
+      <ChipToggle label="I confirm that I am 18 or older" selected={adult} onPress={onToggleAdult} />
     </Card>
     <Card tone="subtle" style={styles.section}>
       <Overline>AI Data Processing</Overline>
@@ -170,11 +197,11 @@ export function ConsentGate({ session, children }: { session: AccountSession; ch
       <AppText variant="body" color={color.text.secondary}>
         Share only the context needed. AI suggestions can be inaccurate and do not replace professional advice. You can use non-AI features without consenting to optional AI processing.
       </AppText>
-      <ChipToggle label="I consent to AI data processing." selected={ai === true} onPress={() => setAi(true)} />
-      <ChipToggle label="Continue without optional AI Data Processing" selected={ai === false} onPress={() => setAi(false)} />
+      <ChipToggle label="I consent to AI data processing." selected={ai === true} onPress={() => onChooseAi(true)} />
+      <ChipToggle label="Continue without optional AI Data Processing" selected={ai === false} onPress={() => onChooseAi(false)} />
     </Card>
     {issue && <AppText variant="body" color={color.status.risk}>{issue}</AppText>}
-    <Button label={saving ? 'Saving…' : 'Agree and Continue'} disabled={saving || !terms || !privacy || !adult || ai === null} onPress={() => void commit()} />
+    <Button label={saving ? 'Saving…' : 'Agree and Continue'} disabled={saving || !terms || !privacy || !adult || ai === null} onPress={onCommit} />
   </ScrollView>;
 }
 
