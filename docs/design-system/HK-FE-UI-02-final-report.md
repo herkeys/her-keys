@@ -33,8 +33,7 @@ evidence harnesses.
 ### Owner amendment A1 (palette-lock exception)
 The owner expressly lifted the lock for sage botanical linework (outline 50% / tip 60% / whisper 20%, 30% under Reduce Motion, linework
 only, never on controls, cards, headers or navigation). Implemented and **contained by a test** (`botanicalBoundary.test.mjs`). The owner
-gave names and opacities, **not hex values**: `#7E9C86 / #5F8A6B / #A8C3AE` are the agent's choice and **need owner confirmation
-(OD-UI02-05)**. `Sage Whisper` is defined and unused.
+gave names and opacities, **not hex values**: `#7E9C86 / #5F8A6B / #A8C3AE` were the agent's choice and were **confirmed as final by the owner on 2026-10-16 (OD-UI02-05 closed)**. `Sage Whisper` is defined and unused.
 
 ## C. Accessibility
 
@@ -114,7 +113,7 @@ sage linework (A1) at its chosen hexes and weight reads as intended.
 | **Life Operating Profile with insights** and the **final Premium decision** screen: appearance unverified (profile captured only in its empty state; final step not rendered) — *visual verification pending* | Native-device verification |
 | Premium **review sheets** (Daily Load proposals, Momentum patterns/next step), capture review cards, Premium Home attention/expired states, confirmation sheets, Your Account/Settings: structural tests only | Native-device verification |
 | iOS rendering of everything; native Android build; dark-system-preference and native splash black→light transition | Native-device verification / Product-owner decision (OD-UI02-03) |
-| Sage hex values `#7E9C86 / #5F8A6B / #A8C3AE` and `Sage Whisper` use | Product-owner decision (OD-UI02-05) |
+| `Sage Whisper` micro-wash is defined but unused (hexes `#7E9C86 / #5F8A6B / #A8C3AE` confirmed final) | Product-owner decision, closed for hexes |
 | Custom display serif; true Bézier botanicals (need an SVG library) | Product-owner decisions (OD-UI02-01, -02) |
 | Pinker cream for the "needs you" amber cards | Product-owner decision (OD-UI02-06) |
 | 3 `premiumHome` + 8 account-deletion inherited failures; RevenueCat repair branch integration | Integration blocker / RevenueCat dependency |

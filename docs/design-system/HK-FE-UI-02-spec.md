@@ -91,8 +91,8 @@ sage outlines. The owner's rules, implemented verbatim:
 | `botanicalPalette.sageTip` `#5F8A6B` | accents at leaf tips and stem nodes only | 60% | 1.5–2 pt dots |
 | `botanicalPalette.sageWhisper` `#A8C3AE` | optional micro-wash | 20%, never behind body text | **defined, not used** |
 
-- **The hex values are the design agent's choice** (the owner specified names and opacities only): muted sage, hue ≈ 135°, no blue.
-  *Open for owner confirmation — OD-UI02-05.*
+- **The hex values were the design agent's choice** (the owner specified names and opacities only): muted sage, hue ≈ 135°, no blue.
+  **Confirmed as final by the product owner on 2026-10-16 (OD-UI02-05 closed).**
 - **Linework only.** Leaves are borders with a transparent fill; there is no solid green fill, green surface or green gradient.
 - **Containment is enforced by a test, not by convention.** `tests/design-system/botanicalBoundary.test.mjs` fails if any file other
   than `Botanical.tsx` (and `tokens.ts`) names a sage token, or if a sage value is reachable through any text, action, surface, border,
