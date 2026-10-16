@@ -58,10 +58,18 @@ function withAccountSdkOperation<T>(operation: () => Promise<T>): Promise<T> {
 
 async function matchesIdentifiedAccount(expected: string | null): Promise<boolean> {
   if (!configured || expected === null || identifiedAccountId !== expected || nativeIdentityWorkUnsettled) return false;
+  const epoch = identity.epoch;
   try {
     const read = await withDeadline(() => Purchases.getAppUserID(), REVENUECAT_DEADLINES.readMs);
-    return !read.timedOut && !nativeIdentityWorkUnsettled && identifiedAccountId === expected
-      && read.value === expected;
+    // A timed-out read is unverifiable: never start another native identity mutation
+    // solely because a read stalled. A concurrent actor change also invalidates the result.
+    if (read.timedOut || nativeIdentityWorkUnsettled || identity.epoch !== epoch ||
+        identifiedAccountId !== expected || desiredAccountId !== expected) return false;
+    if (read.value === expected) return true;
+    // A readable mismatch is definitive SDK drift (for example a late native logIn).
+    // Withdraw the claim so the CURRENT actor can safely re-identify on the next readiness check.
+    if (typeof read.value === 'string') identifiedAccountId = null;
+    return false;
   } catch {
     // A native identity read must fail closed, not pin the serialized purchase/restore queue.
     return false;
@@ -179,10 +187,19 @@ export async function ensureRevenueCatIdentity(): Promise<boolean> {
   if (!configured || desiredAccountId === null) return false;
   const wanted = desiredAccountId;
   if (identity.accountId === wanted && identifiedAccountId === wanted) {
-    return matchesIdentifiedAccount(wanted);
+    // Serialize the bounded read against native store operations. A concurrent
+    // account switch must never make an old caller report readiness.
+    const verified = await withAccountSdkOperation(() => matchesIdentifiedAccount(wanted));
+    if (verified) return desiredAccountId === wanted && identity.accountId === wanted && !nativeIdentityWorkUnsettled;
+    // Unknown/timeout is NOT permission to start a new native mutation. Only a
+    // definitive, readable SDK mismatch withdraws identifiedAccountId above.
+    if (identifiedAccountId === wanted || desiredAccountId !== wanted ||
+        identity.accountId !== wanted || nativeIdentityWorkUnsettled) return false;
   }
+  if (desiredAccountId !== wanted || nativeIdentityWorkUnsettled) return false;
   const result = await identifyRevenueCatAccount(wanted);
-  return result === 'identified' && desiredAccountId === wanted && identity.accountId === wanted;
+  return result === 'identified' && desiredAccountId === wanted &&
+    identity.accountId === wanted && !nativeIdentityWorkUnsettled;
 }
 
 export function isRevenueCatConfigured(): boolean {
