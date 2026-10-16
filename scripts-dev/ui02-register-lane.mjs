@@ -50,7 +50,7 @@ const lines = [
   BEGIN,
   '  {',
   `    id: 'HK-FE-UI-02 (Dusty Mauve + Luxury Black design system, ${phase})',`,
-  '    // Presentation-only design migration. No schema, sync kind, auth, RevenueCat, consent or persistence change.',
+  '    // Presentation-only design migration. No schema, sync kind, auth, RevenueCat or consent change; the only storage is the device-local appearance preference key (HK-FE-UI-02-DM), outside the household/sync persistence schema.',
   '    branch: null,',
   '    owned: [',
   ...added.map((f) => `      /^${escapeRe(f)}$/,`),

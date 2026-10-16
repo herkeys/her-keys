@@ -13,7 +13,11 @@
  * be a native default and skipped.
  */
 import { StyleSheet } from 'react-native';
-import { color } from '../../src/design/tokens';
+import { color, type ColorTokens } from '../../src/design/tokens';
+import { darkColor } from '../../src/design/theme/palettes';
+
+/** HK_UI_DEFAULT_SCHEME=dark re-runs the whole suite's renders in Dark: the screen ground and the disabled pair follow the scheme. */
+const SCHEME_COLOR = process.env.HK_UI_DEFAULT_SCHEME === 'dark' ? darkColor : color;
 
 const HEX = /^#([0-9a-f]{6})$/i;
 
@@ -62,7 +66,7 @@ function textOf(node: Node): string {
   return walk(children).replace(/\s+/g, ' ').trim().slice(0, 48);
 }
 
-function backgroundBehind(node: Node): { bg: string | null; translucent: boolean } {
+function backgroundBehind(node: Node, ground: string): { bg: string | null; translucent: boolean } {
   for (let up = node.parent; up; up = up.parent) {
     if (typeof up.type !== 'string') continue;
     const bg = flat(up).backgroundColor;
@@ -70,10 +74,34 @@ function backgroundBehind(node: Node): { bg: string | null; translucent: boolean
     if (HEX.test(bg)) return { bg, translucent: false };
     return { bg: null, translucent: true };
   }
-  return { bg: color.background, translucent: false };
+  return { bg: ground, translucent: false };
 }
 
-const DISABLED_TEXT = color.action.disabledText.toLowerCase();
+const DISABLED_TEXT = new Set([color.action.disabledText.toLowerCase(), darkColor.action.disabledText.toLowerCase()]);
+
+/** Every colour that appears ONLY in the Light text/action set, and only in the Dark one (shared brand/decoration colours excluded). */
+const flatText = (c: ColorTokens) => [...Object.values(c.text), ...Object.values(c.status), ...Object.values(c.ai), c.action.primary, c.action.onSoft].map((v) => String(v).toLowerCase());
+const LIGHT_ONLY = new Set(flatText(color).filter((h) => !flatText(darkColor).includes(h)));
+const DARK_ONLY = new Set(flatText(darkColor).filter((h) => !flatText(color).includes(h)));
+
+/**
+ * A rendered tree with no explicit ground (an isolated component, not a Screen) is measured against the ground of the scheme it was
+ * drawn in. The scheme is read from the tree's OWN colours: whichever scheme's exclusive text colours the tree uses more. A tree that
+ * mixes them (a Light leak inside Dark) is still judged against the majority ground, so the leaking colour fails there. A tree with
+ * neither falls back to the run's default scheme (HK_UI_DEFAULT_SCHEME).
+ */
+function inferGround(hosts: Node[]): string {
+  let light = 0;
+  let dark = 0;
+  for (const node of hosts) {
+    const fg = String(node.type === 'Ionicons' ? node.props.color : flat(node).color ?? '').toLowerCase();
+    if (LIGHT_ONLY.has(fg)) light += 1;
+    else if (DARK_ONLY.has(fg)) dark += 1;
+  }
+  if (dark > light) return darkColor.background;
+  if (light > dark) return color.background;
+  return SCHEME_COLOR.background;
+}
 
 export function auditContrast(root: Node): AuditResult {
   const findings: Finding[] = [];
@@ -81,12 +109,13 @@ export function auditContrast(root: Node): AuditResult {
   let skippedTranslucent = 0;
 
   const hosts = root.findAll((n: Node) => typeof n.type === 'string' && (n.type === 'Text' || n.type === 'Ionicons'));
+  const ground = inferGround(hosts);
   for (const node of hosts) {
     const isIcon = node.type === 'Ionicons';
     const fg = isIcon ? node.props.color : flat(node).color;
     if (typeof fg !== 'string' || !HEX.test(fg)) continue;
-    if (fg.toLowerCase() === DISABLED_TEXT) continue;
-    const behind = backgroundBehind(node);
+    if (DISABLED_TEXT.has(fg.toLowerCase())) continue;
+    const behind = backgroundBehind(node, ground);
     if (behind.translucent) { skippedTranslucent += 1; continue; }
     if (!behind.bg) continue;
     measured += 1;

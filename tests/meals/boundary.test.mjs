@@ -102,11 +102,12 @@ describe('[BV] the semantic-boundary scan', () => {
     // device-local notification controller mount, d557f7c) and the polish pass (the splash fade) — the accounting names them all,
     // in registry order.
     // The welcome auth integration (the account-settling gate in the root layout) registers after them.
+    // HK-FE-UI-02-DM (adaptive appearance) registers last: the appearance provider, system chrome and themed navigation mount there.
     // Build 2A (Premium offer before account choice) mounts the intent holder and the checkout gate there.
-    assert.deepEqual(account('app/_layout.tsx', 'M', false, 'M').shared.lanes, [F10, REFINEMENTS, POLISH, WELCOME_AUTH, BUILD_2A, 'HK-V2-PREMIUM-PASS-A (owner-approved client convergence)', V2_CONSENT, 'HK-ACCOUNT-DELETION (autonomous lifecycle)']);
+    assert.deepEqual(account('app/_layout.tsx', 'M', false, 'M').shared.lanes, [F10, REFINEMENTS, POLISH, WELCOME_AUTH, BUILD_2A, 'HK-V2-PREMIUM-PASS-A (owner-approved client convergence)', V2_CONSENT, 'HK-ACCOUNT-DELETION (autonomous lifecycle)', 'HK-FE-UI-02 (Dusty Mauve + Luxury Black design system, adaptive appearance DM)']);
     assert.match(account('src/domain/taskLists.ts', 'M', false, 'M').findings.join(), /no later lane's reason/, 'no lane explains taskLists.ts');
     // A later lane's own file is its lane, not a shared change; a shared change registered by a later lane names both lanes.
-    assert.deepEqual(account('src/features/work/WorkOverview.tsx', 'M', false, 'M').shared.lanes, [F10, POLISH]);
+    assert.deepEqual(account('src/features/work/WorkOverview.tsx', 'M', false, 'M').shared.lanes, [F10, POLISH, 'HK-FE-UI-02 (Dusty Mauve + Luxury Black design system, adaptive appearance DM)']);
     assert.match(account('src/features/work/WorkOverview.tsx', 'M', true, 'M').findings.join(), /unexplained shared-file change on the Wave 2 line/);
     // A Meals file changed after the checkpoint names who changed it, and a Meals file no lane explains is a finding.
     assert.ok(account('supabase/tests/private-stack.mjs', 'M', true, 'M').mealsFile.lanes.includes('HK-F01-F13 integration (INT13 / AUD13)'));
