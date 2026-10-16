@@ -496,22 +496,21 @@ Deno.serve(async (req) => {
   try {
     const user = await requireUser(req);
 
-    // An authenticated caller must not bypass a declined AI Data Processing
-    // choice by calling this Edge Function directly. Enable ONLY after the
-    // versioned, RLS-isolated consent ledger is deployed and verified.
-    if (Deno.env.get('HER_KEYS_AI_REQUIRE_CONSENT') === 'true') {
-      const { data: decisions, error: consentError } = await adminClient()
-        .from('account_consents')
-        .select('policy_version,granted')
-        .eq('account_id', user.id)
-        .eq('consent_type', 'ai_processing')
-        .order('recorded_at', { ascending: false })
-        .limit(1);
-      if (consentError || decisions?.length !== 1 ||
-          decisions[0].policy_version !== 'ai-data-processing-initial-v1' ||
-          decisions[0].granted !== true) {
-        return json({ status: 'unavailable', reason: 'ai_processing_consent_required', requestId }, 403);
-      }
+    // AI processing is optional. An authenticated user who declined it (or has
+    // no current affirmative receipt) must never reach Gemini, regardless of
+    // deployment environment variables or what the client UI claims.
+    // Fail closed on missing, outdated, declined or unreadable consent.
+    const { data: decisions, error: consentError } = await adminClient()
+      .from('account_consents')
+      .select('policy_version,granted')
+      .eq('account_id', user.id)
+      .eq('consent_type', 'ai_processing')
+      .order('recorded_at', { ascending: false })
+      .limit(1);
+    if (consentError || decisions?.length !== 1 ||
+        decisions[0].policy_version !== 'ai-data-processing-initial-v1' ||
+        decisions[0].granted !== true) {
+      return json({ status: 'unavailable', reason: 'ai_processing_consent_required', requestId }, 403);
     }
 
     if (!configured()) {
