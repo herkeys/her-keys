@@ -1,7 +1,6 @@
-import { StyleSheet, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { AppText, Button, FadeIn, Overline } from '../../../design/components';
-import { color, sizing, spacing } from '../../../design/tokens';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { AppText, Button, FadeIn, KeyBadge, Overline } from '../../../design/components';
+import { color, spacing } from '../../../design/tokens';
 import { WELCOME_AUTH_COPY as COPY } from '../copy';
 
 export interface WelcomeViewProps {
@@ -14,17 +13,16 @@ export interface WelcomeViewProps {
  * Back must not skip into onboarding (the integration owns the hardware
  * binding; this view simply offers nothing to go back to).
  *
- * The presentation mirrors the established Welcome: the gold brand mark
- * resolves the launch splash into the warm interior, then the pinned
- * headline and lede carry the screen.
+ * HK-FE-UI-02: the rounded Her Keys key badge sits on the warm off-white ground (the shell adds the faint curve and botanical
+ * sprig behind the empty top region), then the pinned headline and lede in Deep Plum Gray carry the screen. The two decisions
+ * and every word of copy are unchanged.
  */
 export function WelcomeView({ onBegin, onExistingAccount }: WelcomeViewProps) {
   return (
     <>
-      <FadeIn speed="deliberate" style={styles.body}>
-        <View style={styles.mark} accessibilityElementsHidden importantForAccessibility="no">
-          <Ionicons name="key-outline" size={sizing.icon.lg} color={color.brand.gold} />
-        </View>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
+      <FadeIn speed="deliberate">
+        <KeyBadge style={styles.mark} />
         <Overline>{COPY.welcome.overline}</Overline>
         <AppText variant="hero" style={styles.title}>
           {COPY.welcome.title}
@@ -33,6 +31,7 @@ export function WelcomeView({ onBegin, onExistingAccount }: WelcomeViewProps) {
           {COPY.welcome.lede}
         </AppText>
       </FadeIn>
+      </ScrollView>
 
       <View style={styles.footer}>
         <AppText variant="bodySm" color={color.text.muted} style={styles.footnote}>
@@ -46,16 +45,9 @@ export function WelcomeView({ onBegin, onExistingAccount }: WelcomeViewProps) {
 }
 
 const styles = StyleSheet.create({
-  body: { flex: 1, justifyContent: 'center', paddingHorizontal: spacing.xl },
-  mark: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: color.brand.goldSoft,
-    marginBottom: spacing.lg,
-  },
+  scroll: { flex: 1 },
+  body: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: spacing.xl },
+  mark: { marginBottom: spacing.xl },
   title: { marginTop: spacing.md },
   lede: { marginTop: spacing.xl },
   footer: { paddingHorizontal: spacing.xl, paddingBottom: spacing.xxl, gap: spacing.md },

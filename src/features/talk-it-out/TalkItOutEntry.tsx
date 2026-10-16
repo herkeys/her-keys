@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { Pressable, StyleSheet } from 'react-native';
 import { AppText, Overline } from '../../design/components';
-import { colors, interaction, radius, spacing } from '../../design/tokens';
+import { color, colors, interaction, radius, spacing } from '../../design/tokens';
 
 /**
  * Inline entry point rather than a floating button: an overlay pill covered
@@ -17,7 +17,7 @@ export function TalkItOutEntry() {
       onPress={() => router.push('/talk-it-out')}
       style={({ pressed }) => [styles.surface, pressed ? styles.pressed : null]}
     >
-      <Overline color={colors.accent}>Talk it out</Overline>
+      <Overline color={color.action.onSoft}>Talk it out</Overline>
       <AppText variant="body" color={colors.textSecondary} style={styles.copy}>
         Something feel off that isn’t on this list? Tell Her Keys what’s going on.
       </AppText>

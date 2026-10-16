@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
-import { AppText, Button, Card, Overline, Screen } from '../../src/design/components';
+import { AppText, Button, Card, Overline, PremiumBadge, Screen } from '../../src/design/components';
 import { colors, spacing } from '../../src/design/tokens';
 import { canResolveOnboardingPlus, HER_KEYS_PREMIUM_DISPLAY_NAME, PAYWALL_POLICY } from '../../src/monetization/entitlement';
 import { PaywallNoticeView } from '../../src/monetization/PaywallNoticeView';
@@ -103,6 +103,7 @@ export default function HerKeysPlus() {
 
   return (
     <Screen bottomClearance={spacing.xxl}>
+      <PremiumBadge style={styles.badge} />
       <Overline>{HER_KEYS_PREMIUM_DISPLAY_NAME}</Overline>
       <AppText variant="hero" style={styles.title}>
         You’re ready to begin.
@@ -156,6 +157,7 @@ export default function HerKeysPlus() {
 }
 
 const styles = StyleSheet.create({
+  badge: { marginBottom: spacing.lg },
   title: { marginTop: spacing.md },
   lede: { marginTop: spacing.md, marginBottom: spacing.xxl },
   benefits: { gap: spacing.sm },

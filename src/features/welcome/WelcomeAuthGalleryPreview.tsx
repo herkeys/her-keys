@@ -5,10 +5,17 @@ import { color, radius, spacing } from '../../design/tokens';
 import { RESEND_COOLDOWN_SECONDS, emailObviousError, stepAfterBack, type WelcomeAuthPresentation, type WelcomeAuthStep, type WelcomeAuthViewState } from './model';
 import { WelcomeAuthShell } from './WelcomeAuthShell';
 
-type SceneKey =
+export type SceneKey =
   | 'welcome'
   | 'premium'
   | 'choice'
+  | 'signup'
+  | 'signin'
+  | 'password-invalid'
+  | 'password-unreachable'
+  | 'provider-unavailable'
+  | 'confirm-email'
+  | 'recovery'
   | 'email'
   | 'otp'
   | 'otp-wrong'
@@ -23,6 +30,13 @@ const SCENES: Array<{ key: SceneKey; label: string }> = [
   { key: 'welcome', label: 'Welcome' },
   { key: 'choice', label: 'Account choice' },
   { key: 'premium', label: 'Premium offer' },
+  { key: 'signup', label: 'Sign up' },
+  { key: 'signin', label: 'Sign in' },
+  { key: 'password-invalid', label: 'Invalid credentials' },
+  { key: 'password-unreachable', label: 'Connection error' },
+  { key: 'provider-unavailable', label: 'Provider unavailable' },
+  { key: 'confirm-email', label: 'Confirm email' },
+  { key: 'recovery', label: 'Forgot password' },
   { key: 'email', label: 'Email' },
   { key: 'otp', label: 'OTP' },
   { key: 'otp-wrong', label: 'OTP wrong' },
@@ -38,6 +52,13 @@ const SCENE_STATE: Record<SceneKey, Partial<WelcomeAuthViewState>> = {
   welcome: { step: 'welcome' },
   choice: { step: 'account-choice' },
   premium: { step: 'premium', passwordMode: 'signUp' },
+  signup: { step: 'password', passwordMode: 'signUp' },
+  signin: { step: 'password', passwordMode: 'signIn' },
+  'password-invalid': { step: 'password', passwordMode: 'signIn', passwordNotice: 'rejected' },
+  'password-unreachable': { step: 'password', passwordMode: 'signIn', passwordNotice: 'unreachable' },
+  'provider-unavailable': { step: 'password', passwordMode: 'signIn', passwordNotice: 'unavailable' },
+  'confirm-email': { step: 'password', passwordMode: 'signUp', passwordNotice: 'confirmationRequired' },
+  recovery: { step: 'recovery', recoveryEmail: 'rowan@example.com' },
   email: { step: 'email' },
   otp: { step: 'otp', email: 'rowan@example.com' },
   'otp-wrong': { step: 'otp', email: 'rowan@example.com', otpError: 'wrong-code' },
@@ -69,9 +90,9 @@ const BASE: WelcomeAuthViewState = {
  * for server behavior — the cooldown is the shell's documented local visual
  * state, and every other transition happens on a press.
  */
-export function WelcomeAuthGalleryPreview() {
-  const [scene, setScene] = useState<SceneKey>('welcome');
-  const [state, setState] = useState<WelcomeAuthViewState>(BASE);
+export function WelcomeAuthGalleryPreview({ initialScene = 'welcome', initialPlatform = 'ios', frameHeight, bare }: { initialScene?: SceneKey; initialPlatform?: WelcomeAuthViewState['platform']; frameHeight?: number; bare?: boolean } = {}) {
+  const [scene, setScene] = useState<SceneKey>(initialScene);
+  const [state, setState] = useState<WelcomeAuthViewState>({ ...BASE, platform: initialPlatform, ...SCENE_STATE[initialScene] });
 
   const apply = (key: SceneKey) => {
     setScene(key);
@@ -100,8 +121,8 @@ export function WelcomeAuthGalleryPreview() {
     setState((current) => ({ ...current, step, presentation }));
 
   return (
-    <View>
-      <View style={styles.controls}>
+    <View style={bare ? styles.bare : null}>
+      {!bare && <View style={styles.controls}>
         <Overline>Platform</Overline>
         <View style={styles.chips}>
           <ChipToggle label="iOS" selected={state.platform === 'ios'} onPress={() => setState((c) => ({ ...c, platform: 'ios' }))} />
@@ -113,11 +134,16 @@ export function WelcomeAuthGalleryPreview() {
             <ChipToggle key={key} label={label} selected={scene === key} onPress={() => apply(key)} />
           ))}
         </View>
-      </View>
+      </View>}
 
-      <View style={styles.frame}>
+      <View style={[styles.frame, bare ? styles.bareFrame : null, frameHeight ? { height: frameHeight } : null]}>
         <WelcomeAuthShell
           state={state}
+          onRequestRecovery={async () => 'ok'}
+          onVerifyRecovery={async () => 'ok'}
+          onUpdateRecoveryPassword={async () => 'ok'}
+          onCancelRecovery={() => apply('signin')}
+          onForgotPassword={() => apply('recovery')}
           onBegin={() => setState((current) => ({ ...current, step: 'premium', passwordMode: 'signUp' }))}
           onExistingAccount={() => setState((current) => ({ ...current, step: 'account-choice', passwordMode: 'signIn' }))}
           onSelectPremium={() => setState((current) => ({ ...current, step: 'account-choice' }))}
@@ -145,9 +171,9 @@ export function WelcomeAuthGalleryPreview() {
         />
       </View>
 
-      <AppText variant="metadata" color={color.text.muted} style={styles.hint}>
+      {!bare && <AppText variant="metadata" color={color.text.muted} style={styles.hint}>
         The frame renders the shell exactly as the integration will: one view-state object in, intent callbacks out.
-      </AppText>
+      </AppText>}
     </View>
   );
 }
@@ -164,4 +190,6 @@ const styles = StyleSheet.create({
     minHeight: 560,
   },
   hint: { marginTop: spacing.md },
+  bare: { flex: 1 },
+  bareFrame: { flex: 1, borderWidth: 0, borderRadius: 0, minHeight: 0 },
 });

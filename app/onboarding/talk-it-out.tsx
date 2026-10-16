@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { StyleSheet } from 'react-native';
 import { AppText, Card, Overline } from '../../src/design/components';
-import { colors, spacing } from '../../src/design/tokens';
+import { color, colors, spacing } from '../../src/design/tokens';
 import { OnboardingScaffold } from '../../src/features/onboarding/OnboardingScaffold';
 import { useOnboarding } from '../../src/store/OnboardingContext';
 
@@ -21,7 +21,7 @@ export default function TalkItOutInviteStep() {
       continueLabel="See my profile"
     >
       <Card tone="accent">
-        <Overline color={colors.accent}>How it works</Overline>
+        <Overline color={color.action.onSoft}>How it works</Overline>
         <AppText variant="title" style={styles.line}>
           Her Keys listens, offers a theory, then asks one question to check it.
         </AppText>

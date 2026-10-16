@@ -12,7 +12,9 @@ const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf
 describe('onboarding layout contract', () => {
   const scaffold = read('src/features/onboarding/OnboardingScaffold.tsx');
   const screen = read('src/design/components/Screen.tsx');
-  const consent = read('src/features/consent/ConsentFlow.tsx');
+  // HK-FE-UI-02 moved the three stage views into ConsentViews.tsx (the gate and its insets stay in ConsentFlow.tsx): the
+  // contract is about the pair together — the gate computes the insets, every stage view applies them.
+  const consent = read('src/features/consent/ConsentFlow.tsx') + read('src/features/consent/ConsentViews.tsx');
 
   test('Continue follows the content: the content block never grows to fill the viewport', () => {
     const content = scaffold.match(/content:\s*\{[^}]*\}/)?.[0] ?? '';

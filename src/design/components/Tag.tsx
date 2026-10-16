@@ -1,5 +1,5 @@
 import { StyleSheet, View } from 'react-native';
-import { colors, radius, spacing } from '../tokens';
+import { color, colors, radius, spacing } from '../tokens';
 import { AppText } from './AppText';
 
 type Tone = 'neutral' | 'attention' | 'success' | 'accent';
@@ -13,7 +13,8 @@ const toneMap: Record<Tone, { bg: string; fg: string }> = {
   neutral: { bg: colors.surfaceSubtle, fg: colors.textTertiary },
   attention: { bg: colors.attentionSoft, fg: colors.attention },
   success: { bg: colors.successSoft, fg: colors.success },
-  accent: { bg: colors.accentSoft, fg: colors.accent },
+  // Soft Lilac fill: plain Berry is 4.16:1 here (illegal for small text), so the label uses the Berry-family `onSoft` (5.54:1).
+  accent: { bg: colors.accentSoft, fg: color.action.onSoft },
 };
 
 export function Tag({ label, tone = 'neutral' }: TagProps) {

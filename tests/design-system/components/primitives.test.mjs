@@ -103,7 +103,8 @@ describe('Tag', () => {
       neutral: { fg: color.text.muted, bg: color.surface.secondary },
       attention: { fg: color.status.attention, bg: color.status.attentionSoft },
       success: { fg: color.status.success, bg: color.status.successSoft },
-      accent: { fg: color.action.primary, bg: color.action.primarySoft },
+      // HK-FE-UI-02: Berry is 4.16:1 on Soft Lilac (illegal for small text) — the label uses the Berry-family onSoft.
+      accent: { fg: color.action.onSoft, bg: color.action.primarySoft },
     };
     for (const [tone, want] of Object.entries(expected)) {
       const r = await render(<Tag label={`tone-${tone}`} tone={tone} />);

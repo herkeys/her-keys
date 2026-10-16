@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, StyleSheet, View } from 'react-native';
 import { AppText, Button, Overline, TextField } from '../../../design/components';
+import { HeaderBadge } from '../HeaderBadge';
 import { color, spacing } from '../../../design/tokens';
 import { WELCOME_AUTH_COPY as COPY } from '../copy';
 import { emailObviousError, type EmailErrorKind } from '../model';
@@ -47,6 +48,7 @@ export function EmailEntryView({ email, error, pending, onSubmitEmail }: EmailEn
   return (
     <KeyboardAvoidingView style={styles.flex} behavior={EMAIL_AUTH_KEYBOARD_BEHAVIOR}>
       <View style={styles.body}>
+        <HeaderBadge icon="mail-outline" />
         <Overline>{COPY.email.overline}</Overline>
         <AppText variant="display" style={styles.title}>
           {COPY.email.title}

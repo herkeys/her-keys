@@ -106,7 +106,7 @@ const styles = StyleSheet.create({
   input: {
     minHeight: sizing.control.height,
     borderRadius: radius.md,
-    borderWidth: StyleSheet.hairlineWidth,
+    borderWidth: 1,
     borderColor: color.border.control,
     backgroundColor: color.surface.primary,
     paddingHorizontal: spacing.lg,
@@ -115,7 +115,13 @@ const styles = StyleSheet.create({
     color: color.text.primary,
   },
   multiline: { minHeight: 88, textAlignVertical: 'top' },
-  inputFocused: { borderColor: color.action.primary },
+  // Focus is a 2px Berry edge (5.10:1 on off-white); padding gives back the extra pixel so the text never shifts.
+  inputFocused: {
+    borderColor: color.action.primary,
+    borderWidth: 2,
+    paddingHorizontal: spacing.lg - 1,
+    paddingVertical: spacing.md - 1,
+  },
   inputError: { borderColor: color.status.attention },
   error: { marginTop: spacing.xs },
 });

@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
-import { AppText, Button, Card, Overline, Screen, Tag } from '../../src/design/components';
-import { colors, radius, spacing } from '../../src/design/tokens';
+import { AiMark, AppText, Button, Card, Overline, Screen, Tag } from '../../src/design/components';
+import { color, colors, radius, spacing } from '../../src/design/tokens';
 import { buildOperatingProfile } from '../../src/features/onboarding/buildOperatingProfile';
 import { useOnboarding } from '../../src/store/OnboardingContext';
 
@@ -11,7 +11,10 @@ export default function ProfileResult() {
 
   return (
     <Screen bottomClearance={spacing.xxl}>
-      <Overline>Life operating profile</Overline>
+      <View style={styles.headerRow}>
+        <AiMark kind="understood" />
+        <Overline>Life operating profile</Overline>
+      </View>
       <AppText variant="hero" style={styles.title}>
         Here’s what I understand so far.
       </AppText>
@@ -65,13 +68,16 @@ export default function ProfileResult() {
 }
 
 const styles = StyleSheet.create({
+  headerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   title: { marginTop: spacing.md },
   lede: { marginTop: spacing.md, marginBottom: spacing.xxl },
   surface: {
     backgroundColor: colors.surface,
+    // An unconfirmed reading of her answers: outlined, not filled — the same dashed language as every other Her Keys reading.
     borderRadius: radius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.borderSubtle,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: color.ai.insightBorder,
     paddingHorizontal: spacing.xl,
   },
   insight: { paddingVertical: spacing.xl },

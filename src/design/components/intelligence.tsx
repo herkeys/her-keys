@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View, type ViewStyle } from 'react-native';
-import { color, radius, spacing } from '../tokens';
+import { Ionicons } from '@expo/vector-icons';
+import { color, radius, sizing, spacing } from '../tokens';
 import type { ConfidenceLevel, ProvenanceSource } from '../../domain/foundation/provenance';
 import type { IntentStage } from '../../domain/authorization';
 import type { OutcomeKind } from '../../domain/foundation/authorization';
@@ -27,10 +28,91 @@ import { Card } from './Card';
  * never show chain-of-thought. Color never carries the meaning alone — every
  * pattern pairs its treatment with an explicit text label.
  *
- * Plum is used selectively (owner decision 2): it marks the "Her Keys
- * noticed" intelligence register and nothing else. It is not recurring AI
- * chrome; insight blocks read as the same product as everything around them.
+ * HK-FE-UI-02 §6 SUPERSEDES HK-FE-UI-01's "plum marks AI" rule. Plum is now a general brand colour, so COLOUR CAN NO LONGER
+ * IDENTIFY AI. Instead each register has all of: an explicit text label, a distinct component structure, and an `AiMark`
+ * whose SHAPE carries the epistemic status:
+ *
+ *   dashed outline   = Her Keys' reading, NOT yet confirmed by her   (noticed · understood · asks)
+ *   solid tint tile  = a recommendation: an action she may take      (suggests)
+ *   amber hand       = it needs her approval before anything runs    (needsApproval)
+ *   solid moss check = she confirmed it / it is established          (confirmed)
+ *
+ * A recommendation therefore never looks like a verified fact, a proposal never looks like completed work, and an AI reading
+ * never implies a confirmation that has not happened. The mapping table is docs/design-system/HK-FE-UI-02-spec.md §6.
  */
+
+// ---------------------------------------------------------------------------
+// AI MARK — the recognisable, shape-coded AI register glyph
+// ---------------------------------------------------------------------------
+
+export type AiMarkKind = 'noticed' | 'suggests' | 'understood' | 'asks' | 'needsApproval' | 'confirmed';
+
+type IoniconName = keyof typeof Ionicons.glyphMap;
+
+interface MarkSpec {
+  icon: IoniconName;
+  shape: 'dashed-circle' | 'dashed-tile' | 'solid-tile' | 'amber-circle' | 'moss-circle';
+  /** The state this mark means — consumed by tests and by the semantic migration table. */
+  meaning: 'unconfirmed-reading' | 'recommendation' | 'approval-required' | 'confirmed';
+}
+
+export const AI_MARKS: Record<AiMarkKind, MarkSpec> = {
+  noticed: { icon: 'sparkles-outline', shape: 'dashed-circle', meaning: 'unconfirmed-reading' },
+  understood: { icon: 'document-text-outline', shape: 'dashed-tile', meaning: 'unconfirmed-reading' },
+  asks: { icon: 'chatbubble-ellipses-outline', shape: 'dashed-circle', meaning: 'unconfirmed-reading' },
+  suggests: { icon: 'bulb-outline', shape: 'solid-tile', meaning: 'recommendation' },
+  needsApproval: { icon: 'hand-left-outline', shape: 'amber-circle', meaning: 'approval-required' },
+  confirmed: { icon: 'checkmark', shape: 'moss-circle', meaning: 'confirmed' },
+};
+
+/**
+ * A small shape-coded glyph that sits beside the register's text label. It is decorative to assistive technology on purpose:
+ * the adjacent label ("Her Keys noticed", "Needs your yes"…) is the accessible statement, and colour/shape only reinforce it.
+ */
+export function AiMark({ kind }: { kind: AiMarkKind }) {
+  const spec = AI_MARKS[kind];
+  const iconColor =
+    spec.shape === 'moss-circle' ? color.text.inverse : spec.shape === 'amber-circle' ? color.status.attention : color.text.primary;
+  return (
+    <View
+      testID={`ai-mark-${kind}`}
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+      style={[markStyles.base, markShape[spec.shape]]}
+    >
+      <Ionicons name={spec.icon} size={sizing.icon.sm} color={iconColor} />
+    </View>
+  );
+}
+
+const MARK = 28;
+const markStyles = StyleSheet.create({
+  base: { width: MARK, height: MARK, alignItems: 'center', justifyContent: 'center' },
+});
+const markShape = StyleSheet.create({
+  'dashed-circle': {
+    borderRadius: MARK / 2,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: color.ai.insightBorder,
+    backgroundColor: color.ai.insightSoft,
+  },
+  'dashed-tile': {
+    borderRadius: radius.xs,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: color.ai.insightBorder,
+    backgroundColor: color.ai.insightSoft,
+  },
+  'solid-tile': { borderRadius: radius.xs, backgroundColor: color.surface.tint },
+  'amber-circle': {
+    borderRadius: MARK / 2,
+    borderWidth: 1,
+    borderColor: color.status.attentionBorder,
+    backgroundColor: color.status.attentionSoft,
+  },
+  'moss-circle': { borderRadius: MARK / 2, backgroundColor: color.status.success },
+});
 
 // ---------------------------------------------------------------------------
 // HER KEYS INSIGHT — “Her Keys noticed…”
@@ -45,15 +127,17 @@ interface InsightBlockProps {
 
 /**
  * A reading Her Keys surfaced (an inference or an observed pattern worth her
- * attention). Rendered as quiet plum — the one selective AI semantic
- * treatment — with an explicit "HER KEYS NOTICED" eyebrow so the register is
- * named in text, not carried by color alone.
+ * attention). HK-FE-UI-02: a Soft Lilac wash with a DASHED outline (an unconfirmed reading, not a settled fact), the
+ * dashed-circle `AiMark`, and the explicit "HER KEYS NOTICED" eyebrow — the register is named in text and shape, not colour.
  */
 export function InsightBlock({ children, onDismiss, style }: InsightBlockProps) {
   return (
     <Card tone="subtle" style={[styles.insightCard, style]}>
       <View style={styles.insightHeader}>
-        <Overline color={color.ai.insight}>Her Keys noticed</Overline>
+        <View style={styles.markRow}>
+          <AiMark kind="noticed" />
+          <Overline color={color.ai.insight}>Her Keys noticed</Overline>
+        </View>
         {onDismiss ? (
           <Pressable
             onPress={onDismiss}
@@ -104,10 +188,9 @@ interface RecommendationBlockProps {
 }
 
 /**
- * One Move and future recommendation surfaces. A plain suggestion is a quiet
- * clay action block; an approval-required recommendation additionally carries
- * an explicit "Needs your yes" marker — the distinction is structural text +
- * tone, never color alone.
+ * One Move and future recommendation surfaces. A plain suggestion is a white action card with a Berry rail and the solid
+ * lightbulb tile; an approval-required recommendation additionally carries an explicit "Needs your yes" marker with the
+ * amber hand — the distinction is structural text + shape, never colour alone.
  */
 export function RecommendationBlock({
   body,
@@ -122,11 +205,15 @@ export function RecommendationBlock({
 }: RecommendationBlockProps) {
   const primaryLabel = actionLabel ?? (approvalRequired ? 'Yes, do that' : 'Do that');
   return (
-    <Card tone="surface" raised={raised} style={style}>
+    <Card tone="surface" raised={raised} style={[styles.recCard, style]}>
       <View style={styles.recHeader}>
-        <Overline color={color.action.primary}>What I recommend</Overline>
+        <View style={styles.markRow}>
+          <AiMark kind="suggests" />
+          <Overline color={color.action.primary}>What I recommend</Overline>
+        </View>
         {approvalRequired ? (
           <View style={styles.approvalMarker}>
+            <AiMark kind="needsApproval" />
             <AppText variant="statusLabel" color={color.status.attention}>
               NEEDS YOUR YES
             </AppText>
@@ -209,8 +296,11 @@ interface ClarificationPromptProps {
  */
 export function ClarificationPrompt({ question, proposed, onConfirm, onCorrect, style }: ClarificationPromptProps) {
   return (
-    <Card tone="surface" style={style}>
-      <Overline color={color.ai.insight}>Her Keys needs one thing</Overline>
+    <Card tone="surface" style={[styles.readingCard, style]}>
+      <View style={styles.markRow}>
+        <AiMark kind="asks" />
+        <Overline color={color.ai.insight}>Her Keys needs one thing</Overline>
+      </View>
       <AppText variant="body" style={styles.clarifyQuestion}>
         {question}
       </AppText>
@@ -257,8 +347,11 @@ interface InterpretationReviewProps {
  */
 export function InterpretationReview({ fields, onAccept, onReject, onCorrect, style }: InterpretationReviewProps) {
   return (
-    <Card tone="surface" style={style}>
-      <Overline color={color.ai.insight}>What I understood</Overline>
+    <Card tone="surface" style={[styles.readingCard, style]}>
+      <View style={styles.markRow}>
+        <AiMark kind="understood" />
+        <Overline color={color.ai.insight}>What I understood</Overline>
+      </View>
       {fields.map((field) => (
         <View key={field.label} style={styles.reviewRow}>
           <AppText variant="metadata" color={color.text.muted} style={styles.reviewLabel}>
@@ -311,6 +404,12 @@ export function ConfidenceBadge({ level }: ConfidenceBadgeProps) {
   const tone = CONFIDENCE_TONE[level];
   return (
     <View style={[styles.badge, { backgroundColor: tone.bg }]}>
+      <Ionicons
+        name={level === 'established' ? 'checkmark-circle' : 'help-circle-outline'}
+        size={sizing.icon.sm - 2}
+        color={tone.fg}
+        accessibilityElementsHidden
+      />
       <AppText variant="statusLabel" color={tone.fg}>
         {CONFIDENCE_LABEL[level]}
       </AppText>
@@ -432,7 +531,10 @@ export function ActionStateBlock({
   const presentation = actionPresentation(stage, outcome);
   return (
     <Card tone={presentation.surface} style={style}>
-      <Overline color={presentation.eyebrowColor}>{presentation.eyebrow}</Overline>
+      <View style={styles.markRow}>
+        {stage === 'proposed' ? <AiMark kind="needsApproval" /> : stage === 'succeeded' ? <AiMark kind="confirmed" /> : null}
+        <Overline color={presentation.eyebrowColor}>{presentation.eyebrow}</Overline>
+      </View>
       <AppText variant="body" style={styles.actionSummary}>
         {summary}
       </AppText>
@@ -454,10 +556,23 @@ export function ActionStateBlock({
 // ---------------------------------------------------------------------------
 
 const styles = StyleSheet.create({
+  // Unconfirmed readings share one dashed outline; recommendations get a solid Berry rail. Shape, not hue, tells them apart.
   insightCard: {
-    borderLeftWidth: 3,
-    borderLeftColor: color.ai.insightBorder,
+    backgroundColor: color.ai.insightSoft,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: color.ai.insightBorder,
   },
+  readingCard: {
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: color.ai.insightBorder,
+  },
+  recCard: {
+    borderLeftWidth: 4,
+    borderLeftColor: color.action.primary,
+  },
+  markRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexShrink: 1 },
   insightHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -470,9 +585,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   approvalMarker: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
     backgroundColor: color.status.attentionSoft,
     borderRadius: radius.pill,
-    paddingHorizontal: spacing.md,
+    paddingLeft: spacing.xxs,
+    paddingRight: spacing.md,
     paddingVertical: spacing.xxs,
   },
   recBody: { marginTop: spacing.sm },
@@ -493,6 +612,9 @@ const styles = StyleSheet.create({
   reviewRow: { marginTop: spacing.md },
   reviewLabel: { marginBottom: spacing.xxs },
   badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
     alignSelf: 'flex-start',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xxs + 1,
