@@ -30,7 +30,7 @@ client.configureRevenueCat();
 Object.assign(client.REVENUECAT_DEADLINES, { identifyMs: 40, readMs: 40, restoreMs: 40 });
 
 afterEach(async () => {
-  Object.assign(sdk, { failLogin: false, failRestore: false, restoreWait: null, offering: null, info: { entitlements: { active: {} } } });
+  Object.assign(sdk, { failLogin: false, failRestore: false, restoreWait: null, loginWait: null, logoutWait: null, offering: null, info: { entitlements: { active: {} } } });
   Object.assign(sdk.hang, { login: false, customerInfo: false, offerings: false, restore: false });
   await client.identifyRevenueCatAccount(null);
   sdk.calls.length = 0;
@@ -51,13 +51,50 @@ describe('offering assessment', () => {
 });
 
 describe('every SDK call ends', () => {
-  test('a never-answering logIn is a failed identify, not a held queue', async () => {
-    sdk.hang.login = true;
+  test('a timed-out native logIn quarantines paid identity until the old SDK work actually settles', async () => {
+    let resolveLogin;
+    sdk.loginWait = new Promise((resolve) => { resolveLogin = resolve; });
     assert.equal(await client.identifyRevenueCatAccount(A), 'sdk_error');
     assert.equal(client.getRevenueCatIdentity().accountId, null, 'a timed-out identify never claims the account');
-    sdk.hang.login = false;
-    assert.equal(await client.identifyRevenueCatAccount(B), 'identified', 'the next operation is not stuck behind the hung one');
-    assert.equal(client.getRevenueCatIdentity().accountId, B);
+    sdk.loginWait = null;
+    assert.equal(await client.identifyRevenueCatAccount(B), 'sdk_error',
+      'a newer native mutation is refused while the timed-out one might still write SDK identity');
+    assert.equal(sdk.calls.filter(([kind]) => kind === 'login').length, 1, 'no overlapping native logIns');
+    resolveLogin();
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(sdk.id, A, 'the old SDK operation can still change native identity after its deadline');
+    assert.equal(client.getRevenueCatIdentity().accountId, null, 'late native completion never republishes stale identity');
+    assert.equal(await client.identifyRevenueCatAccount(B), 'identified',
+      'after the native operation genuinely settles, a fresh identify can recover');
+    assert.equal(sdk.id, B);
+  });
+
+  test('a timed-out native logOut cannot collide with a later account logIn', async () => {
+    await client.identifyRevenueCatAccount(A);
+    let resolveLogout;
+    sdk.logoutWait = new Promise((resolve) => { resolveLogout = resolve; });
+    assert.equal(await client.identifyRevenueCatAccount(B), 'sdk_error');
+    sdk.logoutWait = null;
+    assert.equal(await client.identifyRevenueCatAccount(A), 'sdk_error',
+      'even the earlier account cannot purchase while an old native logout is pending');
+    resolveLogout();
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(client.getRevenueCatIdentity().accountId, null);
+    assert.equal(await client.identifyRevenueCatAccount(A), 'identified',
+      'the current account may retry after the late native logout finishes');
+    assert.equal(sdk.id, A);
+  });
+
+  test('an indefinitely pending native identity read has a finite fail-closed outcome', async () => {
+    await client.identifyRevenueCatAccount(A);
+    sdk.hang.identityRead = true;
+    assert.equal(await client.fetchActiveEntitlementIds(), null);
+    assert.deepEqual(await client.restoreRevenueCatPurchases(A), { kind: 'unavailable' });
+    assert.deepEqual(await client.presentRevenueCatPaywall(nativeOffering, A), { kind: 'unavailable' });
+    assert.equal(sdk.calls.filter(([kind]) => kind === 'paywall').length, 0,
+      'identity uncertainty cannot show a purchase sheet');
+    sdk.hang.identityRead = false;
+    assert.equal(await client.ensureRevenueCatIdentity(), true, 'a later verified identity read recovers');
   });
 
   test('customer info, offerings and restore each resolve to the safe fallback', async () => {
