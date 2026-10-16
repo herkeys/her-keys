@@ -1,0 +1,70 @@
+name: Her Keys V2 — Production Backend Internal Android APK
+
+on:
+  push:
+    branches:
+      - repair/v2-production-premium-rollout-readiness-20261016
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v2-internal-production-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android-internal:
+    name: Validated internal Android APK (Production backend; NO store submission)
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      CI: '1'
+      EXPO_NO_TELEMETRY: '1'
+    steps:
+      - name: Check exact source identity
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Ensure Expo token was configured
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "::error::EXPO_TOKEN is missing. Connect this repository to the correct Her Keys EAS account before requesting an internal APK."
+            exit 1
+          fi
+      - name: Install exact dependencies
+        run: npm ci
+      - name: Source type safety and release identity
+        run: |
+          npm run typecheck
+          npm run verify:release-identity
+      - name: Welcome Tree and Premium launch contract gate
+        run: node --import ./tests/support/register-ts.mjs --import ./tests/support/register-jsx.mjs --test --test-timeout=120000 --test-force-exit tests/onboardingLayout.test.mjs tests/premiumLaunchState.test.mjs tests/premiumCheckoutSwitch.test.mjs tests/migrationChain.test.mjs tests/meals/boundary.test.mjs tests/premiumDomain/dailyLoadUi.test.mjs tests/premium/clientProvider.test.mjs tests/welcomeAuthFlow.test.mjs tests/consent.test.mjs
+      - name: Confirm only the intended Production-backend APK profile
+        run: |
+          node - <<'JS'
+          const c=require('./eas.json').build['smoke-production-android'];
+          if(c?.environment!=='production'||c?.distribution!=='internal'||c?.android?.buildType!=='apk'||c?.env?.EXPO_PUBLIC_HERKEYS_BACKEND!=='production') throw Error('Wrong internal Production APK profile');
+          console.log('Verified: Android APK, internal distribution, Production backend. No AAB/IPA or submit.');
+          JS
+      - name: Expo native compatibility
+        run: |
+          npx expo install --check
+          npx expo-doctor
+      - name: Set up EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+          packager: npm
+      - name: Start ONE internal Android APK (no submission)
+        run: |
+          echo "Building SHA $(git rev-parse HEAD) for internal QA, Production backend, paid checkout held OFF at server."
+          eas build --platform android --profile smoke-production-android --non-interactive --no-wait
