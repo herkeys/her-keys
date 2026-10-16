@@ -1335,6 +1335,7 @@ const LATER_FEATURES = [
       /^docs\/design-system\/HK-FE-UI-02-asset-register\.md$/,
       /^docs\/design-system\/HK-FE-UI-02-impact-inventory\.generated\.md$/,
       /^docs\/design-system\/HK-FE-UI-02-impact-inventory\.md$/,
+      /^docs\/design-system\/HK-FE-UI-02-phase1-report\.md$/,
       /^docs\/design-system\/HK-FE-UI-02-spec\.md$/,
       /^docs\/design-system\/evidence\/hk-fe-ui-02\/MANIFEST\.md$/,
       /^docs\/design-system\/evidence\/hk-fe-ui-02\/android-emulator-expo-go\/01-tokens\.png$/,
