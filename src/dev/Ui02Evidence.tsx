@@ -63,6 +63,7 @@ interface Params {
 
 export function Ui02Evidence({ mode, params }: { mode: EvidenceMode; params: Params }) {
   const styles = useStyles();
+  const insets = useSafeAreaInsets();
   switch (mode) {
     case 'welcome':
       return (
@@ -72,7 +73,8 @@ export function Ui02Evidence({ mode, params }: { mode: EvidenceMode; params: Par
       );
     case 'appearance':
       return (
-        <View style={styles.full}>
+        // Padded like the Your Account panel it lives in (spacing.xl gutters), so the capture shows the real in-panel look.
+        <View style={[styles.full, { paddingTop: insets.top + spacing.xl, paddingHorizontal: spacing.xl }]}>
           <AppearanceSection />
         </View>
       );

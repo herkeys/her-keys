@@ -1,6 +1,6 @@
 # HK-FE-UI-02-DM — Final report (Adaptive Appearance: Light / Dark / System)
 
-Disposition: **SOURCE COMPLETE. Device and native evidence NOT RUN.** Nothing merged, no EAS build, no OTA, no Supabase deploy.
+Disposition: **SOURCE COMPLETE. Android emulator (Expo Go) Light/Dark captures included; native builds, iOS and physical-device evidence NOT RUN.** Nothing merged, no EAS build, no OTA, no Supabase deploy.
 
 ## A. Source
 
@@ -23,7 +23,7 @@ luminous Berry `#CC84AC` (tuned up from the candidate `#BE729C`, which is 4.1:1 
 siblings, Luxury Black badge with a rim, sage unchanged and decorative-only, no blue anywhere. Contrast: `contrast-matrix.md` 152 PASS / 0 FAIL across both
 schemes; rendered audits below.
 
-## D. Behaviour (all verified at source/unit level; device NOT RUN)
+## D. Behaviour (verified at source/unit level; Light/Dark screens also captured on an Android emulator in Expo Go; live switching, restart persistence and System-following NOT RUN on a device)
 
 | Behaviour | Evidence |
 |---|---|
@@ -71,7 +71,7 @@ inferring each tree's ground from its own scheme-exclusive colours. The first Da
 
 | Flag | Value |
 |---|---|
-| HK_UI02_DM_SOURCE_COMPLETE | **YES** (source); device evidence outstanding |
+| HK_UI02_DM_SOURCE_COMPLETE | **YES** (source + 24 emulator Light/Dark pairs); native/device evidence outstanding |
 | LIGHT_MODE_REGRESSION | **NONE** — 74 resolved trees identical to pre-migration `ca9e792` under three provider configurations; Light rendered audit 0 findings |
 | DARK_MODE_IMPLEMENTATION | **IMPLEMENTED** (whole app incl. Premium; rendered audit 0 findings) |
 | SYSTEM_MODE_SWITCHING | **PASS at unit level**; on-device NOT RUN |
@@ -90,10 +90,10 @@ inferring each tree's ground from its own scheme-exclusive colours. The first Da
 | ANDROID_NATIVE_CERTIFICATION | **NOT_RUN** |
 | IOS_NATIVE_CERTIFICATION | **NOT_RUN** |
 | READY_FOR_V2_INTEGRATION | **YES, conditional** on the dependencies below |
-| READY_FOR_DEVICE_SMOKE | **YES after a new dev/preview binary**; emulator captures blocked by host disk space |
+| READY_FOR_DEVICE_SMOKE | **YES after a new dev/preview binary** (emulator captures in Expo Go done; they are not native certification) |
 
 ## Remaining limitations
-1. No visual evidence (see `evidence/hk-fe-ui-02-dm/MANIFEST.md`): host disk full (~575 MB free) when the emulator became available.
+1. Visual evidence is Android emulator + Expo Go only: 20 screens at 1344x2992 plus 4 compact (720x1280), each as Light, Dark and side-by-side (`evidence/hk-fe-ui-02-dm/`). NOT captured: Smart Inbox, the final Premium decision, review sheets, Life Operating Profile with insights, Appearance inside the real Your Account panel, live switching, iOS, a physical device, status/navigation-bar behaviour. See the manifest.
 2. Native-only behaviours unverified: Android edge-to-edge system/navigation-bar glyph contrast, iOS Automatic appearance, status bar on devices, launch-splash hand-over, keyboard and alert theming.
 3. Third-party/OS surfaces we do not draw (store purchase sheet, permission dialogs, Apple/Google sign-in) follow the phone or the OS override.
 4. Selector exists only in Your Account; no pre-auth control.
