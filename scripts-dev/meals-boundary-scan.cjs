@@ -1302,6 +1302,30 @@ const LATER_FEATURES = [
       ['.github/workflows/v2-integration-validation.yml', 'P0 auth recovery: run the same gate on the repair branch exact pushed SHA'],
     ],
   },
+  {
+    id: 'HK-PREMIUM-PRODUCTION-READINESS (actor and commercial checkout separated)',
+    // An explicitly owned integration repair, without modifying Meals data or household sync.
+    branch: null,
+    owned: [
+      /^tests\/premiumLaunchState\.test\.mjs$/,
+      /^tests\/premiumCheckoutSwitch\.test\.mjs$/,
+      /^\.github\/workflows\/v2-internal-production-apk\.yml$/,
+      /^supabase\/migrations\/20261016012000_premium_purchase_readiness\.sql$/,
+      /^supabase\/migrations\/20261016013000_premium_checkout_independent_activation\.sql$/,
+    ],
+    migrations: [
+      'supabase/migrations/20261016012000_premium_purchase_readiness.sql',
+      'supabase/migrations/20261016013000_premium_checkout_independent_activation.sql',
+    ],
+    schemas: [], rootCollections: [], syncKinds: [],
+    shared: [
+      ['supabase/tests/migration-chain.mjs', 'Premium production readiness: register both independent additive migrations in the canonical ordered chain'],
+      ['tests/migrationChain.test.mjs', 'Premium production readiness: pin migration owner, identity and deterministic chain ordering'],
+      ['.gitattributes', 'Premium production readiness: pin both governed additive migrations to LF'],
+      ['tests/premiumDomain/dailyLoadUi.test.mjs', 'Premium purchase test: explicitly simulate an eligible server response after introducing fail-closed native checkout'],
+      ['scripts-dev/meals-boundary-scan.cjs', 'Premium production readiness: register the new migration and test evidence without weakening Meals checks'],
+    ],
+  },
 
 ];
 

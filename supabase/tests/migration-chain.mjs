@@ -51,6 +51,9 @@ export const ADDITIVE_CHAIN = [
   { file: '20261015130000_premium_decision_ledger.sql', owner: 'PREMIUM_LEDGER', label: 'premium-ledger' },
   // Premium engineering: dirty and stale server-authoritative subscriber projections must fail closed before paid work.
   { file: '20261015140000_premium_stale_projection_guard.sql', owner: 'PREMIUM_FRESHNESS', label: 'premium-freshness' },
+  // Premium launch: actor-bound purchase readiness and independent checkout OFF-by-default control.
+  { file: '20261016012000_premium_purchase_readiness.sql', owner: 'PREMIUM_PURCHASE_READINESS', label: 'premium-purchase-readiness' },
+  { file: '20261016013000_premium_checkout_independent_activation.sql', owner: 'PREMIUM_CHECKOUT_SWITCH', label: 'premium-checkout-switch' },
 ];
 
 /** WAVE3_BASE (363e473) ended at F05: the chain a WAVE3_BASE-era database was built with, and the populated-upgrade starting point. */
