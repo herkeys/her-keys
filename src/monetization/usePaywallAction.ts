@@ -49,7 +49,7 @@ export function usePaywallAction(placement: PaywallPlacement): PaywallActionApi 
     setNotice(null);
     let outcome: PaywallOutcome;
     try {
-      outcome = await presentPaywall(placement);
+      outcome = await premium?.canOfferPurchase?.() === true ? await presentPaywall(placement) : { kind: 'unavailable' };
     } catch {
       outcome = { kind: 'error', message: 'paywall_threw' };
     } finally {
@@ -60,7 +60,7 @@ export function usePaywallAction(placement: PaywallPlacement): PaywallActionApi 
       setNotice(paywallNoticeFor(outcome));
     }
     return outcome;
-  }, [placement, presentPaywall, readiness.ready]);
+  }, [placement, presentPaywall, readiness.ready, premium]);
 
   return { present, presenting, notice };
 }
