@@ -24,15 +24,18 @@ export interface ConfigureResult {
 }
 
 /**
- * Every SDK call that is not a customer's own interaction ends. A native call that never answers would otherwise hold the
- * serialized account queue below forever, so the next sign-in, restore or paywall would wait behind it. A timeout does not cancel
- * the native work; each caller treats a late answer as stale via the identity checks already in this file.
+ * Non-interactive RevenueCat work has a caller deadline. A timed-out native identity mutation may still finish later,
+ * so the purchase lane must remain quarantined until that native work settles. Free auth never depends on this lane.
+ * Do not confuse bounded UI responses with cancellation of a native SDK operation.
  */
 export const REVENUECAT_DEADLINES = { identifyMs: 15_000, readMs: 15_000, restoreMs: 60_000 } as const;
 
 let configured = false;
 let desiredAccountId: string | null = null;
 let identifiedAccountId: string | null = null;
+// A timed-out native logIn/logOut/getAppUserID can finish after its JS caller has returned.
+// Do not start another account mutation, or a purchase, while its result is still uncertain.
+let nativeIdentityWorkUnsettled = false;
 export interface RevenueCatIdentity { accountId: string | null; epoch: number }
 let identity: RevenueCatIdentity = { accountId: null, epoch: 0 };
 const identityListeners = new Set<() => void>();
@@ -54,7 +57,15 @@ function withAccountSdkOperation<T>(operation: () => Promise<T>): Promise<T> {
 }
 
 async function matchesIdentifiedAccount(expected: string | null): Promise<boolean> {
-  return configured && expected !== null && identifiedAccountId === expected && await Purchases.getAppUserID() === expected;
+  if (!configured || expected === null || identifiedAccountId !== expected || nativeIdentityWorkUnsettled) return false;
+  try {
+    const read = await withDeadline(() => Purchases.getAppUserID(), REVENUECAT_DEADLINES.readMs);
+    return !read.timedOut && !nativeIdentityWorkUnsettled && identifiedAccountId === expected
+      && read.value === expected;
+  } catch {
+    // A native identity read must fail closed, not pin the serialized purchase/restore queue.
+    return false;
+  }
 }
 
 function currentPlatformApiKey(): string | undefined {
@@ -111,25 +122,48 @@ export async function identifyRevenueCatAccount(accountId: string | null): Promi
   const epoch = identity.epoch + 1;
   publishIdentity({ accountId: null, epoch });
   return withAccountSdkOperation(async () => {
-    if (identity.epoch !== epoch) return 'sdk_error';
+    if (identity.epoch !== epoch || nativeIdentityWorkUnsettled) return 'sdk_error';
     identifiedAccountId = null;
     if (!configured) return 'not_configured';
+
+    // A caller timeout cannot cancel a native identity mutation. Keep paid operations fenced until it
+    // ACTUALLY settles, and never allow its late completion to publish a stale account identity.
+    let active = true;
+    nativeIdentityWorkUnsettled = true;
+    const work = (async (): Promise<IdentifyResult> => {
+      const previousId = await Purchases.getAppUserID();
+      if (!active || identity.epoch !== epoch) return 'sdk_error';
+      if (accountId === null) {
+        if (!previousId.startsWith('$RCAnonymousID:')) await Purchases.logOut();
+        return active && identity.epoch === epoch ? 'signed_out' : 'sdk_error';
+      }
+      if (previousId !== accountId && !previousId.startsWith('$RCAnonymousID:')) {
+        await Purchases.logOut();
+        if (!active || identity.epoch !== epoch) return 'sdk_error';
+      }
+      await Purchases.logIn(accountId);
+      if (!active || identity.epoch !== epoch) return 'sdk_error';
+      const confirmedId = await Purchases.getAppUserID();
+      if (!active || identity.epoch !== epoch || confirmedId !== accountId) return 'sdk_error';
+      identifiedAccountId = accountId;
+      publishIdentity({ accountId, epoch });
+      return 'identified';
+    })();
+    // Both fulfillment and rejection release quarantine only when the native work has genuinely finished.
+    // Keep a rejection handler even when the caller's deadline already expired.
+    void work.then(
+      () => { nativeIdentityWorkUnsettled = false; },
+      () => { nativeIdentityWorkUnsettled = false; },
+    );
     try {
-      const done = await withDeadline(async (): Promise<IdentifyResult> => {
-        if (accountId === null) {
-          if (!(await Purchases.getAppUserID()).startsWith('$RCAnonymousID:')) await Purchases.logOut();
-          return 'signed_out';
-        }
-        const previousId = await Purchases.getAppUserID();
-        if (previousId !== accountId && !previousId.startsWith('$RCAnonymousID:')) await Purchases.logOut();
-        await Purchases.logIn(accountId);
-        if (identity.epoch !== epoch || await Purchases.getAppUserID() !== accountId) return 'sdk_error';
-        identifiedAccountId = accountId;
-        publishIdentity({ accountId, epoch });
-        return 'identified';
-      }, REVENUECAT_DEADLINES.identifyMs);
-      return done.timedOut ? 'sdk_error' : done.value;
+      const done = await withDeadline(work, REVENUECAT_DEADLINES.identifyMs);
+      if (done.timedOut) {
+        active = false;
+        return 'sdk_error';
+      }
+      return done.value;
     } catch {
+      active = false;
       return 'sdk_error';
     }
   });
@@ -144,7 +178,9 @@ export async function identifyRevenueCatAccount(accountId: string | null): Promi
 export async function ensureRevenueCatIdentity(): Promise<boolean> {
   if (!configured || desiredAccountId === null) return false;
   const wanted = desiredAccountId;
-  if (identity.accountId === wanted && identifiedAccountId === wanted) return true;
+  if (identity.accountId === wanted && identifiedAccountId === wanted) {
+    return matchesIdentifiedAccount(wanted);
+  }
   const result = await identifyRevenueCatAccount(wanted);
   return result === 'identified' && desiredAccountId === wanted && identity.accountId === wanted;
 }
