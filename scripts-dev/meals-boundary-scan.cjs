@@ -1309,6 +1309,8 @@ const LATER_FEATURES = [
     owned: [
       /^tests\/premiumLaunchState\.test\.mjs$/,
       /^tests\/premiumCheckoutSwitch\.test\.mjs$/,
+      /^supabase\/migrations\/20261016012000_premium_purchase_readiness\.sql$/,
+      /^supabase\/migrations\/20261016013000_premium_checkout_independent_activation\.sql$/,
     ],
     migrations: [
       'supabase/migrations/20261016012000_premium_purchase_readiness.sql',
