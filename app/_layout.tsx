@@ -97,8 +97,10 @@ function RootNavigator() {
   // The welcome tree only records an intent to take Premium. Checkout is presented by `PremiumCheckoutAfterConsent` below, and
   // only for a bound account after consent. There is no purchase before an account exists, so nothing is ever transferred.
   const presentWelcomeCheckout = useCallback(
-    () => premiumReleaseReady ? presentPaywall('welcome_premium') : Promise.resolve({ kind: 'unavailable' } as const),
-    [presentPaywall, premiumReleaseReady],
+    async () => premiumReleaseReady && await premiumState?.canOfferPurchase?.() === true
+      ? presentPaywall('welcome_premium')
+      : { kind: 'unavailable' } as const,
+    [presentPaywall, premiumReleaseReady, premiumState],
   );
   // Recheck the store's canonical entitlement when a Supabase session is
   // activated or signed out. The runtime identifies the RevenueCat UUID
