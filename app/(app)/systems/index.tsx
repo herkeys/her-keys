@@ -6,6 +6,8 @@ import { useEntitlement } from '../../../src/monetization/RevenueCatProvider';
 import { HER_KEYS_PREMIUM_DISPLAY_NAME } from '../../../src/monetization/entitlement';
 import { PaywallNoticeView } from '../../../src/monetization/PaywallNoticeView';
 import { usePaywallAction } from '../../../src/monetization/usePaywallAction';
+import { usePremiumStateIfMounted } from '../../../src/monetization/PremiumStateProvider';
+import { premiumLaunchState } from '../../../src/monetization/premiumLaunchState';
 
 /**
  * The Systems tab: the hub of the household's reusable Systems. The Her Keys Premium entry below it is the existing
@@ -14,6 +16,8 @@ import { usePaywallAction } from '../../../src/monetization/usePaywallAction';
 export default function SystemsScreen() {
   const { isPlus } = useEntitlement();
   const paywall = usePaywallAction('systems_upgrade');
+  const premium = usePremiumStateIfMounted();
+  const releaseReady = premiumLaunchState(premium?.snapshot.manifest ?? null).ready;
   // The paywall is a full-screen sheet while it is open; the control is only ever held for that one in-flight action.
   const busy = paywall.presenting;
 
@@ -25,7 +29,9 @@ export default function SystemsScreen() {
         <Card tone="subtle" style={styles.upgrade}>
           <Overline>{HER_KEYS_PREMIUM_DISPLAY_NAME}</Overline>
           <AppText variant="supporting" color={color.text.secondary} style={styles.upgradeCopy}>
-            More of Her Keys' intelligence is on the way.
+            {releaseReady
+              ? 'Daily Load reviews, Smart Inbox and Momentum are available with Her Keys Premium.'
+              : 'Daily Load reviews, Smart Inbox and Momentum are being prepared for Premium. Free Systems remain available.'}
           </AppText>
           <Button
             label={`Learn about ${HER_KEYS_PREMIUM_DISPLAY_NAME}`}
