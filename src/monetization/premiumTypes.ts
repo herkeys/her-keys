@@ -158,6 +158,8 @@ export type ExtractResult =
 export interface PremiumServerClient {
   entitlement(): Promise<{ kind: 'ok'; value: ServerEntitlement } | { kind: 'unavailable' }>;
   manifest(): Promise<{ kind: 'ok'; entries: ManifestEntry[] } | { kind: 'unavailable' }>;
+  /** Server verifies commercial eligibility for this authenticated actor, rollout, and webhook fulfillment. */
+  purchaseReadiness?(): Promise<{ ready: boolean; reason: string }>;
   /** "Verify my subscription": the server reads RevenueCat's authenticated record for THIS account. Rate-limited server-side. */
   verify(): Promise<{ kind: 'ok'; status: VerifyStatus } | { kind: 'unavailable' }>;
   authorize(request: GateRequest): Promise<GateResult>;
