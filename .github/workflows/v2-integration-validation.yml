@@ -83,7 +83,7 @@ jobs:
         run: npm run typecheck
 
       - name: Welcome and Premium launch-critical contract tests
-        run: node --import ./tests/support/register-ts.mjs --import ./tests/support/register-jsx.mjs --test tests/onboardingLayout.test.mjs tests/premiumLaunchState.test.mjs tests/premiumCheckoutSwitch.test.mjs tests/migrationChain.test.mjs tests/meals/boundary.test.mjs tests/premiumDomain/dailyLoadUi.test.mjs tests/premium/clientProvider.test.mjs tests/welcomeAuthFlow.test.mjs tests/consent.test.mjs
+        run: node --import ./tests/support/register-ts.mjs --import ./tests/support/register-jsx.mjs --test --test-timeout=120000 --test-force-exit tests/onboardingLayout.test.mjs tests/premiumLaunchState.test.mjs tests/premiumCheckoutSwitch.test.mjs tests/migrationChain.test.mjs tests/meals/boundary.test.mjs tests/premiumDomain/dailyLoadUi.test.mjs tests/premium/clientProvider.test.mjs tests/welcomeAuthFlow.test.mjs tests/consent.test.mjs
 
       - name: Full application test suite
         run: npm test
