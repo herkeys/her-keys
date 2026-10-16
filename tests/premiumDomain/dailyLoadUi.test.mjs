@@ -47,6 +47,9 @@ async function world({ serverState = 'premium_active', gate = null, ledgerDown =
   const server = {
     state: serverState, gateCalls: [], verifyCalls: 0,
     client: {
+      // Purchase is independently allowed only after the SERVER says fulfillment is ready.
+      // This UI test simulates that explicit readiness and never initiates a real store transaction.
+      purchaseReadiness: async () => ({ ready: true, reason: 'ready' }),
       entitlement: async () => ({ kind: 'ok', value: { state: server.state, expiresAt: '2026-11-13T00:00:00Z', graceExpiresAt: null, canceled: false, needsReconcile: false, checkedAt: '' } }),
       manifest: async () => ({ kind: 'ok', entries: [{ featureKey: 'daily_load_premium', displayName: 'Daily Load', tier: 'premium', available: true, requiresAiConsent: false, minAppVersion: null }] }),
       verify: async () => { server.verifyCalls += 1; return { kind: 'ok', status: 'reconciled' }; },
