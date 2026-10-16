@@ -16,7 +16,7 @@ import { fixture } from './support/premium/stubs.mjs';
 import { render } from './support/render.tsx';
 import { paywallNoticeFor } from '../src/monetization/paywallFeedback.ts';
 import { PremiumCheckoutAfterConsent } from '../src/monetization/PremiumCheckoutAfterConsent.tsx';
-import { PremiumIntentProvider } from '../src/store/PremiumIntentContext.tsx';
+import { PremiumIntentProvider, usePremiumIntent } from '../src/store/PremiumIntentContext.tsx';
 
 const stub = new URL('./support/premium/stubs.mjs', import.meta.url).href;
 registerHooks({ resolve(specifier, context, next) {
@@ -179,6 +179,50 @@ test('SC-03: onboarding refuses a commercial purchase while the server has unrel
     assert.equal(button(r, 'Continue to Her Keys').props.disabled, false);
     await act(() => r.unmount());
   }
+});
+
+test('SC-03: pre-auth Premium intent waits for server manifest and opens one paywall, never before', async () => {
+  reset();
+  fixture.manifest = null;
+  let choice, purchases = 0;
+  function Choose() { choice = usePremiumIntent(); return null; }
+  fixture.entitlement.presentPaywall = async () => { purchases += 1; return { kind: 'cancelled' }; };
+  const screen = () => <PremiumIntentProvider><Choose /><PlusStep /></PremiumIntentProvider>;
+  const r = await render(screen());
+  try {
+    await act(() => choice.setChoice('premium'));
+    await settle();
+    assert.equal(purchases, 0, 'no paid sheet while server feature manifest is unknown');
+    fixture.manifest = ['daily_load_premium', 'smart_inbox_extract', 'momentum_report']
+      .map((featureKey) => ({ featureKey, tier: 'premium', available: true }));
+    await act(() => r.update(screen()));
+    await settle();
+    assert.equal(purchases, 1, 'exactly one store sheet after all three server flags are ready');
+    await act(() => r.update(screen()));
+    await settle();
+    assert.equal(purchases, 1, 'rerender does not duplicate purchase');
+  } finally { await act(() => r.unmount()); }
+});
+
+test('SC-03: Continue Free clears a pending Premium intent even if the manifest never loads', async () => {
+  reset();
+  fixture.manifest = null;
+  let choice, purchases = 0;
+  function Choose() { choice = usePremiumIntent(); return null; }
+  fixture.entitlement.presentPaywall = async () => { purchases += 1; return { kind: 'purchased' }; };
+  const screen = () => <PremiumIntentProvider><Choose /><PlusStep /></PremiumIntentProvider>;
+  const r = await render(screen());
+  try {
+    await act(() => choice.setChoice('premium'));
+    await act(() => button(r, 'Continue to Her Keys').props.onPress());
+    fixture.manifest = ['daily_load_premium', 'smart_inbox_extract', 'momentum_report']
+      .map((featureKey) => ({ featureKey, tier: 'premium', available: true }));
+    await act(() => r.update(screen()));
+    await settle();
+    assert.equal(choice.choice, null, 'Free continuation consumes the earlier Premium intent');
+    assert.equal(purchases, 0, 'no late store sheet after Free continuation');
+    assert.equal(fixture.onboarding.completeCalls, 1);
+  } finally { await act(() => r.unmount()); }
 });
 
 async function checkout(outcome, choice = 'premium') {
