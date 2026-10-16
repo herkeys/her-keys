@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
-import { color, opacity, radius, spacing } from '../tokens';
+import { color, opacity, radius, spacing, withAlpha } from '../tokens';
 import { AppText } from './AppText';
 import { Button } from './Button';
 
@@ -79,7 +79,8 @@ export function ConfirmationSheet({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: `rgba(31, 30, 27, ${opacity.scrim})`,
+    // Plum-black scrim (never pure black): the one translucent layer, and it never sits behind measured text.
+    backgroundColor: withAlpha(color.scrim, opacity.scrim),
     justifyContent: 'flex-end',
   },
   sheet: {

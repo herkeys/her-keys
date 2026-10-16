@@ -1,5 +1,6 @@
 import { ActivityIndicator, StyleSheet, View, type ViewStyle } from 'react-native';
-import { color, radius, spacing } from '../tokens';
+import { Ionicons } from '@expo/vector-icons';
+import { color, radius, sizing, spacing } from '../tokens';
 import { FadeIn } from './animated';
 import { AppText, Overline } from './AppText';
 
@@ -116,11 +117,18 @@ export interface InlineNoticeProps {
   style?: ViewStyle;
 }
 
-const noticeTones: Record<NoticeTone, { bg: string; border: string; fg: string }> = {
-  info: { bg: color.ai.insightSoft, border: color.ai.insightBorder, fg: color.ai.insight },
-  attention: { bg: color.status.attentionSoft, border: color.status.attentionBorder, fg: color.status.attention },
-  success: { bg: color.status.successSoft, border: color.status.successBorder, fg: color.status.success },
-  waiting: { bg: color.status.waitingSoft, border: color.status.waitingBorder, fg: color.status.waiting },
+type NoticeIcon = 'information-circle-outline' | 'alert-circle-outline' | 'checkmark-circle-outline' | 'time-outline';
+
+/**
+ * HK-FE-UI-02: `info` is Deep Plum Gray with an information icon — it is NOT the AI register any more (plum is a brand
+ * colour now; AI identity lives in intelligence.tsx structure + labels). Every tone also carries its own icon, so the state is
+ * never colour alone.
+ */
+const noticeTones: Record<NoticeTone, { bg: string; border: string; fg: string; icon: NoticeIcon }> = {
+  info: { bg: color.status.infoSoft, border: color.status.infoBorder, fg: color.status.info, icon: 'information-circle-outline' },
+  attention: { bg: color.status.attentionSoft, border: color.status.attentionBorder, fg: color.status.attention, icon: 'alert-circle-outline' },
+  success: { bg: color.status.successSoft, border: color.status.successBorder, fg: color.status.success, icon: 'checkmark-circle-outline' },
+  waiting: { bg: color.status.waitingSoft, border: color.status.waitingBorder, fg: color.status.waiting, icon: 'time-outline' },
 };
 
 /** A quiet inline banner for state that deserves a sentence, not a screen. */
@@ -128,14 +136,21 @@ export function InlineNotice({ tone = 'info', title, body, style }: InlineNotice
   const t = noticeTones[tone];
   return (
     <View style={[styles.notice, { backgroundColor: t.bg, borderColor: t.border }, style]} accessibilityRole="text">
-      <AppText variant="bodyStrong" color={t.fg}>
-        {title}
-      </AppText>
-      {body && (
-        <AppText variant="supporting" color={t.fg} style={styles.tightGap}>
-          {body}
-        </AppText>
-      )}
+      <View style={styles.noticeRow}>
+        <View accessibilityElementsHidden importantForAccessibility="no" style={styles.noticeIcon}>
+          <Ionicons name={t.icon} size={sizing.icon.md} color={t.fg} />
+        </View>
+        <View style={styles.noticeText}>
+          <AppText variant="bodyStrong" color={t.fg}>
+            {title}
+          </AppText>
+          {body && (
+            <AppText variant="supporting" color={t.fg} style={styles.noticeBody}>
+              {body}
+            </AppText>
+          )}
+        </View>
+      </View>
     </View>
   );
 }
@@ -156,4 +171,8 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     padding: spacing.lg,
   },
+  noticeRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
+  noticeIcon: { paddingTop: 2 },
+  noticeText: { flex: 1 },
+  noticeBody: { marginTop: spacing.xs },
 });

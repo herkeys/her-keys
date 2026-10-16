@@ -37,11 +37,14 @@ const allText = (root) =>
     .join(' ');
 
 describe('InsightBlock (HER KEYS INSIGHT)', () => {
-  test('names the register in text and uses the selective plum treatment', async () => {
+  test('names the register in text and marks it as an unconfirmed reading by SHAPE (dashed), not by plum', async () => {
     const r = await render(<InsightBlock>You haven’t had a quiet evening in nine days.</InsightBlock>);
     assert.match(allText(r.root), /HER KEYS NOTICED/i);
-    const card = r.root.findByType('View');
-    assert.equal(flatten(card).borderLeftColor, color.ai.insightBorder);
+    const card = flatten(r.root.findByType('View'));
+    assert.equal(card.borderStyle, 'dashed', 'an AI reading is outlined, not filled-and-settled');
+    assert.equal(card.borderColor, color.ai.insightBorder);
+    assert.ok(r.root.findAll((n) => n.props.testID === 'ai-mark-noticed').length > 0, 'carries the noticed mark');
+    assert.equal(r.root.findAll((n) => n.props.testID === 'ai-mark-confirmed').length, 0, 'never implies confirmation');
   });
 
   test('dismiss is an explicit affordance, present only when asked for', async () => {
@@ -212,5 +215,75 @@ describe('ActionStateBlock', () => {
     assert.match(allText(declined.root), /You said no/i);
     const withdrawn = await render(<ActionStateBlock stage="withdrawn" summary="x" />);
     assert.match(allText(withdrawn.root), /Withdrawn/i);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// HK-FE-UI-02 §6 — the AI language no longer relies on plum. Label + structure + shape.
+// ---------------------------------------------------------------------------
+describe('HK-FE-UI-02 AI truth semantics survive the palette change', () => {
+  const marks = (r) => [...new Set(r.root.findAll((n) => typeof n.props.testID === 'string' && n.props.testID.startsWith('ai-mark-')).map((n) => n.props.testID))];
+
+  test('every register carries an explicit text label AND a mark of the right meaning', async () => {
+    const noticed = await render(<InsightBlock>x</InsightBlock>);
+    const rec = await render(<RecommendationBlock body="x" approvalRequired={false} onApprove={() => {}} />);
+    const understood = await render(<InterpretationReview fields={[{ label: 'When', value: 'Sat' }]} onAccept={() => {}} onReject={() => {}} />);
+    const asks = await render(<ClarificationPrompt question="q" proposed="p" onConfirm={() => {}} onCorrect={() => {}} />);
+    assert.deepEqual(marks(noticed), ['ai-mark-noticed']);
+    assert.deepEqual(marks(rec), ['ai-mark-suggests']);
+    assert.deepEqual(marks(understood), ['ai-mark-understood']);
+    assert.deepEqual(marks(asks), ['ai-mark-asks']);
+    assert.match(allText(noticed.root), /HER KEYS NOTICED/i);
+    assert.match(allText(rec.root), /WHAT I RECOMMEND/i);
+    assert.match(allText(understood.root), /WHAT I UNDERSTOOD/i);
+    assert.match(allText(asks.root), /HER KEYS NEEDS ONE THING/i);
+  });
+
+  test('a recommendation is structurally NOT a fact or an unconfirmed reading: solid rail, never dashed, never a confirmed mark', async () => {
+    const rec = await render(<RecommendationBlock body="x" approvalRequired={false} onApprove={() => {}} />);
+    const card = flatten(rec.root.findByType('View'));
+    assert.notEqual(card.borderStyle, 'dashed');
+    assert.equal(card.borderLeftColor, color.action.primary);
+    assert.ok(!marks(rec).includes('ai-mark-confirmed'));
+  });
+
+  test('unconfirmed readings (insight, understood, clarification) all share the dashed outline', async () => {
+    for (const el of [
+      <InsightBlock>x</InsightBlock>,
+      <InterpretationReview fields={[]} onAccept={() => {}} onReject={() => {}} />,
+      <ClarificationPrompt question="q" proposed="p" onConfirm={() => {}} onCorrect={() => {}} />,
+    ]) {
+      const r = await render(el);
+      assert.equal(flatten(r.root.findByType('View')).borderStyle, 'dashed');
+    }
+  });
+
+  test('an action proposal never looks like completed work; only a succeeded execution gets the confirmed mark', async () => {
+    const proposed = await render(<ActionStateBlock stage="proposed" summary="x" approvalQuestion="ok?" onApprove={() => {}} onDecline={() => {}} />);
+    const approved = await render(<ActionStateBlock stage="approved" summary="x" />);
+    const failed = await render(<ActionStateBlock stage="failed" summary="x" />);
+    const done = await render(<ActionStateBlock stage="succeeded" outcome="verified" summary="x" />);
+    assert.deepEqual(marks(proposed), ['ai-mark-needsApproval']);
+    assert.deepEqual(marks(approved), []);
+    assert.deepEqual(marks(failed), []);
+    assert.deepEqual(marks(done), ['ai-mark-confirmed']);
+    assert.match(allText(proposed.root), /NEEDS YOUR YES/i);
+    assert.match(allText(approved.root), /READY — WILL RUN/i);
+  });
+
+  test('uncertain confidence reads as a question mark, established as a check — beside the text label', async () => {
+    const possible = await render(<ConfidenceBadge level="possible" />);
+    const established = await render(<ConfidenceBadge level="established" />);
+    assert.equal(possible.root.findByType('Ionicons').props.name, 'help-circle-outline');
+    assert.equal(established.root.findByType('Ionicons').props.name, 'checkmark-circle');
+    assert.match(allText(possible.root), /POSSIBLE/);
+    assert.match(allText(established.root), /ESTABLISHED/);
+  });
+
+  test('mark vocabulary is closed and every mark has exactly one epistemic meaning', async () => {
+    const { AI_MARKS } = await import('../../../src/design/components/intelligence.tsx');
+    assert.deepEqual(Object.keys(AI_MARKS).sort(), ['asks', 'confirmed', 'needsApproval', 'noticed', 'suggests', 'understood']);
+    const confirmed = Object.entries(AI_MARKS).filter(([, m]) => m.meaning === 'confirmed').map(([k]) => k);
+    assert.deepEqual(confirmed, ['confirmed']);
   });
 });
