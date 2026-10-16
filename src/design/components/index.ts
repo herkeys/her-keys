@@ -14,3 +14,5 @@ export * from './intelligence';
 export * from './animated';
 export * from './HubHeader';
 export * from './TabIcon';
+export * from './Botanical';
+export * from './Badges';
