@@ -1,5 +1,6 @@
 import { StyleSheet, View, useWindowDimensions, type ViewStyle } from 'react-native';
-import { brandPalette, color, decorationBudget, opacity } from '../tokens';
+import { brandPalette, botanicalOpacity, botanicalPalette, botanicalStroke, decorationBudget, opacity, withAlpha } from '../tokens';
+import { useReduceMotion } from '../motion';
 
 /**
  * Original, locally maintained decorative vectors (HK-FE-UI-02 §8). Built from plain Views — rounded rectangles, rotated
@@ -7,8 +8,14 @@ import { brandPalette, color, decorationBudget, opacity } from '../tokens';
  * styled boxes. Provenance: see docs/design-system/HK-FE-UI-02-asset-register.md (all original, no third-party artwork, no
  * trace of the concept mockup).
  *
+ * BOTANICAL LINEWORK (owner amendment 2026-10-16): the sprig is drawn as thin SAGE OUTLINES only — a 1.25 pt `Sage Outline` stroke
+ * at 50% opacity for the stem and every leaf, with small `Sage Tip` accents at 60% opacity at each leaf tip and stem node. There
+ * is no solid fill, no green surface and no green gradient anywhere. Sage is read ONLY here: it never appears on a control,
+ * button, card, header or navigation chrome (tests/design-system/botanicalBoundary.test.mjs enforces who may import it). Under
+ * Reduce Motion or increased contrast the outline drops to 30% (it is decorative, never load-bearing).
+ *
  * Rules the components enforce themselves:
- *   - decoration is FAINT and secondary (`opacity.decoration`), placed in corners and empty regions only;
+ *   - decoration is FAINT and secondary, placed in corners and empty regions only;
  *   - it is hidden from screen readers and never receives touches;
  *   - it yields to function: below 360 dp window width, or above 1.3× font scale, it renders nothing at all
  *     (`useDecorationVisible`), so it can never push content off screen or sit behind a form on a small phone;
@@ -30,7 +37,7 @@ const HIDDEN = {
 export type Corner = 'topRight' | 'topLeft' | 'bottomRight' | 'bottomLeft';
 
 interface Leaf {
-  /** Position along the stem, −0.5 (tip) … +0.5 (base). */
+  /** Position of the leaf's node along the stem, −0.5 (tip end, growing into the screen) … +0.5 (base at the corner). */
   t: number;
   /** −1 left of the stem, +1 right. */
   side: -1 | 1;
@@ -39,31 +46,44 @@ interface Leaf {
 
 // A sprig is a gently angled stem with alternating leaves. Hand-placed: this IS the asset.
 const LEAVES: readonly Leaf[] = [
-  { t: -0.46, side: 1, length: 14 },
-  { t: -0.32, side: -1, length: 20 },
-  { t: -0.16, side: 1, length: 26 },
-  { t: 0, side: -1, length: 30 },
-  { t: 0.16, side: 1, length: 30 },
-  { t: 0.3, side: -1, length: 26 },
+  { t: -0.4, side: 1, length: 16 },
+  { t: -0.26, side: -1, length: 22 },
+  { t: -0.1, side: 1, length: 28 },
+  { t: 0.06, side: -1, length: 32 },
+  { t: 0.2, side: 1, length: 30 },
+  { t: 0.34, side: -1, length: 24 },
 ];
 
 const STEM_ANGLE_DEG = 28;
+const LEAF_SPREAD_DEG = 48;
+const rad = (deg: number) => (deg * Math.PI) / 180;
 
 /** The pure geometry of one leaf, exported so tests can assert placement without a renderer. */
 export function leafGeometry(size: number, leaf: Leaf) {
-  const theta = (STEM_ANGLE_DEG * Math.PI) / 180;
+  const theta = rad(STEM_ANGLE_DEG);
   const len = size * 0.9;
-  const cx = size / 2 + leaf.t * len * Math.sin(theta);
-  const cy = size / 2 - leaf.t * len * Math.cos(theta);
+  // The leaf's node sits ON the stem.
+  const node = { x: size / 2 + leaf.t * len * Math.sin(theta), y: size / 2 - leaf.t * len * Math.cos(theta) };
+  // The sprig grows from its corner (the stem's +t end) toward the screen (−t end), so each leaf points toward the stem tip at
+  // ±LEAF_SPREAD_DEG to the growth direction (θ + 90° on screen).
+  const phi = STEM_ANGLE_DEG + 90 + leaf.side * LEAF_SPREAD_DEG;
   const width = leaf.length;
   const height = leaf.length * 0.5;
-  const rotate = STEM_ANGLE_DEG + leaf.side * 52;
+  const c = Math.cos(rad(phi));
+  const s = Math.sin(rad(phi));
+  const turn = (dx: number, dy: number) => ({ x: dx * c - dy * s, y: dx * s + dy * c });
+  // The View's pointed corners are top-right (the tip) and bottom-left (the base); put the base corner on the node.
+  const offset = turn(width / 2, -height / 2);
+  const centre = { x: node.x + offset.x, y: node.y + offset.y };
+  const tipOffset = turn(width, -height);
   return {
-    left: cx - width / 2 + leaf.side * 3,
-    top: cy - height / 2,
+    left: centre.x - width / 2,
+    top: centre.y - height / 2,
     width,
     height,
-    rotate,
+    rotate: phi,
+    node,
+    tip: { x: node.x + tipOffset.x, y: node.y + tipOffset.y },
   };
 }
 
@@ -81,28 +101,38 @@ const CORNER_STYLE: Record<Corner, ViewStyle> = {
   bottomLeft: { bottom: -16, left: -20, transform: [{ scaleX: -1 }, { scaleY: -1 }] },
 };
 
-/** A faint botanical sprig tucked into a corner. Renders nothing on compact screens or at large text. */
+/** A faint sage linework sprig tucked into a corner. Renders nothing on compact screens or at large text. */
 export function BotanicalSprig({ corner = 'topRight', size = 132, style }: SprigProps) {
   const visible = useDecorationVisible();
+  const reduceMotion = useReduceMotion();
   if (!visible) return null;
   const len = size * 0.9;
-  return (
+  const outline = withAlpha(botanicalPalette.sageOutline, reduceMotion ? botanicalOpacity.reduced : botanicalOpacity.outline);
+  const tip = withAlpha(botanicalPalette.sageTip, botanicalOpacity.tip);
+  const theta = rad(STEM_ANGLE_DEG);
+  const dot = (x: number, y: number, diameter: number, key: string) => (
     <View
-      {...HIDDEN}
-      testID="botanical-sprig"
-      style={[styles.sprig, { width: size, height: size, opacity: opacity.decoration }, CORNER_STYLE[corner], style]}
-    >
+      key={key}
+      testID="botanical-accent"
+      style={[styles.dot, { left: x - diameter / 2, top: y - diameter / 2, width: diameter, height: diameter, borderRadius: diameter / 2, backgroundColor: tip }]}
+    />
+  );
+  return (
+    <View {...HIDDEN} testID="botanical-sprig" style={[styles.sprig, { width: size, height: size }, CORNER_STYLE[corner], style]}>
       <View
         style={[
           styles.stem,
-          { height: len, left: size / 2 - 1, top: (size - len) / 2, transform: [{ rotate: `${STEM_ANGLE_DEG}deg` }] },
+          { height: len, left: size / 2 - botanicalStroke.outline / 2, top: (size - len) / 2, width: botanicalStroke.outline, backgroundColor: outline, transform: [{ rotate: `${STEM_ANGLE_DEG}deg` }] },
         ]}
       />
+      {/* the stem's own tip */}
+      {dot(size / 2 - 0.5 * len * Math.sin(theta), size / 2 + 0.5 * len * Math.cos(theta), botanicalStroke.tip + 1.5, 'stem-tip')}
       {LEAVES.map((leaf, index) => {
         const g = leafGeometry(size, leaf);
-        return (
+        return [
           <View
-            key={index}
+            key={`leaf-${index}`}
+            testID="botanical-leaf"
             style={[
               styles.leaf,
               {
@@ -112,12 +142,15 @@ export function BotanicalSprig({ corner = 'topRight', size = 132, style }: Sprig
                 height: g.height,
                 borderTopLeftRadius: g.height,
                 borderBottomRightRadius: g.height,
-                backgroundColor: index % 2 === 0 ? color.brand.dustyMauve : color.brand.softLilac,
+                borderColor: outline,
+                borderWidth: botanicalStroke.outline,
                 transform: [{ rotate: `${g.rotate}deg` }],
               },
             ]}
-          />
-        );
+          />,
+          dot(g.node.x, g.node.y, botanicalStroke.node + 1, `node-${index}`),
+          dot(g.tip.x, g.tip.y, botanicalStroke.tip + 1.5, `tip-${index}`),
+        ];
       })}
     </View>
   );
@@ -133,7 +166,8 @@ interface WaveProps {
 
 /**
  * A soft, wide curve: a Soft Lilac wash plus one fine Dusty Mauve line, produced by clipping oversized circles. Sits at a
- * screen edge in otherwise empty space; never behind text or a form.
+ * screen edge in otherwise empty space; never behind text or a form. (This is the brand decoration, not botanical linework: it
+ * stays mauve/lilac.)
  */
 export function CurvedWave({ edge = 'top', height = 120, style }: WaveProps) {
   const { width } = useWindowDimensions();
@@ -157,14 +191,17 @@ export function CurvedWave({ edge = 'top', height = 120, style }: WaveProps) {
 
 const styles = StyleSheet.create({
   sprig: { position: 'absolute' },
-  stem: { position: 'absolute', width: 2, borderRadius: 1, backgroundColor: color.brand.dustyMauve },
+  stem: { position: 'absolute', borderRadius: 1 },
+  // Outline only: the border carries the leaf; the fill stays transparent (no solid green).
   leaf: {
     position: 'absolute',
+    backgroundColor: 'transparent',
     borderTopRightRadius: 2,
     borderBottomLeftRadius: 2,
   },
+  dot: { position: 'absolute' },
   wave: { position: 'absolute', left: 0, right: 0, overflow: 'hidden' },
-  washCircle: { position: 'absolute', backgroundColor: color.brand.softLilac, opacity: 0.55 },
+  washCircle: { position: 'absolute', backgroundColor: brandPalette.softLilac, opacity: 0.55 },
   lineCircle: {
     position: 'absolute',
     borderWidth: 1,

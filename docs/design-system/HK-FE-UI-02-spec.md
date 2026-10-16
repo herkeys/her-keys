@@ -80,6 +80,28 @@ Phase 2/3 and will be checked there; any collision will be documented rather tha
 computed its floor so that every pairing silently degraded to the 3:1 large-text floor; that looseness is removed.) Berry on Soft
 Lilac (4.16:1) is explicitly **not** an allowed pairing and has a negative test; Dusty Mauve is asserted never to be a text token.
 
+### 2.5 Amendment A1 — sage botanical linework (owner-authorised exception to the six-colour lock)
+
+On 2026-10-16 the product owner **expressly broke the palette lock** for one purpose: the decorative botanical layer is drawn as thin
+sage outlines. The owner's rules, implemented verbatim:
+
+| Token | Role | Opacity | Weight |
+|---|---|---|---|
+| `botanicalPalette.sageOutline` `#7E9C86` | stem and leaf outlines | 50% (30% under Reduce Motion) | 1–1.5 pt (1.25) |
+| `botanicalPalette.sageTip` `#5F8A6B` | accents at leaf tips and stem nodes only | 60% | 1.5–2 pt dots |
+| `botanicalPalette.sageWhisper` `#A8C3AE` | optional micro-wash | 20%, never behind body text | **defined, not used** |
+
+- **The hex values are the design agent's choice** (the owner specified names and opacities only): muted sage, hue ≈ 135°, no blue.
+  *Open for owner confirmation — OD-UI02-05.*
+- **Linework only.** Leaves are borders with a transparent fill; there is no solid green fill, green surface or green gradient.
+- **Containment is enforced by a test, not by convention.** `tests/design-system/botanicalBoundary.test.mjs` fails if any file other
+  than `Botanical.tsx` (and `tokens.ts`) names a sage token, or if a sage value is reachable through any text, action, surface, border,
+  status, AI or luxury token. Sage therefore cannot reach a button, card, header or navigation chrome.
+- This **does not** relax the rest of the palette: the six brand colours are unchanged and still pinned; there is still no blue or
+  teal; Dusty Mauve is still never text. `CurvedWave` (not botanical) stays mauve/lilac.
+- High-contrast: Reduce Motion drops the outline to 30% (tested). A platform high-contrast signal is not wired (no portable RN API);
+  the decoration is already suppressed at large text.
+
 ## 3. Primary button recipe (spec §7)
 
 Berry `#A24E7A` body · 1 px **opaque** top-edge highlight `#B36E92` drawn as an inset line (so pill rounding stays clean) · 1 px
