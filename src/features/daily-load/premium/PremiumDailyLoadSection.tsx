@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { AppText, Button, Card, ConfirmationSheet, Divider, Sheet, Tag } from '../../../design/components';
-import { colors, spacing } from '../../../design/tokens';
+import { Ionicons } from '@expo/vector-icons';
+import { AiMark, AppText, Button, Card, ConfirmationSheet, Divider, PremiumBadge, Sheet, Tag } from '../../../design/components';
+import { colors, sizing, spacing } from '../../../design/tokens';
 import type { DailyLoadReview, RescheduleProposal } from '../../../domain/premium/dailyLoadReview';
 import { openAccountToRestore } from '../../../monetization/accountNavigation';
 import type { PremiumCopy } from '../../../monetization/premiumCopy';
@@ -34,7 +35,13 @@ export function PremiumDailyLoadPanel({ api }: { api: PremiumDailyLoadApi }) {
   const usable = feature.usable;
   return (
     <Card tone="accent" style={styles.card}>
-      <Tag label="Her Keys Premium" tone="accent" />
+      {/* HK-FE-UI-02 Premium register: the small Luxury Black badge beside the plan tag; everything else is the Free card language. */}
+      <View style={styles.brandRow}>
+        <PremiumBadge />
+        <View>
+          <Tag label="Her Keys Premium" tone="accent" />
+        </View>
+      </View>
       <AppText variant="screenTitle" style={styles.headline}>
         {usable ? COPY.entry.title : feature.copy.title}
       </AppText>
@@ -102,9 +109,16 @@ function Receipts({ receipts, busyId, onUndo }: { receipts: ReceiptView[]; busyI
       </AppText>
       {receipts.map((receipt) => (
         <View key={receipt.id} style={styles.receiptRow}>
-          <AppText variant="body" color={colors.textSecondary} style={styles.receiptText}>
-            {receipt.line}
-          </AppText>
+          {/* APPLIED: a receipt of something that already happened — a neutral receipt glyph, never the solid confirmed check (an undone
+              receipt reads from its own words), and always beside its undo. */}
+          <View style={styles.receiptLine}>
+            <View accessibilityElementsHidden importantForAccessibility="no">
+              <Ionicons name="receipt-outline" size={sizing.icon.md} color={colors.textSecondary} />
+            </View>
+            <AppText variant="body" color={colors.textSecondary} style={styles.receiptText}>
+              {receipt.line}
+            </AppText>
+          </View>
           {receipt.canUndo ? <Button label={busyId === receipt.id ? COPY.sheet.undoing : COPY.sheet.undo} variant="secondary" size="sm" onPress={() => void onUndo(receipt.id)} disabled={busyId !== null} /> : null}
         </View>
       ))}
@@ -180,8 +194,13 @@ function ReviewBody({ api, review }: { api: PremiumDailyLoadApi; review: DailyLo
 
 function ProposalCard({ proposal, busy, anyBusy, onApprove, onDismiss }: { proposal: RescheduleProposal; busy: boolean; anyBusy: boolean; onApprove: () => void; onDismiss: () => void }) {
   return (
-    <Card tone="surface" style={styles.proposal}>
-      <AppText variant="sectionTitle">{proposalHeadline(proposal)}</AppText>
+    // PROPOSED CHANGE: the recommendation structure (solid Berry rail + lightbulb mark). Nothing here has happened yet — approval is a
+    // separate, explicit action below, and the applied result appears only as a receipt.
+    <Card tone="surface" style={[styles.proposal, styles.proposalRail]}>
+      <View style={styles.proposalHead}>
+        <AiMark kind="suggests" />
+        <AppText variant="sectionTitle" style={styles.proposalTitle}>{proposalHeadline(proposal)}</AppText>
+      </View>
       {proposalImpactLines(proposal).map((line) => (
         <AppText key={line} variant="body" color={colors.textSecondary} style={styles.gap}>{line}</AppText>
       ))}
@@ -205,6 +224,11 @@ const styles = StyleSheet.create({
   receipts: { marginTop: spacing.lg },
   sectionTitle: { marginTop: spacing.md, marginBottom: spacing.xs },
   receiptRow: { marginTop: spacing.sm, gap: spacing.sm },
+  receiptLine: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
+  brandRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  proposalRail: { borderLeftWidth: 4, borderLeftColor: colors.accent },
+  proposalHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  proposalTitle: { flexShrink: 1 },
   receiptText: { flexShrink: 1 },
   sheetHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md },
   block: { marginTop: spacing.lg },

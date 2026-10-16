@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 import { registerHooks } from 'node:module';
 import { afterEach, describe, test } from 'node:test';
 import React from 'react';
+import { StyleSheet } from 'react-native';
 import TestRenderer from 'react-test-renderer';
 import { fixture } from '../support/premium/stubs.mjs';
 import { render } from '../support/render.tsx';
@@ -275,6 +276,53 @@ describe('account isolation', () => {
     await settle();
     assert.equal(sheetText(r), null, 'the open review is gone');
     assert.equal(w.ledger.rows.filter((x) => x.householdId === HOUSEHOLD).length, 1);
+    await act(() => r.unmount());
+  });
+});
+
+// ---------------------------------------------------------------------------
+// HK-FE-UI-02 Phase 3 — the truth structure of the Premium Momentum presentation.
+// Recorded counts and calculated changes are plain; a pattern is an unconfirmed reading; the next step is a recommendation;
+// a thin week is an explicit waiting state. Nothing is invented and nothing implies certainty.
+// ---------------------------------------------------------------------------
+describe('HK-FE-UI-02 presentation: observation, inference, recommendation, insufficient evidence', () => {
+  const marks = (root) => [...new Set(root.findAll((n) => typeof n.props.testID === 'string' && n.props.testID.startsWith('ai-mark-')).map((n) => n.props.testID))];
+  const icons = (root) => root.findAllByType('Ionicons').map((n) => n.props.name);
+  const flat = (n) => StyleSheet.flatten(typeof n.props.style === 'function' ? n.props.style({ pressed: false }) : n.props.style) ?? {};
+  const sheetNode = (r) => modal(r, 'Weekly review');
+
+  test('the card carries the small Luxury Black Premium badge', async () => {
+    const w = await world();
+    const r = await mount(w);
+    assert.equal(r.root.findAll((n) => n.props.testID === 'premium-badge' && typeof n.type === 'string').length, 1);
+    await act(() => r.unmount());
+  });
+
+  test('a pattern is an UNCONFIRMED reading (dashed outline + noticed mark) and the next step is a RECOMMENDATION (rail + suggests mark); neither carries a confirmed check', async () => {
+    const w = await world();
+    const r = await mount(w);
+    await act(() => button(r, 'Open your weekly review').props.onPress());
+    await settle();
+    const sheet = sheetNode(r);
+    const found = marks(sheet);
+    assert.ok(found.includes('ai-mark-noticed'), 'the pattern reads as a reading');
+    assert.ok(found.includes('ai-mark-suggests'), 'the next step reads as a recommendation');
+    assert.ok(!found.includes('ai-mark-confirmed'), 'nothing is shown as confirmed before she approves');
+    const dashed = sheet.findAll((n) => typeof n.type === 'string' && flat(n).borderStyle === 'dashed');
+    assert.ok(dashed.length >= 1, 'inferred patterns are outlined, not filled');
+    const railed = sheet.findAll((n) => typeof n.type === 'string' && flat(n).borderLeftWidth === 4);
+    assert.ok(railed.length >= 1, 'the recommendation has the solid rail');
+    await act(() => r.unmount());
+  });
+
+  test('a thin week is an explicit waiting notice: clock icon, no mark, no invented result', async () => {
+    const w = await world({ state: thinWeek() });
+    const r = await mount(w);
+    await act(() => button(r, 'Open your weekly review').props.onPress());
+    await settle();
+    const sheet = sheetNode(r);
+    assert.ok(icons(sheet).includes('time-outline'));
+    assert.deepEqual(marks(sheet), []);
     await act(() => r.unmount());
   });
 });

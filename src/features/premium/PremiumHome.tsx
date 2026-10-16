@@ -1,5 +1,5 @@
 import { StyleSheet, View } from 'react-native';
-import { AppText, Button, Card, Overline, Tag } from '../../design/components';
+import { AppText, Button, Card, IconBadge, Overline, PremiumBadge, Tag } from '../../design/components';
 import { colors, spacing } from '../../design/tokens';
 import type { PremiumHomeCopy, CapabilityView, HomeActionCopy } from '../../monetization/premiumHomeCopy';
 import { usePremiumStateIfMounted } from '../../monetization/PremiumStateProvider';
@@ -7,6 +7,12 @@ import { usePremiumHome, type PremiumHomeApi } from './usePremiumHome';
 
 const toneOf = (tone: PremiumHomeCopy['tone']) => (tone === 'success' ? 'success' : tone === 'attention' ? 'attention' : 'neutral');
 const cardTone = (tone: PremiumHomeCopy['tone']) => (tone === 'success' ? 'success' : tone === 'attention' ? 'attention' : 'surface');
+/** One icon per real Stage 1 tool (the same three as the Premium introduction). Ornament only: the name and summary are the content. */
+const CAPABILITY_ICON: Record<string, 'sunny-outline' | 'mail-unread-outline' | 'trending-up-outline'> = {
+  daily_load_premium: 'sunny-outline',
+  smart_inbox_extract: 'mail-unread-outline',
+  momentum_report: 'trending-up-outline',
+};
 const capabilityTag = (status: CapabilityView['status']) => (status === 'ready' ? 'success' : status === 'included' ? 'accent' : 'neutral');
 
 export interface PremiumHomeViewProps {
@@ -39,7 +45,10 @@ export function PremiumHomeView({ home, hold }: PremiumHomeViewProps) {
 
   return (
     <View style={styles.root}>
-      <Overline>Her Keys Premium</Overline>
+      <View style={styles.brandRow}>
+        <PremiumBadge />
+        <Overline>Her Keys Premium</Overline>
+      </View>
       <Card tone={cardTone(copy.tone)} style={styles.status}>
         <View accessible accessibilityRole="summary" style={styles.statusText}>
           <Tag label={copy.status} tone={toneOf(copy.tone)} />
@@ -71,9 +80,12 @@ export function PremiumHomeView({ home, hold }: PremiumHomeViewProps) {
         <Card key={capability.key} tone="surface" style={styles.capability}>
           <View accessible accessibilityRole="summary" style={styles.statusText}>
             <View style={styles.capabilityHead}>
-              <AppText variant="bodyStrong" style={styles.capabilityName} accessibilityRole="header">
-                {capability.name}
-              </AppText>
+              <View style={styles.capabilityTitle}>
+                <IconBadge icon={CAPABILITY_ICON[capability.key] ?? 'sparkles-outline'} />
+                <AppText variant="bodyStrong" style={styles.capabilityName} accessibilityRole="header">
+                  {capability.name}
+                </AppText>
+              </View>
               <Tag label={capability.statusLabel} tone={capabilityTag(capability.status)} />
             </View>
             <AppText variant="bodySm" color={colors.textSecondary}>
@@ -100,6 +112,8 @@ export function PremiumHome({ hold }: { hold: boolean }) {
 
 const styles = StyleSheet.create({
   root: { gap: spacing.md },
+  brandRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  capabilityTitle: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, flexShrink: 1 },
   status: { gap: spacing.md },
   statusText: { gap: spacing.sm, alignItems: 'flex-start' },
   statusTitle: { marginTop: spacing.xs },
