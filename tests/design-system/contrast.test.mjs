@@ -1,149 +1,171 @@
 /**
- * WCAG AA contrast matrix over the canonical token pairings (HK-FE-UI-01 §8).
+ * HK-FE-UI-02 — WCAG AA contrast matrix and palette contract.
  *
- * Every text token is measured against every surface it is intended to appear
- * on. "Looks readable" is not evidence — this is. Normal text needs 4.5:1,
- * large text (≥18pt regular / 14pt bold — our display/screenTitle rungs) needs
- * 3:1. Control-identifying boundaries need 3:1 against adjacent colors.
+ * Every text token is measured against every surface it is intended to appear on ("looks readable" is not evidence — this is).
+ * Normal text needs 4.5:1, with NO large-text exemption in this matrix. Control-identifying boundaries need 3:1.
+ * Owner facts from the HK-FE-UI-02 brief (Berry on off-white ≈5.10, Dusty Mauve ≈2.08, Deep Plum Gray ≈9.18, Berry on Soft
+ * Lilac ≈4.16) are pinned below so a future palette edit cannot silently invalidate the design rules built on them.
  *
- * docs/design-system/contrast-matrix.md is generated from the same pair list;
- * keep the two in sync (the doc carries ratios for humans, this test gates CI).
+ * docs/design-system/contrast-matrix.md is generated from the same pair list (tests/design-system/contrastPairs.mjs).
  */
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
-import { color, radius, type } from '../../src/design/tokens.ts';
+import { brandPalette, color, decorationBudget, opacity, radius, spacing } from '../../src/design/tokens.ts';
+import { BOUNDARIES, BOUNDARY_FLOOR, INTENT, NORMAL_TEXT_FLOOR, SURFACES, TEXT, ratio } from './contrastPairs.mjs';
 
-function lum(hex) {
-  const h = hex.replace('#', '');
-  const ch = (i) => {
-    const c = parseInt(h.slice(i, i + 2), 16) / 255;
-    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
-  };
-  return 0.2126 * ch(0) + 0.7152 * ch(2) + 0.0722 * ch(4);
-}
+export { ratio };
 
-export function ratio(fg, bg) {
-  const [hi, lo] = [lum(fg), lum(bg)].sort((a, b) => b - a);
-  return (hi + 0.05) / (lo + 0.05);
-}
-
-/** Text rung → the rungs large enough to qualify for the 3:1 large-text floor. */
-const LARGE = new Set(['display', 'screenTitle', 'sectionTitle', 'cardTitle']);
-
-const SURFACES = {
-  background: color.background,
-  'surface.primary': color.surface.primary,
-  'surface.secondary': color.surface.secondary,
-  'surface.elevated': color.surface.elevated,
-  'action.primarySoft': color.action.primarySoft,
-  'action.primary': color.action.primary,
-  'status.attentionSoft': color.status.attentionSoft,
-  'status.riskSoft': color.status.riskSoft,
-  'status.successSoft': color.status.successSoft,
-  'status.waitingSoft': color.status.waitingSoft,
-  'ai.insightSoft': color.ai.insightSoft,
-  'ai.inferenceSoft': color.ai.inferenceSoft,
-  'ai.confirmationSoft': color.ai.confirmationSoft,
-  'ai.actionSoft': color.ai.actionSoft,
-};
-
-const TEXT = {
-  'text.primary': color.text.primary,
-  'text.secondary': color.text.secondary,
-  'text.muted': color.text.muted,
-  'action.primary': color.action.primary,
-  'status.attention': color.status.attention,
-  'status.risk': color.status.risk,
-  'status.success': color.status.success,
-  'status.waiting': color.status.waiting,
-  'ai.insight': color.ai.insight,
-  'ai.inference': color.status.attention,
-  'ai.confirmation': color.ai.confirmation,
-  'ai.action': color.ai.action,
-  'neutral.deep': color.neutral.deep,
-};
-
-const INVERSE_TEXT = {
-  'text.inverse': color.text.inverse,
-};
-
-/**
- * Intended pairings: which text tokens may sit on which surfaces.
- * Anything absent here is not an allowed pairing — adding one requires adding
- * it to this map and to the matrix doc.
- */
-const INTENT = {
-  'text.primary': ['background', 'surface.primary', 'surface.secondary', 'surface.elevated'],
-  'text.secondary': ['background', 'surface.primary', 'surface.secondary', 'surface.elevated'],
-  'text.muted': [
-    'background', 'surface.primary', 'surface.secondary',
-    'action.primarySoft', 'status.attentionSoft', 'status.successSoft', 'status.waitingSoft',
-    'ai.insightSoft', 'ai.confirmationSoft', 'ai.actionSoft',
-  ],
-  'action.primary': ['background', 'surface.primary', 'surface.secondary', 'action.primarySoft'],
-  'status.attention': ['background', 'surface.primary', 'surface.secondary', 'status.attentionSoft'],
-  'status.risk': ['background', 'surface.primary', 'surface.secondary', 'status.riskSoft'],
-  'status.success': ['background', 'surface.primary', 'surface.secondary', 'status.successSoft'],
-  'status.waiting': ['background', 'surface.primary', 'surface.secondary', 'status.waitingSoft'],
-  'ai.insight': ['background', 'surface.primary', 'ai.insightSoft'],
-  'ai.inference': ['background', 'surface.primary', 'ai.inferenceSoft'],
-  'ai.confirmation': ['background', 'surface.primary', 'ai.confirmationSoft'],
-  'ai.action': ['background', 'surface.primary', 'ai.actionSoft'],
-  'neutral.deep': ['background', 'surface.primary', 'ai.insightSoft'],
-  'text.inverse': ['action.primary'],
-};
-
-describe('WCAG AA contrast matrix (canonical pairings)', () => {
-  const rows = [];
+describe('WCAG AA contrast matrix (canonical pairings, 4.5:1 normal-text floor)', () => {
   for (const [fgName, bgList] of Object.entries(INTENT)) {
     for (const bgName of bgList) {
-      const fg = TEXT[fgName] ?? INVERSE_TEXT[fgName];
-      const bg = SURFACES[bgName];
-      const r = ratio(fg, bg);
-      const largeEnough = Object.entries(type)
-        .filter(([, spec]) => (spec.fontWeight >= '600' ? spec.fontSize >= 14 : spec.fontSize >= 18))
-        .some(([name]) => LARGE.has(name));
-      const floor = largeEnough ? 3 : 4.5;
-      rows.push({ fgName, bgName, r });
-      test(`${fgName} on ${bgName} = ${r.toFixed(2)}:1 (floor ${floor}:1)`, () => {
-        assert.ok(r >= floor, `${fgName} on ${bgName} is ${r.toFixed(2)}:1, below ${floor}:1`);
+      const r = ratio(TEXT[fgName], SURFACES[bgName]);
+      test(`${fgName} on ${bgName} = ${r.toFixed(2)}:1`, () => {
+        assert.ok(r >= NORMAL_TEXT_FLOOR, `${fgName} on ${bgName} is ${r.toFixed(2)}:1, below ${NORMAL_TEXT_FLOOR}:1`);
       });
     }
   }
 
   test('matrix covers every canonical text token', () => {
     for (const name of Object.keys(TEXT)) assert.ok(INTENT[name], `${name} has no intended surface`);
-    for (const name of Object.keys(INVERSE_TEXT)) assert.ok(INTENT[name], `${name} has no intended surface`);
+  });
+});
+
+describe('Owner-approved brand palette (exact hexes, six colours, no seventh hue)', () => {
+  test('the six brand colours are exactly the approved values', () => {
+    assert.deepEqual({ ...brandPalette }, {
+      berryPlum: '#A24E7A',
+      dustyMauve: '#C7A6BB',
+      softLilac: '#EADFEA',
+      warmOffWhite: '#FDF8F5',
+      deepPlumGray: '#5A3A55',
+      luxuryBlack: '#1E1B1D',
+    });
   });
 
-  test('attack list: muted on ivory, clay accent text, AI treatments, disabled', () => {
-    assert.ok(ratio(color.text.muted, color.background) >= 4.5, 'muted on ivory');
-    assert.ok(ratio(color.action.primary, color.background) >= 4.5, 'clay accent text');
-    assert.ok(ratio(color.action.primary, color.action.primarySoft) >= 4.5, 'clay on claySoft');
-    for (const tone of ['insight', 'inference', 'confirmation', 'action']) {
-      assert.ok(
-        ratio(color.ai[tone], color.ai[`${tone}Soft`]) >= 4.5,
-        `ai.${tone} on ai.${tone}Soft`,
-      );
+  test('canonical roles resolve to the right brand colour', () => {
+    assert.equal(color.background, brandPalette.warmOffWhite);
+    assert.equal(color.action.primary, brandPalette.berryPlum);
+    assert.equal(color.text.primary, brandPalette.deepPlumGray);
+    assert.equal(color.surface.tint, brandPalette.softLilac);
+    assert.equal(color.luxury.black, brandPalette.luxuryBlack);
+    assert.equal(color.action.primaryBorder, brandPalette.dustyMauve);
+  });
+
+  test('pinned owner measurements', () => {
+    const near = (actual, expected) => assert.ok(Math.abs(actual - expected) < 0.06, `${actual} vs ${expected}`);
+    near(ratio(brandPalette.berryPlum, brandPalette.warmOffWhite), 5.1);
+    near(ratio(brandPalette.dustyMauve, brandPalette.warmOffWhite), 2.08);
+    near(ratio(brandPalette.deepPlumGray, brandPalette.warmOffWhite), 9.18);
+    near(ratio(brandPalette.berryPlum, brandPalette.softLilac), 4.16);
+  });
+
+  test('Dusty Mauve is never an ordinary-text token (it fails 4.5 on every light surface)', () => {
+    for (const surface of ['background', 'surface.primary', 'surface.secondary', 'surface.tint']) {
+      assert.ok(ratio(brandPalette.dustyMauve, SURFACES[surface]) < NORMAL_TEXT_FLOOR, `mauve on ${surface}`);
     }
-    assert.ok(
-      ratio(color.action.disabledText, color.action.disabled) >= 3,
-      'disabled pair kept readable (stricter than the WCAG exemption)',
-    );
+    // luxury.glyph is Dusty Mauve ON Luxury Black (7.81:1) — an icon on a black badge, not text on a light ground.
+    for (const [name, value] of Object.entries(TEXT)) if (name !== 'luxury.glyph') assert.notEqual(value.toLowerCase(), brandPalette.dustyMauve.toLowerCase());
+  });
+
+  test('Berry Plum is NOT an allowed small-text colour on Soft Lilac; onSoft is, and it is legal there', () => {
+    assert.ok(ratio(color.action.primary, color.action.primarySoft) < NORMAL_TEXT_FLOOR, 'the owner palette makes berry-on-lilac illegal');
+    assert.ok(!INTENT['action.primary'].includes('action.primarySoft'));
+    assert.ok(!INTENT['action.primary'].includes('surface.tint'));
+    assert.ok(ratio(color.action.onSoft, color.action.primarySoft) >= NORMAL_TEXT_FLOOR);
+    assert.ok(ratio(color.text.primary, color.surface.tint) >= NORMAL_TEXT_FLOOR);
+  });
+
+  test('no blue / teal anywhere in the palette (hue 165°–265° at any visible saturation)', () => {
+    const flat = [];
+    const walk = (node, path) => {
+      if (typeof node === 'string' && /^#[0-9a-f]{6}$/i.test(node)) flat.push([path, node]);
+      else if (node && typeof node === 'object') for (const [k, v] of Object.entries(node)) walk(v, `${path}.${k}`);
+    };
+    walk(color, 'color');
+    assert.ok(flat.length > 40, 'walked the palette');
+    for (const [path, hex] of flat) {
+      const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+      const max = Math.max(r, g, b);
+      const min = Math.min(r, g, b);
+      const chroma = max - min;
+      if (chroma < 0.04) continue; // neutrals
+      let h;
+      if (max === r) h = ((g - b) / chroma) % 6;
+      else if (max === g) h = (b - r) / chroma + 2;
+      else h = (r - g) / chroma + 4;
+      h = (h * 60 + 360) % 360;
+      assert.ok(!(h >= 165 && h <= 265), `${path} ${hex} has blue/teal hue ${h.toFixed(0)}°`);
+    }
+  });
+
+  test('Luxury Black stays a micro-detail: it is not a surface or background role', () => {
+    for (const role of ['primary', 'secondary', 'elevated', 'tint']) {
+      assert.notEqual(color.surface[role].toLowerCase(), brandPalette.luxuryBlack.toLowerCase());
+    }
+    assert.notEqual(color.background.toLowerCase(), brandPalette.luxuryBlack.toLowerCase());
+    assert.notEqual(color.action.primary.toLowerCase(), brandPalette.luxuryBlack.toLowerCase());
   });
 });
 
-describe('Control-identifying boundaries (WCAG 1.4.11, 3:1)', () => {
-  test('control border against both adjacent surfaces', () => {
-    assert.ok(ratio(color.border.control, color.surface.primary) >= 3, 'control border on paper');
-    assert.ok(ratio(color.border.control, color.background) >= 3, 'control border on ivory');
+describe('Functional (non-brand) semantic colours', () => {
+  test('error / success / warning keep their accessible families on the new light surfaces', () => {
+    assert.equal(color.status.risk, '#8A3B2C');
+    assert.equal(color.status.success, '#33523F');
+    assert.equal(color.status.attention, '#6E4C0E');
+    for (const [fg, soft] of [['risk', 'riskSoft'], ['success', 'successSoft'], ['attention', 'attentionSoft'], ['waiting', 'waitingSoft']]) {
+      assert.ok(ratio(color.status[fg], color.status[soft]) >= NORMAL_TEXT_FLOOR, `${fg} on ${soft}`);
+      assert.ok(ratio(color.status[fg], color.background) >= NORMAL_TEXT_FLOOR, `${fg} on background`);
+    }
+  });
+
+  test('information is Deep Plum Gray (paired with an icon in InlineNotice)', () => {
+    assert.equal(color.status.info, brandPalette.deepPlumGray);
+  });
+
+  test('disabled is a distinct, readable pair — not decorative pastel and not lowered opacity', () => {
+    assert.ok(ratio(color.action.disabledText, color.action.disabled) >= NORMAL_TEXT_FLOOR);
+    assert.notEqual(color.action.disabled.toLowerCase(), color.action.primary.toLowerCase());
   });
 });
 
-/** Radius sanity: no "rounded-everything" drift at the token level. */
-describe('Shape restraint', () => {
+describe('Component-identifying boundaries (WCAG 1.4.11, 3:1)', () => {
+  for (const [name, { value, against }] of Object.entries(BOUNDARIES)) {
+    for (const surface of against) {
+      test(`${name} against ${surface}`, () => {
+        assert.ok(ratio(value, SURFACES[surface]) >= BOUNDARY_FLOOR, `${name} on ${surface}`);
+      });
+    }
+  }
+});
+
+describe('Primary button recipe (spec §7)', () => {
+  test('white text is readable at the brightest (resting) and darkest (pressed) fill', () => {
+    assert.ok(ratio(color.text.inverse, color.action.primary) >= NORMAL_TEXT_FLOOR);
+    assert.ok(ratio(color.text.inverse, color.action.primaryPressed) >= NORMAL_TEXT_FLOOR);
+  });
+
+  test('highlight and lower edge are opaque (reduced-transparency safe) and stay close to Berry', () => {
+    assert.match(color.action.primaryHighlight, /^#[0-9A-F]{6}$/i);
+    assert.match(color.action.primaryPressed, /^#[0-9A-F]{6}$/i);
+    // the button still reads predominantly Berry: neither edge colour strays far in luminance
+    assert.ok(ratio(color.action.primaryHighlight, color.action.primary) < 1.6, 'highlight stays Berry-family');
+    assert.ok(ratio(color.action.primaryPressed, color.action.primary) < 1.6, 'lower edge stays Berry-family');
+  });
+});
+
+describe('Shape and decoration discipline', () => {
   test('card-scale radii stay at or below lg; only pills are infinite', () => {
     assert.ok(radius.lg <= 20, 'largest finite radius stays restrained');
     assert.equal(radius.pill, 999);
+  });
+
+  test('the airy spacing scale is the preserved one', () => {
+    assert.deepEqual(Object.values(spacing), [2, 4, 8, 12, 16, 20, 24, 32, 40]);
+  });
+
+  test('decoration is faint and yields to function on compact screens / large text', () => {
+    assert.ok(opacity.decoration <= 0.5, 'botanicals stay secondary');
+    assert.equal(decorationBudget.minWidth, 360);
+    assert.ok(decorationBudget.maxFontScale <= 1.3);
   });
 });

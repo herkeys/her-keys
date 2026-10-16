@@ -23,7 +23,7 @@ export function WelcomeView({ onBegin, onExistingAccount }: WelcomeViewProps) {
     <>
       <FadeIn speed="deliberate" style={styles.body}>
         <View style={styles.mark} accessibilityElementsHidden importantForAccessibility="no">
-          <Ionicons name="key-outline" size={sizing.icon.lg} color={color.brand.gold} />
+          <Ionicons name="key-outline" size={sizing.icon.lg} color={color.text.primary} />
         </View>
         <Overline>{COPY.welcome.overline}</Overline>
         <AppText variant="hero" style={styles.title}>
@@ -53,7 +53,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: color.brand.goldSoft,
+    backgroundColor: color.surface.tint,
     marginBottom: spacing.lg,
   },
   title: { marginTop: spacing.md },

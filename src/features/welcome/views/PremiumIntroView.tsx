@@ -20,7 +20,7 @@ export function PremiumIntroView({ onSelectPremium, onContinueFree }: PremiumInt
     <>
       <View style={styles.body}>
         <View style={styles.mark}>
-          <Ionicons name="sparkles-outline" size={sizing.icon.lg} color={color.brand.gold} />
+          <Ionicons name="sparkles-outline" size={sizing.icon.lg} color={color.text.primary} />
         </View>
         <Overline>{HER_KEYS_PREMIUM_DISPLAY_NAME}</Overline>
         <AppText variant="hero" style={styles.title}>
@@ -50,7 +50,7 @@ export function PremiumIntroView({ onSelectPremium, onContinueFree }: PremiumInt
 
 const styles = StyleSheet.create({
   body: { flex: 1, justifyContent: 'center', paddingHorizontal: spacing.xl },
-  mark: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: color.brand.goldSoft, marginBottom: spacing.lg },
+  mark: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: color.surface.tint, marginBottom: spacing.lg },
   title: { marginTop: spacing.md },
   lede: { marginTop: spacing.lg },
   benefits: { marginTop: spacing.xl, gap: spacing.sm },
