@@ -1676,7 +1676,7 @@ const LATER_FEATURES = [
     // This additive lane owns only its integration report; all shared changes have explicit safety/test/CI reasons.
     branch: null,
     owned: [
-      /^docs\\/integration\\/V2_UI02_DM_RC_AI_CONVERGENCE_20261016\\.md$/,
+      /^docs\/integration\/V2_UI02_DM_RC_AI_CONVERGENCE_20261016\.md$/,
     ],
     migrations: [], schemas: [], rootCollections: [], syncKinds: [],
     shared: [
