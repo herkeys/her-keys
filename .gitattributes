@@ -50,3 +50,7 @@ supabase/migrations/20261014015835_account_deletion_cancelled_history_cleanup.sq
 supabase/migrations/20261014021410_account_deletion_shared_provider_retry.sql text eol=lf
 supabase/migrations/20261014112400_account_deletion_orphan_shared_ownership.sql text eol=lf
 supabase/migrations/20261014113517_account_deletion_household_lock.sql text eol=lf
+
+# Production Premium launch migrations: LF-pinned and additive; historical SQL remains untouched.
+supabase/migrations/20261016012000_premium_purchase_readiness.sql text eol=lf
+supabase/migrations/20261016013000_premium_checkout_independent_activation.sql text eol=lf
