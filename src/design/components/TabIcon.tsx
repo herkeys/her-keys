@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useRef } from 'react';
-import { Animated, Easing, type ColorValue } from 'react-native';
+import { Animated, Easing, StyleSheet, View, type ColorValue } from 'react-native';
 import { motionDuration, useReduceMotion } from '../motion';
+import { color as palette, radius } from '../tokens';
 
 type IoniconName = keyof typeof Ionicons.glyphMap;
 
@@ -24,6 +25,9 @@ interface TabIconProps {
  * selected, with a restrained QUICK emphasis (a small rise-and-settle, never a
  * bounce). Color comes from the navigator so active/inactive tint stays in one
  * place. Honors Reduce Motion: the icon swaps without animating.
+ *
+ * HK-FE-UI-02: the selected tab also sits in a Soft Lilac pill (Berry glyph on Lilac is a 4.16:1 graphic, above the 3:1 floor), so
+ * selection is carried by shape and fill as well as by tint. The pill is static; only the icon's quick rise animates.
  */
 export function TabIcon({ spec, color, size, focused }: TabIconProps) {
   const reduceMotion = useReduceMotion();
@@ -39,6 +43,7 @@ export function TabIcon({ spec, color, size, focused }: TabIconProps) {
   }, [emphasis, focused, reduceMotion]);
 
   return (
+    <View style={[styles.pill, focused ? styles.pillSelected : null]} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
     <Animated.View
       style={{
         transform: [
@@ -49,5 +54,11 @@ export function TabIcon({ spec, color, size, focused }: TabIconProps) {
     >
       <Ionicons name={focused ? spec.filled : spec.outline} color={color} size={size} />
     </Animated.View>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  pill: { minWidth: 56, height: 32, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent' },
+  pillSelected: { backgroundColor: palette.surface.tint },
+});

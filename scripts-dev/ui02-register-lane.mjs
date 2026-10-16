@@ -30,7 +30,7 @@ for (const [status, file] of diff) changed.set(file, status);
 for (const file of untracked) changed.set(file, 'A');
 changed.delete(SELF);
 // the temporary router-free evidence entry is never part of the change
-for (const temp of ['evidence-entry.js']) changed.delete(temp);
+for (const temp of ['evidence-entry.js', 'core-entry.js', 'metro.config.js']) changed.delete(temp);
 
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\/]/g, (c) => '\\' + c);
 const added = [...changed].filter(([, s]) => s === 'A').map(([f]) => f).sort();

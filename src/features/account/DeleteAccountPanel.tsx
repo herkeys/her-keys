@@ -1,6 +1,10 @@
 import {useState} from 'react';
 import {Linking,ScrollView,TextInput,View} from 'react-native';
 import {AppText,Button} from '../../design/components';
+import {color,radius} from '../../design/tokens';
+
+// Presentation only (HK-FE-UI-02): the two entry fields used a grey literal; they now use the control-border token.
+const fieldStyle={borderWidth:1,borderColor:color.border.control,backgroundColor:color.surface.primary,color:color.text.primary,padding:14,borderRadius:radius.md} as const;
 import {useAccount} from '../../store/AccountProvider';
 import {deletionRuntime} from '../../store/deletionRuntimeInstance';
 export function DeleteAccountPanel({onBack}:{onBack:()=>void}) {
@@ -17,9 +21,9 @@ export function DeleteAccountPanel({onBack}:{onBack:()=>void}) {
   <Button variant="secondary" label="Google Play subscriptions" onPress={()=>void Linking.openURL('https://play.google.com/store/account/subscriptions')}/>
   <Button variant="ghost" label="Privacy Policy" onPress={()=>void Linking.openURL('https://herkeys.app/privacy')}/>
   <AppText>For your security, verify your account within 10 minutes before confirming. You can use a fresh sign-in or request a sign-in code for your existing account.</AppText>
-  <TextInput accessibilityLabel="Account email" placeholder="Account email" autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} style={{borderWidth:1,borderColor:'#999',padding:14,borderRadius:8}}/>
+  <TextInput accessibilityLabel="Account email" placeholder="Account email" autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} style={fieldStyle} placeholderTextColor={color.text.muted}/>
   <Button label="Send sign-in code" disabled={busy||!email} onPress={()=>void work(async()=>{const result=await account.requestEmailOtp(email);setNotice(result.kind==='sent'?'Check your email for a sign-in code.':'If a code is available, check your email.');})}/>
-  <TextInput accessibilityLabel="Sign-in code" placeholder="Sign-in code" keyboardType="number-pad" value={code} onChangeText={setCode} style={{borderWidth:1,borderColor:'#999',padding:14,borderRadius:8}}/>
+  <TextInput accessibilityLabel="Sign-in code" placeholder="Sign-in code" keyboardType="number-pad" value={code} onChangeText={setCode} style={fieldStyle} placeholderTextColor={color.text.muted}/>
   <Button label="Verify code" disabled={busy||!code} onPress={()=>void work(async()=>{const result=await account.verifyEmailOtp(email,code);setNotice(result.outcome.kind==='verified'?'Identity verified. You can now confirm deletion.':'Verification did not complete.');})}/>
   <AppText accessibilityLiveRegion="polite">{notice}</AppText>
   <View style={{gap:12}}>

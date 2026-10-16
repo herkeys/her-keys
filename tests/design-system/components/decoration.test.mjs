@@ -19,7 +19,7 @@ import {
   leafGeometry,
   useDecorationVisible,
 } from '../../../src/design/components/index.ts';
-import { color, decorationBudget, opacity } from '../../../src/design/tokens.ts';
+import { botanicalOpacity, botanicalPalette, botanicalStroke, color, decorationBudget, withAlpha } from '../../../src/design/tokens.ts';
 import { windowMetrics } from '../../support/rn-stub.tsx';
 import { render } from '../../support/render.tsx';
 
@@ -73,14 +73,12 @@ describe('decoration budget (spec §9)', () => {
 });
 
 describe('botanical assets are decorative', () => {
-  test('hidden from screen readers, touch-transparent and faint', async () => {
+  test('hidden from screen readers and touch-transparent', async () => {
     const r = await render(<BotanicalSprig corner="bottomLeft" />);
     const [sprig] = byTestId(r, 'botanical-sprig');
     assert.equal(sprig.props.accessibilityElementsHidden, true);
     assert.equal(sprig.props.importantForAccessibility, 'no-hide-descendants');
     assert.equal(sprig.props.pointerEvents, 'none');
-    assert.equal(flatten(sprig).opacity, opacity.decoration);
-    assert.ok(flatten(sprig).opacity <= 0.5);
   });
 
   test('every corner is a real placement; left corners mirror', async () => {
@@ -100,20 +98,72 @@ describe('botanical assets are decorative', () => {
     assert.equal(flatten(wave).bottom, 0);
   });
 
-  test('leaf geometry stays inside the sprig footprint (no clipped or runaway leaves)', () => {
+  test('leaf geometry stays inside the sprig footprint, with the tip farther from the stem than the node', () => {
     const size = 132;
-    const leaves = [-0.46, -0.32, -0.16, 0, 0.16, 0.3].flatMap((t) => [-1, 1].map((side) => leafGeometry(size, { t, side, length: 30 })));
-    for (const g of leaves) {
-      assert.ok(g.left > -20 && g.left + g.width < size + 20, `x in range ${g.left}`);
-      assert.ok(g.top > -20 && g.top + g.height < size + 20, `y in range ${g.top}`);
+    for (const t of [-0.4, -0.26, -0.1, 0.06, 0.2, 0.34]) {
+      for (const side of [-1, 1]) {
+        const g = leafGeometry(size, { t, side, length: 30 });
+        for (const [x, y] of [[g.node.x, g.node.y], [g.tip.x, g.tip.y]]) {
+          assert.ok(x > -20 && x < size + 20 && y > -20 && y < size + 20, `point (${x.toFixed(1)}, ${y.toFixed(1)}) in range`);
+        }
+        const reach = Math.hypot(g.tip.x - g.node.x, g.tip.y - g.node.y);
+        assert.ok(reach > 15 && reach < 40, `leaf reach ${reach.toFixed(1)}`);
+      }
     }
   });
 
-  test('botanical colours come only from the approved brand tokens', async () => {
+  // OWNER AMENDMENT 2026-10-16 — botanical SAGE LINEWORK: outlines only, no solid green fills.
+  test('leaves are outlines: sage border at 50%, transparent fill, 1.25 pt', async () => {
     const r = await render(<BotanicalSprig />);
-    const fills = r.root.findAll((n) => typeof n.type === 'string' && flatten(n).backgroundColor).map((n) => flatten(n).backgroundColor);
-    assert.ok(fills.length > 5);
-    for (const f of fills) assert.ok([color.brand.dustyMauve, color.brand.softLilac].includes(f), `unexpected fill ${f}`);
+    const leaves = byTestId(r, 'botanical-leaf');
+    assert.equal(leaves.length, 6);
+    for (const leaf of leaves) {
+      const st = flatten(leaf);
+      assert.equal(st.backgroundColor, 'transparent', 'no solid leaf fill');
+      assert.equal(st.borderColor, withAlpha(botanicalPalette.sageOutline, botanicalOpacity.outline));
+      assert.equal(st.borderWidth, botanicalStroke.outline);
+      assert.ok(st.borderWidth >= 1 && st.borderWidth <= 1.5);
+    }
+  });
+
+  test('accents sit at leaf tips and stem nodes: Sage Tip at 60%, 1.5–2 pt class dots', async () => {
+    const r = await render(<BotanicalSprig />);
+    const dots = byTestId(r, 'botanical-accent');
+    assert.equal(dots.length, 6 * 2 + 1, 'a node and a tip per leaf, plus the stem tip');
+    for (const dot of dots) {
+      const st = flatten(dot);
+      assert.equal(st.backgroundColor, withAlpha(botanicalPalette.sageTip, botanicalOpacity.tip));
+      assert.ok(st.width <= 4, 'small accent, never a blob');
+    }
+  });
+
+  test('the only green in the sprig is sage linework: every fill/border colour is a sage token at its stated opacity (or transparent)', async () => {
+    const r = await render(<BotanicalSprig />);
+    const allowed = new Set([
+      withAlpha(botanicalPalette.sageOutline, botanicalOpacity.outline),
+      withAlpha(botanicalPalette.sageTip, botanicalOpacity.tip),
+      'transparent',
+    ]);
+    const used = r.root.findAll((n) => typeof n.type === 'string').flatMap((n) => {
+      const st = flatten(n);
+      return [st.backgroundColor, st.borderColor].filter(Boolean);
+    });
+    assert.ok(used.length > 10);
+    for (const c of used) assert.ok(allowed.has(c), `unexpected colour ${c}`);
+  });
+
+  test('Reduce Motion drops the outline to 30% (decorative, never load-bearing)', async () => {
+    const { AccessibilityInfo } = await import('react-native');
+    const original = AccessibilityInfo.isReduceMotionEnabled;
+    AccessibilityInfo.isReduceMotionEnabled = () => Promise.resolve(true);
+    try {
+      const r = await render(<BotanicalSprig />);
+      await new Promise((resolve) => setImmediate(resolve));
+      const [leaf] = byTestId(r, 'botanical-leaf');
+      assert.equal(flatten(leaf).borderColor, withAlpha(botanicalPalette.sageOutline, botanicalOpacity.reduced));
+    } finally {
+      AccessibilityInfo.isReduceMotionEnabled = original;
+    }
   });
 });
 

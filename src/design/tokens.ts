@@ -37,6 +37,25 @@ export const brandPalette = {
 } as const;
 
 // ---------------------------------------------------------------------------
+// Color — BOTANICAL LINEWORK (owner amendment, 2026-10-16)
+//
+// The owner expressly lifted the six-colour lock for ONE purpose: thin sage linework on the decorative botanical layer. These
+// three tokens are NOT brand colours and may not be used for text, controls, cards, headers, navigation, status or fills —
+// `tests/design-system/botanicalBoundary.test.mjs` fails if any file other than Botanical.tsx reads them. The owner supplied the names
+// and opacities, not hex values; the hexes below are the design agent's choice (muted sage, hue ~135°, no blue) and are OPEN FOR OWNER
+// CONFIRMATION (OD-UI02-05).
+// ---------------------------------------------------------------------------
+
+export const botanicalPalette = {
+  /** Base stroke at 50% opacity, 1–1.5 pt. */
+  sageOutline: '#7E9C86',
+  /** Accent at leaf tips and stem nodes at 60% opacity, 1.5–2 pt. */
+  sageTip: '#5F8A6B',
+  /** Optional micro-wash at 20% opacity, never behind body text (not used by the current sprig). */
+  sageWhisper: '#A8C3AE',
+} as const;
+
+// ---------------------------------------------------------------------------
 // Color — DERIVED tokens. Each has one documented purpose (spec §4); none is a new brand hue.
 // ---------------------------------------------------------------------------
 
@@ -202,6 +221,9 @@ export const color = {
 
   /** Scrim colour for sheets/modals (applied at `opacity.scrim`). */
   scrim: derived.scrim,
+
+  /** Decorative sage linework — Botanical.tsx ONLY (see botanicalPalette). */
+  botanical: botanicalPalette,
 
   track: derived.track,
 
@@ -382,6 +404,12 @@ export const opacity = {
   /** Botanical / ornamental line work: faint and secondary (spec §8). */
   decoration: 0.4,
 } as const;
+
+/** Sage botanical linework (owner amendment): outline 50%, tip 60%, whisper 20%; 30% when reduced-motion / high-contrast is on. */
+export const botanicalOpacity = { outline: 0.5, tip: 0.6, whisper: 0.2, reduced: 0.3 } as const;
+
+/** Stroke weights in dp: outline 1–1.5, tip 1.5–2 (rendered as a dot of this diameter plus 1.5). */
+export const botanicalStroke = { outline: 1.25, tip: 2, node: 1.5 } as const;
 
 // ---------------------------------------------------------------------------
 // Motion — restrained; explains state changes, never decorates (§21)
