@@ -33,6 +33,7 @@ function makeServer() {
   };
   server.client = {
     entitlement: async () => { server.calls.entitlement += 1; return entitlement(server.states.get(server.who) ?? 'free'); },
+    purchaseReadiness: async () => ({ ready: true, reason: 'ready' }),
     manifest: async () => ({ kind: 'ok', entries: [
       { featureKey: 'daily_load_premium', displayName: 'Daily Load', tier: 'premium', available: true, requiresAiConsent: false, minAppVersion: null },
       { featureKey: 'smart_inbox_extract', displayName: 'Smart Inbox', tier: 'premium', available: true, requiresAiConsent: true, minAppVersion: null },
