@@ -30,8 +30,8 @@ client.configureRevenueCat();
 Object.assign(client.REVENUECAT_DEADLINES, { identifyMs: 40, readMs: 40, restoreMs: 40 });
 
 afterEach(async () => {
-  Object.assign(sdk, { failLogin: false, failRestore: false, restoreWait: null, loginWait: null, logoutWait: null, offering: null, info: { entitlements: { active: {} } } });
-  Object.assign(sdk.hang, { login: false, customerInfo: false, offerings: false, restore: false });
+  Object.assign(sdk, { failLogin: false, failRestore: false, restoreWait: null, loginWait: null, logoutWait: null, identityReadWait: null, offering: null, info: { entitlements: { active: {} } } });
+  Object.assign(sdk.hang, { login: false, identityRead: false, customerInfo: false, offerings: false, restore: false });
   await client.identifyRevenueCatAccount(null);
   sdk.calls.length = 0;
 });
@@ -95,6 +95,46 @@ describe('every SDK call ends', () => {
       'identity uncertainty cannot show a purchase sheet');
     sdk.hang.identityRead = false;
     assert.equal(await client.ensureRevenueCatIdentity(), true, 'a later verified identity read recovers');
+  });
+
+  test('a readable SDK identity drift denies the stale actor and rebinds only the current account', async () => {
+    assert.equal(await client.identifyRevenueCatAccount(A), 'identified');
+    sdk.id = B; // Simulates an out-of-band native identity mutation that completed late.
+    assert.equal(await client.fetchActiveEntitlementIds(), null,
+      'the stale actor cannot read entitlements through a mismatched native account');
+    assert.deepEqual(await client.presentRevenueCatPaywall(nativeOffering, A), { kind: 'unavailable' },
+      'an unverified native identity cannot open a purchase sheet');
+    assert.equal(sdk.calls.filter(([kind]) => kind === 'paywall').length, 0);
+    assert.equal(await client.ensureRevenueCatIdentity(), true,
+      'a definitive SDK mismatch may be repaired for the current desired account');
+    assert.equal(sdk.id, A);
+    assert.equal(client.getRevenueCatIdentity().accountId, A);
+  });
+
+  test('a native identity-read result arriving after account switch cannot certify stale readiness', async () => {
+    assert.equal(await client.identifyRevenueCatAccount(A), 'identified');
+    let releaseRead;
+    sdk.identityReadWait = new Promise((resolve) => { releaseRead = resolve; });
+    const oldReadiness = client.ensureRevenueCatIdentity();
+    await new Promise((resolve) => setImmediate(resolve));
+    const switchToB = client.identifyRevenueCatAccount(B); // Invalidates published A immediately.
+    sdk.identityReadWait = null;
+    releaseRead();
+    assert.equal(await oldReadiness, false, 'a read started under A cannot authorize after B is desired');
+    assert.equal(await switchToB, 'identified');
+    assert.equal(sdk.id, B);
+    assert.equal(client.getRevenueCatIdentity().accountId, B);
+  });
+
+  test('an unreadable SDK ID never starts a second native identity mutation', async () => {
+    assert.equal(await client.identifyRevenueCatAccount(A), 'identified');
+    const loginsBefore = sdk.calls.filter(([kind]) => kind === 'login').length;
+    sdk.hang.identityRead = true;
+    assert.equal(await client.ensureRevenueCatIdentity(), false);
+    assert.equal(sdk.calls.filter(([kind]) => kind === 'login').length, loginsBefore,
+      'unknown identity is not permission to log in again');
+    sdk.hang.identityRead = false;
+    assert.equal(await client.ensureRevenueCatIdentity(), true, 'the queue can recover when reads resume');
   });
 
   test('customer info, offerings and restore each resolve to the safe fallback', async () => {
