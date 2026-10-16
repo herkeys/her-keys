@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { onboardingOptions } from '../data/catalog/onboardingOptions';
 import {
   ActionStateBlock,
@@ -26,7 +27,7 @@ import {
   TextField,
 } from '../design/components';
 import { brandPalette, color, radius, spacing, type as typeScale } from '../design/tokens';
-import { ConsentErrorView, ConsentLegalView, ConsentPermissionsView } from '../features/consent/ConsentFlow';
+import { ConsentErrorView, ConsentLegalView, ConsentPermissionsView } from '../features/consent/ConsentViews';
 import { OnboardingScaffold } from '../features/onboarding/OnboardingScaffold';
 import { WelcomeAuthGalleryPreview, type SceneKey } from '../features/welcome/WelcomeAuthGalleryPreview';
 
@@ -53,7 +54,6 @@ interface Params {
   step?: string;
 }
 
-const INSET = { paddingTop: spacing.xl, paddingBottom: spacing.xxl };
 
 export function Ui02Evidence({ mode, params }: { mode: EvidenceMode; params: Params }) {
   switch (mode) {
@@ -82,6 +82,9 @@ export function Ui02Evidence({ mode, params }: { mode: EvidenceMode; params: Par
 
 function ConsentEvidence({ stage }: { stage: string }) {
   const noop = () => {};
+  // The real gate adds the system insets itself (ConsentFlow); the harness does the same so the capture is faithful.
+  const insets = useSafeAreaInsets();
+  const INSET = { paddingTop: insets.top + spacing.xxl, paddingBottom: insets.bottom + spacing.xxl };
   if (stage === 'permissions') return <ConsentPermissionsView inset={INSET} notificationsBusy={false} onEnableNotifications={noop} onContinue={noop} />;
   if (stage === 'error') return <ConsentErrorView inset={INSET} retried leaving={false} onRetry={noop} onLeave={noop} />;
   const filled = stage === 'legal-filled';

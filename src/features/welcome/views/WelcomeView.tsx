@@ -1,4 +1,4 @@
-import { StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { AppText, Button, FadeIn, KeyBadge, Overline } from '../../../design/components';
 import { color, spacing } from '../../../design/tokens';
 import { WELCOME_AUTH_COPY as COPY } from '../copy';
@@ -20,7 +20,8 @@ export interface WelcomeViewProps {
 export function WelcomeView({ onBegin, onExistingAccount }: WelcomeViewProps) {
   return (
     <>
-      <FadeIn speed="deliberate" style={styles.body}>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
+      <FadeIn speed="deliberate">
         <KeyBadge style={styles.mark} />
         <Overline>{COPY.welcome.overline}</Overline>
         <AppText variant="hero" style={styles.title}>
@@ -30,6 +31,7 @@ export function WelcomeView({ onBegin, onExistingAccount }: WelcomeViewProps) {
           {COPY.welcome.lede}
         </AppText>
       </FadeIn>
+      </ScrollView>
 
       <View style={styles.footer}>
         <AppText variant="bodySm" color={color.text.muted} style={styles.footnote}>
@@ -43,7 +45,8 @@ export function WelcomeView({ onBegin, onExistingAccount }: WelcomeViewProps) {
 }
 
 const styles = StyleSheet.create({
-  body: { flex: 1, justifyContent: 'center', paddingHorizontal: spacing.xl },
+  scroll: { flex: 1 },
+  body: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: spacing.xl },
   mark: { marginBottom: spacing.xl },
   title: { marginTop: spacing.md },
   lede: { marginTop: spacing.xl },

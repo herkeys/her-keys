@@ -1,3 +1,5 @@
+> **HK-FE-UI-02 supersession note.** The Paper-and-Ink palette described in this document (clay, ivory, parchment, plum-as-AI, gold launch bridge) is superseded by the Dusty Mauve + Luxury Black system. Domain/provenance bindings and truth semantics remain valid; for visual vocabulary and the AI label + shape language see [HK-FE-UI-02-spec.md](HK-FE-UI-02-spec.md) (section 6).
+
 # AI / intelligence presentation — traceability (HK-FE-UI-01 §13, K3)
 
 The front end is not a second semantics authority. Every intelligence

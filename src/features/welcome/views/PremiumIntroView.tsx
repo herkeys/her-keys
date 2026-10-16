@@ -1,4 +1,4 @@
-import { StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { AppText, Button, IconBadge, Overline, PremiumBadge } from '../../../design/components';
 import { color, radius, spacing } from '../../../design/tokens';
 import { HER_KEYS_PREMIUM_DISPLAY_NAME } from '../../../monetization/entitlement';
@@ -29,7 +29,8 @@ function splitBenefit(benefit: string): { name: string | null; detail: string } 
 export function PremiumIntroView({ onSelectPremium, onContinueFree }: PremiumIntroProps) {
   return (
     <>
-      <View style={styles.body}>
+      {/* Scrolls when the window is short or the text large, so the headline is never pushed off the top. */}
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
         <PremiumBadge size="md" style={styles.mark} />
         <Overline>{HER_KEYS_PREMIUM_DISPLAY_NAME}</Overline>
         <AppText variant="hero" style={styles.title}>
@@ -54,7 +55,7 @@ export function PremiumIntroView({ onSelectPremium, onContinueFree }: PremiumInt
             );
           })}
         </View>
-      </View>
+      </ScrollView>
       <View style={styles.footer}>
         <Button label={COPY.premium.select} onPress={onSelectPremium} />
         <Button label={COPY.premium.free} variant="secondary" onPress={onContinueFree} />
@@ -67,7 +68,8 @@ export function PremiumIntroView({ onSelectPremium, onContinueFree }: PremiumInt
 }
 
 const styles = StyleSheet.create({
-  body: { flex: 1, justifyContent: 'center', paddingHorizontal: spacing.xl },
+  scroll: { flex: 1 },
+  body: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: spacing.xl },
   mark: { marginBottom: spacing.lg },
   title: { marginTop: spacing.md },
   lede: { marginTop: spacing.lg },

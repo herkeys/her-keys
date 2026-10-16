@@ -15,7 +15,7 @@ const lock = JSON.parse(readFileSync(new URL('tests/design-system/fixtures/legal
 
 for (const [path, strings] of Object.entries(lock)) {
   test(`${path}: every locked legal/consent/permission string is still present, byte for byte`, () => {
-    const source = readFileSync(new URL(path, ROOT), 'utf8').replace(/\s+/g, ' ');
+    const source = (readFileSync(new URL(path, ROOT), 'utf8') + (path.endsWith('ConsentFlow.tsx') ? readFileSync(new URL('src/features/consent/ConsentViews.tsx', ROOT), 'utf8') : '')).replace(/\s+/g, ' ');
     assert.ok(strings.length > 30);
     const missing = strings.filter((s) => !source.includes(s.replace(/\s+/g, ' ')));
     assert.deepEqual(missing, []);
@@ -23,7 +23,7 @@ for (const [path, strings] of Object.entries(lock)) {
 }
 
 test('the consent receipts written on Agree and Continue are exactly the baseline set', () => {
-  const source = readFileSync(new URL('src/features/consent/ConsentFlow.tsx', ROOT), 'utf8').replace(/\s+/g, ' ');
+  const source = (readFileSync(new URL('src/features/consent/ConsentFlow.tsx', ROOT), 'utf8') + readFileSync(new URL('src/features/consent/ConsentViews.tsx', ROOT), 'utf8')).replace(/\s+/g, ' ');
   for (const receipt of [
     "{ consent_type: 'terms', granted: true }",
     "{ consent_type: 'privacy', granted: true }",
