@@ -49,7 +49,7 @@ test('consent gate is tied to bound accounts and server ledger, not an untrusted
   assert.match(view, /'age18'/);
   assert.match(view, /'ai_processing'/);
   assert.match(backend, /\.from\('account_consents'\)/);
-  assert.match(ai, /HER_KEYS_AI_REQUIRE_CONSENT/);
+  assert.doesNotMatch(ai, /HER_KEYS_AI_REQUIRE_CONSENT/, 'server-side consent must never depend on an optional deployment flag');
   assert.match(ai, /\.eq\('account_id', user\.id\)/);
 });
 
@@ -65,4 +65,19 @@ test('the Edge Function and the client agree on the current AI Data Processing p
   assert.match(ai, /decisions\[0\]\.granted !== true/);
   // And it must fail closed: an unreadable ledger or a missing receipt both refuse.
   assert.match(ai, /consentError \|\| decisions\?\.length !== 1/);
+});
+
+test('Talk It Out always checks affirmative AI consent before contacting Gemini', () => {
+  const ai = readFileSync('supabase/functions/herkeys-ai/index.ts', 'utf8');
+  const authenticate = ai.indexOf('const user = await requireUser(req);');
+  const ledger = ai.indexOf(".from('account_consents')", authenticate);
+  const denied = ai.indexOf("reason: 'ai_processing_consent_required'", ledger);
+  const provider = ai.indexOf('const outcome = await providerRequest(', denied);
+  assert.ok(authenticate >= 0 && ledger > authenticate && denied > ledger && provider > denied,
+    'auth must precede an unconditional consent read and denial before the Gemini request');
+  const gate = ai.slice(authenticate, provider);
+  assert.doesNotMatch(gate, /if\s*\(\s*Deno\.env\.get\(/,
+    'no deployment secret flag may disable the server-side AI consent gate');
+  assert.match(gate, /decisions\[0\]\.granted !== true/,
+    'missing, expired or declined affirmative consent must fail closed');
 });
