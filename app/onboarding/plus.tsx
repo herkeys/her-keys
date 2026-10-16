@@ -6,20 +6,18 @@ import { colors, spacing } from '../../src/design/tokens';
 import { canResolveOnboardingPlus, HER_KEYS_PREMIUM_DISPLAY_NAME, PAYWALL_POLICY } from '../../src/monetization/entitlement';
 import { PaywallNoticeView } from '../../src/monetization/PaywallNoticeView';
 import { useEntitlement } from '../../src/monetization/RevenueCatProvider';
+import { CAPABILITY_TEXT, PREMIUM_CAPABILITY_KEYS } from '../../src/monetization/premiumHomeCopy';
+import { premiumLaunchState } from '../../src/monetization/premiumLaunchState';
+import { usePremiumStateIfMounted } from '../../src/monetization/PremiumStateProvider';
 import { usePaywallAction } from '../../src/monetization/usePaywallAction';
 import { useOnboarding } from '../../src/store/OnboardingContext';
 import { usePremiumIntent } from '../../src/store/PremiumIntentContext';
 
 /**
- * What this screen may say about Premium. Only what the source supports: the paid entitlement (`her_keys_plus`) is purchasable and
- * restorable, but no feature in the app or backend is gated on it yet (`featureAccess` has no consumer), so the screen does not list
- * benefits. Naming a benefit here is a product decision that waits for a real, gated one (docs/audits/HK_BUILD2_SHARED_CONSUMER_REPAIR_LEDGER.md, OD-SC-03).
+ * The three implemented Stage 1 pillars come from the same descriptions as Your Account.
+ * Availability is a separate SERVER decision: never advertise an unshipped feature as ready.
+ * No subscription price or trial is embedded in this screen.
  */
-const PREMIUM_STATUS = [
-  'Everything in Her Keys works without Premium.',
-  'Premium features are still being built, so nothing in the app is locked behind it today.',
-];
-
 /**
  * The final onboarding step. Her Keys owns navigation, placement and
  * fallback state here; RevenueCat owns the purchase/restore transaction
@@ -32,6 +30,8 @@ export default function HerKeysPlus() {
   const paywall = usePaywallAction('onboarding_complete');
   const { complete } = useOnboarding();
   const intent = usePremiumIntent();
+  const premium = usePremiumStateIfMounted();
+  const release = premiumLaunchState(premium?.snapshot.manifest ?? null);
   const [busy, setBusy] = useState<'purchase' | 'continue' | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const resolving = useRef(false);
@@ -69,6 +69,12 @@ export default function HerKeysPlus() {
   if (status === 'plus') return null;
 
   const onSeePlus = async () => {
+    if (!release.ready) {
+      setNote(release.kind === 'checking'
+        ? 'Checking whether Her Keys Premium is ready. You can continue Free while we check.'
+        : 'Her Keys Premium is not yet available to purchase in this app. Your Free tools are ready to use.');
+      return;
+    }
     setBusy('purchase');
     setNote(null);
     // Every way the paywall can end (unavailable offering, failure, cancel) is worded by the hook's notice below.
@@ -98,16 +104,21 @@ export default function HerKeysPlus() {
       </AppText>
 
       <Card tone="subtle" style={styles.benefits}>
-        <Overline>Where Premium stands</Overline>
-        {PREMIUM_STATUS.map((line) => (
-          <AppText key={line} variant="body" style={styles.benefit}>
-            {line}
-          </AppText>
+        <Overline>What Her Keys Premium adds</Overline>
+        {PREMIUM_CAPABILITY_KEYS.map((key) => (
+          <View key={key} style={styles.benefit}>
+            <AppText variant="bodyStrong">{CAPABILITY_TEXT[key].name}</AppText>
+            <AppText variant="bodySm" color={colors.textSecondary}>{CAPABILITY_TEXT[key].summary}</AppText>
+          </View>
         ))}
       </Card>
 
       <AppText variant="bodySm" color={colors.textTertiary} style={styles.reassurance}>
-        Premium remains optional. You can explore plans again whenever you’re ready.
+        {release.kind === 'ready'
+          ? 'These tools are now available for eligible Premium accounts. Premium is optional, and you can continue Free.'
+          : release.kind === 'checking'
+            ? 'Checking which Premium tools are available here. You can continue Free at any time.'
+            : 'The Premium tools are being prepared for release. Nothing is purchased here, and you can continue Free.'}
       </AppText>
 
       <PaywallNoticeView notice={paywall.notice} style={styles.paywallNotice} />
@@ -140,7 +151,7 @@ const styles = StyleSheet.create({
   title: { marginTop: spacing.md },
   lede: { marginTop: spacing.md, marginBottom: spacing.xxl },
   benefits: { gap: spacing.sm },
-  benefit: { marginTop: spacing.sm },
+  benefit: { gap: spacing.xs, marginTop: spacing.sm },
   reassurance: { marginTop: spacing.lg, marginBottom: spacing.xl },
   paywallNotice: { marginBottom: spacing.md },
   note: { marginBottom: spacing.md },
