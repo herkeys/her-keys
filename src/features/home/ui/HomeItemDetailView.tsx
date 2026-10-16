@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { AppText, Button, ChipToggle, ConfirmationSheet, EmptyState, Overline, Screen, Sheet } from '../../../design/components';
-import { colors, spacing } from '../../../design/tokens';
+import { spacing } from '../../../design/tokens';
+import { useTheme } from '../../../design/theme';
 import { ACTION_LABEL, describeDetail, type CopyContext } from '../copy';
 import type { HolderChoice } from '../model/mutations';
 import type { HolderFact, HomeAction, HomeItem } from '../model/types';
@@ -32,6 +33,7 @@ const holderLabel = (holder: HolderFact) => (holder.relationship === null ? hold
  * There is no HomeRecord: this composes a task's, visit's or routine's own canonical facts.
  */
 export function HomeItemDetailView({ item, holders, copyContext, busy, error, onAction }: HomeItemDetailViewProps) {
+  const { colors } = useTheme();
   const [asking, setAsking] = useState(false);
   const [choice, setChoice] = useState<HolderFact | null>(null);
   const [answering, setAnswering] = useState(false);

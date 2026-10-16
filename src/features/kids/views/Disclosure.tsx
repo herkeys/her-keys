@@ -1,13 +1,15 @@
 import { useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { AppText } from '../../../design/components';
-import { color, interaction, sizing, spacing } from '../../../design/tokens';
+import { sizing, spacing } from '../../../design/tokens';
+import { useTheme } from '../../../design/theme';
 
 /**
  * Progressive disclosure: a labelled toggle that reveals more of the same list. The state ("expanded") is announced, not only drawn,
  * and the target is at least as tall as the touch floor.
  */
 export function Disclosure({ collapsedLabel, expandedLabel, children }: { collapsedLabel: string; expandedLabel: string; children: ReactNode }) {
+  const { color, interaction } = useTheme();
   const [open, setOpen] = useState(false);
   return (
     <View>

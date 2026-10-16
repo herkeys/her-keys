@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { color, radius, sizing, spacing } from '../tokens';
+import { radius, sizing, spacing, type ColorTokens } from '../tokens';
+import { themed, useTheme, createThemedStyles } from '../theme';
 import type { ConfidenceLevel, ProvenanceSource } from '../../domain/foundation/provenance';
 import type { IntentStage } from '../../domain/authorization';
 import type { OutcomeKind } from '../../domain/foundation/authorization';
@@ -70,6 +71,8 @@ export const AI_MARKS: Record<AiMarkKind, MarkSpec> = {
  * the adjacent label ("Her Keys noticed", "Needs your yes"…) is the accessible statement, and colour/shape only reinforce it.
  */
 export function AiMark({ kind }: { kind: AiMarkKind }) {
+  const { color } = useTheme();
+  const markShape = useMarkShape();
   const spec = AI_MARKS[kind];
   const iconColor =
     spec.shape === 'moss-circle' ? color.text.inverse : spec.shape === 'amber-circle' ? color.status.attention : color.text.primary;
@@ -89,7 +92,7 @@ const MARK = 28;
 const markStyles = StyleSheet.create({
   base: { width: MARK, height: MARK, alignItems: 'center', justifyContent: 'center' },
 });
-const markShape = StyleSheet.create({
+const useMarkShape = createThemedStyles(({ color }) => StyleSheet.create({
   'dashed-circle': {
     borderRadius: MARK / 2,
     borderWidth: 1.5,
@@ -112,7 +115,7 @@ const markShape = StyleSheet.create({
     backgroundColor: color.status.attentionSoft,
   },
   'moss-circle': { borderRadius: MARK / 2, backgroundColor: color.status.success },
-});
+}));
 
 // ---------------------------------------------------------------------------
 // HER KEYS INSIGHT — “Her Keys noticed…”
@@ -131,6 +134,8 @@ interface InsightBlockProps {
  * dashed-circle `AiMark`, and the explicit "HER KEYS NOTICED" eyebrow — the register is named in text and shape, not colour.
  */
 export function InsightBlock({ children, onDismiss, style }: InsightBlockProps) {
+  const { color } = useTheme();
+  const styles = useStyles();
   return (
     <Card tone="subtle" style={[styles.insightCard, style]}>
       <View style={styles.insightHeader}>
@@ -203,6 +208,8 @@ export function RecommendationBlock({
   raised = false,
   style,
 }: RecommendationBlockProps) {
+  const { color } = useTheme();
+  const styles = useStyles();
   const primaryLabel = actionLabel ?? (approvalRequired ? 'Yes, do that' : 'Do that');
   return (
     <Card tone="surface" raised={raised} style={[styles.recCard, style]}>
@@ -259,6 +266,8 @@ interface WhyThisProps {
 
 /** “Why?” — the evidence behind a recommendation, stated as facts. */
 export function WhyThis({ reasons, style }: WhyThisProps) {
+  const { color } = useTheme();
+  const styles = useStyles();
   if (reasons.length === 0) return null;
   return (
     <View style={style} accessibilityLabel="Why this">
@@ -295,6 +304,8 @@ interface ClarificationPromptProps {
  * never as settled fact.
  */
 export function ClarificationPrompt({ question, proposed, onConfirm, onCorrect, style }: ClarificationPromptProps) {
+  const { color } = useTheme();
+  const styles = useStyles();
   return (
     <Card tone="surface" style={[styles.readingCard, style]}>
       <View style={styles.markRow}>
@@ -346,6 +357,8 @@ interface InterpretationReviewProps {
    * real row, rejecting never deletes the source.
  */
 export function InterpretationReview({ fields, onAccept, onReject, onCorrect, style }: InterpretationReviewProps) {
+  const { color } = useTheme();
+  const styles = useStyles();
   return (
     <Card tone="surface" style={[styles.readingCard, style]}>
       <View style={styles.markRow}>
@@ -381,13 +394,13 @@ interface ConfidenceBadgeProps {
   level: ConfidenceLevel;
 }
 
-const CONFIDENCE_TONE: Record<ConfidenceLevel, { fg: string; bg: string }> = {
+const confidenceToneFor = themed<Record<ConfidenceLevel, { fg: string; bg: string }>>(({ color }) => ({
   // A claim Her Keys made and she has not confirmed: uncertainty is visible.
   possible: { fg: color.ai.inference, bg: color.ai.inferenceSoft },
   likely: { fg: color.ai.inference, bg: color.ai.inferenceSoft },
   // She confirmed it (or accepted the candidate): settled, shown as confirmation.
   established: { fg: color.ai.confirmation, bg: color.ai.confirmationSoft },
-};
+}));
 
 const CONFIDENCE_LABEL: Record<ConfidenceLevel, string> = {
   possible: 'POSSIBLE',
@@ -401,7 +414,9 @@ const CONFIDENCE_LABEL: Record<ConfidenceLevel, string> = {
  * fact renders NO badge — certainty she stated is not a "confidence level".
  */
 export function ConfidenceBadge({ level }: ConfidenceBadgeProps) {
-  const tone = CONFIDENCE_TONE[level];
+  const { color } = useTheme();
+  const styles = useStyles();
+  const tone = confidenceToneFor(useTheme())[level];
   return (
     <View style={[styles.badge, { backgroundColor: tone.bg }]}>
       <Ionicons
@@ -430,6 +445,7 @@ interface ProvenanceLabelProps {
  * HONESTLY — "Source unknown" — never dressed up as something she said.
  */
 export function ProvenanceLabel({ source }: ProvenanceLabelProps) {
+  const { color } = useTheme();
   return (
     <AppText variant="metadata" color={color.text.muted}>
       {PROVENANCE_LABEL[source]}
@@ -474,27 +490,27 @@ type ActionPresentation = {
   needsButtons: boolean;
 };
 
-function actionPresentation(stage: IntentStage, outcome: OutcomeKind | null | undefined): ActionPresentation {
+function actionPresentation(stage: IntentStage, outcome: OutcomeKind | null | undefined, c: ColorTokens): ActionPresentation {
   switch (stage) {
     // Her Keys is asking. APPROVAL REQUIRED is structurally different from a
     // suggestion: it names the permission and demands her answer.
     case 'proposed':
-      return { eyebrow: 'Needs your yes', eyebrowColor: color.status.attention, surface: 'attention', needsButtons: true };
+      return { eyebrow: 'Needs your yes', eyebrowColor: c.status.attention, surface: 'attention', needsButtons: true };
     case 'approved':
       // Approved but not yet attempted: prepared, waiting — never shown as done.
-      return { eyebrow: 'Ready — will run', eyebrowColor: color.status.waiting, surface: 'subtle', needsButtons: false };
+      return { eyebrow: 'Ready — will run', eyebrowColor: c.status.waiting, surface: 'subtle', needsButtons: false };
     case 'attempted':
-      return { eyebrow: 'Running now', eyebrowColor: color.status.waiting, surface: 'subtle', needsButtons: false };
+      return { eyebrow: 'Running now', eyebrowColor: c.status.waiting, surface: 'subtle', needsButtons: false };
     case 'succeeded':
       return outcome
-        ? { eyebrow: `Done — ${OUTCOME_LABEL[outcome].toLowerCase()}`, eyebrowColor: color.status.success, surface: 'success', needsButtons: false }
-        : { eyebrow: 'Done', eyebrowColor: color.status.success, surface: 'success', needsButtons: false };
+        ? { eyebrow: `Done — ${OUTCOME_LABEL[outcome].toLowerCase()}`, eyebrowColor: c.status.success, surface: 'success', needsButtons: false }
+        : { eyebrow: 'Done', eyebrowColor: c.status.success, surface: 'success', needsButtons: false };
     case 'failed':
-      return { eyebrow: 'Didn’t work — needs you', eyebrowColor: color.status.risk, surface: 'risk', needsButtons: false };
+      return { eyebrow: 'Didn’t work — needs you', eyebrowColor: c.status.risk, surface: 'risk', needsButtons: false };
     case 'declined':
-      return { eyebrow: 'You said no', eyebrowColor: color.text.muted, surface: 'subtle', needsButtons: false };
+      return { eyebrow: 'You said no', eyebrowColor: c.text.muted, surface: 'subtle', needsButtons: false };
     case 'withdrawn':
-      return { eyebrow: 'Withdrawn', eyebrowColor: color.text.muted, surface: 'subtle', needsButtons: false };
+      return { eyebrow: 'Withdrawn', eyebrowColor: c.text.muted, surface: 'subtle', needsButtons: false };
   }
 }
 
@@ -528,7 +544,9 @@ export function ActionStateBlock({
   onDecline,
   style,
 }: ActionStateBlockProps) {
-  const presentation = actionPresentation(stage, outcome);
+  const { color } = useTheme();
+  const styles = useStyles();
+  const presentation = actionPresentation(stage, outcome, color);
   return (
     <Card tone={presentation.surface} style={style}>
       <View style={styles.markRow}>
@@ -555,7 +573,7 @@ export function ActionStateBlock({
 
 // ---------------------------------------------------------------------------
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(({ color }) => StyleSheet.create({
   // Unconfirmed readings share one dashed outline; recommendations get a solid Berry rail. Shape, not hue, tells them apart.
   insightCard: {
     backgroundColor: color.ai.insightSoft,
@@ -621,4 +639,4 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
   },
   actionSummary: { marginTop: spacing.sm },
-});
+}));

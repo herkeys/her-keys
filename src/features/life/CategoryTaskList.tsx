@@ -1,7 +1,8 @@
 import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { AppText, Button, StatusList } from '../../design/components';
-import { colors, spacing } from '../../design/tokens';
+import { spacing } from '../../design/tokens';
+import { useTheme } from '../../design/theme';
 import { openTasksInCategory } from '../../domain/taskLists';
 import { useHouseholdState } from '../../store/AppStateProvider';
 import { needsAttention, openTaskLabel } from './openTaskLabel';
@@ -20,6 +21,7 @@ interface CategoryTaskListProps {
  * list is where everything else she has saved stays reachable.
  */
 export function CategoryTaskList({ categoryId, emptyLabel }: CategoryTaskListProps) {
+  const { colors } = useTheme();
   const { state, today } = useHouseholdState();
   const entries = categoryId ? openTasksInCategory(state, categoryId, today) : [];
 

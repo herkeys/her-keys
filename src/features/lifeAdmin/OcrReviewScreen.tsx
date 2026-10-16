@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { AppText, Button, ChipToggle, Overline, Sheet, TextField } from '../../design/components';
-import { colors, spacing } from '../../design/tokens';
+import { spacing } from '../../design/tokens';
+import { useTheme } from '../../design/theme';
 import { OCR_DATE_TARGETS, type OcrAssignment, type OcrCandidate, type OcrDateTarget, EMPTY_OCR_ASSIGNMENT } from './ocrCandidate';
 import { OCR_COPY as COPY } from './ocrCopy';
 import { recordDate, recordDateLong } from './lifeAdminDates';
@@ -33,6 +34,7 @@ export interface OcrReviewScreenProps {
  * candidate from the others.
  */
 export function OcrReviewScreen({ visible, candidate, onUseValues, onManualEntry, onCancel }: OcrReviewScreenProps) {
+  const { colors } = useTheme();
   const [assignment, setAssignment] = useState<OcrAssignment>(EMPTY_OCR_ASSIGNMENT);
   const [issuerText, setIssuerText] = useState('');
   const [referenceText, setReferenceText] = useState('');

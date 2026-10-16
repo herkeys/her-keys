@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { AppText } from '../../design/components';
-import { colors, interaction, spacing } from '../../design/tokens';
+import { spacing } from '../../design/tokens';
+import { createThemedStyles, useTheme } from '../../design/theme';
 import { useSchedule } from '../../store/ScheduleContext';
 import { formatTime } from '../daily-load/computeDailyLoad';
 
@@ -22,6 +23,8 @@ export interface TimelineListProps {
  * the page ground with hairline rules rather than on a surface of its own.
  */
 export function TimelineList({ onPressItem }: TimelineListProps = {}) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const { events, tasks } = useSchedule();
   const scheduledTasks = tasks.filter((t) => t.scheduledStartMinutes != null);
 
@@ -81,11 +84,11 @@ export function TimelineList({ onPressItem }: TimelineListProps = {}) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(({ colors, interaction }) => StyleSheet.create({
   row: { flexDirection: 'row', paddingVertical: spacing.lg, gap: spacing.md },
   rowDivider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderSubtle },
   time: { width: 72, paddingTop: 2 },
   body: { flex: 1 },
   meta: { marginTop: spacing.xxs },
   pressed: { opacity: interaction.pressedOpacity },
-});
+}));

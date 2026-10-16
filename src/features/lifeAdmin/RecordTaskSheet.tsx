@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { AppText, Button, ChipToggle, InlineNotice, Overline, Sheet, TextField } from '../../design/components';
-import { colors, spacing } from '../../design/tokens';
+import { spacing } from '../../design/tokens';
+import { useTheme } from '../../design/theme';
 import { checkLifeRecordTitle } from '../../domain/lifeRecords';
 import { isLocalDate, type LocalDate } from '../../domain/logicalDay';
 import { FIELD_LIMITS, type LifeRecordLinkRelation } from '../../domain/state';
@@ -35,6 +36,7 @@ export interface RecordTaskSheetProps {
  * the category is her explicit pick, and the due date is empty unless she sets it.
  */
 export function RecordTaskSheet({ visible, relation, recordTitle, renewBy, categories, notice, busy, canWrite, onSubmit, onClose }: RecordTaskSheetProps) {
+  const { colors } = useTheme();
   const [values, setValues] = useState<RecordTaskSheetValues>({
     title: COPY.taskSuggestedTitle[relation](recordTitle).slice(0, FIELD_LIMITS.titleLength),
     categoryId: null,

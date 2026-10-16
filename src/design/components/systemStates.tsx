@@ -1,6 +1,7 @@
 import { ActivityIndicator, StyleSheet, View, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { color, radius, sizing, spacing } from '../tokens';
+import { radius, sizing, spacing } from '../tokens';
+import { themed, useTheme, createThemedStyles } from '../theme';
 import { FadeIn } from './animated';
 import { AppText, Overline } from './AppText';
 
@@ -18,6 +19,8 @@ export interface LoadingStateProps {
 }
 
 export function LoadingState({ label = 'Loading…', detail, style }: LoadingStateProps) {
+  const { color } = useTheme();
+  const styles = useStyles();
   return (
     <View style={[styles.center, style]} accessibilityRole="progressbar" accessibilityLabel={label}>
       <ActivityIndicator color={color.action.primary} />
@@ -43,6 +46,8 @@ export interface EmptyStateProps {
 }
 
 export function EmptyState({ title, body, actionLabel, onAction, style }: EmptyStateProps) {
+  const { color } = useTheme();
+  const styles = useStyles();
   return (
     <FadeIn style={[styles.center, style]}>
       {/* The quiet mark: an open ring — a section that is valid and at rest,
@@ -71,6 +76,8 @@ export interface ErrorStateProps {
 }
 
 export function ErrorState({ title = 'Something didn’t go through', body, onRetry, style }: ErrorStateProps) {
+  const { color } = useTheme();
+  const styles = useStyles();
   return (
     <View style={[styles.center, style]} accessibilityRole="alert">
       <AppText variant="sectionTitle" color={color.status.risk} style={styles.gap}>
@@ -98,6 +105,8 @@ export function OfflineState({
   body = 'You’re offline. Nothing you’ve entered is lost — it will sync when the connection is back.',
   style,
 }: OfflineStateProps) {
+  const { color } = useTheme();
+  const styles = useStyles();
   return (
     <View style={[styles.center, style]}>
       <Overline color={color.status.waiting}>Offline</Overline>
@@ -124,16 +133,18 @@ type NoticeIcon = 'information-circle-outline' | 'alert-circle-outline' | 'check
  * colour now; AI identity lives in intelligence.tsx structure + labels). Every tone also carries its own icon, so the state is
  * never colour alone.
  */
-const noticeTones: Record<NoticeTone, { bg: string; border: string; fg: string; icon: NoticeIcon }> = {
+const noticeTonesFor = themed<Record<NoticeTone, { bg: string; border: string; fg: string; icon: NoticeIcon }>>(({ color }) => ({
   info: { bg: color.status.infoSoft, border: color.status.infoBorder, fg: color.status.info, icon: 'information-circle-outline' },
   attention: { bg: color.status.attentionSoft, border: color.status.attentionBorder, fg: color.status.attention, icon: 'alert-circle-outline' },
   success: { bg: color.status.successSoft, border: color.status.successBorder, fg: color.status.success, icon: 'checkmark-circle-outline' },
   waiting: { bg: color.status.waitingSoft, border: color.status.waitingBorder, fg: color.status.waiting, icon: 'time-outline' },
-};
+}));
 
 /** A quiet inline banner for state that deserves a sentence, not a screen. */
 export function InlineNotice({ tone = 'info', title, body, style }: InlineNoticeProps) {
-  const t = noticeTones[tone];
+  const { color } = useTheme();
+  const styles = useStyles();
+  const t = noticeTonesFor(useTheme())[tone];
   return (
     <View style={[styles.notice, { backgroundColor: t.bg, borderColor: t.border }, style]} accessibilityRole="text">
       <View style={styles.noticeRow}>
@@ -155,7 +166,7 @@ export function InlineNotice({ tone = 'info', title, body, style }: InlineNotice
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(({ color }) => StyleSheet.create({
   center: { alignItems: 'center', paddingVertical: spacing.xxxl, paddingHorizontal: spacing.xl },
   quietMark: {
     width: 26,
@@ -175,4 +186,4 @@ const styles = StyleSheet.create({
   noticeIcon: { paddingTop: 2 },
   noticeText: { flex: 1 },
   noticeBody: { marginTop: spacing.xs },
-});
+}));

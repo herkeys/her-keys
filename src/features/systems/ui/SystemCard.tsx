@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { AppText, Card, Overline, Tag } from '../../../design/components';
-import { color, spacing } from '../../../design/tokens';
+import { spacing } from '../../../design/tokens';
+import { useTheme } from '../../../design/theme';
 import type { LocalDate } from '../../../domain/logicalDay';
 import { attentionLine, copy, durationLine, scheduleSentence, scheduleTag, stepCountLine } from '../copy';
 import type { HubItem } from '../model/types';
@@ -11,6 +12,7 @@ import type { HubItem } from '../model/types';
  * no progress, no tally and no encouragement here, because there is nothing done to count.
  */
 export function SystemCard({ item, today, onPress }: { item: HubItem; today: LocalDate; onPress: () => void }) {
+  const { color } = useTheme();
   const tag = scheduleTag(item.schedule, today);
   const sentence = item.schedule.state === 'active' || item.schedule.state === 'paused' ? scheduleSentence(item.schedule) : null;
   const facts = [stepCountLine(item.stepCount), durationLine(item.duration)].filter((fact): fact is string => fact !== null);

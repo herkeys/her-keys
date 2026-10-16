@@ -1,6 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 import { AppText, Button } from '../../../design/components';
-import { colors, spacing } from '../../../design/tokens';
+import { spacing } from '../../../design/tokens';
+import { useTheme } from '../../../design/theme';
 import { COPY } from '../copy';
 import type { FollowUpPresentation, ResponsibilityAction } from '../present';
 import type { MoneyFollowUpDetailView as MoneyFollowUpDetailModel } from '../types';
@@ -26,6 +27,7 @@ export interface FollowUpDetailViewProps {
  * "a payment was reported" only as far as the record supports.
  */
 export function FollowUpDetailView({ presentation: p, detail, busy, error, onResponsibilityAction, onEdit, onMarkDone, onRemove }: FollowUpDetailViewProps) {
+  const { colors } = useTheme();
   const followUp = detail.followUp;
   if (followUp === null) return null;
 

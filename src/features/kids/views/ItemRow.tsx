@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { AppText, Tag } from '../../../design/components';
-import { color, interaction, radius, sizing, spacing } from '../../../design/tokens';
+import { radius, sizing, spacing } from '../../../design/tokens';
+import { createThemedStyles, useTheme } from '../../../design/theme';
 import type { LocalDate } from '../../../domain/logicalDay';
 import {
   DETAIL,
@@ -33,6 +34,8 @@ export function ItemRow({
   /** The expanded logistics view: says what is not recorded. */
   showUnknowns?: boolean;
 }) {
+  const { color, interaction } = useTheme();
+  const styles = useStyles();
   const when = whenPhrase(item, today);
   const tag = coverageTag(item.responsibility.coverage);
   const dependency = dependencyLine(item);
@@ -99,7 +102,7 @@ export function ItemRow({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(({ color }) => StyleSheet.create({
   row: {
     minHeight: sizing.minTouchTarget,
     paddingVertical: spacing.md,
@@ -109,4 +112,4 @@ const styles = StyleSheet.create({
     borderRadius: radius.xs,
   },
   tagRow: { flexDirection: 'row', marginTop: spacing.xs },
-});
+}));

@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { KeyboardAvoidingView, ScrollView, StyleSheet, View } from 'react-native';
 import { AppText, Button, Overline, TextField } from '../../../design/components';
 import { HeaderBadge } from '../HeaderBadge';
-import { color, spacing } from '../../../design/tokens';
+import { spacing } from '../../../design/tokens';
+import { useTheme } from '../../../design/theme';
 import type { RecoveryResult } from '../../../platform/passwordRecoveryProvider';
 import { emailObviousError } from '../model';
 import { EMAIL_AUTH_KEYBOARD_BEHAVIOR } from './EmailEntryView';
@@ -21,6 +22,7 @@ export interface PasswordRecoveryViewProps {
  * of Supabase sessions, household authority, secure storage or credentials.
  */
 export function PasswordRecoveryView({ initialEmail, request, verify, updatePassword, onReturnToSignIn }: PasswordRecoveryViewProps) {
+  const { color } = useTheme();
   const [stage, setStage] = useState<'request' | 'verify' | 'newPassword' | 'complete'>('request');
   const [email, setEmail] = useState(initialEmail);
   const [code, setCode] = useState('');

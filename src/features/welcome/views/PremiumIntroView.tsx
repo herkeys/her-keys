@@ -1,6 +1,7 @@
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { AppText, Button, IconBadge, Overline, PremiumBadge } from '../../../design/components';
-import { color, radius, spacing } from '../../../design/tokens';
+import { radius, spacing } from '../../../design/tokens';
+import { createThemedStyles, useTheme } from '../../../design/theme';
 import { HER_KEYS_PREMIUM_DISPLAY_NAME } from '../../../monetization/entitlement';
 import { WELCOME_AUTH_COPY as COPY } from '../copy';
 
@@ -27,6 +28,8 @@ function splitBenefit(benefit: string): { name: string | null; detail: string } 
  * benefit rows with Soft Lilac icon wells. Nothing here shows or implies a price, plan or trial.
  */
 export function PremiumIntroView({ onSelectPremium, onContinueFree }: PremiumIntroProps) {
+  const { color } = useTheme();
+  const styles = useStyles();
   return (
     <>
       {/* Scrolls when the window is short or the text large, so the headline is never pushed off the top. */}
@@ -67,7 +70,7 @@ export function PremiumIntroView({ onSelectPremium, onContinueFree }: PremiumInt
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(({ color }) => StyleSheet.create({
   scroll: { flex: 1 },
   body: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: spacing.xl },
   mark: { marginBottom: spacing.lg },
@@ -87,4 +90,4 @@ const styles = StyleSheet.create({
   rowText: { flex: 1 },
   footer: { paddingHorizontal: spacing.xl, paddingBottom: spacing.xxl, gap: spacing.md },
   note: { textAlign: 'center' },
-});
+}));

@@ -1,7 +1,8 @@
 import { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { AppText, Button } from '../../design/components';
-import { colors, spacing } from '../../design/tokens';
+import { spacing } from '../../design/tokens';
+import { useTheme } from '../../design/theme';
 import { useRestorePurchases } from '../../monetization/useRestorePurchases';
 
 /**
@@ -30,6 +31,7 @@ export function RestorePurchasesControl({
   blocked?: boolean;
   onRestoringChange?: (restoring: boolean) => void;
 }) {
+  const { colors } = useTheme();
   const { restoring, notice, restore } = useRestorePurchases(accountId, blocked);
 
   useEffect(() => {

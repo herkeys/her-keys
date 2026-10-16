@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, View, type ViewStyle } from 'react-native';
 import { AppText } from '../../design/components';
-import { color, interaction, radius, sizing, spacing } from '../../design/tokens';
+import { radius, sizing, spacing } from '../../design/tokens';
+import { createThemedStyles, useTheme } from '../../design/theme';
 import { METHOD_LABELS } from './copy';
 import type { WelcomeAuthMethod } from './model';
 
@@ -28,6 +29,8 @@ export interface ProviderButtonProps {
  * Presentational only: no auth behavior lives in this control.
  */
 export function ProviderButton({ method, onPress, disabled, style }: ProviderButtonProps) {
+  const { color } = useTheme();
+  const styles = useStyles();
   const label = METHOD_LABELS[method];
   return (
     <Pressable
@@ -57,7 +60,7 @@ export function ProviderButton({ method, onPress, disabled, style }: ProviderBut
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(({ color, interaction }) => StyleSheet.create({
   base: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -74,4 +77,4 @@ const styles = StyleSheet.create({
   icon: { width: sizing.icon.lg, alignItems: 'center' },
   pressed: { opacity: interaction.pressedOpacity },
   disabled: { backgroundColor: color.action.disabled, borderColor: 'transparent' },
-});
+}));

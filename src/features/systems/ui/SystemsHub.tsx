@@ -2,7 +2,8 @@ import { router } from 'expo-router';
 import { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { AppText, Button, EmptyState, InlineNotice, LoadingState } from '../../../design/components';
-import { color, spacing } from '../../../design/tokens';
+import { spacing } from '../../../design/tokens';
+import { useTheme } from '../../../design/theme';
 import { useStoreSnapshot } from '../../../store/AppStateProvider';
 import { UNAVAILABLE_BODY, copy } from '../copy';
 import { projectSystemsHub } from '../model/hub';
@@ -16,6 +17,7 @@ import { SystemCard } from './SystemCard';
  * a household with no Systems. Content only — the route composes the screen shell.
  */
 export function SystemsHub() {
+  const { color } = useTheme();
   const snapshot = useStoreSnapshot();
   // The clock is read here, at the edge, and handed down: projections never touch the device clock.
   const hub = useMemo(

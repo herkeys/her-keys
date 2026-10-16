@@ -1,6 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 import { AppText, Card, InlineNotice, Tag } from '../../../design/components';
-import { colors, spacing } from '../../../design/tokens';
+import { spacing } from '../../../design/tokens';
+import { useTheme } from '../../../design/theme';
 import { COPY, MAX_INDIVIDUAL_NARROW_CARDS, categoryLabel, conflictCopy, headlineFor, missingLines, narrowCopy, narrowGroupCopy, type CopyContext, type Headline } from '../copy';
 import type { CalendarDayViewModel, Conflict, MissingEvidence, NarrowTransition } from '../model/types';
 import { WhyDisclosure } from './Disclosure';
@@ -11,6 +12,7 @@ import { WhyDisclosure } from './Disclosure';
  * score — the category is a word, and the evidence is one press away.
  */
 export function DaySummary({ view, ctx }: { view: CalendarDayViewModel; ctx: CopyContext }) {
+  const { colors } = useTheme();
   const headline = headlineFor(view, ctx);
   const state = view.capacityState;
   const showTier = view.dayMode !== 'past' && state !== null && headline.kind !== 'empty';
@@ -21,7 +23,7 @@ export function DaySummary({ view, ctx }: { view: CalendarDayViewModel; ctx: Cop
           <Tag label={categoryLabel(state.category)} tone={state.category === 'more_than_fits' ? 'attention' : 'neutral'} />
         </View>
       ) : null}
-      <AppText variant="bodyStrong" color={toneOf(headline)} accessibilityRole="header">
+      <AppText variant="bodyStrong" color={toneOf(headline, colors)} accessibilityRole="header">
         {headline.text}
       </AppText>
       {headline.more > 0 ? (
@@ -33,7 +35,7 @@ export function DaySummary({ view, ctx }: { view: CalendarDayViewModel; ctx: Cop
   );
 }
 
-const toneOf = (headline: Headline): string => (headline.kind === 'problem' ? colors.attention : colors.textPrimary);
+const toneOf = (headline: Headline, c: { attention: string; textPrimary: string }): string => (headline.kind === 'problem' ? c.attention : c.textPrimary);
 
 /** One genuine conflict: a plain sentence, a text label (never color alone), and the evidence on request. */
 export function ConflictCard({ conflict, ctx }: { conflict: Conflict; ctx: CopyContext }) {

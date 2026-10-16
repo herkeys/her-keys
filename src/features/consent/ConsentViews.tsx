@@ -1,7 +1,8 @@
 import { Linking, ScrollView, StyleSheet, View } from 'react-native';
 import { AppText, Button, Card, Overline, ChipToggle } from '../../design/components';
 import { HeaderBadge } from '../welcome/HeaderBadge';
-import { color, spacing } from '../../design/tokens';
+import { spacing } from '../../design/tokens';
+import { createThemedStyles, useTheme } from '../../design/theme';
 import { HER_KEYS_LEGAL_URLS } from '../../config/legal';
 
 /**
@@ -17,6 +18,8 @@ import { HER_KEYS_LEGAL_URLS } from '../../config/legal';
 type Inset = { paddingTop: number; paddingBottom: number };
 
 export function ConsentErrorView({ inset, retried, leaving, onRetry, onLeave }: { inset: Inset; retried: boolean; leaving: boolean; onRetry: () => void; onLeave: () => void }) {
+  const { color } = useTheme();
+  const styles = useStyles();
   return <ScrollView style={styles.ground} contentContainerStyle={[styles.recover, inset]}>
     <HeaderBadge icon="shield-checkmark-outline" />
     <AppText variant="title" accessibilityRole="header">We could not verify your account’s policy choices.</AppText>
@@ -28,6 +31,8 @@ export function ConsentErrorView({ inset, retried, leaving, onRetry, onLeave }: 
 }
 
 export function ConsentPermissionsView({ inset, notificationsBusy, onEnableNotifications, onContinue }: { inset: Inset; notificationsBusy: boolean; onEnableNotifications: () => void; onContinue: () => void }) {
+  const { color } = useTheme();
+  const styles = useStyles();
   return <ScrollView style={styles.ground} contentContainerStyle={[styles.content, inset]}>
     <Overline>Optional permissions</Overline>
     <AppText variant="display">Set things up your way.</AppText>
@@ -52,6 +57,8 @@ export function ConsentLegalView({ inset, terms, privacy, adult, ai, saving, iss
   inset: Inset; terms: boolean; privacy: boolean; adult: boolean; ai: boolean | null; saving: boolean; issue: string | null;
   onToggleTerms: () => void; onTogglePrivacy: () => void; onToggleAdult: () => void; onChooseAi: (value: boolean) => void; onCommit: () => void;
 }) {
+  const { color } = useTheme();
+  const styles = useStyles();
   return <ScrollView style={styles.ground} keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.content, inset]}>
     <Overline>Before we begin</Overline>
     <AppText variant="display">A little clarity goes a long way.</AppText>
@@ -81,11 +88,11 @@ export function ConsentLegalView({ inset, terms, privacy, adult, ai, saving, iss
   </ScrollView>;
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(({ color }) => StyleSheet.create({
   // The gate renders above the app shell, so it supplies the warm off-white ground itself.
   ground: { flex: 1, backgroundColor: color.background },
   recover: { flexGrow: 1, justifyContent: 'center', padding: spacing.xl, gap: spacing.md },
   content: { flexGrow: 1, paddingHorizontal: spacing.xl, paddingVertical: spacing.xxl, gap: spacing.lg },
   section: { gap: spacing.md },
   readRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-});
+}));

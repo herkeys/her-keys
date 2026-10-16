@@ -1,9 +1,10 @@
 import { StyleSheet, View } from 'react-native';
 import { AppText, Button, Overline } from '../../../design/components';
-import { colors, spacing } from '../../../design/tokens';
+import { spacing } from '../../../design/tokens';
+import { useTheme } from '../../../design/theme';
 import { HOME_COPY, SECTION_NOTE, SECTION_TITLE, type RowCopy } from '../copy';
 import type { HomeSectionKey } from '../model/types';
-import { HomeItemRow, homeRowSurface } from './HomeItemRow';
+import { HomeItemRow, useHomeRowSurface } from './HomeItemRow';
 
 /** How many rows a section shows before she asks for the rest. Collapsing is presentation; nothing is ever dropped. */
 export const SECTION_LIMIT = 5;
@@ -18,6 +19,8 @@ export interface SectionRow {
  * Every row is reachable — the Life hub does not list a Home task anywhere else, so collapsing must never mean losing.
  */
 export function HomeSectionBlock({ sectionKey, rows, expanded, onToggle, onOpen }: { sectionKey: HomeSectionKey; rows: SectionRow[]; expanded: boolean; onToggle: () => void; onOpen: (homeItemId: string) => void }) {
+  const { colors } = useTheme();
+  const homeRowSurface = useHomeRowSurface();
   if (rows.length === 0) return null;
   const shown = expanded ? rows : rows.slice(0, SECTION_LIMIT);
   return (

@@ -1,7 +1,8 @@
 import { useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { AppText, WhyThis } from '../../../design/components';
-import { colors, interaction, sizing, spacing } from '../../../design/tokens';
+import { sizing, spacing } from '../../../design/tokens';
+import { createThemedStyles, useTheme } from '../../../design/theme';
 import { COPY } from '../copy';
 
 /**
@@ -22,6 +23,8 @@ export function ToggleLink({
   onPress: () => void;
   accessibilityLabel: string;
 }) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   return (
     <Pressable
       onPress={onPress}
@@ -39,6 +42,7 @@ export function ToggleLink({
 
 /** "Why" for one conflict or one unplaced item: structured evidence, stated as facts. */
 export function WhyDisclosure({ reasons, subject }: { reasons: readonly string[]; subject: string }) {
+  const styles = useStyles();
   const [open, setOpen] = useState(false);
   if (reasons.length === 0) return null;
   return (
@@ -57,6 +61,8 @@ export function WhyDisclosure({ reasons, subject }: { reasons: readonly string[]
 
 /** A quiet block of second-level lines under an item. */
 export function DetailLines({ lines, children }: { lines: readonly string[]; children?: ReactNode }) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   return (
     <View style={styles.details}>
       {lines.map((line) => (
@@ -69,9 +75,9 @@ export function DetailLines({ lines, children }: { lines: readonly string[]; chi
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(({ interaction }) => StyleSheet.create({
   toggle: { minHeight: sizing.minTouchTarget, justifyContent: 'center', alignSelf: 'flex-start' },
   pressed: { opacity: interaction.pressedOpacity },
   body: { marginBottom: spacing.sm },
   details: { gap: spacing.xs, paddingBottom: spacing.md },
-});
+}));

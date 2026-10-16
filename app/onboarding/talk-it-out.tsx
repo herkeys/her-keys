@@ -1,11 +1,13 @@
 import { router } from 'expo-router';
 import { StyleSheet } from 'react-native';
 import { AppText, Card, Overline } from '../../src/design/components';
-import { color, colors, spacing } from '../../src/design/tokens';
+import { spacing } from '../../src/design/tokens';
+import { useTheme } from '../../src/design/theme';
 import { OnboardingScaffold } from '../../src/features/onboarding/OnboardingScaffold';
 import { useOnboarding } from '../../src/store/OnboardingContext';
 
 export default function TalkItOutInviteStep() {
+  const { color, colors } = useTheme();
   const { recordStep } = useOnboarding();
 
   return (

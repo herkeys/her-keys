@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet } from 'react-native';
-import { color, interaction, radius, sizing, spacing } from '../tokens';
+import { radius, sizing, spacing } from '../tokens';
+import { createThemedStyles, useTheme } from '../theme';
 import { AppText } from './AppText';
 
 interface ChipToggleProps {
@@ -9,6 +10,8 @@ interface ChipToggleProps {
 }
 
 export function ChipToggle({ label, selected, onPress }: ChipToggleProps) {
+  const { color } = useTheme();
+  const styles = useStyles();
   return (
     <Pressable
       onPress={onPress}
@@ -24,7 +27,7 @@ export function ChipToggle({ label, selected, onPress }: ChipToggleProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(({ color, interaction }) => StyleSheet.create({
   chip: {
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
@@ -39,4 +42,4 @@ const styles = StyleSheet.create({
   },
   chipSelected: { backgroundColor: color.action.primary, borderColor: color.action.primary },
   pressed: { opacity: interaction.pressedOpacity },
-});
+}));

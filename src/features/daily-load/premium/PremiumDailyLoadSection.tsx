@@ -2,14 +2,15 @@ import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AiMark, AppText, Button, Card, ConfirmationSheet, Divider, PremiumBadge, Sheet, Tag } from '../../../design/components';
-import { colors, sizing, spacing } from '../../../design/tokens';
+import { sizing, spacing } from '../../../design/tokens';
+import { createThemedStyles, useTheme } from '../../../design/theme';
 import type { DailyLoadReview, RescheduleProposal } from '../../../domain/premium/dailyLoadReview';
 import { openAccountToRestore } from '../../../monetization/accountNavigation';
 import type { PremiumCopy } from '../../../monetization/premiumCopy';
 import { COPY, assumptionLine, consideredLine, dayTitle, evidenceGapLine, pressureResponsibleLine, pressureSentence, proposalHeadline, proposalImpactLines } from './copy';
 import { usePremiumDailyLoad, type Notice, type PremiumDailyLoadApi, type ReceiptView } from './usePremiumDailyLoad';
 
-const noticeColor = (tone: Notice['tone']) => (tone === 'attention' ? colors.attention : tone === 'success' ? colors.success : colors.textSecondary);
+const noticeColor = (tone: Notice['tone'], c: { attention: string; success: string; textSecondary: string }) => (tone === 'attention' ? c.attention : tone === 'success' ? c.success : c.textSecondary);
 
 /**
  * Her Keys Premium's Daily Load review, on Today beneath the Free Daily Load.
@@ -31,6 +32,8 @@ export function PremiumDailyLoadSection({ showWhenClear = false }: { showWhenCle
 }
 
 export function PremiumDailyLoadPanel({ api }: { api: PremiumDailyLoadApi }) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const { feature } = api;
   const usable = feature.usable;
   return (
@@ -50,12 +53,12 @@ export function PremiumDailyLoadPanel({ api }: { api: PremiumDailyLoadApi }) {
       </AppText>
 
       {api.upgrade.notice !== null ? (
-        <AppText variant="supporting" color={noticeColor(api.upgrade.notice.tone)} style={styles.note} accessibilityRole="alert">
+        <AppText variant="supporting" color={noticeColor(api.upgrade.notice.tone, colors)} style={styles.note} accessibilityRole="alert">
           {api.upgrade.notice.message}
         </AppText>
       ) : null}
       {api.notice !== null ? (
-        <AppText variant="supporting" color={noticeColor(api.notice.tone)} style={styles.note} accessibilityRole="alert">
+        <AppText variant="supporting" color={noticeColor(api.notice.tone, colors)} style={styles.note} accessibilityRole="alert">
           {api.notice.message}
         </AppText>
       ) : null}
@@ -81,6 +84,7 @@ export function PremiumDailyLoadPanel({ api }: { api: PremiumDailyLoadApi }) {
 }
 
 function Actions({ api, copy }: { api: PremiumDailyLoadApi; copy: PremiumCopy }) {
+  const styles = useStyles();
   const { feature, upgrade } = api;
   if (feature.usable) {
     return (
@@ -100,6 +104,8 @@ function Actions({ api, copy }: { api: PremiumDailyLoadApi; copy: PremiumCopy })
 }
 
 function Receipts({ receipts, busyId, onUndo }: { receipts: ReceiptView[]; busyId: string | null; onUndo: (id: string) => Promise<void> }) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   if (receipts.length === 0) return null;
   return (
     <View style={styles.receipts}>
@@ -127,6 +133,8 @@ function Receipts({ receipts, busyId, onUndo }: { receipts: ReceiptView[]; busyI
 }
 
 function ReviewBody({ api, review }: { api: PremiumDailyLoadApi; review: DailyLoadReview }) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const [showConsidered, setShowConsidered] = useState(false);
   return (
     <View>
@@ -193,6 +201,8 @@ function ReviewBody({ api, review }: { api: PremiumDailyLoadApi; review: DailyLo
 }
 
 function ProposalCard({ proposal, busy, anyBusy, onApprove, onDismiss }: { proposal: RescheduleProposal; busy: boolean; anyBusy: boolean; onApprove: () => void; onDismiss: () => void }) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   return (
     // PROPOSED CHANGE: the recommendation structure (solid Berry rail + lightbulb mark). Nothing here has happened yet — approval is a
     // separate, explicit action below, and the applied result appears only as a receipt.
@@ -215,7 +225,7 @@ function ProposalCard({ proposal, busy, anyBusy, onApprove, onDismiss }: { propo
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(({ colors }) => StyleSheet.create({
   card: { marginBottom: spacing.lg },
   headline: { marginTop: spacing.md },
   body: { marginTop: spacing.sm },
@@ -237,4 +247,4 @@ const styles = StyleSheet.create({
   proposal: { marginTop: spacing.md },
   proposalActions: { marginTop: spacing.md },
   closeButton: { marginTop: spacing.xl },
-});
+}));

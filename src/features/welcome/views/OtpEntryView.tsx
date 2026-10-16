@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, StyleSheet, View } from 'react-native';
 import { AppText, Button, Overline, TextField } from '../../../design/components';
 import { HeaderBadge } from '../HeaderBadge';
-import { color, sizing, spacing } from '../../../design/tokens';
+import { sizing, spacing } from '../../../design/tokens';
+import { useTheme } from '../../../design/theme';
 import { WELCOME_AUTH_COPY as COPY } from '../copy';
 import { OTP_CODE_LENGTH, type OtpErrorKind } from '../model';
 
@@ -37,6 +38,7 @@ const ERROR_COPY: Record<OtpErrorKind, string> = {
  * only, asserting nothing about any backend rate limit.
  */
 export function OtpEntryView({ email, error, pending, resendSecondsLeft, onSubmitOtp, onResendOtp, onChangeEmail }: OtpEntryViewProps) {
+  const { color } = useTheme();
   const [code, setCode] = useState('');
   const complete = code.length === OTP_CODE_LENGTH;
   const coolingDown = resendSecondsLeft !== null && resendSecondsLeft > 0;

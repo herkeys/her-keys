@@ -1,6 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 import { AppText, Button, Card, IconBadge, Overline, PremiumBadge, Tag } from '../../design/components';
-import { colors, spacing } from '../../design/tokens';
+import { spacing } from '../../design/tokens';
+import { useTheme } from '../../design/theme';
 import type { PremiumHomeCopy, CapabilityView, HomeActionCopy } from '../../monetization/premiumHomeCopy';
 import { usePremiumStateIfMounted } from '../../monetization/PremiumStateProvider';
 import { usePremiumHome, type PremiumHomeApi } from './usePremiumHome';
@@ -28,6 +29,7 @@ export interface PremiumHomeViewProps {
  * directly beneath this section — and NO price: the store's own purchase interface is the only place a price appears.
  */
 export function PremiumHomeView({ home, hold }: PremiumHomeViewProps) {
+  const { colors } = useTheme();
   const { copy, capabilities, upgrade } = home;
   const act = (item: HomeActionCopy) => {
     switch (item.action) {

@@ -1,7 +1,8 @@
 import { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TabIcon, type TabIconSpec } from '../../src/design/components';
-import { colors, sizing, spacing, typography } from '../../src/design/tokens';
+import { sizing, spacing, typography } from '../../src/design/tokens';
+import { useTheme } from '../../src/design/theme';
 
 /**
  * The primary navigation: five tabs, one icon family (Ionicons — outline at
@@ -18,6 +19,7 @@ const TAB_ICONS: Record<string, TabIconSpec> = {
 };
 
 export default function AppTabsLayout() {
+  const { colors } = useTheme();
   const insets = useSafeAreaInsets();
 
   return (

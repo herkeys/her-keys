@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { AppText, Button, EmptyState, Overline, StatusList } from '../../../design/components';
-import { colors, spacing } from '../../../design/tokens';
+import { spacing } from '../../../design/tokens';
+import { useTheme } from '../../../design/theme';
 import { peopleCopy } from '../copy';
 import type { PeopleHomeView as HomeData } from '../projection';
 
@@ -18,6 +19,7 @@ export interface PeopleHomeViewProps {
  * updated lately. No score, no streak, no "top" anything — the list is in name order, and only work is ever ranked.
  */
 export function PeopleHomeView({ view, showAllFollowUps, onOpenPerson, onAddPerson, onSeeAllFollowUps }: PeopleHomeViewProps) {
+  const { colors } = useTheme();
   if (view.empty) {
     return (
       <View>
@@ -108,6 +110,7 @@ export function PeopleHomeView({ view, showAllFollowUps, onOpenPerson, onAddPers
 }
 
 function Header() {
+  const { colors } = useTheme();
   return (
     <View style={styles.header}>
       <AppText variant="display" accessibilityRole="header">

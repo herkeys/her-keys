@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { AppText, Button, ChipToggle, InlineNotice, Sheet, TextField } from '../../design/components';
-import { colors, spacing } from '../../design/tokens';
+import { spacing } from '../../design/tokens';
+import { useTheme } from '../../design/theme';
 import type { LocalDate } from '../../domain/logicalDay';
 import { MEAL_TASK_MAX_MINUTES, checkMealTaskTitle } from '../../domain/meals';
 import { MEAL_COPY, dueProposalLabel } from './mealCopy';
@@ -31,6 +32,7 @@ export interface MealTaskSheetProps {
  * nothing is recorded unless she turns it on, so a date Her Keys suggested is never stored as one she chose.
  */
 export function MealTaskSheet({ visible, proposedDate, notice, busy, canWrite, onSubmit, onClose }: MealTaskSheetProps) {
+  const { colors } = useTheme();
   const [title, setTitle] = useState('');
   const [minutesText, setMinutesText] = useState('');
   const [dueConfirmed, setDueConfirmed] = useState(false);

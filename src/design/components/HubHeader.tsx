@@ -1,5 +1,6 @@
 import { StyleSheet, View, type ViewStyle } from 'react-native';
-import { color, spacing } from '../tokens';
+import { spacing } from '../tokens';
+import { useTheme } from '../theme';
 import { AppText } from './AppText';
 
 interface HubHeaderProps {
@@ -17,6 +18,7 @@ interface HubHeaderProps {
  * screenTitle so the title doesn't compete with the content beneath it.
  */
 export function HubHeader({ title, lede, style }: HubHeaderProps) {
+  const { color } = useTheme();
   return (
     <View style={[styles.header, style]}>
       <AppText variant="screenTitle" accessibilityRole="header">

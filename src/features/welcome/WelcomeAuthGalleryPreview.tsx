@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { AppText, ChipToggle, Overline } from '../../design/components';
-import { color, radius, spacing } from '../../design/tokens';
+import { radius, spacing } from '../../design/tokens';
+import { createThemedStyles, useTheme } from '../../design/theme';
 import { RESEND_COOLDOWN_SECONDS, emailObviousError, stepAfterBack, type WelcomeAuthPresentation, type WelcomeAuthStep, type WelcomeAuthViewState } from './model';
 import { WelcomeAuthShell } from './WelcomeAuthShell';
 
@@ -91,6 +92,8 @@ const BASE: WelcomeAuthViewState = {
  * state, and every other transition happens on a press.
  */
 export function WelcomeAuthGalleryPreview({ initialScene = 'welcome', initialPlatform = 'ios', frameHeight, bare }: { initialScene?: SceneKey; initialPlatform?: WelcomeAuthViewState['platform']; frameHeight?: number; bare?: boolean } = {}) {
+  const { color } = useTheme();
+  const styles = useStyles();
   const [scene, setScene] = useState<SceneKey>(initialScene);
   const [state, setState] = useState<WelcomeAuthViewState>({ ...BASE, platform: initialPlatform, ...SCENE_STATE[initialScene] });
 
@@ -178,7 +181,7 @@ export function WelcomeAuthGalleryPreview({ initialScene = 'welcome', initialPla
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(({ color }) => StyleSheet.create({
   controls: { marginBottom: spacing.lg },
   sceneLabel: { marginTop: spacing.md },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },
@@ -192,4 +195,4 @@ const styles = StyleSheet.create({
   hint: { marginTop: spacing.md },
   bare: { flex: 1 },
   bareFrame: { flex: 1, borderWidth: 0, borderRadius: 0, minHeight: 0 },
-});
+}));

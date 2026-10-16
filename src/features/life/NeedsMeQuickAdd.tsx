@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { AppText, Button, Card, TextField } from '../../design/components';
-import { colors, spacing } from '../../design/tokens';
+import { spacing } from '../../design/tokens';
+import { useTheme } from '../../design/theme';
 import { captureNeedsMeItem } from '../../domain/needsMe';
 import { FIELD_LIMITS } from '../../domain/state';
 import { useAppStore } from '../../store/AppStateProvider';
@@ -11,6 +12,7 @@ import { useAppStore } from '../../store/AppStateProvider';
  * Category and due date are never asked for here.
  */
 export function NeedsMeQuickAdd() {
+  const { colors } = useTheme();
   const store = useAppStore();
   const [title, setTitle] = useState('');
   const [busy, setBusy] = useState(false);

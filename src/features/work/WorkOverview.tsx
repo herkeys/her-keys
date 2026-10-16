@@ -1,7 +1,8 @@
 import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { AppText, HubHeader, Overline, StatusList } from '../../design/components';
-import { colors, spacing } from '../../design/tokens';
+import { spacing } from '../../design/tokens';
+import { useTheme } from '../../design/theme';
 import { hasOpenNextAction } from '../../domain/opportunities';
 import { workCareerVerdict } from '../../domain/reasoning/workCareer';
 import { CategoryTaskList } from '../life/CategoryTaskList';
@@ -19,6 +20,7 @@ import { careerListsOf } from './careerLists';
  * `domain/opportunities.ts`.
  */
 export function WorkOverview() {
+  const { colors } = useTheme();
   const { events } = useSchedule();
   const { categoryIdForRole } = useHousehold();
   const { state } = useHouseholdState();

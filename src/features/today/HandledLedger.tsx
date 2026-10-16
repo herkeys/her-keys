@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { AppText, Button, Card } from '../../design/components';
-import { color, spacing } from '../../design/tokens';
+import { spacing } from '../../design/tokens';
+import { createThemedStyles, useTheme } from '../../design/theme';
 import { moveWasUndone } from '../../domain/dailyLoadDecisions';
 import { epochMsOf, wallClockMinutesAt, type LocalDate } from '../../domain/logicalDay';
 import type { ActionRecord, AppState } from '../../domain/state';
@@ -58,6 +59,8 @@ function describe(action: ActionRecord, state: AppState, today: LocalDate): Omit
  * the item is still exactly where that move put it.
  */
 export function HandledLedger() {
+  const { color } = useTheme();
+  const styles = useStyles();
   const { state, today } = useHouseholdState();
   const { undoableMoveId, undoMove } = useSchedule();
   const [busy, setBusy] = useState(false);
@@ -123,9 +126,9 @@ export function HandledLedger() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(({ color }) => StyleSheet.create({
   card: { gap: 0 },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.sm, gap: spacing.md },
   rowDivider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: color.border.subtle },
   summary: { flex: 1 },
-});
+}));

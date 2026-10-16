@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { StatusList, AppText } from '../../design/components';
-import { colors } from '../../design/tokens';
+import { useTheme } from '../../design/theme';
 import { openTasksWithoutList } from '../../domain/taskLists';
 import { useHouseholdState } from '../../store/AppStateProvider';
 import { useHousehold } from '../../store/useHousehold';
@@ -12,6 +12,7 @@ import { needsAttention, openTaskLabel } from './openTaskLabel';
  * nothing she saved is out of reach.
  */
 export function OtherTasksList() {
+  const { colors } = useTheme();
   const { state, today } = useHouseholdState();
   const { categoryName } = useHousehold();
   const entries = openTasksWithoutList(state, today);

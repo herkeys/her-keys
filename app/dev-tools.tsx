@@ -2,7 +2,8 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet } from 'react-native';
 import { AppText, Button, Card, Overline, Screen } from '../src/design/components';
-import { colors, spacing } from '../src/design/tokens';
+import { spacing } from '../src/design/tokens';
+import { useTheme } from '../src/design/theme';
 import {
   addCategory,
   archiveCategory,
@@ -31,6 +32,7 @@ const DAMAGE: Array<{ kind: SimulatedDamage; label: string }> = [
  * own navigation.
  */
 export default function DevToolsScreen() {
+  const { colors } = useTheme();
   const store = useAppStore();
   const snapshot = useStoreSnapshot();
   const [note, setNote] = useState<string | null>(null);

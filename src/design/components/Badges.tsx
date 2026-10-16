@@ -1,6 +1,7 @@
 import { StyleSheet, View, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { color, sizing } from '../tokens';
+import { sizing } from '../tokens';
+import { createThemedStyles, useTheme } from '../theme';
 
 /**
  * Icon wells and the two brand badges (HK-FE-UI-02 §8).
@@ -37,6 +38,8 @@ interface IconBadgeProps extends BaseProps {
 
 /** A rounded icon well: Soft Lilac with a Deep Plum Gray glyph (7.48:1), or Berry with a white glyph (5.37:1). */
 export function IconBadge({ icon, size = 'sm', tone = 'lilac', accessibilityLabel, style }: IconBadgeProps) {
+  const { color } = useTheme();
+  const styles = useStyles();
   const dim = sizing.badge[size];
   const berry = tone === 'berry';
   return (
@@ -57,6 +60,8 @@ export function IconBadge({ icon, size = 'sm', tone = 'lilac', accessibilityLabe
 
 /** The rounded Her Keys key badge: a Soft Lilac disc, a Dusty Mauve ring and a white inner well holding the key glyph. */
 export function KeyBadge({ size = 'lg', accessibilityLabel, style }: BaseProps) {
+  const { color } = useTheme();
+  const styles = useStyles();
   const dim = sizing.badge[size];
   const inner = Math.round(dim * 0.72);
   return (
@@ -74,6 +79,8 @@ export function KeyBadge({ size = 'lg', accessibilityLabel, style }: BaseProps) 
 
 /** Premium sparkle badge — the one place Luxury Black is used as a small polished detail. */
 export function PremiumBadge({ size = 'sm', accessibilityLabel, style }: BaseProps) {
+  const { color } = useTheme();
+  const styles = useStyles();
   const dim = sizing.badge[size];
   return (
     <View
@@ -88,7 +95,7 @@ export function PremiumBadge({ size = 'sm', accessibilityLabel, style }: BasePro
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(({ color }) => StyleSheet.create({
   disc: { alignItems: 'center', justifyContent: 'center' },
   lilac: { backgroundColor: color.surface.tint },
   berry: { backgroundColor: color.action.primary, borderWidth: 1, borderColor: color.action.primaryPressed },
@@ -100,4 +107,4 @@ const styles = StyleSheet.create({
   keyInner: { backgroundColor: color.surface.primary, borderWidth: 1, borderColor: color.border.default },
   black: { backgroundColor: color.luxury.black, borderWidth: 1, borderColor: color.luxury.rim },
   glint: { position: 'absolute', height: 1, borderRadius: 1, backgroundColor: color.luxury.glint },
-});
+}));

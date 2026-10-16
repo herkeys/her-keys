@@ -1,13 +1,15 @@
 import { useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { AppText } from '../../design/components';
-import { color, interaction, sizing, spacing } from '../../design/tokens';
+import { sizing, spacing } from '../../design/tokens';
+import { createThemedStyles, useTheme } from '../../design/theme';
 
 /**
  * A section heading. It is a real heading for a screen reader, and its meaning never
  * depends on color — it is a word.
  */
 export function SectionLabel({ children, tone }: { children: string; tone?: string }) {
+  const { color } = useTheme();
   return (
     <AppText variant="label" color={tone ?? color.text.muted} accessibilityRole="header">
       {children.toUpperCase()}
@@ -34,6 +36,8 @@ interface TodayDisclosureProps {
  * should promote a single shared version.
  */
 export function TodayDisclosure({ title, summary, defaultExpanded = false, children }: TodayDisclosureProps) {
+  const { color } = useTheme();
+  const styles = useStyles();
   const [expanded, setExpanded] = useState(defaultExpanded);
   return (
     <View>
@@ -64,7 +68,7 @@ export function TodayDisclosure({ title, summary, defaultExpanded = false, child
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(({ interaction }) => StyleSheet.create({
   header: {
     minHeight: sizing.minTouchTarget,
     flexDirection: 'row',
@@ -75,4 +79,4 @@ const styles = StyleSheet.create({
   titles: { flex: 1, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.sm },
   body: { marginTop: spacing.sm },
   pressed: { opacity: interaction.pressedOpacity },
-});
+}));

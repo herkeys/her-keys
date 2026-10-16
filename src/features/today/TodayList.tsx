@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { AppText } from '../../design/components';
-import { color, interaction, sizing, spacing } from '../../design/tokens';
+import { sizing, spacing } from '../../design/tokens';
+import { createThemedStyles, useTheme } from '../../design/theme';
 import type { SourceLine } from './model';
 import { SectionLabel, TodayDisclosure } from './TodayDisclosure';
 import { sourceLabelOf, TodaySourceLine } from './TodaySourceLine';
@@ -29,6 +30,7 @@ interface TodayListProps {
  * than three cards.
  */
 export function TodayList({ title, rows, moreRows = [] }: TodayListProps) {
+  const styles = useStyles();
   return (
     <View>
       <SectionLabel>{title}</SectionLabel>
@@ -49,6 +51,8 @@ export function TodayList({ title, rows, moreRows = [] }: TodayListProps) {
 }
 
 function Row({ row, last }: { row: TodayListRow; last: boolean }) {
+  const { color } = useTheme();
+  const styles = useStyles();
   const content = (
     <View style={[styles.row, last ? null : styles.divider]}>
       <AppText variant="supporting" color={color.text.secondary}>
@@ -76,9 +80,9 @@ function Row({ row, last }: { row: TodayListRow; last: boolean }) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(({ color, interaction }) => StyleSheet.create({
   list: { marginTop: spacing.xs },
   row: { paddingVertical: spacing.md, minHeight: sizing.minTouchTarget, justifyContent: 'center', gap: spacing.xxs },
   divider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: color.border.subtle },
   pressed: { opacity: interaction.pressedOpacity },
-});
+}));

@@ -1,7 +1,8 @@
 import { useState, type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { AppText, Button, InlineNotice, LoadingState, Overline, StatusList } from '../../design/components';
-import { colors, spacing } from '../../design/tokens';
+import { spacing } from '../../design/tokens';
+import { useTheme } from '../../design/theme';
 import { LIFE_ADMIN_COPY as COPY } from './lifeAdminCopy';
 import type { LifeAdminGate } from './lifeAdminGate';
 import type { LifeAdminView } from './lifeAdminView';
@@ -22,6 +23,7 @@ export interface LifeAdminBodyProps {
  * what matters", not for filing: no counts of failures, no colour that scores her, no reference number, location or note anywhere.
  */
 export function LifeAdminBody({ gate, view, flash, onAddRecord, onSkip, onOpenRecord }: LifeAdminBodyProps) {
+  const { colors } = useTheme();
   const [allReview, setAllReview] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
 

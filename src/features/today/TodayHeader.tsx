@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { AppText, Overline } from '../../design/components';
-import { color, spacing } from '../../design/tokens';
+import { spacing } from '../../design/tokens';
+import { useTheme } from '../../design/theme';
 import type { TodayReady } from './model';
 
 /**
@@ -12,6 +13,7 @@ import type { TodayReady } from './model';
  * sync surface of its own; it only leaves the existing affordance where it always was.
  */
 export function TodayHeader({ view, children }: { view: TodayReady; children?: ReactNode }) {
+  const { color } = useTheme();
   return (
     <View style={styles.header}>
       <Overline>{`Today · ${view.day.label}`}</Overline>

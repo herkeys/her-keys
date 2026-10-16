@@ -1,7 +1,8 @@
 import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { AppText, Overline, Screen, StatusList } from '../../../src/design/components';
-import { colors, spacing } from '../../../src/design/tokens';
+import { spacing } from '../../../src/design/tokens';
+import { useTheme } from '../../../src/design/theme';
 import { openTasksWithoutList } from '../../../src/domain/taskLists';
 import { NeedsMeQuickAdd } from '../../../src/features/life/NeedsMeQuickAdd';
 import { LIFE_HUB_COPY } from '../../../src/features/life/lifeHubCopy';
@@ -26,6 +27,7 @@ import { useHouseholdState } from '../../../src/store/AppStateProvider';
  * Every row is a count or a date, never a name, a title, a note, a number or a place.
  */
 export default function LifeHub() {
+  const { colors } = useTheme();
   const statuses = useLifeStatus();
   const inbox = useLifeInbox();
   const { state, today } = useHouseholdState();

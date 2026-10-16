@@ -1,6 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 import { AppText, Button, LoadingState, Overline } from '../../../design/components';
-import { color, spacing } from '../../../design/tokens';
+import { spacing } from '../../../design/tokens';
+import { useTheme } from '../../../design/theme';
 import { WELCOME_AUTH_COPY as COPY } from '../copy';
 import { HeaderBadge } from '../HeaderBadge';
 
@@ -25,6 +26,7 @@ export function SettlingView() {
  * reconnect action is the same control as a first sign-in.
  */
 export function DegradedHeader() {
+  const { color } = useTheme();
   return (
     <View style={styles.degraded}>
       <HeaderBadge icon="cloud-offline-outline" />
@@ -52,6 +54,7 @@ export interface ConflictViewProps {
  * account-conflict screen.
  */
 export function ConflictView({ busy, onSignOut }: ConflictViewProps) {
+  const { color } = useTheme();
   return (
     <>
       <View style={styles.body}>

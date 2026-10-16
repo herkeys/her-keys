@@ -1,5 +1,5 @@
 import { Stack } from 'expo-router';
-import { colors } from '../../../src/design/tokens';
+import { useTheme } from '../../../src/design/theme';
 import type { SystemRole } from '../../../src/domain/state';
 import { useHousehold } from '../../../src/store/useHousehold';
 
@@ -10,6 +10,7 @@ export const unstable_settings = {
 };
 
 export default function LifeLayout() {
+  const { colors } = useTheme();
   const { categoryIdForRole, categoryName } = useHousehold();
   // Headers use the household's own name for each area, so a renamed category reads the same everywhere.
   const titleFor = (role: SystemRole, fallback: string) => {

@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { AppText, Button, InlineNotice, Overline, StatusList, TextField } from '../../../design/components';
-import { colors, spacing } from '../../../design/tokens';
+import { spacing } from '../../../design/tokens';
+import { useTheme } from '../../../design/theme';
 import { PEOPLE_LIMITS } from '../../../domain/foundation/personContext';
 import { peopleCopy } from '../copy';
 import type { PersonDetail } from '../privateNote';
@@ -32,6 +33,7 @@ export interface PersonDetailViewProps {
  * is Co-Parent's, and that is said plainly.
  */
 export function PersonDetailView(props: PersonDetailViewProps) {
+  const { colors } = useTheme();
   const { detail, busy, message } = props;
   const context = detail.context;
   const [label, setLabel] = useState(context?.relationshipName ?? '');

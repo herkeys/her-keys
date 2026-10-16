@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { AppText, Button, InlineNotice, Overline, Sheet, StatusList } from '../../design/components';
-import { colors, spacing } from '../../design/tokens';
+import { spacing } from '../../design/tokens';
+import { useTheme } from '../../design/theme';
 import type { LifeRecordLinkRelation } from '../../domain/state';
 import { LIFE_ADMIN_COPY as COPY } from './lifeAdminCopy';
 import type { RecordDetail } from './lifeAdminView';
@@ -26,6 +27,7 @@ export interface RecordDetailSheetProps {
  * stored). The copy under the title says what the record is: what she recorded, not something Her Keys checked or holds.
  */
 export function RecordDetailSheet({ visible, detail, notice, busy, canWrite, onEdit, onAddTask, onArchive, onRestore, onOpenTask, onClose }: RecordDetailSheetProps) {
+  const { colors } = useTheme();
   const [revealed, setRevealed] = useState(false);
   const facts: Array<[string, string]> = [];
   facts.push([COPY.fieldKind, detail.kindText]);

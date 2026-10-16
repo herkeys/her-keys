@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { ActivityIndicator, Linking, Pressable, StyleSheet, View } from 'react-native';
 import { AppText, FadeIn, Overline } from '../../../design/components';
 import { HER_KEYS_LEGAL_URLS } from '../../../config/legal';
-import { color, sizing, spacing } from '../../../design/tokens';
+import { sizing, spacing } from '../../../design/tokens';
+import { useTheme } from '../../../design/theme';
 import { WELCOME_AUTH_COPY as COPY } from '../copy';
 import { methodsForPlatform, type WelcomeAuthCallbacks, type WelcomeAuthMethod, type WelcomeAuthViewState } from '../model';
 import { ProviderButton } from '../ProviderButton';
@@ -36,6 +37,7 @@ export interface AccountChoiceViewProps {
  * These are public documents, not authentication or app-route callbacks.
  */
 export function AccountChoiceView({ platform, pending, headerless, notice, authMode = 'signIn', onApple, onGoogle, onChooseEmail, onChoosePassword }: AccountChoiceViewProps) {
+  const { color } = useTheme();
   // Exactly ONE visible email choice. Never route a normal signup back to the legacy email-code entry.
   const handlers = { apple: onApple, google: onGoogle, email: onChoosePassword ?? onChooseEmail } as const;
   const methods = methodsForPlatform(platform);

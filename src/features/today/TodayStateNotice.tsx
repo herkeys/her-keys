@@ -1,7 +1,8 @@
 import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { AppText, Button, Card, InlineNotice, LoadingState } from '../../design/components';
-import { color, spacing } from '../../design/tokens';
+import { spacing } from '../../design/tokens';
+import { useTheme } from '../../design/theme';
 import type { RecoveryReason } from '../../state/appStore';
 import type { SparseSection } from './model';
 
@@ -27,6 +28,7 @@ const UNAVAILABLE_REASON: Partial<Record<RecoveryReason, string>> = {
  *                one existing place to begin. It does not ask her to fill her day.
  */
 export function TodayStateNotice(props: Props) {
+  const { color } = useTheme();
   if (props.kind === 'unknown') return <LoadingState label="Getting your day ready…" />;
 
   if (props.kind === 'unavailable') {

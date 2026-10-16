@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { AppText, Button, Card, Overline, Tag } from '../../../design/components';
-import { color, interaction, sizing, spacing } from '../../../design/tokens';
+import { sizing, spacing } from '../../../design/tokens';
+import { createThemedStyles, useTheme } from '../../../design/theme';
 import type { LocalDate } from '../../../domain/logicalDay';
 import {
   NOT_AUTHORIZATION,
@@ -39,6 +40,8 @@ export function FallbackPlanSection({
   onOpenStep: (stepTaskId: string) => void;
   onAddStep: (parent: KidsRef) => void;
 }) {
+  const { color, interaction } = useTheme();
+  const styles = useStyles();
   if (plans.length === 0) return null;
 
   const described = plans.filter((row) => row.plan.reason !== 'nothing_recorded');
@@ -115,10 +118,10 @@ export function FallbackPlanSection({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(({ color }) => StyleSheet.create({
   section: { gap: spacing.md },
   row: { gap: spacing.xs, paddingVertical: spacing.md, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: color.border.subtle },
   tagRow: { flexDirection: 'row', marginTop: spacing.xs },
   step: { minHeight: sizing.minTouchTarget, justifyContent: 'center' },
   titlePress: { minHeight: sizing.minTouchTarget, justifyContent: 'center' },
-});
+}));

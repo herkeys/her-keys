@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { AppText, Button, ChipToggle, InlineNotice, Overline, Sheet, TextField } from '../../design/components';
-import { colors, spacing } from '../../design/tokens';
+import { spacing } from '../../design/tokens';
+import { useTheme } from '../../design/theme';
 import { isLocalDate, type LocalDate } from '../../domain/logicalDay';
 import { MEAL_TITLE_MAX, checkMealTitle } from '../../domain/meals';
 import type { MealSlot } from '../../domain/state';
@@ -45,6 +46,7 @@ const TITLES: Record<MealSheetMode, string> = {
  * weeks, or any date typed as YYYY-MM-DD, and never assumes a meal type. Remove means take it out of the plan, nothing more.
  */
 export function MealSheet(props: MealSheetProps) {
+  const { colors } = useTheme();
   const { visible, mode, initial, today, notice, busy, canWrite, onSubmit, onClose, onRemove, onPlanAgain, onAddTask } = props;
   const [title, setTitle] = useState(initial.title);
   const [date, setDate] = useState<LocalDate>(initial.date);

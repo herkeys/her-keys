@@ -1,6 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 import { AppText, Button, EmptyState, InlineNotice, LoadingState, Screen } from '../../../design/components';
-import { colors, spacing } from '../../../design/tokens';
+import { spacing } from '../../../design/tokens';
+import { useTheme } from '../../../design/theme';
 import { HOME_COPY, describeItem, type CopyContext } from '../copy';
 import type { HomeReadiness, HomeScreenState } from '../model/readiness';
 import type { HomeSectionKey, HomeView } from '../model/types';
@@ -30,6 +31,7 @@ export interface HomeScreenViewProps {
  * from the projection, and which of loading / missing / unrecovered / empty / content to show from `homeScreenState`.
  */
 export function HomeScreenView(props: HomeScreenViewProps) {
+  const { colors } = useTheme();
   const { screen, view, readiness, copyContext } = props;
 
   if (screen.kind === 'loading' || view === null || copyContext === null) {

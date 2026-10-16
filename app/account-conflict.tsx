@@ -1,6 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 import { AppText, Button, Overline, Screen } from '../src/design/components';
-import { colors, spacing } from '../src/design/tokens';
+import { spacing } from '../src/design/tokens';
+import { useTheme } from '../src/design/theme';
 import { useAccount } from '../src/store/AccountProvider';
 
 /**
@@ -16,6 +17,7 @@ import { useAccount } from '../src/store/AccountProvider';
  * household it already has.
  */
 export default function AccountConflict() {
+  const { colors } = useTheme();
   const { state, busy, signOut } = useAccount();
   const quarantined = state.kind === 'boundOther';
 

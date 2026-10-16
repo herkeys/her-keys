@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, StyleSheet, View } from 'react-native';
 import { AppText, Button, Overline, TextField } from '../../../design/components';
 import { HeaderBadge } from '../HeaderBadge';
-import { color, spacing } from '../../../design/tokens';
+import { spacing } from '../../../design/tokens';
+import { useTheme } from '../../../design/theme';
 import { WELCOME_AUTH_COPY as COPY } from '../copy';
 import { emailObviousError, type EmailErrorKind } from '../model';
 
@@ -28,6 +29,7 @@ export const EMAIL_AUTH_KEYBOARD_BEHAVIOR = 'padding' as const;
  * Keyboard-safe: the field and action ride above the keyboard.
  */
 export function EmailEntryView({ email, error, pending, onSubmitEmail }: EmailEntryViewProps) {
+  const { color } = useTheme();
   const [draft, setDraft] = useState(email);
   const [formatError, setFormatError] = useState<string | null>(null);
 

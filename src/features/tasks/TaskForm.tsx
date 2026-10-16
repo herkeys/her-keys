@@ -2,7 +2,8 @@ import { router } from 'expo-router';
 import { useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { AppText, Button, ChipToggle, Overline, Screen, TextField } from '../../design/components';
-import { colors, spacing } from '../../design/tokens';
+import { spacing } from '../../design/tokens';
+import { useTheme } from '../../design/theme';
 import { categoryWithRole, scopeForNewRow } from '../../domain/categories';
 import { DEFAULT_TASK_DURATION_MINUTES, durationSourceForSave } from '../../domain/foundation/duration';
 import { isLocalDate } from '../../domain/logicalDay';
@@ -23,6 +24,7 @@ export function TaskForm({
   /** Promoting a Needs Me item: its details prefill the form, and it is resolved only when this task is saved. */
   needsMeId?: string;
 }) {
+  const { colors } = useTheme();
   const store = useAppStore();
   const { state } = useHouseholdState();
   const { categories } = useHousehold();

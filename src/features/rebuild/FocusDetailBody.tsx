@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { AppText, Button, Card, ChipToggle, EmptyState, InlineNotice, LoadingState, Overline, StatusList, TextField } from '../../design/components';
-import { colors, spacing } from '../../design/tokens';
+import { spacing } from '../../design/tokens';
+import { useTheme } from '../../design/theme';
 import { REBUILD_FOCUS_NOTE_MAX, REBUILD_FOCUS_TITLE_MAX, type RebuildFocusState } from '../../domain/rebuild/schema';
 import { FIELD_LIMITS } from '../../domain/state';
 import type { RebuildAvailability } from './availability';
@@ -53,6 +54,7 @@ function ReadyDetail({
   onConnect,
   onDisconnect,
 }: FocusDetailBodyProps & { view: FocusDetailView; canWrite: boolean }) {
+  const { colors } = useTheme();
   const [editing, setEditing] = useState<Editing>('none');
   const [titleDraft, setTitleDraft] = useState(view.title);
   const [noteDraft, setNoteDraft] = useState(view.note ?? '');

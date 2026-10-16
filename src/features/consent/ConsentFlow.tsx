@@ -3,7 +3,8 @@ import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText } from '../../design/components';
 import { ConsentErrorView, ConsentLegalView, ConsentPermissionsView } from './ConsentViews';
-import { color, spacing } from '../../design/tokens';
+import { spacing } from '../../design/tokens';
+import { createThemedStyles } from '../../design/theme';
 import { consentStatus } from '../../domain/consent';
 import type { AccountSession } from '../../domain/account/identity';
 import { createConsentLedger, type ConsentReadResult } from '../../platform/consentBackend';
@@ -37,6 +38,7 @@ function readWithTimeout(read: () => Promise<ConsentReadResult>, ms: number): Pr
 }
 
 export function ConsentGate({ session, children }: { session: AccountSession; children: ReactNode }) {
+  const styles = useStyles();
   const accountId = session.accountId;
   // Tokens rotate while she uses the app. The consent decision belongs to the ACCOUNT, not to one token pair: it is keyed by
   // accountId, and each request reads the freshest tokens at the moment it is made. A rotation therefore never re-runs the
@@ -134,6 +136,6 @@ export function ConsentGate({ session, children }: { session: AccountSession; ch
 
 export { ConsentErrorView, ConsentLegalView, ConsentPermissionsView } from './ConsentViews';
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(({ color }) => StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', padding: spacing.xl, gap: spacing.md, backgroundColor: color.background },
-});
+}));

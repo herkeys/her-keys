@@ -2,7 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useRef } from 'react';
 import { Animated, Easing, StyleSheet, View, type ColorValue } from 'react-native';
 import { motionDuration, useReduceMotion } from '../motion';
-import { color as palette, radius } from '../tokens';
+import { radius } from '../tokens';
+import { createThemedStyles } from '../theme';
 
 type IoniconName = keyof typeof Ionicons.glyphMap;
 
@@ -30,6 +31,7 @@ interface TabIconProps {
  * selection is carried by shape and fill as well as by tint. The pill is static; only the icon's quick rise animates.
  */
 export function TabIcon({ spec, color, size, focused }: TabIconProps) {
+  const styles = useStyles();
   const reduceMotion = useReduceMotion();
   const emphasis = useRef(new Animated.Value(focused ? 1 : 0)).current;
 
@@ -58,7 +60,7 @@ export function TabIcon({ spec, color, size, focused }: TabIconProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(({ color: palette }) => StyleSheet.create({
   pill: { minWidth: 56, height: 32, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent' },
   pillSelected: { backgroundColor: palette.surface.tint },
-});
+}));

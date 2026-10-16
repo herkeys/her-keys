@@ -2,7 +2,8 @@ import { router } from 'expo-router';
 import { useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { AppText, Button, Card, ChipToggle, Overline, Screen, StatusList, TextField } from '../../design/components';
-import { colors, spacing } from '../../design/tokens';
+import { spacing } from '../../design/tokens';
+import { useTheme } from '../../design/theme';
 import { epochMsOf, isLocalDate, toInstant, zonedTimeToEpochMs } from '../../domain/logicalDay';
 import {
   OPPORTUNITY_CLOSED_REASONS,
@@ -48,6 +49,7 @@ const TYPE_LABEL: Record<OpportunityType, string> = {
  * through the same domain commands the rest of the app uses.
  */
 export function OpportunityForm({ opportunityId }: { opportunityId?: string }) {
+  const { colors } = useTheme();
   const store = useAppStore();
   const { state } = useHouseholdState();
   const { categories, categoryIdForRole } = useHousehold();

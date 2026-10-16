@@ -1,5 +1,6 @@
 import { StyleSheet, View, useWindowDimensions, type ViewStyle } from 'react-native';
-import { brandPalette, botanicalOpacity, botanicalPalette, botanicalStroke, decorationBudget, opacity, withAlpha } from '../tokens';
+import { botanicalOpacity, botanicalPalette, botanicalStroke, decorationBudget, opacity, withAlpha } from '../tokens';
+import { createThemedStyles } from '../theme';
 import { useReduceMotion } from '../motion';
 
 /**
@@ -170,6 +171,7 @@ interface WaveProps {
  * stays mauve/lilac.)
  */
 export function CurvedWave({ edge = 'top', height = 120, style }: WaveProps) {
+  const waveStyles = useWaveStyles();
   const { width } = useWindowDimensions();
   const visible = useDecorationVisible();
   if (!visible) return null;
@@ -183,8 +185,8 @@ export function CurvedWave({ edge = 'top', height = 120, style }: WaveProps) {
       testID="curved-wave"
       style={[styles.wave, edge === 'top' ? { top: 0 } : { bottom: 0 }, { height }, style]}
     >
-      <View style={[styles.washCircle, { width: d, height: d, borderRadius: d / 2, left: (width - d) / 2 }, wash]} />
-      <View style={[styles.lineCircle, { width: d, height: d, borderRadius: d / 2, left: (width - d) / 2 }, line]} />
+      <View style={[waveStyles.washCircle, { width: d, height: d, borderRadius: d / 2, left: (width - d) / 2 }, wash]} />
+      <View style={[waveStyles.lineCircle, { width: d, height: d, borderRadius: d / 2, left: (width - d) / 2 }, line]} />
     </View>
   );
 }
@@ -201,11 +203,12 @@ const styles = StyleSheet.create({
   },
   dot: { position: 'absolute' },
   wave: { position: 'absolute', left: 0, right: 0, overflow: 'hidden' },
-  washCircle: { position: 'absolute', backgroundColor: brandPalette.softLilac, opacity: 0.55 },
-  lineCircle: {
-    position: 'absolute',
-    borderWidth: 1,
-    borderColor: brandPalette.dustyMauve,
-    opacity: opacity.decoration + 0.1,
-  },
 });
+
+/** The wave is brand decoration (not sage), so it follows the theme: Soft Lilac wash + Dusty Mauve line in Light, their dark-plum counterparts in Dark. */
+const useWaveStyles = createThemedStyles(({ color }) =>
+  StyleSheet.create({
+    washCircle: { position: 'absolute', backgroundColor: color.surface.tint, opacity: 0.55 },
+    lineCircle: { position: 'absolute', borderWidth: 1, borderColor: color.action.primaryBorder, opacity: opacity.decoration + 0.1 },
+  }),
+);

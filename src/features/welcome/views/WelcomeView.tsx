@@ -1,6 +1,7 @@
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { AppText, Button, FadeIn, KeyBadge, Overline } from '../../../design/components';
-import { color, spacing } from '../../../design/tokens';
+import { spacing } from '../../../design/tokens';
+import { useTheme } from '../../../design/theme';
 import { WELCOME_AUTH_COPY as COPY } from '../copy';
 
 export interface WelcomeViewProps {
@@ -18,6 +19,7 @@ export interface WelcomeViewProps {
  * and every word of copy are unchanged.
  */
 export function WelcomeView({ onBegin, onExistingAccount }: WelcomeViewProps) {
+  const { color } = useTheme();
   return (
     <>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>

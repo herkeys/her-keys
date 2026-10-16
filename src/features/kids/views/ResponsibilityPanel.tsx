@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { AppText, Button, Card, ChipToggle, InlineNotice, Overline, Tag, TextField } from '../../../design/components';
-import { color, spacing } from '../../../design/tokens';
+import { spacing } from '../../../design/tokens';
+import { useTheme } from '../../../design/theme';
 import { PERSON_RELATIONSHIPS } from '../../../domain/foundation/responsibility';
 import { HANDOFF, RELATIONSHIP_LABEL, coverageLine, coverageTag } from '../copy';
 import type { ItemAction, ResponsibilityFacts } from '../types';
@@ -34,6 +35,7 @@ type Mode = 'idle' | 'choose' | 'accept';
  * "accepted" can never quietly become "covered".
  */
 export function ResponsibilityPanel(props: ResponsibilityPanelProps) {
+  const { color } = useTheme();
   const { facts, actions, people, busy, message } = props;
   const [mode, setMode] = useState<Mode>('idle');
   const [newName, setNewName] = useState('');

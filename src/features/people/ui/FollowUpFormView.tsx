@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { AppText, Button, InlineNotice, TextField } from '../../../design/components';
-import { colors, spacing } from '../../../design/tokens';
+import { spacing } from '../../../design/tokens';
+import { useTheme } from '../../../design/theme';
 import { peopleCopy } from '../copy';
 
 export interface FollowUpFormViewProps {
@@ -18,6 +19,7 @@ export interface FollowUpFormViewProps {
  * follow-up actually is. Scope is fixed (private to her) and said so. Rendering this form writes nothing; Cancel writes nothing.
  */
 export function FollowUpFormView({ displayName, busy, message, onSave, onCancel }: FollowUpFormViewProps) {
+  const { colors } = useTheme();
   const [title, setTitle] = useState('');
   const [dueDate, setDueDate] = useState('');
   return (

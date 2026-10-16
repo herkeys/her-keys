@@ -1,11 +1,14 @@
 import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { AiMark, AppText, Button, Card, Overline, Screen, Tag } from '../../src/design/components';
-import { color, colors, radius, spacing } from '../../src/design/tokens';
+import { radius, spacing } from '../../src/design/tokens';
+import { createThemedStyles, useTheme } from '../../src/design/theme';
 import { buildOperatingProfile } from '../../src/features/onboarding/buildOperatingProfile';
 import { useOnboarding } from '../../src/store/OnboardingContext';
 
 export default function ProfileResult() {
+  const { color, colors } = useTheme();
+  const styles = useStyles();
   const { answers, selected, recordStep } = useOnboarding();
   const profile = buildOperatingProfile(answers, selected.struggleIds);
 
@@ -67,7 +70,7 @@ export default function ProfileResult() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(({ color, colors }) => StyleSheet.create({
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   title: { marginTop: spacing.md },
   lede: { marginTop: spacing.md, marginBottom: spacing.xxl },
@@ -86,4 +89,4 @@ const styles = StyleSheet.create({
   insightDetail: { marginTop: spacing.sm },
   learning: { marginTop: spacing.lg, marginBottom: spacing.xxl },
   learningText: { marginTop: spacing.sm },
-});
+}));
