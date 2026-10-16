@@ -202,6 +202,42 @@ describe('the consumer journey through the real provider', () => {
     await TestRenderer.act(async () => r.unmount());
   });
 
+  test('a manifest with released features still cannot sell if the backend denies fulfillment', async () => {
+    const server = makeServer(); server.who = A;
+    server.client.purchaseReadiness = async () => ({ ready: false, reason: 'fulfillment_unavailable' });
+    let presentations = 0;
+    fixture.entitlement = { ...fixture.entitlement, presentPaywall: async () => { presentations += 1; return { kind: 'purchased' }; } };
+    const r = await mount(server, bound(A));
+    await settle();
+    let result;
+    await TestRenderer.act(async () => { result = await probe.upgrade.start(); });
+    assert.equal(result.kind, 'unavailable');
+    assert.equal(presentations, 0);
+    assert.match(probe.upgrade.notice.message, /Premium/i);
+    await TestRenderer.act(async () => r.unmount());
+  });
+
+  test('a late purchase-readiness result for account A cannot present a paywall on account B', async () => {
+    const server = makeServer(); server.who = A;
+    let resolveReadiness;
+    server.client.purchaseReadiness = () => new Promise((resolve) => { resolveReadiness = resolve; });
+    let presentations = 0;
+    fixture.entitlement = { ...fixture.entitlement, presentPaywall: async () => { presentations += 1; return { kind: 'purchased' }; } };
+    const r = await mount(server, bound(A)); await settle();
+    let pending;
+    await TestRenderer.act(async () => { pending = probe.upgrade.start(); });
+    server.who = B;
+    await remount(r, server, bound(B));
+    let outcome;
+    await TestRenderer.act(async () => {
+      resolveReadiness({ ready: true, reason: 'ready' });
+      outcome = await pending;
+    });
+    assert.equal(outcome.kind, 'unavailable');
+    assert.equal(presentations, 0);
+    await TestRenderer.act(async () => r.unmount());
+  });
+
   test('the upgrade flow presents the paywall for its placement, then hands verification to the server (not the store)', async () => {
     const server = makeServer();
     server.who = A;
