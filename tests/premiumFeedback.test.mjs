@@ -20,7 +20,7 @@ import { PremiumIntentProvider } from '../src/store/PremiumIntentContext.tsx';
 
 const stub = new URL('./support/premium/stubs.mjs', import.meta.url).href;
 registerHooks({ resolve(specifier, context, next) {
-  if (/\/(RevenueCatProvider|OnboardingContext|SystemsHub)$/.test(specifier) || specifier === 'expo-router') return next(stub, context);
+  if (/\/(RevenueCatProvider|OnboardingContext|SystemsHub|PremiumStateProvider)$/.test(specifier) || specifier === 'expo-router') return next(stub, context);
   return next(specifier, context);
 } });
 const { default: SystemsScreen } = await import('../app/(app)/systems/index.tsx');
@@ -37,6 +37,7 @@ const settle = () => act(async () => { await new Promise((resolve) => setImmedia
 const reset = () => {
   fixture.entitlement = { status: 'free', isPlus: false, presentPaywall: async () => ({ kind: 'cancelled' }), restore: async () => ({ kind: 'no_purchases_found' }), refresh: async () => {} };
   fixture.onboarding = { completeCalls: 0, complete: async () => true };
+  fixture.manifest = ['daily_load_premium', 'smart_inbox_extract', 'momentum_report'].map((featureKey) => ({ featureKey, tier: 'premium', available: true }));
 };
 const deferred = () => { let resolve; const promise = new Promise((r) => { resolve = r; }); return { promise, resolve }; };
 
@@ -153,14 +154,31 @@ test('SC-03: the onboarding step completes on purchase or restore, once, and on 
   await act(() => free.unmount());
 });
 
-test('SC-03: the onboarding step no longer lists benefits nothing delivers', async () => {
+test('SC-03: final onboarding lists exactly the Stage 1 tools and no unshipped promises', async () => {
   reset();
   const r = await render(<PremiumIntentProvider><PlusStep /></PremiumIntentProvider>);
   const shown = text(r);
-  assert.doesNotMatch(shown, /household intelligence|proactive planning|Enhanced Talk It Out|automation for repeatable work|journey continues/i);
-  assert.match(shown, /Everything in Her Keys works without Premium/);
-  assert.match(shown, /nothing in the app is locked behind it today/);
+  assert.match(shown, /Daily Load review/);
+  assert.match(shown, /Smart Inbox/);
+  assert.match(shown, /Weekly review/);
+  assert.doesNotMatch(shown, /Co-Parent Plus|The Village|household intelligence|unlimited|automation for repeatable work/i);
+  assert.match(shown, /continue Free/i);
   await act(() => r.unmount());
+});
+
+test('SC-03: onboarding refuses a commercial purchase while the server has unreleased Premium features', async () => {
+  for (const manifest of [null, [{ featureKey: 'daily_load_premium', tier: 'premium', available: true }]]) {
+    reset();
+    fixture.manifest = manifest;
+    let purchased = 0;
+    fixture.entitlement.presentPaywall = async () => { purchased += 1; return { kind: 'purchased' }; };
+    const r = await render(<PremiumIntentProvider><PlusStep /></PremiumIntentProvider>);
+    await act(() => button(r, 'Explore Her Keys Premium').props.onPress());
+    await settle();
+    assert.equal(purchased, 0, 'no native checkout before all three feature flags are released');
+    assert.equal(button(r, 'Continue to Her Keys').props.disabled, false);
+    await act(() => r.unmount());
+  }
 });
 
 async function checkout(outcome, choice = 'premium') {
