@@ -55,9 +55,32 @@ configured today, and activation/approval state.
 2. A licensed-tester purchase on Android produces a webhook, a projection row and a granted gate decision on Staging.
 3. Expiry, cancel, refund and restore verified on Staging.
 4. Production `revenuecat-webhook` at v2 with secrets configured and webhook processing verified on a Sandbox event.
-5. `premium_enabled` and webhook processing enabled together, so no customer can be charged while delivery is off.
-6. Rollback: set `premium_enabled=false` and webhook processing off; the client degrades to Free (tested:
-   `fail-closed` gate, Continue Free path).
+5. Before accepting paid purchases, confirm that at least one promised Premium feature is actually released,
+   enabled, operable and authorized in Production; do not equate the presence of a paywall with delivered value.
+   Enable the validated Premium feature, webhook processing and reconciliation under an approved rollout.
+6. Rollback BEFORE any real purchase: suspend new checkout exposure; keep payment and entitlement services safe.
+   Rollback AFTER the first real purchase: stop NEW purchases through an approved checkout/offer switch, but KEEP
+   webhook processing, reconciliation, renewals, refunds, grace periods, cancellations and revocations operational.
+   Preserve fulfillment for existing paying subscribers or use an approved customer-remediation/refund process.
+   Do NOT blindly set `webhook_processing=false` or disable all paid feature access when subscriptions are live.
+   Exercise and document this rollback before Production activation.
+
+## Verified backend feature state (read-only snapshot, 2026-10-15)
+
+Both Staging and Production report the following feature flags from `public.premium_feature_config`:
+
+| Feature key | Tier | Enabled | Released | Rollout |
+|---|---|---|---|---|
+| `coparent_plus` | premium | false | false | not_released |
+| `daily_load_premium` | premium | false | false | not_released |
+| `momentum_report` | premium | false | false | not_released |
+| `smart_inbox_extract` | premium | false | false | not_released |
+| `village_delegation` | premium | false | false | not_released |
+| `talk_it_out` | free | true | true | general |
+
+This is a point-in-time database check, NOT proof that a feature can be switched on safely.
+RevenueCat offering activation must remain commercially gated until truthful purchasable value
+has passed the feature's end-to-end test and the corresponding Production flags are approved.
 
 ## Premium benefits copy
 `app/onboarding/plus.tsx` still states that nothing is locked behind Premium. That is true until a gated feature
