@@ -109,7 +109,8 @@ describe('the three tools', () => {
     assert.match(CAPABILITY_TEXT.momentum_report.summary, /doesn’t score you/);
   });
   test('"Ready" only when the server says entitled; Free and pending are "Part of Her Keys Premium", never Ready', () => {
-    const statusOf = (state, manifest = null) => capabilityViews(state, manifest).map((c) => c.status);
+    const manifestReady = PREMIUM_CAPABILITY_KEYS.map((featureKey) => ({ featureKey, tier: 'premium', available: true }));
+    const statusOf = (state, manifest = manifestReady) => capabilityViews(state, manifest).map((c) => c.status);
     for (const kind of ['active', 'canceled_active', 'billing_grace']) assert.deepEqual(statusOf({ kind, endsOn: null }), ['ready', 'ready', 'ready']);
     for (const state of [{ kind: 'free' }, { kind: 'loading' }, { kind: 'unavailable' }, { kind: 'signed_out' }, { kind: 'verification_pending', cause: 'checking', canRetry: false }]) {
       assert.deepEqual(statusOf(state), ['included', 'included', 'included'], state.kind);
@@ -119,9 +120,12 @@ describe('the three tools', () => {
     assert.deepEqual(statusOf({ kind: 'account_closing' }), ['paused', 'paused', 'paused']);
   });
   test('the server manifest can switch a tool off: it is then shown as not switched on, even for a paying customer', () => {
-    const manifest = [{ featureKey: 'smart_inbox_extract', displayName: 'Smart Inbox', tier: 'premium', available: false, requiresAiConsent: true, minAppVersion: null }];
+    const manifest = PREMIUM_CAPABILITY_KEYS.map((featureKey) => ({ featureKey, displayName: featureKey, tier: 'premium', available: featureKey !== 'smart_inbox_extract', requiresAiConsent: false, minAppVersion: null }));
     const views = capabilityViews({ kind: 'active', endsOn: null }, manifest);
     assert.deepEqual(views.map((c) => c.status), ['ready', 'unavailable', 'ready']);
     assert.equal(views[1].statusLabel, 'Not switched on for your account yet');
+    const unknown = capabilityViews({ kind: 'active', endsOn: null }, null);
+    assert.deepEqual(unknown.map((c) => c.status), ['unavailable', 'unavailable', 'unavailable'],
+      'a subscriber is never shown three ready features without a server manifest');
   });
 });

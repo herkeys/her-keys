@@ -30,11 +30,11 @@ export const WELCOME_AUTH_COPY = {
    */
   premium: {
     title: 'A little more room for you.',
-    lede: 'Explore deeper planning support and more proactive help as Her Keys grows.',
+    lede: 'Premium is being prepared to help with the work of keeping your week together. Explore the tools without making a purchase here.',
     benefits: [
-      'Deeper household intelligence',
-      'More proactive planning support',
-      'Enhanced Talk It Out capabilities',
+      'Daily Load: review tight days and approve a change you can undo.',
+      'Smart Inbox: turn captured notes into suggestions you review before saving.',
+      'Momentum: see a weekly review built from what you actually recorded.',
     ],
     select: 'Select Premium',
     free: 'Continue Free',

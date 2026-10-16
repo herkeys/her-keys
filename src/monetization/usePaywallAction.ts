@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { PaywallOutcome, PaywallPlacement } from './entitlement';
 import { paywallNoticeFor, type PaywallNotice } from './paywallFeedback';
 import { useEntitlement } from './RevenueCatProvider';
+import { usePremiumStateIfMounted } from './PremiumStateProvider';
+import { premiumLaunchState } from './premiumLaunchState';
 
 export interface PaywallActionApi {
   /** Opens the paywall for this placement. Resolves to how it ended, or `null` if a presentation was already in flight. */
@@ -19,6 +21,8 @@ export interface PaywallActionApi {
  */
 export function usePaywallAction(placement: PaywallPlacement): PaywallActionApi {
   const { presentPaywall } = useEntitlement();
+  const premium = usePremiumStateIfMounted();
+  const readiness = premiumLaunchState(premium?.snapshot.manifest ?? null);
   const inFlight = useRef(false);
   const mounted = useRef(true);
   const [presenting, setPresenting] = useState(false);
@@ -33,6 +37,13 @@ export function usePaywallAction(placement: PaywallPlacement): PaywallActionApi 
 
   const present = useCallback(async (): Promise<PaywallOutcome | null> => {
     if (inFlight.current) return null;
+    if (!readiness.ready) {
+      if (mounted.current) setNotice({
+        tone: 'attention',
+        message: 'Premium plans are not available for purchase here yet. Nothing has changed and your Free tools still work.',
+      });
+      return { kind: 'unavailable' };
+    }
     inFlight.current = true;
     setPresenting(true);
     setNotice(null);
@@ -49,7 +60,7 @@ export function usePaywallAction(placement: PaywallPlacement): PaywallActionApi 
       setNotice(paywallNoticeFor(outcome));
     }
     return outcome;
-  }, [placement, presentPaywall]);
+  }, [placement, presentPaywall, readiness.ready]);
 
   return { present, presenting, notice };
 }

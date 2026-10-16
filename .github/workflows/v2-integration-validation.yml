@@ -31,6 +31,10 @@ on:
       # P0 auth recovery: every account operation ends (bounded activation, storage, RPC, provider and email), exact pushed SHA.
       - repair/p0-auth-recovery-20261015
       - integration/premium-paywall-layout-20261015
+      # Native RevenueCat identity deadline and late-mutation quarantine certification.
+      - repair/premium-sdk-identity-fence-20261015
+      # Stage 1 server-directed Premium launch UI and truthful feature availability.
+      - integration/premium-stage1-feature-ui-20261016
   workflow_dispatch:
 
 permissions:

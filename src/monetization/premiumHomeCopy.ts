@@ -48,7 +48,7 @@ export function premiumHomeCopyFor(state: PremiumHomeState, format: DateFormatte
       return {
         status: 'Free plan',
         title: 'You’re on the Free plan',
-        body: `${PREMIUM} adds three tools that do more of the work for you, listed below. ${FREE_UNTOUCHED}`,
+        body: `${PREMIUM} is being prepared to add three tools that do more of the work for you. Check availability below. ${FREE_UNTOUCHED}`,
         tone: 'info',
         primary: { action: 'upgrade', label: `See ${PREMIUM}` },
         manage: null,
@@ -57,7 +57,7 @@ export function premiumHomeCopyFor(state: PremiumHomeState, format: DateFormatte
       return {
         status: 'On',
         title: `${PREMIUM} is on`,
-        body: `${through(state.endsOn, format, 'Your current period runs through', 'Your subscription is active.')} The three tools below are ready to use.`,
+        body: `${through(state.endsOn, format, 'Your current period runs through', 'Your subscription is active.')} Check the availability of each tool below.`,
         tone: 'success',
         primary: null,
         manage: MANAGE,
@@ -183,9 +183,9 @@ export function capabilityViews(state: PremiumHomeState, manifest: readonly Mani
     const entry = manifest?.find((item) => item.featureKey === key);
     let status: CapabilityStatus;
     let statusLabel: string;
-    if (entry !== undefined && !entry.available) {
+    if (!entry?.available) {
       status = 'unavailable';
-      statusLabel = 'Not switched on for your account yet';
+      statusLabel = manifest === null ? 'Checking availability' : 'Not switched on for your account yet';
     } else if (isHomeEntitled(state)) {
       status = 'ready';
       statusLabel = 'Ready';

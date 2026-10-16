@@ -10,7 +10,8 @@ import { PremiumCheckoutAfterConsent } from '../src/monetization/PremiumCheckout
 import { WelcomeAuthSettling } from '../src/features/account/WelcomeAuthFlow';
 import { ConsentGate } from '../src/features/consent/ConsentFlow';
 import { PremiumReaderBridge } from '../src/features/smart-inbox/PremiumReaderBridge';
-import { PremiumStateProvider } from '../src/monetization/PremiumStateProvider';
+import { PremiumStateProvider, usePremiumStateIfMounted } from '../src/monetization/PremiumStateProvider';
+import { premiumLaunchState } from '../src/monetization/premiumLaunchState';
 import { RevenueCatProvider, useEntitlement } from '../src/monetization/RevenueCatProvider';
 import { accountRuntime, premiumAppVersion, premiumLedgerClient, premiumServerClient } from '../src/store/accountRuntimeInstance';
 import { deletionRuntime } from '../src/store/deletionRuntimeInstance';
@@ -91,9 +92,14 @@ function RootNavigator() {
   const account = useAccount();
   const { refresh: refreshPremium, presentPaywall } = useEntitlement();
   const premiumIntent = usePremiumIntent();
+  const premiumState = usePremiumStateIfMounted();
+  const premiumReleaseReady = premiumLaunchState(premiumState?.snapshot.manifest ?? null).ready;
   // The welcome tree only records an intent to take Premium. Checkout is presented by `PremiumCheckoutAfterConsent` below, and
   // only for a bound account after consent. There is no purchase before an account exists, so nothing is ever transferred.
-  const presentWelcomeCheckout = useCallback(() => presentPaywall('welcome_premium'), [presentPaywall]);
+  const presentWelcomeCheckout = useCallback(
+    () => premiumReleaseReady ? presentPaywall('welcome_premium') : Promise.resolve({ kind: 'unavailable' } as const),
+    [presentPaywall, premiumReleaseReady],
+  );
   // Recheck the store's canonical entitlement when a Supabase session is
   // activated or signed out. The runtime identifies the RevenueCat UUID
   // before publishing a bound account.
