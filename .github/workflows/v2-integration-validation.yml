@@ -43,6 +43,8 @@ on:
       - integration/v2-ui02dm-rc-ai-convergence-20261016
       # Shared backend repair: validation of the exact pushed SHA only; no deployment or native build.
       - repair/v2-shared-backend-convergence-20261017
+      # Shared AI-reporting metadata and controlled revenuecat/AI production convergence, source validation only.
+      - repair/v2-ai-reporting-and-prod-convergence-20261017
   workflow_dispatch:
 
 permissions:

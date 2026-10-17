@@ -94,6 +94,7 @@ describe('post-certification migration governance', () => {
       ['PREMIUM_FRESHNESS', '20261015140000_premium_stale_projection_guard.sql'],
       ['PREMIUM_PURCHASE_READINESS', '20261016012000_premium_purchase_readiness.sql'],
       ['PREMIUM_CHECKOUT_SWITCH', '20261016013000_premium_checkout_independent_activation.sql'],
+      ['AI_REPORTING', '20261017180000_ai_response_reporting.sql'],
     ]);
     const sql = lf(POST_CERT_CHAIN[0].file);
     const executable = sql.replace(/--.*$/gm, '');

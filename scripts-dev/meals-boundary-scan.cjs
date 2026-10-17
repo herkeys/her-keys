@@ -1711,6 +1711,27 @@ const LATER_FEATURES = [
       ['scripts-dev/meals-boundary-scan.cjs', 'Register only assigned shared backend repairs and evidence, no Meals capability, schema or ownership changes'],
     ],
   },
+  {
+    id: 'HK-V2-AI-REPORTING-20261017 (metadata-only, separate source)',
+    branch: null,
+    owned: [
+      /^src\/platform\/aiResponseReporting\.ts$/,
+      /^src\/features\/ai-safety\/AiReportPanel\.tsx$/,
+      /^tests\/aiResponseReporting\.test\.mjs$/,
+      /^supabase\/migrations\/20261017180000_ai_response_reporting\.sql$/,
+      /^docs\/integration\/V2_AI_REPORTING_CONVERGENCE_20261017\.md$/,
+    ],
+    migrations: ['supabase/migrations/20261017180000_ai_response_reporting.sql'],
+    schemas: [], rootCollections: [], syncKinds: [],
+    shared: [
+      ['src/store/accountRuntimeInstance.ts', 'Compose the metadata-only safety report client on the existing authenticated Supabase session'],
+      ['supabase/tests/migration-chain.mjs', 'Register the exact additive AI-reporting migration without modifying historical migrations'],
+      ['tests/migrationChain.test.mjs', 'Pin the AI-reporting migration to the authoritative append-only chain'],
+      ['src/features/talk-it-out/TalkItOutView.tsx', 'Actual accessible Report response action: user-chosen reason and metadata only, no message text'],
+      ['.github/workflows/v2-integration-validation.yml', 'Allow exact branch in validation-only CI, no deployment/build'],
+      ['scripts-dev/meals-boundary-scan.cjs', 'Register exact AI reporting migration and source files without changing existing safety ownership'],
+    ],
+  },
 
 ];
 
