@@ -69,7 +69,7 @@ REVOKE ALL ON FUNCTION public.submit_ai_response_report(text,text,text,uuid) FRO
 GRANT EXECUTE ON FUNCTION public.submit_ai_response_report(text,text,text,uuid) TO authenticated;
 
 -- Retain only 30 days. This job handles expiration without exposing raw reports to app clients.
-DO $
+DO $$
 DECLARE v_job_exists boolean;
 BEGIN
   -- Hosted Supabase includes pg_cron; disposable PGlite harnesses do not.
@@ -84,4 +84,4 @@ BEGIN
     END IF;
   END IF;
 END
-$;
+$$;
