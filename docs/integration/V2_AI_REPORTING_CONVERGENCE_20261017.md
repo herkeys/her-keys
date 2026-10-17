@@ -10,7 +10,7 @@ The Talk It Out consumer surface now provides a themed, accessible **Report resp
 
 Shared client `src/platform/aiResponseReporting.ts` verifies the originating account's session and pins its JWT before the RPC call. The UI aborts pending work when account/household/binding changes and ignores late completions. Errors never display server internals. A stored successful receipt is distinguished from a failed attempt. This is not a purchase/monetization feature.
 
-The new forward-only `supabase/migrations/20261017180000_ai_response_reporting.sql` defines a **private** report queue, an authenticated-only, server-identity-derived SECURITY DEFINER submission RPC, RLS, explicit role grants, per-account idempotency, maximum five reports per rolling 24h (serialized by account advisory lock), 30-day maximum metadata retention, and an hourly? **daily** cron expiration job. Foreign-key deletion on account removal is cascading. A consumer cannot read or edit the report queue. The queue stores **no user messages or AI outputs**.
+The new forward-only `supabase/migrations/20261017180000_ai_response_reporting.sql` defines a **private** report queue, an authenticated-only, server-identity-derived SECURITY DEFINER submission RPC, RLS, explicit role grants, per-account idempotency, maximum five reports per rolling 24h (serialized by account advisory lock), 30-day maximum metadata retention, and a daily cron expiration job. Foreign-key deletion on account removal is cascading. A consumer cannot read or edit the report queue. The queue stores **no user messages or AI outputs**.
 
 A private report queue is an intake mechanism, not proof it is operationally monitored. Before inviting real consumers to rely on reporting, the product owner must assign **an actual project-admin reviewer**, establish a review cadence and reviewer permissions/process, confirm 30-day metadata retention against the legal/privacy policy, and validate a reviewer read/disposition rehearsal. The current implementation intentionally has no automatic response-text attachment. A reply to a user should say only **submitted**, not claim human moderation or investigation occurred.
 
@@ -49,6 +49,16 @@ Before promoting to Production, complete a legitimate authenticated Staging acco
 Run exact-SHA CI, TypeScript, Expo compatibility, full suite, security/boundary checks, SQL migration execution on Staging, privileged RPC call negative/positive role tests, live reporting submission/retry/duplicate/rate-limit, and reviewer read/disposition. No iOS/Android-only changes, account-deletion edits, purchases, Production schema change, EAS artifacts or provider credential changes are included in source scope.
 
 **The eight inherited deletion and three inherited Premium Home failures remain separately assigned.** Classify missing proof as NOT_RUN; identify actual newly introduced source failures as defects.
+
+## Executed Staging deployment and exact-SHA CI evidence
+
+- Staging (project `fhhudicklmpofuzkxeqe`): applied additive migration `ai_response_reporting_20261017` from the source SQL after local/regression CI returned the inherited failure baseline.
+- Read-back verified `private.ai_response_reports` exists, RLS enabled+forced, zero rows, and daily `cron.job` `herkeys_ai_report_expiry` active at 03:19.
+- Verified `anon` cannot call `submit_ai_response_report`; `authenticated` may call it, while both `anon` and `authenticated` cannot read the private table directly.
+- **Staging account-bound reporting submission / reviewer resolution / rate-limit E2E: NOT_RUN** — legitimate authenticated synthetic test session and designated reviewer are not yet available. The live project state and privilege evidence do not replace those tests.
+- Source CI run [39071836969](https://github.com/herkeys/her-keys/actions/runs/39071836969), commit `525e7696b08ea8fc01e4331ad4cf57f46c1d8783`: 5,111 total; 5,100 passed; 11 inherited failures (8 deletion, 3 Premium Home); **0 new failures**. Backend boundary, release identity, TypeScript, launch-critical tests, Expo compatibility and Doctor passed.
+- **Production migration: NOT APPLIED.** Production checkout and both production webhook/AI deployments remain unchanged.
+- Neither RevenueCat nor Supabase webhook/ops credentials were rotated, copied, set, or logged through this workspace; `503 not_configured` remains an open configuration gap in BOTH environments.
 
 ## Pending owner/operational steps
 
