@@ -57,10 +57,10 @@ Production promotion and exact release-branch authorization remain PENDING_APPRO
 - S06-02 — P2 CONFIRMED_DEFECT, scripts/verify-release-identity.mjs: --release trusted cached @{u} and skipped backend validation outside EAS_BUILD. Repair requires live exact upstream SHA and Production URL/client configuration/empty mode/mandatory consent on --release, preserving every identity/branch/clean-source guard. Fifteen release tests PASS, including denied branch prefixes, missing/offline/local-only upstream and stale remote. Owner: shared release governance.
 - Exact repair branch added only to validation workflow and scoped boundary provenance lane. No native-build workflow changed.
 
-## Pass G certification in progress
+## Pass G source certification complete; hosted certification blocked
 
 Fresh npm ci: 587 packages, PASS. TypeScript PASS. Deno checks for AI and all four Premium functions PASS. Expo dependency compatibility PASS; Expo Doctor 21/21 PASS. Boundary scan PASS after registering the exact assigned file ownership.
 
-Initial full run: 5,042 tests, 5,029 pass, 13 fail. Eight deletion and three Premium Home failures are inherited/deferred. Two additional failures were (a) newly-created audit evidence lacking its boundary lane, now repaired, and (b) a CPU-contention calendar timing failure; isolated unchanged test passes (2.50ms against 50ms threshold). No assertion weakened. Final full suite uses four workers while preserving every test; exact-SHA CI also required.
+Initial full run: 5,042 tests, 5,029 pass, 13 fail. Eight deletion and three Premium Home failures are inherited/deferred. Two additional failures were (a) newly-created audit evidence lacking its boundary lane, now repaired, and (b) a CPU-contention calendar timing failure; isolated unchanged test passes (2.50ms against 50ms threshold). No assertion weakened. Final full suite: 5,087 tests, 5,076 pass, 11 inherited failures, zero new failures. Exact application-source CI fcdc7b9 (run 39047921590) has the same totals/failures; all other steps pass. Draft PR #34 remains uncertified for hosted/provider/platform handoff pending the documented owner inputs. See V2_SHARED_BACKEND_REPORT_20261017.md.
 
 

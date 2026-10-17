@@ -17,7 +17,7 @@ for (const [environment,ref] of Object.entries(projects)) {
         method:'POST',headers:{'Content-Type':'application/json',...headers},body:'{}',signal:AbortSignal.timeout(15000),
       });
       const data=await res.json().catch(()=>({}));
-      results.push({environment,name,status:res.status,reason:data.reason??data.error??data.message??null,requestId:data.requestId??null,latencyMs:Math.round(performance.now()-started),classification:[401,403,503].includes(res.status)?'PASS':'UNVERIFIED'});
+      results.push({environment,name,status:res.status,reason:data.reason??data.error??data.message??null,requestId:data.requestId??res.headers.get('sb-request-id')??null,latencyMs:Math.round(performance.now()-started),denial:[401,403,503].includes(res.status)?'PASS':'UNVERIFIED',classification:res.status===503&&data.error==='not_configured'?'CONFIRMED_DEFECT':[401,403].includes(res.status)?'PASS':'UNVERIFIED'});
     }catch{results.push({environment,name,classification:'BLOCKED_TEST',reason:'transport_unavailable'});}
   }
 }
