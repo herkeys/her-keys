@@ -25,3 +25,42 @@ Provider and legitimate account access limitations remain BLOCKED_TEST; deployme
 Operational report reviewer/destination and approved retention must be established before introducing sensitive collection.
 Production promotion and exact release-branch authorization remain PENDING_APPROVAL.
 
+## Pass B checkpoint — source 22f14c3 plus subsequent actor-fence repair
+
+- S02-01: Staging v11 deployed from exact entry handler/shared source; downloaded files exactly match. Bundle f7b98ea09472119d2005a9f7b990d1264d25e654efa1f694094a0c767b26da14, JWT verification true. Production v7 unchanged, PENDING_APPROVAL. Handler tests PASS (18); targeted consent/AI group PASS (51). Live authenticated scenarios BLOCKED_TEST; missing/invalid JWT hosted denial probes PASS. No Gemini content sent.
+- S02-02 — P1 CONFIRMED_DEFECT, src/store/TalkItOutContext.tsx: pending provider completion/retry used the global current store after its owner changed or component unmounted. Four red reproductions dispatched into the replacement store. Repair invalidates on unsubscribe/owner transition and compares account/household/binding before applying a result. Ten mounted tests now PASS for ready/unavailable outcomes, rebind, unmount, retry and account bounce; Free fallback PASS. Owner: shared source. Residual: live authenticated session-switch test BLOCKED_TEST.
+
+## Pass C checkpoint — source audit and 119 passing webhook/reconcile/gate tests
+
+- S03-01 remains NOT_VERIFIED for provider-originated authentication. Documented Authorization + HMAC format checked against current RevenueCat docs; no invented signing mechanism.
+- S03-02 — P1 CONFIRMED_DEFECT (configuration), both hosted webhook and premium-ops: empty/missing and bad credentials receive 503 not_configured. This proves fail-closed unavailability, not working provider authentication. Exact missing secret/runtime field cannot be determined from public probes. No secrets or destinations changed. Repair BLOCKED_TEST awaiting approved Staging secret installation and provider test traffic; Production changes separately gated. Owner: billing/backend configuration.
+- Source behavior PASS: authentication before persistence; malformed body refusal; durable provider event ID + environment deduplication; alias ambiguity/transfer reconciliation; out-of-order/refund clocks; CAS retries; durable failure/backlog/dead-letter recovery; content-minimizing logs. Unit tests do not certify the live provider.
+- Staging webhook/ops v2 differs from Production v1 only in runtime requireHmac applying to staging as well as production. With correctly declared environments both actual deployments require HMAC; preserve strict Staging behavior. premium-gate/reconcile bundles match across projects. PREMIUM_ENVIRONMENT secret values remain UNVERIFIED.
+
+## Pass D checkpoint — catalog parity and disposable SQL
+
+- Actual metadata: Staging 76 relations / 1,147 columns; Production 77 / 1,154. All 189 RLS policy definitions match; shared columns, relation RLS/grants, and schema grants match exactly.
+- Production-only welcome-email receipt table, seven columns, service-only grants and claim RPC are intentional outbound-email infrastructure. Staging has no corresponding table, consistent with suppressed outbound mail.
+- Both projects expose 71 public/private functions. All shared definitions match except premium_authorize's deliberate Staging tester restriction. Staging-only readiness helper is service-only. Purchase readiness is identical, derives auth.uid(), checks lifecycle and independent checkout false. Service-only authorize/projection/event/reconcile functions are not executable by anon/authenticated. Consumer ledger RPCs derive auth.uid() and enforce ownership/authorized-operation keys.
+- Live authenticated-role/no-subject SQL probe: readiness account_unavailable, consent rows zero. Consumer premium_events read denied 42501 in both. This does not establish signed-in A/B positive RLS; those tests BLOCKED_TEST.
+- New disposable PostgreSQL test applies the complete unchanged migration chain, creates two local-only households, and passes 12 checks (parent included) of consent/RLS/grants, cross-household read/write denial, privileged RPC denial and durable event dedupe. No hosted users/purchases/entitlements/schema mutated.
+- Canonical migration versions differ from historical hosted apply timestamps. Structural/functional fingerprints, not counts, establish the explained differences. Staging fixture/scheduler history and deletion-only differences remain DEFERRED. No applied migrations edited or new migrations deployed.
+
+## Pass E checkpoint
+
+- S04-01 now P2 CONFIRMED_DEFECT: full shared inventory found no compatible safety reporting route, submission backend or operational review queue. See V2_SHARED_BACKEND_AI_REPORTING_20261017.md.
+- Implementation awaits owner-approved review destination/retention/attachment contract. New sensitive collection is an explicit owner decision; no inert control or unmonitored endpoint created. Owner: product/privacy + shared backend. AI_REPORTING=FAIL.
+
+## Pass F checkpoint
+
+- S06-01 nomination remains PENDING_APPROVAL. Proposed exact future branch: candidate/v2-shared-backend-convergence-20261017. Proposal is not authorization; no branch was added to RELEASE_BRANCHES and no Production build was run.
+- S06-02 — P2 CONFIRMED_DEFECT, scripts/verify-release-identity.mjs: --release trusted cached @{u} and skipped backend validation outside EAS_BUILD. Repair requires live exact upstream SHA and Production URL/client configuration/empty mode/mandatory consent on --release, preserving every identity/branch/clean-source guard. Fifteen release tests PASS, including denied branch prefixes, missing/offline/local-only upstream and stale remote. Owner: shared release governance.
+- Exact repair branch added only to validation workflow and scoped boundary provenance lane. No native-build workflow changed.
+
+## Pass G certification in progress
+
+Fresh npm ci: 587 packages, PASS. TypeScript PASS. Deno checks for AI and all four Premium functions PASS. Expo dependency compatibility PASS; Expo Doctor 21/21 PASS. Boundary scan PASS after registering the exact assigned file ownership.
+
+Initial full run: 5,042 tests, 5,029 pass, 13 fail. Eight deletion and three Premium Home failures are inherited/deferred. Two additional failures were (a) newly-created audit evidence lacking its boundary lane, now repaired, and (b) a CPU-contention calendar timing failure; isolated unchanged test passes (2.50ms against 50ms threshold). No assertion weakened. Final full suite uses four workers while preserving every test; exact-SHA CI also required.
+
+

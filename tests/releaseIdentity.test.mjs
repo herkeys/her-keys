@@ -66,7 +66,7 @@ describe('Release identity guard', () => {
   });
 
   test('provenance requires an authorized branch, a clean tracked tree and a pushed HEAD', () => {
-    const good = { branch: RELEASE_BRANCHES[0], trackedChanges: [], head: 'a', upstreamHead: 'a' };
+    const good = { branch: RELEASE_BRANCHES[0], trackedChanges: [], head: 'a'.repeat(40), upstreamHead: 'a'.repeat(40), remoteHead: 'a'.repeat(40) };
     assert.deepEqual(checkProvenance(good), []);
     assert.match(checkProvenance({ ...good, branch: 'feature/01-today-chief-of-staff' }).join('\n'), /not an authorized release branch/);
     assert.match(checkProvenance({ ...good, trackedChanges: ['app.json'] }).join('\n'), /tracked changes/);

@@ -1,4 +1,4 @@
-import { createContext, useContext, useRef, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   applyDiscoveryConversation,
   applyProviderDiscoveryConversation,
@@ -100,6 +100,33 @@ function TalkItOutSession({ children }: { children: ReactNode }) {
   const nextSubmissionRef = useRef(0);
   const lastFallbackRef = useRef<FallbackRetry | null>(null);
 
+  // The shared store can change owners while a provider turn is awaiting the
+  // network. Never apply an old account's result to the replacement household.
+  const ownerKey = () => {
+    const snapshot = store.getSnapshot();
+    const binding = snapshot.identity.binding;
+    return [binding?.accountId, binding?.householdId, binding?.boundAt, snapshot.state?.household.id].join('|');
+  };
+  useEffect(() => {
+    let owner = ownerKey();
+    const invalidate = () => {
+      const current = ownerKey();
+      if (current === owner) return;
+      owner = current;
+      activeSubmissionRef.current = null;
+      lastFallbackRef.current = null;
+      setIsThinking(false);
+      setServiceNotice(null);
+      update(startFrom(store.getSnapshot().state?.discovery ?? null));
+    };
+    const unsubscribe = store.subscribe(invalidate);
+    return () => {
+      unsubscribe();
+      activeSubmissionRef.current = null;
+      lastFallbackRef.current = null;
+    };
+  }, [store]);
+
   // One key per composed message: a re-tapped Send is the same submission, not a second capture.
   const submissionRef = useRef(0);
   const submissionKey = () => `s${Date.now().toString(36)}-${submissionRef.current}`;
@@ -182,6 +209,7 @@ function TalkItOutSession({ children }: { children: ReactNode }) {
     nextSubmissionRef.current += 1;
     const submissionId = nextSubmissionRef.current;
     activeSubmissionRef.current = submissionId;
+    const owner = ownerKey();
 
     try {
       const current = sessionRef.current;
@@ -226,7 +254,7 @@ function TalkItOutSession({ children }: { children: ReactNode }) {
           .map(({ speaker, text: messageText }) => ({ speaker, text: messageText })),
       });
 
-      if (activeSubmissionRef.current !== submissionId) return 'sent';
+      if (activeSubmissionRef.current !== submissionId || ownerKey() !== owner) return 'sent';
 
       let turn: DiscoveryTurn;
       if (call.kind === 'ready') {
@@ -284,6 +312,7 @@ function TalkItOutSession({ children }: { children: ReactNode }) {
     nextSubmissionRef.current += 1;
     const submissionId = nextSubmissionRef.current;
     activeSubmissionRef.current = submissionId;
+    const owner = ownerKey();
     setServiceNotice(null);
     setIsThinking(true);
 
@@ -297,7 +326,7 @@ function TalkItOutSession({ children }: { children: ReactNode }) {
           .map(({ speaker, text: messageText }) => ({ speaker, text: messageText })),
       });
 
-      if (activeSubmissionRef.current !== submissionId) return;
+      if (activeSubmissionRef.current !== submissionId || ownerKey() !== owner) return;
 
       if (call.kind !== 'ready') {
         setServiceNotice(DEGRADED_NOTICE);

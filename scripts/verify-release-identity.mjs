@@ -58,7 +58,13 @@ export function checkBackendTarget(env) {
   return failures;
 }
 
-export function checkProvenance({ branch, trackedChanges, head, upstreamHead }) {
+export function checkReleaseBackendTarget(env) {
+  const failures = checkBackendTarget(env);
+  if (env.EXPO_PUBLIC_HERKEYS_BACKEND !== 'production') failures.push('release backend: a store release requires the Production backend');
+  return failures;
+}
+
+export function checkProvenance({ branch, trackedChanges, head, upstreamHead, remoteHead }) {
   const failures = [];
   if (!RELEASE_BRANCHES.includes(branch)) {
     failures.push(`branch: ${JSON.stringify(branch)} is not an authorized release branch (${RELEASE_BRANCHES.join(', ')})`);
@@ -66,6 +72,9 @@ export function checkProvenance({ branch, trackedChanges, head, upstreamHead }) 
   if (trackedChanges.length > 0) failures.push(`working tree: tracked changes present (${trackedChanges.join(', ')})`);
   if (!upstreamHead) failures.push('upstream: branch has no upstream, so the candidate SHA is not on the remote');
   else if (upstreamHead !== head) failures.push(`upstream: HEAD ${head} differs from upstream ${upstreamHead} (push or pull first)`);
+  if (!/^[0-9a-f]{40}$/.test(head ?? '')) failures.push('source: an exact full commit SHA is required');
+  if (!remoteHead) failures.push('remote: current remote HEAD could not be verified (network access and an upstream are required)');
+  else if (remoteHead !== head) failures.push('remote: current remote HEAD differs from the exact local source SHA');
   return failures;
 }
 
@@ -84,6 +93,25 @@ function git(args) {
   return result.status === 0 ? result.stdout.trim() : '';
 }
 
+// A cached tracking ref is not proof that the remote still points to this SHA.
+// Query the configured upstream's exact branch; offline/missing/local upstreams fail closed.
+export function readProvenance(run = git) {
+  const branch = run(['rev-parse', '--abbrev-ref', 'HEAD']);
+  const remote = run(['config', '--get', `branch.${branch}.remote`]);
+  const merge = run(['config', '--get', `branch.${branch}.merge`]);
+  const upstreamHead = run(['rev-parse', '@{u}']);
+  const lines = remote && remote !== '.' && merge.startsWith('refs/heads/') && upstreamHead
+    ? run(['ls-remote', '--exit-code', '--refs', remote, merge]).split('\n') : [];
+  const matches = lines.map(line => line.trim().split(/\s+/)).filter(parts => parts.length === 2 && parts[1] === merge && /^[0-9a-f]{40}$/.test(parts[0]));
+  return {
+    branch,
+    head: run(['rev-parse', 'HEAD']),
+    upstreamHead,
+    remoteHead: matches.length === 1 ? matches[0][0] : '',
+    trackedChanges: run(['diff', '--name-only', 'HEAD']).split('\n').filter(Boolean),
+  };
+}
+
 function main() {
   const release = process.argv.includes('--release');
   const config = resolveExpoConfig();
@@ -98,15 +126,12 @@ function main() {
     IOS_BUILD_NUMBER: config?.ios?.buildNumber,
   };
   if (release) {
-    const provenance = {
-      branch: git(['rev-parse', '--abbrev-ref', 'HEAD']),
-      head: git(['rev-parse', 'HEAD']),
-      upstreamHead: git(['rev-parse', '@{u}']),
-      trackedChanges: git(['diff', '--name-only', 'HEAD']).split('\n').filter(Boolean),
-    };
+    failures.push(...checkReleaseBackendTarget(process.env));
+    const provenance = readProvenance();
     failures.push(...checkProvenance(provenance));
     report.BRANCH = provenance.branch;
     report.SOURCE_SHA = provenance.head;
+    report.REMOTE_SOURCE_SHA = provenance.remoteHead;
   }
   for (const [key, value] of Object.entries(report)) console.log(`${key}=${value}`);
   if (failures.length > 0) {
