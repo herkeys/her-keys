@@ -8,7 +8,7 @@ import { useTalkItOut } from '../../store/TalkItOutContext';
 import type { TalkItOutMessage, TalkItOutStage } from '../../types';
 import { CaptureGroup } from './capture/CaptureCards';
 import { copy } from './capture/copy';
-import { AiReportPanel } from './AiReportPanel';
+import { AiReportPanel } from '../ai-safety/AiReportPanel';
 
 /**
  * A capture in the conversation. "Decide later" folds it away and leaves it in the Life Inbox; it is never
