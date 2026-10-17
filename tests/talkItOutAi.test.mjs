@@ -8,6 +8,8 @@ import { isReplayableDiscoveryConversation } from '../src/domain/discovery.ts';
 import { createHerKeysAiClient } from '../src/platform/herKeysAiClient.ts';
 
 const read = (path) => readFileSync(path, 'utf8');
+const owner = () => ({ accountId: 'synthetic-account', signal: new AbortController().signal });
+const auth = { getSession: async () => ({ data: { session: { user: { id: 'synthetic-account' }, access_token: 'synthetic-local-token' } }, error: null }) };
 
 const validTurn = () => ({
   messages: [{ speaker: 'herkeys', text: 'What feels most urgent right now?', stage: 'clarify' }],
@@ -71,6 +73,7 @@ describe('authenticated client boundary', () => {
     globalThis.__DEV__ = false;
     let call;
     const client = createHerKeysAiClient({
+      auth,
       functions: {
         invoke: async (name, options) => {
           call = { name, options };
@@ -84,7 +87,7 @@ describe('authenticated client boundary', () => {
       userText: 'I do not know where to start.',
       history: [],
     };
-    const result = await client.advance(input);
+    const result = await client.advance(input, owner());
 
     assert.equal(call.name, 'herkeys-ai');
     assert.deepEqual(call.options.body, input);
@@ -96,29 +99,32 @@ describe('authenticated client boundary', () => {
     globalThis.__DEV__ = false;
 
     const unauthorized = createHerKeysAiClient({
+      auth,
       functions: {
         invoke: async () => ({ data: null, error: { message: 'no', context: { status: 401 } } }),
       },
     });
-    assert.deepEqual(await unauthorized.advance({ state: createInitialState(), userText: 'x', history: [] }), {
+    assert.deepEqual(await unauthorized.advance({ state: createInitialState(), userText: 'x', history: [] }, owner()), {
       kind: 'unauthorized',
     });
 
     const unavailable = createHerKeysAiClient({
+      auth,
       functions: {
         invoke: async () => {
           throw new Error('offline');
         },
       },
     });
-    assert.equal((await unavailable.advance({ state: createInitialState(), userText: 'x', history: [] })).kind, 'unavailable');
+    assert.equal((await unavailable.advance({ state: createInitialState(), userText: 'x', history: [] }, owner())).kind, 'unavailable');
 
     const malformed = createHerKeysAiClient({
+      auth,
       functions: {
         invoke: async () => ({ data: { messages: 'not-an-array' }, error: null }),
       },
     });
-    assert.equal((await malformed.advance({ state: createInitialState(), userText: 'x', history: [] })).kind, 'invalid');
+    assert.equal((await malformed.advance({ state: createInitialState(), userText: 'x', history: [] }, owner())).kind, 'invalid');
   });
 });
 

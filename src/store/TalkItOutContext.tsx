@@ -97,6 +97,7 @@ function TalkItOutSession({ children }: { children: ReactNode }) {
   const record = useHouseholdState().state.discovery;
   const counterRef = useRef(0);
   const activeSubmissionRef = useRef<number | null>(null);
+  const activeRequestRef = useRef<AbortController | null>(null);
   const nextSubmissionRef = useRef(0);
   const lastFallbackRef = useRef<FallbackRetry | null>(null);
 
@@ -113,6 +114,8 @@ function TalkItOutSession({ children }: { children: ReactNode }) {
       const current = ownerKey();
       if (current === owner) return;
       owner = current;
+      activeRequestRef.current?.abort();
+      activeRequestRef.current = null;
       activeSubmissionRef.current = null;
       lastFallbackRef.current = null;
       setIsThinking(false);
@@ -122,6 +125,8 @@ function TalkItOutSession({ children }: { children: ReactNode }) {
     const unsubscribe = store.subscribe(invalidate);
     return () => {
       unsubscribe();
+      activeRequestRef.current?.abort();
+      activeRequestRef.current = null;
       activeSubmissionRef.current = null;
       lastFallbackRef.current = null;
     };
@@ -210,6 +215,9 @@ function TalkItOutSession({ children }: { children: ReactNode }) {
     const submissionId = nextSubmissionRef.current;
     activeSubmissionRef.current = submissionId;
     const owner = ownerKey();
+    const accountId = store.getSnapshot().identity.binding?.accountId ?? null;
+    const request = new AbortController();
+    activeRequestRef.current = request;
 
     try {
       const current = sessionRef.current;
@@ -252,7 +260,7 @@ function TalkItOutSession({ children }: { children: ReactNode }) {
         history: current.messages
           .slice(-12)
           .map(({ speaker, text: messageText }) => ({ speaker, text: messageText })),
-      });
+      }, { accountId, signal: request.signal });
 
       if (activeSubmissionRef.current !== submissionId || ownerKey() !== owner) return 'sent';
 
@@ -299,6 +307,7 @@ function TalkItOutSession({ children }: { children: ReactNode }) {
       return 'sent';
     } finally {
       if (activeSubmissionRef.current === submissionId) {
+        activeRequestRef.current = null;
         activeSubmissionRef.current = null;
         setIsThinking(false);
       }
@@ -313,6 +322,9 @@ function TalkItOutSession({ children }: { children: ReactNode }) {
     const submissionId = nextSubmissionRef.current;
     activeSubmissionRef.current = submissionId;
     const owner = ownerKey();
+    const accountId = store.getSnapshot().identity.binding?.accountId ?? null;
+    const request = new AbortController();
+    activeRequestRef.current = request;
     setServiceNotice(null);
     setIsThinking(true);
 
@@ -324,7 +336,7 @@ function TalkItOutSession({ children }: { children: ReactNode }) {
         history: retry.before.messages
           .slice(-12)
           .map(({ speaker, text: messageText }) => ({ speaker, text: messageText })),
-      });
+      }, { accountId, signal: request.signal });
 
       if (activeSubmissionRef.current !== submissionId || ownerKey() !== owner) return;
 
@@ -357,6 +369,7 @@ function TalkItOutSession({ children }: { children: ReactNode }) {
       });
     } finally {
       if (activeSubmissionRef.current === submissionId) {
+        activeRequestRef.current = null;
         activeSubmissionRef.current = null;
         setIsThinking(false);
       }

@@ -44,6 +44,32 @@ test('a current owner still receives the Free local fallback',async()=>{
   assert.ok(view.serviceNotice);
   await act(()=>r.unmount());
 });
+
+for (const scenario of ['unmount', 'account-switch', 'household-switch', 'rebind']) {
+  test('the mounted conversation cancels its network owner on ' + scenario, async () => {
+    reset();
+    const pending = deferred();
+    let boundary;
+    fixture.call = (_input, owner) => { boundary = owner; return pending.promise; };
+    const r = await render(<TalkItOutProvider><Probe /></TalkItOutProvider>);
+    let sent;
+    await act(() => { sent = view.sendMessage('I do not know where to start.'); });
+    assert.equal(boundary.accountId, 'a');
+    assert.equal(boundary.signal.aborted, false);
+    await act(() => {
+      if (scenario === 'unmount') r.unmount();
+      if (scenario === 'account-switch') fixture.snapshot.identity.binding = { accountId: 'b', householdId: 'hb', boundAt: 't2' };
+      if (scenario === 'household-switch') fixture.snapshot.state.household = { id: 'other-household' };
+      if (scenario === 'rebind') fixture.snapshot.identity.binding = { ...fixture.snapshot.identity.binding, boundAt: 't2' };
+      if (scenario !== 'unmount') store.notify();
+    });
+    assert.equal(boundary.signal.aborted, true);
+    await act(async () => { pending.resolve({ kind: 'unauthorized' }); await sent; });
+    assert.equal(fixture.writes, 0);
+    if (scenario !== 'unmount') await act(() => r.unmount());
+  });
+}
+
 test('an ownership change invalidates retry text and an in-flight turn even if the first account returns',async()=>{
   reset(); fixture.call=async()=>({kind:'unavailable',reason:'synthetic'});
   const r=await render(<TalkItOutProvider><Probe /></TalkItOutProvider>);
