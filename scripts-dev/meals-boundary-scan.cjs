@@ -1716,7 +1716,7 @@ const LATER_FEATURES = [
     branch: null,
     owned: [
       /^src\/platform\/aiResponseReporting\.ts$/,
-      /^src\/features\/talk-it-out\/AiReportPanel\.tsx$/,
+      /^src\/features\/ai-safety\/AiReportPanel\.tsx$/,
       /^tests\/aiResponseReporting\.test\.mjs$/,
       /^supabase\/migrations\/20261017180000_ai_response_reporting\.sql$/,
       /^docs\/integration\/V2_AI_REPORTING_CONVERGENCE_20261017\.md$/,
