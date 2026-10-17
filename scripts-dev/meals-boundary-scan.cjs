@@ -1721,7 +1721,7 @@ const LATER_FEATURES = [
       /^supabase\/migrations\/20261017180000_ai_response_reporting\.sql$/,
       /^docs\/integration\/V2_AI_REPORTING_CONVERGENCE_20261017\.md$/,
     ],
-    migrations: [/^supabase\/migrations\/20261017180000_ai_response_reporting\.sql$/],
+    migrations: ['supabase/migrations/20261017180000_ai_response_reporting.sql'],
     schemas: [], rootCollections: [], syncKinds: [],
     shared: [
       ['src/store/accountRuntimeInstance.ts', 'Compose the metadata-only safety report client on the existing authenticated Supabase session'],
