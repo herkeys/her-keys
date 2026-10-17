@@ -1690,6 +1690,27 @@ const LATER_FEATURES = [
       ['scripts-dev/meals-boundary-scan.cjs', 'Register this exact reviewed integration scope without altering Meals boundary checks, protected files or inherited lane claims'],
     ],
   },
+  {
+    id: 'HK-V2-SHARED-BACKEND-CONVERGENCE-20261017',
+    branch: null,
+    owned: [
+      /^docs\/integration\/V2_SHARED_BACKEND_(?:LEDGER|REPORT|PROMOTION|AI_REPORTING)_20261017\.md$/,
+      /^docs\/integration\/evidence\/(?:entry-functions|entry-full-suite|shared-backend-[a-z0-9-]+|fhhudicklmpofuzkxeqe-entry-(?:ai-parsed|rpcs|migrations)|npykvnxnehlsdlbumzwk-entry-(?:ai-parsed|rpcs|migrations))\.(?:json|txt)$/,
+      /^tests\/(?:aiConsentHandler|aiClientAccountBoundary|talkItOutAccountFence|sharedBackendSqlAuthorization|releaseProvenanceRemote)\.test\.mjs$/,
+      /^tests\/support\/talkItOutBoundary\.mjs$/,
+      /^scripts-dev\/shared-backend-negative-probes\.mjs$/,
+    ],
+    migrations: [], schemas: [], rootCollections: [], syncKinds: [],
+    shared: [
+      ['src/store/TalkItOutContext.tsx', 'P1 reproduced late AI completion: invalidate on unmount/ownership change and fence result or retry to its originating account and household; Free fallback retained'],
+      ['src/platform/herKeysAiClient.ts', 'P1 reproduced cross-account JWT substitution during consent lookup: require the originating account, pin its JWT, bound the receipt query, and honour owner cancellation; server remains consent authority'],
+      ['tests/talkItOutAi.test.mjs', 'Supply the required authenticated owner and session in existing client fixtures; preserve original response, error, privacy and server enforcement assertions'],
+      ['scripts/verify-release-identity.mjs', 'P2 release provenance: verify live exact remote SHA and Production configuration for --release; exact branch allowlist unchanged'],
+      ['tests/releaseIdentity.test.mjs', 'Use full SHA and live remote proof in positive provenance fixture; preserve every negative identity and source check'],
+      ['.github/workflows/v2-integration-validation.yml', 'Exact repair branch validation only with every existing gate, no deployments or native builds'],
+      ['scripts-dev/meals-boundary-scan.cjs', 'Register only assigned shared backend repairs and evidence, no Meals capability, schema or ownership changes'],
+    ],
+  },
 
 ];
 

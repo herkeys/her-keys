@@ -1,0 +1,115 @@
+{
+  "fileHashes": [
+    {
+      "path": "supabase/functions/herkeys-ai/index.ts",
+      "sha256": "dc1790f6b9ac83a4146d2e1eb4f0a864931ebd68383d913a606c1007156948e0",
+      "lfSha256": "aac220a89f1de59cb9b6152a53bb7e5cb50107afc656e63a4d38184fbe7f27b5"
+    },
+    {
+      "path": "supabase/functions/_shared/supabaseAdmin.ts",
+      "sha256": "7fe68234426c9d03d27d182c8ba7ae77e619efe9e23c920801fed2cd6e238ad9",
+      "lfSha256": "a985c9ee345c41c92ef0014b06e744ec659db43f63e79d08d09a4a61bb83ef96"
+    },
+    {
+      "path": "supabase/functions/_shared/http.ts",
+      "sha256": "ece84e7e17f3d21feb6b99ffa0606864196cf5848a1d0ddbb631f6f3cbea5f38",
+      "lfSha256": "58f66be6e4f4056ae0637d4abcb71418bf063cd9ce3b5a26789edbbc2162576a"
+    }
+  ],
+  "premiumSourceDrift": [
+    {
+      "project": "fhhudicklmpofuzkxeqe",
+      "function": "premium-gate",
+      "file": "functions/_shared/supabaseAdmin.ts"
+    },
+    {
+      "project": "fhhudicklmpofuzkxeqe",
+      "function": "premium-gate",
+      "file": "functions/_shared/premium/runtime.ts"
+    },
+    {
+      "project": "fhhudicklmpofuzkxeqe",
+      "function": "premium-reconcile",
+      "file": "functions/_shared/supabaseAdmin.ts"
+    },
+    {
+      "project": "fhhudicklmpofuzkxeqe",
+      "function": "premium-reconcile",
+      "file": "functions/_shared/premium/runtime.ts"
+    },
+    {
+      "project": "fhhudicklmpofuzkxeqe",
+      "function": "revenuecat-webhook",
+      "file": "functions/_shared/supabaseAdmin.ts"
+    },
+    {
+      "project": "fhhudicklmpofuzkxeqe",
+      "function": "premium-ops",
+      "file": "functions/_shared/supabaseAdmin.ts"
+    },
+    {
+      "project": "npykvnxnehlsdlbumzwk",
+      "function": "premium-gate",
+      "file": "functions/_shared/supabaseAdmin.ts"
+    },
+    {
+      "project": "npykvnxnehlsdlbumzwk",
+      "function": "premium-gate",
+      "file": "functions/_shared/premium/runtime.ts"
+    },
+    {
+      "project": "npykvnxnehlsdlbumzwk",
+      "function": "premium-reconcile",
+      "file": "functions/_shared/supabaseAdmin.ts"
+    },
+    {
+      "project": "npykvnxnehlsdlbumzwk",
+      "function": "premium-reconcile",
+      "file": "functions/_shared/premium/runtime.ts"
+    },
+    {
+      "project": "npykvnxnehlsdlbumzwk",
+      "function": "revenuecat-webhook",
+      "file": "functions/_shared/premium/runtime.ts"
+    },
+    {
+      "project": "npykvnxnehlsdlbumzwk",
+      "function": "revenuecat-webhook",
+      "file": "functions/_shared/supabaseAdmin.ts"
+    },
+    {
+      "project": "npykvnxnehlsdlbumzwk",
+      "function": "premium-ops",
+      "file": "functions/_shared/premium/runtime.ts"
+    },
+    {
+      "project": "npykvnxnehlsdlbumzwk",
+      "function": "premium-ops",
+      "file": "functions/_shared/supabaseAdmin.ts"
+    }
+  ],
+  "deployedAiExactParity": true,
+  "syntheticContentSentToGemini": false,
+  "sourceCi": {
+    "sha": "fcdc7b9c4e0408f5a891c877849e97ab0a8d8891",
+    "run": "https://github.com/herkeys/her-keys/actions/runs/39047921590",
+    "status": "failure",
+    "failureStep": "Full application test suite"
+  },
+  "localFullSuite": {
+    "tests": 5102,
+    "pass": 5091,
+    "fail": 11,
+    "newFailures": 0,
+    "ownedAddedTests": 60,
+    "workers": 4,
+    "applicationSha": "bd9f398c912d4be67ae9790a35e9c869778bd429",
+    "evidence": "shared-backend-account-boundary-suite.txt"
+  },
+  "launchCritical": {
+    "tests": 125,
+    "pass": 125,
+    "fail": 0
+  },
+  "checkoutEnabled": false
+}

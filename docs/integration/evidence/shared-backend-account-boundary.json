@@ -1,0 +1,32 @@
+{
+  "issue": "S02-03",
+  "priority": "P1",
+  "classification": "CONFIRMED_DEFECT",
+  "environment": "local installed Supabase SDK, synthetic sessions and network transport",
+  "entrySha": "c8921b7c5c441cd492233ea87afe5d966d2a0992",
+  "repairSha": "bd9f398c912d4be67ae9790a35e9c869778bd429",
+  "source": ["src/platform/herKeysAiClient.ts", "src/store/TalkItOutContext.tsx"],
+  "rootCause": "The SDK resolves the current JWT after an awaited consent lookup; original input was not pinned to its originating session and pending transport was not cancelled on owner changes.",
+  "reproduction": "Pause consent response for A, replace the current local session with B, release the response. The installed SDK sent A's synthetic request body with B's synthetic Authorization header.",
+  "entryTests": { "total": 11, "pass": 4, "fail": 7 },
+  "repair": "Require originating bound account, verify session matches it, filter the receipt by account, pin the Edge Authorization header, propagate AbortSignal and cancel on owner changes/unmount. No owner or consent authority is sent in the request body.",
+  "exitTests": {
+    "installedSdk": { "total": 11, "pass": 11, "fail": 0 },
+    "mountedOwnerBoundary": { "total": 14, "pass": 14, "fail": 0 },
+    "typeScript": "PASS",
+    "backendBoundary": "PASS",
+    "fullSuite": { "total": 5102, "pass": 5091, "fail": 11, "newFailures": 0 }
+  },
+  "historicalIncidentEstablished": false,
+  "hostedIdentityCertification": "BLOCKED_TEST",
+  "externalProviderInvoked": false,
+  "sensitiveDataCollected": false,
+  "residualRisk": "Client cancellation cannot recall content already transmitted before the switch. Requests retain the originating JWT and late completions are discarded. Live authenticated synthetic certification is outstanding.",
+  "owner": "shared source",
+  "references": [
+    "https://supabase.com/docs/reference/javascript/functions-invoke",
+    "https://supabase.com/docs/reference/javascript/auth-getsession",
+    "node_modules/@supabase/supabase-js/src/lib/fetch.ts",
+    "node_modules/@supabase/functions-js/src/FunctionsClient.ts"
+  ]
+}
