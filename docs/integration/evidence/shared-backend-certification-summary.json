@@ -97,12 +97,14 @@
     "failureStep": "Full application test suite"
   },
   "localFullSuite": {
-    "tests": 5087,
-    "pass": 5076,
+    "tests": 5102,
+    "pass": 5091,
     "fail": 11,
     "newFailures": 0,
-    "ownedAddedTests": 45,
-    "workers": 4
+    "ownedAddedTests": 60,
+    "workers": 4,
+    "applicationSha": "bd9f398c912d4be67ae9790a35e9c869778bd429",
+    "evidence": "shared-backend-account-boundary-suite.txt"
   },
   "launchCritical": {
     "tests": 125,

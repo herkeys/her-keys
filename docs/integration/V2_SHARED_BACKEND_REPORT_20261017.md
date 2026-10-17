@@ -7,19 +7,21 @@ Disposition: **repair candidate delivered; assignment certification blocked**. D
 ENTRY_SHA: d775b1fadea6e4d5b1da4a8e81738f539231a5e5.
 Branch: repair/v2-shared-backend-convergence-20261017.
 [Draft PR #34](https://github.com/herkeys/her-keys/pull/34), targeting PR #32's exact integration branch.
-Application repair SHA: fcdc7b9c4e0408f5a891c877849e97ab0a8d8891.
+Latest application repair SHA: bd9f398c912d4be67ae9790a35e9c869778bd429.
 The evidence closeout commit follows that source checkpoint; use the exact final PR head and Actions SHA pinned in the final handoff, not an unpinned branch tip.
 
 Commits:
 - 22f14c3fd40c64f1a8f0b93969df719afeaa4bf5 — executable consent/provider safety regressions and entry inventory.
 - fcdc7b9c4e0408f5a891c877849e97ab0a8d8891 — shared AI ownership fence, live release provenance, SQL tests, scoped validation lane and audit checkpoints.
-- Final closeout — report, evidence logs and explicit denial-probe classifications; no additional application/backend behavior change.
+- c8921b7c5c441cd492233ea87afe5d966d2a0992 — first closeout, evidence logs and explicit denial-probe classifications.
+- bd9f398c912d4be67ae9790a35e9c869778bd429 — pin AI requests to their originating account/JWT and cancel on owner changes; SDK and mounted cancellation regressions.
+- Final evidence closeout — updated report and full-suite output; exact head and Actions URL pinned in draft PR #34 and the final handoff.
 
 PR #32 was checked twice against GitHub and fetched; it remained at ENTRY_SHA. No newer fixes or conflicts existed, no merge/rebase was necessary, and no unrelated branch was merged. PR #32 was not modified or force-pushed.
 iOS PR #33 remains open at fecc8426229230d6b88548824a43f13ae27770f4 on audit/ios-v2-preflight-20261016 and was not modified.
 The main workspace's unrelated local changes were preserved. The clean pre-existing requested repair worktree was moved inside C:/Users/jsmit/Her Keys/.worktrees/v2-shared-backend.
 
-Only one shipped application file changed: src/store/TalkItOutContext.tsx. No app.json, eas.json, Info.plist, Android manifest, native folder, platform-only test/repair, account-deletion implementation/test, applied migration, product/price/offering or activation flag changed. No native binary/build/store command ran.
+Two shipped application files changed: src/store/TalkItOutContext.tsx and src/platform/herKeysAiClient.ts. No app.json, eas.json, Info.plist, Android manifest, native folder, platform-only test/repair, account-deletion implementation/test, applied migration, product/price/offering or activation flag changed. No native binary/build/store command ran.
 
 Changed files (including this closeout):
 - .github/workflows/v2-integration-validation.yml
@@ -36,6 +38,8 @@ Changed files (including this closeout):
 - docs/integration/evidence/npykvnxnehlsdlbumzwk-entry-migrations.json
 - docs/integration/evidence/npykvnxnehlsdlbumzwk-entry-rpcs.json
 - docs/integration/evidence/shared-backend-certification-summary.json
+- docs/integration/evidence/shared-backend-account-boundary.json
+- docs/integration/evidence/shared-backend-account-boundary-suite.txt
 - docs/integration/evidence/shared-backend-full-suite.txt
 - docs/integration/evidence/shared-backend-negative-probes.json
 - docs/integration/evidence/shared-backend-parity.json
@@ -43,12 +47,15 @@ Changed files (including this closeout):
 - scripts-dev/shared-backend-negative-probes.mjs
 - scripts/verify-release-identity.mjs
 - src/store/TalkItOutContext.tsx
+- src/platform/herKeysAiClient.ts
+- tests/aiClientAccountBoundary.test.mjs
 - tests/aiConsentHandler.test.mjs
 - tests/releaseIdentity.test.mjs
 - tests/releaseProvenanceRemote.test.mjs
 - tests/sharedBackendSqlAuthorization.test.mjs
 - tests/support/talkItOutBoundary.mjs
 - tests/talkItOutAccountFence.test.mjs
+- tests/talkItOutAi.test.mjs
 
 ## Confirmed issues, repair and ownership
 
@@ -58,6 +65,7 @@ The [issue ledger](V2_SHARED_BACKEND_LEDGER_20261017.md) contains entry/exit evi
 |---|---|---|---|
 | S02-01 / P1 | Both downloaded AI deployments retain conditional consent; entry source is unconditional | Staging deployed v11; exact downloaded file comparison PASS; 18 shipping-handler regressions PASS | CONFIRMED_DRIFT, Staging repaired; Production pending approval and authenticated E2E blocked. Shared backend / Build Manager |
 | S02-02 / P1 | Late AI completions/retries dispatch against global current household after original owner/session ends; four red mounted reproductions | Invalidate on unmount/ownership changes, fence account/household/binding, clear stale retry content. Ten mounted ready/unavailable/switch/rebind/retry tests PASS; Free fallback PASS | CONFIRMED_DEFECT repaired. Live synthetic session test outstanding. Shared source |
+| S02-03 / P1 | SDK reads the current JWT after asynchronous consent preflight; actual installed SDK sent A's synthetic words with B's JWT in the local red reproduction | Require the originating bound account; capture its session; constrain consent query to that account; explicitly pin the Edge JWT; cancel preflight/transport on account, household, rebind or unmount. Eleven SDK and fourteen mounted tests PASS | CONFIRMED_DEFECT repaired. No historical incident asserted. Live synthetic identity test remains BLOCKED_TEST. Shared source |
 | S03-01 / evidence gap | Provider-originated signed/authenticated delivery and real subscriber reconciliation not demonstrated | 119 exact handler/auth/projection/reconcile/gate tests PASS; provider event ID dedupe also executed in disposable SQL | UNVERIFIED / BLOCKED_TEST for live positives. Billing/backend |
 | S03-02 / P1 | Both live webhook and ops endpoints return 503 not_configured before payload handling | Fail-closed denial verified; exact missing config field unknown; no secret rotation/destination changes made | CONFIRMED_DEFECT, unresolved configuration blocker. Approved Staging secrets/provider test traffic required; Production separately controlled. Billing/backend configuration owner |
 | S04-01 / P2 | Whole shared UI/backend inventory has no safety-report submission/review path | Inventory and policy comparison completed; concrete common contract prepared; no inert control or unmonitored collection added | CONFIRMED_DEFECT, unresolved. Reviewer owner, actual monitored destination, retention and attachment approval required. Product/privacy + shared backend |
@@ -107,6 +115,8 @@ Safe denial request IDs/status/latency: [probe evidence](evidence/shared-backend
 Server ordering reviewed: validate trusted bearer identity/account, read account-scoped latest ai_processing receipt, require current ai-data-processing-initial-v1 affirmative decision, then check configuration/request and invoke Gemini. No environment bypass/client consent authority. Missing/denied/withdrawn/outdated/wrong-account/unreadable decisions make zero provider fetches in executed shipping-handler tests. Provider failures/retries/timeouts and unsafe structured responses are rejected honestly, without fabricated success.
 Live gateway missing/invalid JWT probes return 401 in both environments. Other authenticated consent-negative/positive cases, expired-session fixture, actual provider failure/timeout/retry and real Gemini result are BLOCKED_TEST/NOT_RUN without approved synthetic identities.
 
+The account-switch follow-up reproduced JWT substitution using the installed Supabase SDK and a fully local transport. Seven of eleven new SDK checks failed on c8921b7; all eleven now pass, plus four new mounted cancellation checks (fourteen mounted checks total). Existing client fixtures supply the new required owner/session without removing assertions. No account ID or consent boolean is added to the Edge payload; the server still derives identity from the verified bearer. Cancellation cannot recall content already sent before a switch; it cancels pending transport and discards late completions, while explicit JWT pinning prevents another account authorizing the original request. See [boundary evidence](evidence/shared-backend-account-boundary.json).
+
 No Gemini invocation occurred. Only empty invalid denial payloads and deliberately invalid synthetic credentials were sent to hosted endpoints; no real user content, valid bearer token, provider secret or private account information was logged.
 [Reporting inventory](V2_SHARED_BACKEND_AI_REPORTING_20261017.md) explains Talk It Out's confirmed gap, Smart Inbox productivity scope, deterministic recommendation surfaces, policy sources and the exact data/reviewer decision needed. No new sensitive collection/retention was introduced.
 Production manifest is prepared but explicitly **not eligible for approval/promotion until Staging E2E certification completes**. It includes exact hashes, safe verification and rollback/recovery preserving unconditional consent.
@@ -122,9 +132,9 @@ Both live destinations and ops fail closed as not_configured. No positive provid
 
 Fresh npm ci PASS (587 installed); package/lockfile unchanged.
 TypeScript PASS; Deno 2.8.2 checks PASS for AI/webhook/reconcile/gate/ops.
-Full suite: **5,087 total / 5,076 passing / 11 failing / zero new failures**. All 45 added checks pass. Local final run uses four test workers with every test/assertion unchanged.
+Full suite after the account-boundary follow-up: **5,102 total / 5,091 passing / 11 failing / zero new failures**. All 60 added checks pass. Local final run uses four test workers; existing assertions are retained. [Full output](evidence/shared-backend-account-boundary-suite.txt).
 [Exact application-source CI](https://github.com/herkeys/her-keys/actions/runs/39047921590), SHA fcdc7b9c4e0408f5a891c877849e97ab0a8d8891: same totals, same inherited failures. Exact final-head CI is pinned in the final handoff.
-Launch-critical 125/125 PASS; targeted consent/AI 51/51 PASS; webhook/reconcile/gate 119/119 PASS; SQL 12/12 PASS; release 15/15 PASS; account-fence 10/10 PASS.
+Launch-critical 125/125 PASS; original targeted consent/AI 51/51 PASS; webhook/reconcile/gate 119/119 PASS; SQL 12/12 PASS; release 15/15 PASS. Follow-up SDK identity 11/11 and mounted account-fence/cancellation 14/14 PASS; TypeScript and backend boundary checks rerun PASS.
 Welcome Tree, Premium permission/identity/state, consent, AI schemas/behavior, migration-chain, theme and boundary tests run in the complete suite. Shared-state message tests cover Free, Premium active/pending/expired/unavailable, denied consent/provider failure and household refusal; they are shared source evidence, not native device certification.
 Expo install --check PASS. Expo Doctor 21/21 PASS locally and CI. Resolved Expo public/native config checks PASS in CI; no binary built.
 CI workflows retain all original gates. Exact repair branch is added only to validation. Production release allowlist stays exactly build/02-gemini-integration; unapproved branch prefixes/dirty source/missing upstream/stale remote/wrong identity/backend/missing consent remain rejected.
