@@ -54,6 +54,7 @@ export const ADDITIVE_CHAIN = [
   // Premium launch: actor-bound purchase readiness and independent checkout OFF-by-default control.
   { file: '20261016012000_premium_purchase_readiness.sql', owner: 'PREMIUM_PURCHASE_READINESS', label: 'premium-purchase-readiness' },
   { file: '20261016013000_premium_checkout_independent_activation.sql', owner: 'PREMIUM_CHECKOUT_SWITCH', label: 'premium-checkout-switch' },
+  { file: '20261017180000_ai_response_reporting.sql', owner: 'AI_REPORTING', label: 'ai-reporting' },
 ];
 
 /** WAVE3_BASE (363e473) ended at F05: the chain a WAVE3_BASE-era database was built with, and the populated-upgrade starting point. */
