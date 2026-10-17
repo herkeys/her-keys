@@ -5,7 +5,7 @@ import { describe, test } from 'node:test';
 const source = (file) => readFileSync(new URL('../' + file, import.meta.url), 'utf8');
 const sql = source('supabase/migrations/20261017180000_ai_response_reporting.sql');
 const client = source('src/platform/aiResponseReporting.ts');
-const panel = source('src/features/talk-it-out/AiReportPanel.tsx');
+const panel = source('src/features/ai-safety/AiReportPanel.tsx');
 const view = source('src/features/talk-it-out/TalkItOutView.tsx');
 
 describe('AI response reporting — private consumer safety', () => {
