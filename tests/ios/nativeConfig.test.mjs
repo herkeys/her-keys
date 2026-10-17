@@ -118,10 +118,10 @@ describe('adaptive appearance (HK-FE-UI-02-DM supersedes the light-only policy I
 describe('iOS permission surface', () => {
   const purposeKeys = Object.keys(infoPlist).filter((k) => /^NS.*UsageDescription$/.test(k)).sort();
 
-  test('exactly the four declared purpose strings exist; each is backed by a linked native module', () => {
+  test('exactly the five declared purpose strings exist; each is backed by a linked native module', () => {
     // Location: foreground weather. Camera: document scan (OCR, on device). Motion: expo-location links CoreMotion and Apple's upload
     // validation keys on linked APIs, although the app never requests motion. Face ID: expo-secure-store links LocalAuthentication.
-    assert.deepEqual(purposeKeys, ['NSCameraUsageDescription', 'NSFaceIDUsageDescription', 'NSLocationWhenInUseUsageDescription', 'NSMotionUsageDescription']);
+    assert.deepEqual(purposeKeys, ['NSCameraUsageDescription', 'NSFaceIDUsageDescription', 'NSLocationWhenInUseUsageDescription', 'NSMotionUsageDescription', 'NSPhotoLibraryUsageDescription']);
   });
 
   test('no background location, microphone, contacts, calendars, Bluetooth or tracking is declared', () => {
@@ -142,6 +142,8 @@ describe('iOS permission surface', () => {
   test('the camera string says the photo stays on the device, and location says foreground and approximate', () => {
     assert.match(infoPlist.NSCameraUsageDescription, /on-device|on this device/i);
     assert.match(infoPlist.NSCameraUsageDescription, /never uploaded/i);
+    assert.match(infoPlist.NSPhotoLibraryUsageDescription, /on-device|on this device/i);
+    assert.match(infoPlist.NSPhotoLibraryUsageDescription, /never uploaded/i);
     assert.match(infoPlist.NSLocationWhenInUseUsageDescription, /approximate/i);
     assert.match(infoPlist.NSLocationWhenInUseUsageDescription, /while you're using the app/i);
   });
