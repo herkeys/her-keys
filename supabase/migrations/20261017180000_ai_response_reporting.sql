@@ -69,13 +69,19 @@ REVOKE ALL ON FUNCTION public.submit_ai_response_report(text,text,text,uuid) FRO
 GRANT EXECUTE ON FUNCTION public.submit_ai_response_report(text,text,text,uuid) TO authenticated;
 
 -- Retain only 30 days. This job handles expiration without exposing raw reports to app clients.
-DO $$
+DO $
+DECLARE v_job_exists boolean;
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'herkeys_ai_report_expiry') THEN
-    PERFORM cron.schedule(
-      'herkeys_ai_report_expiry', '19 3 * * *',
-      $job$DELETE FROM private.ai_response_reports WHERE expires_at < now()$job$
-    );
+  -- Hosted Supabase includes pg_cron; disposable PGlite harnesses do not.
+  -- Compile/execute cron statements only when the extension relation exists.
+  IF to_regclass('cron.job') IS NOT NULL THEN
+    EXECUTE 'SELECT EXISTS(SELECT 1 FROM cron.job WHERE jobname = $1)'
+      INTO v_job_exists USING 'herkeys_ai_report_expiry';
+    IF NOT v_job_exists THEN
+      EXECUTE 'SELECT cron.schedule($1,$2,$3)'
+        USING 'herkeys_ai_report_expiry','19 3 * * *',
+          'DELETE FROM private.ai_response_reports WHERE expires_at < now()';
+    END IF;
   END IF;
 END
-$$;
+$;
