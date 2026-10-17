@@ -1725,6 +1725,8 @@ const LATER_FEATURES = [
     schemas: [], rootCollections: [], syncKinds: [],
     shared: [
       ['src/store/accountRuntimeInstance.ts', 'Compose the metadata-only safety report client on the existing authenticated Supabase session'],
+      ['supabase/tests/migration-chain.mjs', 'Register the exact additive AI-reporting migration without modifying historical migrations'],
+      ['tests/migrationChain.test.mjs', 'Pin the AI-reporting migration to the authoritative append-only chain'],
       ['src/features/talk-it-out/TalkItOutView.tsx', 'Actual accessible Report response action: user-chosen reason and metadata only, no message text'],
       ['.github/workflows/v2-integration-validation.yml', 'Allow exact branch in validation-only CI, no deployment/build'],
       ['scripts-dev/meals-boundary-scan.cjs', 'Register exact AI reporting migration and source files without changing existing safety ownership'],
