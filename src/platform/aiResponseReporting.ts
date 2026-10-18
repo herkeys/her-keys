@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { supabaseConfig } from '../config/supabase';
+import { createTimeoutFetch } from './timeoutFetch';
 
 export type AiReportReason = 'unsafe' | 'offensive' | 'inaccurate' | 'privacy' | 'other';
 export type AiReportResult = 'received' | 'unavailable' | 'rate_limited' | 'unauthorized';
@@ -15,6 +16,7 @@ export interface AiReportClient {
  * switch cannot substitute a new actor for an old actor's report.
  */
 export function createAiReportClient(client: SupabaseClient): AiReportClient {
+  const request = createTimeoutFetch((url, options) => globalThis.fetch(url, options));
   return {
     async submit(input, owner) {
       if (!owner.accountId || owner.signal.aborted || !supabaseConfig.url || !supabaseConfig.anonKey) return 'unavailable';
@@ -23,7 +25,7 @@ export function createAiReportClient(client: SupabaseClient): AiReportClient {
         const { data: { session }, error } = await client.auth.getSession();
         if (error || !session || session.user.id !== owner.accountId || owner.signal.aborted) return 'unauthorized';
         const token = session.access_token;
-        const response = await fetch(`${supabaseConfig.url}/rest/v1/rpc/submit_ai_response_report`, {
+        const response = await request(`${supabaseConfig.url}/rest/v1/rpc/submit_ai_response_report`, {
           method: 'POST',
           headers: {
             apikey: supabaseConfig.anonKey,
@@ -48,8 +50,10 @@ export function createAiReportClient(client: SupabaseClient): AiReportClient {
           }
           return 'unavailable';
         }
-        const result = await response.json() as { status?: string };
-        return result.status === 'received' ? 'received' : 'unavailable';
+        const result = await response.json() as { status?: string; receiptId?: unknown };
+        return result.status === 'received' && typeof result.receiptId === 'string' &&
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(result.receiptId)
+          ? 'received' : 'unavailable';
       } catch {
         return 'unavailable';
       }

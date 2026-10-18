@@ -1732,6 +1732,30 @@ const LATER_FEATURES = [
       ['scripts-dev/meals-boundary-scan.cjs', 'Register exact AI reporting migration and source files without changing existing safety ownership'],
     ],
   },
+  {
+    id: 'HK-V2-SHARED-PRODUCTION-CLOSEOUT-20261017 (restricted reporting review and certification)',
+    branch: null,
+    owned: [
+      /^scripts-dev\/ai-report-review\.mjs$/,
+      /^scripts-dev\/shared-production-certification\.mjs$/,
+      /^tests\/(?:aiReportingRuntime|aiReportReviewDatabase|aiReportReviewOperator|aiReportPanelRuntime)\.test\.mjs$/,
+      /^tests\/support\/aiReportBoundary\.mjs$/,
+      /^supabase\/migrations\/20261017221825_ai_report_review_workflow\.sql$/,
+      /^docs\/integration\/V2_SHARED_PRODUCTION_CLOSEOUT_20261017\.md$/,
+      /^docs\/integration\/evidence\/shared-production-[a-z0-9-]+\.(?:json|txt)$/,
+    ],
+    migrations: ['supabase/migrations/20261017221825_ai_report_review_workflow.sql'],
+    schemas: [], rootCollections: [], syncKinds: [],
+    shared: [
+      ['src/platform/aiResponseReporting.ts', 'Reproduced P2 false submission without receipt and hung transport: require a receipt UUID and bounded cancellable request; metadata-only payload unchanged'],
+        ['supabase/functions/herkeys-ai/index.ts', 'Live Gemini P1 contract failure: constrain generated confidence to the already enforced safety contract and log only boolean validation diagnostics; consent and rejection rules unchanged'],
+        ['tests/aiConsentHandler.test.mjs', 'Reproduce provider-generation confidence mismatch and verify invalid labels still fail closed without private content in diagnostics'],
+      ['supabase/tests/migration-chain.mjs', 'Register only the new forward-only reviewer migration; historical migrations and deletion fixtures unchanged'],
+      ['tests/migrationChain.test.mjs', 'Pin the new reviewed migration in the exact append-only chain without weakening governance assertions'],
+      ['.gitattributes', 'Pin the new reviewer migration to LF'],
+      ['scripts-dev/meals-boundary-scan.cjs', 'Register only the assigned reporting review workflow and production certification evidence'],
+    ],
+  },
 
 ];
 

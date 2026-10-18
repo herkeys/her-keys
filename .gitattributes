@@ -54,3 +54,4 @@ supabase/migrations/20261014113517_account_deletion_household_lock.sql text eol=
 # Production Premium launch migrations: LF-pinned and additive; historical SQL remains untouched.
 supabase/migrations/20261016012000_premium_purchase_readiness.sql text eol=lf
 supabase/migrations/20261016013000_premium_checkout_independent_activation.sql text eol=lf
+supabase/migrations/20261017221825_ai_report_review_workflow.sql text eol=lf
