@@ -154,7 +154,8 @@ export function createPremiumLedgerClient(client: SupabaseClient, owner?: Premiu
           .eq('feature_key', featureKey)
           .eq('household_id', householdId)
           .order('updated_at', { ascending: false })
-          .limit(Math.max(1, Math.min(limit, 100)));
+          // Momentum explicitly requests 200 evidence receipts; preserve that bounded window.
+          .limit(Math.max(1, Math.min(limit, 200)));
         const { data, error } = await (authorization ? request.setHeader('Authorization', authorization) : request);
         if (error) return { kind: 'unavailable' };
         const rows: LedgerRow[] = [];

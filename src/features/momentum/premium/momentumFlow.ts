@@ -81,6 +81,9 @@ export async function generateWeeklyReview(deps: MomentumFlowDeps, input: { stat
 
   const listed = await deps.ledger.list(DAILY_LOAD_FEATURE_KEY, deps.householdId, 200);
   if (listed.kind !== 'ok') return { kind: 'unavailable', reason: 'receipts' };
+  // A full bounded window may have omitted older receipts that explain recorded moves.
+  // Do not misattribute those moves or publish partial counts as a complete weekly review.
+  if (listed.value.length >= 200) return { kind: 'unavailable', reason: 'receipts' };
 
   const report = buildWeeklyReview({
     observations: state.observations,

@@ -3,6 +3,8 @@ import { test } from 'node:test';
 import { createClient } from '@supabase/supabase-js';
 import { createPremiumServerClient } from '../../src/monetization/premiumServerClient.ts';
 import { createPremiumLedgerClient } from '../../src/monetization/premiumLedgerClient.ts';
+import { decisionsFrom } from '../../src/features/momentum/premium/momentumFlow.ts';
+import { buildWeeklyReview } from '../../src/domain/premium/momentum/report.ts';
 
 const A = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const B = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
@@ -57,3 +59,29 @@ for (const [name, run] of operations) {
     assert.equal(h.requests.length, 0);
   });
 }
+
+test('Momentum can receive its requested 200 receipts through the real ledger adapter, including receipt 101', async () => {
+  const rows = Array.from({ length: 101 }, (_, i) => ({
+    id: `receipt-${i}`, feature_key: 'daily_load_premium', kind: 'daily_load.reschedule_task', status: 'applied',
+    idempotency_key: `key-${i}`, proposal_ref: { kind: 'task', id: `task-${i}` }, proposal_digest: `digest-${i}`,
+    before_snapshot: { plan: { kind: 'day', date: '2026-10-18' } }, after_snapshot: { plan: { kind: 'day', date: '2026-10-19' } },
+    proposed_at: `2026-10-${16 + i % 3}T12:00:00Z`, applied_at: `2026-10-${16 + i % 3}T12:01:00Z`, updated_at: `2026-10-${16 + i % 3}T12:01:00Z`,
+  }));
+  let limit;
+  const sdk = createClient('https://premium-boundary.invalid', 'sb_publishable_local_test', {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    global: { fetch: async url => {
+      limit = Number(new URL(url).searchParams.get('limit'));
+      return Response.json(rows.slice(0, limit));
+    } },
+  });
+  sdk.auth.getSession = async () => ({ data: { session: session(A) }, error: null });
+  const result = await createPremiumLedgerClient(sdk, { accountId: A, isCurrent: () => true }).list('daily_load_premium', 'shared-household', 200);
+  assert.equal(result.kind, 'ok');
+  assert.equal(result.value.length, 101, 'the requested evidence window must not be silently halved');
+  assert.equal(limit, 200);
+  assert.equal(decisionsFrom(result.value, 'UTC').length, 101);
+  const report = buildWeeklyReview({ observations: [], decisions: decisionsFrom(result.value, 'UTC'), confirmedPatterns: [], today: '2026-10-19', timeZone: 'UTC', nowMs: Date.parse('2026-10-19T15:00:00Z') });
+  assert.equal(report.status, 'ready');
+  assert.equal(report.counts.suggestionsApplied, 101, 'the weekly count includes the real receipt beyond the old cap');
+});
