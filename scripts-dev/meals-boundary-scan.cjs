@@ -1147,6 +1147,7 @@ const LATER_FEATURES = [
     ,"supabase/migrations/20261019144729_account_deletion_v2_resource_certification.sql"
     ,"supabase/migrations/20261019151501_account_deletion_optional_welcome_inventory.sql"
     ,"supabase/migrations/20261019152629_account_deletion_overdue_request_monitor.sql"
+    ,"supabase/migrations/20261019153801_account_deletion_private_household_owners.sql"
   ],
   "schemas": [],
   "rootCollections": [],
@@ -1155,6 +1156,7 @@ const LATER_FEATURES = [
     ['supabase/migrations/20261019144729_account_deletion_v2_resource_certification.sql', 'Deletion V2: explicit Premium/private schema census, independent terminal recount and synthetic-only scoped testing; no Premium computation gate or Meals mutation.'],
     ['supabase/migrations/20261019151501_account_deletion_optional_welcome_inventory.sql', 'Deletion V2: welcome receipt ledger is intentionally Production-only; classify its absent Staging variant without skipping any required resource.'],
     ['supabase/migrations/20261019152629_account_deletion_overdue_request_monitor.sql', 'Deletion V2: monitor overdue requests even while the destructive switch is off; no scheduler activation.'],
+    ['supabase/migrations/20261019153801_account_deletion_private_household_owners.sql', 'Deletion V2: retain another former adult private receipt when it is the only surviving evidence of household ownership.'],
     ['supabase/blueprints/staging-deletion-v2-certification.sql', 'Temporary Staging-only service RPC validates owned fixtures and limits destructive tests to an expiring allowlist; removed after use.'],
     ['supabase/blueprints/staging-deletion-v2-certification.ts', 'Temporary HMAC Staging fixture journey exercises deployed deletion endpoints with synthetic accounts; retired after use.'],
     ['tests/accountRuntime.test.mjs', 'Deletion V2: delayed actor-scoped sign-out preserves a replacement authentication attempt and credential.'],
