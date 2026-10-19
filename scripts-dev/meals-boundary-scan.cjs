@@ -1144,11 +1144,27 @@ const LATER_FEATURES = [
     ,"supabase/migrations/20261014021410_account_deletion_shared_provider_retry.sql"
     ,"supabase/migrations/20261014112400_account_deletion_orphan_shared_ownership.sql"
     ,"supabase/migrations/20261014113517_account_deletion_household_lock.sql"
+    ,"supabase/migrations/20261019144729_account_deletion_v2_resource_certification.sql"
+    ,"supabase/migrations/20261019151501_account_deletion_optional_welcome_inventory.sql"
+    ,"supabase/migrations/20261019152629_account_deletion_overdue_request_monitor.sql"
   ],
   "schemas": [],
   "rootCollections": [],
   "syncKinds": [],
   "shared": [['supabase/blueprints/staging-deletion-fixture.ts', 'Temporary HMAC-authenticated Staging fixture harness; forbidden in Production.'],
+    ['supabase/migrations/20261019144729_account_deletion_v2_resource_certification.sql', 'Deletion V2: explicit Premium/private schema census, independent terminal recount and synthetic-only scoped testing; no Premium computation gate or Meals mutation.'],
+    ['supabase/migrations/20261019151501_account_deletion_optional_welcome_inventory.sql', 'Deletion V2: welcome receipt ledger is intentionally Production-only; classify its absent Staging variant without skipping any required resource.'],
+    ['supabase/migrations/20261019152629_account_deletion_overdue_request_monitor.sql', 'Deletion V2: monitor overdue requests even while the destructive switch is off; no scheduler activation.'],
+    ['supabase/blueprints/staging-deletion-v2-certification.sql', 'Temporary Staging-only service RPC validates owned fixtures and limits destructive tests to an expiring allowlist; removed after use.'],
+    ['supabase/blueprints/staging-deletion-v2-certification.ts', 'Temporary HMAC Staging fixture journey exercises deployed deletion endpoints with synthetic accounts; retired after use.'],
+    ['tests/accountRuntime.test.mjs', 'Deletion V2: delayed actor-scoped sign-out preserves a replacement authentication attempt and credential.'],
+    ['src/domain/account/deletionRuntime.ts', 'Deletion V2: injectable runtime with account-switch fencing at asynchronous boundaries.'],
+    ['src/domain/account/accountRuntime.ts', 'Deletion V2: optional expected-account sign-out refuses ending a replacement identity.'],
+    ['src/platform/secureStore.ts', 'Deletion V2: serialize shared native key operations across adapter instances to preserve replacement credentials.'],
+    ['src/platform/localNotifications.ts', 'Deletion V2: serialize reminder scheduling/cancellation so pending account reminders cannot reappear after cancellation.'],
+    ['src/store/LocalNotificationProvider.tsx', 'Deletion V2: cancel reminders while deletion restricts account access.'],
+    ['tests/premiumFeedback.test.mjs', 'Deletion V2: classify the exact cleanup-only migration and assert it never gates deletion on entitlement.'],
+    ['.github/workflows/v2-integration-validation.yml', 'Deletion V2: run the unchanged full integration gate on the isolated repair branch exact SHA.'],
     ['supabase/migrations/20261014012518_account_deletion_auth_reconciliation.sql', 'Additive session-revocation reconciliation verified against hosted Auth behavior.'],
     ['supabase/migrations/20261014014020_account_deletion_terminal_identity.sql', 'Preserve receipt-to-namespace proof and reject deleted Auth identities.'],
     ['supabase/migrations/20261014014620_account_deletion_proof_retention.sql', 'Apply owner-approved 365-day minimal terminal proof and daily expiry.'],

@@ -134,6 +134,27 @@ function runtimeFor({
   };
 }
 
+test('deletion-scoped sign-out refuses the wrong actor and preserves its credential',async()=>{
+ const h=runtimeFor();await h.runtime.signIn('apple');
+ const before=h.secureStorage.contents()[SECURE_SESSION_KEY];
+ await h.runtime.signOut(ACCOUNT_B);
+ assert.equal(h.runtime.getState().kind,'accountBound');assert.equal(h.secureStorage.contents()[SECURE_SESSION_KEY],before);
+ assert.deepEqual(h.identified,[ACCOUNT_A]);
+});
+
+test('deletion-scoped sign-out loses authority while another actor signs in',async()=>{
+ let resume,started;
+ const waiting=new Promise(r=>{resume=r;}),entered=new Promise(r=>{started=r;});
+ const h=runtimeFor({providerResults:[{kind:'success',session:sessionFor(ACCOUNT_A)},{kind:'success',session:sessionFor(ACCOUNT_B)}],
+  sessionClient:{async activate(value){return {kind:'active',session:value};},async signOut(){started();await waiting;return {kind:'ok'};},subscribe(){return()=>{};},startAutoRefresh(){},stopAutoRefresh(){}}});
+ await h.runtime.signIn('apple');const leaving=h.runtime.signOut(ACCOUNT_A);await entered;
+ await h.runtime.signIn('apple');
+ await h.secureStorage.setItem(SECURE_SESSION_KEY,JSON.stringify(sessionFor(ACCOUNT_B)));
+ const before=h.runtime.getState();resume();await leaving;
+ assert.equal(h.runtime.getState(),before);assert.equal(parseStoredSession(h.secureStorage.contents()[SECURE_SESSION_KEY]).accountId,ACCOUNT_B);
+ assert.notEqual(h.identified.at(-1),null);
+});
+
 describe('secure session boundary', () => {
   test('1. the credential lives under its own key, never the household one', () => {
     assert.equal(SECURE_SESSION_KEY, 'herkeys.secure.session');

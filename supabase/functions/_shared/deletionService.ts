@@ -53,7 +53,8 @@ export async function handleDeletion(req: Request, action: 'request'|'restore'|'
    if(error || claims?.claims.sub!==user.id) return json({error:'unauthorized'},401);
    const token=randomUrlSafe(); const encrypted=await recoveryPayload(user.email,token);
    const result=await command('request',{account_id:user.id,session_id:claims.claims.session_id,
-    receipt_hash:await sha256Base64Url(body.receipt),recovery_hash:await sha256Base64Url(token),...encrypted});
+    receipt_hash:await sha256Base64Url(body.receipt),recovery_hash:await sha256Base64Url(token),
+    identity_providers:(user.identities??[]).map(identity=>identity.provider),...encrypted});
    if(result.duplicate)return json({...result,email_status:'previously_queued'});
    // Restrictive database state is authoritative even if Auth/provider calls fail.
    const revoke=await adminClient().auth.admin.signOut(bearer,'global');

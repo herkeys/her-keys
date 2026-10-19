@@ -1,6 +1,20 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {revokeGoogle,revokeApple,deleteRevenueCatCustomer} from '../../supabase/functions/_shared/deletionProviders.ts';
+import {verifiedAuthAbsence,verifiedProviderEvidence,deletionHealthNeedsAttention} from '../../supabase/functions/_shared/deletionCore.ts';
+test('disabled processing never hides an overdue deletion backlog from monitoring',()=>{
+ assert.equal(deletionHealthNeedsAttention({enabled:false,overdue_requests:1}),true);
+ assert.equal(deletionHealthNeedsAttention({enabled:false,overdue_requests:0,failed:0}),false);
+ assert.equal(deletionHealthNeedsAttention({retention_failed:true}),true);
+});
+
+test('Auth absence requires an explicit authoritative 404; aggregate provider booleans cannot skip cleanup',()=>{
+ assert.equal(verifiedAuthAbsence({data:{user:null},error:{status:404}}),true);
+ for(const result of [{data:{user:null},error:null},{data:{user:{}},error:{status:404}},... [401,403,429,500,503].map(status=>({data:{user:null},error:{status}}))])assert.equal(verifiedAuthAbsence(result),false);
+ assert.equal(verifiedProviderEvidence({providers:true}),false);
+ const verified={google_revoked:true,apple_revoked:true,revenuecat_deleted:true};assert.equal(verifiedProviderEvidence(verified),true);
+ for(const key of Object.keys(verified))assert.equal(verifiedProviderEvidence({...verified,[key]:'requires_retry'}),false);
+});
 test('OAuth endpoint absence never certifies credential revocation',async()=>{
  const absent=async()=>new Response('{}',{status:404});
  await assert.rejects(revokeGoogle('disposable-token',absent),/provider_unavailable/);

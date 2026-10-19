@@ -1,5 +1,16 @@
 export type DeletionStatus = { status: 'pending' | 'restored' | 'failed' | 'purged' | 'unknown'; deadline?: string; purged_at?: string | null; verified_at?: string | null };
 export function isOpaqueProof(value: unknown): value is string { return typeof value === 'string' && /^[A-Za-z0-9_-]{43}$/.test(value); }
+export function verifiedAuthAbsence(result: {data:{user:unknown};error:{status?:number}|null}):boolean {
+ return result.data.user===null && result.error?.status===404;
+}
+export function verifiedProviderEvidence(evidence:Record<string,unknown>):boolean {
+ return ['google_revoked','apple_revoked','revenuecat_deleted'].every(key=>evidence[key]===true);
+}
+export function deletionHealthNeedsAttention(health:Record<string,unknown>):boolean {
+ return ['scheduler_stale','retention_stale','retention_failed'].some(key=>health[key]===true)
+  || ['failed','overdue_cases','overdue_requests','stale_leases','email_problems','retention_overdue']
+   .some(key=>typeof health[key]==='number'&&(health[key] as number)>0);
+}
 export function isVerifiedPurge(value: unknown): value is DeletionStatus {
  if (!value || typeof value !== 'object') return false;
  const v = value as DeletionStatus;
