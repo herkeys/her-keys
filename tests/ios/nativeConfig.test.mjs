@@ -95,10 +95,10 @@ describe('IOS-D02 the iOS app is light-only, as app.json declares', () => {
 describe('iOS permission surface', () => {
   const purposeKeys = Object.keys(infoPlist).filter((k) => /^NS.*UsageDescription$/.test(k)).sort();
 
-  test('exactly the four declared purpose strings exist; each is backed by a linked native module', () => {
+  test('exactly the five declared purpose strings exist; each is backed by a linked native module', () => {
     // Location: foreground weather. Camera: document scan (OCR, on device). Motion: expo-location links CoreMotion and Apple's upload
     // validation keys on linked APIs, although the app never requests motion. Face ID: expo-secure-store links LocalAuthentication.
-    assert.deepEqual(purposeKeys, ['NSCameraUsageDescription', 'NSFaceIDUsageDescription', 'NSLocationWhenInUseUsageDescription', 'NSMotionUsageDescription']);
+    assert.deepEqual(purposeKeys, ['NSCameraUsageDescription', 'NSFaceIDUsageDescription', 'NSLocationWhenInUseUsageDescription', 'NSMotionUsageDescription', 'NSPhotoLibraryUsageDescription']);
   });
 
   test('no background location, microphone, contacts, calendars, Bluetooth or tracking is declared', () => {
@@ -114,6 +114,15 @@ describe('iOS permission surface', () => {
       'NSSpeechRecognitionUsageDescription',
     ]) assert.equal(infoPlist[key], undefined, key);
     assert.equal(infoPlist.UIBackgroundModes, undefined);
+  });
+
+  test('the resolved iOS Photos purpose matches the reviewed image-picker document intake', () => {
+    const approved = 'Her Keys lets you select a document photo from your library for on-device text recognition. The selected photo stays on this device and is never uploaded.';
+    const picker = appJson.plugins.find((p) => Array.isArray(p) && p[0] === 'expo-image-picker')[1];
+    assert.equal(picker.photosPermission, approved);
+    assert.equal(infoPlist.NSPhotoLibraryUsageDescription, approved);
+    assert.equal(infoPlist.NSPhotoLibraryAddUsageDescription, undefined,
+      'The app only selects, not writes, document photos');
   });
 
   test('the camera string says the photo stays on the device, and location says foreground and approximate', () => {
