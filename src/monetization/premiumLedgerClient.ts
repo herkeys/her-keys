@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
+import { premiumAuthorization, premiumRpc, type PremiumRequestOwner } from './premiumRequestOwner';
 
 /**
  * The client side of the shared Premium decision ledger (supabase/migrations/20261015130000_premium_decision_ledger.sql).
@@ -55,6 +56,7 @@ export type LedgerPatch = {
 export type LedgerResult<T> = { kind: 'ok'; value: T } | { kind: 'refused'; code: 'not_authorized' | 'ownership_denied' | 'duplicate' | 'idempotency_conflict' | 'illegal_transition' | 'not_found' | 'rejected' } | { kind: 'unavailable' };
 
 export interface PremiumLedgerClient {
+  forAccount?(owner: PremiumRequestOwner): PremiumLedgerClient;
   record(input: LedgerRecordInput): Promise<LedgerResult<LedgerRow>>;
   transition(id: string, to: LedgerStatus, patch?: LedgerPatch): Promise<LedgerResult<LedgerRow>>;
   /** The caller's OWN receipts (RLS), newest first. Readable whatever the subscription state. */
@@ -107,11 +109,12 @@ function refusal(error: { code?: string; message?: string } | null): LedgerResul
   return { kind: 'unavailable' };
 }
 
-export function createPremiumLedgerClient(client: SupabaseClient): PremiumLedgerClient {
+export function createPremiumLedgerClient(client: SupabaseClient, owner?: PremiumRequestOwner): PremiumLedgerClient {
   return {
+    forAccount: (scope) => createPremiumLedgerClient(client, scope),
     async record(input) {
       try {
-        const { data, error } = await client.rpc('premium_decision_record', {
+        const { data, error } = await premiumRpc(client, owner, 'premium_decision_record', {
           p_household: input.householdId,
           p_feature: input.featureKey,
           p_kind: input.kind,
@@ -133,7 +136,7 @@ export function createPremiumLedgerClient(client: SupabaseClient): PremiumLedger
 
     async transition(id, to, patch = {}) {
       try {
-        const { data, error } = await client.rpc('premium_decision_transition', { p_id: id, p_to: to, p_patch: patch });
+        const { data, error } = await premiumRpc(client, owner, 'premium_decision_transition', { p_id: id, p_to: to, p_patch: patch });
         if (error) return refusal(error);
         const row = toRow(data);
         return row === null ? { kind: 'unavailable' } : { kind: 'ok', value: row };
@@ -144,13 +147,15 @@ export function createPremiumLedgerClient(client: SupabaseClient): PremiumLedger
 
     async list(featureKey, householdId, limit) {
       try {
-        const { data, error } = await client
+        const authorization = await premiumAuthorization(client, owner);
+        const request = client
           .from('premium_decisions')
           .select('*')
           .eq('feature_key', featureKey)
           .eq('household_id', householdId)
           .order('updated_at', { ascending: false })
           .limit(Math.max(1, Math.min(limit, 100)));
+        const { data, error } = await (authorization ? request.setHeader('Authorization', authorization) : request);
         if (error) return { kind: 'unavailable' };
         const rows: LedgerRow[] = [];
         for (const item of data ?? []) {

@@ -1756,6 +1756,30 @@ const LATER_FEATURES = [
       ['scripts-dev/meals-boundary-scan.cjs', 'Register only the assigned reporting review workflow and production certification evidence'],
     ],
   },
+  {
+    id: 'HK-V2-SHARED-DEFECT-CLOSEOUT-20261019 (account-scoped Premium transport and reporting races)',
+    branch: null,
+    owned: [
+      /^src\/monetization\/premiumRequestOwner\.ts$/,
+      /^tests\/premium\/transportAccountBoundary\.test\.mjs$/,
+      /^docs\/integration\/HK_V2_(?:SHARED_REPAIR_CLOSEOUT|SHARED_DEFECT_LEDGER|REMAINING_HANDOFF|INTEGRATION_MANIFEST)_20261019\.md$/,
+      /^docs\/integration\/evidence\/shared-closeout-20261019\/[a-z0-9-]+\.(?:json|txt)$/,
+    ],
+    migrations: [], schemas: [], rootCollections: [], syncKinds: [],
+    shared: [
+      ['src/monetization/PremiumStateProvider.tsx', 'Capture the provider account lifetime in actual server and ledger transports; readiness and server entitlement guards remain unchanged'],
+      ['src/monetization/premiumTypes.ts', 'Expose an optional account-scoped transport factory; no entitlement business-rule changes'],
+      ['src/monetization/premiumServerClient.ts', 'Proven SDK JWT substitution: verify the originating session and pin Authorization on Premium RPC and Edge calls'],
+      ['src/monetization/premiumLedgerClient.ts', 'Apply the same originating-session fence and pinned JWT to receipt writes and reads'],
+      ['src/features/ai-safety/AiReportPanel.tsx', 'Proven same-frame duplicate and pre-submission account-switch races: synchronous single-flight and originating binding fence'],
+      ['tests/premiumHome/home.test.mjs', 'Repair missing positive readiness fixture and add fail-closed purchase negative controls without enabling checkout'],
+      ['tests/premium/clientProvider.test.mjs', 'Verify real provider forwards the originating lifetime and invalidates old server/ledger owners'],
+      ['tests/premiumCheckoutSwitch.test.mjs', 'Keep paid-readiness source assertions while checking the actor-pinned RPC helper and installed-SDK runtime regressions'],
+      ['tests/aiReportPanelRuntime.test.mjs', 'Reproduce and protect duplicate submission, stale account, error retry and rate-limit feedback'],
+      ['.github/workflows/v2-integration-validation.yml', 'Run existing mandatory validation on exact repair branch pushes; no deployment or native build'],
+      ['scripts-dev/meals-boundary-scan.cjs', 'Register only exact shared repair paths and dated evidence; all boundary assertions remain enforced'],
+    ],
+  },
 
 ];
 

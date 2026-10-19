@@ -22,17 +22,40 @@ export function AiReportPanel({ messageId, onClose }: { messageId: string; onClo
   const styles = useStyles();
   const accountStore = useAppStore();
   const [reason, setReason] = useState<AiReportReason>('unsafe');
-  const [state, setState] = useState<'idle' | 'sending' | 'received' | 'error'>('idle');
+  const [state, setState] = useState<'idle' | 'sending' | 'received' | 'error' | 'changed'>('idle');
   const [notice, setNotice] = useState<string | null>(null);
   const key = useRef(Crypto.randomUUID());
   const pending = useRef<AbortController | null>(null);
-  useEffect(() => () => { pending.current?.abort(); }, []);
+  const submitted = useRef(false);
+  const origin = useRef(accountStore.getSnapshot().identity.binding);
+  const stale = useRef(false);
+  const sameOwner = () => {
+    const current = accountStore.getSnapshot().identity.binding;
+    return current?.accountId === origin.current?.accountId && current?.householdId === origin.current?.householdId
+      && current?.boundAt === origin.current?.boundAt;
+  };
+  useEffect(() => {
+    const unsubscribe = accountStore.subscribe(() => {
+      if (sameOwner()) return;
+      stale.current = true;
+      pending.current?.abort();
+      setState('changed');
+      setNotice('Your account changed. Close this report and open it again from your conversation.');
+    });
+    return () => { unsubscribe(); pending.current?.abort(); };
+  }, [accountStore]);
 
   const submit = async () => {
-    if (state === 'sending' || state === 'received') return;
+    if (pending.current || submitted.current || stale.current) return;
     const bound = accountStore.getSnapshot().identity.binding;
     if (!bound?.accountId) {
       setNotice('Sign in to submit your report. Your conversation was not shared.');
+      return;
+    }
+    if (!sameOwner()) {
+      stale.current = true;
+      setState('changed');
+      setNotice('Your account changed. Close this report and open it again from your conversation.');
       return;
     }
     const request = new AbortController();
@@ -49,6 +72,7 @@ export function AiReportPanel({ messageId, onClose }: { messageId: string; onClo
         { accountId: bound.accountId, signal: request.signal });
       if (request.signal.aborted) return;
       if (result === 'received') {
+        submitted.current = true;
         setState('received');
         setNotice('Report submitted. Your conversation text was not included.');
       } else {
@@ -56,6 +80,11 @@ export function AiReportPanel({ messageId, onClose }: { messageId: string; onClo
         setNotice(result === 'rate_limited'
           ? 'You have reached the report limit for today.'
           : 'Could not submit your report. Please try again.');
+      }
+    } catch {
+      if (!request.signal.aborted) {
+        setState('error');
+        setNotice('Could not submit your report. Please try again.');
       }
     } finally {
       unsubscribe();
@@ -74,7 +103,7 @@ export function AiReportPanel({ messageId, onClose }: { messageId: string; onClo
           {reasons.map(([value, label]) => (
             <Button key={value} label={reason === value ? `Selected: ${label}` : label}
               accessibilityHint={reason === value ? 'Currently selected report reason' : 'Choose this report reason'}
-              size="sm" variant="secondary" disabled={state === 'sending'}
+              size="sm" variant="secondary" disabled={state === 'sending' || state === 'changed'}
               onPress={() => { setReason(value); setNotice(null); setState('idle'); }} />
           ))}
         </View>
@@ -83,7 +112,7 @@ export function AiReportPanel({ messageId, onClose }: { messageId: string; onClo
       <View style={styles.actions}>
         {state !== 'received' && (
           <Button label={state === 'sending' ? 'Submitting…' : 'Submit report'} size="sm"
-            disabled={state === 'sending'} onPress={() => void submit()} />
+            disabled={state === 'sending' || state === 'changed'} onPress={() => void submit()} />
         )}
         <Button label="Close report" size="sm" variant="ghost" onPress={() => { pending.current?.abort(); onClose(); }} />
       </View>

@@ -63,7 +63,7 @@ export function PremiumStateProvider(props: PremiumStateProviderProps) {
 }
 
 function PremiumAccountState({
-  client,
+  client: transport,
   accountState,
   ledger = UNCONFIGURED_PREMIUM_LEDGER,
   appVersion,
@@ -72,8 +72,6 @@ function PremiumAccountState({
   scopeIsCurrent,
 }: PremiumStateProviderProps & { scopeIsCurrent: () => boolean }) {
   const { status: storeStatus } = useEntitlement();
-  const controller = useMemo(() => new PremiumController(client), [client]);
-  const snapshot = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
   const accountId = activeAccountId(accountState);
   const accountBound = accountState.kind === 'accountBound';
   const householdId = accountState.kind === 'accountBound' ? accountState.householdId : null;
@@ -81,24 +79,29 @@ function PremiumAccountState({
   useEffect(() => { live.current = true; return () => { live.current = false; }; }, []);
   const isCurrent = useCallback(() => live.current && scopeIsCurrent() && accountBound && accountId !== null && householdId !== null
     && (isAccountCurrent?.(accountId, householdId) ?? true), [scopeIsCurrent, accountBound, accountId, householdId, isAccountCurrent]);
+  const owner = useMemo(() => ({ accountId, isCurrent }), [accountId, isCurrent]);
+  const client = useMemo(() => transport.forAccount?.(owner) ?? transport, [transport, owner]);
+  const controller = useMemo(() => new PremiumController(client), [client]);
+  const snapshot = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
+  const accountLedger = useMemo(() => ledger.forAccount?.(owner) ?? ledger, [ledger, owner]);
   // Old flows cannot invoke a new account's transport after an await, including a shared-household account switch.
   const scopedLedger = useMemo<PremiumLedgerClient>(() => ({
     async record(input) {
       if (!isCurrent() || input.householdId !== householdId) return { kind: 'unavailable' };
-      const result = await ledger.record(input);
+      const result = await accountLedger.record(input);
       return isCurrent() ? result : { kind: 'unavailable' };
     },
     async transition(...args) {
       if (!isCurrent()) return { kind: 'unavailable' };
-      const result = await ledger.transition(...args);
+      const result = await accountLedger.transition(...args);
       return isCurrent() ? result : { kind: 'unavailable' };
     },
     async list(feature, household, limit) {
       if (!isCurrent() || household !== householdId) return { kind: 'unavailable' };
-      const result = await ledger.list(feature, household, limit);
+      const result = await accountLedger.list(feature, household, limit);
       return isCurrent() ? result : { kind: 'unavailable' };
     },
-  }), [ledger, isCurrent, householdId]);
+  }), [accountLedger, isCurrent, householdId]);
   const [decisionStore, setDecisionStore] = useState<{ accountId: string | null; byFeature: Record<string, GateDecision> }>({ accountId: null, byFeature: {} });
 
   // A bound account is the only one that may hold Premium state; authDegraded keeps its last server view out of reach.

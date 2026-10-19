@@ -77,6 +77,38 @@ test('pending and completed submissions disable accidental repeat actions', asyn
   assert.equal(button(r, 'Submit report'), undefined);
 });
 
+test('a thrown report failure offers a retry without an unhandled rejection', async () => {
+  reportFixture.submit = async () => { throw new Error('private transport detail'); };
+  const r = await mount(); await press(r, 'Submit report');
+  assert.match(text(r), /Could not submit/); assert.doesNotMatch(text(r), /private transport detail/);
+  reportFixture.submit = async () => 'received'; await press(r, 'Submit report');
+  assert.match(text(r), /Report submitted/);
+});
+
+test('rate limiting gives clear feedback without claiming receipt', async () => {
+  reportFixture.submit = async () => 'rate_limited';
+  const r = await mount(); await press(r, 'Submit report');
+  assert.match(text(r), /report limit for today/); assert.doesNotMatch(text(r), /Report submitted/);
+});
+
+test('two taps before React renders start only one submission', async () => {
+  const pending = deferred(); let calls = 0;
+  reportFixture.submit = () => { calls++; return pending.promise; };
+  const r = await mount(); const submit = button(r, 'Submit report').props.onPress;
+  await act(() => { submit(); submit(); });
+  assert.equal(calls, 1);
+  await act(() => pending.resolve('received'));
+});
+
+test('an account switch before submission cannot report the old response as the replacement account', async () => {
+  let calls = 0; reportFixture.submit = async () => { calls++; return 'received'; };
+  const r = await mount(); const submit = button(r, 'Submit report').props.onPress;
+  await act(() => { fixture.snapshot.identity.binding = { accountId: 'b', householdId: 'hb', boundAt: 't2' }; store.notify(); });
+  await act(() => submit());
+  assert.equal(calls, 0);
+  assert.doesNotMatch(text(r), /Report submitted/);
+});
+
 for (const field of ['account', 'household', 'binding']) {
   test('a pending report cancels after ' + field + ' change and ignores late success', async () => {
     const pending = deferred(); let owner;
