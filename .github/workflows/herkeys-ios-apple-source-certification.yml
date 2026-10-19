@@ -1,0 +1,50 @@
+name: Her Keys V2 iOS Apple source certification
+
+on:
+  push:
+    branches:
+      - audit/ios-v2-photos-permission-20261019
+      - integration/build2-shared-consumer-repair
+  pull_request:
+    branches:
+      - integration/build2-shared-consumer-repair
+    paths:
+      - app.json
+      - tests/ios/**
+      - .github/workflows/herkeys-ios-apple-source-certification.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ios-source:
+    name: iOS generated permissions, Apple source and full regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      CI: '1'
+      EXPO_NO_TELEMETRY: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Locked dependencies
+        run: npm ci
+      - name: iOS generated native config, Apple sign-in and permissions
+        run: node --import ./tests/support/register-ts.mjs --import ./tests/support/register-jsx.mjs --test tests/ios/*.test.mjs
+      - name: Full application regression
+        run: npm test
+      - name: TypeScript
+        run: npm run typecheck
+      - name: Expo compatibility and introspected native config
+        run: |
+          npx expo install --check
+          npx expo-doctor
+          npx expo config --type introspect --json > /tmp/herkeys-ios-config.json
+      - name: Release identity guard
+        run: npm run verify:release-identity
