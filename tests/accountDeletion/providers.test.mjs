@@ -1,7 +1,13 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {revokeGoogle,revokeApple,deleteRevenueCatCustomer} from '../../supabase/functions/_shared/deletionProviders.ts';
-import {verifiedAuthAbsence,verifiedProviderEvidence,deletionHealthNeedsAttention} from '../../supabase/functions/_shared/deletionCore.ts';
+import {verifiedAuthAbsence,verifiedProviderEvidence,deletionHealthNeedsAttention,needsProviderReconciliation} from '../../supabase/functions/_shared/deletionCore.ts';
+test('a crash after the final provider acknowledgement still reconciles the missing aggregate on retry',()=>{
+ const acknowledged={google_revoked:true,apple_revoked:true,revenuecat_deleted:true};
+ assert.equal(needsProviderReconciliation(acknowledged),true);
+ assert.equal(needsProviderReconciliation({...acknowledged,providers:true}),false);
+ for(const key of Object.keys(acknowledged))assert.equal(needsProviderReconciliation({...acknowledged,providers:true,[key]:'requires_retry'}),true);
+});
 test('disabled processing never hides an overdue deletion backlog from monitoring',()=>{
  assert.equal(deletionHealthNeedsAttention({enabled:false,overdue_requests:1}),true);
  assert.equal(deletionHealthNeedsAttention({enabled:false,overdue_requests:0,failed:0}),false);

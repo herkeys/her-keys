@@ -6,6 +6,9 @@ export function verifiedAuthAbsence(result: {data:{user:unknown};error:{status?:
 export function verifiedProviderEvidence(evidence:Record<string,unknown>):boolean {
  return ['google_revoked','apple_revoked','revenuecat_deleted'].every(key=>evidence[key]===true);
 }
+export function needsProviderReconciliation(evidence:Record<string,unknown>):boolean {
+ return !verifiedProviderEvidence(evidence)||evidence.providers!==true;
+}
 export function deletionHealthNeedsAttention(health:Record<string,unknown>):boolean {
  return ['scheduler_stale','retention_stale','retention_failed'].some(key=>health[key]===true)
   || ['failed','overdue_cases','overdue_requests','stale_leases','email_problems','retention_overdue']

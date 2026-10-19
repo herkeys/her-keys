@@ -1,7 +1,7 @@
 import { adminClient } from './supabaseAdmin.ts';
 import { command, drainDeletionEmail, reconcileRestoration, deliveryRecipient } from './deletionService.ts';
 import { decryptSecret, encryptSecret } from './crypto.ts';
-import { safeCategory, verifiedAuthAbsence, verifiedProviderEvidence } from './deletionCore.ts';
+import { safeCategory, verifiedAuthAbsence, needsProviderReconciliation } from './deletionCore.ts';
 import {revokeGoogle,revokeApple,deleteRevenueCatCustomer} from './deletionProviders.ts';
 
 async function checked(query: any) { const {data,error}=await query; if(error) throw new Error('database_unavailable'); return data; }
@@ -41,7 +41,7 @@ export async function processDeletions() {
     await command('prepare_completion',{...args,...encrypted});
    }
    let providersComplete=!authLookupUnavailable;
-   if(!verifiedProviderEvidence(request.evidence)) {
+   if(needsProviderReconciliation(request.evidence)) {
     async function provider(name:string,work:()=>Promise<void>) {
      if(request.evidence[name]===true)return;
      try {await work();await evidence(name,true);}
