@@ -1,9 +1,9 @@
 # Her Keys V2 shared repair closeout — October 19, 2026
 
-The three inherited Premium Home failures are repaired. Four confirmed shared defects are closed, with 39 added regression tests and no new failures. This is ready for Build Manager source integration review. It is not EAS, native purchase, Production operations, or release approval.
+The three inherited Premium Home failures are repaired. Five confirmed shared defects are closed, with 41 added regression tests and no new failures. This is ready for Build Manager source integration review. It is not EAS, native purchase, Production operations, or release approval.
 
 - Entry: `559e50cdc99e7858b2b259f330a0fe2f8aa87513`, PR #35.
-- Final executable repair: `5cb2a02af790ecb6a710a120985a3e1795726745`.
+- Final executable repair: `c66caeccc72951d46470eef8eb94fb8fe388f239` (initial four repairs in `5cb2a02af790ecb6a710a120985a3e1795726745`, plus the final Momentum evidence repair).
 - Branch: `repair/v2-shared-defect-closeout-20261019`.
 - [Draft PR #38](https://github.com/herkeys/her-keys/pull/38), targeting PR #35's branch.
 - Subsequent evidence/documentation commits do not alter the executable repair. The documentation-inclusive final review SHA and its latest exact-head Actions URL are pinned in PR #38's integration manifest after push; use that head for integration, not an inferred merge ref.
@@ -22,29 +22,32 @@ Expo's exact [v57 documentation](https://docs.expo.dev/versions/v57.0.0/) was re
 2. **SHR-V2-002:** UI/controller lifetime checks discarded stale responses but did not constrain Supabase's later JWT injection. With an old actor scope and a replacement SDK session, all nine server/ledger operations could transmit as the replacement actor, including Smart Inbox text. `premiumRequestOwner.ts` now verifies the originating session against the keyed provider lifetime, bounds that lookup to eight seconds, and pins Authorization on RPC, Edge and receipt queries. `PremiumStateProvider` scopes both real transports. Twenty-seven installed-SDK tests cover mismatched actors, later token substitution and switches during lookup; the shipping-provider regression verifies lifetime wiring and invalidation. Before repair, 18/27 new transport tests failed; all 27 now pass.
 3. **SHR-V2-003:** report submission relied on React state, allowing two same-frame callbacks to start two requests. A synchronous pending ref and successful-submission ref now prevent this. The server's existing durable deduplication remains unchanged. Error handling remains retryable with the same key, with explicit rate-limit feedback.
 4. **SHR-V2-004:** a report form opened under A captured account identity only when Submit was pressed. A pre-submit switch could therefore submit A's response reference as B. The form now captures its originating account/household/binding, invalidates on any change, aborts pending work, disables stale actions and suppresses late receipts. Before repair, both new mounted report race tests failed; they now pass.
+5. **SHR-V2-013:** Momentum requests 200 receipt rows, but the actual ledger adapter capped every read at 100. The installed-SDK regression returned only 100 of 101 real-shaped receipts, omitting evidence used for attribution. The adapter now honors the existing 200-row contract; the report regression verifies all 101 approved suggestions are counted. A saturated 200-row window is conservatively unavailable before authorization/save, because completeness cannot then be established. This avoids partial counts or attributing an omitted approved move to the user. Two additional regressions pass. Material limit: households that fill this bounded window receive the existing unavailable state; expanding/paginating historical evidence is not claimed here.
 
 No entitlement is granted by these changes. Store success still starts bounded server reconciliation; only the server entitlement authorizes paid operations. Missing readiness remains denial. Production checkout was never toggled.
 
 ## Test evidence
 
-| Validation | Entry | Executable repair |
+| Validation | Entry | Final executable CI |
 |---|---:|---:|
-| Full tests | 5,152 | 5,191 |
-| Passed | 5,141 | 5,183 |
+| Full tests | 5,152 | 5,193 |
+| Passed | 5,141 | 5,185 |
 | Failed | 11 | 8 |
 | Premium Home inherited failures | 3 | 0 |
 | Independent deletion failures, including parent failures | 8 | 8 |
 | New regressions | — | 0 |
-| Focused shared contracts | — | 1,157 / 1,157 |
+| Focused shared contracts | — | 1,159 / 1,159 |
 | Launch-critical CI tests | 125 historically | 126 / 126 |
 
-[Entry exact-SHA Actions](https://github.com/herkeys/her-keys/actions/runs/39091377651). [Executable repair exact-SHA Actions](https://github.com/herkeys/her-keys/actions/runs/39212300521), head `5cb2a02af790ecb6a710a120985a3e1795726745`: **FAIL only for the eight inherited deletion failures**. Install, backend protection, release identity, TypeScript, launch contracts, Expo install compatibility, Doctor 21/21, and public/native configuration all PASS. Check the PR's latest head run after the evidence commit; an older run is not certification of a newer SHA.
+[Entry exact-SHA Actions](https://github.com/herkeys/her-keys/actions/runs/39091377651). [Final executable repair exact-SHA Actions](https://github.com/herkeys/her-keys/actions/runs/39213517785), head `c66caeccc72951d46470eef8eb94fb8fe388f239`: **FAIL only for the eight inherited deletion failures**. Install, backend protection, release identity, TypeScript, launch contracts, Expo install compatibility, Doctor 21/21, and public/native configuration all PASS. The [initial repair run](https://github.com/herkeys/her-keys/actions/runs/39212300521) had 5,191 / 5,183 pass / 8 inherited failures. Check the PR's latest head run after the evidence commit; an older run is not certification of a newer SHA.
 
 Reproduced locally from fresh `npm ci`. Full `npm test` at a clean entry worktree matched historical CI exactly. A preliminary run with three newly written, unregistered evidence files also triggered the Meals ownership scanner; moving instrumentation outside the tree and rerunning cleanly restored the 11-failure baseline. The scanner still enforces every boundary; this sprint registers its exact dated evidence and source paths with reasons. A static readiness test was updated to follow the new actor-pinned RPC helper while retaining the RPC name, timeout, account check, pinned Authorization, server-readiness and paywall assertions.
 
 Evidence is in `docs/integration/evidence/shared-closeout-20261019/`: individual original stacks, transport/report red regressions, local full-suite comparison, focused totals, exact-source CI steps/totals, and fresh read-only hosted observations. Full local raw logs remain in the task's Windows temporary directory; committed summaries contain commands/totals and failure locations without copying full SQL fixture diagnostics.
 
-The 1,157-test focused run covers all `tests/premium`, `premiumHome`, `premiumDomain`, `premiumFinalConfig`, `platformParity`, `ai*`, `welcome*`, `consent*`, plus account runtime, bounded auth, email/password/OTP, account-bound Talk It Out capture, checkout, paywall feedback, sequencing, launch state, backend boundaries, migration chain, onboarding layout and AI behavior. It does not exclude or waive deletion tests from full CI.
+The 1,159-test focused run covers all `tests/premium`, `premiumHome`, `premiumDomain`, `premiumFinalConfig`, `platformParity`, `ai*`, `welcome*`, `consent*`, plus account runtime, bounded auth, email/password/OTP, account-bound Talk It Out capture, checkout, paywall feedback, sequencing, launch state, backend boundaries, migration chain, onboarding layout and AI behavior. It does not exclude or waive deletion tests from full CI.
+
+Two later concurrent local runs reported the unchanged calendar performance growth-ratio assertion (ratios 25.9 and 22.5). The last local full run had 5,193 total / 5,184 pass / 9 fail, including that assertion; its isolated rerun passed 6/6, and exact-source CI passed the calendar test with only the eight inherited failures overall. Contention is a hypothesis, not a proven root cause. No timing threshold or test was changed or waived. This local reproducibility limit is SHR-V2-014; authoritative final pinned-Node CI totals are reported separately above.
 
 ## Shared journeys and actual backend contracts
 

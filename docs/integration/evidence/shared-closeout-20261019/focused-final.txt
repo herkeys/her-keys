@@ -1,9 +1,9 @@
-✔ journeys through the real welcome flow and the real account runtime (384.9897ms)
-ℹ tests 1157
+✔ journeys through the real welcome flow and the real account runtime (549.1857ms)
+ℹ tests 1159
 ℹ suites 172
-ℹ pass 1157
+ℹ pass 1159
 ℹ fail 0
 ℹ cancelled 0
 ℹ skipped 0
 ℹ todo 0
-ℹ duration_ms 9363.6819
+ℹ duration_ms 52852.5121

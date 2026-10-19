@@ -21,3 +21,14 @@ hk-shared-final-full-fixed.txt: test at tests\accountDeletion\mutations.test.mjs
 hk-shared-final-full-fixed.txt: test at tests\accountDeletion\resourceCoverage.test.mjs:69:63
 hk-shared-final-full-fixed.txt: test at tests\accountDeletion\resourceCoverage.test.mjs:69:63
 hk-shared-final-full-fixed.txt: test at tests\accountDeletion\resourceCoverage.test.mjs:69:63
+hk-shared-final-complete.txt: ℹ tests 5193
+hk-shared-final-complete.txt: ℹ pass 5184
+hk-shared-final-complete.txt: ℹ fail 9
+hk-shared-final-complete.txt: ℹ cancelled 0
+hk-shared-final-complete.txt: test at tests\accountDeletion\database.test.mjs:124:11
+hk-shared-final-complete.txt: test at tests\accountDeletion\database.test.mjs:129:11
+hk-shared-final-complete.txt: test at tests\accountDeletion\mutations.test.mjs:49:11
+hk-shared-final-complete.txt: test at tests\accountDeletion\resourceCoverage.test.mjs:69:63
+hk-shared-final-complete.txt: test at tests\accountDeletion\resourceCoverage.test.mjs:69:63
+hk-shared-final-complete.txt: test at tests\accountDeletion\resourceCoverage.test.mjs:69:63
+hk-shared-final-complete.txt: test at tests\calendarPerformance.test.mjs:77:3

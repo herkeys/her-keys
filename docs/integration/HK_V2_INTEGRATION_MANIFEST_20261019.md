@@ -5,11 +5,11 @@
 | Repository | `herkeys/her-keys` |
 | Repair branch | `repair/v2-shared-defect-closeout-20261019` |
 | Base / merge base | `559e50cdc99e7858b2b259f330a0fe2f8aa87513` |
-| Final executable repair SHA | `5cb2a02af790ecb6a710a120985a3e1795726745` |
+| Final executable repair SHA | `c66caeccc72951d46470eef8eb94fb8fe388f239` |
 | Draft PR | [#38](https://github.com/herkeys/her-keys/pull/38) |
 | PR target | `repair/v2-ai-reporting-and-prod-convergence-20261017` (PR #35) |
 | Final documentation-inclusive SHA | PR #38 `headRefOid`, pinned verbatim in its final machine-readable integration report after this evidence commit is pushed |
-| Source exact-SHA CI | [39212300521](https://github.com/herkeys/her-keys/actions/runs/39212300521): 5,191 / 5,183 pass / 8 inherited failures; all other gates PASS |
+| Source exact-SHA CI | [39213517785](https://github.com/herkeys/her-keys/actions/runs/39213517785): 5,193 / 5,185 pass / 8 inherited failures; all other gates PASS |
 | Latest exact-head CI | Use the direct run URL in PR #38's final report; require `headSha == headRefOid` |
 | Backend migrations / staging deployments | NONE / NONE |
 | Production promotions authorized or performed | NONE |
@@ -30,6 +30,7 @@ gh run list --branch repair/v2-shared-defect-closeout-20261019 --limit 5 --json 
 .github/workflows/v2-integration-validation.yml
 scripts-dev/meals-boundary-scan.cjs
 src/features/ai-safety/AiReportPanel.tsx
+src/features/momentum/premium/momentumFlow.ts
 src/monetization/PremiumStateProvider.tsx
 src/monetization/premiumLedgerClient.ts
 src/monetization/premiumRequestOwner.ts
@@ -38,11 +39,12 @@ src/monetization/premiumTypes.ts
 tests/aiReportPanelRuntime.test.mjs
 tests/premium/clientProvider.test.mjs
 tests/premium/transportAccountBoundary.test.mjs
+tests/premiumDomain/momentumFlow.test.mjs
 tests/premiumCheckoutSwitch.test.mjs
 tests/premiumHome/home.test.mjs
 ```
 
-Documentation/evidence additions: the four `HK_V2_*_20261019.md` integration documents and `docs/integration/evidence/shared-closeout-20261019/{live-readback.json,negative-probes.json,premium-home-entry-0.txt,premium-home-entry-1.txt,premium-home-entry-2.txt,report-before.txt,transport-before.txt,focused-final.txt,full-comparison.txt,executable-ci.json,executable-ci-summary.txt}`. Use `git diff --name-only 559e50cdc99e7858b2b259f330a0fe2f8aa87513 <final-head>` for the authoritative complete path set.
+Documentation/evidence additions: the four `HK_V2_*_20261019.md` integration documents and `docs/integration/evidence/shared-closeout-20261019/{live-readback.json,negative-probes.json,premium-home-entry-0.txt,premium-home-entry-1.txt,premium-home-entry-2.txt,report-before.txt,transport-before.txt,momentum-limit-before.txt,calendar-recheck.txt,focused-final.txt,full-comparison.txt,executable-ci.json,executable-ci-summary.txt}`. Use `git diff --name-only 559e50cdc99e7858b2b259f330a0fe2f8aa87513 <final-head>` for the authoritative complete path set.
 
 ## Dependencies and deterministic convergence
 

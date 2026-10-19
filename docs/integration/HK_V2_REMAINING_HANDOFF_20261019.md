@@ -1,6 +1,6 @@
 # Remaining platform and external handoff — October 19, 2026
 
-Shared repairs are in [Draft PR #38](https://github.com/herkeys/her-keys/pull/38), executable commit `5cb2a02af790ecb6a710a120985a3e1795726745`. These are eight distinct handoffs, not eight outstanding shared-source defects. All device execution is DEVICE_TEST_PENDING. No EAS build or release is authorized by this report.
+Shared repairs are in [Draft PR #38](https://github.com/herkeys/her-keys/pull/38), final executable commit `c66caeccc72951d46470eef8eb94fb8fe388f239`. These are eight distinct handoffs, not eight outstanding shared-source defects. All device execution is DEVICE_TEST_PENDING. No EAS build or release is authorized by this report.
 
 ## 1. iOS owner — SHR-V2-005
 
