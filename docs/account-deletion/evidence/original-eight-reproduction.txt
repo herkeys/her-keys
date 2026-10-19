@@ -1,0 +1,251 @@
+▶ account deletion: real SQL state, privileges, recovery and purge
+  ✔ internal command is denied to authenticated and anon (14.6182ms)
+  ✔ stale auth cannot request deletion (89.2759ms)
+  ✔ request records exactly 30 days and queues encrypted recovery (32.2262ms)
+  ✔ duplicate requests preserve deadline and do not queue another email (2.881ms)
+  ✔ previously issued JWT loses ordinary RLS access and RPC authority (22.64ms)
+  ✔ worker disabled and dry-run cannot claim (5.0501ms)
+  ✔ enabled worker cannot delete before the deadline (4.0769ms)
+  ✔ replacement recovery invalidates previous token without extending deadline (10.1265ms)
+  ✔ single-use recovery reserves against purge but does not falsely restore (127.62ms)
+  ✔ new lifecycle after restoration has a new deadline (11.5318ms)
+  ✔ expired requests cannot restore; workers compete through claims (10.3012ms)
+  ✔ wrong fencing token and kill switch refuse destructive work (9.8967ms)
+  ✔ false terminal success is refused (3.6187ms)
+  ✔ expired lease can be reclaimed and old worker loses authority (6.1134ms)
+  ✖ complete database cleanup preserves the other account (7.182ms)
+  ✖ purged requires Auth absence and independent resource evidence (169.2136ms)
+  ✔ resend rate limit has a bounded window and unknown receipts disclose nothing (9.5508ms)
+✖ account deletion: real SQL state, privileges, recovery and purge (20474.653ms)
+▶ critical lifecycle negative controls detect unsafe guard mutations
+  ✔ removing the restrictive policy exposes stale-JWT profile access (16.5995ms)
+  ✔ granting command execution to authenticated crosses the worker authority boundary (13.6569ms)
+  ✔ removing expiry eligibility makes an early purge claim possible (19.8277ms)
+  ✖ approved shared policy deletes private records, restricts ambiguous records and preserves the other adult (138.1034ms)
+✖ critical lifecycle negative controls detect unsafe guard mutations (20268.0343ms)
+✖ all 43 registered resources: shared and unrelated isolation (21528.8625ms)
+ℹ Populated resources: account_claims, account_consents, action_executions, action_intents, action_outcomes, action_records, apple_revocation_credentials, automation_authorities, behavior_observations, calendar_oauth_states, capacity_profiles, career_opportunities, change_log, dependencies, discovery_records, events, evidence_links, external_calendar_connections, external_references, goals, herkeys_welcome_email_receipts, household_categories, household_members, household_people, household_systems, intent_decisions, interpretations, life_record_task_links, life_records, meal_plan_entries, needs_me_items, onboarding_state, one_move_records, patterns, person_contexts, person_task_links, rebuild_focus_links, rebuild_focuses, recurrence_rules, responsibilities, source_artifacts, system_steps, tasks
+✖ all 43 registered resources: former_member and unrelated isolation (13343.6307ms)
+ℹ Populated resources: account_claims, account_consents, action_executions, action_intents, action_outcomes, action_records, apple_revocation_credentials, automation_authorities, behavior_observations, calendar_oauth_states, capacity_profiles, career_opportunities, change_log, dependencies, discovery_records, events, evidence_links, external_calendar_connections, external_references, goals, herkeys_welcome_email_receipts, household_categories, household_members, household_people, household_systems, intent_decisions, interpretations, life_record_task_links, life_records, meal_plan_entries, needs_me_items, onboarding_state, one_move_records, patterns, person_contexts, person_task_links, rebuild_focus_links, rebuild_focuses, recurrence_rules, responsibilities, source_artifacts, system_steps, tasks
+✖ all 43 registered resources: single and unrelated isolation (17378.2776ms)
+ℹ Populated resources: account_claims, account_consents, action_executions, action_intents, action_outcomes, action_records, apple_revocation_credentials, automation_authorities, behavior_observations, calendar_oauth_states, capacity_profiles, career_opportunities, change_log, dependencies, discovery_records, events, evidence_links, external_calendar_connections, external_references, goals, herkeys_welcome_email_receipts, household_categories, household_members, household_people, household_systems, intent_decisions, interpretations, life_record_task_links, life_records, meal_plan_entries, needs_me_items, onboarding_state, one_move_records, patterns, person_contexts, person_task_links, rebuild_focus_links, rebuild_focuses, recurrence_rules, responsibilities, source_artifacts, system_steps, tasks
+ℹ tests 26
+ℹ suites 0
+ℹ pass 18
+ℹ fail 8
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 53465.7902
+
+✖ failing tests:
+
+test at tests\accountDeletion\database.test.mjs:124:11
+✖ complete database cleanup preserves the other account (7.182ms)
+  error: unclassified_resource
+      at pe.Ue (file:///C:/Users/jsmit/.codex/worktrees/deletion-crossplatform-closeout/Her%20Keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:17959)
+      at pe.tt (file:///C:/Users/jsmit/.codex/worktrees/deletion-crossplatform-closeout/Her%20Keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:15347)
+      at pe.parse (file:///C:/Users/jsmit/.codex/worktrees/deletion-crossplatform-closeout/Her%20Keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:14021)
+      at D.Ne (file:///C:/Users/jsmit/.codex/worktrees/deletion-crossplatform-closeout/Her%20Keys/node_modules/@electric-sql/pglite/dist/index.js:5:1763)
+      at file:///C:/Users/jsmit/.codex/worktrees/deletion-crossplatform-closeout/Her%20Keys/node_modules/@electric-sql/pglite/dist/index.js:5:1155
+      at wasm://wasm/0269e01e:wasm-function[10979]:0x5ad057
+      at wasm://wasm/0269e01e:wasm-function[3598]:0x281dd2
+      at wasm://wasm/0269e01e:wasm-function[3640]:0x289ccf
+      at wasm://wasm/0269e01e:wasm-function[3650]:0x289f2b
+      at wasm://wasm/0269e01e:wasm-function[9956]:0x556968 {
+    length: 164,
+    severity: 'ERROR',
+    code: 'P0001',
+    detail: undefined,
+    hint: undefined,
+    position: undefined,
+    internalPosition: undefined,
+    internalQuery: undefined,
+    where: 'PL/pgSQL function public.herkeys_deletion_command(text,jsonb) line 200 at RAISE',
+    schema: undefined,
+    table: undefined,
+    column: undefined,
+    dataType: undefined,
+    constraint: undefined,
+    file: 'pl_exec.c',
+    line: '3923',
+    routine: 'exec_stmt_raise',
+    query: 'select public.herkeys_deletion_command($1,$2::jsonb) as r',
+    params: [ 'database_cleanup', '{"request_id":"16ea67ec-cddc-4eaf-8995-5b847518a665","fence":2}' ],
+    queryOptions: undefined
+  }
+
+test at tests\accountDeletion\database.test.mjs:129:11
+✖ purged requires Auth absence and independent resource evidence (169.2136ms)
+  error: terminal_verification_failed
+      at pe.Ue (file:///C:/Users/jsmit/.codex/worktrees/deletion-crossplatform-closeout/Her%20Keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:17959)
+      at pe.tt (file:///C:/Users/jsmit/.codex/worktrees/deletion-crossplatform-closeout/Her%20Keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:15347)
+      at pe.parse (file:///C:/Users/jsmit/.codex/worktrees/deletion-crossplatform-closeout/Her%20Keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:14021)
+      at D.Ne (file:///C:/Users/jsmit/.codex/worktrees/deletion-crossplatform-closeout/Her%20Keys/node_modules/@electric-sql/pglite/dist/index.js:5:1763)
+      at file:///C:/Users/jsmit/.codex/worktrees/deletion-crossplatform-closeout/Her%20Keys/node_modules/@electric-sql/pglite/dist/index.js:5:1155
+      at wasm://wasm/0269e01e:wasm-function[10979]:0x5ad057
+      at wasm://wasm/0269e01e:wasm-function[3598]:0x281dd2
+      at wasm://wasm/0269e01e:wasm-function[3640]:0x289ccf
+      at wasm://wasm/0269e01e:wasm-function[3650]:0x289f2b
+      at wasm://wasm/0269e01e:wasm-function[9956]:0x556968 {
+    length: 171,
+    severity: 'ERROR',
+    code: 'P0001',
+    detail: undefined,
+    hint: undefined,
+    position: undefined,
+    internalPosition: undefined,
+    internalQuery: undefined,
+    where: 'PL/pgSQL function public.herkeys_deletion_command(text,jsonb) line 232 at RAISE',
+    schema: undefined,
+    table: undefined,
+    column: undefined,
+    dataType: undefined,
+    constraint: undefined,
+    file: 'pl_exec.c',
+    line: '3923',
+    routine: 'exec_stmt_raise',
+    query: 'select public.herkeys_deletion_command($1,$2::jsonb) as r',
+    params: [ 'finish', '{"request_id":"16ea67ec-cddc-4eaf-8995-5b847518a665","fence":2}' ],
+    queryOptions: undefined
+  }
+
+test at tests\accountDeletion\mutations.test.mjs:49:11
+✖ approved shared policy deletes private records, restricts ambiguous records and preserves the other adult (138.1034ms)
+  error: unclassified_resource
+      at pe.Ue (file:///C:/Users/jsmit/.codex/worktrees/deletion-crossplatform-closeout/Her%20Keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:17959)
+      at pe.tt (file:///C:/Users/jsmit/.codex/worktrees/deletion-crossplatform-closeout/Her%20Keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:15347)
+      at pe.parse (file:///C:/Users/jsmit/.codex/worktrees/deletion-crossplatform-closeout/Her%20Keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:14021)
+      at D.Ne (file:///C:/Users/jsmit/.codex/worktrees/deletion-crossplatform-closeout/Her%20Keys/node_modules/@electric-sql/pglite/dist/index.js:5:1763)
+      at file:///C:/Users/jsmit/.codex/worktrees/deletion-crossplatform-closeout/Her%20Keys/node_modules/@electric-sql/pglite/dist/index.js:5:1155
+      at wasm://wasm/0269e01e:wasm-function[10979]:0x5ad057
+      at wasm://wasm/0269e01e:wasm-function[3598]:0x281dd2
+      at wasm://wasm/0269e01e:wasm-function[3640]:0x289ccf
+      at wasm://wasm/0269e01e:wasm-function[3650]:0x289f2b
+      at wasm://wasm/0269e01e:wasm-function[9956]:0x556968 {
+    length: 164,
+    severity: 'ERROR',
+    code: 'P0001',
+    detail: undefined,
+    hint: undefined,
+    position: undefined,
+    internalPosition: undefined,
+    internalQuery: undefined,
+    where: 'PL/pgSQL function public.herkeys_deletion_command(text,jsonb) line 200 at RAISE',
+    schema: undefined,
+    table: undefined,
+    column: undefined,
+    dataType: undefined,
+    constraint: undefined,
+    file: 'pl_exec.c',
+    line: '3923',
+    routine: 'exec_stmt_raise',
+    query: 'select public.herkeys_deletion_command($1,$2::jsonb) as r',
+    params: [ 'database_cleanup', '{"request_id":"d3f2cf2f-5791-40a9-9ec8-2a10dc59e0a9","fence":1}' ],
+    queryOptions: undefined
+  }
+
+test at tests\accountDeletion\resourceCoverage.test.mjs:69:63
+✖ all 43 registered resources: shared and unrelated isolation (21528.8625ms)
+  error: unclassified_resource
+      at pe.Ue (file:///C:/Users/jsmit/.codex/worktrees/deletion-crossplatform-closeout/Her%20Keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:17959)
+      at pe.tt (file:///C:/Users/jsmit/.codex/worktrees/deletion-crossplatform-closeout/Her%20Keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:15347)
+      at pe.parse (file:///C:/Users/jsmit/.codex/worktrees/deletion-crossplatform-closeout/Her%20Keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:14021)
+      at D.Ne (file:///C:/Users/jsmit/.codex/worktrees/deletion-crossplatform-closeout/Her%20Keys/node_modules/@electric-sql/pglite/dist/index.js:5:1763)
+      at file:///C:/Users/jsmit/.codex/worktrees/deletion-crossplatform-closeout/Her%20Keys/node_modules/@electric-sql/pglite/dist/index.js:5:1155
+      at wasm://wasm/0269e01e:wasm-function[10979]:0x5ad057
+      at wasm://wasm/0269e01e:wasm-function[3598]:0x281dd2
+      at wasm://wasm/0269e01e:wasm-function[3640]:0x289ccf
+      at wasm://wasm/0269e01e:wasm-function[3650]:0x289f2b
+      at wasm://wasm/0269e01e:wasm-function[9956]:0x556968 {
+    length: 164,
+    severity: 'ERROR',
+    code: 'P0001',
+    detail: undefined,
+    hint: undefined,
+    position: undefined,
+    internalPosition: undefined,
+    internalQuery: undefined,
+    where: 'PL/pgSQL function public.herkeys_deletion_command(text,jsonb) line 200 at RAISE',
+    schema: undefined,
+    table: undefined,
+    column: undefined,
+    dataType: undefined,
+    constraint: undefined,
+    file: 'pl_exec.c',
+    line: '3923',
+    routine: 'exec_stmt_raise',
+    query: 'select public.herkeys_deletion_command($1,$2::jsonb) as r',
+    params: [ 'database_cleanup', '{"request_id":"d182670e-5914-472c-9d0b-0a0ad1a56590","fence":1}' ],
+    queryOptions: undefined
+  }
+
+test at tests\accountDeletion\resourceCoverage.test.mjs:69:63
+✖ all 43 registered resources: former_member and unrelated isolation (13343.6307ms)
+  error: unclassified_resource
+      at pe.Ue (file:///C:/Users/jsmit/.codex/worktrees/deletion-crossplatform-closeout/Her%20Keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:17959)
+      at pe.tt (file:///C:/Users/jsmit/.codex/worktrees/deletion-crossplatform-closeout/Her%20Keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:15347)
+      at pe.parse (file:///C:/Users/jsmit/.codex/worktrees/deletion-crossplatform-closeout/Her%20Keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:14021)
+      at D.Ne (file:///C:/Users/jsmit/.codex/worktrees/deletion-crossplatform-closeout/Her%20Keys/node_modules/@electric-sql/pglite/dist/index.js:5:1763)
+      at file:///C:/Users/jsmit/.codex/worktrees/deletion-crossplatform-closeout/Her%20Keys/node_modules/@electric-sql/pglite/dist/index.js:5:1155
+      at wasm://wasm/0269e01e:wasm-function[10979]:0x5ad057
+      at wasm://wasm/0269e01e:wasm-function[3598]:0x281dd2
+      at wasm://wasm/0269e01e:wasm-function[3640]:0x289ccf
+      at wasm://wasm/0269e01e:wasm-function[3650]:0x289f2b
+      at wasm://wasm/0269e01e:wasm-function[9956]:0x556968 {
+    length: 164,
+    severity: 'ERROR',
+    code: 'P0001',
+    detail: undefined,
+    hint: undefined,
+    position: undefined,
+    internalPosition: undefined,
+    internalQuery: undefined,
+    where: 'PL/pgSQL function public.herkeys_deletion_command(text,jsonb) line 200 at RAISE',
+    schema: undefined,
+    table: undefined,
+    column: undefined,
+    dataType: undefined,
+    constraint: undefined,
+    file: 'pl_exec.c',
+    line: '3923',
+    routine: 'exec_stmt_raise',
+    query: 'select public.herkeys_deletion_command($1,$2::jsonb) as r',
+    params: [ 'database_cleanup', '{"request_id":"4d2af7d1-3dbb-4f1a-aaa6-4737c5928657","fence":1}' ],
+    queryOptions: undefined
+  }
+
+test at tests\accountDeletion\resourceCoverage.test.mjs:69:63
+✖ all 43 registered resources: single and unrelated isolation (17378.2776ms)
+  error: unclassified_resource
+      at pe.Ue (file:///C:/Users/jsmit/.codex/worktrees/deletion-crossplatform-closeout/Her%20Keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:17959)
+      at pe.tt (file:///C:/Users/jsmit/.codex/worktrees/deletion-crossplatform-closeout/Her%20Keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:15347)
+      at pe.parse (file:///C:/Users/jsmit/.codex/worktrees/deletion-crossplatform-closeout/Her%20Keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:14021)
+      at D.Ne (file:///C:/Users/jsmit/.codex/worktrees/deletion-crossplatform-closeout/Her%20Keys/node_modules/@electric-sql/pglite/dist/index.js:5:1763)
+      at file:///C:/Users/jsmit/.codex/worktrees/deletion-crossplatform-closeout/Her%20Keys/node_modules/@electric-sql/pglite/dist/index.js:5:1155
+      at wasm://wasm/0269e01e:wasm-function[10979]:0x5ad057
+      at wasm://wasm/0269e01e:wasm-function[3598]:0x281dd2
+      at wasm://wasm/0269e01e:wasm-function[3640]:0x289ccf
+      at wasm://wasm/0269e01e:wasm-function[3650]:0x289f2b
+      at wasm://wasm/0269e01e:wasm-function[9956]:0x556968 {
+    length: 164,
+    severity: 'ERROR',
+    code: 'P0001',
+    detail: undefined,
+    hint: undefined,
+    position: undefined,
+    internalPosition: undefined,
+    internalQuery: undefined,
+    where: 'PL/pgSQL function public.herkeys_deletion_command(text,jsonb) line 200 at RAISE',
+    schema: undefined,
+    table: undefined,
+    column: undefined,
+    dataType: undefined,
+    constraint: undefined,
+    file: 'pl_exec.c',
+    line: '3923',
+    routine: 'exec_stmt_raise',
+    query: 'select public.herkeys_deletion_command($1,$2::jsonb) as r',
+    params: [ 'database_cleanup', '{"request_id":"9f95797f-ba6c-45d7-9040-2cc527c4af74","fence":1}' ],
+    queryOptions: undefined
+  }

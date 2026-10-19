@@ -1,0 +1,29 @@
+✔ Auth absence requires an explicit authoritative 404; aggregate provider booleans cannot skip cleanup (0.6889ms)
+✔ OAuth endpoint absence never certifies credential revocation (36.4133ms)
+✔ RevenueCat deletion requires a subsequent authoritative absence check (1.2696ms)
+✔ provider outages and unrelated project configuration cannot become purge proof (1.0525ms)
+✔ Google cleanup revokes the credential without modifying calendar events (0.242ms)
+✔ Apple credential client-secret uses the approved four Staging/Production secret names (0.5052ms)
+✔ request cannot sign out replacement account at idle (2.5125ms)
+✔ request cannot sign out replacement account at flush (0.5607ms)
+✔ request cannot sign out replacement account at response (0.3425ms)
+✔ a timed-out request retains a durable receipt until active-account authority returns (0.3714ms)
+✔ late restored response cannot alter another account (0.4872ms)
+✔ late failed response cannot alter another account (0.2989ms)
+✔ late purged response cannot alter another account (0.2102ms)
+✔ late web receipt import is fenced and cannot replace the new namespace receipt (0.3023ms)
+✔ unavailable or expired proof cannot authorize a local reset: null (0.7092ms)
+✔ unavailable or expired proof cannot authorize a local reset: {"status":"unknown"} (0.2216ms)
+✔ unavailable or expired proof cannot authorize a local reset: {"status":"pending"} (0.1002ms)
+✔ unavailable or expired proof cannot authorize a local reset: {"status":"purged","purged_at":"2026-10-14","verified_at":"2026-10-14","expires_at":"2026-10-15"} (0.1761ms)
+✔ valid terminal proof removes exactly its namespace after scoped sign-out (1.0589ms)
+✔ local reset is separately confirmed and fenced while synchronization drains (0.3885ms)
+✔ concurrent requests share no mutation authority (0.227ms)
+ℹ tests 21
+ℹ suites 0
+ℹ pass 21
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 322.2015

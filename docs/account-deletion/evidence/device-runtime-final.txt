@@ -1,0 +1,25 @@
+✔ request cannot sign out replacement account at idle (6.3627ms)
+✔ request cannot sign out replacement account at flush (0.7299ms)
+✔ request cannot sign out replacement account at response (0.771ms)
+✔ a timed-out request retains a durable receipt until active-account authority returns (0.8455ms)
+✔ late restored response cannot alter another account (1.1414ms)
+✔ late failed response cannot alter another account (1.2143ms)
+✔ late purged response cannot alter another account (0.9512ms)
+✔ late web receipt import is fenced and cannot replace the new namespace receipt (0.9849ms)
+✔ unavailable or expired proof cannot authorize a local reset: null (2.4414ms)
+✔ unavailable or expired proof cannot authorize a local reset: {"status":"unknown"} (0.6946ms)
+✔ unavailable or expired proof cannot authorize a local reset: {"status":"pending"} (0.4554ms)
+✔ unavailable or expired proof cannot authorize a local reset: {"status":"purged","purged_at":"2026-10-14","verified_at":"2026-10-14","expires_at":"2026-10-15"} (0.6145ms)
+✔ valid terminal proof removes exactly its namespace after scoped sign-out (2.8621ms)
+✔ local reset is separately confirmed and fenced while synchronization drains (1.177ms)
+✔ concurrent requests share no mutation authority (0.7041ms)
+✔ account A to B to A still invalidates the original deletion operation (0.9309ms)
+✔ a stale durable credential cannot authorize the replacement namespace (0.4788ms)
+ℹ tests 17
+ℹ suites 0
+ℹ pass 17
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 743.9668
