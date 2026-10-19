@@ -1,0 +1,22 @@
+v2-repository-validation	Backend boundary protection	2026-10-19T06:51:17.7070384Z # tests 5
+v2-repository-validation	Backend boundary protection	2026-10-19T06:51:17.7071014Z # pass 5
+v2-repository-validation	Backend boundary protection	2026-10-19T06:51:17.7071164Z # fail 0
+v2-repository-validation	Backend boundary protection	2026-10-19T06:51:17.7071300Z # cancelled 0
+v2-repository-validation	Welcome and Premium launch-critical contract tests	2026-10-19T06:51:34.0030340Z # tests 126
+v2-repository-validation	Welcome and Premium launch-critical contract tests	2026-10-19T06:51:34.0030556Z # pass 126
+v2-repository-validation	Welcome and Premium launch-critical contract tests	2026-10-19T06:51:34.0030663Z # fail 0
+v2-repository-validation	Welcome and Premium launch-critical contract tests	2026-10-19T06:51:34.0030769Z # cancelled 0
+v2-repository-validation	Full application test suite	2026-10-19T06:51:39.2520709Z     not ok 15 - complete database cleanup preserves the other account
+v2-repository-validation	Full application test suite	2026-10-19T06:51:39.2532869Z     not ok 16 - purged requires Auth absence and independent resource evidence
+v2-repository-validation	Full application test suite	2026-10-19T06:51:39.2562327Z not ok 1 - account deletion: real SQL state, privileges, recovery and purge
+v2-repository-validation	Full application test suite	2026-10-19T06:51:39.3123804Z     not ok 4 - approved shared policy deletes private records, restricts ambiguous records and preserves the other adult
+v2-repository-validation	Full application test suite	2026-10-19T06:51:39.3137254Z not ok 11 - critical lifecycle negative controls detect unsafe guard mutations
+v2-repository-validation	Full application test suite	2026-10-19T06:51:39.9096453Z not ok 17 - all 43 registered resources: shared and unrelated isolation
+v2-repository-validation	Full application test suite	2026-10-19T06:51:43.7986267Z not ok 18 - all 43 registered resources: former_member and unrelated isolation
+v2-repository-validation	Full application test suite	2026-10-19T06:51:46.7947159Z not ok 19 - all 43 registered resources: single and unrelated isolation
+v2-repository-validation	Full application test suite	2026-10-19T06:52:43.2638872Z # tests 5191
+v2-repository-validation	Full application test suite	2026-10-19T06:52:43.2638981Z # pass 5183
+v2-repository-validation	Full application test suite	2026-10-19T06:52:43.2639031Z # fail 8
+v2-repository-validation	Full application test suite	2026-10-19T06:52:43.2639086Z # cancelled 0
+v2-repository-validation	Expo install compatibility	2026-10-19T06:52:43.8105049Z Dependencies are up to date
+v2-repository-validation	Expo Doctor	2026-10-19T06:52:46.1313686Z 21/21 checks passed. No issues detected!

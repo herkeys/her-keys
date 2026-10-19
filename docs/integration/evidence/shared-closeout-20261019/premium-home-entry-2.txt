@@ -1,0 +1,33 @@
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+▶ buying
+  ✖ no offering and an SDK error are calm and recoverable (40.7459ms)
+✖ buying (42.1253ms)
+ℹ tests 1
+ℹ suites 1
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 510.4415
+
+✖ failing tests:
+
+test at tests\premiumHome\home.test.mjs:191:3
+✖ no offering and an SDK error are calm and recoverable (40.7459ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /isn’t available to purchase right now/. Input:
+
+  'HER KEYS PREMIUM | FREE PLAN | You’re on the Free plan | Her Keys Premium is being prepared to add three tools that do more of the work for you. Check availability below. Everything free in Her Keys still works. | See Her Keys Premium | Her Keys Premium can’t be reached right now. Nothing has changed. Everything free in Her Keys still works. Try again later. | Premium tools and availability | Daily Load review | PART OF HER KEYS PREMIUM | When a day looks tight, Her Keys looks at it with you and suggests what could move. Nothing changes until you approve it, and you can undo it. | On Today, beneath your Daily Load, when the day needs it. | Smart Inbox | PART OF HER KEYS PREMIUM | When you capture a note with Talk It Out, Her Keys can read it more closely and propose tasks, events and items for you to review. It sends your note to an AI service only if you have allowed that, and nothing is saved until you approve it. | In Talk It Out, after you capture a note. | Weekly review | PART OF HER KEYS PREMIUM | A look back at your week that counts what was actually recorded and shows what each number is based on. It doesn’t score you, and you can save a copy. | On Today, near the bottom.'
+
+      at TestContext.<anonymous> (file:///C:/Users/jsmit/.codex/worktrees/v2-shared-defect-closeout-20261019/Her%20Keys/tests/premiumHome/home.test.mjs:201:14)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async Promise.all (index 2)
+      at async Suite.run (node:internal/test_runner/test:1533:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:358:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'HER KEYS PREMIUM | FREE PLAN | You’re on the Free plan | Her Keys Premium is being prepared to add three tools that do more of the work for you. Check availability below. Everything free in Her Keys still works. | See Her Keys Premium | Her Keys Premium can’t be reached right now. Nothing has changed. Everything free in Her Keys still works. Try again later. | Premium tools and availability | Daily Load review | PART OF HER KEYS PREMIUM | When a day looks tight, Her Keys looks at it with you and suggests what could move. Nothing changes until you approve it, and you can undo it. | On Today, beneath your Daily Load, when the day needs it. | Smart Inbox | PART OF HER KEYS PREMIUM | When you capture a note with Talk It Out, Her Keys can read it more closely and propose tasks, events and items for you to review. It sends your note to an AI service only if you have allowed that, and nothing is saved until you approve it. | In Talk It Out, after you capture a note. | Weekly review | PART OF HER KEYS PREMIUM | A look back at your week that counts what was actually recorded and shows what each number is based on. It doesn’t score you, and you can save a copy. | On Today, near the bottom.',
+    expected: /isn’t available to purchase right now/,
+    operator: 'match',
+    diff: 'simple'
+  }

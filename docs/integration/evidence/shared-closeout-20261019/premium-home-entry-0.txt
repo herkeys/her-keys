@@ -1,0 +1,37 @@
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+▶ buying
+  ✖ See Her Keys Premium opens the store purchase interface once, then waits for the SERVER before claiming anything (38.8381ms)
+✖ buying (40.4857ms)
+ℹ tests 1
+ℹ suites 1
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 525.0485
+
+✖ failing tests:
+
+test at tests\premiumHome\home.test.mjs:151:3
+✖ See Her Keys Premium opens the store purchase interface once, then waits for the SERVER before claiming anything (38.8381ms)
+  AssertionError [ERR_ASSERTION]: single flight, with its own placement
+  + actual - expected
+
+  + []
+  - [
+  -   'manual_upgrade'
+  - ]
+
+      at TestContext.<anonymous> (file:///C:/Users/jsmit/.codex/worktrees/v2-shared-defect-closeout-20261019/Her%20Keys/tests/premiumHome/home.test.mjs:168:12)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async Promise.all (index 0)
+      at async Suite.run (node:internal/test_runner/test:1533:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:358:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: [],
+    expected: [ 'manual_upgrade' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
