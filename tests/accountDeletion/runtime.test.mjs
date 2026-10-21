@@ -24,7 +24,11 @@ function harness(options={}) {
   refresh:async value=>options.refresh?options.refresh(value):value,
   call:async(name,body,token)=>{calls.push({name,body,token});return options.call?options.call(name,body,token):{deadline:'2026-11-19T00:00:00Z'};}
  });
- return {runtime,storage,effects,calls,sessions,switch(id){namespace=id;actor={kind:'accountBound',session:session(id),householdId:'household'};for(const fn of subscribers)fn();},actor:()=>actor};
+ return {runtime,storage,effects,calls,sessions,switch(id){namespace=id;actor={kind:'accountBound',session:session(id),householdId:'household'};for(const fn of subscribers)fn();},actor:()=>actor,
+  // B signs in on a phone whose household is still A's: the runtime's quarantine.
+  quarantine(){namespace=A;actor={kind:'boundOther',session:session(B),quarantinedAccountId:A};for(const fn of subscribers)fn();},
+  // Cold launch: A's household on disk, nothing restored yet.
+  launch(){namespace=A;actor={kind:'unauthenticated'};for(const fn of subscribers)fn();}};
 }
 for(const stage of ['idle','flush','response'])test('request cannot sign out replacement account at '+stage,async()=>{
  const wait=deferred(),started=deferred();
@@ -84,6 +88,32 @@ test('account A to B to A still invalidates the original deletion operation',asy
  const wait=deferred(),started=deferred();const h=harness({call:async()=>{started.resolve();await wait.promise;return {deadline:'2026-11-19T00:00:00Z'};}});
  const pending=h.runtime.request();await started.promise;h.switch(B);h.switch(A);wait.resolve();
  await assert.rejects(pending,/namespace_changed/);assert.ok(!h.effects.some(x=>x.startsWith('signout:')));
+});
+// AE2E-D05 (Android emulator): signing in as B on a phone holding A's household is the designed quarantine (boundOther), but the
+// gate called it 'session_namespace_mismatch' and showed "Account status unavailable" with only "Reset this device's local data",
+// trapping her (no sign-out) and inviting her to wipe A's household. The quarantine is judged by B's OWN active status instead.
+const quarantine=h=>{h.quarantine();return h.runtime.check().then(()=>h.runtime.getSnapshot().kind);};
+test('a quarantined sign-in (B on A\'s household) is checked with B\'s own token and opens the conflict screen',async()=>{
+ const tokens=[];const h=harness({activeStatus:async token=>{tokens.push(token);return true;}});
+ await h.sessions.write(session(B));
+ assert.equal(await quarantine(h),'active');
+ assert.deepEqual(tokens,[session(B).accessToken]);
+ assert.ok(!h.effects.some(x=>x.startsWith('reset:')||x.startsWith('signout:')),'A\'s household is never touched');
+});
+test('a quarantined sign-in whose own account is pending deletion is still restricted',async()=>{
+ const h=harness({activeStatus:async()=>false});await h.sessions.write(session(B));
+ assert.equal(await quarantine(h),'pending');assert.ok(!h.effects.some(x=>x.startsWith('reset:')));
+});
+test('at launch, before the runtime restores B, B\'s stored session decides only B\'s status (no unavailable deadlock)',async()=>{
+ const tokens=[];const h=harness({activeStatus:async token=>{tokens.push(token);return true;}});
+ await h.sessions.write(session(B));h.launch();await h.runtime.check();
+ assert.equal(h.runtime.getSnapshot().kind,'active');assert.deepEqual(tokens,[session(B).accessToken]);
+ assert.ok(!h.effects.some(x=>x.startsWith('reset:')||x.startsWith('signout:')));
+});
+test('a quarantine never lends A\'s stale credential to B',async()=>{
+ const tokens=[];const h=harness({activeStatus:async token=>{tokens.push(token);return true;}});
+ await h.sessions.write(session(A));
+ assert.equal(await quarantine(h),'unavailable');assert.deepEqual(tokens,[]);
 });
 test('a stale durable credential cannot authorize the replacement namespace',async()=>{
  const h=harness();await h.sessions.write(session(A));h.switch(B);await h.runtime.check();

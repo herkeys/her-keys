@@ -78,7 +78,13 @@ async function check() {
   if(session.kind==='unavailable'||session.kind==='unreadable')throw new Error('session_unavailable');
   if(session.kind==='session') {
    const namespace=appStore.currentIdentity().binding?.accountId??null,actor=activeAccountId(accountRuntime.getState());
-   if((namespace&&namespace!==session.session.accountId)||(actor&&actor!==session.session.accountId))throw new Error('session_namespace_mismatch');
+   // Another account's session on this household is the quarantine (or, at launch, the restore that will produce it): that
+   // account's OWN credential decides only its own status, and the route table opens nothing but the conflict screen. Refusing it
+   // here showed "Account status unavailable" offering a reset of the OTHER account's household, and — since the gate then
+   // unmounted AccountProvider — the restore that resolves it never ran (AE2E-D05). A session that contradicts a known actor is
+   // still refused.
+   const foreign=actor===null||(accountRuntime.getState().kind==='boundOther'&&actor===session.session.accountId);
+   if((namespace&&namespace!==session.session.accountId&&!foreign)||(actor&&actor!==session.session.accountId))throw new Error('session_namespace_mismatch');
    if(session.expired) {
     const refreshed=await refresh(session.session);scope.assert();
     await sessions.write(refreshed);scope.assert();
