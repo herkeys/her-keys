@@ -157,7 +157,8 @@ const LATER_FEATURES = [
   {
     id: 'HK-PREMIUM-STORE-CERT-20261021 (authorized Premium integration and D06 repair)',
     branch: null,
-    owned: [/^src\/monetization\/sdkKeyPolicy\.ts$/, /^docs\/audits\/premium-store-integration-20261021\//, /^scripts-dev\/premium-store-certification\//,
+    // Exact D06 adapter path: native transport classification only; no new domain model or cloud authority.
+    owned: [/^src\/domain\/account\/accountAccessStatus\.ts$/, /^src\/monetization\/sdkKeyPolicy\.ts$/, /^docs\/audits\/premium-store-integration-20261021\//, /^scripts-dev\/premium-store-certification\//,
       /^supabase\/migrations\/20261021075347_premium_verified_subscription_period\.sql$/, /^supabase\/migrations\/20261021083447_premium_test_store_checkout_isolation\.sql$/],
     migrations: ['supabase/migrations/20261021075347_premium_verified_subscription_period.sql','supabase/migrations/20261021083447_premium_test_store_checkout_isolation.sql'],
     schemas: [], rootCollections: [], syncKinds: [],
