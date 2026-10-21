@@ -79,7 +79,7 @@ export interface WelcomeAuthViewState {
   recoveryEmail?: string;
   passwordMode?: 'signIn' | 'signUp';
   passwordCanSignUp?: boolean;
-  passwordNotice?: 'confirmationRequired' | 'rejected' | 'unreachable' | 'unavailable' | null;
+  passwordNotice?: 'confirmationRequired' | 'rejected' | 'rateLimited' | 'unreachable' | 'unavailable' | null;
   /**
    * Seconds until Resend is enabled again, or null when it is enabled. This
    * is UI state only — it asserts nothing about any backend rate limit.

@@ -85,7 +85,7 @@ function codeOf(error: AuthFailure): string {
   return typeof error.status === 'number' ? `status_${error.status}` : 'unknown';
 }
 
-function isRateLimited(error: AuthFailure): boolean {
+export function isRateLimited(error: AuthFailure): boolean {
   return error.status === 429 || error.code === 'over_email_send_rate_limit' || error.code === 'over_request_rate_limit';
 }
 

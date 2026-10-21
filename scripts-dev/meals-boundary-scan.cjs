@@ -129,6 +129,32 @@ const INTEGRATION_CHECKPOINTS = ['363e473fdf053547a21a41a67b7f62bd9aa2bcdf'];
  */
 const LATER_FEATURES = [
   {
+    id: 'HK-V2-ANDROID-E2E-20261021 (Build 2 Android emulator E2E defect repair)',
+    // Repairs found by running the release APK on an Android emulator against Staging. Exact-file ownership only: no Meals
+    // functionality, migration, schema, root collection or sync kind; every unrelated path stays default-deny.
+    branch: null,
+    owned: [],
+    migrations: [],
+    schemas: [],
+    rootCollections: [],
+    syncKinds: [],
+    shared: [
+      ['src/platform/webCryptoShim.ts',
+        'AE2E-D02: fill-only WebCrypto (getRandomValues, SHA digest) backed by expo-crypto so supabase-js PKCE uses S256 with a CSPRNG verifier; no state, no persistence'],
+      ['src/platform/installWebCrypto.ts',
+        'AE2E-D02: side-effect module the root layout imports first to install the shim before any Supabase client exists'],
+      ['tests/webCryptoShim.test.mjs', 'AE2E-D02 regression: RFC 7636 S256 vector, supabase-js returns s256, fill-only, unknown algorithms refused'],
+      ['tests/deletionGateCovering.test.mjs', 'AE2E-D01 regression: a deletion re-check covers the mounted app instead of unmounting it'],
+      ['tests/support/deletionGateBoundary.mjs', 'AE2E-D01 test double for DeletionGate runtime imports; test-only'],
+      ['docs/testing/build2-android-e2e/REPORT.md', 'Android emulator E2E evidence report and defect register; no executable behavior'],
+      ['docs/testing/build2-android-e2e/REVENUECAT_FOLLOW_UP.md', 'Owner-deferred RevenueCat and free-trial work register; no executable behavior'],
+      ...['A01-welcome', 'A02-premium-offer', 'C02-consent-ready', 'C06-profile', 'D03-today-with-task', 'E04-quarantine-conflict',
+        'F02-B-account-premium', 'F05-momentum', 'F07-daily-load-review', 'F08-daily-load-considered', 'F10-momentum-with-data',
+        'H02-ai-response', 'H05-after-reject', 'H07-report-submitted', 'I01-offline-relaunch'].map((name) =>
+        [`docs/testing/build2-android-e2e/screens/${name}.png`, 'Android emulator screenshot evidence (disposable Staging test accounts, no personal data)']),
+    ],
+  },
+  {
     id: 'HK-V2-IOS-AUDIT-20261019 (Build 2 Photos permission and Apple readiness review)',
     // PR #37 was reviewed and merged into the 2026-10-20 mobile candidate. These two
     // documents are audit evidence, not Meals-owned functionality or new schema.

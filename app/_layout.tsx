@@ -1,3 +1,5 @@
+// First: WebCrypto for S256 PKCE must exist before any module below creates a Supabase client (AE2E-D02).
+import '../src/platform/installWebCrypto';
 import { SplashScreen, Stack } from 'expo-router';
 import { DeletionGate } from '../src/features/account/DeletionGate';
 import * as NativeSplashScreen from 'expo-splash-screen';

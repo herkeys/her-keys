@@ -51,10 +51,16 @@ type PremiumStateProviderProps = {
   children: ReactNode;
 };
 
-/** Reset the entire consumer subtree on actor/household change, before its first render can expose the previous actor. */
+/**
+ * Reset the entire consumer subtree on actor/household change, before its first render can expose the previous actor.
+ *
+ * Only a BOUND account has an actor and a household for Premium to hold, so every unbound kind shares one key. Keying on the kind
+ * itself remounted the whole app — the welcome flow included — on every sign-in transition (unauthenticated -> authenticating ->
+ * unauthenticated), discarding the sign-up confirmation notice, the code screen and any in-flight provider sign-in (AE2E-D03).
+ */
 export function PremiumStateProvider(props: PremiumStateProviderProps) {
   const key = props.accountState.kind === 'accountBound'
-    ? `${props.accountState.session.accountId}:${props.accountState.householdId}` : props.accountState.kind;
+    ? `${props.accountState.session.accountId}:${props.accountState.householdId}` : 'unbound';
   const scope = useRef({ key });
   if (scope.current.key !== key) scope.current = { key };
   const owner = scope.current;

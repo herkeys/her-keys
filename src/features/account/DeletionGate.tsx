@@ -1,5 +1,5 @@
-import {useEffect,useState,useSyncExternalStore,type ReactNode} from 'react';
-import {AppState,Linking,TextInput,View} from 'react-native';
+import {useEffect,useRef,useState,useSyncExternalStore,type ReactNode} from 'react';
+import {AppState,Linking,StyleSheet,TextInput,View} from 'react-native';
 import {SplashScreen} from 'expo-router';
 import {AppText,Button,Screen} from '../../design/components';
 import {deletionRuntime} from '../../store/deletionRuntimeInstance';
@@ -25,10 +25,19 @@ export function DeletionGate({children}:{children:ReactNode}) {
   const stop=accountRuntime.subscribe(()=>{void deletionRuntime.check();});
   return()=>{clearInterval(interval);foreground.remove();stop();};
  },[hydrated]);
- if(!hydrated || gate.kind==='active')return children;
+ // restrict() publishes 'checking' on EVERY AppState change. That re-check must COVER the app, never unmount it: unmounting the
+ // account tree discarded an in-flight sign-in, the welcome flow and every open editor each time she switched apps (AE2E-D01).
+ // Only a 'checking' that follows 'active' covers; every other non-active answer still removes the app exactly as before.
+ const covering=useRef(false);
+ if(gate.kind==='active')covering.current=true;else if(gate.kind!=='checking')covering.current=false;
+ const appMounted=!hydrated||gate.kind==='active'||(gate.kind==='checking'&&covering.current);
+ const blocked=hydrated&&gate.kind!=='active';
+ const app=appMounted?<View style={styles.fill} pointerEvents={blocked?'none':'auto'}
+  importantForAccessibility={blocked?'no-hide-descendants':'auto'} accessibilityElementsHidden={blocked}>{children}</View>:null;
+ if(!blocked)return <View style={styles.fill}>{app}</View>;
  const title=gate.kind==='review'?'Deletion requires privacy review':gate.kind==='pending'?'Account deletion pending':gate.kind==='purged'?'Account permanently deleted':
   gate.kind==='restored'?'Account restored':gate.kind==='checking'?'Checking account access':'Account status unavailable';
- return <Screen><View style={{padding:24,gap:20}}>
+ const screen=<Screen><View style={{padding:24,gap:20}}>
   <AppText variant="hero" accessibilityRole="header">{title}</AppText>
   <AppText>{gate.kind==='review'?'Some resources require manual privacy review. Account access remains restricted. Contact support for the resolution status; permanent deletion is not yet complete.':gate.kind==='pending'?(recoveryExpired?'The recovery period has ended. Account access remains restricted while permanent deletion is processed. Deletion is complete only after verification.':'Normal app access and sync are stopped. Use your recovery email to restore your account before the recovery deadline.'):
    gate.kind==='purged'?'The server has verified permanent deletion.':
@@ -62,4 +71,8 @@ export function DeletionGate({children}:{children:ReactNode}) {
   </>:null}
   {gate.kind==='purged'||gate.kind==='restored'?<Button label="Continue to sign in" onPress={()=>deletionRuntime.continueToSignIn()}/>:null}
  </View></Screen>;
+ // The app keeps its place (index 0) whether or not it is covered, so covering it never remounts it.
+ return <View style={styles.fill}>{app}<View style={app?StyleSheet.absoluteFill:styles.fill}>{screen}</View></View>;
 }
+
+const styles=StyleSheet.create({fill:{flex:1}});

@@ -10,6 +10,8 @@ export type EmailPasswordResult =
   | { kind: 'success'; session: AccountSession }
   | { kind: 'confirmationRequired' }
   | { kind: 'rejected'; detail: string }
+  /** The auth service refused because of ITS rate limit (signups also send mail). Not a statement about her details. */
+  | { kind: 'rateLimited'; detail: string }
   | { kind: 'unreachable'; detail: string }
   | { kind: 'unavailable'; detail: string };
 

@@ -285,6 +285,22 @@ describe('email/password through the same runtime', () => {
     assert.deepEqual(d.cloudCalls, []);
     assert.deepEqual(d.secureStorage.contents(), {});
   });
+
+  test('a signup refused by the service rate limit says so, and does not blame her details (AE2E-D04)', async () => {
+    const d = device({ password: [{ kind: 'rateLimited', detail: 'over_email_send_rate_limit' }] });
+    const r = await open();
+    await toAccountChoice(r);
+    await press(r, 'Continue with email');
+    const inputs = r.root.findAllByType('TextInput');
+    for (const [index, value] of [EMAIL, 'secret-password-for-tests', 'secret-password-for-tests'].entries()) {
+      await TestRenderer.act(async () => inputs[index].props.onChangeText(value));
+    }
+    await press(r, COPY.password.create);
+    assert.match(shown(r), /Too many requests right now/);
+    assert.doesNotMatch(shown(r), /Check your details/);
+    assert.equal(d.runtime.getState().kind, 'unauthenticated');
+    assert.deepEqual(d.cloudCalls, []);
+  });
 });
 
 describe('Google and Apple, through the runtime', () => {

@@ -98,6 +98,7 @@ export const WELCOME_AUTH_COPY = {
     hide: 'Hide password',
     confirmationRequired: 'Check your email for an account confirmation link. Once confirmed, come back and sign in. Your household has not been bound yet.',
     rejected: 'That did not work. Check your details and try again.',
+    rateLimited: 'Too many requests right now. Wait a few minutes, then try again.',
     unreachable: 'Could not reach sign-in. Please try again.',
     unavailable: 'Email/password sign-in is not configured in this build.',
   },
