@@ -23,6 +23,9 @@
     },
     "production": {
       "environment": "production",
+      "android": {
+        "autoIncrement": true
+      },
       "env": {
         "EXPO_PUBLIC_HERKEYS_BACKEND": "production",
         "EXPO_PUBLIC_HERKEYS_DATA_MODE": "empty",
