@@ -8,7 +8,7 @@ test('period migration preserves CAS, RLS, service-only writes and own-account p
   const a = '11111111-1111-4111-8111-111111111111';
   const b = '22222222-2222-4222-8222-222222222222';
   try {
-    await db.exec(`insert into auth.users(id) values ('${a}'),('${b}'); update public.premium_runtime_config set environment='staging',allow_test_fixtures=false;`);
+    await db.exec(`insert into auth.users(id) values ('${a}'),('${b}'); alter table auth.users add column if not exists raw_app_meta_data jsonb default '{}'; update public.premium_runtime_config set environment='staging',allow_test_fixtures=false;`);
     const fields = { source: 'reconcile', environment: 'SANDBOX', has_entitlement: true, expires_at: '2099-02-28T15:00:00Z', last_reconciled_at: new Date().toISOString(), period_type: 'TRIAL', period_started_at: '2099-01-31T15:00:00Z', trial_ends_at: '2099-02-28T15:00:00Z' };
     const apply = (version, f) => db.query('select public.premium_apply_projection($1,$2,$3) as result', [a,version,JSON.stringify(f)]);
     assert.equal((await apply(0,fields)).rows[0].result.applied,true);

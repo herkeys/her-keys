@@ -158,8 +158,8 @@ const LATER_FEATURES = [
     id: 'HK-PREMIUM-STORE-CERT-20261021 (authorized Premium integration and D06 repair)',
     branch: null,
     owned: [/^src\/monetization\/sdkKeyPolicy\.ts$/, /^docs\/audits\/premium-store-integration-20261021\//, /^scripts-dev\/premium-store-certification\//,
-      /^supabase\/migrations\/20261021075347_premium_verified_subscription_period\.sql$/],
-    migrations: ['supabase/migrations/20261021075347_premium_verified_subscription_period.sql'],
+      /^supabase\/migrations\/20261021075347_premium_verified_subscription_period\.sql$/, /^supabase\/migrations\/20261021083447_premium_test_store_checkout_isolation\.sql$/],
+    migrations: ['supabase/migrations/20261021075347_premium_verified_subscription_period.sql','supabase/migrations/20261021083447_premium_test_store_checkout_isolation.sql'],
     schemas: [], rootCollections: [], syncKinds: [],
     shared: [
       ['src/domain/sync/syncRuntime.ts', 'D06: persistent cloud-suspension latch prevents account refresh from restarting sync during local-only offline access; no sync schema or kind change'],

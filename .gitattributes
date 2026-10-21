@@ -63,3 +63,4 @@ supabase/migrations/20261019151501_account_deletion_optional_welcome_inventory.s
 supabase/migrations/20261019152629_account_deletion_overdue_request_monitor.sql text eol=lf
 supabase/migrations/20261019153801_account_deletion_private_household_owners.sql text eol=lf
 supabase/migrations/20261021075347_premium_verified_subscription_period.sql text eol=lf
+supabase/migrations/20261021083447_premium_test_store_checkout_isolation.sql text eol=lf

@@ -139,7 +139,7 @@ export function createPremiumServerClient(client: SupabaseClient, owner?: Premiu
       let deadline: ReturnType<typeof setTimeout> | null = null;
       try {
         const answer = await Promise.race([
-          premiumRpc(client, owner, 'premium_purchase_readiness'),
+          premiumRpc(client, owner, process.env.EXPO_PUBLIC_REVENUECAT_STORE === 'test' ? 'premium_test_store_purchase_readiness' : 'premium_purchase_readiness'),
           new Promise<{ data: null; error: Error }>((resolve) => {
             deadline = setTimeout(() => resolve({ data: null, error: new Error('purchase_readiness_timeout') }), 8000);
           }),
