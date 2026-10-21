@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {revokeGoogle,revokeApple,settleAppleRevocation,deleteRevenueCatCustomer} from '../../supabase/functions/_shared/deletionProviders.ts';
-import {verifiedAuthAbsence,verifiedProviderEvidence,deletionHealthNeedsAttention,needsProviderReconciliation,providerSettled,recoveryEmail,APPLE_MANUAL_REVOCATION} from '../../supabase/functions/_shared/deletionCore.ts';
+import {revokeGoogle,settleGoogleRevocation,revokeApple,settleAppleRevocation,deleteRevenueCatCustomer} from '../../supabase/functions/_shared/deletionProviders.ts';
+import {verifiedAuthAbsence,verifiedProviderEvidence,deletionHealthNeedsAttention,needsProviderReconciliation,providerSettled,recoveryEmail,APPLE_MANUAL_REVOCATION,GOOGLE_ACCESS_CHECK} from '../../supabase/functions/_shared/deletionCore.ts';
 test('a crash after the final provider acknowledgement still reconciles the missing aggregate on retry',()=>{
  const acknowledged={google_revoked:true,apple_revoked:true,revenuecat_deleted:true};
  assert.equal(needsProviderReconciliation(acknowledged),true);
@@ -109,6 +109,26 @@ test('DEL-P2-001: the worker routes Apple through the settlement and tells users
  assert.ok(!recoveryEmail('restored','2026-11-14T00:00:00Z').text.includes('Stop Using'));
  const panel=readFileSync(new URL('../../src/features/account/DeleteAccountPanel.tsx',import.meta.url),'utf8');
  assert.match(panel,/Sign in with Apple/);
+});
+
+test('DEL-P2-002: a Google token Google already rejects as invalid settles distinctly; outages stay retryable',async()=>{
+ const invalidToken=async()=>new Response(JSON.stringify({error:'invalid_token',error_description:'Token expired or revoked'}),{status:400});
+ await assert.rejects(revokeGoogle('removed-grant',invalidToken),/google_credential_unusable/);
+ assert.equal(await settleGoogleRevocation(['removed-grant'],t=>revokeGoogle(t,invalidToken)),'credential_already_invalid');
+ assert.equal(await settleGoogleRevocation([],async()=>{throw new Error('must not be called');}),'revoked');
+ assert.equal(await settleGoogleRevocation(['a','b'],async()=>{}),'revoked');
+ for(const response of [()=>new Response('{}',{status:503}),()=>new Response('{}',{status:429}),()=>new Response('{}',{status:404}),
+  ()=>new Response(JSON.stringify({error:'invalid_request'}),{status:400}),()=>new Response('html',{status:400})]) {
+  await assert.rejects(settleGoogleRevocation(['t'],t=>revokeGoogle(t,async()=>response())),/provider_unavailable/);
+ }
+ assert.equal(providerSettled('google_revoked','credential_already_invalid'),true);
+ for(const key of ['apple_revoked','revenuecat_deleted'])assert.equal(providerSettled(key,'credential_already_invalid'),false);
+ assert.equal(verifiedProviderEvidence({google_revoked:'credential_already_invalid',apple_revoked:true,revenuecat_deleted:true}),true);
+ assert.equal(verifiedProviderEvidence({google_revoked:'credential_already_invalid',apple_revoked:true,revenuecat_deleted:'credential_already_invalid'}),false);
+ const {readFileSync}=await import('node:fs');
+ assert.match(readFileSync(new URL('../../supabase/functions/_shared/deletionWorker.ts',import.meta.url),'utf8'),/settleGoogleRevocation\(/);
+ const completed=recoveryEmail('completed','2026-11-14T00:00:00Z').text;
+ assert.ok(completed.includes(GOOGLE_ACCESS_CHECK)&&/events are not deleted/.test(completed));
 });
 
 test('Apple credential client-secret uses the approved four Staging/Production secret names',async()=>{

@@ -2,7 +2,7 @@ import { adminClient } from './supabaseAdmin.ts';
 import { command, drainDeletionEmail, reconcileRestoration, deliveryRecipient } from './deletionService.ts';
 import { decryptSecret, encryptSecret } from './crypto.ts';
 import { safeCategory, verifiedAuthAbsence, needsProviderReconciliation, providerSettled } from './deletionCore.ts';
-import {revokeGoogle,revokeApple,settleAppleRevocation,deleteRevenueCatCustomer} from './deletionProviders.ts';
+import {revokeGoogle,settleGoogleRevocation,revokeApple,settleAppleRevocation,deleteRevenueCatCustomer} from './deletionProviders.ts';
 
 async function checked(query: any) { const {data,error}=await query; if(error) throw new Error('database_unavailable'); return data; }
 export async function processDeletions() {
@@ -42,18 +42,17 @@ export async function processDeletions() {
    }
    let providersComplete=!authLookupUnavailable;
    if(needsProviderReconciliation(request.evidence)) {
-    async function provider(name:string,work:()=>Promise<void|'manual_revocation_required'>) {
+    async function provider(name:string,work:()=>Promise<void|'manual_revocation_required'|'credential_already_invalid'>) {
      if(providerSettled(name,request.evidence[name]))return;
      try {await evidence(name,(await work())??true);}
      catch {providersComplete=false;await evidence(name,'requires_retry');}
     }
     await provider('google_revoked',async()=>{
      const connections=await checked(admin.from('external_calendar_connections').select('refresh_token_ciphertext,refresh_token_iv').eq('user_id',request.account_id));
-     for(const connection of connections) {
-      await fence();
-      const token=await decryptSecret(connection.refresh_token_ciphertext,connection.refresh_token_iv);
-      await revokeGoogle(token);
-     }
+     const tokens:string[]=[];
+     for(const connection of connections)tokens.push(await decryptSecret(connection.refresh_token_ciphertext,connection.refresh_token_iv));
+     const outcome=await settleGoogleRevocation(tokens,async token=>{await fence();await revokeGoogle(token);});
+     if(outcome==='credential_already_invalid')return 'credential_already_invalid';
     });
     await provider('apple_revoked',async()=>{
      if(authLookupUnavailable)throw new Error('apple_identity_unverified');

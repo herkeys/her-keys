@@ -5,7 +5,22 @@ async function request(fetcher:Fetcher,url:string,init:RequestInit,allowMissing=
  return response;
 }
 export async function revokeGoogle(token:string,fetcher:Fetcher=fetch) {
- await request(fetcher,'https://oauth2.googleapis.com/revoke',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({token})});
+ const response=await fetcher('https://oauth2.googleapis.com/revoke',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
+  body:new URLSearchParams({token}),signal:AbortSignal.timeout(15000)});
+ if(response.ok)return;
+ // Google answers invalid_token when the grant was already removed or the token
+ // expired. Nothing usable remains to revoke; anything else stays retryable.
+ if(response.status===400&&(await response.json().catch(()=>null))?.error==='invalid_token')throw new Error('google_credential_unusable');
+ throw new Error('provider_unavailable');
+}
+export type GoogleRevocationOutcome='revoked'|'credential_already_invalid';
+export async function settleGoogleRevocation(tokens:string[],revoke:(token:string)=>Promise<void>):Promise<GoogleRevocationOutcome> {
+ let invalid=false;
+ for(const token of tokens) {
+  try {await revoke(token);}
+  catch(error) {if(error instanceof Error&&error.message==='google_credential_unusable')invalid=true;else throw error;}
+ }
+ return invalid?'credential_already_invalid':'revoked';
 }
 export async function revokeApple(token:string,clientId:string,clientSecret:string,fetcher:Fetcher=fetch) {
  const response=await fetcher('https://appleid.apple.com/auth/revoke',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
