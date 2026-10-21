@@ -1,0 +1,503 @@
+{
+  "date": "2026-10-19",
+  "source_base_sha": "c7dca1ec13956e16e03b66ae64346be73829e077",
+  "source_sha": "6267a299206a4e9e48ca987891e7c971567c1223",
+  "mobile_pr": "https://github.com/herkeys/her-keys/pull/39",
+  "web_pr": "https://github.com/herkeys/her-keys-web/pull/9",
+  "production_project": "npykvnxnehlsdlbumzwk",
+  "staging_project": "fhhudicklmpofuzkxeqe",
+  "approval": {
+    "production_migrations": false,
+    "production_function_deployments": false,
+    "production_scheduler": false,
+    "production_processing": false,
+    "production_irreversible_test": false
+  },
+  "safe_controls": {
+    "enabled": false,
+    "dry_run": true,
+    "active_destructive_jobs": 0
+  },
+  "migrations": [
+    {
+      "file": "supabase/migrations/20261019144729_account_deletion_v2_resource_certification.sql",
+      "sha256_lf": "20b63f9312197ee9dee0809ddc69fc3a399acbae589b38da1a21b64efe858fc6",
+      "name": "account_deletion_v2_resource_certification",
+      "staging_applied": [
+        {
+          "version": "20261019150824",
+          "name": "account_deletion_v2_resource_certification"
+        }
+      ],
+      "production_applied": []
+    },
+    {
+      "file": "supabase/migrations/20261019151501_account_deletion_optional_welcome_inventory.sql",
+      "sha256_lf": "462f42d8cd1198a6da3ebc65b83527bde07ee32cbb376ab3eae1fac836ca32c3",
+      "name": "account_deletion_optional_welcome_inventory",
+      "staging_applied": [
+        {
+          "version": "20261019151616",
+          "name": "account_deletion_optional_welcome_inventory"
+        }
+      ],
+      "production_applied": []
+    },
+    {
+      "file": "supabase/migrations/20261019152629_account_deletion_overdue_request_monitor.sql",
+      "sha256_lf": "ae02ba5a240d0a5d68b6302faee03b339b06412473c30dbc6b200ea8dd433683",
+      "name": "account_deletion_overdue_request_monitor",
+      "staging_applied": [
+        {
+          "version": "20261019152912",
+          "name": "account_deletion_overdue_request_monitor"
+        }
+      ],
+      "production_applied": []
+    },
+    {
+      "file": "supabase/migrations/20261019153801_account_deletion_private_household_owners.sql",
+      "sha256_lf": "ad177babba7adec7bde2df6a5dd1e5670e1f8689024345dd5a55101d4f9bae3d",
+      "name": "account_deletion_private_household_owners",
+      "staging_applied": [
+        {
+          "version": "20261019153856",
+          "name": "account_deletion_private_household_owners"
+        }
+      ],
+      "production_applied": []
+    }
+  ],
+  "function_deployment_candidates": [
+    {
+      "name": "request-account-deletion",
+      "entrypoint": "supabase/functions/request-account-deletion/index.ts",
+      "verify_jwt": true,
+      "production_version_before": 5,
+      "staging": {
+        "project": "fhhudicklmpofuzkxeqe",
+        "function": "request-account-deletion",
+        "version": 11,
+        "verify_jwt": true,
+        "bundle_sha256": "8dddf0dce8206c4a888ef90792c66e3766b4176831304bf5f1c4b95875f26ebb",
+        "files": [
+          {
+            "path": "supabase/functions/request-account-deletion/index.ts",
+            "local_sha256": "691ef3624e62a36c81161f22e9fa5f4b85bcc6387843ff90abc85dd1e21f82b0",
+            "deployed_sha256": "691ef3624e62a36c81161f22e9fa5f4b85bcc6387843ff90abc85dd1e21f82b0",
+            "matches_source": true
+          },
+          {
+            "path": "supabase/functions/_shared/deletionService.ts",
+            "local_sha256": "ba884b7b64fc10bebc6aa612bcb4827d4b40b580b77acdc29e1180104c39dee3",
+            "deployed_sha256": "ba884b7b64fc10bebc6aa612bcb4827d4b40b580b77acdc29e1180104c39dee3",
+            "matches_source": true
+          },
+          {
+            "path": "supabase/functions/_shared/supabaseAdmin.ts",
+            "local_sha256": "a985c9ee345c41c92ef0014b06e744ec659db43f63e79d08d09a4a61bb83ef96",
+            "deployed_sha256": "a985c9ee345c41c92ef0014b06e744ec659db43f63e79d08d09a4a61bb83ef96",
+            "matches_source": true
+          },
+          {
+            "path": "supabase/functions/_shared/crypto.ts",
+            "local_sha256": "31e3efa4b30af10bec94db37fbae492fe8c8b8dfcaea49d63ae57f2d617ba0cb",
+            "deployed_sha256": "31e3efa4b30af10bec94db37fbae492fe8c8b8dfcaea49d63ae57f2d617ba0cb",
+            "matches_source": true
+          },
+          {
+            "path": "supabase/functions/_shared/http.ts",
+            "local_sha256": "58f66be6e4f4056ae0637d4abcb71418bf063cd9ce3b5a26789edbbc2162576a",
+            "deployed_sha256": "58f66be6e4f4056ae0637d4abcb71418bf063cd9ce3b5a26789edbbc2162576a",
+            "matches_source": true
+          },
+          {
+            "path": "supabase/functions/_shared/deletionCore.ts",
+            "local_sha256": "d3d9a5c89d84f9cbcc68a8c5837471864b17f2e5b8eb6a5c4e9efb33ab69c93c",
+            "deployed_sha256": "d3d9a5c89d84f9cbcc68a8c5837471864b17f2e5b8eb6a5c4e9efb33ab69c93c",
+            "matches_source": true
+          }
+        ]
+      }
+    },
+    {
+      "name": "restore-account",
+      "entrypoint": "supabase/functions/restore-account/index.ts",
+      "verify_jwt": false,
+      "production_version_before": 5,
+      "staging": {
+        "project": "fhhudicklmpofuzkxeqe",
+        "function": "restore-account",
+        "version": 9,
+        "verify_jwt": false,
+        "bundle_sha256": "f92bc37f055cb46808cb556cfefb5a3766a1c35eab1ff9e70e463c791c7fb97d",
+        "files": [
+          {
+            "path": "supabase/functions/restore-account/index.ts",
+            "local_sha256": "2786ff9c8cbc4dfa0f82877e4179b77657dcc304ccbaf2c58e83cb9db82a7483",
+            "deployed_sha256": "2786ff9c8cbc4dfa0f82877e4179b77657dcc304ccbaf2c58e83cb9db82a7483",
+            "matches_source": true
+          },
+          {
+            "path": "supabase/functions/_shared/deletionService.ts",
+            "local_sha256": "ba884b7b64fc10bebc6aa612bcb4827d4b40b580b77acdc29e1180104c39dee3",
+            "deployed_sha256": "ba884b7b64fc10bebc6aa612bcb4827d4b40b580b77acdc29e1180104c39dee3",
+            "matches_source": true
+          },
+          {
+            "path": "supabase/functions/_shared/supabaseAdmin.ts",
+            "local_sha256": "a985c9ee345c41c92ef0014b06e744ec659db43f63e79d08d09a4a61bb83ef96",
+            "deployed_sha256": "a985c9ee345c41c92ef0014b06e744ec659db43f63e79d08d09a4a61bb83ef96",
+            "matches_source": true
+          },
+          {
+            "path": "supabase/functions/_shared/crypto.ts",
+            "local_sha256": "31e3efa4b30af10bec94db37fbae492fe8c8b8dfcaea49d63ae57f2d617ba0cb",
+            "deployed_sha256": "31e3efa4b30af10bec94db37fbae492fe8c8b8dfcaea49d63ae57f2d617ba0cb",
+            "matches_source": true
+          },
+          {
+            "path": "supabase/functions/_shared/http.ts",
+            "local_sha256": "58f66be6e4f4056ae0637d4abcb71418bf063cd9ce3b5a26789edbbc2162576a",
+            "deployed_sha256": "58f66be6e4f4056ae0637d4abcb71418bf063cd9ce3b5a26789edbbc2162576a",
+            "matches_source": true
+          },
+          {
+            "path": "supabase/functions/_shared/deletionCore.ts",
+            "local_sha256": "d3d9a5c89d84f9cbcc68a8c5837471864b17f2e5b8eb6a5c4e9efb33ab69c93c",
+            "deployed_sha256": "d3d9a5c89d84f9cbcc68a8c5837471864b17f2e5b8eb6a5c4e9efb33ab69c93c",
+            "matches_source": true
+          }
+        ]
+      }
+    },
+    {
+      "name": "resend-restoration-email",
+      "entrypoint": "supabase/functions/resend-restoration-email/index.ts",
+      "verify_jwt": false,
+      "production_version_before": 5,
+      "staging": {
+        "project": "fhhudicklmpofuzkxeqe",
+        "function": "resend-restoration-email",
+        "version": 9,
+        "verify_jwt": false,
+        "bundle_sha256": "cf8e69f206859e6ff1c0242b72e5cdc19fefbbc6560468baec52542178cad33f",
+        "files": [
+          {
+            "path": "supabase/functions/resend-restoration-email/index.ts",
+            "local_sha256": "03828a145867a93e516d7e6ffe3efbf3b18034386a339b3d84006ad15285a50c",
+            "deployed_sha256": "03828a145867a93e516d7e6ffe3efbf3b18034386a339b3d84006ad15285a50c",
+            "matches_source": true
+          },
+          {
+            "path": "supabase/functions/_shared/deletionService.ts",
+            "local_sha256": "ba884b7b64fc10bebc6aa612bcb4827d4b40b580b77acdc29e1180104c39dee3",
+            "deployed_sha256": "ba884b7b64fc10bebc6aa612bcb4827d4b40b580b77acdc29e1180104c39dee3",
+            "matches_source": true
+          },
+          {
+            "path": "supabase/functions/_shared/supabaseAdmin.ts",
+            "local_sha256": "a985c9ee345c41c92ef0014b06e744ec659db43f63e79d08d09a4a61bb83ef96",
+            "deployed_sha256": "a985c9ee345c41c92ef0014b06e744ec659db43f63e79d08d09a4a61bb83ef96",
+            "matches_source": true
+          },
+          {
+            "path": "supabase/functions/_shared/crypto.ts",
+            "local_sha256": "31e3efa4b30af10bec94db37fbae492fe8c8b8dfcaea49d63ae57f2d617ba0cb",
+            "deployed_sha256": "31e3efa4b30af10bec94db37fbae492fe8c8b8dfcaea49d63ae57f2d617ba0cb",
+            "matches_source": true
+          },
+          {
+            "path": "supabase/functions/_shared/http.ts",
+            "local_sha256": "58f66be6e4f4056ae0637d4abcb71418bf063cd9ce3b5a26789edbbc2162576a",
+            "deployed_sha256": "58f66be6e4f4056ae0637d4abcb71418bf063cd9ce3b5a26789edbbc2162576a",
+            "matches_source": true
+          },
+          {
+            "path": "supabase/functions/_shared/deletionCore.ts",
+            "local_sha256": "d3d9a5c89d84f9cbcc68a8c5837471864b17f2e5b8eb6a5c4e9efb33ab69c93c",
+            "deployed_sha256": "d3d9a5c89d84f9cbcc68a8c5837471864b17f2e5b8eb6a5c4e9efb33ab69c93c",
+            "matches_source": true
+          }
+        ]
+      }
+    },
+    {
+      "name": "deletion-status",
+      "entrypoint": "supabase/functions/deletion-status/index.ts",
+      "verify_jwt": false,
+      "production_version_before": 5,
+      "staging": {
+        "project": "fhhudicklmpofuzkxeqe",
+        "function": "deletion-status",
+        "version": 9,
+        "verify_jwt": false,
+        "bundle_sha256": "2fcec57346b7a3529af3fbf433c901ab92f147004c951474da77e04b91bd76de",
+        "files": [
+          {
+            "path": "supabase/functions/deletion-status/index.ts",
+            "local_sha256": "11eb2c9a3200d42c68de1e481478c5dca11910814cdbb302a6f86fff5835b157",
+            "deployed_sha256": "11eb2c9a3200d42c68de1e481478c5dca11910814cdbb302a6f86fff5835b157",
+            "matches_source": true
+          },
+          {
+            "path": "supabase/functions/_shared/deletionService.ts",
+            "local_sha256": "ba884b7b64fc10bebc6aa612bcb4827d4b40b580b77acdc29e1180104c39dee3",
+            "deployed_sha256": "ba884b7b64fc10bebc6aa612bcb4827d4b40b580b77acdc29e1180104c39dee3",
+            "matches_source": true
+          },
+          {
+            "path": "supabase/functions/_shared/supabaseAdmin.ts",
+            "local_sha256": "a985c9ee345c41c92ef0014b06e744ec659db43f63e79d08d09a4a61bb83ef96",
+            "deployed_sha256": "a985c9ee345c41c92ef0014b06e744ec659db43f63e79d08d09a4a61bb83ef96",
+            "matches_source": true
+          },
+          {
+            "path": "supabase/functions/_shared/crypto.ts",
+            "local_sha256": "31e3efa4b30af10bec94db37fbae492fe8c8b8dfcaea49d63ae57f2d617ba0cb",
+            "deployed_sha256": "31e3efa4b30af10bec94db37fbae492fe8c8b8dfcaea49d63ae57f2d617ba0cb",
+            "matches_source": true
+          },
+          {
+            "path": "supabase/functions/_shared/http.ts",
+            "local_sha256": "58f66be6e4f4056ae0637d4abcb71418bf063cd9ce3b5a26789edbbc2162576a",
+            "deployed_sha256": "58f66be6e4f4056ae0637d4abcb71418bf063cd9ce3b5a26789edbbc2162576a",
+            "matches_source": true
+          },
+          {
+            "path": "supabase/functions/_shared/deletionCore.ts",
+            "local_sha256": "d3d9a5c89d84f9cbcc68a8c5837471864b17f2e5b8eb6a5c4e9efb33ab69c93c",
+            "deployed_sha256": "d3d9a5c89d84f9cbcc68a8c5837471864b17f2e5b8eb6a5c4e9efb33ab69c93c",
+            "matches_source": true
+          }
+        ]
+      }
+    },
+    {
+      "name": "process-account-deletions",
+      "entrypoint": "supabase/functions/process-account-deletions/index.ts",
+      "verify_jwt": false,
+      "production_version_before": 5,
+      "staging": {
+        "project": "fhhudicklmpofuzkxeqe",
+        "function": "process-account-deletions",
+        "version": 14,
+        "verify_jwt": false,
+        "bundle_sha256": "efc1e038f5b3af0f5e7c1641299fcef56b268caa568c5dd089af34efc08457c3",
+        "files": [
+          {
+            "path": "supabase/functions/process-account-deletions/index.ts",
+            "local_sha256": "b2ab44f02cef96348017a64fd87665ac97b2201e2fa4d5ea1946f86b81e1a9ef",
+            "deployed_sha256": "b2ab44f02cef96348017a64fd87665ac97b2201e2fa4d5ea1946f86b81e1a9ef",
+            "matches_source": true
+          },
+          {
+            "path": "supabase/functions/_shared/deletionWorker.ts",
+            "local_sha256": "ea0632cadfad33c939bb4010722869f15a4ca80e6db282042cc7c1a83cefb15c",
+            "deployed_sha256": "ea0632cadfad33c939bb4010722869f15a4ca80e6db282042cc7c1a83cefb15c",
+            "matches_source": true
+          },
+          {
+            "path": "supabase/functions/_shared/supabaseAdmin.ts",
+            "local_sha256": "a985c9ee345c41c92ef0014b06e744ec659db43f63e79d08d09a4a61bb83ef96",
+            "deployed_sha256": "a985c9ee345c41c92ef0014b06e744ec659db43f63e79d08d09a4a61bb83ef96",
+            "matches_source": true
+          },
+          {
+            "path": "supabase/functions/_shared/deletionService.ts",
+            "local_sha256": "ba884b7b64fc10bebc6aa612bcb4827d4b40b580b77acdc29e1180104c39dee3",
+            "deployed_sha256": "ba884b7b64fc10bebc6aa612bcb4827d4b40b580b77acdc29e1180104c39dee3",
+            "matches_source": true
+          },
+          {
+            "path": "supabase/functions/_shared/crypto.ts",
+            "local_sha256": "31e3efa4b30af10bec94db37fbae492fe8c8b8dfcaea49d63ae57f2d617ba0cb",
+            "deployed_sha256": "31e3efa4b30af10bec94db37fbae492fe8c8b8dfcaea49d63ae57f2d617ba0cb",
+            "matches_source": true
+          },
+          {
+            "path": "supabase/functions/_shared/http.ts",
+            "local_sha256": "58f66be6e4f4056ae0637d4abcb71418bf063cd9ce3b5a26789edbbc2162576a",
+            "deployed_sha256": "58f66be6e4f4056ae0637d4abcb71418bf063cd9ce3b5a26789edbbc2162576a",
+            "matches_source": true
+          },
+          {
+            "path": "supabase/functions/_shared/deletionCore.ts",
+            "local_sha256": "d3d9a5c89d84f9cbcc68a8c5837471864b17f2e5b8eb6a5c4e9efb33ab69c93c",
+            "deployed_sha256": "d3d9a5c89d84f9cbcc68a8c5837471864b17f2e5b8eb6a5c4e9efb33ab69c93c",
+            "matches_source": true
+          },
+          {
+            "path": "supabase/functions/_shared/deletionProviders.ts",
+            "local_sha256": "4bda8b2000dc1a419bcb8f5de12cd574df76243269ea7de6bf9d1b1bfbb942e7",
+            "deployed_sha256": "4bda8b2000dc1a419bcb8f5de12cd574df76243269ea7de6bf9d1b1bfbb942e7",
+            "matches_source": true
+          },
+          {
+            "path": "supabase/functions/_shared/deletionApple.ts",
+            "local_sha256": "74e300705ce96238369753a676b69d093ef429247703ff320d556e6aeab2dc9c",
+            "deployed_sha256": "74e300705ce96238369753a676b69d093ef429247703ff320d556e6aeab2dc9c",
+            "matches_source": true
+          }
+        ]
+      }
+    },
+    {
+      "name": "monitor-account-deletions",
+      "entrypoint": "supabase/functions/monitor-account-deletions/index.ts",
+      "verify_jwt": false,
+      "production_version_before": 5,
+      "staging": {
+        "project": "fhhudicklmpofuzkxeqe",
+        "function": "monitor-account-deletions",
+        "version": 11,
+        "verify_jwt": false,
+        "bundle_sha256": "f4bab42c2545477d456aa8a1775a599855ca596703b69141fc8fd1fb7c8de209",
+        "files": [
+          {
+            "path": "supabase/functions/monitor-account-deletions/index.ts",
+            "local_sha256": "731527fd9db6f8411a793905d63e608048957ea96eba9a6a4676fc4c2e93b8b4",
+            "deployed_sha256": "731527fd9db6f8411a793905d63e608048957ea96eba9a6a4676fc4c2e93b8b4",
+            "matches_source": true
+          },
+          {
+            "path": "supabase/functions/_shared/supabaseAdmin.ts",
+            "local_sha256": "a985c9ee345c41c92ef0014b06e744ec659db43f63e79d08d09a4a61bb83ef96",
+            "deployed_sha256": "a985c9ee345c41c92ef0014b06e744ec659db43f63e79d08d09a4a61bb83ef96",
+            "matches_source": true
+          },
+          {
+            "path": "supabase/functions/_shared/deletionMonitor.ts",
+            "local_sha256": "95134f33162d0968da074a931da34979bf4d86c91290365071af753ae5663e3c",
+            "deployed_sha256": "95134f33162d0968da074a931da34979bf4d86c91290365071af753ae5663e3c",
+            "matches_source": true
+          },
+          {
+            "path": "supabase/functions/_shared/deletionService.ts",
+            "local_sha256": "ba884b7b64fc10bebc6aa612bcb4827d4b40b580b77acdc29e1180104c39dee3",
+            "deployed_sha256": "ba884b7b64fc10bebc6aa612bcb4827d4b40b580b77acdc29e1180104c39dee3",
+            "matches_source": true
+          },
+          {
+            "path": "supabase/functions/_shared/crypto.ts",
+            "local_sha256": "31e3efa4b30af10bec94db37fbae492fe8c8b8dfcaea49d63ae57f2d617ba0cb",
+            "deployed_sha256": "31e3efa4b30af10bec94db37fbae492fe8c8b8dfcaea49d63ae57f2d617ba0cb",
+            "matches_source": true
+          },
+          {
+            "path": "supabase/functions/_shared/http.ts",
+            "local_sha256": "58f66be6e4f4056ae0637d4abcb71418bf063cd9ce3b5a26789edbbc2162576a",
+            "deployed_sha256": "58f66be6e4f4056ae0637d4abcb71418bf063cd9ce3b5a26789edbbc2162576a",
+            "matches_source": true
+          },
+          {
+            "path": "supabase/functions/_shared/deletionCore.ts",
+            "local_sha256": "d3d9a5c89d84f9cbcc68a8c5837471864b17f2e5b8eb6a5c4e9efb33ab69c93c",
+            "deployed_sha256": "d3d9a5c89d84f9cbcc68a8c5837471864b17f2e5b8eb6a5c4e9efb33ab69c93c",
+            "matches_source": true
+          }
+        ]
+      }
+    },
+    {
+      "name": "begin-web-deletion",
+      "entrypoint": "supabase/functions/begin-web-deletion/index.ts",
+      "verify_jwt": false,
+      "production_version_before": 5,
+      "staging": {
+        "project": "fhhudicklmpofuzkxeqe",
+        "function": "begin-web-deletion",
+        "version": 8,
+        "verify_jwt": false,
+        "bundle_sha256": "5ebc05b02d7bed4b27155aecf6a14cf19b3e9af14abfe2dc50a0129e39e3bdaf",
+        "files": [
+          {
+            "path": "supabase/functions/begin-web-deletion/index.ts",
+            "local_sha256": "4341de6e15a3ca7d2235fffa74f84dffc017477c9df69fa120f2b868facd312a",
+            "deployed_sha256": "4341de6e15a3ca7d2235fffa74f84dffc017477c9df69fa120f2b868facd312a",
+            "matches_source": true
+          },
+          {
+            "path": "supabase/functions/_shared/supabaseAdmin.ts",
+            "local_sha256": "a985c9ee345c41c92ef0014b06e744ec659db43f63e79d08d09a4a61bb83ef96",
+            "deployed_sha256": "a985c9ee345c41c92ef0014b06e744ec659db43f63e79d08d09a4a61bb83ef96",
+            "matches_source": true
+          },
+          {
+            "path": "supabase/functions/_shared/deletionService.ts",
+            "local_sha256": "ba884b7b64fc10bebc6aa612bcb4827d4b40b580b77acdc29e1180104c39dee3",
+            "deployed_sha256": "ba884b7b64fc10bebc6aa612bcb4827d4b40b580b77acdc29e1180104c39dee3",
+            "matches_source": true
+          },
+          {
+            "path": "supabase/functions/_shared/crypto.ts",
+            "local_sha256": "31e3efa4b30af10bec94db37fbae492fe8c8b8dfcaea49d63ae57f2d617ba0cb",
+            "deployed_sha256": "31e3efa4b30af10bec94db37fbae492fe8c8b8dfcaea49d63ae57f2d617ba0cb",
+            "matches_source": true
+          },
+          {
+            "path": "supabase/functions/_shared/http.ts",
+            "local_sha256": "58f66be6e4f4056ae0637d4abcb71418bf063cd9ce3b5a26789edbbc2162576a",
+            "deployed_sha256": "58f66be6e4f4056ae0637d4abcb71418bf063cd9ce3b5a26789edbbc2162576a",
+            "matches_source": true
+          },
+          {
+            "path": "supabase/functions/_shared/deletionCore.ts",
+            "local_sha256": "d3d9a5c89d84f9cbcc68a8c5837471864b17f2e5b8eb6a5c4e9efb33ab69c93c",
+            "deployed_sha256": "d3d9a5c89d84f9cbcc68a8c5837471864b17f2e5b8eb6a5c4e9efb33ab69c93c",
+            "matches_source": true
+          }
+        ]
+      }
+    }
+  ],
+  "already_matching_functions": [
+    "capture-apple-credential",
+    "expire-account-deletion-proofs"
+  ],
+  "excluded": [
+    "staging_only_temporary_deletion_v2_certification",
+    "staging_only_retire_deletion_v2_fixture",
+    "supabase/blueprints/staging-deletion-v2-certification.sql",
+    "supabase/blueprints/staging-deletion-v2-certification.ts",
+    "deletion-v2-certification endpoint",
+    "synthetic fixtures and temporary accelerated deadlines",
+    "private.deletion_test_scope rows"
+  ],
+  "required_secret_names": [
+    "EXTERNAL_TOKEN_ENCRYPTION_KEY_B64",
+    "REVENUECAT_DELETION_API_KEY",
+    "REVENUECAT_PROJECT_ID",
+    "APPLE_DELETION_CLIENT_ID",
+    "APPLE_DELETION_TEAM_ID",
+    "APPLE_DELETION_KEY_ID",
+    "APPLE_DELETION_PRIVATE_KEY",
+    "RESEND_API_KEY",
+    "DELETION_EMAIL_ENABLED",
+    "DELETION_ALERT_RECIPIENT"
+  ],
+  "secret_presence": "CLI listing denied 403; no values read or rotated. Staging RC runtime was proved; Production secret-name parity remains NOT_VERIFIED.",
+  "runtime_differences": [
+    "Staging welcome ledger absent intentionally; Production ledger present",
+    "Staging owned registry 50 versus Production 43 before promotion",
+    "All nine Staging source graphs match; seven Production graphs differ and two match",
+    "Staging monitor/retention cron active and worker cron inactive; Production three existing deletion jobs installed but inactive; retention control disabled",
+    "Staging processing allowlist disabled/empty after tests"
+  ],
+  "stop_procedure": [
+    "UPDATE public.account_deletion_control SET enabled=false,dry_run=true WHERE singleton;",
+    "If a destructive job exists, use cron.alter_job(job_id:=...,active:=false); do not install or activate one here.",
+    "Preserve request/recovery/review/evidence state; do not undo deactivation or erase proofs.",
+    "Forward-fix an applied additive migration; never attempt to reconstruct deleted customer data or weaken terminal verification."
+  ],
+  "promotion_sequence": [
+    "Obtain explicit owner approval for these four source migrations and seven function bundles, separately from activation.",
+    "Refetch PR #38/shared candidate and compare any new changes; validate exact selected source and LF hashes.",
+    "Read-only confirm Production inventory, predecessor function contracts, migration history and disabled controls.",
+    "Apply the four canonical files in listed order, once; record actual generated Production migration IDs.",
+    "Verify registry/classification, private function ACLs/RLS and active-account guards; run read-only schema tests.",
+    "Deploy only the seven candidate function graphs from the approved source; preserve listed JWT flags; compare all uploaded source file hashes.",
+    "Read-only verify health and source parity; keep enabled=false,dry_run=true with zero active destructive jobs.",
+    "Resolve legal, website, native, live-grant, vendor-retention and independent-watchdog gates; request a separate activation decision only with the concrete certified runtime plan."
+  ]
+}

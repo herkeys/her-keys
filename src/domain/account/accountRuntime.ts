@@ -114,7 +114,7 @@ export interface AccountRuntime {
   verifyEmailOtp(email: string, code: string): Promise<{ state: AccountState; outcome: EmailVerification }>;
   /** Run the binding this device needs. Safe to call again after a failure. */
   resolveBinding(): Promise<AccountState>;
-  signOut(): Promise<AccountState>;
+  signOut(expectedAccountId?: string): Promise<AccountState>;
   /** What the device would do for the signed-in account, without doing it. */
   plannedBinding(): BindingDecision | null;
   lastClaimOutcome(): ClaimOutcome | null;
@@ -833,7 +833,14 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
       return apply({ type: 'bindingSucceeded', householdId: outcome.householdId });
     },
 
-    async signOut() {
+    async signOut(expectedAccountId) {
+      // Deletion is bound to its original actor. A delayed cleanup may not end
+      // the replacement account's transport, credential or Premium identity.
+      const epoch = activationEpoch;
+      const authAttempt = latestAttempt;
+      const stillExpected = () => expectedAccountId === undefined ||
+        (activationEpoch === epoch && latestAttempt === authAttempt && accountIdOf(state) === expectedAccountId);
+      if (!stillExpected()) return state;
       // Stop sync before the client credential is ended.
       if (state.kind === 'accountBound') apply({ type: 'sessionDegraded', reason: 'refreshFailed' });
 
@@ -852,6 +859,8 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
         return state;
       }
 
+      if (!stillExpected()) return state;
+
       try {
         await bounded('session.clear', () => options.sessions.clear());
       } catch (error) {
@@ -859,6 +868,7 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
         return state;
       }
 
+      if (!stillExpected()) return state;
       identify(null);
       // The binding stays. Signing out is not leaving the account, and the next
       // sign-in of the same account must resume rather than claim again.

@@ -50,6 +50,14 @@ async function populateRemainingResources(db,vars) {
  const actors=[[vars.ua,vars.hh_a],...vars.omit_second_adult_population?[]:[[vars.ub,vars.hh_a]],[vars.uc,vars.hh_c]];
  for(const [actor,household] of actors) {
   const base={household_id:household,profile_id:actor};
+  const feature=(await db.query('select feature_key from public.premium_feature_config order by feature_key limit 1')).rows[0].feature_key;
+  await db.query("insert into public.premium_entitlements(account_id,source,environment) values($1,'reconcile','SANDBOX')",[actor]);
+  await db.query("insert into public.premium_subscriber_identities(provider_user_id,account_id,kind,status,source) values($1::text,$1::text::uuid,'primary','verified','reconcile')",[actor]);
+  await db.query('insert into public.premium_reconcile_state(account_id) values($1)',[actor]);
+  await db.query('insert into public.premium_usage(account_id,feature_key,period_start) values($1,$2,current_date)',[actor,feature]);
+  await db.query("insert into public.premium_usage_events(account_id,feature_key,idempotency_key,status,units,cost_units,via,period_start) values($1,$2,'coverage-fixture','completed',1,1,'premium',current_date)",[actor,feature]);
+  await db.query("insert into public.premium_authorization_audit(account_id,feature_key,outcome,reason,entitlement_state) values($1,$2,'allowed','fixture','active')",[actor,feature]);
+  await db.query("insert into public.premium_decisions(account_id,household_id,feature_key,kind,idempotency_key,proposal_ref,proposal_digest) values($1,$2,$3,'fixture.receipt','coverage-fixture','{}',repeat('a',64))",[actor,household,feature]);
   await db.query("insert into public.account_consents(account_id,consent_type,policy_version,granted) values($1,'privacy','fixture-v1',true)",[actor]);
   await db.query("insert into public.calendar_oauth_states(state_hash,user_id,code_verifier,redirect_uri,expires_at) values($1,$2,'fixture-verifier','https://example.invalid/callback',now()+interval '10 minutes')",['state-'+actor,actor]);
   await db.query("insert into public.external_calendar_connections(user_id,provider,scopes,refresh_token_ciphertext,refresh_token_iv) values($1,'google',array['test'],'encrypted-fixture','fixture-iv')",[actor]);
@@ -66,7 +74,7 @@ async function populateRemainingResources(db,vars) {
  }
 }
 
-for(const scenario of ['shared','former_member','single'])test('all 43 registered resources: '+scenario+' and unrelated isolation',async t=>{
+for(const scenario of ['shared','former_member','single'])test('all 50 registered resources: '+scenario+' and unrelated isolation',async t=>{
  const shared=scenario!=='single';
  const db=await deletionDatabase();t.after(()=>db.close());
  await db.exec(await readFile(new URL('../../supabase/tests/helpers/01-test-helpers.sql',import.meta.url),'utf8'));

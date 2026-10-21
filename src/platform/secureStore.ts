@@ -15,6 +15,15 @@ import type { SecureStorageAdapter } from '../domain/account/secureSession';
  */
 export const secureStorageAvailable = Platform.OS !== 'web';
 
+// All adapter instances share the same native keys. Preserve invocation order
+// so an old actor's pending delete cannot finish after a new actor's write.
+let secureTurn:Promise<unknown>=Promise.resolve();
+function inSecureTurn<T>(work:()=>Promise<T>):Promise<T> {
+  const result=secureTurn.then(work,work);
+  secureTurn=result.catch(()=>undefined);
+  return result;
+}
+
 export function createDeviceSecureStorage(): SecureStorageAdapter {
   if (!secureStorageAvailable) {
     const refuse = () => {
@@ -35,8 +44,8 @@ export function createDeviceSecureStorage(): SecureStorageAdapter {
   }
 
   return {
-    getItem: (key) => SecureStore.getItemAsync(key),
-    setItem: (key, value) => SecureStore.setItemAsync(key, value),
-    deleteItem: (key) => SecureStore.deleteItemAsync(key),
+    getItem: (key) => inSecureTurn(()=>SecureStore.getItemAsync(key)),
+    setItem: (key, value) => inSecureTurn(()=>SecureStore.setItemAsync(key, value)),
+    deleteItem: (key) => inSecureTurn(()=>SecureStore.deleteItemAsync(key)),
   };
 }

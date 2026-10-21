@@ -1,0 +1,16 @@
+✔ a crash after the final provider acknowledgement still reconciles the missing aggregate on retry (1.0302ms)
+✔ disabled processing never hides an overdue deletion backlog from monitoring (0.1456ms)
+✔ Auth absence requires an explicit authoritative 404; aggregate provider booleans cannot skip cleanup (0.1666ms)
+✔ OAuth endpoint absence never certifies credential revocation (29.1955ms)
+✔ RevenueCat deletion requires a subsequent authoritative absence check (1.6982ms)
+✔ provider outages and unrelated project configuration cannot become purge proof (0.7818ms)
+✔ Google cleanup revokes the credential without modifying calendar events (0.2597ms)
+✔ Apple credential client-secret uses the approved four Staging/Production secret names (1.4208ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 516.8154

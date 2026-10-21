@@ -1,0 +1,25 @@
+▶ V2 deletion: cross-account event redaction, private review history and independent terminal checks
+  ✔ scoped processing requires a live allowlist and cannot drain unrelated mail (35.5273ms)
+  ✔ an account identifier added to global configuration must be reclassified (273.2376ms)
+  ✔ new client-readable ledger and definer RPCs refuse deactivated actors (143.433ms)
+  ✔ unknown schema resource fails closed with its name: public.unknown_application_fixture (15.3454ms)
+  ✔ unknown schema resource fails closed with its name: private.unknown_private_fixture (114.2774ms)
+  ✔ unknown schema resource fails closed with its name: public.account_deletion_unknown_fixture (76.9305ms)
+  ✔ only the explicitly optional welcome ledger may be absent at verification (1070.4855ms)
+  ✔ exact provider identity redaction preserves the other adult and idempotency (153.8324ms)
+  ✔ missing database evidence cannot finish (530.5418ms)
+  ✔ missing auth evidence cannot finish (284.6939ms)
+  ✔ missing storage evidence cannot finish (102.8738ms)
+  ✔ missing providers evidence cannot finish (352.7704ms)
+  ✔ claimed booleans cannot hide actual storage (186.9111ms)
+  ✔ independent verification rejects late private metadata and provider aliases (160.9812ms)
+  ✔ successful retry recounts resources and keeps only approved minimal proof (74.085ms)
+✔ V2 deletion: cross-account event redaction, private review history and independent terminal checks (11680.0035ms)
+ℹ tests 16
+ℹ suites 0
+ℹ pass 16
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 12181.4394

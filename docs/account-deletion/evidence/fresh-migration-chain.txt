@@ -1,0 +1,1 @@
+Full migration chain applied to disposable PostgreSQL.

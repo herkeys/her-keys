@@ -307,12 +307,22 @@ test('PBP-2 (evolved in Premium Stage 1): the backend enforces Premium ONLY insi
   const mentions = backend.filter((f) => /her_keys_plus|revenuecat|premium_(entitlements|authorize|usage|derive_state|my_entitlement)/i.test(read(f)));
   // Deletion removes the external provider customer; its name is not an entitlement read. Keep these exact cleanup/fixture
   // paths classified separately and prohibit ANY projection/authorization reference inside them. Never exempt a Free consumer.
-  const deletionProviderOnly = new Set(['supabase/blueprints/staging-deletion-fixture.ts', 'supabase/functions/_shared/deletionProviders.ts', 'supabase/functions/_shared/deletionWorker.ts']);
+  const deletionProviderOnly = new Set(['supabase/blueprints/staging-deletion-fixture.ts', 'supabase/functions/_shared/deletionProviders.ts', 'supabase/functions/_shared/deletionWorker.ts', 'supabase/functions/_shared/deletionCore.ts']);
   for (const file of deletionProviderOnly) {
     assert.doesNotMatch(read(file), /her_keys_plus|premium_(entitlements|authorize|usage|derive_state|my_entitlement)/i, `${file} must not read or enforce Premium`);
   }
   const PREMIUM_BACKEND = /^supabase\/(migrations\/\d{14}_premium_[a-z_]+\.sql|functions\/(_shared\/premium\/|premium-[a-z]+\/|revenuecat-webhook\/|smart-inbox-[a-z-]+\/|\.env\.example$|_shared\/supabaseAdmin\.ts$)|config\.toml$|tests\/)/;
-  assert.deepEqual(mentions.filter((f) => !PREMIUM_BACKEND.test(f) && !deletionProviderOnly.has(f)), [], 'a function or migration outside the Premium namespace reads or enforces the entitlement');
+  // Reviewed deletion migration counts/removes owned Premium records. It must
+  // never use entitlement state to decide eligibility for account deletion.
+  const deletionResourceMigration='supabase/migrations/20261019144729_account_deletion_v2_resource_certification.sql';
+  assert.doesNotMatch(read(deletionResourceMigration),/her_keys_plus|premium_(authorize|derive_state|my_entitlement)\s*\(|has_entitlement\s*(=|IS|THEN)/i);
+  assert.match(read(deletionResourceMigration),/deletion_verify_resources/);
+  const deletionTestFixtures=new Set(['supabase/blueprints/staging-deletion-v2-certification.sql','supabase/blueprints/staging-deletion-v2-certification.ts']);
+  for(const file of deletionTestFixtures){
+    assert.match(read(file),/fhhudicklmpofuzkxeqe/,'fixture must pin Her Keys Staging');
+    assert.match(read(file),/deletion_certification_fixture/,'fixture must require owned synthetic identities');
+  }
+  assert.deepEqual(mentions.filter((f) => !PREMIUM_BACKEND.test(f) && !deletionProviderOnly.has(f) && f!==deletionResourceMigration && !deletionTestFixtures.has(f)), [], 'a function or migration outside the Premium namespace reads or enforces the entitlement');
   assert.ok(mentions.some((f) => f.startsWith('supabase/functions/premium-gate/') || f.startsWith('supabase/functions/_shared/premium/')), 'and the Premium namespace really does carry the enforcement');
   // The Free functions are named, so a future edit that quietly gates one fails here by name.
   for (const free of ['herkeys-ai', 'calendar-data', 'calendar-oauth', 'weather-context', 'herkeys-welcome-email']) {

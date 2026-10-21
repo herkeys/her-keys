@@ -1,0 +1,17 @@
+{
+  "status": "fulfilled",
+  "value": {
+    "content": [
+      {
+        "type": "text",
+        "text": "object: customer\nid: 3f4eb231-6455-4959-bf35-c4a99c9e9c00\nproject_id: proj93809efe\nfirst_seen_at: \"2026-10-19T15:18:57.353Z\"\nlast_seen_at: \"2026-10-19T15:18:57.353Z\"\nlast_seen_app_version: null\nlast_seen_country: null\nlast_seen_platform: null\nlast_seen_platform_version: null\nactive_entitlements:\n  object: list\n  items: []\n  next_page: null\n  url: \"https://api.revenuecat.com/v2/projects/proj93809efe/customers/3f4eb231-6455-4959-bf35-c4a99c9e9c00/active_entitlements\"\nexperiment: null"
+      },
+      {
+        "type": "text",
+        "text": "Dashboard URL for this result: https://app.revenuecat.com/projects/93809efe/customers/3f4eb231-6455-4959-bf35-c4a99c9e9c00\nIf you link to it, use this exact URL. Link only when it helps the user."
+      }
+    ],
+    "structuredContent": null,
+    "isError": false
+  }
+}

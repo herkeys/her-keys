@@ -1,0 +1,74 @@
+▶ V2 deletion: cross-account event redaction, private review history and independent terminal checks
+  ✔ new client-readable ledger and definer RPCs refuse deactivated actors (138.7261ms)
+  ✔ unknown schema resource fails closed with its name: public.unknown_application_fixture (19.4446ms)
+  ✔ unknown schema resource fails closed with its name: private.unknown_private_fixture (117.6272ms)
+  ✔ unknown schema resource fails closed with its name: public.account_deletion_unknown_fixture (9.699ms)
+  ✔ exact provider identity redaction preserves the other adult and idempotency (65.8607ms)
+  ✔ missing database evidence cannot finish (92.4832ms)
+  ✔ missing auth evidence cannot finish (122.8813ms)
+  ✔ missing storage evidence cannot finish (36.2736ms)
+  ✔ missing providers evidence cannot finish (145.4965ms)
+  ✔ claimed booleans cannot hide actual storage (166.5936ms)
+  ✔ independent verification rejects late private metadata and provider aliases (480.1596ms)
+  ✔ successful retry recounts resources and keeps only approved minimal proof (296.4662ms)
+✔ V2 deletion: cross-account event redaction, private review history and independent terminal checks (15057.7488ms)
+✔ deletion-scoped sign-out refuses the wrong actor and preserves its credential (30.0673ms)
+✔ deletion-scoped sign-out loses authority while another actor signs in (2.4615ms)
+▶ secure session boundary
+  ✔ 1. the credential lives under its own key, never the household one (0.4208ms)
+  ✔ 2. a stored session round-trips, and every field is checked on the way back (0.379ms)
+  ✔ 3. anything malformed is refused rather than half-trusted (0.3591ms)
+  ✔ 4. an unreadable credential is discarded; a store failure discards nothing (0.5201ms)
+  ✔ 5. expiry is reported, not acted on, by the store (0.3553ms)
+✔ secure session boundary (2.6232ms)
+▶ sign-in
+  ✔ 6. a cancelled sign-in returns her exactly where she was (0.3601ms)
+  ✔ 7. a misconfigured build is an unrecoverable auth error, a flaky provider a recoverable one (0.4842ms)
+  ✔ 8. a successful sign-in stores the credential and identifies the account before anything else (0.9217ms)
+  ✔ 9. an unknown provider is refused without reaching an adapter (0.3219ms)
+✔ sign-in (2.3965ms)
+▶ email/password shares the account boundary
+  ✔ confirmation-pending signup never creates a credential or a cloud household (0.6106ms)
+  ✔ confirmed password login adopts the exact same Supabase account binding path as Google/Apple (0.9227ms)
+  ✔ wrong password is a refusal; it does not bind, persist, or send records (0.5616ms)
+✔ email/password shares the account boundary (2.3232ms)
+▶ bootstrap and claim
+  ✔ 10. an empty real household bootstraps and lands bound (1.0991ms)
+  ✔ 11. a real household with content claims, and carries its closure (2.0246ms)
+  ✔ 12. a demo household is never claimed, and stays usable (2.4474ms)
+  ✔ 13. the claim key is recorded BEFORE the request leaves (0.6655ms)
+  ✔ 14. the complete id map is durable before the account is called bound (0.7449ms)
+  ✔ 15. a server refusal is not retried, and is recorded as the server worded it (0.9545ms)
+  ✔ 16. an unreachable server leaves a retryable receipt and no binding (0.8435ms)
+  ✔ 17. a retry reuses the SAME claim key rather than starting a second household (0.9524ms)
+  ✔ 18. a claim that succeeds but cannot be recorded stays retryable and does not claim to be bound (0.4357ms)
+  ✔ 19. an unreadable server answer is a failure, not an optimistic success (0.4263ms)
+✔ bootstrap and claim (11.1138ms)
+▶ fresh-device household adoption
+  ✔ an empty device durably binds the existing household with an unhydrated, empty outbound namespace (4.9673ms)
+  ✔ an invalid or missing cloud household id never binds (1.437ms)
+  ✔ work created while bootstrap is in flight is preserved and prevents adoption (0.6115ms)
+  ✔ a failed adoption write stays unbound and preserves the retryable receipt and original namespace (0.9538ms)
+✔ fresh-device household adoption (8.3572ms)
+▶ restore, degrade, quarantine and switching
+  ✔ 20. a stored session restores and re-identifies the account (2.1388ms)
+  ✔ 21. an expired session degrades instead of signing her out, and local work continues (0.6185ms)
+  ✔ 22. a keychain that will not answer degrades a bound device rather than offering a fresh start (0.5555ms)
+  ✔ 23. a second account is quarantined: nothing renders, nothing uploads, nothing is deleted (0.579ms)
+  ✔ 24. signing out clears the credential but keeps the binding, so the same account resumes (1.2826ms)
+  ✔ 25. a RevenueCat failure never undoes a claim the server already committed (1.2138ms)
+✔ restore, degrade, quarantine and switching (6.7763ms)
+▶ P0: billing SDK never blocks Free authentication or secure household binding
+  ✔ Apple/Google provider login binds while RevenueCat identify remains pending (1.0576ms)
+  ✔ password sign-in also finishes when RevenueCat identify never resolves (0.6205ms)
+  ✔ cold-start restore resumes a secure household despite an unresponsive billing SDK (2.1358ms)
+  ✔ provider failure is finite and retryable, never leaves authenticating behind (0.5269ms)
+✔ P0: billing SDK never blocks Free authentication or secure household binding (4.5608ms)
+ℹ tests 51
+ℹ suites 7
+ℹ pass 51
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 15760.9123

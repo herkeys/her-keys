@@ -11,6 +11,10 @@ import {
 export type LocalNotificationPermission = 'undetermined' | 'granted' | 'denied';
 
 export const HER_KEYS_REMINDER_CHANNEL = 'herkeys-reminders';
+let reminderTurn:Promise<unknown>=Promise.resolve();
+function inReminderTurn(work:()=>Promise<void>):Promise<void>{
+  const result=reminderTurn.then(work,work);reminderTurn=result.catch(()=>undefined);return result;
+}
 
 /**
  * Foreground delivery stays quiet: the reminder remains in the notification
@@ -80,9 +84,11 @@ export async function requestLocalNotificationPermission(): Promise<LocalNotific
 }
 
 export async function cancelHerKeysLocalReminders(): Promise<void> {
+ return inReminderTurn(async()=>{
   const scheduled = await Notifications.getAllScheduledNotificationsAsync();
   const ours = scheduled.filter((request) => isHerKeysReminderData(request.content.data));
   await Promise.all(ours.map((request) => Notifications.cancelScheduledNotificationAsync(request.identifier)));
+ });
 }
 
 /**
@@ -95,6 +101,7 @@ export async function reconcileHerKeysLocalReminder(
   permission: LocalNotificationPermission,
   plan: LocalReminderPlan | null
 ): Promise<void> {
+ return inReminderTurn(async()=>{
   const scheduled = await Notifications.getAllScheduledNotificationsAsync();
   const ours = scheduled.filter((request) => isHerKeysReminderData(request.content.data));
 
@@ -133,6 +140,7 @@ export async function reconcileHerKeysLocalReminder(
       ...(Platform.OS === 'android' ? { channelId: HER_KEYS_REMINDER_CHANNEL } : {}),
     },
   });
+ });
 }
 
 export function addHerKeysReminderResponseListener(listener: (route: '/today') => void): () => void {

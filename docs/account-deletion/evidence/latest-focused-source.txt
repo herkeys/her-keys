@@ -1,0 +1,118 @@
+✔ disabled processing never hides an overdue deletion backlog from monitoring (0.837ms)
+✔ Auth absence requires an explicit authoritative 404; aggregate provider booleans cannot skip cleanup (0.7322ms)
+✔ OAuth endpoint absence never certifies credential revocation (34.8967ms)
+✔ RevenueCat deletion requires a subsequent authoritative absence check (2.0939ms)
+✔ provider outages and unrelated project configuration cannot become purge proof (1.2221ms)
+✔ Google cleanup revokes the credential without modifying calendar events (0.335ms)
+✔ Apple credential client-secret uses the approved four Staging/Production secret names (3.4237ms)
+▶ V2 deletion: cross-account event redaction, private review history and independent terminal checks
+  ✔ expired requests remain visible to monitoring when processing is disabled (11.3422ms)
+  ✔ scoped processing requires a live allowlist and cannot drain unrelated mail (26.328ms)
+  ✔ an account identifier added to global configuration must be reclassified (46.7171ms)
+  ✔ new client-readable ledger and definer RPCs refuse deactivated actors (33.0125ms)
+  ✔ unknown schema resource fails closed with its name: public.unknown_application_fixture (16.0888ms)
+  ✔ unknown schema resource fails closed with its name: private.unknown_private_fixture (14.0096ms)
+  ✔ unknown schema resource fails closed with its name: public.account_deletion_unknown_fixture (13.9463ms)
+  ✔ only the explicitly optional welcome ledger may be absent at verification (437.3231ms)
+  ✔ exact provider identity redaction preserves the other adult and idempotency (11.3538ms)
+  ✔ missing database evidence cannot finish (82.2232ms)
+  ✔ missing auth evidence cannot finish (103.9101ms)
+  ✔ missing storage evidence cannot finish (94.0982ms)
+  ✔ missing providers evidence cannot finish (71.3981ms)
+  ✔ claimed booleans cannot hide actual storage (101.2979ms)
+  ✔ independent verification rejects late private metadata and provider aliases (651.3223ms)
+  ✔ successful retry recounts resources and keeps only approved minimal proof (510.31ms)
+✔ V2 deletion: cross-account event redaction, private review history and independent terminal checks (50771.5806ms)
+warning: in the working copy of 'src/store/deletionRuntimeInstance.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/store/deletionRuntimeInstance.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/store/deletionRuntimeInstance.ts', LF will be replaced by CRLF the next time Git touches it
+▶ [BV] the semantic-boundary scan
+  ✔ [BV1] [BV2] [BV3] [BV4] [BV5] the scan passes: one migration, no new durable type, table, collection or sync kind, every shared-file change explained (63794.9553ms)
+  ✔ [BM1] [BM2] [BM3] no sibling imports, by import scan and by ancestry (17.2365ms)
+  ✔ [BM4] the checked-out branch is the line under test, never its own sibling — and a detached HEAD or any OTHER branch is not exempt (9.3835ms)
+  ✔ [BM5] only the owner-reviewed exact Premium import is registered; future tips and unrelated lanes still fail (0.4934ms)
+  ✔ [BV6] who could have made a change decides what explains it: the Wave 2 line needs a Meals-line reason, a later change a later lane's (HK13-D11) (21.9076ms)
+  ✔ [BV7] check H — the register is true: every known-invalid claim still fails, and only a PROVED stacked lane inherits (5.5922ms)
+  ✔ [CB1] [CD1] no dependency relation, recipe link or external reference is created by Meals code (23.1502ms)
+✔ [BV] the semantic-boundary scan (63874.6434ms)
+▶ [AN] [BY] no dietary or allergy context exists to attribute
+  ✔ [AN1] [BY1] nothing outside Meals' own copy mentions allergy, diet, nutrition, calories or recipes: the foundation has no such facts, so none may be claimed (428.517ms)
+✔ [AN] [BY] no dietary or allergy context exists to attribute (428.8549ms)
+▶ [BF] drafts and UI state stay off the store
+  ✔ [BF1] the sheets and the body import no store, persistence or sync module: a draft lives and dies in the component (9.2653ms)
+  ✔ [BF2] the only writes are the meal domain actions through the canonical store commit (2.3163ms)
+✔ [BF] drafts and UI state stay off the store (11.9239ms)
+▶ [BO] no network, no logging, no secrets in Meals code
+  ✔ [BO3] Meals code makes no network call and logs nothing (a meal title never reaches a log) (32.2064ms)
+  ✔ [BO1] no secret or credential pattern in any line Feature 08 added (2384.8758ms)
+✔ [BO] no network, no logging, no secrets in Meals code (2417.3634ms)
+▶ [BL] the route and the Life hub are used as they were
+  ✔ [BL1] [BL2] Meals never changed the routing, route access, root layout or Life layout; any later change to one is a registered later lane's; the Meals route is the existing direct route (648.4506ms)
+✔ [BL] the route and the Life hub are used as they were (648.6751ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-03: every paywall outcome has words in the right tone, and none leak the SDK’s own message (2.9987ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ V2 integration: onboarding routes to Account for restore rather than mounting a second transaction control (34.6989ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-03 android: the Systems Premium card tells her how every paywall ended (44.6828ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-03 ios: the Systems Premium card tells her how every paywall ended (29.2984ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-03: the Systems card is single-flight, a throwing paywall is a failed paywall, and entitled users see no upsell (12.4656ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-03: the unmounted Systems card ignores a paywall that ends late (6.2902ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-03: the onboarding step words an unavailable offering, a failure and a cancel — and never traps her (43.3162ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-03: the onboarding step completes on purchase or restore, once, and on free continuation (24.3357ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-03: final onboarding lists exactly the Stage 1 tools and no unshipped promises (8.1981ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-03: onboarding refuses a commercial purchase while the server has unreleased Premium features (20.6045ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-03: pre-auth Premium intent waits for server manifest and opens one paywall, never before (36.7114ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-03: Continue Free clears a pending Premium intent even if the manifest never loads (24.1801ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-03: after consent, a Premium choice that cannot be fulfilled is told to her — and the app stays open (21.7103ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-03: a checkout that throws is worded, never blocks the app, and the notice can be dismissed (4.5134ms)
+✔ SC-03: a free choice shows nothing and offers no checkout (2.4093ms)
+✔ PBP-1: no feature is gated on her_keys_plus — outside src/monetization the only entitlement read is the Systems upsell card (24070.5368ms)
+✔ PBP-1b (Premium Stage 1): the ONLY server-authoritative consumers of Premium state outside src/monetization are the Premium features themselves (11572.9169ms)
+✔ PBP-2 (evolved in Premium Stage 1): the backend enforces Premium ONLY inside the Premium namespace — no Free function, calendar, weather, AI, welcome-email or sync path reads the entitlement (2633.2302ms)
+✔ PBP-3: outside the Welcome Tree, no source copy claims Premium benefits the app does not deliver (9088.6538ms)
+ℹ tests 56
+ℹ suites 5
+ℹ pass 56
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 68673.3557
