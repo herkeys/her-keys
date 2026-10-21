@@ -84,7 +84,7 @@ describe('Release identity guard', () => {
     assert.match(guide, /integration\/build2-candidate-20261020/);
     assert.match(guide, /eas env:exec production/);
     assert.match(guide, /npm run release:preflight/);
-    assert.match(guide, /No IPA is built/);
+    assert.match(guide, /no IPA is built/i);
   });
 
   test('the parity registry agrees with the guard', () => {

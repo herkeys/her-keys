@@ -75,7 +75,7 @@ keytool -printcert -jarfile <app.aab>      # SHA1 must be 27:EF:71:89:70:C6:72:0
 and confirm the EAS build page shows application id `com.heykeys.app` and a `versionCode` Play has not seen
 (versionCode 1 was used by `ea226dc0`).
 
-## Branches that must not be used for a store build
+## Release branch authorization
 
 The release guard explicitly authorizes `build/02-gemini-integration` and the current V2 source candidate
 `integration/build2-candidate-20261020`. The separate `audit/ios-android-platform-parity` audit branch is not an
