@@ -77,8 +77,9 @@ and confirm the EAS build page shows application id `com.heykeys.app` and a `ver
 
 ## Branches that must not be used for a store build
 
-Only branches containing `f87aaee` resolve the correct Android id: `build/02-gemini-integration` and
-`audit/ios-android-platform-parity`. Every other branch (all `feature/*`, `integration/*`, `refinement/*`, `repair/*`,
-`design/*`, `docs/*`, `build/04-cloud-identity-sync`) still resolves `com.herkeys.app`, has no guard, and is
-**non-release**. `main` and the early `build/0x` branches have no Android package at all, so EAS would prompt for one.
-These branches pick up the correct id and the guard when they are rebased onto or merged with the release line.
+The release guard explicitly authorizes `build/02-gemini-integration` and the current V2 source candidate
+`integration/build2-candidate-20261020`. The separate `audit/ios-android-platform-parity` audit branch is not an
+authorized release source. Other branches remain non-release sources unless explicitly added to
+`RELEASE_BRANCHES` after review. `main` and early `build/0x` branches may not carry the required Android package or guard.
+See [iOS Release Preflight](IOS_RELEASE_PREFLIGHT.md) for the current candidate's Production-environment PowerShell
+preflight. The preflight does not start a build.
