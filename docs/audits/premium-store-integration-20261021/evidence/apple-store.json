@@ -1,0 +1,426 @@
+{
+  "observedAt": "2026-10-21T08:26:16.186Z",
+  "source": "Apple App Store Connect API (read-only)",
+  "app": {
+    "id": "6816197153",
+    "bundle": "com.herkeys.app"
+  },
+  "credential": {
+    "keyId": "XTNYDBS8T8",
+    "verified": true
+  },
+  "groups": [
+    {
+      "type": "subscriptionGroups",
+      "id": "22498877",
+      "attributes": {
+        "referenceName": "Her Keys Premium"
+      },
+      "relationships": {
+        "subscriptions": {
+          "links": {
+            "self": "https://api.appstoreconnect.apple.com/v1/subscriptionGroups/22498877/relationships/subscriptions",
+            "related": "https://api.appstoreconnect.apple.com/v1/subscriptionGroups/22498877/subscriptions"
+          }
+        },
+        "subscriptionGroupLocalizations": {
+          "links": {
+            "self": "https://api.appstoreconnect.apple.com/v1/subscriptionGroups/22498877/relationships/subscriptionGroupLocalizations",
+            "related": "https://api.appstoreconnect.apple.com/v1/subscriptionGroups/22498877/subscriptionGroupLocalizations"
+          }
+        },
+        "versions": {
+          "links": {
+            "self": "https://api.appstoreconnect.apple.com/v1/subscriptionGroups/22498877/relationships/versions",
+            "related": "https://api.appstoreconnect.apple.com/v1/subscriptionGroups/22498877/versions"
+          }
+        }
+      },
+      "links": {
+        "self": "https://api.appstoreconnect.apple.com/v1/subscriptionGroups/22498877"
+      }
+    }
+  ],
+  "subscriptions": [
+    {
+      "id": "6825188825",
+      "group": "22498877",
+      "attributes": {
+        "name": "Annual Premium",
+        "productId": "yearly",
+        "familySharable": false,
+        "state": "MISSING_METADATA",
+        "subscriptionPeriod": "ONE_YEAR",
+        "reviewNote": null,
+        "groupLevel": 2,
+        "multiSeatStatus": "ENABLED",
+        "marketSettings": [
+          "APP_STORE",
+          "APPLE_BUSINESS",
+          "APPLE_SCHOOL"
+        ]
+      },
+      "prices": {
+        "data": [
+          {
+            "type": "subscriptionPrices",
+            "id": "eyJhIjoiNjgyNTE4ODgyNSIsImMiOiJVUyIsImQiOjAsInAiOiIwIn0",
+            "attributes": {
+              "startDate": null,
+              "preserved": false,
+              "planType": "UPFRONT"
+            },
+            "relationships": {
+              "territory": {
+                "data": {
+                  "type": "territories",
+                  "id": "USA"
+                }
+              },
+              "subscriptionPricePoint": {
+                "data": {
+                  "type": "subscriptionPricePoints",
+                  "id": "eyJzIjoiNjgyNTE4ODgyNSIsInQiOiJVU0EiLCJwIjoiMTA0MTcifQ"
+                }
+              }
+            },
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/subscriptionPrices/eyJhIjoiNjgyNTE4ODgyNSIsImMiOiJVUyIsImQiOjAsInAiOiIwIn0"
+            }
+          }
+        ],
+        "included": [
+          {
+            "type": "territories",
+            "id": "USA",
+            "attributes": {
+              "currency": "USD"
+            },
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/territories/USA"
+            }
+          },
+          {
+            "type": "subscriptionPricePoints",
+            "id": "eyJzIjoiNjgyNTE4ODgyNSIsInQiOiJVU0EiLCJwIjoiMTA0MTcifQ",
+            "attributes": {
+              "customerPrice": "79.99",
+              "proceeds": "56.0",
+              "proceedsYear2": "67.99"
+            },
+            "relationships": {
+              "territory": {},
+              "equalizations": {
+                "links": {
+                  "self": "https://api.appstoreconnect.apple.com/v1/subscriptionPricePoints/eyJzIjoiNjgyNTE4ODgyNSIsInQiOiJVU0EiLCJwIjoiMTA0MTcifQ/relationships/equalizations",
+                  "related": "https://api.appstoreconnect.apple.com/v1/subscriptionPricePoints/eyJzIjoiNjgyNTE4ODgyNSIsInQiOiJVU0EiLCJwIjoiMTA0MTcifQ/equalizations"
+                }
+              },
+              "adjustedEqualizations": {
+                "links": {
+                  "related": "https://api.appstoreconnect.apple.com/v1/subscriptionPricePoints/eyJzIjoiNjgyNTE4ODgyNSIsInQiOiJVU0EiLCJwIjoiMTA0MTcifQ/adjustedEqualizations"
+                }
+              }
+            },
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/subscriptionPricePoints/eyJzIjoiNjgyNTE4ODgyNSIsInQiOiJVU0EiLCJwIjoiMTA0MTcifQ"
+            }
+          }
+        ],
+        "links": {
+          "self": "https://api.appstoreconnect.apple.com/v1/subscriptions/6825188825/prices?filter%5Bterritory%5D=USA&include=subscriptionPricePoint%2Cterritory&limit=200"
+        },
+        "meta": {
+          "paging": {
+            "total": 1,
+            "limit": 200
+          }
+        }
+      },
+      "introductoryOffers": {
+        "data": [
+          {
+            "type": "subscriptionIntroductoryOffers",
+            "id": "eyJzIjoiNjgyNTE4ODgyNSIsImQiOjE3OTI1NjYwMDAsImkiOiJVUyIsInQiOiIiLCJwIjoiMCJ9",
+            "attributes": {
+              "startDate": "2026-10-21",
+              "endDate": "2027-10-21",
+              "duration": "ONE_MONTH",
+              "offerMode": "FREE_TRIAL",
+              "numberOfPeriods": 1,
+              "targetSubscriptionPlanType": "UPFRONT"
+            },
+            "relationships": {
+              "territory": {
+                "data": {
+                  "type": "territories",
+                  "id": "USA"
+                }
+              }
+            },
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/subscriptionIntroductoryOffers/eyJzIjoiNjgyNTE4ODgyNSIsImQiOjE3OTI1NjYwMDAsImkiOiJVUyIsInQiOiIiLCJwIjoiMCJ9"
+            }
+          }
+        ],
+        "included": [
+          {
+            "type": "territories",
+            "id": "USA",
+            "attributes": {
+              "currency": "USD"
+            },
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/territories/USA"
+            }
+          }
+        ],
+        "links": {
+          "self": "https://api.appstoreconnect.apple.com/v1/subscriptions/6825188825/introductoryOffers?filter%5Bterritory%5D=USA&include=territory&limit=200"
+        },
+        "meta": {
+          "paging": {
+            "total": 1,
+            "limit": 200
+          }
+        }
+      },
+      "availability": {
+        "data": {
+          "type": "subscriptionAvailabilities",
+          "id": "6825188825",
+          "attributes": {
+            "availableInNewTerritories": false
+          },
+          "relationships": {
+            "availableTerritories": {
+              "links": {
+                "self": "https://api.appstoreconnect.apple.com/v1/subscriptionAvailabilities/6825188825/relationships/availableTerritories",
+                "related": "https://api.appstoreconnect.apple.com/v1/subscriptionAvailabilities/6825188825/availableTerritories"
+              }
+            }
+          },
+          "links": {
+            "self": "https://api.appstoreconnect.apple.com/v1/subscriptionAvailabilities/6825188825"
+          }
+        },
+        "links": {
+          "self": "https://api.appstoreconnect.apple.com/v1/subscriptions/6825188825/subscriptionAvailability"
+        }
+      },
+      "territories": {
+        "data": [
+          {
+            "type": "territories",
+            "id": "USA",
+            "attributes": {
+              "currency": "USD"
+            },
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/territories/USA"
+            }
+          }
+        ],
+        "links": {
+          "self": "https://api.appstoreconnect.apple.com/v1/subscriptionAvailabilities/6825188825/availableTerritories?limit=200"
+        },
+        "meta": {
+          "paging": {
+            "total": 1,
+            "limit": 200
+          }
+        }
+      }
+    },
+    {
+      "id": "6825188960",
+      "group": "22498877",
+      "attributes": {
+        "name": "Monthly Premium",
+        "productId": "monthly",
+        "familySharable": false,
+        "state": "MISSING_METADATA",
+        "subscriptionPeriod": "ONE_MONTH",
+        "reviewNote": null,
+        "groupLevel": 1,
+        "multiSeatStatus": "ENABLED",
+        "marketSettings": [
+          "APP_STORE",
+          "APPLE_BUSINESS",
+          "APPLE_SCHOOL"
+        ]
+      },
+      "prices": {
+        "data": [
+          {
+            "type": "subscriptionPrices",
+            "id": "eyJhIjoiNjgyNTE4ODk2MCIsImMiOiJVUyIsImQiOjAsInAiOiIwIn0",
+            "attributes": {
+              "startDate": null,
+              "preserved": false,
+              "planType": "UPFRONT"
+            },
+            "relationships": {
+              "territory": {
+                "data": {
+                  "type": "territories",
+                  "id": "USA"
+                }
+              },
+              "subscriptionPricePoint": {
+                "data": {
+                  "type": "subscriptionPricePoints",
+                  "id": "eyJzIjoiNjgyNTE4ODk2MCIsInQiOiJVU0EiLCJwIjoiMTAxMjcifQ"
+                }
+              }
+            },
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/subscriptionPrices/eyJhIjoiNjgyNTE4ODk2MCIsImMiOiJVUyIsImQiOjAsInAiOiIwIn0"
+            }
+          }
+        ],
+        "included": [
+          {
+            "type": "territories",
+            "id": "USA",
+            "attributes": {
+              "currency": "USD"
+            },
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/territories/USA"
+            }
+          },
+          {
+            "type": "subscriptionPricePoints",
+            "id": "eyJzIjoiNjgyNTE4ODk2MCIsInQiOiJVU0EiLCJwIjoiMTAxMjcifQ",
+            "attributes": {
+              "customerPrice": "9.99",
+              "proceeds": "7.0",
+              "proceedsYear2": "8.49"
+            },
+            "relationships": {
+              "territory": {},
+              "equalizations": {
+                "links": {
+                  "self": "https://api.appstoreconnect.apple.com/v1/subscriptionPricePoints/eyJzIjoiNjgyNTE4ODk2MCIsInQiOiJVU0EiLCJwIjoiMTAxMjcifQ/relationships/equalizations",
+                  "related": "https://api.appstoreconnect.apple.com/v1/subscriptionPricePoints/eyJzIjoiNjgyNTE4ODk2MCIsInQiOiJVU0EiLCJwIjoiMTAxMjcifQ/equalizations"
+                }
+              },
+              "adjustedEqualizations": {
+                "links": {
+                  "related": "https://api.appstoreconnect.apple.com/v1/subscriptionPricePoints/eyJzIjoiNjgyNTE4ODk2MCIsInQiOiJVU0EiLCJwIjoiMTAxMjcifQ/adjustedEqualizations"
+                }
+              }
+            },
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/subscriptionPricePoints/eyJzIjoiNjgyNTE4ODk2MCIsInQiOiJVU0EiLCJwIjoiMTAxMjcifQ"
+            }
+          }
+        ],
+        "links": {
+          "self": "https://api.appstoreconnect.apple.com/v1/subscriptions/6825188960/prices?filter%5Bterritory%5D=USA&include=subscriptionPricePoint%2Cterritory&limit=200"
+        },
+        "meta": {
+          "paging": {
+            "total": 1,
+            "limit": 200
+          }
+        }
+      },
+      "introductoryOffers": {
+        "data": [
+          {
+            "type": "subscriptionIntroductoryOffers",
+            "id": "eyJzIjoiNjgyNTE4ODk2MCIsImQiOjE3OTI1NjYwMDAsImkiOiJVUyIsInQiOiIiLCJwIjoiMCJ9",
+            "attributes": {
+              "startDate": "2026-10-21",
+              "endDate": "2027-10-21",
+              "duration": "ONE_MONTH",
+              "offerMode": "FREE_TRIAL",
+              "numberOfPeriods": 1,
+              "targetSubscriptionPlanType": "UPFRONT"
+            },
+            "relationships": {
+              "territory": {
+                "data": {
+                  "type": "territories",
+                  "id": "USA"
+                }
+              }
+            },
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/subscriptionIntroductoryOffers/eyJzIjoiNjgyNTE4ODk2MCIsImQiOjE3OTI1NjYwMDAsImkiOiJVUyIsInQiOiIiLCJwIjoiMCJ9"
+            }
+          }
+        ],
+        "included": [
+          {
+            "type": "territories",
+            "id": "USA",
+            "attributes": {
+              "currency": "USD"
+            },
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/territories/USA"
+            }
+          }
+        ],
+        "links": {
+          "self": "https://api.appstoreconnect.apple.com/v1/subscriptions/6825188960/introductoryOffers?filter%5Bterritory%5D=USA&include=territory&limit=200"
+        },
+        "meta": {
+          "paging": {
+            "total": 1,
+            "limit": 200
+          }
+        }
+      },
+      "availability": {
+        "data": {
+          "type": "subscriptionAvailabilities",
+          "id": "6825188960",
+          "attributes": {
+            "availableInNewTerritories": false
+          },
+          "relationships": {
+            "availableTerritories": {
+              "links": {
+                "self": "https://api.appstoreconnect.apple.com/v1/subscriptionAvailabilities/6825188960/relationships/availableTerritories",
+                "related": "https://api.appstoreconnect.apple.com/v1/subscriptionAvailabilities/6825188960/availableTerritories"
+              }
+            }
+          },
+          "links": {
+            "self": "https://api.appstoreconnect.apple.com/v1/subscriptionAvailabilities/6825188960"
+          }
+        },
+        "links": {
+          "self": "https://api.appstoreconnect.apple.com/v1/subscriptions/6825188960/subscriptionAvailability"
+        }
+      },
+      "territories": {
+        "data": [
+          {
+            "type": "territories",
+            "id": "USA",
+            "attributes": {
+              "currency": "USD"
+            },
+            "links": {
+              "self": "https://api.appstoreconnect.apple.com/v1/territories/USA"
+            }
+          }
+        ],
+        "links": {
+          "self": "https://api.appstoreconnect.apple.com/v1/subscriptionAvailabilities/6825188960/availableTerritories?limit=200"
+        },
+        "meta": {
+          "paging": {
+            "total": 1,
+            "limit": 200
+          }
+        }
+      }
+    }
+  ]
+}
