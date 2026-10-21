@@ -1,0 +1,34 @@
+# Independent account-deletion watchdog (DEL-P2-005).
+# Runs outside Supabase so a stopped pg_cron scheduler or broken alert path is still noticed.
+# A failed run notifies repository owners through GitHub's own notification channel.
+# INERT until the owner: (1) merges this to the default branch (schedules only run there),
+# (2) adds repository secret DELETION_WORKER_KEY (the target project's private.deletion_worker_key),
+# (3) sets repository variables DELETION_WATCHDOG_ENABLED=true and DELETION_WATCHDOG_PROJECT_URL.
+name: Account deletion watchdog
+on:
+  schedule:
+    - cron: '7,37 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: account-deletion-watchdog
+  cancel-in-progress: false
+jobs:
+  watchdog:
+    if: vars.DELETION_WATCHDOG_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts-dev/deletion-watchdog.mjs
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Check deletion lifecycle health
+        env:
+          DELETION_WATCHDOG_PROJECT_URL: ${{ vars.DELETION_WATCHDOG_PROJECT_URL }}
+          DELETION_WORKER_KEY: ${{ secrets.DELETION_WORKER_KEY }}
+        run: node scripts-dev/deletion-watchdog.mjs
