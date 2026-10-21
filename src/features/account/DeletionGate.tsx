@@ -29,12 +29,13 @@ export function DeletionGate({children}:{children:ReactNode}) {
  // account tree discarded an in-flight sign-in, the welcome flow and every open editor each time she switched apps (AE2E-D01).
  // Only a 'checking' that follows 'active' covers; every other non-active answer still removes the app exactly as before.
  const covering=useRef(false);
- if(gate.kind==='active')covering.current=true;else if(gate.kind!=='checking')covering.current=false;
- const appMounted=!hydrated||gate.kind==='active'||(gate.kind==='checking'&&covering.current);
- const blocked=hydrated&&gate.kind!=='active';
+ const localAccess=gate.kind==='active'||gate.kind==='offline_local';
+ if(localAccess)covering.current=true;else if(gate.kind!=='checking')covering.current=false;
+ const appMounted=!hydrated||localAccess||(gate.kind==='checking'&&covering.current);
+ const blocked=hydrated&&!localAccess;
  const app=appMounted?<View style={styles.fill} pointerEvents={blocked?'none':'auto'}
   importantForAccessibility={blocked?'no-hide-descendants':'auto'} accessibilityElementsHidden={blocked}>{children}</View>:null;
- if(!blocked)return <View style={styles.fill}>{app}</View>;
+ if(!blocked)return <View style={styles.fill}>{app}{gate.kind==='offline_local'?<View style={{padding:12}}><AppText accessibilityLiveRegion="polite">Offline — your saved household is available on this device. Sync is paused until account access is checked online.</AppText><Button label="Check connection" variant="secondary" onPress={()=>void deletionRuntime.check()}/></View>:null}</View>;
  const title=gate.kind==='review'?'Deletion requires privacy review':gate.kind==='pending'?'Account deletion pending':gate.kind==='purged'?'Account permanently deleted':
   gate.kind==='restored'?'Account restored':gate.kind==='checking'?'Checking account access':'Account status unavailable';
  const screen=<Screen><View style={{padding:24,gap:20}}>

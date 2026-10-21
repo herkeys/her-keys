@@ -58,6 +58,8 @@ export interface SyncRuntime {
   snapshot(): SyncSnapshot | null;
   running(): { accountId: string; householdId: string } | null;
   stop(): void;
+  /** Account access revalidation can pause cloud traffic independently of local editing and auth refresh. */
+  setAccessSuspended(suspended: boolean): void;
   /** Resolves when no start-up or requested cycle is still running. For tests and diagnostics; nothing awaits it in the app. */
   idle(): Promise<void>;
   /** How many coordinators this runtime has ever built. More than one running at once is impossible; this proves it stayed cheap. */
@@ -86,6 +88,7 @@ export function createSyncRuntime(deps: SyncRuntimeDeps): SyncRuntime {
   const report = (type: string, detail?: string) => deps.report?.({ type, detail });
 
   let active: Active | null = null;
+  let accessSuspended = false;
   let generation = 0;
   let built = 0;
   let cancelRetry: (() => void) | null = null;
@@ -227,6 +230,7 @@ export function createSyncRuntime(deps: SyncRuntimeDeps): SyncRuntime {
   }
 
   function start(accountId: string, householdId: string) {
+    if (accessSuspended) return;
     // Exactly once: the same account and household already have a live coordinator.
     if (active !== null && active.accountId === accountId && active.householdId === householdId) return;
     stop();
@@ -278,6 +282,10 @@ export function createSyncRuntime(deps: SyncRuntimeDeps): SyncRuntime {
   }
 
   const runtime: SyncRuntime = {
+    setAccessSuspended(suspended) {
+      accessSuspended = suspended;
+      if (suspended) stop();
+    },
     onAccountState(state) {
       if (state.kind === 'accountBound') start(state.session.accountId, state.householdId);
       else if (active !== null) stop();

@@ -1,4 +1,5 @@
 import * as Crypto from 'expo-crypto';
+import {isAuthRetryableFetchError} from '@supabase/supabase-js';
 import {supabaseConfig} from '../config/supabase';
 import {createDeviceSecureStorage} from '../platform/secureStore';
 import {createSecureSessionStore} from '../domain/account/secureSession';
@@ -30,7 +31,8 @@ export const deletionRuntime=createDeletionRuntime({
  async refresh(session){
   const auth=createSupabaseClient();if(!auth)throw new Error('not_configured');
   const result=await auth.auth.refreshSession({refresh_token:session.refreshToken});
-  if(result.error||!result.data.session||result.data.session.user.id!==session.accountId)throw new Error('refresh_unavailable');
+  if(result.error){if(isAuthRetryableFetchError(result.error))throw result.error;throw new Error('refresh_unavailable');}
+  if(!result.data.session||result.data.session.user.id!==session.accountId)throw new Error('refresh_unavailable');
   return sessionFromSupabase(result.data.session,session.accountId,session.provider);
  }
 });

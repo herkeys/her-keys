@@ -184,6 +184,19 @@ async function bindAsNewDevice(device, accountCloud) {
 }
 
 describe('HA-001 — the production composition operates sync after binding', () => {
+  test('D06: local-only access suspension survives auth callbacks and mutation retries until online authority resumes sync', async () => {
+    const cloud=createFakeCloud();const accountCloud=accountCloudFor(cloud,ACCOUNT_A);
+    const a=await makeDevice({cloud,accountId:ACCOUNT_A,accountCloud});await a.signIn();
+    a.syncRuntime.setAccessSuspended(true);await a.syncRuntime.idle();
+    const before=cloud.calls.length;
+    await mutate(a,task('Keep this local while access is rechecked'));
+    a.syncRuntime.onAccountState(a.accountRuntime.getState());
+    await a.settle();await a.syncRuntime.request('networkRestored');
+    assert.equal(a.syncRuntime.running(),null);assert.equal(cloud.calls.length,before);
+    assert.ok(a.store.getSnapshot().state.tasks.some(t=>t.title==='Keep this local while access is rechecked'));
+    a.syncRuntime.setAccessSuspended(false);a.syncRuntime.onAccountState(a.accountRuntime.getState());
+    await a.syncRuntime.idle();assert.ok(a.syncRuntime.running());assert.ok(cloud.calls.length>before);
+  });
   test('a fresh device signs in through the actual composition and adopts then pulls the existing household without uploading starter data', async () => {
     const cloud = createFakeCloud();
     const accountCloud = accountCloudFor(cloud, ACCOUNT_A);

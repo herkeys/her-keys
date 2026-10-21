@@ -7,14 +7,20 @@ import type {AppStore} from '../../state/appStore';
 import {activeAccountId} from './authState';
 interface DeletionDependencies {
  secure:SecureStorageAdapter;sessions:SecureSessionStore;accountRuntime:AccountRuntime;appStore:AppStore;
- syncRuntime:Pick<SyncRuntime,'stop'|'idle'|'onAccountState'>;
+ syncRuntime:Pick<SyncRuntime,'stop'|'idle'|'onAccountState'> & Partial<Pick<SyncRuntime,'setAccessSuspended'>>;
  call(name:string,body:unknown,token?:string):Promise<any>;
  activeStatus(token:string):Promise<boolean>;
  refresh(session:AccountSession):Promise<AccountSession>;
  randomProof():string;fingerprint(accountId:string):Promise<string>;
 }
+// A recent positive server check permits only this device's local household during a network outage.
+// It never authorizes cloud traffic, purchases, AI, or a namespace without its own durable session.
+export const OFFLINE_ACCOUNT_ACCESS_MAX_AGE_MS=24*60*60*1000;
 export function createDeletionRuntime({secure,sessions,accountRuntime,appStore,syncRuntime,call,activeStatus,refresh,randomProof,fingerprint}:DeletionDependencies) {
 const KEY='herkeys.secure.deletionReceipt';
+const ACTIVE_KEY='herkeys.secure.lastActive.';
+const deniedAccounts=new Set<string>();
+syncRuntime.setAccessSuspended?.(true);
 async function readReceipt(accountId:string|null){
  if(!accountId)return null;
  const scoped=await secure.getItem(KEY+'.'+accountId);
@@ -27,12 +33,12 @@ async function deleteReceipt(accountId:string){
  const legacy=parseDeletionReceipt(await secure.getItem(KEY));
  if(legacy?.accountId===accountId)await secure.deleteItem(KEY);
 }
-type Gate={kind:'checking'|'active'|'pending'|'review'|'unavailable'|'purged'|'restored';deadline?:string};
+type Gate={kind:'checking'|'active'|'offline_local'|'pending'|'review'|'unavailable'|'purged'|'restored';deadline?:string};
 let gate:Gate={kind:'checking'},inFlight:Promise<void>|null=null;
 let scopeVersion=0,operationVersion=0,mutating=false,checkAgain=false;
 const scopeKey=()=>JSON.stringify([appStore.currentIdentity().binding?.accountId??null,activeAccountId(accountRuntime.getState())??appStore.currentIdentity().binding?.accountId??null]);
 let lastScope=scopeKey();
-const observe=()=>{const next=scopeKey();if(next!==lastScope){lastScope=next;scopeVersion++;if((inFlight||mutating)&&(appStore.currentIdentity().binding||activeAccountId(accountRuntime.getState())))checkAgain=true;}};
+const observe=()=>{const next=scopeKey();if(next!==lastScope){lastScope=next;scopeVersion++;syncRuntime.setAccessSuspended?.(true);if((inFlight||mutating)&&(appStore.currentIdentity().binding||activeAccountId(accountRuntime.getState())))checkAgain=true;}};
 accountRuntime.subscribe(observe);appStore.subscribe(observe);
 function capture(){
  observe();const scope=scopeVersion,operation=operationVersion;
@@ -43,13 +49,16 @@ const matchesAccount=(id:string)=>appStore.currentIdentity().binding?.accountId=
  && (activeAccountId(accountRuntime.getState())===null||activeAccountId(accountRuntime.getState())===id);
 const listeners=new Set<()=>void>();
 function publish(next:Gate) {
- gate=next; appStore.setAccountAccessBlocked(next.kind!=='active');
+ gate=next; appStore.setAccountAccessBlocked(next.kind!=='active'&&next.kind!=='offline_local');
+ syncRuntime.setAccessSuspended?.(next.kind!=='active');
  if(next.kind!=='active')syncRuntime.stop();
  else syncRuntime.onAccountState(accountRuntime.getState());
  for(const listener of listeners)listener();
 }
 async function check() {
  const scope=capture();
+ let offlineAccount:string|null=null;
+ let lastActive:{accountId:string;checkedAt:number}|null=null;
  try {
   const receipt=await readReceipt(appStore.currentIdentity().binding?.accountId??null);
   scope.assert();
@@ -85,16 +94,30 @@ async function check() {
    // still refused.
    const foreign=actor===null||(accountRuntime.getState().kind==='boundOther'&&actor===session.session.accountId);
    if((namespace&&namespace!==session.session.accountId&&!foreign)||(actor&&actor!==session.session.accountId))throw new Error('session_namespace_mismatch');
+   if(namespace===session.session.accountId&&(actor===null||actor===namespace)&&!deniedAccounts.has(namespace)) {
+    const raw=await secure.getItem(ACTIVE_KEY+namespace);scope.assert();
+    try {lastActive=raw?JSON.parse(raw):null;}catch{lastActive=null;}
+    offlineAccount=namespace;
+   }
    if(session.expired) {
     const refreshed=await refresh(session.session);scope.assert();
     await sessions.write(refreshed);scope.assert();
     session=await sessions.read(Date.now());if(session.kind!=='session')throw new Error('session_unavailable');
    }
    const active=await activeStatus(session.session.accessToken);scope.assert();
-   if(!active){publish({kind:'pending'});return;}
+   if(!active){deniedAccounts.add(session.session.accountId);await secure.deleteItem(ACTIVE_KEY+session.session.accountId);scope.assert();publish({kind:'pending'});return;}
+   deniedAccounts.delete(session.session.accountId);
+   await secure.setItem(ACTIVE_KEY+session.session.accountId,JSON.stringify({accountId:session.session.accountId,checkedAt:Date.now()}));scope.assert();
   }
   publish({kind:'active'});
- } catch {if(scope.current())publish({kind:'unavailable'});}
+ } catch(error) {
+  if(!scope.current())return;
+  const networkFailure=error instanceof Error&&new Set(['TypeError','AbortError','TimeoutError','AuthRetryableFetchError']).has(error.name);
+  const age=lastActive?Date.now()-lastActive.checkedAt:NaN;
+  if(networkFailure&&offlineAccount&&lastActive?.accountId===offlineAccount&&Number.isFinite(age)&&age>=0&&age<=OFFLINE_ACCOUNT_ACCESS_MAX_AGE_MS
+    &&!deniedAccounts.has(offlineAccount)&&appStore.currentIdentity().binding?.accountId===offlineAccount)publish({kind:'offline_local'});
+  else publish({kind:'unavailable'});
+ }
 }
 function runCheck():Promise<void>{
  if(mutating)return Promise.resolve();
@@ -116,6 +139,7 @@ return {
   scope.assert();
   if(receipt && receipt.accountId!==account.session.accountId)throw new Error('Another account has a pending deletion receipt.');
   receipt??={accountId:account.session.accountId,proof:randomProof()};
+  deniedAccounts.add(account.session.accountId);await secure.deleteItem(ACTIVE_KEY+account.session.accountId);scope.assert();
   await secure.setItem(KEY+'.'+receipt.accountId,JSON.stringify(receipt)); // durable BEFORE a request whose response might be lost
   scope.assert();
   publish({kind:'checking'});await syncRuntime.idle();await appStore.flush();

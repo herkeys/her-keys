@@ -42,6 +42,15 @@ const tree = r => r.root.findAll(n => n.props.testID === 'account-tree');
 const text = r => JSON.stringify(r.toJSON());
 const covered = r => r.root.findAll(n => n.type === 'View' && n.props.accessibilityElementsHidden === true && n.props.pointerEvents === 'none');
 
+test('offline local access preserves the account tree and explains that synchronization is paused',async()=>{
+ const r=await mountGate();await act(()=>publishGate({kind:'active'}));
+ await act(()=>publishGate({kind:'offline_local'}));
+ assert.equal(life.mounts,1);assert.equal(life.unmounts,0);assert.equal(covered(r).length,0);
+ assert.match(text(r),/Sync is paused/);
+ await act(()=>publishGate({kind:'checking'}));assert.equal(life.unmounts,0);assert.equal(covered(r).length,1);
+ await act(()=>publishGate({kind:'pending'}));assert.equal(tree(r).length,0);
+});
+
 test('switching apps covers the account tree without remounting it, and keeps what she had typed', async () => {
   const r = await mountGate();
   assert.equal(tree(r).length, 0, 'nothing account-held renders before the first answer');
