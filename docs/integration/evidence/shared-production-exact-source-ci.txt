@@ -1,0 +1,39 @@
+﻿
+v2-repository-validation	Backend boundary protection	2026-10-18T02:36:21.3705294Z # tests 5
+v2-repository-validation	Backend boundary protection	2026-10-18T02:36:21.3706419Z # pass 5
+v2-repository-validation	Backend boundary protection	2026-10-18T02:36:21.3706992Z # fail 0
+v2-repository-validation	Welcome and Premium launch-critical contract tests	2026-10-18T02:36:46.0225838Z # tests 125
+v2-repository-validation	Welcome and Premium launch-critical contract tests	2026-10-18T02:36:46.0226199Z # pass 125
+v2-repository-validation	Welcome and Premium launch-critical contract tests	2026-10-18T02:36:46.0226375Z # fail 0
+v2-repository-validation	Full application test suite	2026-10-18T02:36:53.9323570Z     not ok 15 - complete database 
+cleanup preserves the other account
+v2-repository-validation	Full application test suite	2026-10-18T02:36:53.9347280Z     not ok 16 - purged requires Auth 
+absence and independent resource evidence
+v2-repository-validation	Full application test suite	2026-10-18T02:36:53.9456931Z not ok 1 - account deletion: real 
+SQL state, privileges, recovery and purge
+v2-repository-validation	Full application test suite	2026-10-18T02:36:54.0060425Z     not ok 4 - approved shared 
+policy deletes private records, restricts ambiguous records and preserves the other adult
+v2-repository-validation	Full application test suite	2026-10-18T02:36:54.0083726Z not ok 11 - critical lifecycle 
+negative controls detect unsafe guard mutations
+v2-repository-validation	Full application test suite	2026-10-18T02:36:55.1476150Z not ok 17 - all 43 registered 
+resources: shared and unrelated isolation
+v2-repository-validation	Full application test suite	2026-10-18T02:37:01.4536316Z not ok 18 - all 43 registered 
+resources: former_member and unrelated isolation
+v2-repository-validation	Full application test suite	2026-10-18T02:37:06.3240013Z not ok 19 - all 43 registered 
+resources: single and unrelated isolation
+v2-repository-validation	Full application test suite	2026-10-18T02:38:07.8932226Z     # Subtest: any failure at the 
+boundary is fail-closed: 503 service_unavailable, never "allowed"
+v2-repository-validation	Full application test suite	2026-10-18T02:38:07.8933402Z     ok 5 - any failure at the 
+boundary is fail-closed: 503 service_unavailable, never "allowed"
+v2-repository-validation	Full application test suite	2026-10-18T02:38:11.6222546Z     not ok 1 - See Her Keys Premium 
+opens the store purchase interface once, then waits for the SERVER before claiming anything
+v2-repository-validation	Full application test suite	2026-10-18T02:38:11.6521926Z     not ok 2 - cancelling the 
+purchase changes nothing and says so
+v2-repository-validation	Full application test suite	2026-10-18T02:38:11.6758090Z     not ok 3 - no offering and an 
+SDK error are calm and recoverable
+v2-repository-validation	Full application test suite	2026-10-18T02:38:11.7041866Z not ok 973 - buying
+v2-repository-validation	Full application test suite	2026-10-18T02:38:36.8900977Z # tests 5152
+v2-repository-validation	Full application test suite	2026-10-18T02:38:36.8901933Z # pass 5141
+v2-repository-validation	Full application test suite	2026-10-18T02:38:36.8902264Z # fail 11
+
+

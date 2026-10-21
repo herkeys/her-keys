@@ -101,8 +101,8 @@ const RESPONSE_JSON_SCHEMA = {
             type: 'string',
             enum: ['listen', 'hypothesis', 'refinement', 'clarify', 'result', 'next-step', 'unmatched'],
           },
-          confidenceLabel: { type: 'string' },
-          confidence: { type: 'string', enum: ['possible', 'likely', 'established'] },
+          confidenceLabel: { type: 'string', enum: ['Possible pattern'] },
+          confidence: { type: 'string', enum: ['possible'] },
           evidence: {
             type: 'array',
             maxItems: 8,
@@ -122,7 +122,7 @@ const RESPONSE_JSON_SCHEMA = {
           type: ['object', 'null'],
           properties: {
             statement: { type: 'string' },
-            confidence: { type: 'string', enum: ['possible', 'likely', 'established'] },
+            confidence: { type: 'string', enum: ['possible'] },
           },
           required: ['statement', 'confidence'],
           additionalProperties: false,
@@ -174,7 +174,7 @@ const RESPONSE_JSON_SCHEMA = {
           type: ['object', 'null'],
           properties: {
             summary: { type: 'string' },
-            confidenceLabel: { type: 'string' },
+            confidenceLabel: { type: 'string', enum: ['Possible pattern'] },
             nextStep: { type: 'string' },
           },
           required: ['summary', 'confidenceLabel', 'nextStep'],
@@ -230,6 +230,7 @@ Behavior:
 Conversation state:
 - LISTEN -> HYPOTHESIZE -> CLARIFY -> REFINE -> RECOMMEND remains the conceptual flow, but natural conversation can revisit clarification or change subjects.
 - A self-reported conversation alone supports at most "possible" confidence. Never emit "likely" or "established" confidence from this interaction.
+- Every confidenceLabel, when present in a message or result, must be exactly "Possible pattern".
 - If the subject changes, clear evidence that belonged only to the old subject.
 - If stage is clarifying or refining, pendingQuestion must be present.
 - If stage is resolved, pendingQuestion must be null and result must be present.
@@ -481,6 +482,8 @@ function logOperational(event: {
   fallback: false;
   errorClass?: string;
   tokens?: { input?: number; output?: number; total?: number };
+  providerInvoked?: boolean;
+  contractChecks?: { schema: boolean; transition?: boolean; evidence?: boolean; state?: boolean; safety?: boolean; hypothesisConfidence?: boolean; resultConfidence?: boolean; noUrls?: boolean; noActionClaims?: boolean; messageConfidence?: boolean };
 }) {
   console.info('[herkeys-ai]', JSON.stringify(event));
 }
@@ -510,6 +513,9 @@ Deno.serve(async (req) => {
     if (consentError || decisions?.length !== 1 ||
         decisions[0].policy_version !== 'ai-data-processing-initial-v1' ||
         decisions[0].granted !== true) {
+      logOperational({ requestId, model: modelName, latencyMs: Date.now() - started,
+        providerStatus: 403, schemaValidation: 'not-run', fallback: false,
+        errorClass: 'consent_required', providerInvoked: false });
       return json({ status: 'unavailable', reason: 'ai_processing_consent_required', requestId }, 403);
     }
 
@@ -619,6 +625,20 @@ Deno.serve(async (req) => {
         fallback: false,
         errorClass: 'provider_contract',
         tokens: usage(outcome.payload),
+        // Booleans only: distinguish contract failures without recording content,
+        // schema issue values, prompts, account identifiers or provider secrets.
+        contractChecks: parsedTurn.success ? {
+          schema: true,
+          transition: stageTransitionAllowed(parsedRequest.data.state, parsedTurn.data.state),
+          evidence: validEvidenceTransition(parsedRequest.data.state, parsedTurn.data.state, parsedRequest.data.optionId),
+          state: validStateShape(parsedTurn.data.state, parsedTurn.data.quickReplies),
+          safety: safeText(parsedTurn.data),
+          hypothesisConfidence: parsedTurn.data.state.hypothesis === null || parsedTurn.data.state.hypothesis.confidence === 'possible',
+          resultConfidence: parsedTurn.data.state.result === null || parsedTurn.data.state.result.confidenceLabel === 'Possible pattern',
+          noUrls: !URL_PATTERN.test(JSON.stringify(parsedTurn.data)),
+          noActionClaims: !ACTION_CLAIM_PATTERN.test(JSON.stringify(parsedTurn.data)),
+          messageConfidence: parsedTurn.data.messages.every(message => (!message.confidence || message.confidence === 'possible') && (!message.confidenceLabel || message.confidenceLabel === 'Possible pattern')),
+        } : { schema: false },
       });
       return json({ status: 'unavailable', reason: 'ai_response_invalid', requestId }, 502);
     }

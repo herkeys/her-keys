@@ -1,0 +1,16 @@
+Full suite at 5d408090325a11f44feb306711e9749f42b02692 — node --test --test-concurrency=1, 2026-10-21T00:26:16Z
+# tests 5243
+# suites 1060
+# pass 5243
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 253482.9613
+
+Earlier run at e265f27+Phase2 code on a CRLF checkout (DEL-P2-006 reproduction):
+# tests 5175
+# suites 1060
+# pass 5165
+# fail 10
+     10 # migration failed: 20261019144729_account_deletion_v2_resource_certification.sql classification_contract_mismatch

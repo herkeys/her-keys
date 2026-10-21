@@ -1,15 +1,18 @@
 import { adminClient } from './supabaseAdmin.ts';
 import { command, drainDeletionEmail, reconcileRestoration, deliveryRecipient } from './deletionService.ts';
 import { decryptSecret, encryptSecret } from './crypto.ts';
-import { safeCategory } from './deletionCore.ts';
-import {revokeGoogle,revokeApple,deleteRevenueCatCustomer} from './deletionProviders.ts';
+import { safeCategory, verifiedAuthAbsence, needsProviderReconciliation, providerSettled } from './deletionCore.ts';
+import {revokeGoogle,settleGoogleRevocation,revokeApple,settleAppleRevocation,deleteRevenueCatCustomer} from './deletionProviders.ts';
 
 async function checked(query: any) { const {data,error}=await query; if(error) throw new Error('database_unavailable'); return data; }
 export async function processDeletions() {
  const admin=adminClient();
  // Auth deactivation and recovery are reconciled independently from the destructive switch.
- const pending=await checked(admin.from('account_deletion_requests').select('id,account_id,status,evidence,auth_deactivation_pending,deactivated_at')
-  .in('status',['restoring','deactivated']).limit(20));
+ const scope=await command('processing_scope');
+ let pendingQuery=admin.from('account_deletion_requests').select('id,account_id,status,evidence,auth_deactivation_pending,deactivated_at')
+  .in('status',['restoring','deactivated']).limit(20);
+ if(scope.scoped)pendingQuery=pendingQuery.in('account_id',scope.accounts);
+ const pending=scope.scoped&&!scope.accounts.length?[]:await checked(pendingQuery);
  for(const r of pending) {
   if(r.status==='restoring') await reconcileRestoration(r.id,r.account_id);
   else if(r.auth_deactivation_pending && Date.parse(r.deactivated_at)<Date.now()-300000) {
@@ -30,38 +33,45 @@ export async function processDeletions() {
    await command('cleanup_safe',args);
    // Capture the completion recipient only in a restricted encrypted outbox before Auth disappears.
    const userResult=await admin.auth.admin.getUserById(request.account_id);
-   const authLookupUnavailable=!!userResult.error&&userResult.error.status!==404;
+   const authLookupUnavailable=!!userResult.error&&!verifiedAuthAbsence(userResult)
+    || (!userResult.data.user&&!verifiedAuthAbsence(userResult));
    if(authLookupUnavailable)await evidence('auth_lookup_failure','requires_retry');
    if(userResult.data.user?.email) {
     const encrypted=await encryptSecret(JSON.stringify({email:deliveryRecipient(userResult.data.user.email)}));
     await command('prepare_completion',{...args,...encrypted});
    }
    let providersComplete=!authLookupUnavailable;
-   if(!request.evidence.providers) {
-    async function provider(name:string,work:()=>Promise<void>) {
-     if(request.evidence[name]===true)return;
-     try {await work();await evidence(name,true);}
+   if(needsProviderReconciliation(request.evidence)) {
+    async function provider(name:string,work:()=>Promise<void|'manual_revocation_required'|'credential_already_invalid'>) {
+     if(providerSettled(name,request.evidence[name]))return;
+     try {await evidence(name,(await work())??true);}
      catch {providersComplete=false;await evidence(name,'requires_retry');}
     }
     await provider('google_revoked',async()=>{
      const connections=await checked(admin.from('external_calendar_connections').select('refresh_token_ciphertext,refresh_token_iv').eq('user_id',request.account_id));
-     for(const connection of connections) {
-      await fence();
-      const token=await decryptSecret(connection.refresh_token_ciphertext,connection.refresh_token_iv);
-      await revokeGoogle(token);
-     }
+     const tokens:string[]=[];
+     for(const connection of connections)tokens.push(await decryptSecret(connection.refresh_token_ciphertext,connection.refresh_token_iv));
+     const outcome=await settleGoogleRevocation(tokens,async token=>{await fence();await revokeGoogle(token);});
+     if(outcome==='credential_already_invalid')return 'credential_already_invalid';
     });
     await provider('apple_revoked',async()=>{
      if(authLookupUnavailable)throw new Error('apple_identity_unverified');
+     if(!userResult.data.user&&!Array.isArray(request.evidence.identity_providers))throw new Error('apple_identity_unverified');
      const credentials=await checked(admin.from('apple_revocation_credentials').select('token_ciphertext,token_iv').eq('account_id',request.account_id));
-     for(const credential of credentials) {
+     const tokens:string[]=[];
+     for(const credential of credentials)tokens.push(await decryptSecret(credential.token_ciphertext,credential.token_iv));
+     const appleLinked=request.evidence.apple_legacy==='manual_revocation_required'
+      || request.evidence.identity_providers?.includes('apple') || !!userResult.data.user?.identities?.some(i=>i.provider==='apple');
+     const outcome=await settleAppleRevocation(appleLinked,tokens,async token=>{
       const { appleClientSecret }=await import('./deletionApple.ts');
       await fence();
-      await revokeApple(await decryptSecret(credential.token_ciphertext,credential.token_iv),Deno.env.get('APPLE_DELETION_CLIENT_ID')!,await appleClientSecret());
-     }
-     if(!credentials.length && (request.evidence.apple_legacy==='manual_revocation_required'||userResult.data.user?.identities?.some(i=>i.provider==='apple'))) {
+      await revokeApple(token,Deno.env.get('APPLE_DELETION_CLIENT_ID')!,await appleClientSecret());
+     });
+     if(outcome==='manual_revocation_required') {
+      // Erasure continues; Apple's grant is not claimed revoked. The user is told
+      // how to remove Her Keys from their Apple Account (completion email/app).
       await evidence('apple_legacy','manual_revocation_required');
-      throw new Error('apple_revocation_requires_action');
+      return 'manual_revocation_required';
      }
     });
     await provider('revenuecat_deleted',async()=>{
@@ -107,7 +117,7 @@ export async function processDeletions() {
    const existing=await admin.auth.admin.getUserById(request.account_id);
    if(existing.data.user) { const {error}=await admin.auth.admin.deleteUser(request.account_id); if(error) throw new Error('auth_delete_failed'); }
    const verifyAuth=await admin.auth.admin.getUserById(request.account_id);
-   if(verifyAuth.data.user || (verifyAuth.error && verifyAuth.error.status!==404)) throw new Error('auth_verification_failed');
+   if(!verifiedAuthAbsence(verifyAuth)) throw new Error('auth_verification_failed');
    await evidence('auth',true);
    if(!providersComplete) throw new Error('provider_retry_required');
    await command('finish',args);

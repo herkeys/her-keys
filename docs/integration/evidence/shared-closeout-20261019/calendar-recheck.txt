@@ -1,0 +1,23 @@
+  PERF single-day, 60 events + 20 tasks: median 5.03 ms (target < 50)
+  PERF seven-day, 210 events + 70 tasks: median 2.38 ms (target < 150)
+  PERF day with 10 handoffs + 9 dependencies: median 1.84 ms
+  PERF 3000 stored rows, one day: median 2.94 ms; content digest of the whole state: 3.65 ms
+  PERF growth: 25 events 1.78 ms -> 100 events 6.75 ms (x3.8); 4x input
+▶ measured on dense reference fixtures
+  ✔ single-day projection: dense day (60 commitments, 20 tasks) is well inside the 50 ms target (259.2198ms)
+  ✔ seven-day projection: dense week (30 commitments and 10 tasks a day) is well inside the 150 ms target (70.2275ms)
+  ✔ a day with dependencies and responsibilities carries no meaningful extra cost (100.258ms)
+  ✔ a household with thousands of stored rows still projects one day quickly (indexing, not scanning) (322.7168ms)
+✔ measured on dense reference fixtures (753.9156ms)
+▶ growth is not combinatorial
+  ✔ quadrupling a day’s commitments never multiplies the time by anything like the number of arrangements (251.3881ms)
+  ✔ Feature 03 source contains no search over alternative schedules (16.5143ms)
+✔ growth is not combinatorial (268.2264ms)
+ℹ tests 6
+ℹ suites 2
+ℹ pass 6
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1572.8984

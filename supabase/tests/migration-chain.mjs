@@ -54,6 +54,12 @@ export const ADDITIVE_CHAIN = [
   // Premium launch: actor-bound purchase readiness and independent checkout OFF-by-default control.
   { file: '20261016012000_premium_purchase_readiness.sql', owner: 'PREMIUM_PURCHASE_READINESS', label: 'premium-purchase-readiness' },
   { file: '20261016013000_premium_checkout_independent_activation.sql', owner: 'PREMIUM_CHECKOUT_SWITCH', label: 'premium-checkout-switch' },
+  { file: '20261017180000_ai_response_reporting.sql', owner: 'AI_REPORTING', label: 'ai-reporting' },
+  { file: '20261017221825_ai_report_review_workflow.sql', owner: 'AI_REPORT_REVIEW', label: 'ai-report-review' },
+  { file: '20261019144729_account_deletion_v2_resource_certification.sql', owner: 'ACCOUNT_DELETION_V2', label: 'account-deletion-v2' },
+  { file: '20261019151501_account_deletion_optional_welcome_inventory.sql', owner: 'ACCOUNT_DELETION_OPTIONAL_WELCOME', label: 'account-deletion-optional-welcome' },
+  { file: '20261019152629_account_deletion_overdue_request_monitor.sql', owner: 'ACCOUNT_DELETION_OVERDUE_MONITOR', label: 'account-deletion-overdue-monitor' },
+  { file: '20261019153801_account_deletion_private_household_owners.sql', owner: 'ACCOUNT_DELETION_PRIVATE_OWNERS', label: 'account-deletion-private-owners' },
 ];
 
 /** WAVE3_BASE (363e473) ended at F05: the chain a WAVE3_BASE-era database was built with, and the populated-upgrade starting point. */

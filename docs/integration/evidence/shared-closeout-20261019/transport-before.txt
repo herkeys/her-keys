@@ -1,0 +1,343 @@
+✖ entitlement: a replacement session cannot send the old actor request (45.8383ms)
+✔ entitlement: the SDK cannot substitute a later JWT for the captured owner token (1.3107ms)
+✖ entitlement: a switch during session lookup prevents transmission (1.2394ms)
+✖ manifest: a replacement session cannot send the old actor request (1.6413ms)
+✔ manifest: the SDK cannot substitute a later JWT for the captured owner token (1.2758ms)
+✖ manifest: a switch during session lookup prevents transmission (0.936ms)
+✖ readiness: a replacement session cannot send the old actor request (1.8856ms)
+✔ readiness: the SDK cannot substitute a later JWT for the captured owner token (4.365ms)
+✖ readiness: a switch during session lookup prevents transmission (1.0215ms)
+✖ reconcile: a replacement session cannot send the old actor request (2.0344ms)
+✔ reconcile: the SDK cannot substitute a later JWT for the captured owner token (0.6241ms)
+✖ reconcile: a switch during session lookup prevents transmission (0.5071ms)
+✖ authorize: a replacement session cannot send the old actor request (1.4333ms)
+✔ authorize: the SDK cannot substitute a later JWT for the captured owner token (0.4776ms)
+✖ authorize: a switch during session lookup prevents transmission (0.5737ms)
+✖ extract: a replacement session cannot send the old actor request (1.1934ms)
+✔ extract: the SDK cannot substitute a later JWT for the captured owner token (0.4298ms)
+✖ extract: a switch during session lookup prevents transmission (0.5145ms)
+✖ record: a replacement session cannot send the old actor request (2.2947ms)
+✔ record: the SDK cannot substitute a later JWT for the captured owner token (0.4725ms)
+✖ record: a switch during session lookup prevents transmission (0.4732ms)
+✖ transition: a replacement session cannot send the old actor request (0.5886ms)
+✔ transition: the SDK cannot substitute a later JWT for the captured owner token (0.7005ms)
+✖ transition: a switch during session lookup prevents transmission (0.4975ms)
+✖ list: a replacement session cannot send the old actor request (1.1151ms)
+✔ list: the SDK cannot substitute a later JWT for the captured owner token (0.6737ms)
+✖ list: a switch during session lookup prevents transmission (0.5ms)
+ℹ tests 27
+ℹ suites 0
+ℹ pass 9
+ℹ fail 18
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 455.0494
+
+✖ failing tests:
+
+test at tests\premium\transportAccountBoundary.test.mjs:42:3
+✖ entitlement: a replacement session cannot send the old actor request (45.8383ms)
+  AssertionError [ERR_ASSERTION]: A request must never leave using B JWT, even in a shared household
+
+  1 !== 0
+
+      at TestContext.<anonymous> (file:///C:/Users/jsmit/.codex/worktrees/v2-shared-defect-closeout-20261019/Her%20Keys/tests/premium/transportAccountBoundary.test.mjs:45:12)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:358:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\premium\transportAccountBoundary.test.mjs:54:3
+✖ entitlement: a switch during session lookup prevents transmission (1.2394ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+  1 !== 0
+
+      at TestContext.<anonymous> (file:///C:/Users/jsmit/.codex/worktrees/v2-shared-defect-closeout-20261019/Her%20Keys/tests/premium/transportAccountBoundary.test.mjs:57:12)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\premium\transportAccountBoundary.test.mjs:42:3
+✖ manifest: a replacement session cannot send the old actor request (1.6413ms)
+  AssertionError [ERR_ASSERTION]: A request must never leave using B JWT, even in a shared household
+
+  1 !== 0
+
+      at TestContext.<anonymous> (file:///C:/Users/jsmit/.codex/worktrees/v2-shared-defect-closeout-20261019/Her%20Keys/tests/premium/transportAccountBoundary.test.mjs:45:12)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\premium\transportAccountBoundary.test.mjs:54:3
+✖ manifest: a switch during session lookup prevents transmission (0.936ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+  1 !== 0
+
+      at TestContext.<anonymous> (file:///C:/Users/jsmit/.codex/worktrees/v2-shared-defect-closeout-20261019/Her%20Keys/tests/premium/transportAccountBoundary.test.mjs:57:12)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\premium\transportAccountBoundary.test.mjs:42:3
+✖ readiness: a replacement session cannot send the old actor request (1.8856ms)
+  AssertionError [ERR_ASSERTION]: A request must never leave using B JWT, even in a shared household
+
+  1 !== 0
+
+      at TestContext.<anonymous> (file:///C:/Users/jsmit/.codex/worktrees/v2-shared-defect-closeout-20261019/Her%20Keys/tests/premium/transportAccountBoundary.test.mjs:45:12)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\premium\transportAccountBoundary.test.mjs:54:3
+✖ readiness: a switch during session lookup prevents transmission (1.0215ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+  1 !== 0
+
+      at TestContext.<anonymous> (file:///C:/Users/jsmit/.codex/worktrees/v2-shared-defect-closeout-20261019/Her%20Keys/tests/premium/transportAccountBoundary.test.mjs:57:12)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\premium\transportAccountBoundary.test.mjs:42:3
+✖ reconcile: a replacement session cannot send the old actor request (2.0344ms)
+  AssertionError [ERR_ASSERTION]: A request must never leave using B JWT, even in a shared household
+
+  1 !== 0
+
+      at TestContext.<anonymous> (file:///C:/Users/jsmit/.codex/worktrees/v2-shared-defect-closeout-20261019/Her%20Keys/tests/premium/transportAccountBoundary.test.mjs:45:12)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\premium\transportAccountBoundary.test.mjs:54:3
+✖ reconcile: a switch during session lookup prevents transmission (0.5071ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+  1 !== 0
+
+      at TestContext.<anonymous> (file:///C:/Users/jsmit/.codex/worktrees/v2-shared-defect-closeout-20261019/Her%20Keys/tests/premium/transportAccountBoundary.test.mjs:57:12)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\premium\transportAccountBoundary.test.mjs:42:3
+✖ authorize: a replacement session cannot send the old actor request (1.4333ms)
+  AssertionError [ERR_ASSERTION]: A request must never leave using B JWT, even in a shared household
+
+  1 !== 0
+
+      at TestContext.<anonymous> (file:///C:/Users/jsmit/.codex/worktrees/v2-shared-defect-closeout-20261019/Her%20Keys/tests/premium/transportAccountBoundary.test.mjs:45:12)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\premium\transportAccountBoundary.test.mjs:54:3
+✖ authorize: a switch during session lookup prevents transmission (0.5737ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+  1 !== 0
+
+      at TestContext.<anonymous> (file:///C:/Users/jsmit/.codex/worktrees/v2-shared-defect-closeout-20261019/Her%20Keys/tests/premium/transportAccountBoundary.test.mjs:57:12)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\premium\transportAccountBoundary.test.mjs:42:3
+✖ extract: a replacement session cannot send the old actor request (1.1934ms)
+  AssertionError [ERR_ASSERTION]: A request must never leave using B JWT, even in a shared household
+
+  1 !== 0
+
+      at TestContext.<anonymous> (file:///C:/Users/jsmit/.codex/worktrees/v2-shared-defect-closeout-20261019/Her%20Keys/tests/premium/transportAccountBoundary.test.mjs:45:12)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\premium\transportAccountBoundary.test.mjs:54:3
+✖ extract: a switch during session lookup prevents transmission (0.5145ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+  1 !== 0
+
+      at TestContext.<anonymous> (file:///C:/Users/jsmit/.codex/worktrees/v2-shared-defect-closeout-20261019/Her%20Keys/tests/premium/transportAccountBoundary.test.mjs:57:12)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\premium\transportAccountBoundary.test.mjs:42:3
+✖ record: a replacement session cannot send the old actor request (2.2947ms)
+  AssertionError [ERR_ASSERTION]: A request must never leave using B JWT, even in a shared household
+
+  1 !== 0
+
+      at TestContext.<anonymous> (file:///C:/Users/jsmit/.codex/worktrees/v2-shared-defect-closeout-20261019/Her%20Keys/tests/premium/transportAccountBoundary.test.mjs:45:12)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\premium\transportAccountBoundary.test.mjs:54:3
+✖ record: a switch during session lookup prevents transmission (0.4732ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+  1 !== 0
+
+      at TestContext.<anonymous> (file:///C:/Users/jsmit/.codex/worktrees/v2-shared-defect-closeout-20261019/Her%20Keys/tests/premium/transportAccountBoundary.test.mjs:57:12)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\premium\transportAccountBoundary.test.mjs:42:3
+✖ transition: a replacement session cannot send the old actor request (0.5886ms)
+  AssertionError [ERR_ASSERTION]: A request must never leave using B JWT, even in a shared household
+
+  1 !== 0
+
+      at TestContext.<anonymous> (file:///C:/Users/jsmit/.codex/worktrees/v2-shared-defect-closeout-20261019/Her%20Keys/tests/premium/transportAccountBoundary.test.mjs:45:12)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\premium\transportAccountBoundary.test.mjs:54:3
+✖ transition: a switch during session lookup prevents transmission (0.4975ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+  1 !== 0
+
+      at TestContext.<anonymous> (file:///C:/Users/jsmit/.codex/worktrees/v2-shared-defect-closeout-20261019/Her%20Keys/tests/premium/transportAccountBoundary.test.mjs:57:12)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\premium\transportAccountBoundary.test.mjs:42:3
+✖ list: a replacement session cannot send the old actor request (1.1151ms)
+  AssertionError [ERR_ASSERTION]: A request must never leave using B JWT, even in a shared household
+
+  1 !== 0
+
+      at TestContext.<anonymous> (file:///C:/Users/jsmit/.codex/worktrees/v2-shared-defect-closeout-20261019/Her%20Keys/tests/premium/transportAccountBoundary.test.mjs:45:12)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\premium\transportAccountBoundary.test.mjs:54:3
+✖ list: a switch during session lookup prevents transmission (0.5ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+  1 !== 0
+
+      at TestContext.<anonymous> (file:///C:/Users/jsmit/.codex/worktrees/v2-shared-defect-closeout-20261019/Her%20Keys/tests/premium/transportAccountBoundary.test.mjs:57:12)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

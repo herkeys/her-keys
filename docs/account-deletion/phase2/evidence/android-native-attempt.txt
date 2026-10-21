@@ -1,0 +1,8 @@
+HerKeys_UI02 boot (2026-10-20): -memory 2048 -gpu swiftshader_indirect -no-window -no-snapshot-save
+boot_completed=1 and pm ready after ~490 s
+Expo Go host.exp.exponent versionName=57.0.9
+Metro: Starting project at C:\Users\jsmit\Her-Keys-DEL2
+ ERROR  [Error: Cannot find native module 'ExpoTopicSubscriptionModule'] 
+ ERROR  [Error: Cannot find native module 'ExpoTopicSubscriptionModule'] 
+ ERROR  [Error: Cannot find native module 'ExpoTopicSubscriptionModule'] 
+ ERROR  [Error: Cannot find native module 'ExpoTopicSubscriptionModule'] 

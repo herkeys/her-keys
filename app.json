@@ -52,7 +52,7 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": false,
+          "photosPermission": "Her Keys lets you select a document photo from your library for on-device text recognition. The selected photo stays on this device and is never uploaded.",
           "cameraPermission": "Her Keys uses the camera to photograph a document for on-device text recognition. The photo is processed on this device and is never uploaded.",
           "microphonePermission": false
         }

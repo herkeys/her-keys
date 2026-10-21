@@ -8,6 +8,7 @@ import { useTalkItOut } from '../../store/TalkItOutContext';
 import type { TalkItOutMessage, TalkItOutStage } from '../../types';
 import { CaptureGroup } from './capture/CaptureCards';
 import { copy } from './capture/copy';
+import { AiReportPanel } from '../ai-safety/AiReportPanel';
 
 /**
  * A capture in the conversation. "Decide later" folds it away and leaves it in the Life Inbox; it is never
@@ -33,6 +34,7 @@ export function TalkItOutView({ showHeader = false }: { showHeader?: boolean }) 
   const styles = useStyles();
   const { messages, quickReplies, captures, isThinking, serviceNotice, canRetry, retryLastTurn, canRestart, sendMessage, selectQuickReply, restart } = useTalkItOut();
   const [draft, setDraft] = useState('');
+  const [reportedMessage, setReportedMessage] = useState<string | null>(null);
   const scrollRef = useRef<ScrollView>(null);
   const frameRef = useRef<View>(null);
   const [screenTop, setScreenTop] = useState(0);
@@ -75,7 +77,8 @@ export function TalkItOutView({ showHeader = false }: { showHeader?: boolean }) 
 
           {messages.map((message, index) => (
             <Fragment key={message.id}>
-              <Bubble message={message} previous={messages[index - 1]} />
+              <Bubble message={message} previous={messages[index - 1]} onReport={(id) => setReportedMessage(id)} />
+              {reportedMessage === message.id && <AiReportPanel key={message.id} messageId={message.id} onClose={() => setReportedMessage(null)} />}
               {captures
                 .filter((c) => c.afterMessageId === message.id)
                 .map((c) => (
@@ -163,7 +166,7 @@ const stageLabels: Partial<Record<TalkItOutStage, string>> = {
   'next-step': 'One move',
 };
 
-function Bubble({ message, previous }: { message: TalkItOutMessage; previous?: TalkItOutMessage }) {
+function Bubble({ message, previous, onReport }: { message: TalkItOutMessage; previous?: TalkItOutMessage; onReport: (id: string) => void }) {
   const { colors } = useTheme();
   const styles = useStyles();
   const isUser = message.speaker === 'user';
@@ -211,6 +214,9 @@ function Bubble({ message, previous }: { message: TalkItOutMessage; previous?: T
         )}
 
         {message.evidence && message.evidence.length > 0 && <WhyThis reasons={message.evidence} style={styles.evidence} />}
+
+        {!isUser && <Button label="Report response" size="sm" variant="ghost"
+          accessibilityHint="Report a problem with this Her Keys response" onPress={() => onReport(message.id)} />}
       </View>
     </View>
   );

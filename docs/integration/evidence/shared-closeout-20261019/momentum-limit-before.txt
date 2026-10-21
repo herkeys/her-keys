@@ -1,0 +1,28 @@
+✖ Momentum can receive its requested 200 receipts through the real ledger adapter, including receipt 101 (32.9665ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 415.3767
+
+✖ failing tests:
+
+test at tests\premium\transportAccountBoundary.test.mjs:62:1
+✖ Momentum can receive its requested 200 receipts through the real ledger adapter, including receipt 101 (32.9665ms)
+  AssertionError [ERR_ASSERTION]: the requested evidence window must not be silently halved
+
+  100 !== 101
+
+      at TestContext.<anonymous> (file:///C:/Users/jsmit/.codex/worktrees/v2-shared-defect-closeout-20261019/Her%20Keys/tests/premium/transportAccountBoundary.test.mjs:80:10)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:358:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 100,
+    expected: 101,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

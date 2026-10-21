@@ -1,0 +1,18 @@
+[
+  {
+    "file": "supabase/migrations/20261019144729_account_deletion_v2_resource_certification.sql",
+    "sha256_lf": "20b63f9312197ee9dee0809ddc69fc3a399acbae589b38da1a21b64efe858fc6"
+  },
+  {
+    "file": "supabase/migrations/20261019151501_account_deletion_optional_welcome_inventory.sql",
+    "sha256_lf": "462f42d8cd1198a6da3ebc65b83527bde07ee32cbb376ab3eae1fac836ca32c3"
+  },
+  {
+    "file": "supabase/migrations/20261019152629_account_deletion_overdue_request_monitor.sql",
+    "sha256_lf": "ae02ba5a240d0a5d68b6302faee03b339b06412473c30dbc6b200ea8dd433683"
+  },
+  {
+    "file": "supabase/migrations/20261019153801_account_deletion_private_household_owners.sql",
+    "sha256_lf": "ad177babba7adec7bde2df6a5dd1e5670e1f8689024345dd5a55101d4f9bae3d"
+  }
+]

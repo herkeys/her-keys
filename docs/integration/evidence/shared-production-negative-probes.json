@@ -1,0 +1,146 @@
+﻿{
+  "at": "2026-10-18T02:19:49.303Z",
+  "scope": "negative probes only; no authenticated consent or provider-delivery proof",
+  "results": [
+    {
+      "environment": "staging",
+      "name": "ai-missing-jwt",
+      "status": 401,
+      "reason": "Missing authorization header",
+      "requestId": "01a14cce-d6f1-7049-b050-c4be5e667100",
+      "latencyMs": 324,
+      "denial": "PASS",
+      "classification": "PASS"
+    },
+    {
+      "environment": "staging",
+      "name": "ai-invalid-jwt",
+      "status": 401,
+      "reason": "Invalid JWT",
+      "requestId": "01a14cce-d7e4-715b-9d7d-7d0a08746b7c",
+      "latencyMs": 141,
+      "denial": "PASS",
+      "classification": "PASS"
+    },
+    {
+      "environment": "staging",
+      "name": "webhook-missing-credentials",
+      "status": 503,
+      "reason": "not_configured",
+      "requestId": "01a14cce-d867-7df9-b766-35f22fb2d760",
+      "latencyMs": 252,
+      "denial": "PASS",
+      "classification": "CONFIRMED_DEFECT"
+    },
+    {
+      "environment": "staging",
+      "name": "webhook-invalid-credentials",
+      "status": 503,
+      "reason": "not_configured",
+      "requestId": "01a14cce-d96c-7ad6-8fab-9dc7af316f7d",
+      "latencyMs": 248,
+      "denial": "PASS",
+      "classification": "CONFIRMED_DEFECT"
+    },
+    {
+      "environment": "staging",
+      "name": "ops-missing-credentials",
+      "status": 503,
+      "reason": "not_configured",
+      "requestId": "01a14cce-da60-7d2d-81e3-3fabb09cac88",
+      "latencyMs": 236,
+      "denial": "PASS",
+      "classification": "CONFIRMED_DEFECT"
+    },
+    {
+      "environment": "staging",
+      "name": "premium-gate-missing-jwt",
+      "status": 401,
+      "reason": "Missing authorization header",
+      "requestId": "01a14cce-db47-7bfc-b819-8bc0b46ce3e2",
+      "latencyMs": 162,
+      "denial": "PASS",
+      "classification": "PASS"
+    },
+    {
+      "environment": "staging",
+      "name": "reconcile-missing-jwt",
+      "status": 401,
+      "reason": "Missing authorization header",
+      "requestId": "01a14cce-dbf0-7bfb-8996-c0b0ee5263aa",
+      "latencyMs": 213,
+      "denial": "PASS",
+      "classification": "PASS"
+    },
+    {
+      "environment": "production",
+      "name": "ai-missing-jwt",
+      "status": 401,
+      "reason": "Missing authorization header",
+      "requestId": "01a14cce-dce6-784f-b36a-15a1dd6ebcce",
+      "latencyMs": 335,
+      "denial": "PASS",
+      "classification": "PASS"
+    },
+    {
+      "environment": "production",
+      "name": "ai-invalid-jwt",
+      "status": 401,
+      "reason": "Invalid JWT",
+      "requestId": "01a14cce-de12-754e-b7f1-e44bc64c96ef",
+      "latencyMs": 170,
+      "denial": "PASS",
+      "classification": "PASS"
+    },
+    {
+      "environment": "production",
+      "name": "webhook-missing-credentials",
+      "status": 503,
+      "reason": "not_configured",
+      "requestId": "01a14cce-deb9-7276-9ed4-73ddbf07e254",
+      "latencyMs": 238,
+      "denial": "PASS",
+      "classification": "CONFIRMED_DEFECT"
+    },
+    {
+      "environment": "production",
+      "name": "webhook-invalid-credentials",
+      "status": 503,
+      "reason": "not_configured",
+      "requestId": "01a14cce-dfab-7b76-9a66-49ee244a5864",
+      "latencyMs": 210,
+      "denial": "PASS",
+      "classification": "CONFIRMED_DEFECT"
+    },
+    {
+      "environment": "production",
+      "name": "ops-missing-credentials",
+      "status": 503,
+      "reason": "not_configured",
+      "requestId": "01a14cce-e07b-79f2-9f96-af172fe8fe7f",
+      "latencyMs": 266,
+      "denial": "PASS",
+      "classification": "CONFIRMED_DEFECT"
+    },
+    {
+      "environment": "production",
+      "name": "premium-gate-missing-jwt",
+      "status": 401,
+      "reason": "Missing authorization header",
+      "requestId": "01a14cce-e183-78b0-9d2b-65795b2639ae",
+      "latencyMs": 173,
+      "denial": "PASS",
+      "classification": "PASS"
+    },
+    {
+      "environment": "production",
+      "name": "reconcile-missing-jwt",
+      "status": 401,
+      "reason": "Missing authorization header",
+      "requestId": "01a14cce-e22e-7cbc-8565-a7dca83c7c61",
+      "latencyMs": 156,
+      "denial": "PASS",
+      "classification": "PASS"
+    }
+  ]
+}

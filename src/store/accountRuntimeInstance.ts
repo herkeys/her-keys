@@ -15,6 +15,7 @@ import { createSupabaseEmailOtp } from '../platform/emailOtpProvider';
 import { createSupabaseEmailPassword } from '../platform/emailPasswordProvider';
 import { createGoogleProvider } from '../platform/googleProvider';
 import { createHerKeysAiClient, UNCONFIGURED_HER_KEYS_AI } from '../platform/herKeysAiClient';
+import { createAiReportClient, UNCONFIGURED_AI_REPORT_CLIENT } from '../platform/aiResponseReporting';
 import { createExternalIntelligenceClient, UNCONFIGURED_EXTERNAL_INTELLIGENCE } from '../platform/externalIntelligenceClient';
 import { createDeviceSecureStorage, secureStorageAvailable } from '../platform/secureStore';
 import { createSupabaseAccountClient, createSupabaseClient } from '../platform/supabaseCloud';
@@ -77,6 +78,9 @@ export const externalIntelligenceClient =
  * only the user-authenticated Edge Function can reach the provider.
  */
 export const herKeysAiClient = client === null ? UNCONFIGURED_HER_KEYS_AI : createHerKeysAiClient(client);
+
+/** Shared metadata-only AI safety reporting through the same bound account session. */
+export const aiReportClient = client === null ? UNCONFIGURED_AI_REPORT_CLIENT : createAiReportClient(client);
 
 /**
  * Her Keys Premium's server view (entitlement state, display manifest, authorization). Same authenticated session as sync and the AI

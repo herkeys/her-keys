@@ -31,6 +31,8 @@ const FEATURES = ['daily_load_premium', 'smart_inbox_extract', 'momentum_report'
 function makeServer() {
   const server = { states: new Map(), who: A, unreachable: false, verified: 0, onVerify: null, extra: {} };
   server.client = {
+    // Positive purchase journeys explicitly model the authenticated server readiness RPC.
+    purchaseReadiness: async () => ({ ready: true, reason: 'ready' }),
     entitlement: async () => {
       if (server.unreachable) return { kind: 'unavailable' };
       const state = server.states.get(server.who) ?? 'free';
@@ -128,6 +130,44 @@ describe('the server is the authority, not the store', () => {
 });
 
 describe('buying', () => {
+  for (const readiness of [undefined, { ready: false, reason: 'unavailable' }, { ready: false, reason: 'checkout_disabled' }]) {
+    test(`purchase denied when readiness is ${readiness?.reason ?? 'missing'}; Free stays available`, async () => {
+      const server = makeServer(); store('free'); let opened = 0;
+      server.client.purchaseReadiness = readiness === undefined ? undefined : async () => readiness;
+      fixture.entitlement.presentPaywall = async () => { opened++; return { kind: 'purchased' }; };
+      const r = await mount(server, A);
+      await TestRenderer.act(async () => { assert.equal((await probe.upgrade.start()).kind, 'unavailable'); });
+      assert.equal(opened, 0); assert.equal(server.verified, 0);
+      assert.match(text(r), /You’re on the Free plan/);
+      assert.match(text(r), /Everything free in Her Keys still works/);
+      assert.doesNotMatch(text(r), /Her Keys Premium is on/);
+    });
+  }
+
+  test('a switch during readiness never presents the departed account offer', async () => {
+    const server = makeServer(); let ready; let opened = 0;
+    server.client.purchaseReadiness = () => new Promise(resolve => { ready = resolve; });
+    fixture.entitlement.presentPaywall = async () => { opened++; return { kind: 'purchased' }; };
+    const r = await mount(server, A); let pending;
+    await TestRenderer.act(async () => { pending = probe.upgrade.start(); });
+    server.who = B; await TestRenderer.act(async () => r.update(tree(server, B))); await settle();
+    await TestRenderer.act(async () => { ready({ ready: true, reason: 'ready' }); assert.equal((await pending).kind, 'unavailable'); });
+    assert.equal(opened, 0); assert.equal(server.verified, 0);
+    assert.match(text(r), /You’re on the Free plan/);
+  });
+
+  for (const kind of ['no_offering', 'cancelled', 'purchased']) {
+    test(`${kind} never grants Premium without a server entitlement`, async () => {
+      const server = makeServer();
+      fixture.entitlement.presentPaywall = async () => ({ kind });
+      const r = await mount(server, A);
+      await TestRenderer.act(async () => { await probe.upgrade.start(); }); await settle();
+      assert.doesNotMatch(text(r), /Her Keys Premium is on/);
+      assert.doesNotMatch(text(r), /\bREADY\b/);
+      assert.equal(server.verified > 0, kind === 'purchased');
+    });
+  }
+
   test('See Her Keys Premium opens the store purchase interface once, then waits for the SERVER before claiming anything', async () => {
     const server = makeServer(); store('free');
     const placements = [];

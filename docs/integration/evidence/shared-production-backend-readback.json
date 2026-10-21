@@ -1,0 +1,446 @@
+{
+  "entrySha": "550122c4df05d0788a419bf7645c3ef84684ea3c",
+  "repairSha": "5c2152118ae707e40248b83de55459031d24e0ee",
+  "staging": {
+    "project": "fhhudicklmpofuzkxeqe",
+    "functionVersion": 15,
+    "bundleHash": "6dc2998dd2b86faf54786aa9499ce8944c6fde47b87b64d560308a8877a30733",
+    "jwt": true,
+    "files": [
+      {
+        "file": "supabase/functions/herkeys-ai/index.ts",
+        "exact": true
+      },
+      {
+        "file": "supabase/functions/_shared/supabaseAdmin.ts",
+        "exact": true
+      },
+      {
+        "file": "supabase/functions/_shared/http.ts",
+        "exact": true
+      }
+    ],
+    "migrationCount": 34,
+    "migrations": [
+      {
+        "name": "build4_baseline",
+        "version": "20260919230054"
+      },
+      {
+        "name": "build4_cloud_schema",
+        "version": "20260919231500"
+      },
+      {
+        "name": "ir01_duration_source_and_claim_v3",
+        "version": "20260921120000"
+      },
+      {
+        "name": "f08_meal_slot_and_status",
+        "version": "20260921160000"
+      },
+      {
+        "name": "f05_add_child_after_binding",
+        "version": "20260921190000"
+      },
+      {
+        "name": "f09_task_payment_mechanism",
+        "version": "20260924182047"
+      },
+      {
+        "name": "f10_career_opportunities",
+        "version": "20260924182051"
+      },
+      {
+        "name": "f11_rebuild_focus",
+        "version": "20260924182055"
+      },
+      {
+        "name": "f12_life_records",
+        "version": "20260924182059"
+      },
+      {
+        "name": "f13_people_os",
+        "version": "20260924182113"
+      },
+      {
+        "name": "int13_per_owner_uniqueness",
+        "version": "20260924182116"
+      },
+      {
+        "name": "env_function_alignment",
+        "version": "20260924182838"
+      },
+      {
+        "name": "external_calendar_connections",
+        "version": "20260925142007"
+      },
+      {
+        "name": "v2_account_consents",
+        "version": "20261009102234"
+      },
+      {
+        "name": "account_deletion_lifecycle",
+        "version": "20261014012151"
+      },
+      {
+        "name": "account_deletion_scheduler_disabled",
+        "version": "20261014012355"
+      },
+      {
+        "name": "account_deletion_auth_reconciliation",
+        "version": "20261014012645"
+      },
+      {
+        "name": "account_deletion_terminal_identity",
+        "version": "20261014014243"
+      },
+      {
+        "name": "account_deletion_proof_retention",
+        "version": "20261014015314"
+      },
+      {
+        "name": "account_deletion_retention_scheduler_disabled",
+        "version": "20261014015657"
+      },
+      {
+        "name": "account_deletion_cancelled_history_cleanup",
+        "version": "20261014015954"
+      },
+      {
+        "name": "staging_deletion_storage_fixture",
+        "version": "20261014021221"
+      },
+      {
+        "name": "account_deletion_shared_provider_retry",
+        "version": "20261014110526"
+      },
+      {
+        "name": "account_deletion_staging_storage_fixture_teardown",
+        "version": "20261014111528"
+      },
+      {
+        "name": "account_deletion_orphan_shared_ownership",
+        "version": "20261014112526"
+      },
+      {
+        "name": "account_deletion_household_lock",
+        "version": "20261014113628"
+      },
+      {
+        "name": "account_deletion_staging_lock_probe",
+        "version": "20261014113908"
+      },
+      {
+        "name": "account_deletion_staging_lock_probe_teardown",
+        "version": "20261014113943"
+      },
+      {
+        "name": "premium_entitlement_foundation",
+        "version": "20261014175642"
+      },
+      {
+        "name": "premium_decision_ledger",
+        "version": "20261014175647"
+      },
+      {
+        "name": "premium_staging_tester_guard",
+        "version": "20261014210054"
+      },
+      {
+        "name": "premium_stale_projection_guard",
+        "version": "20261015015427"
+      },
+      {
+        "name": "ai_response_reporting_20261017",
+        "version": "20261017214221"
+      },
+      {
+        "name": "ai_report_review_workflow_20261017",
+        "version": "20261017222919"
+      }
+    ],
+    "reportAudit": {
+      "reports": 6,
+      "resolved": 1,
+      "audit_entries": 2
+    },
+    "remainingSyntheticReviewers": 0,
+    "reportRpcs": [
+      {
+        "name": "list_ai_response_reports",
+        "definition": "CREATE OR REPLACE FUNCTION public.list_ai_response_reports(p_status text DEFAULT 'pending'::text, p_limit integer DEFAULT 50, p_after_created_at timestamp with time zone DEFAULT NULL::timestamp with time zone, p_after_id uuid DEFAULT NULL::uuid)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog'\nAS $function$\nDECLARE v_reports jsonb;\nBEGIN\n  PERFORM private.require_ai_report_reviewer();\n  IF p_status IS NULL OR p_status NOT IN ('pending','reviewing','resolved')\n      OR p_limit IS NULL OR p_limit NOT BETWEEN 1 AND 100\n      OR (p_after_created_at IS NULL) <> (p_after_id IS NULL) THEN\n    RAISE EXCEPTION 'invalid_review_request' USING ERRCODE = '22023';\n  END IF;\n  SELECT coalesce(jsonb_agg(jsonb_build_object(\n    'receiptId', r.id, 'surface', r.surface, 'messageId', r.message_id,\n    'reason', r.reason, 'reviewStatus', r.review_status,\n    'createdAt', r.created_at, 'expiresAt', r.expires_at,\n    'ageSeconds', greatest(0, floor(extract(epoch FROM (now() - r.created_at)))),\n    'history', r.review_history\n  ) ORDER BY r.created_at, r.id), '[]'::jsonb) INTO v_reports\n  FROM (\n    SELECT id, surface, message_id, reason, review_status, created_at, expires_at, review_history\n    FROM private.ai_response_reports\n    WHERE review_status = p_status AND expires_at > now()\n      AND (p_after_created_at IS NULL OR (created_at, id) > (p_after_created_at, p_after_id))\n    ORDER BY created_at, id LIMIT p_limit\n  ) AS r;\n  RETURN v_reports;\nEND\n$function$\n"
+      },
+      {
+        "name": "require_ai_report_reviewer",
+        "definition": "CREATE OR REPLACE FUNCTION private.require_ai_report_reviewer()\n RETURNS uuid\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog'\nAS $function$\nDECLARE v_actor uuid := auth.uid();\nBEGIN\n  IF v_actor IS NULL OR NOT EXISTS (\n    SELECT 1 FROM auth.users AS u WHERE u.id = v_actor\n      AND u.raw_app_meta_data -> 'herkeys_ai_report_reviewer' = 'true'::jsonb\n  ) THEN\n    RAISE EXCEPTION 'reviewer_required' USING ERRCODE = '42501';\n  END IF;\n  RETURN v_actor;\nEND\n$function$\n"
+      },
+      {
+        "name": "review_ai_response_report",
+        "definition": "CREATE OR REPLACE FUNCTION public.review_ai_response_report(p_report_id uuid, p_expected_status text, p_status text)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog'\nAS $function$\nDECLARE\n  v_actor uuid := private.require_ai_report_reviewer();\n  v_report private.ai_response_reports%ROWTYPE;\nBEGIN\n  IF p_report_id IS NULL OR p_expected_status IS NULL OR p_expected_status NOT IN ('pending','reviewing','resolved')\n      OR p_status IS NULL OR p_status NOT IN ('reviewing','resolved') THEN\n    RAISE EXCEPTION 'invalid_review_request' USING ERRCODE = '22023';\n  END IF;\n  SELECT * INTO v_report FROM private.ai_response_reports\n    WHERE id = p_report_id AND expires_at > now() FOR UPDATE;\n  IF NOT FOUND THEN\n    RAISE EXCEPTION 'report_unavailable' USING ERRCODE = 'P0002';\n  END IF;\n  -- Network retries neither duplicate the audit trail nor repeat the mutation.\n  IF v_report.review_status = p_status THEN\n    RETURN jsonb_build_object('receiptId', p_report_id, 'reviewStatus', p_status, 'replayed', true);\n  END IF;\n  IF v_report.review_status <> p_expected_status THEN\n    RAISE EXCEPTION 'review_conflict' USING ERRCODE = '40001';\n  END IF;\n  IF v_report.review_status = 'resolved' OR (v_report.review_status = 'reviewing' AND p_status <> 'resolved') THEN\n    RAISE EXCEPTION 'invalid_review_request' USING ERRCODE = '22023';\n  END IF;\n  UPDATE private.ai_response_reports SET\n    review_status = p_status,\n    review_history = review_history || jsonb_build_array(jsonb_build_object(\n      'reviewerId', v_actor, 'from', v_report.review_status, 'to', p_status, 'at', now()\n    ))\n    WHERE id = p_report_id;\n  RETURN jsonb_build_object('receiptId', p_report_id, 'reviewStatus', p_status, 'replayed', false);\nEND\n$function$\n"
+      },
+      {
+        "name": "submit_ai_response_report",
+        "definition": "CREATE OR REPLACE FUNCTION public.submit_ai_response_report(p_surface text, p_message_id text, p_reason text, p_dedupe_key uuid)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'private'\nAS $function$\nDECLARE\n  v_actor uuid := auth.uid();\n  v_existing uuid;\n  v_new uuid;\nBEGIN\n  IF v_actor IS NULL OR NOT EXISTS (SELECT 1 FROM auth.users WHERE id = v_actor) THEN\n    RAISE EXCEPTION 'account_unavailable' USING ERRCODE = '28000';\n  END IF;\n  IF p_surface IS DISTINCT FROM 'talk_it_out'\n      OR p_message_id IS NULL OR char_length(p_message_id) NOT BETWEEN 1 AND 100\n      OR p_reason IS NULL OR p_reason NOT IN ('unsafe','offensive','inaccurate','privacy','other')\n      OR p_dedupe_key IS NULL THEN\n    RAISE EXCEPTION 'invalid_report' USING ERRCODE = '22023';\n  END IF;\n\n  PERFORM pg_advisory_xact_lock(hashtextextended(v_actor::text, 4811));\n\n  SELECT id INTO v_existing FROM private.ai_response_reports\n    WHERE account_id = v_actor AND client_dedupe_key = p_dedupe_key;\n  IF FOUND THEN\n    RETURN jsonb_build_object('status','received','receiptId',v_existing);\n  END IF;\n  IF (SELECT count(*) FROM private.ai_response_reports\n      WHERE account_id = v_actor AND created_at > now() - interval '24 hours') >= 5 THEN\n    RAISE EXCEPTION 'report_rate_limited' USING ERRCODE = 'P0001';\n  END IF;\n\n  INSERT INTO private.ai_response_reports(account_id,surface,message_id,reason,client_dedupe_key)\n    VALUES (v_actor,p_surface,p_message_id,p_reason,p_dedupe_key)\n    RETURNING id INTO v_new;\n  RETURN jsonb_build_object('status','received','receiptId',v_new);\nEND\n$function$\n"
+      }
+    ],
+    "premiumRpcs": [
+      {
+        "args": "p_account uuid, p_feature text, p_household uuid, p_idempotency_key text, p_request_id text, p_app_version text, p_units integer, p_complete_now boolean",
+        "name": "premium_authorize",
+        "owner": "postgres",
+        "grants": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "definition": "CREATE OR REPLACE FUNCTION public.premium_authorize(p_account uuid, p_feature text, p_household uuid DEFAULT NULL::uuid, p_idempotency_key text DEFAULT NULL::text, p_request_id text DEFAULT NULL::text, p_app_version text DEFAULT NULL::text, p_units integer DEFAULT 1, p_complete_now boolean DEFAULT false)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public'\nAS $function$\nDECLARE\n  v_now      timestamptz := clock_timestamp();\n  cfg        public.premium_feature_config%ROWTYPE;\n  rt         public.premium_runtime_config%ROWTYPE;\n  ev         public.premium_usage_events%ROWTYPE;\n  v_state    text := 'unknown';\n  v_reason   text := NULL;\n  v_next     text := 'none';\n  v_checks   jsonb := '[]'::jsonb;\n  v_entitled boolean := false;\n  v_via      text := NULL;\n  v_limit    integer;\n  v_period   date;\n  v_end      date;\n  v_cost     integer;\n  v_claim    uuid := NULL;\n  v_reclaimed boolean := false;\n  v_replay   boolean := false;\n  v_used     integer := 0;\n  v_reserved integer := 0;\n  v_rows     integer;\n  v_recent   integer;\n  v_quota    jsonb := NULL;\n  v_audit    uuid := gen_random_uuid();\n  v_consent  boolean;\nBEGIN\n  SELECT * INTO rt FROM public.premium_runtime_config WHERE singleton;\n  SELECT * INTO cfg FROM public.premium_feature_config WHERE feature_key = p_feature;\n\n  <<decide>>\n  BEGIN\n    -- 0. request shape\n    IF NOT FOUND THEN\n      v_reason := 'feature_disabled'; v_checks := v_checks || jsonb_build_object('feature_exists', false); EXIT decide;\n    END IF;\n    IF p_idempotency_key IS NULL OR length(p_idempotency_key) NOT BETWEEN 8 AND 128\n       OR p_units IS NULL OR p_units < 1 OR p_units > cfg.max_units_per_request THEN\n      v_reason := 'invalid_request'; EXIT decide;\n    END IF;\n\n    -- 2. account lifecycle (identity was verified by the Edge Function; the account id is the JWT subject)\n    IF public.premium_account_lifecycle(p_account) <> 'active' THEN\n      v_state := CASE WHEN public.premium_account_lifecycle(p_account) = 'deletion_pending' THEN 'deletion_pending' ELSE 'unknown' END;\n      v_reason := 'account_deactivated'; v_checks := v_checks || jsonb_build_object('lifecycle', false); EXIT decide;\n    END IF;\n    v_checks := v_checks || jsonb_build_object('lifecycle', true);\n    v_state := public.premium_entitlement_state(p_account, v_now);\n\n    -- 3. ownership: a household id the client supplies never overrides server-verified membership\n    IF cfg.scope = 'household' AND p_household IS NULL THEN\n      v_reason := 'ownership_denied'; v_checks := v_checks || jsonb_build_object('ownership', false); EXIT decide;\n    END IF;\n    IF p_household IS NOT NULL AND NOT EXISTS (\n      SELECT 1 FROM public.household_members m\n      WHERE m.household_id = p_household AND m.profile_id = p_account AND m.member_type = 'adult') THEN\n      v_reason := 'ownership_denied'; v_checks := v_checks || jsonb_build_object('ownership', false); EXIT decide;\n    END IF;\n    v_checks := v_checks || jsonb_build_object('ownership', true);\n\n    -- 4. feature enabled, released, not killed, app version\n    IF NOT cfg.enabled OR NOT cfg.released OR cfg.kill_switch THEN\n      v_reason := 'feature_disabled'; v_checks := v_checks || jsonb_build_object('feature_enabled', false); EXIT decide;\n    END IF;\n    IF NOT public.premium_version_gte(p_app_version, cfg.min_app_version) THEN\n      v_reason := 'feature_disabled'; v_next := 'update_app'; v_checks := v_checks || jsonb_build_object('app_version', false); EXIT decide;\n    END IF;\n    v_checks := v_checks || jsonb_build_object('feature_enabled', true);\n\n    -- 5. backend operational readiness\n    IF NOT rt.premium_enabled THEN\n      v_reason := 'service_unavailable'; v_checks := v_checks || jsonb_build_object('ready', false); EXIT decide;\n    END IF;\n\n    -- Staging-only, server-enforced tester membership. Auth app metadata is writable\n    -- ONLY via the Supabase Admin API, never the account's raw_user_meta_data.\n    -- This is NOT a paid entitlement. A tester still needs a genuine provider\n    -- reconciliation for Premium to authorize a paid operation.\n    IF rt.environment = 'staging' AND cfg.tier = 'premium' AND cfg.rollout_status = 'staging_only' THEN\n      IF NOT EXISTS (\n        SELECT 1 FROM auth.users u WHERE u.id = p_account\n        AND u.raw_app_meta_data->>'herkeys_premium_tester' = 'true'\n      ) THEN\n        v_reason := 'feature_disabled';\n        v_checks := v_checks || jsonb_build_object('staging_allowlist', false);\n        EXIT decide;\n      END IF;\n      v_checks := v_checks || jsonb_build_object('staging_allowlist', true);\n    END IF;\n\n    -- 6. entitlement, or an APPROVED free allowance. Premium state is never inferred from anything but the projection.\n    v_entitled := v_state IN ('premium_active', 'premium_canceled_active', 'premium_billing_grace');\n    IF cfg.tier = 'free' THEN\n      v_via := 'free';\n    ELSIF v_entitled THEN\n      v_via := 'premium';\n    ELSIF cfg.free_allowance_status = 'approved' AND cfg.free_allowance > 0 AND v_state IN ('free', 'unknown', 'premium_expired', 'premium_revoked') THEN\n      v_via := 'free_allowance';\n    ELSE\n      v_reason := CASE v_state\n        WHEN 'unknown' THEN 'entitlement_unknown'\n        WHEN 'premium_expired' THEN 'entitlement_expired'\n        WHEN 'premium_revoked' THEN 'entitlement_expired'\n        ELSE 'requires_premium' END;\n      v_next := CASE v_state WHEN 'unknown' THEN 'retry_verification' ELSE 'open_paywall' END;\n      v_checks := v_checks || jsonb_build_object('entitlement', false); EXIT decide;\n    END IF;\n    v_checks := v_checks || jsonb_build_object('entitlement', true, 'via', v_via);\n\n    -- 7. AI consent (only where an external AI provider would see her content)\n    IF cfg.requires_ai_consent THEN\n      SELECT (c.policy_version = rt.ai_policy_version AND c.granted) INTO v_consent\n        FROM public.account_consents c WHERE c.account_id = p_account AND c.consent_type = 'ai_processing'\n        ORDER BY c.recorded_at DESC, c.id DESC LIMIT 1;\n      IF v_consent IS NOT TRUE THEN\n        v_reason := 'requires_ai_consent'; v_next := 'grant_ai_consent'; v_checks := v_checks || jsonb_build_object('ai_consent', false); EXIT decide;\n      END IF;\n      v_checks := v_checks || jsonb_build_object('ai_consent', true);\n    END IF;\n\n    -- 8. quota and cost budget (atomic reservation)\n    v_period := public.premium_period_start(cfg.quota_period, v_now);\n    v_end := public.premium_period_end(cfg.quota_period, v_period);\n    v_cost := cfg.cost_weight * p_units;\n    v_limit := CASE v_via WHEN 'premium' THEN cfg.premium_limit WHEN 'free_allowance' THEN cfg.free_allowance ELSE NULL END;\n    IF cfg.quota_period = 'none' THEN v_limit := NULL; END IF;\n\n    PERFORM public.premium_expire_stale(p_account, p_feature);\n\n    -- claim the idempotency key first, so a concurrent duplicate waits on this row instead of double-charging\n    INSERT INTO public.premium_usage_events (account_id, feature_key, idempotency_key, status, units, cost_units, via, period_start)\n      VALUES (p_account, p_feature, p_idempotency_key, 'pending', p_units, v_cost, v_via, v_period)\n      ON CONFLICT (account_id, feature_key, idempotency_key) DO NOTHING\n      RETURNING id INTO v_claim;\n    IF v_claim IS NULL THEN\n      SELECT * INTO ev FROM public.premium_usage_events\n        WHERE account_id = p_account AND feature_key = p_feature AND idempotency_key = p_idempotency_key FOR UPDATE;\n      IF ev.status IN ('reserved', 'completed') THEN\n        v_replay := true; v_period := ev.period_start; v_via := ev.via;\n        v_checks := v_checks || jsonb_build_object('idempotent_replay', true);\n        EXIT decide;\n      END IF;\n      -- failed / expired / rejected: the same operation may be retried under the same key\n      UPDATE public.premium_usage_events SET status = 'pending', units = p_units, cost_units = v_cost, via = v_via,\n        period_start = v_period, created_at = v_now, completed_at = NULL WHERE id = ev.id;\n      v_claim := ev.id; v_reclaimed := true;\n    END IF;\n\n    -- per-account rate limit\n    SELECT count(*) INTO v_recent FROM public.premium_usage_events\n      WHERE account_id = p_account AND feature_key = p_feature AND created_at >= v_now - INTERVAL '1 minute' AND id <> v_claim;\n    IF v_recent >= cfg.rate_limit_per_minute THEN\n      v_reason := 'rate_limited'; v_next := 'retry_later'; v_checks := v_checks || jsonb_build_object('rate', false); EXIT decide;\n    END IF;\n\n    -- per-account counter: ONE conditional UPDATE under the row lock is the whole race defence\n    IF v_limit IS NOT NULL THEN\n      INSERT INTO public.premium_usage (account_id, feature_key, period_start) VALUES (p_account, p_feature, v_period)\n        ON CONFLICT (account_id, feature_key, period_start) DO NOTHING;\n      IF p_complete_now THEN\n        UPDATE public.premium_usage SET used = used + p_units, updated_at = now()\n          WHERE account_id = p_account AND feature_key = p_feature AND period_start = v_period AND used + reserved + p_units <= v_limit;\n      ELSE\n        UPDATE public.premium_usage SET reserved = reserved + p_units, updated_at = now()\n          WHERE account_id = p_account AND feature_key = p_feature AND period_start = v_period AND used + reserved + p_units <= v_limit;\n      END IF;\n      GET DIAGNOSTICS v_rows = ROW_COUNT;\n      IF v_rows = 0 THEN\n        v_reason := 'quota_exhausted'; v_next := CASE v_via WHEN 'free_allowance' THEN 'open_paywall' ELSE 'wait_for_reset' END;\n        v_checks := v_checks || jsonb_build_object('quota', false); EXIT decide;\n      END IF;\n    END IF;\n\n    -- global daily cost cap (compensates the per-account reservation on refusal)\n    IF cfg.global_daily_cost_cap IS NOT NULL THEN\n      INSERT INTO public.premium_usage_global (feature_key, day) VALUES (p_feature, (v_now AT TIME ZONE 'UTC')::date)\n        ON CONFLICT (feature_key, day) DO NOTHING;\n      UPDATE public.premium_usage_global SET cost_units = cost_units + v_cost\n        WHERE feature_key = p_feature AND day = (v_now AT TIME ZONE 'UTC')::date AND cost_units + v_cost <= cfg.global_daily_cost_cap;\n      GET DIAGNOSTICS v_rows = ROW_COUNT;\n      IF v_rows = 0 THEN\n        IF v_limit IS NOT NULL THEN\n          IF p_complete_now THEN\n            UPDATE public.premium_usage SET used = GREATEST(used - p_units, 0) WHERE account_id = p_account AND feature_key = p_feature AND period_start = v_period;\n          ELSE\n            UPDATE public.premium_usage SET reserved = GREATEST(reserved - p_units, 0) WHERE account_id = p_account AND feature_key = p_feature AND period_start = v_period;\n          END IF;\n        END IF;\n        v_reason := 'quota_exhausted'; v_next := 'wait_for_reset'; v_checks := v_checks || jsonb_build_object('budget', false); EXIT decide;\n      END IF;\n    END IF;\n\n    UPDATE public.premium_usage_events SET status = CASE WHEN p_complete_now THEN 'completed' ELSE 'reserved' END,\n      completed_at = CASE WHEN p_complete_now THEN clock_timestamp() ELSE NULL END WHERE id = v_claim;\n    v_checks := v_checks || jsonb_build_object('quota', true);\n  END decide;\n\n  -- Refusal after claiming a key: a fresh claim is removed, a reclaimed one goes back to `rejected`.\n  IF v_reason IS NOT NULL AND v_claim IS NOT NULL THEN\n    IF v_reclaimed THEN UPDATE public.premium_usage_events SET status = 'rejected', completed_at = clock_timestamp() WHERE id = v_claim;\n    ELSE DELETE FROM public.premium_usage_events WHERE id = v_claim AND status = 'pending'; END IF;\n  END IF;\n\n  -- quota snapshot for the response (never content)\n  IF cfg.feature_key IS NOT NULL AND cfg.quota_period <> 'none' THEN\n    SELECT COALESCE(u.used, 0), COALESCE(u.reserved, 0) INTO v_used, v_reserved FROM (SELECT 1) s\n      LEFT JOIN public.premium_usage u ON u.account_id = p_account AND u.feature_key = p_feature AND u.period_start = public.premium_period_start(cfg.quota_period, v_now);\n    v_limit := CASE WHEN v_via = 'free_allowance' THEN cfg.free_allowance WHEN v_via = 'premium' THEN cfg.premium_limit\n                    ELSE COALESCE(CASE WHEN v_entitled THEN cfg.premium_limit END, NULLIF(cfg.free_allowance, 0)) END;\n    v_period := public.premium_period_start(cfg.quota_period, v_now);\n    v_quota := jsonb_build_object(\n      'period', cfg.quota_period, 'periodStart', v_period, 'periodEnd', public.premium_period_end(cfg.quota_period, v_period),\n      'used', v_used, 'reserved', v_reserved, 'limit', v_limit,\n      'remaining', CASE WHEN v_limit IS NULL THEN NULL ELSE GREATEST(v_limit - v_used - v_reserved, 0) END);\n  END IF;\n\n  IF p_account IS NOT NULL AND EXISTS (SELECT 1 FROM auth.users WHERE id = p_account) THEN\n    INSERT INTO public.premium_authorization_audit (id, account_id, feature_key, outcome, reason, entitlement_state, checks, request_id)\n      VALUES (v_audit, p_account, left(COALESCE(p_feature, ''), 64), CASE WHEN v_reason IS NULL THEN 'allowed' ELSE 'denied' END,\n              COALESCE(v_reason, 'allowed'), v_state, v_checks, left(p_request_id, 80));\n  END IF;\n\n  RETURN jsonb_build_object(\n    'outcome', CASE WHEN v_reason IS NULL THEN 'allowed' ELSE 'denied' END,\n    'reason', COALESCE(v_reason, 'allowed'),\n    'entitlementState', v_state,\n    'via', v_via,\n    'nextAction', CASE WHEN v_reason IS NULL THEN 'none' ELSE v_next END,\n    'quota', v_quota,\n    'decisionId', v_audit,\n    'replay', v_replay);\nEND\n$function$\n"
+      },
+      {
+        "args": "",
+        "name": "premium_my_entitlement",
+        "owner": "postgres",
+        "grants": [
+          "postgres=X/postgres",
+          "service_role=X/postgres",
+          "authenticated=X/postgres"
+        ],
+        "definition": "CREATE OR REPLACE FUNCTION public.premium_my_entitlement()\n RETURNS jsonb\n LANGUAGE plpgsql\n STABLE SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public'\nAS $function$\nDECLARE v_account uuid := auth.uid(); e public.premium_entitlements%ROWTYPE; v_state text;\nBEGIN\n  IF v_account IS NULL THEN RETURN jsonb_build_object('state', 'unknown'); END IF;\n  v_state := public.premium_entitlement_state(v_account);\n  SELECT * INTO e FROM public.premium_entitlements WHERE account_id = v_account;\n  RETURN jsonb_build_object(\n    'state', v_state,\n    'expiresAt', CASE WHEN v_state LIKE 'premium_%' THEN e.expires_at END,\n    'graceExpiresAt', CASE WHEN v_state = 'premium_billing_grace' THEN e.grace_expires_at END,\n    'canceled', COALESCE(e.canceled_at IS NOT NULL, false) AND v_state IN ('premium_canceled_active'),\n    'needsReconcile', COALESCE(e.needs_reconcile, true),\n    'checkedAt', clock_timestamp());\nEND\n$function$\n"
+      },
+      {
+        "args": "",
+        "name": "premium_purchase_readiness",
+        "owner": "postgres",
+        "grants": [
+          "postgres=X/postgres",
+          "service_role=X/postgres",
+          "authenticated=X/postgres"
+        ],
+        "definition": "CREATE OR REPLACE FUNCTION public.premium_purchase_readiness()\n RETURNS jsonb\n LANGUAGE plpgsql\n STABLE SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public'\nAS $function$\nDECLARE\n  v_account uuid := auth.uid();\n  v_runtime public.premium_runtime_config%ROWTYPE;\n  v_count integer;\nBEGIN\n  IF v_account IS NULL OR public.premium_account_lifecycle(v_account) <> 'active' THEN\n    RETURN jsonb_build_object('ready', false, 'reason', 'account_unavailable');\n  END IF;\n\n  SELECT * INTO v_runtime FROM public.premium_runtime_config WHERE singleton;\n  IF NOT FOUND OR NOT v_runtime.premium_enabled THEN\n    RETURN jsonb_build_object('ready', false, 'reason', 'premium_disabled');\n  END IF;\n  IF NOT v_runtime.webhook_processing THEN\n    RETURN jsonb_build_object('ready', false, 'reason', 'fulfillment_unavailable');\n  END IF;\n  -- Checkout is an INDEPENDENT commercial rollout. Enabling the application,\n  -- Premium features or subscription webhook fulfillment NEVER starts paid sales.\n  IF NOT v_runtime.checkout_enabled THEN\n    RETURN jsonb_build_object('ready', false, 'reason', 'checkout_disabled');\n  END IF;\n\n  SELECT count(*) INTO v_count\n  FROM public.premium_feature_config\n  WHERE feature_key IN ('daily_load_premium', 'smart_inbox_extract', 'momentum_report')\n    AND tier = 'premium' AND enabled AND released AND NOT kill_switch\n    AND (\n      (v_runtime.environment = 'production' AND rollout_status = 'general' AND limit_status = 'owner_approved')\n      OR (v_runtime.environment = 'staging' AND rollout_status = 'staging_only')\n    );\n  IF v_count <> 3 THEN\n    RETURN jsonb_build_object('ready', false, 'reason', 'benefits_unavailable');\n  END IF;\n\n  IF v_runtime.environment = 'staging' AND NOT EXISTS (\n    SELECT 1 FROM auth.users\n    WHERE id = v_account\n      AND raw_app_meta_data->>'herkeys_premium_tester' = 'true'\n  ) THEN\n    RETURN jsonb_build_object('ready', false, 'reason', 'tester_not_eligible');\n  END IF;\n\n  RETURN jsonb_build_object('ready', true, 'reason', 'ready');\nEND;\n$function$\n"
+      }
+    ],
+    "flags": {
+      "singleton": true,
+      "updated_at": "2026-10-16T02:39:20.553555+00:00",
+      "environment": "staging",
+      "premium_enabled": true,
+      "checkout_enabled": false,
+      "ai_policy_version": "ai-data-processing-initial-v1",
+      "webhook_processing": true,
+      "allow_test_fixtures": false,
+      "max_reconciled_age_seconds": 86400,
+      "reconcile_min_interval_seconds": 20
+    }
+  },
+  "production": {
+    "project": "npykvnxnehlsdlbumzwk",
+    "functionVersion": 8,
+    "bundleHash": "6dc2998dd2b86faf54786aa9499ce8944c6fde47b87b64d560308a8877a30733",
+    "jwt": true,
+    "files": [
+      {
+        "file": "supabase/functions/herkeys-ai/index.ts",
+        "exact": true
+      },
+      {
+        "file": "supabase/functions/_shared/supabaseAdmin.ts",
+        "exact": true
+      },
+      {
+        "file": "supabase/functions/_shared/http.ts",
+        "exact": true
+      }
+    ],
+    "migrationCount": 29,
+    "migrations": [
+      {
+        "name": "build4_cloud_schema",
+        "version": "20260924181956"
+      },
+      {
+        "name": "ir01_duration_source_and_claim_v3",
+        "version": "20260924182007"
+      },
+      {
+        "name": "f08_meal_slot_and_status",
+        "version": "20260924182010"
+      },
+      {
+        "name": "f05_add_child_after_binding",
+        "version": "20260924182014"
+      },
+      {
+        "name": "f09_task_payment_mechanism",
+        "version": "20260924182017"
+      },
+      {
+        "name": "f10_career_opportunities",
+        "version": "20260924182021"
+      },
+      {
+        "name": "f11_rebuild_focus",
+        "version": "20260924182024"
+      },
+      {
+        "name": "f12_life_records",
+        "version": "20260924182028"
+      },
+      {
+        "name": "f13_people_os",
+        "version": "20260924182033"
+      },
+      {
+        "name": "int13_per_owner_uniqueness",
+        "version": "20260924182038"
+      },
+      {
+        "name": "build4_baseline",
+        "version": "20260924182148"
+      },
+      {
+        "name": "env_function_alignment",
+        "version": "20260924182844"
+      },
+      {
+        "name": "external_calendar_connections",
+        "version": "20260925142013"
+      },
+      {
+        "name": "herkeys_welcome_email_receipts",
+        "version": "20261009013436"
+      },
+      {
+        "name": "v2_account_consents",
+        "version": "20261009102702"
+      },
+      {
+        "name": "account_deletion_lifecycle",
+        "version": "20261014115427"
+      },
+      {
+        "name": "account_deletion_auth_reconciliation",
+        "version": "20261014115429"
+      },
+      {
+        "name": "account_deletion_terminal_identity",
+        "version": "20261014115432"
+      },
+      {
+        "name": "account_deletion_proof_retention",
+        "version": "20261014115434"
+      },
+      {
+        "name": "account_deletion_cancelled_history_cleanup",
+        "version": "20261014115436"
+      },
+      {
+        "name": "account_deletion_shared_provider_retry",
+        "version": "20261014115439"
+      },
+      {
+        "name": "account_deletion_orphan_shared_ownership",
+        "version": "20261014115441"
+      },
+      {
+        "name": "account_deletion_household_lock",
+        "version": "20261014115443"
+      },
+      {
+        "name": "account_deletion_scheduler_installed_disabled",
+        "version": "20261014143934"
+      },
+      {
+        "name": "premium_entitlement_foundation",
+        "version": "20261014175709"
+      },
+      {
+        "name": "premium_decision_ledger",
+        "version": "20261014175713"
+      },
+      {
+        "name": "premium_stale_projection_guard",
+        "version": "20261015020810"
+      },
+      {
+        "name": "premium_purchase_readiness_production_20261016",
+        "version": "20261016023521"
+      },
+      {
+        "name": "premium_checkout_independent_activation_20261016",
+        "version": "20261016023535"
+      }
+    ],
+    "reportTable": null,
+    "premiumRpcs": [
+      {
+        "args": "p_account uuid, p_feature text, p_household uuid, p_idempotency_key text, p_request_id text, p_app_version text, p_units integer, p_complete_now boolean",
+        "name": "premium_authorize",
+        "owner": "postgres",
+        "grants": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "definition": "CREATE OR REPLACE FUNCTION public.premium_authorize(p_account uuid, p_feature text, p_household uuid DEFAULT NULL::uuid, p_idempotency_key text DEFAULT NULL::text, p_request_id text DEFAULT NULL::text, p_app_version text DEFAULT NULL::text, p_units integer DEFAULT 1, p_complete_now boolean DEFAULT false)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public'\nAS $function$\nDECLARE\n  v_now      timestamptz := clock_timestamp();\n  cfg        public.premium_feature_config%ROWTYPE;\n  rt         public.premium_runtime_config%ROWTYPE;\n  ev         public.premium_usage_events%ROWTYPE;\n  v_state    text := 'unknown';\n  v_reason   text := NULL;\n  v_next     text := 'none';\n  v_checks   jsonb := '[]'::jsonb;\n  v_entitled boolean := false;\n  v_via      text := NULL;\n  v_limit    integer;\n  v_period   date;\n  v_end      date;\n  v_cost     integer;\n  v_claim    uuid := NULL;\n  v_reclaimed boolean := false;\n  v_replay   boolean := false;\n  v_used     integer := 0;\n  v_reserved integer := 0;\n  v_rows     integer;\n  v_recent   integer;\n  v_quota    jsonb := NULL;\n  v_audit    uuid := gen_random_uuid();\n  v_consent  boolean;\nBEGIN\n  SELECT * INTO rt FROM public.premium_runtime_config WHERE singleton;\n  SELECT * INTO cfg FROM public.premium_feature_config WHERE feature_key = p_feature;\n\n  <<decide>>\n  BEGIN\n    -- 0. request shape\n    IF NOT FOUND THEN\n      v_reason := 'feature_disabled'; v_checks := v_checks || jsonb_build_object('feature_exists', false); EXIT decide;\n    END IF;\n    IF p_idempotency_key IS NULL OR length(p_idempotency_key) NOT BETWEEN 8 AND 128\n       OR p_units IS NULL OR p_units < 1 OR p_units > cfg.max_units_per_request THEN\n      v_reason := 'invalid_request'; EXIT decide;\n    END IF;\n\n    -- 2. account lifecycle (identity was verified by the Edge Function; the account id is the JWT subject)\n    IF public.premium_account_lifecycle(p_account) <> 'active' THEN\n      v_state := CASE WHEN public.premium_account_lifecycle(p_account) = 'deletion_pending' THEN 'deletion_pending' ELSE 'unknown' END;\n      v_reason := 'account_deactivated'; v_checks := v_checks || jsonb_build_object('lifecycle', false); EXIT decide;\n    END IF;\n    v_checks := v_checks || jsonb_build_object('lifecycle', true);\n    v_state := public.premium_entitlement_state(p_account, v_now);\n\n    -- 3. ownership: a household id the client supplies never overrides server-verified membership\n    IF cfg.scope = 'household' AND p_household IS NULL THEN\n      v_reason := 'ownership_denied'; v_checks := v_checks || jsonb_build_object('ownership', false); EXIT decide;\n    END IF;\n    IF p_household IS NOT NULL AND NOT EXISTS (\n      SELECT 1 FROM public.household_members m\n      WHERE m.household_id = p_household AND m.profile_id = p_account AND m.member_type = 'adult') THEN\n      v_reason := 'ownership_denied'; v_checks := v_checks || jsonb_build_object('ownership', false); EXIT decide;\n    END IF;\n    v_checks := v_checks || jsonb_build_object('ownership', true);\n\n    -- 4. feature enabled, released, not killed, app version\n    IF NOT cfg.enabled OR NOT cfg.released OR cfg.kill_switch THEN\n      v_reason := 'feature_disabled'; v_checks := v_checks || jsonb_build_object('feature_enabled', false); EXIT decide;\n    END IF;\n    IF NOT public.premium_version_gte(p_app_version, cfg.min_app_version) THEN\n      v_reason := 'feature_disabled'; v_next := 'update_app'; v_checks := v_checks || jsonb_build_object('app_version', false); EXIT decide;\n    END IF;\n    v_checks := v_checks || jsonb_build_object('feature_enabled', true);\n\n    -- 5. backend operational readiness\n    IF NOT rt.premium_enabled THEN\n      v_reason := 'service_unavailable'; v_checks := v_checks || jsonb_build_object('ready', false); EXIT decide;\n    END IF;\n\n    -- 6. entitlement, or an APPROVED free allowance. Premium state is never inferred from anything but the projection.\n    v_entitled := v_state IN ('premium_active', 'premium_canceled_active', 'premium_billing_grace');\n    IF cfg.tier = 'free' THEN\n      v_via := 'free';\n    ELSIF v_entitled THEN\n      v_via := 'premium';\n    ELSIF cfg.free_allowance_status = 'approved' AND cfg.free_allowance > 0 AND v_state IN ('free', 'unknown', 'premium_expired', 'premium_revoked') THEN\n      v_via := 'free_allowance';\n    ELSE\n      v_reason := CASE v_state\n        WHEN 'unknown' THEN 'entitlement_unknown'\n        WHEN 'premium_expired' THEN 'entitlement_expired'\n        WHEN 'premium_revoked' THEN 'entitlement_expired'\n        ELSE 'requires_premium' END;\n      v_next := CASE v_state WHEN 'unknown' THEN 'retry_verification' ELSE 'open_paywall' END;\n      v_checks := v_checks || jsonb_build_object('entitlement', false); EXIT decide;\n    END IF;\n    v_checks := v_checks || jsonb_build_object('entitlement', true, 'via', v_via);\n\n    -- 7. AI consent (only where an external AI provider would see her content)\n    IF cfg.requires_ai_consent THEN\n      SELECT (c.policy_version = rt.ai_policy_version AND c.granted) INTO v_consent\n        FROM public.account_consents c WHERE c.account_id = p_account AND c.consent_type = 'ai_processing'\n        ORDER BY c.recorded_at DESC, c.id DESC LIMIT 1;\n      IF v_consent IS NOT TRUE THEN\n        v_reason := 'requires_ai_consent'; v_next := 'grant_ai_consent'; v_checks := v_checks || jsonb_build_object('ai_consent', false); EXIT decide;\n      END IF;\n      v_checks := v_checks || jsonb_build_object('ai_consent', true);\n    END IF;\n\n    -- 8. quota and cost budget (atomic reservation)\n    v_period := public.premium_period_start(cfg.quota_period, v_now);\n    v_end := public.premium_period_end(cfg.quota_period, v_period);\n    v_cost := cfg.cost_weight * p_units;\n    v_limit := CASE v_via WHEN 'premium' THEN cfg.premium_limit WHEN 'free_allowance' THEN cfg.free_allowance ELSE NULL END;\n    IF cfg.quota_period = 'none' THEN v_limit := NULL; END IF;\n\n    PERFORM public.premium_expire_stale(p_account, p_feature);\n\n    -- claim the idempotency key first, so a concurrent duplicate waits on this row instead of double-charging\n    INSERT INTO public.premium_usage_events (account_id, feature_key, idempotency_key, status, units, cost_units, via, period_start)\n      VALUES (p_account, p_feature, p_idempotency_key, 'pending', p_units, v_cost, v_via, v_period)\n      ON CONFLICT (account_id, feature_key, idempotency_key) DO NOTHING\n      RETURNING id INTO v_claim;\n    IF v_claim IS NULL THEN\n      SELECT * INTO ev FROM public.premium_usage_events\n        WHERE account_id = p_account AND feature_key = p_feature AND idempotency_key = p_idempotency_key FOR UPDATE;\n      IF ev.status IN ('reserved', 'completed') THEN\n        v_replay := true; v_period := ev.period_start; v_via := ev.via;\n        v_checks := v_checks || jsonb_build_object('idempotent_replay', true);\n        EXIT decide;\n      END IF;\n      -- failed / expired / rejected: the same operation may be retried under the same key\n      UPDATE public.premium_usage_events SET status = 'pending', units = p_units, cost_units = v_cost, via = v_via,\n        period_start = v_period, created_at = v_now, completed_at = NULL WHERE id = ev.id;\n      v_claim := ev.id; v_reclaimed := true;\n    END IF;\n\n    -- per-account rate limit\n    SELECT count(*) INTO v_recent FROM public.premium_usage_events\n      WHERE account_id = p_account AND feature_key = p_feature AND created_at >= v_now - INTERVAL '1 minute' AND id <> v_claim;\n    IF v_recent >= cfg.rate_limit_per_minute THEN\n      v_reason := 'rate_limited'; v_next := 'retry_later'; v_checks := v_checks || jsonb_build_object('rate', false); EXIT decide;\n    END IF;\n\n    -- per-account counter: ONE conditional UPDATE under the row lock is the whole race defence\n    IF v_limit IS NOT NULL THEN\n      INSERT INTO public.premium_usage (account_id, feature_key, period_start) VALUES (p_account, p_feature, v_period)\n        ON CONFLICT (account_id, feature_key, period_start) DO NOTHING;\n      IF p_complete_now THEN\n        UPDATE public.premium_usage SET used = used + p_units, updated_at = now()\n          WHERE account_id = p_account AND feature_key = p_feature AND period_start = v_period AND used + reserved + p_units <= v_limit;\n      ELSE\n        UPDATE public.premium_usage SET reserved = reserved + p_units, updated_at = now()\n          WHERE account_id = p_account AND feature_key = p_feature AND period_start = v_period AND used + reserved + p_units <= v_limit;\n      END IF;\n      GET DIAGNOSTICS v_rows = ROW_COUNT;\n      IF v_rows = 0 THEN\n        v_reason := 'quota_exhausted'; v_next := CASE v_via WHEN 'free_allowance' THEN 'open_paywall' ELSE 'wait_for_reset' END;\n        v_checks := v_checks || jsonb_build_object('quota', false); EXIT decide;\n      END IF;\n    END IF;\n\n    -- global daily cost cap (compensates the per-account reservation on refusal)\n    IF cfg.global_daily_cost_cap IS NOT NULL THEN\n      INSERT INTO public.premium_usage_global (feature_key, day) VALUES (p_feature, (v_now AT TIME ZONE 'UTC')::date)\n        ON CONFLICT (feature_key, day) DO NOTHING;\n      UPDATE public.premium_usage_global SET cost_units = cost_units + v_cost\n        WHERE feature_key = p_feature AND day = (v_now AT TIME ZONE 'UTC')::date AND cost_units + v_cost <= cfg.global_daily_cost_cap;\n      GET DIAGNOSTICS v_rows = ROW_COUNT;\n      IF v_rows = 0 THEN\n        IF v_limit IS NOT NULL THEN\n          IF p_complete_now THEN\n            UPDATE public.premium_usage SET used = GREATEST(used - p_units, 0) WHERE account_id = p_account AND feature_key = p_feature AND period_start = v_period;\n          ELSE\n            UPDATE public.premium_usage SET reserved = GREATEST(reserved - p_units, 0) WHERE account_id = p_account AND feature_key = p_feature AND period_start = v_period;\n          END IF;\n        END IF;\n        v_reason := 'quota_exhausted'; v_next := 'wait_for_reset'; v_checks := v_checks || jsonb_build_object('budget', false); EXIT decide;\n      END IF;\n    END IF;\n\n    UPDATE public.premium_usage_events SET status = CASE WHEN p_complete_now THEN 'completed' ELSE 'reserved' END,\n      completed_at = CASE WHEN p_complete_now THEN clock_timestamp() ELSE NULL END WHERE id = v_claim;\n    v_checks := v_checks || jsonb_build_object('quota', true);\n  END decide;\n\n  -- Refusal after claiming a key: a fresh claim is removed, a reclaimed one goes back to `rejected`.\n  IF v_reason IS NOT NULL AND v_claim IS NOT NULL THEN\n    IF v_reclaimed THEN UPDATE public.premium_usage_events SET status = 'rejected', completed_at = clock_timestamp() WHERE id = v_claim;\n    ELSE DELETE FROM public.premium_usage_events WHERE id = v_claim AND status = 'pending'; END IF;\n  END IF;\n\n  -- quota snapshot for the response (never content)\n  IF cfg.feature_key IS NOT NULL AND cfg.quota_period <> 'none' THEN\n    SELECT COALESCE(u.used, 0), COALESCE(u.reserved, 0) INTO v_used, v_reserved FROM (SELECT 1) s\n      LEFT JOIN public.premium_usage u ON u.account_id = p_account AND u.feature_key = p_feature AND u.period_start = public.premium_period_start(cfg.quota_period, v_now);\n    v_limit := CASE WHEN v_via = 'free_allowance' THEN cfg.free_allowance WHEN v_via = 'premium' THEN cfg.premium_limit\n                    ELSE COALESCE(CASE WHEN v_entitled THEN cfg.premium_limit END, NULLIF(cfg.free_allowance, 0)) END;\n    v_period := public.premium_period_start(cfg.quota_period, v_now);\n    v_quota := jsonb_build_object(\n      'period', cfg.quota_period, 'periodStart', v_period, 'periodEnd', public.premium_period_end(cfg.quota_period, v_period),\n      'used', v_used, 'reserved', v_reserved, 'limit', v_limit,\n      'remaining', CASE WHEN v_limit IS NULL THEN NULL ELSE GREATEST(v_limit - v_used - v_reserved, 0) END);\n  END IF;\n\n  IF p_account IS NOT NULL AND EXISTS (SELECT 1 FROM auth.users WHERE id = p_account) THEN\n    INSERT INTO public.premium_authorization_audit (id, account_id, feature_key, outcome, reason, entitlement_state, checks, request_id)\n      VALUES (v_audit, p_account, left(COALESCE(p_feature, ''), 64), CASE WHEN v_reason IS NULL THEN 'allowed' ELSE 'denied' END,\n              COALESCE(v_reason, 'allowed'), v_state, v_checks, left(p_request_id, 80));\n  END IF;\n\n  RETURN jsonb_build_object(\n    'outcome', CASE WHEN v_reason IS NULL THEN 'allowed' ELSE 'denied' END,\n    'reason', COALESCE(v_reason, 'allowed'),\n    'entitlementState', v_state,\n    'via', v_via,\n    'nextAction', CASE WHEN v_reason IS NULL THEN 'none' ELSE v_next END,\n    'quota', v_quota,\n    'decisionId', v_audit,\n    'replay', v_replay);\nEND\n$function$\n"
+      },
+      {
+        "args": "",
+        "name": "premium_my_entitlement",
+        "owner": "postgres",
+        "grants": [
+          "postgres=X/postgres",
+          "service_role=X/postgres",
+          "authenticated=X/postgres"
+        ],
+        "definition": "CREATE OR REPLACE FUNCTION public.premium_my_entitlement()\n RETURNS jsonb\n LANGUAGE plpgsql\n STABLE SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public'\nAS $function$\nDECLARE v_account uuid := auth.uid(); e public.premium_entitlements%ROWTYPE; v_state text;\nBEGIN\n  IF v_account IS NULL THEN RETURN jsonb_build_object('state', 'unknown'); END IF;\n  v_state := public.premium_entitlement_state(v_account);\n  SELECT * INTO e FROM public.premium_entitlements WHERE account_id = v_account;\n  RETURN jsonb_build_object(\n    'state', v_state,\n    'expiresAt', CASE WHEN v_state LIKE 'premium_%' THEN e.expires_at END,\n    'graceExpiresAt', CASE WHEN v_state = 'premium_billing_grace' THEN e.grace_expires_at END,\n    'canceled', COALESCE(e.canceled_at IS NOT NULL, false) AND v_state IN ('premium_canceled_active'),\n    'needsReconcile', COALESCE(e.needs_reconcile, true),\n    'checkedAt', clock_timestamp());\nEND\n$function$\n"
+      },
+      {
+        "args": "",
+        "name": "premium_purchase_readiness",
+        "owner": "postgres",
+        "grants": [
+          "postgres=X/postgres",
+          "service_role=X/postgres",
+          "authenticated=X/postgres"
+        ],
+        "definition": "CREATE OR REPLACE FUNCTION public.premium_purchase_readiness()\n RETURNS jsonb\n LANGUAGE plpgsql\n STABLE SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public'\nAS $function$\nDECLARE\n  v_account uuid := auth.uid();\n  v_runtime public.premium_runtime_config%ROWTYPE;\n  v_count integer;\nBEGIN\n  IF v_account IS NULL OR public.premium_account_lifecycle(v_account) <> 'active' THEN\n    RETURN jsonb_build_object('ready', false, 'reason', 'account_unavailable');\n  END IF;\n\n  SELECT * INTO v_runtime FROM public.premium_runtime_config WHERE singleton;\n  IF NOT FOUND OR NOT v_runtime.premium_enabled THEN\n    RETURN jsonb_build_object('ready', false, 'reason', 'premium_disabled');\n  END IF;\n  IF NOT v_runtime.webhook_processing THEN\n    RETURN jsonb_build_object('ready', false, 'reason', 'fulfillment_unavailable');\n  END IF;\n  -- Checkout is an INDEPENDENT commercial rollout. Enabling the application,\n  -- Premium features or subscription webhook fulfillment NEVER starts paid sales.\n  IF NOT v_runtime.checkout_enabled THEN\n    RETURN jsonb_build_object('ready', false, 'reason', 'checkout_disabled');\n  END IF;\n\n  SELECT count(*) INTO v_count\n  FROM public.premium_feature_config\n  WHERE feature_key IN ('daily_load_premium', 'smart_inbox_extract', 'momentum_report')\n    AND tier = 'premium' AND enabled AND released AND NOT kill_switch\n    AND (\n      (v_runtime.environment = 'production' AND rollout_status = 'general' AND limit_status = 'owner_approved')\n      OR (v_runtime.environment = 'staging' AND rollout_status = 'staging_only')\n    );\n  IF v_count <> 3 THEN\n    RETURN jsonb_build_object('ready', false, 'reason', 'benefits_unavailable');\n  END IF;\n\n  IF v_runtime.environment = 'staging' AND NOT EXISTS (\n    SELECT 1 FROM auth.users\n    WHERE id = v_account\n      AND raw_app_meta_data->>'herkeys_premium_tester' = 'true'\n  ) THEN\n    RETURN jsonb_build_object('ready', false, 'reason', 'tester_not_eligible');\n  END IF;\n\n  RETURN jsonb_build_object('ready', true, 'reason', 'ready');\nEND;\n$function$\n"
+      }
+    ],
+    "flags": {
+      "singleton": true,
+      "updated_at": "2026-10-16T02:37:05.782922+00:00",
+      "environment": "production",
+      "premium_enabled": true,
+      "checkout_enabled": false,
+      "ai_policy_version": "ai-data-processing-initial-v1",
+      "webhook_processing": true,
+      "allow_test_fixtures": false,
+      "max_reconciled_age_seconds": 86400,
+      "reconcile_min_interval_seconds": 20
+    }
+  },
+  "files": [
+    {
+      "path": "supabase/functions/herkeys-ai/index.ts",
+      "sha256": "ddd8b9af3b9fe74c4b9833950187cfa58b549a31bec6be3b95abdcca47e82517",
+      "lfSha256": "df4fb0443d7d3cc755fffb98ada3518a1a363c7f61dc74b97631cd1e150d124c"
+    },
+    {
+      "path": "supabase/functions/_shared/supabaseAdmin.ts",
+      "sha256": "7fe68234426c9d03d27d182c8ba7ae77e619efe9e23c920801fed2cd6e238ad9",
+      "lfSha256": "a985c9ee345c41c92ef0014b06e744ec659db43f63e79d08d09a4a61bb83ef96"
+    },
+    {
+      "path": "supabase/functions/_shared/http.ts",
+      "sha256": "ece84e7e17f3d21feb6b99ffa0606864196cf5848a1d0ddbb631f6f3cbea5f38",
+      "lfSha256": "58f66be6e4f4056ae0637d4abcb71418bf063cd9ce3b5a26789edbbc2162576a"
+    },
+    {
+      "path": "supabase/migrations/20261017180000_ai_response_reporting.sql",
+      "sha256": "2e0ce0f447469657a6354776d5ba846987debc47011c5a3a6703d58ade604f0f",
+      "lfSha256": "a94acaf26f87897e87a63e04fd9d6e024c8a2a7201a790b2e32b6a683ead2942"
+    },
+    {
+      "path": "supabase/migrations/20261017221825_ai_report_review_workflow.sql",
+      "sha256": "5d7e0e5288c9324afe7d951049846a8fab51d096ea2dfdea007b0736220d2f61",
+      "lfSha256": "5d7e0e5288c9324afe7d951049846a8fab51d096ea2dfdea007b0736220d2f61"
+    }
+  ]
+}

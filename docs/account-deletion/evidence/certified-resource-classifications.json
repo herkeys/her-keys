@@ -1,0 +1,450 @@
+{
+  "registry": [
+    {
+      "table_name": "account_claims",
+      "owner_column": "profile_id",
+      "household_scoped": true,
+      "optional_when_absent": false
+    },
+    {
+      "table_name": "account_consents",
+      "owner_column": "account_id",
+      "household_scoped": false,
+      "optional_when_absent": false
+    },
+    {
+      "table_name": "action_executions",
+      "owner_column": "profile_id",
+      "household_scoped": true,
+      "optional_when_absent": false
+    },
+    {
+      "table_name": "action_intents",
+      "owner_column": "profile_id",
+      "household_scoped": true,
+      "optional_when_absent": false
+    },
+    {
+      "table_name": "action_outcomes",
+      "owner_column": "profile_id",
+      "household_scoped": true,
+      "optional_when_absent": false
+    },
+    {
+      "table_name": "action_records",
+      "owner_column": "actor_profile_id",
+      "household_scoped": true,
+      "optional_when_absent": false
+    },
+    {
+      "table_name": "apple_revocation_credentials",
+      "owner_column": "account_id",
+      "household_scoped": false,
+      "optional_when_absent": false
+    },
+    {
+      "table_name": "automation_authorities",
+      "owner_column": "profile_id",
+      "household_scoped": true,
+      "optional_when_absent": false
+    },
+    {
+      "table_name": "behavior_observations",
+      "owner_column": "profile_id",
+      "household_scoped": true,
+      "optional_when_absent": false
+    },
+    {
+      "table_name": "calendar_oauth_states",
+      "owner_column": "user_id",
+      "household_scoped": false,
+      "optional_when_absent": false
+    },
+    {
+      "table_name": "capacity_profiles",
+      "owner_column": "profile_id",
+      "household_scoped": true,
+      "optional_when_absent": false
+    },
+    {
+      "table_name": "career_opportunities",
+      "owner_column": "profile_id",
+      "household_scoped": true,
+      "optional_when_absent": false
+    },
+    {
+      "table_name": "change_log",
+      "owner_column": "owner_profile_id",
+      "household_scoped": true,
+      "optional_when_absent": false
+    },
+    {
+      "table_name": "dependencies",
+      "owner_column": "profile_id",
+      "household_scoped": true,
+      "optional_when_absent": false
+    },
+    {
+      "table_name": "discovery_records",
+      "owner_column": "profile_id",
+      "household_scoped": true,
+      "optional_when_absent": false
+    },
+    {
+      "table_name": "events",
+      "owner_column": "owner_profile_id",
+      "household_scoped": true,
+      "optional_when_absent": false
+    },
+    {
+      "table_name": "evidence_links",
+      "owner_column": "profile_id",
+      "household_scoped": true,
+      "optional_when_absent": false
+    },
+    {
+      "table_name": "external_calendar_connections",
+      "owner_column": "user_id",
+      "household_scoped": false,
+      "optional_when_absent": false
+    },
+    {
+      "table_name": "external_references",
+      "owner_column": "profile_id",
+      "household_scoped": true,
+      "optional_when_absent": false
+    },
+    {
+      "table_name": "goals",
+      "owner_column": "profile_id",
+      "household_scoped": true,
+      "optional_when_absent": false
+    },
+    {
+      "table_name": "herkeys_welcome_email_receipts",
+      "owner_column": "user_id",
+      "household_scoped": false,
+      "optional_when_absent": true
+    },
+    {
+      "table_name": "household_categories",
+      "owner_column": "owner_profile_id",
+      "household_scoped": true,
+      "optional_when_absent": false
+    },
+    {
+      "table_name": "household_members",
+      "owner_column": "profile_id",
+      "household_scoped": true,
+      "optional_when_absent": false
+    },
+    {
+      "table_name": "household_people",
+      "owner_column": "profile_id",
+      "household_scoped": true,
+      "optional_when_absent": false
+    },
+    {
+      "table_name": "household_systems",
+      "owner_column": "owner_profile_id",
+      "household_scoped": true,
+      "optional_when_absent": false
+    },
+    {
+      "table_name": "intent_decisions",
+      "owner_column": "profile_id",
+      "household_scoped": true,
+      "optional_when_absent": false
+    },
+    {
+      "table_name": "interpretations",
+      "owner_column": "profile_id",
+      "household_scoped": true,
+      "optional_when_absent": false
+    },
+    {
+      "table_name": "life_record_task_links",
+      "owner_column": "profile_id",
+      "household_scoped": true,
+      "optional_when_absent": false
+    },
+    {
+      "table_name": "life_records",
+      "owner_column": "profile_id",
+      "household_scoped": true,
+      "optional_when_absent": false
+    },
+    {
+      "table_name": "meal_plan_entries",
+      "owner_column": "owner_profile_id",
+      "household_scoped": true,
+      "optional_when_absent": false
+    },
+    {
+      "table_name": "needs_me_items",
+      "owner_column": "profile_id",
+      "household_scoped": true,
+      "optional_when_absent": false
+    },
+    {
+      "table_name": "onboarding_state",
+      "owner_column": "profile_id",
+      "household_scoped": true,
+      "optional_when_absent": false
+    },
+    {
+      "table_name": "one_move_records",
+      "owner_column": "profile_id",
+      "household_scoped": true,
+      "optional_when_absent": false
+    },
+    {
+      "table_name": "patterns",
+      "owner_column": "profile_id",
+      "household_scoped": true,
+      "optional_when_absent": false
+    },
+    {
+      "table_name": "person_contexts",
+      "owner_column": "profile_id",
+      "household_scoped": true,
+      "optional_when_absent": false
+    },
+    {
+      "table_name": "person_task_links",
+      "owner_column": "profile_id",
+      "household_scoped": true,
+      "optional_when_absent": false
+    },
+    {
+      "table_name": "premium_authorization_audit",
+      "owner_column": "account_id",
+      "household_scoped": false,
+      "optional_when_absent": false
+    },
+    {
+      "table_name": "premium_decisions",
+      "owner_column": "account_id",
+      "household_scoped": false,
+      "optional_when_absent": false
+    },
+    {
+      "table_name": "premium_entitlements",
+      "owner_column": "account_id",
+      "household_scoped": false,
+      "optional_when_absent": false
+    },
+    {
+      "table_name": "premium_reconcile_state",
+      "owner_column": "account_id",
+      "household_scoped": false,
+      "optional_when_absent": false
+    },
+    {
+      "table_name": "premium_subscriber_identities",
+      "owner_column": "account_id",
+      "household_scoped": false,
+      "optional_when_absent": false
+    },
+    {
+      "table_name": "premium_usage",
+      "owner_column": "account_id",
+      "household_scoped": false,
+      "optional_when_absent": false
+    },
+    {
+      "table_name": "premium_usage_events",
+      "owner_column": "account_id",
+      "household_scoped": false,
+      "optional_when_absent": false
+    },
+    {
+      "table_name": "rebuild_focus_links",
+      "owner_column": "profile_id",
+      "household_scoped": true,
+      "optional_when_absent": false
+    },
+    {
+      "table_name": "rebuild_focuses",
+      "owner_column": "profile_id",
+      "household_scoped": true,
+      "optional_when_absent": false
+    },
+    {
+      "table_name": "recurrence_rules",
+      "owner_column": "profile_id",
+      "household_scoped": true,
+      "optional_when_absent": false
+    },
+    {
+      "table_name": "responsibilities",
+      "owner_column": "profile_id",
+      "household_scoped": true,
+      "optional_when_absent": false
+    },
+    {
+      "table_name": "source_artifacts",
+      "owner_column": "profile_id",
+      "household_scoped": true,
+      "optional_when_absent": false
+    },
+    {
+      "table_name": "system_steps",
+      "owner_column": "profile_id",
+      "household_scoped": true,
+      "optional_when_absent": false
+    },
+    {
+      "table_name": "tasks",
+      "owner_column": "owner_profile_id",
+      "household_scoped": true,
+      "optional_when_absent": false
+    }
+  ],
+  "exceptions": [
+    {
+      "schema_name": "private",
+      "table_name": "ai_response_reports",
+      "handling": "custom",
+      "reason": "Erase owned reports and redact reviewerId in another account report"
+    },
+    {
+      "schema_name": "private",
+      "table_name": "deletion_resource_exceptions",
+      "handling": "global",
+      "reason": "Reviewed schema classifications only"
+    },
+    {
+      "schema_name": "private",
+      "table_name": "deletion_resource_registry",
+      "handling": "global",
+      "reason": "Reviewed resource metadata only"
+    },
+    {
+      "schema_name": "private",
+      "table_name": "deletion_scheduler_target",
+      "handling": "global",
+      "reason": "Hosted project URL only; optional in local harness"
+    },
+    {
+      "schema_name": "private",
+      "table_name": "deletion_test_scope",
+      "handling": "lifecycle",
+      "reason": "Expiring synthetic-account processing allowlist; never proof"
+    },
+    {
+      "schema_name": "private",
+      "table_name": "deletion_worker_key",
+      "handling": "global",
+      "reason": "Service authentication secret; no customer identity"
+    },
+    {
+      "schema_name": "public",
+      "table_name": "account_deletion_alerts",
+      "handling": "lifecycle",
+      "reason": "Operational alert delivery metadata"
+    },
+    {
+      "schema_name": "public",
+      "table_name": "account_deletion_cases",
+      "handling": "lifecycle",
+      "reason": "Exact nonterminal shared resource review; erased at terminal completion"
+    },
+    {
+      "schema_name": "public",
+      "table_name": "account_deletion_control",
+      "handling": "global",
+      "reason": "Worker kill switch"
+    },
+    {
+      "schema_name": "public",
+      "table_name": "account_deletion_outbox",
+      "handling": "lifecycle",
+      "reason": "Encrypted recipient; completion outbox unlinked and expires within seven days"
+    },
+    {
+      "schema_name": "public",
+      "table_name": "account_deletion_rate_limits",
+      "handling": "lifecycle",
+      "reason": "Rate-limit hashes expire after one day"
+    },
+    {
+      "schema_name": "public",
+      "table_name": "account_deletion_receipts",
+      "handling": "lifecycle",
+      "reason": "Nonterminal receipt/request associations"
+    },
+    {
+      "schema_name": "public",
+      "table_name": "account_deletion_requests",
+      "handling": "lifecycle",
+      "reason": "Nonterminal lifecycle and bounded operational evidence"
+    },
+    {
+      "schema_name": "public",
+      "table_name": "account_deletion_retention_control",
+      "handling": "global",
+      "reason": "Retention job state only"
+    },
+    {
+      "schema_name": "public",
+      "table_name": "account_deletion_retention_runs",
+      "handling": "global",
+      "reason": "Aggregate expiry counters only"
+    },
+    {
+      "schema_name": "public",
+      "table_name": "account_deletion_runs",
+      "handling": "global",
+      "reason": "Aggregate run counters only"
+    },
+    {
+      "schema_name": "public",
+      "table_name": "account_deletion_terminal_proofs",
+      "handling": "lifecycle",
+      "reason": "Five-field minimal proof expires after 365 days"
+    },
+    {
+      "schema_name": "public",
+      "table_name": "discovery_answers",
+      "handling": "cascade",
+      "reason": "Owned through discovery_records; FK ON DELETE CASCADE"
+    },
+    {
+      "schema_name": "public",
+      "table_name": "households",
+      "handling": "custom",
+      "reason": "Only exclusive households; shared ownership escalated"
+    },
+    {
+      "schema_name": "public",
+      "table_name": "premium_events",
+      "handling": "custom",
+      "reason": "Remove exact account/provider identity references; preserve other accounts and event idempotency"
+    },
+    {
+      "schema_name": "public",
+      "table_name": "premium_feature_config",
+      "handling": "global",
+      "reason": "Public product manifest; contains no account identifier"
+    },
+    {
+      "schema_name": "public",
+      "table_name": "premium_runtime_config",
+      "handling": "global",
+      "reason": "Environment switches; contains no account identifier"
+    },
+    {
+      "schema_name": "public",
+      "table_name": "premium_usage_global",
+      "handling": "global",
+      "reason": "Feature/day aggregate cost only; no account identifier"
+    },
+    {
+      "schema_name": "public",
+      "table_name": "profiles",
+      "handling": "custom",
+      "reason": "Restricted profile removed after provider material; independently counted"
+    }
+  ]
+}

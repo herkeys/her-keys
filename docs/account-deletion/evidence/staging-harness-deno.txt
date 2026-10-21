@@ -1,0 +1,1 @@
+Check supabase/blueprints/staging-deletion-v2-certification.ts

@@ -1,0 +1,68 @@
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ the report form offers labelled, actionable reasons in light appearance (19.9715ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ the report form offers labelled, actionable reasons in dark appearance (3.0799ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ the report form offers labelled, actionable reasons in system appearance (3.523ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ deliberate submission selects the correct reference and reason, then confirms only acceptance (6.7962ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ offline failure offers retry with the same idempotency key and no false confirmation (6.3562ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ pending and completed submissions disable accidental repeat actions (5.8393ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✖ two taps before React renders start only one submission (7.3989ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✖ an account switch before submission cannot report the old response as the replacement account (8.7092ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ a pending report cancels after account change and ignores late success (5.105ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ a pending report cancels after household change and ignores late success (4.911ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ a pending report cancels after binding change and ignores late success (4.5347ms)
+✔ a signed-out Free user keeps their conversation local and receives a sign-in instruction (4.2306ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 10
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 422.095
+
+✖ failing tests:
+
+test at tests\aiReportPanelRuntime.test.mjs:101:1
+✖ two taps before React renders start only one submission (7.3989ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+  2 !== 1
+
+      at TestContext.<anonymous> (file:///C:/Users/jsmit/.codex/worktrees/v2-shared-defect-closeout-20261019/Her%20Keys/tests/aiReportPanelRuntime.test.mjs:114:10)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 2,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\aiReportPanelRuntime.test.mjs:117:1
+✖ an account switch before submission cannot report the old response as the replacement account (8.7092ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+  1 !== 0
+
+      at TestContext.<anonymous> (file:///C:/Users/jsmit/.codex/worktrees/v2-shared-defect-closeout-20261019/Her%20Keys/tests/aiReportPanelRuntime.test.mjs:130:10)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

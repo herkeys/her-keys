@@ -74,6 +74,7 @@ for (const [label, receipts] of [
   assert.equal(result.status, 403);
   assert.equal(result.body.reason, 'ai_processing_consent_required');
   assert.equal(h.calls(), 0);
+  assert.match(h.logs.join(' '), /"providerInvoked":false/);
   assert.equal(h.queries[0].table, 'account_consents');
   assert.deepEqual(JSON.parse(JSON.stringify(h.queries[0].filters)), [['account_id','account-a'],['consent_type','ai_processing']]);
 });
@@ -111,6 +112,30 @@ test('current affirmative consent reaches the provider and validates the structu
   const log = h.logs.join(' ');
   assert.doesNotMatch(log, /synthetic shelf|synthetic-provider-key|system_instruction/);
   assert.match(log, /"schemaValidation":"pass"/);
+});
+
+test('provider generation constraints agree with the mandatory confidence safety contract', async () => {
+  const h = harness({ provider: ({ init }) => {
+    const sent = JSON.parse(init.body);
+    const schema = sent.response_format.schema;
+    const message = schema.properties.messages.items.properties;
+    const state = schema.properties.state.properties;
+    assert.deepEqual(message.confidence.enum, ['possible']);
+    assert.deepEqual(message.confidenceLabel.enum, ['Possible pattern']);
+    assert.deepEqual(state.hypothesis.properties.confidence.enum, ['possible']);
+    assert.deepEqual(state.result.properties.confidenceLabel.enum, ['Possible pattern']);
+    assert.match(sent.system_instruction, /confidenceLabel.*Possible pattern/);
+    return response();
+  } });
+  assert.equal((await h.request()).status, 200);
+});
+
+test('invalid confidence labels remain rejected and diagnostic logs contain only booleans', async () => {
+  const h = harness({ provider: () => response({ ...turn(), messages: [{ speaker: 'herkeys', text: 'Synthetic private response', confidenceLabel: 'Low confidence' }] }) });
+  assert.equal((await h.request()).status, 502);
+  const log = h.logs.join(' ');
+  assert.match(log, /"messageConfidence":false/);
+  assert.doesNotMatch(log, /Synthetic private response|Low confidence|synthetic-provider-key|userText|system_instruction/);
 });
 
 test('provider outage retries once and returns an honest unavailable result', async () => {

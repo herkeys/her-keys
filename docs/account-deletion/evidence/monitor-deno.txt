@@ -1,0 +1,1 @@
+Check supabase/functions/monitor-account-deletions/index.ts

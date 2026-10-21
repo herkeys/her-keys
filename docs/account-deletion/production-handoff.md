@@ -1,3 +1,7 @@
+# 2026-10-19 repair addendum
+
+The current candidate and approval boundary are `production-promotion-20261019.md` and its exact JSON manifest. Source repair PR #39 preserves PR #38; web PR #9 prepares the unpublished self-service flow. All new Production mutations remain unapproved. Current read-only Production controls are off/dry-run with zero active destructive jobs. Historical instructions below do not authorize the four new migrations, seven source-differing bundles, schedulers, customer tests or activation.
+
 # Production handoff: database migrations applied; activation remains closed
 
 > **Later update (2026-10-14):** After the database-only handoff below, the owner authorized Production infrastructure deployment. All 14 required Edge Functions and three inactive scheduler jobs are now installed, with destructive processing still disabled. See [production-edge-deployment-20261014.md](production-edge-deployment-20261014.md). The following sections remain the historical database-only approval record.

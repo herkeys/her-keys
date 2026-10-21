@@ -199,7 +199,7 @@ describe('the app.json permission intent', () => {
       assert.ok(registered.includes(name), `${name} is still registered`);
     }
     const picker = app.plugins.find((entry) => Array.isArray(entry) && entry[0] === 'expo-image-picker')[1];
-    assert.equal(picker.photosPermission, false);
+    assert.equal(picker.photosPermission, "Her Keys lets you select a document photo from your library for on-device text recognition. The selected photo stays on this device and is never uploaded.", 'iOS photo-library purpose matches reviewed on-device document intake');
     assert.equal(picker.microphonePermission, false);
     assert.match(picker.cameraPermission, /on-device text recognition/);
     assert.equal(app.ios.bundleIdentifier, 'com.herkeys.app');

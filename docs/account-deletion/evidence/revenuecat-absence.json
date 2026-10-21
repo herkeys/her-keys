@@ -1,0 +1,15 @@
+{
+  "status": "fulfilled",
+  "value": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Error calling get-customer: Could not find customer ID associated with this project.\nHTTP status: 404\n\nFull response: {\n  \"doc_url\": \"https://errors.rev.cat/resource-missing\",\n  \"message\": \"Could not find customer ID associated with this project\",\n  \"object\": \"error\",\n  \"retryable\": false,\n  \"type\": \"resource_missing\"\n}"
+      }
+    ],
+    "structuredContent": {
+      "error_code": "INVALID_ARGUMENT"
+    },
+    "isError": true
+  }
+}

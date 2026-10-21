@@ -156,6 +156,8 @@ export type ExtractResult =
 
 /** The only way the app reaches the server's Premium state. Implemented over Supabase; scripted in tests. */
 export interface PremiumServerClient {
+  /** Scope the real transport to the provider's account/household lifetime. Test ports may already be scoped. */
+  forAccount?(owner: import('./premiumRequestOwner').PremiumRequestOwner): PremiumServerClient;
   entitlement(): Promise<{ kind: 'ok'; value: ServerEntitlement } | { kind: 'unavailable' }>;
   manifest(): Promise<{ kind: 'ok'; entries: ManifestEntry[] } | { kind: 'unavailable' }>;
   /** Server verifies commercial eligibility for this authenticated actor, rollout, and webhook fulfillment. */
