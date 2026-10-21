@@ -129,6 +129,25 @@ const INTEGRATION_CHECKPOINTS = ['363e473fdf053547a21a41a67b7f62bd9aa2bcdf'];
  */
 const LATER_FEATURES = [
   {
+    id: 'HK-V2-IOS-AUDIT-20261019 (Build 2 Photos permission and Apple readiness review)',
+    // PR #37 was reviewed and merged into the 2026-10-20 mobile candidate. These two
+    // documents are audit evidence, not Meals-owned functionality or new schema.
+    // Explicit exact-file ownership preserves the boundary scan's default-deny
+    // rule for every unrelated document, path, migration, or feature change.
+    branch: null,
+    owned: [],
+    migrations: [],
+    schemas: [],
+    rootCollections: [],
+    syncKinds: [],
+    shared: [
+      ['docs/audits/HK_V2_IOS_FULL_READINESS_AUDIT_20261019.md',
+        'Reviewed iOS PR #37: dated Apple Build 2 source/config audit, signed-device and App Store gaps classified separately from internal testing; no executable behavior'],
+      ['docs/audits/HK_V2_IOS_SHARED_OWNER_HANDOFF_20261019.md',
+        'Reviewed iOS PR #37: shared-owner coordination, Photos purpose contract and release evidence boundaries; no entitlement, Meals-domain, or backend mutation'],
+    ],
+  },
+  {
     id: 'HK-FEATURE-09 (Money OS)',
     branch: 'feature/09-money-os',
     owned: [
