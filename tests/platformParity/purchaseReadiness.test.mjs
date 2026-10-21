@@ -8,7 +8,7 @@ import TestRenderer from 'react-test-renderer';
 import { render } from '../support/render.tsx';
 
 globalThis.__DEV__ = false;
-process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY = 'synthetic-public-sdk-key';
+process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY = 'goog_syntheticPublicSdkKey';
 Platform.OS = 'android';
 const stub = new URL('./support/purchases.mjs', import.meta.url).href;
 registerHooks({ resolve(specifier, context, next) {

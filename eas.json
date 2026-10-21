@@ -1,6 +1,6 @@
 {
   "cli": {
-    "appVersionSource": "local"
+    "appVersionSource": "remote"
   },
   "build": {
     "development": {
@@ -8,6 +8,7 @@
       "distribution": "internal",
       "env": {
         "EXPO_PUBLIC_HERKEYS_BACKEND": "staging",
+        "EXPO_PUBLIC_REVENUECAT_STORE": "test",
         "EXPO_PUBLIC_HERKEYS_DATA_MODE": "empty",
         "EXPO_PUBLIC_HERKEYS_V2_CONSENT_GATE": "true"
       }
@@ -17,17 +18,17 @@
       "distribution": "internal",
       "env": {
         "EXPO_PUBLIC_HERKEYS_BACKEND": "staging",
+        "EXPO_PUBLIC_REVENUECAT_STORE": "native",
         "EXPO_PUBLIC_HERKEYS_DATA_MODE": "empty",
         "EXPO_PUBLIC_HERKEYS_V2_CONSENT_GATE": "true"
       }
     },
     "production": {
       "environment": "production",
-      "android": {
-        "autoIncrement": true
-      },
+      "autoIncrement": true,
       "env": {
         "EXPO_PUBLIC_HERKEYS_BACKEND": "production",
+        "EXPO_PUBLIC_REVENUECAT_STORE": "native",
         "EXPO_PUBLIC_HERKEYS_DATA_MODE": "empty",
         "EXPO_PUBLIC_HERKEYS_V2_CONSENT_GATE": "true"
       }
@@ -40,6 +41,7 @@
       },
       "env": {
         "EXPO_PUBLIC_HERKEYS_BACKEND": "production",
+        "EXPO_PUBLIC_REVENUECAT_STORE": "native",
         "EXPO_PUBLIC_HERKEYS_DATA_MODE": "empty",
         "EXPO_PUBLIC_HERKEYS_V2_CONSENT_GATE": "true"
       }
@@ -52,6 +54,7 @@
       },
       "env": {
         "EXPO_PUBLIC_HERKEYS_BACKEND": "staging",
+        "EXPO_PUBLIC_REVENUECAT_STORE": "test",
         "EXPO_PUBLIC_HERKEYS_DATA_MODE": "empty",
         "EXPO_PUBLIC_HERKEYS_V2_CONSENT_GATE": "true",
         "EXPO_PUBLIC_HK_AUTH_DIAG": "1"

@@ -5,6 +5,8 @@
  * docs/builds/BUILD25_MONETIZATION_FOUNDATION.md.
  */
 
+import { isRevenueCatKeyAllowed } from './sdkKeyPolicy';
+
 export interface RevenueCatApiKeys {
   ios: string | undefined;
   android: string | undefined;
@@ -16,5 +18,5 @@ export const revenueCatApiKeys: RevenueCatApiKeys = {
 };
 
 export function hasConfiguredApiKey(platform: 'ios' | 'android'): boolean {
-  return Boolean(revenueCatApiKeys[platform]);
+  return isRevenueCatKeyAllowed(platform, revenueCatApiKeys[platform], process.env.EXPO_PUBLIC_REVENUECAT_STORE, process.env.EXPO_PUBLIC_HERKEYS_BACKEND);
 }
