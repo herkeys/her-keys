@@ -9,6 +9,8 @@ on:
   push:
     branches:
       - integration/build2a-candidate
+      # Source-only Build 2 convergence candidate: run mandatory exact-head CI before EAS GO decision.
+      - integration/build2-candidate-20261020
       # iOS Build 2 candidate audit: the same gate on the audit branch's exact pushed SHA. Remove with the branch.
       - audit/ios-build2-candidate
       # Build 2 shared consumer blocker repair (Android + iOS audit repairs converged): the same gate on its exact pushed SHA. Remove with the branch.
