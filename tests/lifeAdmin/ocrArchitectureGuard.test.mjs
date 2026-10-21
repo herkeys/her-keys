@@ -170,7 +170,7 @@ describe('Android permission inventory — INSPECTION ONLY (installed-package ma
     const entry = appJson.expo.plugins.find((p) => Array.isArray(p) && p[0] === 'expo-image-picker');
     assert.ok(entry, 'expo-image-picker is registered with options, not just as a bare string');
     assert.equal(entry[1].microphonePermission, false, 'microphonePermission is explicitly false — RECORD_AUDIO is blocked, not merely unmentioned');
-    assert.equal(entry[1].photosPermission, false, 'photosPermission is explicitly false — no photo-library-wide permission is requested');
+    assert.equal(entry[1].photosPermission, "Her Keys lets you select a document photo from your library for on-device text recognition. The selected photo stays on this device and is never uploaded.", 'iOS document-photo permission is scoped to local OCR and accurately discloses no upload');
   });
 
   test('no storage-permission suppression was added: this feature records READ/WRITE_EXTERNAL_STORAGE honestly rather than blocking them', () => {
