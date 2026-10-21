@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { toAccountId } from '../domain/account/identity';
 import type { EmailPasswordPort, EmailPasswordResult } from '../domain/account/emailPassword';
+import { isRateLimited } from './emailOtpProvider';
 import { sessionFromSupabase } from './sessionMapping';
 
 /**
@@ -26,6 +27,8 @@ export function createSupabaseEmailPassword(client: SupabaseClient): EmailPasswo
           if (status === 0 || (typeof status === 'number' && status >= 500)) {
             return { kind: 'unreachable', detail };
           }
+          // A 429 is the service's limit, not a wrong password: "check your details" sent her retrying good details (AE2E-D04).
+          if (isRateLimited(response.error)) return { kind: 'rateLimited', detail };
           // Never expose Supabase's message: it may contain an address.
           return { kind: 'rejected', detail };
         }

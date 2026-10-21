@@ -9,7 +9,7 @@ import { emailObviousError } from '../model';
 import { WELCOME_AUTH_COPY as COPY } from '../copy';
 import { EMAIL_AUTH_KEYBOARD_BEHAVIOR } from './EmailEntryView';
 
-export type EmailPasswordNotice = 'confirmationRequired' | 'rejected' | 'unreachable' | 'unavailable' | null;
+export type EmailPasswordNotice = 'confirmationRequired' | 'rejected' | 'rateLimited' | 'unreachable' | 'unavailable' | null;
 
 export interface EmailPasswordViewProps {
   mode: EmailPasswordMode;
@@ -51,6 +51,7 @@ export function EmailPasswordView({ mode, notice, pending, onSubmit, onForgotPas
   const serverNotice = notice === 'confirmationRequired'
     ? COPY.password.confirmationRequired
     : notice === 'unreachable' ? COPY.password.unreachable
+    : notice === 'rateLimited' ? COPY.password.rateLimited
     : notice === 'unavailable' ? COPY.password.unavailable
     : notice === 'rejected' ? COPY.password.rejected : null;
 

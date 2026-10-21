@@ -44,7 +44,7 @@ export interface WelcomeFlowState {
   otpError: OtpErrorKind | null;
   passwordMode: 'signIn' | 'signUp';
   recoveryEmail: string;
-  passwordNotice: 'confirmationRequired' | 'rejected' | 'unreachable' | 'unavailable' | null;
+  passwordNotice: 'confirmationRequired' | 'rejected' | 'rateLimited' | 'unreachable' | 'unavailable' | null;
   /**
    * Which way she came to the account choice. `null` until she picks a Welcome decision, and always `null` on a reconnect.
    * It decides where Back goes, and nothing else.

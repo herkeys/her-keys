@@ -65,6 +65,20 @@ describe('Supabase email/password adapter', () => {
     assert.equal(JSON.stringify(out).includes('horse'), false);
   });
 
+  // AE2E-D04 (Android emulator, Staging): a signup refused with 429 over_email_send_rate_limit was shown as "Check your details".
+  for (const error of [
+    { status: 429, code: 'over_email_send_rate_limit', message: 'email rate limit exceeded' },
+    { status: 429, code: 'over_request_rate_limit', message: 'rowan@example.test' },
+    { status: 429, message: 'Too Many Requests' },
+  ]) {
+    test(`a ${error.code ?? 'bare 429'} signup is reported as the service's rate limit, never as bad details`, async () => {
+      const c = client({ data: { user: null, session: null }, error });
+      const out = await createSupabaseEmailPassword(c).authenticate('signUp', 'rowan@example.test', 'correct horse battery staple');
+      assert.deepEqual(out, { kind: 'rateLimited', detail: error.code ?? 'status_429' });
+      assert.equal(JSON.stringify(out).includes('rowan@example.test'), false);
+    });
+  }
+
   test('timeout/service exceptions are bounded refusals, not sessions', async () => {
     const out = await createSupabaseEmailPassword({
       auth: { signInWithPassword: async () => { throw new Error('secret-token'); } },
