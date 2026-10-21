@@ -1,0 +1,158 @@
+▶ account deletion: real SQL state, privileges, recovery and purge
+  ✔ internal command is denied to authenticated and anon (13.6417ms)
+  ✔ stale auth cannot request deletion (127.374ms)
+  ✔ request records exactly 30 days and queues encrypted recovery (24.6958ms)
+  ✔ duplicate requests preserve deadline and do not queue another email (7.8735ms)
+  ✔ previously issued JWT loses ordinary RLS access and RPC authority (18.2385ms)
+  ✔ worker disabled and dry-run cannot claim (48.3231ms)
+  ✔ enabled worker cannot delete before the deadline (40.7766ms)
+  ✔ replacement recovery invalidates previous token without extending deadline (12.7443ms)
+  ✔ single-use recovery reserves against purge but does not falsely restore (28.3753ms)
+  ✔ new lifecycle after restoration has a new deadline (59.1407ms)
+  ✔ expired requests cannot restore; workers compete through claims (75.8563ms)
+  ✔ wrong fencing token and kill switch refuse destructive work (24.2934ms)
+  ✔ false terminal success is refused (296.5013ms)
+  ✔ expired lease can be reclaimed and old worker loses authority (9.0394ms)
+  ✔ complete database cleanup preserves the other account (972.4356ms)
+  ✔ purged requires Auth absence and independent resource evidence (668.5156ms)
+  ✔ resend rate limit has a bounded window and unknown receipts disclose nothing (13.7992ms)
+✔ account deletion: real SQL state, privileges, recovery and purge (20142.9731ms)
+✔ local terminal cleanup requires matching namespace and verified timestamps (0.9351ms)
+✔ queued local reset cannot erase an account that replaced the expected namespace (72.3553ms)
+✔ namespace change while reset waits for persistence preserves the replacement account (8.8765ms)
+✔ expired or unavailable proof never resets data; explicit local reset is namespace-bound (0.2012ms)
+✔ malformed local proof is a refusal, never evidence of erasure (1.0801ms)
+✔ pending account blocks local mutation and sync without losing recoverable data (4.4158ms)
+✔ recovery proof has 256-bit entropy input, fixed length, no collisions in a sample (25.5317ms)
+✔ outbox encryption authenticates payload and refuses a tampered ciphertext (6.2679ms)
+✔ recovery email has an explicit confirmation link, deadline, plain text and subscription guidance (1.7914ms)
+▶ critical lifecycle negative controls detect unsafe guard mutations
+  ✔ removing the restrictive policy exposes stale-JWT profile access (48.9856ms)
+  ✔ granting command execution to authenticated crosses the worker authority boundary (69.6339ms)
+  ✔ removing expiry eligibility makes an early purge claim possible (126.6831ms)
+  ✔ approved shared policy deletes private records, restricts ambiguous records and preserves the other adult (1611.1327ms)
+✔ critical lifecycle negative controls detect unsafe guard mutations (20526.4258ms)
+✔ OAuth endpoint absence never certifies credential revocation (24.1667ms)
+✔ RevenueCat deletion requires a subsequent authoritative absence check (3.3076ms)
+✔ provider outages and unrelated project configuration cannot become purge proof (1.1323ms)
+✔ Google cleanup revokes the credential without modifying calendar events (0.3264ms)
+✔ Apple credential client-secret uses the approved four Staging/Production secret names (1.1386ms)
+✖ all 50 registered resources: shared and unrelated isolation (20838.29ms)
+✖ all 50 registered resources: former_member and unrelated isolation (8718.4715ms)
+✖ all 50 registered resources: single and unrelated isolation (9250.9803ms)
+✔ terminal proof retention: exact whitelist, expiry refusal, actual deletion and nonterminal preservation (19325.1324ms)
+ℹ tests 41
+ℹ suites 0
+ℹ pass 38
+ℹ fail 3
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 39130.7986
+
+✖ failing tests:
+
+test at tests\accountDeletion\resourceCoverage.test.mjs:77:63
+✖ all 50 registered resources: shared and unrelated isolation (20838.29ms)
+  error: inconsistent types deduced for parameter $1
+      at pe.Ue (file:///C:/Users/jsmit/.codex/worktrees/deletion-crossplatform-closeout/Her%20Keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:17959)
+      at pe.tt (file:///C:/Users/jsmit/.codex/worktrees/deletion-crossplatform-closeout/Her%20Keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:15347)
+      at pe.parse (file:///C:/Users/jsmit/.codex/worktrees/deletion-crossplatform-closeout/Her%20Keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:14021)
+      at D.Ne (file:///C:/Users/jsmit/.codex/worktrees/deletion-crossplatform-closeout/Her%20Keys/node_modules/@electric-sql/pglite/dist/index.js:5:1763)
+      at file:///C:/Users/jsmit/.codex/worktrees/deletion-crossplatform-closeout/Her%20Keys/node_modules/@electric-sql/pglite/dist/index.js:5:1155
+      at wasm://wasm/0269e01e:wasm-function[10979]:0x5ad057
+      at wasm://wasm/0269e01e:wasm-function[3598]:0x281dd2
+      at wasm://wasm/0269e01e:wasm-function[3640]:0x289ccf
+      at wasm://wasm/0269e01e:wasm-function[3650]:0x289f2b
+      at wasm://wasm/0269e01e:wasm-function[9956]:0x556968 {
+    length: 142,
+    severity: 'ERROR',
+    code: '42P08',
+    detail: 'uuid versus text',
+    hint: undefined,
+    position: '105',
+    internalPosition: undefined,
+    internalQuery: undefined,
+    where: undefined,
+    schema: undefined,
+    table: undefined,
+    column: undefined,
+    dataType: undefined,
+    constraint: undefined,
+    file: 'parse_param.c',
+    line: '227',
+    routine: 'variable_coerce_param_hook',
+    query: "insert into public.premium_subscriber_identities(provider_user_id,account_id,kind,status,source) values($1,$1::uuid,'primary','verified','reconcile')",
+    params: [ '11111111-1111-4111-8111-111111111111' ],
+    queryOptions: undefined
+  }
+
+test at tests\accountDeletion\resourceCoverage.test.mjs:77:63
+✖ all 50 registered resources: former_member and unrelated isolation (8718.4715ms)
+  error: inconsistent types deduced for parameter $1
+      at pe.Ue (file:///C:/Users/jsmit/.codex/worktrees/deletion-crossplatform-closeout/Her%20Keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:17959)
+      at pe.tt (file:///C:/Users/jsmit/.codex/worktrees/deletion-crossplatform-closeout/Her%20Keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:15347)
+      at pe.parse (file:///C:/Users/jsmit/.codex/worktrees/deletion-crossplatform-closeout/Her%20Keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:14021)
+      at D.Ne (file:///C:/Users/jsmit/.codex/worktrees/deletion-crossplatform-closeout/Her%20Keys/node_modules/@electric-sql/pglite/dist/index.js:5:1763)
+      at file:///C:/Users/jsmit/.codex/worktrees/deletion-crossplatform-closeout/Her%20Keys/node_modules/@electric-sql/pglite/dist/index.js:5:1155
+      at wasm://wasm/0269e01e:wasm-function[10979]:0x5ad057
+      at wasm://wasm/0269e01e:wasm-function[3598]:0x281dd2
+      at wasm://wasm/0269e01e:wasm-function[3640]:0x289ccf
+      at wasm://wasm/0269e01e:wasm-function[3650]:0x289f2b
+      at wasm://wasm/0269e01e:wasm-function[9956]:0x556968 {
+    length: 142,
+    severity: 'ERROR',
+    code: '42P08',
+    detail: 'uuid versus text',
+    hint: undefined,
+    position: '105',
+    internalPosition: undefined,
+    internalQuery: undefined,
+    where: undefined,
+    schema: undefined,
+    table: undefined,
+    column: undefined,
+    dataType: undefined,
+    constraint: undefined,
+    file: 'parse_param.c',
+    line: '227',
+    routine: 'variable_coerce_param_hook',
+    query: "insert into public.premium_subscriber_identities(provider_user_id,account_id,kind,status,source) values($1,$1::uuid,'primary','verified','reconcile')",
+    params: [ '11111111-1111-4111-8111-111111111111' ],
+    queryOptions: undefined
+  }
+
+test at tests\accountDeletion\resourceCoverage.test.mjs:77:63
+✖ all 50 registered resources: single and unrelated isolation (9250.9803ms)
+  error: inconsistent types deduced for parameter $1
+      at pe.Ue (file:///C:/Users/jsmit/.codex/worktrees/deletion-crossplatform-closeout/Her%20Keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:17959)
+      at pe.tt (file:///C:/Users/jsmit/.codex/worktrees/deletion-crossplatform-closeout/Her%20Keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:15347)
+      at pe.parse (file:///C:/Users/jsmit/.codex/worktrees/deletion-crossplatform-closeout/Her%20Keys/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:14021)
+      at D.Ne (file:///C:/Users/jsmit/.codex/worktrees/deletion-crossplatform-closeout/Her%20Keys/node_modules/@electric-sql/pglite/dist/index.js:5:1763)
+      at file:///C:/Users/jsmit/.codex/worktrees/deletion-crossplatform-closeout/Her%20Keys/node_modules/@electric-sql/pglite/dist/index.js:5:1155
+      at wasm://wasm/0269e01e:wasm-function[10979]:0x5ad057
+      at wasm://wasm/0269e01e:wasm-function[3598]:0x281dd2
+      at wasm://wasm/0269e01e:wasm-function[3640]:0x289ccf
+      at wasm://wasm/0269e01e:wasm-function[3650]:0x289f2b
+      at wasm://wasm/0269e01e:wasm-function[9956]:0x556968 {
+    length: 142,
+    severity: 'ERROR',
+    code: '42P08',
+    detail: 'uuid versus text',
+    hint: undefined,
+    position: '105',
+    internalPosition: undefined,
+    internalQuery: undefined,
+    where: undefined,
+    schema: undefined,
+    table: undefined,
+    column: undefined,
+    dataType: undefined,
+    constraint: undefined,
+    file: 'parse_param.c',
+    line: '227',
+    routine: 'variable_coerce_param_hook',
+    query: "insert into public.premium_subscriber_identities(provider_user_id,account_id,kind,status,source) values($1,$1::uuid,'primary','verified','reconcile')",
+    params: [ '11111111-1111-4111-8111-111111111111' ],
+    queryOptions: undefined
+  }

@@ -1,21 +1,23 @@
 {
-  "phase": "production_database_migrations_applied_remaining_release_checks_open",
+  "phase": "source_repair_verified_release_gates_open_20261019",
   "repositories": {
     "mobile": {
-      "path": "C:/Users/jsmit/.codex/worktrees/account-deletion/Her Keys",
-      "branch": "codex/account-deletion",
-      "entrySha": "ad72ccd5b517a83bde5e7bbf3bf658193a667b82",
-      "sourceSha": "8b59fd99daeb73ee5bde68bfef5b8baac24939f3",
-      "sourceCi": "https://github.com/herkeys/her-keys/actions/runs/38558155165",
-      "sourceCiResult": "success"
+      "path": "C:/Users/jsmit/.codex/worktrees/deletion-crossplatform-closeout/Her Keys",
+      "branch": "repair/account-deletion-crossplatform-closeout-20261019",
+      "entrySha": "c7dca1ec13956e16e03b66ae64346be73829e077",
+      "sourceSha": "6267a299206a4e9e48ca987891e7c971567c1223",
+      "sourceCi": "https://github.com/herkeys/her-keys/actions/runs/39279605347",
+      "sourceCiResult": "QUEUED_AT_DOCUMENT_PREPARATION",
+      "pullRequest": "https://github.com/herkeys/her-keys/pull/39"
     },
     "website": {
-      "path": "C:/Users/jsmit/Her-Keys-Web-Deletion",
-      "branch": "codex/account-deletion",
-      "entrySha": "b8939095f5a1aec9877864635a7cafcfa521d1a2",
-      "sourceSha": "f4e1fab8b651107ee0ab6129dde65f6c6cb4caa2",
-      "sourceCi": "https://github.com/herkeys/her-keys-web/actions/runs/38560081035",
-      "sourceCiResult": "success"
+      "path": "C:/Users/jsmit/.codex/worktrees/deletion-web-closeout",
+      "branch": "repair/account-deletion-web-closeout-20261019",
+      "entrySha": "f4e1fab8b651107ee0ab6129dde65f6c6cb4caa2",
+      "sourceSha": "c751f9e7eb18575ecc86e2bd4ad862349d648324",
+      "sourceCi": "https://github.com/herkeys/her-keys-web/actions/runs/39278472014",
+      "sourceCiResult": "PASS",
+      "pullRequest": "https://github.com/herkeys/her-keys-web/pull/9"
     }
   },
   "staging": {
@@ -26,13 +28,21 @@
     "schedulerActive": false,
     "monitorActive": true,
     "dailyRetentionActive": true,
-    "evidence": "scoped request/restore/provider/storage/shared/manual/terminal/retention failure-recovery certified; complete matrix remains open"
+    "evidence": "Fresh hosted request/recovery/replay/shared/manual/RevenueCat/terminal and provider-ack retry passed. All-resource hosted population, full race/failure/native matrix remain distinct limits.",
+    "sourceSha": "6267a299206a4e9e48ca987891e7c971567c1223",
+    "testScopeOnly": false,
+    "scopedAccounts": 0,
+    "remainingOwnedAuthFixtures": 0,
+    "temporaryFixtureRpc": "DROPPED",
+    "temporaryFixtureEndpoint": "RETIRED_VERSION_3_JWT_REQUIRED_INERT_410",
+    "functionSourceParity": "9/9_MATCH",
+    "historicalMarkedAuthFixturesPreserved": 3
   },
   "production": {
     "project": "npykvnxnehlsdlbumzwk",
-    "mutations": "8 canonical SQL migrations applied",
-    "scheduler": "NOT_INSTALLED",
-    "configuration": "RevenueCat names and project-ID digest verified read-only",
+    "mutations": "NONE_THIS_REPAIR; earlier approved eight lifecycle migrations/deployments are historical",
+    "scheduler": "THREE_EXISTING_JOBS_INSTALLED_INACTIVE",
+    "configuration": "Current secret-name listing denied 403; earlier name/digest verification is historical. No secret values read or rotated.",
     "approvedScopes": [
       "eight canonical lifecycle SQL migrations"
     ],
@@ -41,9 +51,62 @@
     "customerDeletion": "NOT_RUN",
     "destructiveEnabled": false,
     "dryRun": true,
-    "retentionJob": "NOT_INSTALLED"
+    "retentionJob": "INSTALLED_INACTIVE_CONTROL_DISABLED",
+    "activeDestructiveJobs": 0,
+    "newMigrationsApproved": false,
+    "newFunctionDeploymentsApproved": false,
+    "functionSourceParity": "2/9_MATCH; 7 DIFFER",
+    "registeredResources": 43,
+    "approvalManifest": "production-promotion-manifest-20261019.json"
   },
   "tasks": {
+    "originalEight": "PASS",
+    "localFullSuite": "5233/5233_PASS",
+    "resourceClassification": "PASS",
+    "resourceInventory": "PARTIAL_PROCESSOR_RETENTION_AND_STORAGE_LIMITS",
+    "terminalVerification": "PASS",
+    "sharedIsolation": "PASS_INCLUDING_PRIVATE_RECEIPT_ONLY_FORMER_OWNER",
+    "deviceSourceRaces": "PASS",
+    "nativeIos": "NOT_RUN",
+    "nativeAndroid": "NOT_RUN_EMULATOR_BOOT_BLOCKED",
+    "liveAppleGoogle": "NOT_VERIFIED_OWNER_DEFERRED",
+    "liveRevenueCat": "PASS",
+    "webDeployment": "BLOCKED_PLACEHOLDER_AND_RECOVERY_404",
+    "legalPublication": "BLOCKED_OWNER_APPROVAL",
+    "exactHeadCi": "AWAIT_FINAL_HEAD_RUN"
+  },
+  "blockers": [
+    "Public deletion placeholder and recovery 404; source PR #9 is unpublished",
+    "Published legal/support/deletion placeholders and missing precise lifecycle/processor disclosures",
+    "Live Apple/Google revocation remains SKIPPED_OWNER_DECISION",
+    "iOS toolchain absent; Android emulator package-manager/boot never became ready after two starts",
+    "Docker Linux daemon unavailable; fresh embedded PostgreSQL/SQL tests passed",
+    "Full hosted resource/race/failure matrix, vendor log/backup retention and independent external watchdog incomplete",
+    "Final exact-head CI must finish; queued jobs are not PASS"
+  ],
+  "nextSafeAction": "Review both draft PRs and final exact-head checks. Complete native/legal/public-web/provider/operational gates. Obtain separate approval for the exact four Production migrations and seven function bundles; keep processing/schedulers off.",
+  "evidence": [
+    "engineering-closeout-20261019.md",
+    "defect-register-20261019.md",
+    "resource-registry.md",
+    "ios-compliance-report.md",
+    "google-play-compliance-report.md",
+    "staging-certification.md",
+    "production-promotion-manifest-20261019.json",
+    "cross-platform-test-matrix.md",
+    "legal-handoff.md",
+    "evidence/function-parity-final.json",
+    "evidence/full-suite-at-6267a299.txt"
+  ],
+  "deferredTests": {
+    "liveAppleGoogleRevocation": "SKIPPED_OWNER_DECISION; implementation remains fail-closed; no PASS claimed"
+  },
+  "publicSupport": {
+    "email": "herkeysnow@gmail.com",
+    "status": "owner approved; configured in website source; Production website release not performed"
+  },
+  "date": "2026-10-19",
+  "historicalTasks": {
     "T00": "PASS",
     "T01": "PASS",
     "T02": "PASS",
@@ -59,28 +122,5 @@
     "T12": "IN_PROGRESS",
     "T13": "IN_PROGRESS",
     "T14": "BLOCKED"
-  },
-  "blockers": [
-    "Native Expo dev-server command rejected by automatic approval review; iOS xcrun unavailable",
-    "Full hosted resource/adversarial/concurrency matrix incomplete; all 43 resources covered locally",
-    "Independent scheduler watchdog and pg_net advisor review outstanding"
-  ],
-  "nextSafeAction": "Complete remaining hosted checks and independent watchdog. Live Apple/Google tests are deferred by owner decision. Do not deploy Production Edge Functions, install schedulers or activate workers without separate authorization.",
-  "evidence": [
-    "deployment-manifest.json",
-    "staging-certification.md",
-    "retention-policy.md",
-    "revenuecat-certification.md",
-    "production-schema-census.json",
-    "certification-results.txt",
-    "owner-decisions.md",
-    "production-migration-evidence.json"
-  ],
-  "deferredTests": {
-    "liveAppleGoogleRevocation": "SKIPPED_OWNER_DECISION; implementation remains fail-closed; no PASS claimed"
-  },
-  "publicSupport": {
-    "email": "herkeysnow@gmail.com",
-    "status": "owner approved; configured in website source; Production website release not performed"
   }
 }

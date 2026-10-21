@@ -1,0 +1,122 @@
+[
+  {
+    "name": "full-suite-final.txt",
+    "sha256": "44ef7156291aea59acda0c4ece815a0552ddaf1fac4ce67f9c08ae4419e2a6f1",
+    "bytes": 1046189,
+    "disposition": "Local ignored reference only; not published in the engineering PR"
+  },
+  {
+    "name": "full-suite-initial.txt",
+    "sha256": "c3298ea88455f1f82307693585267b96aade60d834f9c1d3817cd68b084f935d",
+    "bytes": 1047003,
+    "disposition": "Local ignored reference only; not published in the engineering PR"
+  },
+  {
+    "name": "full-suite-repaired.txt",
+    "sha256": "d329b8f44baa3204d9032e0758381df387ee092ec242cbd9fa35365011d6efd3",
+    "bytes": 1045051,
+    "disposition": "Local ignored reference only; not published in the engineering PR"
+  },
+  {
+    "name": "full-suite-source-certified.txt",
+    "sha256": "c6d0ee6e5553e9b24ce150522b95ca247283e9affa39460640070d7593b8c755",
+    "bytes": 1045031,
+    "disposition": "Local ignored reference only; not published in the engineering PR"
+  },
+  {
+    "name": "function-sources-final.json",
+    "sha256": "2aac0e05b45445b7cd012691ca1b95138b35ff5fd47631e8d5d0b8fbde8fb3a8",
+    "bytes": 329516,
+    "disposition": "Local ignored reference only; not published in the engineering PR"
+  },
+  {
+    "name": "function-sources-live.json",
+    "sha256": "07976f70abcc36d339cd8d9c1479340a7bdea7527eb8a84226012c7263fd1b06",
+    "bytes": 326791,
+    "disposition": "Local ignored reference only; not published in the engineering PR"
+  },
+  {
+    "name": "public-delete-account.html",
+    "sha256": "4291dc0c013be3ae8b079b444fa1cb8f72adcf44cbd51d18fff1591eee0b5d8d",
+    "bytes": 27724,
+    "disposition": "Local ignored reference only; not published in the engineering PR"
+  },
+  {
+    "name": "public-delete-account.txt",
+    "sha256": "179fd0da3cee7bf84712207455687878783c811e9fd011a0b77cfa8aed8872ca",
+    "bytes": 1561,
+    "disposition": "Local ignored reference only; not published in the engineering PR"
+  },
+  {
+    "name": "public-privacy.html",
+    "sha256": "e079adb83b1b178d0d9b022585203c47ef86abad0e0208a08f526fbcd2f0f90e",
+    "bytes": 51431,
+    "disposition": "Local ignored reference only; not published in the engineering PR"
+  },
+  {
+    "name": "public-privacy.txt",
+    "sha256": "c6d0d465b4d1e1a7dc9023982ef1b58f92d7e5d58fb164262a3e0b55a10dafa0",
+    "bytes": 6004,
+    "disposition": "Local ignored reference only; not published in the engineering PR"
+  },
+  {
+    "name": "public-terms.html",
+    "sha256": "21d87360bb1e50e72010146155980b2b8f214aea9d573e5397288e8b5fa6dfd5",
+    "bytes": 54043,
+    "disposition": "Local ignored reference only; not published in the engineering PR"
+  },
+  {
+    "name": "public-terms.txt",
+    "sha256": "04dbac5f306aa69e5e03633503f4a779dc8372cd2dda1c9cf45b43d2de209544",
+    "bytes": 6425,
+    "disposition": "Local ignored reference only; not published in the engineering PR"
+  },
+  {
+    "name": "published-full-privacy.html",
+    "sha256": "5054aacf6f61e63354207addbfbbc7b961a2b821e9c2c65f3e555bbda482755e",
+    "bytes": 4870,
+    "disposition": "Local ignored reference only; not published in the engineering PR"
+  },
+  {
+    "name": "published-full-privacy.txt",
+    "sha256": "aae1cca3128ce65ea5d8b46efb752e30569661869ca077deb8015f2260a9eb78",
+    "bytes": 617,
+    "disposition": "Local ignored reference only; not published in the engineering PR"
+  },
+  {
+    "name": "published-full-terms.html",
+    "sha256": "8ceeba0b8ad0c883ad92efc44cb50e89f0c907d0256553b65e81115fbac8b15b",
+    "bytes": 4884,
+    "disposition": "Local ignored reference only; not published in the engineering PR"
+  },
+  {
+    "name": "published-full-terms.txt",
+    "sha256": "f4438b6803cca0b0d48369508018e41f6431c826588485d528c1e0bf970991c0",
+    "bytes": 620,
+    "disposition": "Local ignored reference only; not published in the engineering PR"
+  },
+  {
+    "name": "published-privacy-pdf.txt",
+    "sha256": "8f70810fd21879212d4e6487676a2ed3dbe8b4501d7069c5463a883149ece5ad",
+    "bytes": 27444,
+    "disposition": "Local ignored reference only; not published in the engineering PR"
+  },
+  {
+    "name": "published-privacy.pdf",
+    "sha256": "a85786a385857a8e8bb851fa337dc868161ee5cb907c9ad002b8dc1fab222e5a",
+    "bytes": 134822,
+    "disposition": "Local ignored reference only; not published in the engineering PR"
+  },
+  {
+    "name": "published-terms-pdf.txt",
+    "sha256": "3e57acc454abeb42db17e585051ef67a51c761c1d4ace20c64a95f1154093b2d",
+    "bytes": 25786,
+    "disposition": "Local ignored reference only; not published in the engineering PR"
+  },
+  {
+    "name": "published-terms.pdf",
+    "sha256": "649d7ab60be2ea891096870cf9ed290865dfcfca12f29981de1977b8e6ec07c1",
+    "bytes": 125023,
+    "disposition": "Local ignored reference only; not published in the engineering PR"
+  }
+]

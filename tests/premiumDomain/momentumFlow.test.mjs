@@ -164,6 +164,15 @@ describe('MOMF-JOURNEY — generate, authorize, save', () => {
 // ---------------------------------------------------------------------------------------------------- attribution through the ledger
 
 describe('MOMF-ATTRIBUTION — receipts from the shared ledger explain the household’s own records', () => {
+  test('a saturated receipt window cannot publish partial attribution or charge for an incomplete report', async () => {
+    const a = app();
+    a.ledger.rows.push(...Array.from({ length: 200 }, (_, i) => ({ id: `old-${i}`, householdId: HOUSEHOLD, featureKey: 'daily_load_premium', status: 'applied' })));
+    const out = await run(a, ENOUGH());
+    assert.deepEqual(out, { kind: 'unavailable', reason: 'receipts' });
+    assert.equal(a.gateCalls.length, 0);
+    assert.equal(a.ledger.rows.length, 200, 'no new report was saved');
+  });
+
   const dailyLoadRow = (over = {}) => ({
     id: 'dl-1', householdId: HOUSEHOLD, featureKey: 'daily_load_premium', kind: 'daily_load.reschedule_task', status: 'applied', idempotencyKey: 'k1',
     proposalRef: { kind: 'task', id: 't1' }, sourceRef: { kind: 'day', id: '2026-09-28' }, proposalDigest: 'd1', corrected: false,

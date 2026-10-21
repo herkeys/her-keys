@@ -1,6 +1,16 @@
+# 2026-10-19 source repair evidence
+
+Current source checkpoint: `6267a299206a4e9e48ca987891e7c971567c1223`. The complete local suite passed **5,233/5,233**, zero failures/skips/cancellations: `evidence/full-suite-at-6267a299.txt`. The original eight SQL failures are repaired without bypassing classification, ownership, provider or terminal evidence assertions. Current resource coverage populates all 50 registered tables. Deno checks, TypeScript, Expo compatibility and Doctor (21/21) passed. The separate web exact SHA `c751f9e7eb18575ecc86e2bd4ad862349d648324` passed [CI](https://github.com/herkeys/her-keys-web/actions/runs/39278472014).
+
+Mobile exact source CI is [run 39279605347](https://github.com/herkeys/her-keys/actions/runs/39279605347); it was queued during document preparation. A final documentation commit has its own exact-head gate. Only a completed successful run may be reported as PASS. Historical test totals below are not the current candidate total.
+
+Fresh hosted evidence and limits are in `staging-certification.md`, `evidence/function-parity-final.json`, `cross-platform-test-matrix.md` and the closeout report. Docker SQL/PostgREST and native OS journeys were attempted but unavailable; these are not conflated with embedded PostgreSQL/source tests. Production was read-only and destructive processing remains OFF.
+
+## Historical review/evidence (2026-10-14)
+
 # Test evidence
 
-Local Node v24.14.0 and Expo SDK 57. Current source CI uses Node 24. PGlite 0.5.9 runs PostgreSQL 18.6; hosted Staging is PostgreSQL 17.6. Local SQL tests are not substituted for hosted evidence.
+Historical runtime: Node v24.14.0 and Expo SDK 57. Current integration CI uses Node 22; the local 2026-10-19 suite used Node 24. PGlite 0.5.9 runs PostgreSQL 18.6; hosted Staging is PostgreSQL 17.6. Local SQL tests are not substituted for hosted evidence.
 
 Latest full application suite: 4077 PASS, 0 FAIL (full-tests.log), including retention expiry, prior-restored-history removal, restricted shared cases, provider retry and negative/mutation controls. Mobile TypeScript and release identity checks pass. Deno checks pass for the changed worker, retention endpoint and temporary fixture harness. Website production build, TypeScript and ESLint pass. Expo dependency check and Doctor 21/21 previously passed without dependency changes.
 

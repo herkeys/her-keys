@@ -1,0 +1,62 @@
+[
+  {
+    "project": "fhhudicklmpofuzkxeqe",
+    "function": "revenuecat-webhook",
+    "status": 401,
+    "response": "{\"error\":\"unauthorized\"}"
+  },
+  {
+    "project": "fhhudicklmpofuzkxeqe",
+    "function": "premium-ops",
+    "status": 401,
+    "response": "{\"error\":\"unauthorized\"}"
+  },
+  {
+    "project": "fhhudicklmpofuzkxeqe",
+    "function": "premium-gate",
+    "status": 401,
+    "response": "{\"code\":\"UNAUTHORIZED_INVALID_JWT_FORMAT\",\"message\":\"Invalid JWT\"}"
+  },
+  {
+    "project": "fhhudicklmpofuzkxeqe",
+    "function": "premium-reconcile",
+    "status": 401,
+    "response": "{\"code\":\"UNAUTHORIZED_INVALID_JWT_FORMAT\",\"message\":\"Invalid JWT\"}"
+  },
+  {
+    "project": "fhhudicklmpofuzkxeqe",
+    "function": "smart-inbox-extract",
+    "status": 401,
+    "response": "{\"code\":\"UNAUTHORIZED_INVALID_JWT_FORMAT\",\"message\":\"Invalid JWT\"}"
+  },
+  {
+    "project": "npykvnxnehlsdlbumzwk",
+    "function": "revenuecat-webhook",
+    "status": 401,
+    "response": "{\"error\":\"unauthorized\"}"
+  },
+  {
+    "project": "npykvnxnehlsdlbumzwk",
+    "function": "premium-ops",
+    "status": 401,
+    "response": "{\"error\":\"unauthorized\"}"
+  },
+  {
+    "project": "npykvnxnehlsdlbumzwk",
+    "function": "premium-gate",
+    "status": 401,
+    "response": "{\"code\":\"UNAUTHORIZED_INVALID_JWT_FORMAT\",\"message\":\"Invalid JWT\"}"
+  },
+  {
+    "project": "npykvnxnehlsdlbumzwk",
+    "function": "premium-reconcile",
+    "status": 401,
+    "response": "{\"code\":\"UNAUTHORIZED_INVALID_JWT_FORMAT\",\"message\":\"Invalid JWT\"}"
+  },
+  {
+    "project": "npykvnxnehlsdlbumzwk",
+    "function": "smart-inbox-extract",
+    "status": 401,
+    "response": "{\"code\":\"UNAUTHORIZED_INVALID_JWT_FORMAT\",\"message\":\"Invalid JWT\"}"
+  }
+]

@@ -7,6 +7,7 @@ import {
   useEffect,
   useMemo,
   useState,
+  useSyncExternalStore,
   type ReactNode,
 } from 'react';
 import { AppState as NativeAppState, Linking } from 'react-native';
@@ -23,6 +24,7 @@ import {
   type LocalNotificationPermission,
 } from '../platform/localNotifications';
 import { useStoreSnapshot } from './AppStateProvider';
+import {deletionRuntime} from './deletionRuntimeInstance';
 
 const PREFERENCE_KEY = 'herkeys.localNotifications.v1';
 
@@ -44,6 +46,7 @@ const Context = createContext<LocalNotificationValue | null>(null);
 
 export function LocalNotificationProvider({ children }: { children: ReactNode }) {
   const snapshot = useStoreSnapshot();
+  const deletion=useSyncExternalStore(deletionRuntime.subscribe,deletionRuntime.getSnapshot,deletionRuntime.getSnapshot);
   const [preferenceReady, setPreferenceReady] = useState(false);
   const [enabled, setEnabled] = useState(false);
   const [permission, setPermission] = useState<LocalNotificationPermission>('undetermined');
@@ -106,13 +109,14 @@ export function LocalNotificationProvider({ children }: { children: ReactNode })
   useEffect(() => {
     if (!preferenceReady || !snapshot.state || !isSettled(snapshot.status)) return;
     let live = true;
-    void reconcileHerKeysLocalReminder(enabled, permission, nextPlan).catch((cause) => {
+    void reconcileHerKeysLocalReminder(enabled&&deletion.kind==='active', permission, nextPlan).catch((cause) => {
       if (live) setError(describe(cause));
     });
     return () => {
       live = false;
     };
   }, [
+    deletion.kind,
     preferenceReady,
     snapshot.state,
     snapshot.status,

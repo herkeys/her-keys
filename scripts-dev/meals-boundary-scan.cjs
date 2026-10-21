@@ -1144,11 +1144,31 @@ const LATER_FEATURES = [
     ,"supabase/migrations/20261014021410_account_deletion_shared_provider_retry.sql"
     ,"supabase/migrations/20261014112400_account_deletion_orphan_shared_ownership.sql"
     ,"supabase/migrations/20261014113517_account_deletion_household_lock.sql"
+    ,"supabase/migrations/20261019144729_account_deletion_v2_resource_certification.sql"
+    ,"supabase/migrations/20261019151501_account_deletion_optional_welcome_inventory.sql"
+    ,"supabase/migrations/20261019152629_account_deletion_overdue_request_monitor.sql"
+    ,"supabase/migrations/20261019153801_account_deletion_private_household_owners.sql"
   ],
   "schemas": [],
   "rootCollections": [],
   "syncKinds": [],
   "shared": [['supabase/blueprints/staging-deletion-fixture.ts', 'Temporary HMAC-authenticated Staging fixture harness; forbidden in Production.'],
+    ['supabase/migrations/20261019144729_account_deletion_v2_resource_certification.sql', 'Deletion V2: explicit Premium/private schema census, independent terminal recount and synthetic-only scoped testing; no Premium computation gate or Meals mutation.'],
+    ['supabase/migrations/20261019151501_account_deletion_optional_welcome_inventory.sql', 'Deletion V2: welcome receipt ledger is intentionally Production-only; classify its absent Staging variant without skipping any required resource.'],
+    ['supabase/migrations/20261019152629_account_deletion_overdue_request_monitor.sql', 'Deletion V2: monitor overdue requests even while the destructive switch is off; no scheduler activation.'],
+    ['supabase/migrations/20261019153801_account_deletion_private_household_owners.sql', 'Deletion V2: retain another former adult private receipt when it is the only surviving evidence of household ownership.'],
+    ['supabase/blueprints/staging-deletion-v2-certification.sql', 'Temporary Staging-only service RPC validates owned fixtures and limits destructive tests to an expiring allowlist; removed after use.'],
+    ['supabase/blueprints/staging-deletion-v2-certification.ts', 'Temporary HMAC Staging fixture journey exercises deployed deletion endpoints with synthetic accounts; retired after use.'],
+    ['tests/accountRuntime.test.mjs', 'Deletion V2: delayed actor-scoped sign-out preserves a replacement authentication attempt and credential.'],
+    ['src/domain/account/deletionRuntime.ts', 'Deletion V2: injectable runtime with account-switch fencing at asynchronous boundaries.'],
+    ['src/domain/account/accountRuntime.ts', 'Deletion V2: optional expected-account sign-out refuses ending a replacement identity.'],
+    ['src/platform/secureStore.ts', 'Deletion V2: serialize shared native key operations across adapter instances to preserve replacement credentials.'],
+    ['src/platform/localNotifications.ts', 'Deletion V2: serialize reminder scheduling/cancellation so pending account reminders cannot reappear after cancellation.'],
+    ['src/store/LocalNotificationProvider.tsx', 'Deletion V2: cancel reminders while deletion restricts account access.'],
+    ['tests/premiumFeedback.test.mjs', 'Deletion V2: classify the exact cleanup-only migration and assert it never gates deletion on entitlement.'],
+    ['.github/workflows/v2-integration-validation.yml', 'Deletion V2: run the unchanged full integration gate on the isolated repair branch exact SHA.'],
+    ['scripts-dev/deletion-watchdog.mjs', 'Deletion Phase 2 (DEL-P2-005): independent external watchdog for the deletion monitor; reads aggregate health only.'],
+    ['.github/workflows/account-deletion-watchdog.yml', 'Deletion Phase 2 (DEL-P2-005): scheduled external watchdog, inert until the owner enables it and adds the worker-key secret.'],
     ['supabase/migrations/20261014012518_account_deletion_auth_reconciliation.sql', 'Additive session-revocation reconciliation verified against hosted Auth behavior.'],
     ['supabase/migrations/20261014014020_account_deletion_terminal_identity.sql', 'Preserve receipt-to-namespace proof and reject deleted Auth identities.'],
     ['supabase/migrations/20261014014620_account_deletion_proof_retention.sql', 'Apply owner-approved 365-day minimal terminal proof and daily expiry.'],
@@ -1754,6 +1774,32 @@ const LATER_FEATURES = [
       ['tests/migrationChain.test.mjs', 'Pin the new reviewed migration in the exact append-only chain without weakening governance assertions'],
       ['.gitattributes', 'Pin the new reviewer migration to LF'],
       ['scripts-dev/meals-boundary-scan.cjs', 'Register only the assigned reporting review workflow and production certification evidence'],
+    ],
+  },
+  {
+    id: 'HK-V2-SHARED-DEFECT-CLOSEOUT-20261019 (account-scoped Premium transport and reporting races)',
+    branch: null,
+    owned: [
+      /^src\/monetization\/premiumRequestOwner\.ts$/,
+      /^tests\/premium\/transportAccountBoundary\.test\.mjs$/,
+      /^docs\/integration\/HK_V2_(?:SHARED_REPAIR_CLOSEOUT|SHARED_DEFECT_LEDGER|REMAINING_HANDOFF|INTEGRATION_MANIFEST)_20261019\.md$/,
+      /^docs\/integration\/evidence\/shared-closeout-20261019\/[a-z0-9-]+\.(?:json|txt)$/,
+    ],
+    migrations: [], schemas: [], rootCollections: [], syncKinds: [],
+    shared: [
+      ['src/monetization/PremiumStateProvider.tsx', 'Capture the provider account lifetime in actual server and ledger transports; readiness and server entitlement guards remain unchanged'],
+      ['src/monetization/premiumTypes.ts', 'Expose an optional account-scoped transport factory; no entitlement business-rule changes'],
+      ['src/monetization/premiumServerClient.ts', 'Proven SDK JWT substitution: verify the originating session and pin Authorization on Premium RPC and Edge calls'],
+      ['src/monetization/premiumLedgerClient.ts', 'Apply originating-session fence and pinned JWT to receipts; honor Momentum requested 200-row evidence window instead of silently clamping to 100'],
+      ['src/features/momentum/premium/momentumFlow.ts', 'Refuse a saturated receipt window before computing or charging for partial attribution'],
+      ['tests/premiumDomain/momentumFlow.test.mjs', 'Prove saturated receipt windows cannot publish partial counts or consume authorization'],
+      ['src/features/ai-safety/AiReportPanel.tsx', 'Proven same-frame duplicate and pre-submission account-switch races: synchronous single-flight and originating binding fence'],
+      ['tests/premiumHome/home.test.mjs', 'Repair missing positive readiness fixture and add fail-closed purchase negative controls without enabling checkout'],
+      ['tests/premium/clientProvider.test.mjs', 'Verify real provider forwards the originating lifetime and invalidates old server/ledger owners'],
+      ['tests/premiumCheckoutSwitch.test.mjs', 'Keep paid-readiness source assertions while checking the actor-pinned RPC helper and installed-SDK runtime regressions'],
+      ['tests/aiReportPanelRuntime.test.mjs', 'Reproduce and protect duplicate submission, stale account, error retry and rate-limit feedback'],
+      ['.github/workflows/v2-integration-validation.yml', 'Run existing mandatory validation on exact repair branch pushes; no deployment or native build'],
+      ['scripts-dev/meals-boundary-scan.cjs', 'Register only exact shared repair paths and dated evidence; all boundary assertions remain enforced'],
     ],
   },
 

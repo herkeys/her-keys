@@ -1,0 +1,33 @@
+▶ account deletion: real SQL state, privileges, recovery and purge
+  ✔ internal command is denied to authenticated and anon (7.0423ms)
+  ✔ stale auth cannot request deletion (98.8723ms)
+  ✔ request records exactly 30 days and queues encrypted recovery (16.1914ms)
+  ✔ duplicate requests preserve deadline and do not queue another email (3.2174ms)
+  ✔ previously issued JWT loses ordinary RLS access and RPC authority (11.4726ms)
+  ✔ worker disabled and dry-run cannot claim (3.4543ms)
+  ✔ enabled worker cannot delete before the deadline (4.3578ms)
+  ✔ replacement recovery invalidates previous token without extending deadline (4.1851ms)
+  ✔ single-use recovery reserves against purge but does not falsely restore (87.7875ms)
+  ✔ new lifecycle after restoration has a new deadline (7.3636ms)
+  ✔ expired requests cannot restore; workers compete through claims (10.2403ms)
+  ✔ wrong fencing token and kill switch refuse destructive work (13.0158ms)
+  ✔ false terminal success is refused (13.2828ms)
+  ✔ expired lease can be reclaimed and old worker loses authority (4.0184ms)
+  ✔ complete database cleanup preserves the other account (281.6752ms)
+  ✔ purged requires Auth absence and independent resource evidence (320.2316ms)
+  ✔ resend rate limit has a bounded window and unknown receipts disclose nothing (15.1837ms)
+✔ account deletion: real SQL state, privileges, recovery and purge (6147.7271ms)
+▶ critical lifecycle negative controls detect unsafe guard mutations
+  ✔ removing the restrictive policy exposes stale-JWT profile access (70.9331ms)
+  ✔ granting command execution to authenticated crosses the worker authority boundary (24.6193ms)
+  ✔ removing expiry eligibility makes an early purge claim possible (21.6324ms)
+  ✔ approved shared policy deletes private records, restricts ambiguous records and preserves the other adult (657.9044ms)
+✔ critical lifecycle negative controls detect unsafe guard mutations (6324.7126ms)
+ℹ tests 23
+ℹ suites 0
+ℹ pass 23
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 6919.2985

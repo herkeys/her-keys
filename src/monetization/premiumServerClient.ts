@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
+import { premiumRpc, premiumInvoke, type PremiumRequestOwner } from './premiumRequestOwner';
 import {
   AUTHORIZATION_REASONS,
   EXTRACT_AMBIGUITIES,
@@ -128,13 +129,14 @@ async function bodyOf(data: unknown, error: unknown): Promise<unknown> {
 
 const PurchaseReadinessSchema = z.object({ ready: z.boolean(), reason: z.string().max(48) });
 
-export function createPremiumServerClient(client: SupabaseClient): PremiumServerClient {
+export function createPremiumServerClient(client: SupabaseClient, owner?: PremiumRequestOwner): PremiumServerClient {
   return {
+    forAccount: (scope) => createPremiumServerClient(client, scope),
     async purchaseReadiness() {
       let deadline: ReturnType<typeof setTimeout> | null = null;
       try {
         const answer = await Promise.race([
-          client.rpc('premium_purchase_readiness'),
+          premiumRpc(client, owner, 'premium_purchase_readiness'),
           new Promise<{ data: null; error: Error }>((resolve) => {
             deadline = setTimeout(() => resolve({ data: null, error: new Error('purchase_readiness_timeout') }), 8000);
           }),
@@ -150,7 +152,7 @@ export function createPremiumServerClient(client: SupabaseClient): PremiumServer
     },
     async entitlement() {
       try {
-        const { data, error } = await client.rpc('premium_my_entitlement');
+        const { data, error } = await premiumRpc(client, owner, 'premium_my_entitlement');
         if (error) return { kind: 'unavailable' };
         const parsed = EntitlementSchema.safeParse(data);
         if (!parsed.success) return { kind: 'unavailable' };
@@ -170,7 +172,7 @@ export function createPremiumServerClient(client: SupabaseClient): PremiumServer
 
     async manifest() {
       try {
-        const { data, error } = await client.rpc('premium_feature_manifest');
+        const { data, error } = await premiumRpc(client, owner, 'premium_feature_manifest');
         if (error) return { kind: 'unavailable' };
         const parsed = ManifestSchema.safeParse(data);
         if (!parsed.success) return { kind: 'unavailable' };
@@ -183,7 +185,7 @@ export function createPremiumServerClient(client: SupabaseClient): PremiumServer
 
     async verify() {
       try {
-        const { data, error } = await client.functions.invoke('premium-reconcile', { body: {} });
+        const { data, error } = await premiumInvoke(client, owner, 'premium-reconcile', {});
         // A 503 still carries a typed status ("provider_unavailable"): it is an answer, not a transport failure.
         if (error && httpStatus(error) !== 503) return { kind: 'unavailable' };
         const parsed = VerifySchema.safeParse(await bodyOf(data, error));
@@ -196,7 +198,7 @@ export function createPremiumServerClient(client: SupabaseClient): PremiumServer
 
     async authorize(request: GateRequest): Promise<GateResult> {
       try {
-        const { data, error } = await client.functions.invoke('premium-gate', { body: request });
+        const { data, error } = await premiumInvoke(client, owner, 'premium-gate', request);
         const status = httpStatus(error);
         // 400 = the server judged the REQUEST malformed. Distinct from "could not reach it".
         if (error && status === 400) return { kind: 'invalid' };
@@ -224,7 +226,7 @@ export function createPremiumServerClient(client: SupabaseClient): PremiumServer
 
     async extract(request: ExtractRequest): Promise<ExtractResult> {
       try {
-        const { data, error } = await client.functions.invoke('smart-inbox-extract', { body: request });
+        const { data, error } = await premiumInvoke(client, owner, 'smart-inbox-extract', request);
         const status = httpStatus(error);
         // Only 2xx and the server's own typed 400/502/503 are ANSWERS; anything else (401, 500, a gateway page) is "could not reach it".
         if (error && status !== 400 && status !== 502 && status !== 503) return { kind: 'unavailable', reason: 'transport' };

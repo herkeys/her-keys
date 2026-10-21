@@ -1,0 +1,600 @@
+{
+  "observedDate": "2026-10-19",
+  "method": "Read-only Supabase management queries and RevenueCat catalog readback; no hosted mutation or synthetic paid event.",
+  "projects": {
+    "fhhudicklmpofuzkxeqe": {
+      "readback": [
+        {
+          "section": "runtime",
+          "value": {
+            "singleton": true,
+            "updated_at": "2026-10-16T02:39:20.553555+00:00",
+            "environment": "staging",
+            "premium_enabled": true,
+            "checkout_enabled": false,
+            "ai_policy_version": "ai-data-processing-initial-v1",
+            "webhook_processing": true,
+            "allow_test_fixtures": false,
+            "max_reconciled_age_seconds": 86400,
+            "reconcile_min_interval_seconds": 20
+          }
+        },
+        {
+          "section": "features",
+          "value": [
+            {
+              "tier": "premium",
+              "scope": "household",
+              "enabled": false,
+              "released": false,
+              "updated_at": "2026-10-14T17:56:42.25187+00:00",
+              "cost_weight": 1,
+              "feature_key": "village_delegation",
+              "kill_switch": false,
+              "display_name": "The Village",
+              "limit_status": "controlled_test",
+              "quota_period": "month",
+              "premium_limit": 0,
+              "free_allowance": 0,
+              "rollout_status": "not_released",
+              "min_app_version": null,
+              "manifest_version": 1,
+              "requires_ai_consent": false,
+              "free_allowance_status": "none",
+              "global_daily_cost_cap": null,
+              "max_units_per_request": 1,
+              "rate_limit_per_minute": 6
+            },
+            {
+              "tier": "premium",
+              "scope": "household",
+              "enabled": false,
+              "released": false,
+              "updated_at": "2026-10-14T17:56:42.25187+00:00",
+              "cost_weight": 1,
+              "feature_key": "coparent_plus",
+              "kill_switch": false,
+              "display_name": "Co-Parent Plus",
+              "limit_status": "controlled_test",
+              "quota_period": "month",
+              "premium_limit": 0,
+              "free_allowance": 0,
+              "rollout_status": "not_released",
+              "min_app_version": null,
+              "manifest_version": 1,
+              "requires_ai_consent": false,
+              "free_allowance_status": "none",
+              "global_daily_cost_cap": null,
+              "max_units_per_request": 1,
+              "rate_limit_per_minute": 6
+            },
+            {
+              "tier": "free",
+              "scope": "account",
+              "enabled": true,
+              "released": true,
+              "updated_at": "2026-10-14T17:56:42.25187+00:00",
+              "cost_weight": 1,
+              "feature_key": "talk_it_out",
+              "kill_switch": false,
+              "display_name": "Talk It Out",
+              "limit_status": "controlled_test",
+              "quota_period": "none",
+              "premium_limit": null,
+              "free_allowance": 0,
+              "rollout_status": "general",
+              "min_app_version": null,
+              "manifest_version": 1,
+              "requires_ai_consent": false,
+              "free_allowance_status": "none",
+              "global_daily_cost_cap": null,
+              "max_units_per_request": 1,
+              "rate_limit_per_minute": 60
+            },
+            {
+              "tier": "premium",
+              "scope": "household",
+              "enabled": true,
+              "released": true,
+              "updated_at": "2026-10-16T00:41:50.429849+00:00",
+              "cost_weight": 1,
+              "feature_key": "daily_load_premium",
+              "kill_switch": false,
+              "display_name": "Daily Load — overload review",
+              "limit_status": "controlled_test",
+              "quota_period": "day",
+              "premium_limit": 60,
+              "free_allowance": 0,
+              "rollout_status": "staging_only",
+              "min_app_version": null,
+              "manifest_version": 2,
+              "requires_ai_consent": false,
+              "free_allowance_status": "none",
+              "global_daily_cost_cap": null,
+              "max_units_per_request": 1,
+              "rate_limit_per_minute": 20
+            },
+            {
+              "tier": "premium",
+              "scope": "household",
+              "enabled": true,
+              "released": true,
+              "updated_at": "2026-10-16T00:41:50.429849+00:00",
+              "cost_weight": 5,
+              "feature_key": "smart_inbox_extract",
+              "kill_switch": false,
+              "display_name": "Smart Inbox",
+              "limit_status": "controlled_test",
+              "quota_period": "month",
+              "premium_limit": 150,
+              "free_allowance": 0,
+              "rollout_status": "staging_only",
+              "min_app_version": null,
+              "manifest_version": 2,
+              "requires_ai_consent": true,
+              "free_allowance_status": "proposed_not_approved",
+              "global_daily_cost_cap": 5000,
+              "max_units_per_request": 1,
+              "rate_limit_per_minute": 10
+            },
+            {
+              "tier": "premium",
+              "scope": "household",
+              "enabled": true,
+              "released": true,
+              "updated_at": "2026-10-16T00:41:50.429849+00:00",
+              "cost_weight": 2,
+              "feature_key": "momentum_report",
+              "kill_switch": false,
+              "display_name": "Momentum weekly review",
+              "limit_status": "controlled_test",
+              "quota_period": "month",
+              "premium_limit": 31,
+              "free_allowance": 0,
+              "rollout_status": "staging_only",
+              "min_app_version": null,
+              "manifest_version": 2,
+              "requires_ai_consent": false,
+              "free_allowance_status": "none",
+              "global_daily_cost_cap": null,
+              "max_units_per_request": 1,
+              "rate_limit_per_minute": 6
+            }
+          ]
+        },
+        {
+          "section": "reports",
+          "value": {
+            "total": 6,
+            "pending": 5
+          }
+        },
+        {
+          "section": "reviewers",
+          "value": {
+            "configured_count": 0
+          }
+        },
+        {
+          "section": "cron",
+          "value": [
+            {
+              "active": true,
+              "jobname": "herkeys_ai_report_expiry",
+              "schedule": "19 3 * * *"
+            }
+          ]
+        },
+        {
+          "section": "events",
+          "value": [
+            {
+              "total": 2,
+              "status": "ignored_test",
+              "environment": "SANDBOX"
+            }
+          ]
+        }
+      ],
+      "privilegesAndMigrations": [
+        {
+          "section": "privileges",
+          "value": {
+            "rls_forced": true,
+            "anon_submit": false,
+            "rls_enabled": true,
+            "anon_readiness": false,
+            "authenticated_submit": true,
+            "authenticated_report_table_select": false
+          }
+        },
+        {
+          "section": "recent_migrations",
+          "value": [
+            {
+              "name": "ai_response_reporting_20261017",
+              "version": "20261017214221"
+            },
+            {
+              "name": "ai_report_review_workflow_20261017",
+              "version": "20261017222919"
+            }
+          ]
+        }
+      ],
+      "functions": [
+        {
+          "slug": "herkeys-ai",
+          "status": "ACTIVE",
+          "version": 20,
+          "verify_jwt": true,
+          "ezbr_sha256": "6dc2998dd2b86faf54786aa9499ce8944c6fde47b87b64d560308a8877a30733"
+        },
+        {
+          "slug": "premium-gate",
+          "status": "ACTIVE",
+          "version": 6,
+          "verify_jwt": true,
+          "ezbr_sha256": "366307e1be3369f38031d3f29bd835a89568e703d272101021189b9202264bab"
+        },
+        {
+          "slug": "premium-reconcile",
+          "status": "ACTIVE",
+          "version": 6,
+          "verify_jwt": true,
+          "ezbr_sha256": "c115d42e4fb4d91ed52696153d3f0466bd0f0790ccaacd5657b104a2ffd07cab"
+        },
+        {
+          "slug": "smart-inbox-extract",
+          "status": "ACTIVE",
+          "version": 6,
+          "verify_jwt": true,
+          "ezbr_sha256": "52f7187bf041051d088c694c09145e41d3947920fefe4660075e725992e976e8"
+        },
+        {
+          "slug": "revenuecat-webhook",
+          "status": "ACTIVE",
+          "version": 7,
+          "verify_jwt": false,
+          "ezbr_sha256": "88e1c2283dc4e58a58c1730a74c8377b20fd394a71d994f392c4a94d3a82d49c"
+        },
+        {
+          "slug": "premium-ops",
+          "status": "ACTIVE",
+          "version": 7,
+          "verify_jwt": false,
+          "ezbr_sha256": "9374b81f67b4987cc666bdc2b2f019d0d5d0f4e49105479df2371131661d82c4"
+        }
+      ]
+    },
+    "npykvnxnehlsdlbumzwk": {
+      "readback": [
+        {
+          "section": "runtime",
+          "value": {
+            "singleton": true,
+            "updated_at": "2026-10-16T02:37:05.782922+00:00",
+            "environment": "production",
+            "premium_enabled": true,
+            "checkout_enabled": false,
+            "ai_policy_version": "ai-data-processing-initial-v1",
+            "webhook_processing": true,
+            "allow_test_fixtures": false,
+            "max_reconciled_age_seconds": 86400,
+            "reconcile_min_interval_seconds": 20
+          }
+        },
+        {
+          "section": "features",
+          "value": [
+            {
+              "tier": "premium",
+              "scope": "household",
+              "enabled": false,
+              "released": false,
+              "updated_at": "2026-10-14T17:57:09.306266+00:00",
+              "cost_weight": 1,
+              "feature_key": "village_delegation",
+              "kill_switch": false,
+              "display_name": "The Village",
+              "limit_status": "controlled_test",
+              "quota_period": "month",
+              "premium_limit": 0,
+              "free_allowance": 0,
+              "rollout_status": "not_released",
+              "min_app_version": null,
+              "manifest_version": 1,
+              "requires_ai_consent": false,
+              "free_allowance_status": "none",
+              "global_daily_cost_cap": null,
+              "max_units_per_request": 1,
+              "rate_limit_per_minute": 6
+            },
+            {
+              "tier": "premium",
+              "scope": "household",
+              "enabled": false,
+              "released": false,
+              "updated_at": "2026-10-14T17:57:09.306266+00:00",
+              "cost_weight": 1,
+              "feature_key": "coparent_plus",
+              "kill_switch": false,
+              "display_name": "Co-Parent Plus",
+              "limit_status": "controlled_test",
+              "quota_period": "month",
+              "premium_limit": 0,
+              "free_allowance": 0,
+              "rollout_status": "not_released",
+              "min_app_version": null,
+              "manifest_version": 1,
+              "requires_ai_consent": false,
+              "free_allowance_status": "none",
+              "global_daily_cost_cap": null,
+              "max_units_per_request": 1,
+              "rate_limit_per_minute": 6
+            },
+            {
+              "tier": "free",
+              "scope": "account",
+              "enabled": true,
+              "released": true,
+              "updated_at": "2026-10-14T17:57:09.306266+00:00",
+              "cost_weight": 1,
+              "feature_key": "talk_it_out",
+              "kill_switch": false,
+              "display_name": "Talk It Out",
+              "limit_status": "controlled_test",
+              "quota_period": "none",
+              "premium_limit": null,
+              "free_allowance": 0,
+              "rollout_status": "general",
+              "min_app_version": null,
+              "manifest_version": 1,
+              "requires_ai_consent": false,
+              "free_allowance_status": "none",
+              "global_daily_cost_cap": null,
+              "max_units_per_request": 1,
+              "rate_limit_per_minute": 60
+            },
+            {
+              "tier": "premium",
+              "scope": "household",
+              "enabled": true,
+              "released": true,
+              "updated_at": "2026-10-16T02:37:05.782922+00:00",
+              "cost_weight": 1,
+              "feature_key": "daily_load_premium",
+              "kill_switch": false,
+              "display_name": "Daily Load — overload review",
+              "limit_status": "owner_approved",
+              "quota_period": "day",
+              "premium_limit": 60,
+              "free_allowance": 0,
+              "rollout_status": "general",
+              "min_app_version": null,
+              "manifest_version": 2,
+              "requires_ai_consent": false,
+              "free_allowance_status": "none",
+              "global_daily_cost_cap": null,
+              "max_units_per_request": 1,
+              "rate_limit_per_minute": 20
+            },
+            {
+              "tier": "premium",
+              "scope": "household",
+              "enabled": true,
+              "released": true,
+              "updated_at": "2026-10-16T02:37:05.782922+00:00",
+              "cost_weight": 5,
+              "feature_key": "smart_inbox_extract",
+              "kill_switch": false,
+              "display_name": "Smart Inbox",
+              "limit_status": "owner_approved",
+              "quota_period": "month",
+              "premium_limit": 150,
+              "free_allowance": 0,
+              "rollout_status": "general",
+              "min_app_version": null,
+              "manifest_version": 2,
+              "requires_ai_consent": true,
+              "free_allowance_status": "proposed_not_approved",
+              "global_daily_cost_cap": 5000,
+              "max_units_per_request": 1,
+              "rate_limit_per_minute": 10
+            },
+            {
+              "tier": "premium",
+              "scope": "household",
+              "enabled": true,
+              "released": true,
+              "updated_at": "2026-10-16T02:37:05.782922+00:00",
+              "cost_weight": 2,
+              "feature_key": "momentum_report",
+              "kill_switch": false,
+              "display_name": "Momentum weekly review",
+              "limit_status": "owner_approved",
+              "quota_period": "month",
+              "premium_limit": 31,
+              "free_allowance": 0,
+              "rollout_status": "general",
+              "min_app_version": null,
+              "manifest_version": 2,
+              "requires_ai_consent": false,
+              "free_allowance_status": "none",
+              "global_daily_cost_cap": null,
+              "max_units_per_request": 1,
+              "rate_limit_per_minute": 6
+            }
+          ]
+        },
+        {
+          "section": "reports",
+          "value": {
+            "total": 0,
+            "pending": 0
+          }
+        },
+        {
+          "section": "reviewers",
+          "value": {
+            "configured_count": 0
+          }
+        },
+        {
+          "section": "cron",
+          "value": [
+            {
+              "active": true,
+              "jobname": "herkeys_ai_report_expiry",
+              "schedule": "19 3 * * *"
+            }
+          ]
+        },
+        {
+          "section": "events",
+          "value": [
+            {
+              "total": 1,
+              "status": "ignored_environment",
+              "environment": "SANDBOX"
+            }
+          ]
+        }
+      ],
+      "privilegesAndMigrations": [
+        {
+          "section": "privileges",
+          "value": {
+            "rls_forced": true,
+            "anon_submit": false,
+            "rls_enabled": true,
+            "anon_readiness": false,
+            "authenticated_submit": true,
+            "authenticated_report_table_select": false
+          }
+        },
+        {
+          "section": "recent_migrations",
+          "value": [
+            {
+              "name": "premium_purchase_readiness_production_20261016",
+              "version": "20261016023521"
+            },
+            {
+              "name": "premium_checkout_independent_activation_20261016",
+              "version": "20261016023535"
+            },
+            {
+              "name": "ai_response_reporting_20261017",
+              "version": "20261018231626"
+            },
+            {
+              "name": "ai_report_review_workflow_20261017",
+              "version": "20261018231630"
+            }
+          ]
+        }
+      ],
+      "functions": [
+        {
+          "slug": "herkeys-ai",
+          "status": "ACTIVE",
+          "version": 12,
+          "verify_jwt": true,
+          "ezbr_sha256": "6dc2998dd2b86faf54786aa9499ce8944c6fde47b87b64d560308a8877a30733"
+        },
+        {
+          "slug": "premium-gate",
+          "status": "ACTIVE",
+          "version": 5,
+          "verify_jwt": true,
+          "ezbr_sha256": "366307e1be3369f38031d3f29bd835a89568e703d272101021189b9202264bab"
+        },
+        {
+          "slug": "premium-reconcile",
+          "status": "ACTIVE",
+          "version": 5,
+          "verify_jwt": true,
+          "ezbr_sha256": "c115d42e4fb4d91ed52696153d3f0466bd0f0790ccaacd5657b104a2ffd07cab"
+        },
+        {
+          "slug": "smart-inbox-extract",
+          "status": "ACTIVE",
+          "version": 5,
+          "verify_jwt": true,
+          "ezbr_sha256": "52f7187bf041051d088c694c09145e41d3947920fefe4660075e725992e976e8"
+        },
+        {
+          "slug": "revenuecat-webhook",
+          "status": "ACTIVE",
+          "version": 5,
+          "verify_jwt": false,
+          "ezbr_sha256": "0261ac7e7b20dfe54c08ec6fc1e5792ebe9ab305771af379d487d5dabb5fd694"
+        },
+        {
+          "slug": "premium-ops",
+          "status": "ACTIVE",
+          "version": 5,
+          "verify_jwt": false,
+          "ezbr_sha256": "65a8829ac70012f1b515a5d7965e65edb018fcc2a6f63cba11ed9f30e2760557"
+        }
+      ]
+    }
+  },
+  "revenuecat": {
+    "projectId": "proj93809efe",
+    "ios": {
+      "appId": "app55f51de583",
+      "bundleId": "com.herkeys.app",
+      "appStoreConnectApiKeyConfigured": false,
+      "subscriptionKeyConfigured": true,
+      "registeredProducts": 0
+    },
+    "android": {
+      "appId": "app3311d4868e",
+      "packageName": "com.heykeys.app",
+      "playServiceCredentialsConfigured": true,
+      "registeredProducts": 0
+    },
+    "testStore": {
+      "appId": "app3bba22bc6a",
+      "products": [
+        {
+          "id": "prod610eb92af6",
+          "identifier": "monthly"
+        },
+        {
+          "id": "prod4834df1fd3",
+          "identifier": "yearly"
+        },
+        {
+          "id": "prod192993ad34",
+          "identifier": "lifetime"
+        }
+      ]
+    },
+    "offering": {
+      "id": "ofrng40c3008072",
+      "identifier": "default",
+      "current": true,
+      "paywallId": "pw9aa8edf9bdb34338",
+      "packages": [
+        {
+          "id": "pkgefa04de4299",
+          "identifier": "$rc_monthly",
+          "productId": "prod610eb92af6"
+        },
+        {
+          "id": "pkgee00df65b84",
+          "identifier": "$rc_annual",
+          "productId": "prod4834df1fd3"
+        },
+        {
+          "id": "pkge40d8807508",
+          "identifier": "$rc_lifetime",
+          "productId": "prod192993ad34"
+        }
+      ]
+    }
+  }
+}

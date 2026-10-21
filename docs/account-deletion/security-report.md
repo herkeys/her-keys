@@ -1,3 +1,13 @@
+# Current security review — 2026-10-19
+
+Source checkpoint `6267a299` adds exact public/private classification, independent terminal recounts, active-account guards on new V2 resources, scoped Staging processing, provider acknowledgement recovery and account-generation fencing. The full local suite passed 5,233/5,233; hosted results and outstanding adversarial/native/provider gates are in `staging-certification.md` and `cross-platform-test-matrix.md`. The prior review below is historical, not the current source/deployment certification.
+
+Fresh security advisors reported no ERROR findings in either project. Staging/Production respectively reported 26/25 [RLS-without-policy informational findings](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy), intentional for service-only lifecycle/private tables with client access denied. Each reported one [pg_net extension-in-public warning](https://supabase.com/docs/guides/database/database-linter?lint=0014_extension_in_public), eleven [authenticated SECURITY DEFINER warnings](https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable), and one [disabled leaked-password protection warning](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection). Evidence: `evidence/staging-advisors.json` and `evidence/production-advisors.json`. These are pre-existing platform/application review items, not an all-clear. The RPCs retain explicit actor/ownership checks; this repair adds deactivated-actor guards to the changed decision/report contracts. No broad EXECUTE grants, policy relaxation, extension reinstall or unrelated Auth setting change was made.
+
+Production remained read-only, off/dry-run with all three installed deletion cron jobs inactive. Staging was returned off/dry-run with an empty scope allowlist and no owned fixture Auth users; three historical 2026-10-14 marked users were observed and preserved. Temporary helper RPC is absent and endpoint retired. Secret-name listing returned 403; provider configuration and external log/backup retention remain unverified. No credentials or public legal-document copies are included in the evidence package.
+
+## Historical review/evidence (2026-10-14)
+
 # Security review â€” incomplete release certification
 
 Real SQL and hosted Staging checks prove service-only internal commands, recent-session enforcement, exact 30-day grace, stale-JWT RLS/bootstrap refusal, duplicate-request deadline preservation, one-use recovery, fence/lease refusal, kill switch, Auth absence verification and other-account preservation. Mutation tests detect removed RLS, internal grants and early eligibility.

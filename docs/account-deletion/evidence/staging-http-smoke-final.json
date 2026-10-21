@@ -1,0 +1,85 @@
+[
+  {
+    "name": "request-account-deletion",
+    "status": 401,
+    "expected": 401,
+    "pass": true,
+    "body": {
+      "code": "UNAUTHORIZED_NO_AUTH_HEADER",
+      "message": "Missing authorization header"
+    }
+  },
+  {
+    "name": "capture-apple-credential",
+    "status": 401,
+    "expected": 401,
+    "pass": true,
+    "body": {
+      "code": "UNAUTHORIZED_NO_AUTH_HEADER",
+      "message": "Missing authorization header"
+    }
+  },
+  {
+    "name": "deletion-status",
+    "status": 400,
+    "expected": 400,
+    "pass": true,
+    "body": {
+      "error": "invalid_receipt"
+    }
+  },
+  {
+    "name": "restore-account",
+    "status": 400,
+    "expected": 400,
+    "pass": true,
+    "body": {
+      "status": "invalid_or_expired"
+    }
+  },
+  {
+    "name": "resend-restoration-email",
+    "status": 200,
+    "expected": 200,
+    "pass": true,
+    "body": {
+      "status": "If recovery is available, a message will be queued."
+    }
+  },
+  {
+    "name": "begin-web-deletion",
+    "status": 200,
+    "expected": 200,
+    "pass": true,
+    "body": {
+      "status": "If this address can be verified, check your email for a sign-in code."
+    }
+  },
+  {
+    "name": "process-account-deletions",
+    "status": 401,
+    "expected": 401,
+    "pass": true,
+    "body": {
+      "error": "unauthorized"
+    }
+  },
+  {
+    "name": "monitor-account-deletions",
+    "status": 401,
+    "expected": 401,
+    "pass": true,
+    "body": {
+      "error": "unauthorized"
+    }
+  },
+  {
+    "name": "expire-account-deletion-proofs",
+    "status": 401,
+    "expected": 401,
+    "pass": true,
+    "body": {
+      "error": "unauthorized"
+    }
+  }
+]

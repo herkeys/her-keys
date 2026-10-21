@@ -1,0 +1,10 @@
+{
+  "date": "2026-10-19",
+  "project": "fhhudicklmpofuzkxeqe",
+  "source_sha": "6267a299206a4e9e48ca987891e7c971567c1223",
+  "private_receipt_owner_protected": true,
+  "fixture_transaction_rolled_back": true,
+  "scope": "Random synthetic Auth/profile/household/receipt rows created inside a subtransaction; all rolled back after asserting former-member ownership",
+  "controls": {"enabled": false, "dry_run": true, "test_scope_only": false},
+  "negative_control": "tests/accountDeletion/privateHouseholdOwner.test.mjs reproduces the old false result and verifies preserved receipt with the repaired guard"
+}

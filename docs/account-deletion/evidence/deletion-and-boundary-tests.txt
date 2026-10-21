@@ -1,0 +1,180 @@
+▶ account deletion: real SQL state, privileges, recovery and purge
+  ✔ internal command is denied to authenticated and anon (47.8451ms)
+  ✔ stale auth cannot request deletion (37.5954ms)
+  ✔ request records exactly 30 days and queues encrypted recovery (26.6872ms)
+  ✔ duplicate requests preserve deadline and do not queue another email (104.8697ms)
+  ✔ previously issued JWT loses ordinary RLS access and RPC authority (27.2564ms)
+  ✔ worker disabled and dry-run cannot claim (13.5919ms)
+  ✔ enabled worker cannot delete before the deadline (87.301ms)
+  ✔ replacement recovery invalidates previous token without extending deadline (29.1443ms)
+  ✔ single-use recovery reserves against purge but does not falsely restore (246.6575ms)
+  ✔ new lifecycle after restoration has a new deadline (25.166ms)
+  ✔ expired requests cannot restore; workers compete through claims (17.8476ms)
+  ✔ wrong fencing token and kill switch refuse destructive work (100.2642ms)
+  ✔ false terminal success is refused (36.2389ms)
+  ✔ expired lease can be reclaimed and old worker loses authority (12.0556ms)
+  ✔ complete database cleanup preserves the other account (1055.2732ms)
+  ✔ purged requires Auth absence and independent resource evidence (482.7831ms)
+  ✔ resend rate limit has a bounded window and unknown receipts disclose nothing (25.4846ms)
+✔ account deletion: real SQL state, privileges, recovery and purge (32614.3976ms)
+✔ local terminal cleanup requires matching namespace and verified timestamps (1.9479ms)
+✔ queued local reset cannot erase an account that replaced the expected namespace (118.209ms)
+✔ namespace change while reset waits for persistence preserves the replacement account (11.9983ms)
+✔ expired or unavailable proof never resets data; explicit local reset is namespace-bound (0.3323ms)
+✔ malformed local proof is a refusal, never evidence of erasure (1.8058ms)
+✔ pending account blocks local mutation and sync without losing recoverable data (6.1463ms)
+✔ recovery proof has 256-bit entropy input, fixed length, no collisions in a sample (25.0306ms)
+✔ outbox encryption authenticates payload and refuses a tampered ciphertext (5.2023ms)
+✔ recovery email has an explicit confirmation link, deadline, plain text and subscription guidance (1.3091ms)
+▶ critical lifecycle negative controls detect unsafe guard mutations
+  ✔ removing the restrictive policy exposes stale-JWT profile access (158.7597ms)
+  ✔ granting command execution to authenticated crosses the worker authority boundary (29.1263ms)
+  ✔ removing expiry eligibility makes an early purge claim possible (159.8981ms)
+  ✔ approved shared policy deletes private records, restricts ambiguous records and preserves the other adult (1947.3581ms)
+✔ critical lifecycle negative controls detect unsafe guard mutations (35409.2623ms)
+✔ OAuth endpoint absence never certifies credential revocation (35.9548ms)
+✔ RevenueCat deletion requires a subsequent authoritative absence check (2.4455ms)
+✔ provider outages and unrelated project configuration cannot become purge proof (1.9019ms)
+✔ Google cleanup revokes the credential without modifying calendar events (0.6176ms)
+✔ Apple credential client-secret uses the approved four Staging/Production secret names (1.391ms)
+✔ all 50 registered resources: shared and unrelated isolation (40109.2811ms)
+ℹ Populated resources: account_claims, account_consents, action_executions, action_intents, action_outcomes, action_records, apple_revocation_credentials, automation_authorities, behavior_observations, calendar_oauth_states, capacity_profiles, career_opportunities, change_log, dependencies, discovery_records, events, evidence_links, external_calendar_connections, external_references, goals, herkeys_welcome_email_receipts, household_categories, household_members, household_people, household_systems, intent_decisions, interpretations, life_record_task_links, life_records, meal_plan_entries, needs_me_items, onboarding_state, one_move_records, patterns, person_contexts, person_task_links, premium_authorization_audit, premium_decisions, premium_entitlements, premium_reconcile_state, premium_subscriber_identities, premium_usage, premium_usage_events, rebuild_focus_links, rebuild_focuses, recurrence_rules, responsibilities, source_artifacts, system_steps, tasks
+✔ all 50 registered resources: former_member and unrelated isolation (16293.0525ms)
+ℹ Populated resources: account_claims, account_consents, action_executions, action_intents, action_outcomes, action_records, apple_revocation_credentials, automation_authorities, behavior_observations, calendar_oauth_states, capacity_profiles, career_opportunities, change_log, dependencies, discovery_records, events, evidence_links, external_calendar_connections, external_references, goals, herkeys_welcome_email_receipts, household_categories, household_members, household_people, household_systems, intent_decisions, interpretations, life_record_task_links, life_records, meal_plan_entries, needs_me_items, onboarding_state, one_move_records, patterns, person_contexts, person_task_links, premium_authorization_audit, premium_decisions, premium_entitlements, premium_reconcile_state, premium_subscriber_identities, premium_usage, premium_usage_events, rebuild_focus_links, rebuild_focuses, recurrence_rules, responsibilities, source_artifacts, system_steps, tasks
+✔ all 50 registered resources: single and unrelated isolation (8372.579ms)
+ℹ Populated resources: account_claims, account_consents, action_executions, action_intents, action_outcomes, action_records, apple_revocation_credentials, automation_authorities, behavior_observations, calendar_oauth_states, capacity_profiles, career_opportunities, change_log, dependencies, discovery_records, events, evidence_links, external_calendar_connections, external_references, goals, herkeys_welcome_email_receipts, household_categories, household_members, household_people, household_systems, intent_decisions, interpretations, life_record_task_links, life_records, meal_plan_entries, needs_me_items, onboarding_state, one_move_records, patterns, person_contexts, person_task_links, premium_authorization_audit, premium_decisions, premium_entitlements, premium_reconcile_state, premium_subscriber_identities, premium_usage, premium_usage_events, rebuild_focus_links, rebuild_focuses, recurrence_rules, responsibilities, source_artifacts, system_steps, tasks
+✔ terminal proof retention: exact whitelist, expiry refusal, actual deletion and nonterminal preservation (32190.9764ms)
+▶ V2 deletion: cross-account event redaction, private review history and independent terminal checks
+  ✔ new client-readable ledger and definer RPCs refuse deactivated actors (202.5634ms)
+  ✔ unknown schema resource fails closed with its name: public.unknown_application_fixture (151.6205ms)
+  ✔ unknown schema resource fails closed with its name: private.unknown_private_fixture (25.2309ms)
+  ✔ unknown schema resource fails closed with its name: public.account_deletion_unknown_fixture (8.2836ms)
+  ✔ exact provider identity redaction preserves the other adult and idempotency (161.7186ms)
+  ✔ missing database evidence cannot finish (174.4735ms)
+  ✔ missing auth evidence cannot finish (160.1698ms)
+  ✔ missing storage evidence cannot finish (133.928ms)
+  ✔ missing providers evidence cannot finish (138.9422ms)
+  ✔ claimed booleans cannot hide actual storage (50.0605ms)
+  ✔ independent verification rejects late private metadata and provider aliases (259.2368ms)
+  ✔ successful retry recounts resources and keeps only approved minimal proof (260.0261ms)
+✔ V2 deletion: cross-account event redaction, private review history and independent terminal checks (36011.1866ms)
+warning: in the working copy of 'src/store/deletionRuntimeInstance.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/store/deletionRuntimeInstance.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/store/deletionRuntimeInstance.ts', LF will be replaced by CRLF the next time Git touches it
+▶ [BV] the semantic-boundary scan
+  ✔ [BV1] [BV2] [BV3] [BV4] [BV5] the scan passes: one migration, no new durable type, table, collection or sync kind, every shared-file change explained (40771.0522ms)
+  ✔ [BM1] [BM2] [BM3] no sibling imports, by import scan and by ancestry (169.277ms)
+  ✔ [BM4] the checked-out branch is the line under test, never its own sibling — and a detached HEAD or any OTHER branch is not exempt (10.7304ms)
+  ✔ [BM5] only the owner-reviewed exact Premium import is registered; future tips and unrelated lanes still fail (0.2807ms)
+  ✔ [BV6] who could have made a change decides what explains it: the Wave 2 line needs a Meals-line reason, a later change a later lane's (HK13-D11) (129.137ms)
+  ✔ [BV7] check H — the register is true: every known-invalid claim still fails, and only a PROVED stacked lane inherits (4.4575ms)
+  ✔ [CB1] [CD1] no dependency relation, recipe link or external reference is created by Meals code (20.1954ms)
+✔ [BV] the semantic-boundary scan (41106.6521ms)
+▶ [AN] [BY] no dietary or allergy context exists to attribute
+  ✔ [AN1] [BY1] nothing outside Meals' own copy mentions allergy, diet, nutrition, calories or recipes: the foundation has no such facts, so none may be claimed (464.3185ms)
+✔ [AN] [BY] no dietary or allergy context exists to attribute (464.5304ms)
+▶ [BF] drafts and UI state stay off the store
+  ✔ [BF1] the sheets and the body import no store, persistence or sync module: a draft lives and dies in the component (2.1379ms)
+  ✔ [BF2] the only writes are the meal domain actions through the canonical store commit (1.2133ms)
+✔ [BF] drafts and UI state stay off the store (3.5162ms)
+▶ [BO] no network, no logging, no secrets in Meals code
+  ✔ [BO3] Meals code makes no network call and logs nothing (a meal title never reaches a log) (8.8057ms)
+  ✔ [BO1] no secret or credential pattern in any line Feature 08 added (1869.9689ms)
+✔ [BO] no network, no logging, no secrets in Meals code (1878.9252ms)
+▶ [BL] the route and the Life hub are used as they were
+  ✔ [BL1] [BL2] Meals never changed the routing, route access, root layout or Life layout; any later change to one is a registered later lane's; the Meals route is the existing direct route (193.5488ms)
+✔ [BL] the route and the Life hub are used as they were (193.7662ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-03: every paywall outcome has words in the right tone, and none leak the SDK’s own message (2.7311ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ V2 integration: onboarding routes to Account for restore rather than mounting a second transaction control (32.6399ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-03 android: the Systems Premium card tells her how every paywall ended (47.5071ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-03 ios: the Systems Premium card tells her how every paywall ended (40.786ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-03: the Systems card is single-flight, a throwing paywall is a failed paywall, and entitled users see no upsell (17.7968ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-03: the unmounted Systems card ignores a paywall that ends late (8.3671ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-03: the onboarding step words an unavailable offering, a failure and a cancel — and never traps her (47.0889ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-03: the onboarding step completes on purchase or restore, once, and on free continuation (23.3533ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-03: final onboarding lists exactly the Stage 1 tools and no unshipped promises (7.4591ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-03: onboarding refuses a commercial purchase while the server has unreleased Premium features (41.0789ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-03: pre-auth Premium intent waits for server manifest and opens one paywall, never before (43.0038ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-03: Continue Free clears a pending Premium intent even if the manifest never loads (18.2706ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-03: after consent, a Premium choice that cannot be fulfilled is told to her — and the app stays open (16.9768ms)
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+✔ SC-03: a checkout that throws is worded, never blocks the app, and the notice can be dismissed (3.1252ms)
+✔ SC-03: a free choice shows nothing and offers no checkout (1.7251ms)
+✔ PBP-1: no feature is gated on her_keys_plus — outside src/monetization the only entitlement read is the Systems upsell card (4826.3868ms)
+✔ PBP-1b (Premium Stage 1): the ONLY server-authoritative consumers of Premium state outside src/monetization are the Premium features themselves (10215.0981ms)
+✖ PBP-2 (evolved in Premium Stage 1): the backend enforces Premium ONLY inside the Premium namespace — no Free function, calendar, weather, AI, welcome-email or sync path reads the entitlement (1241.7696ms)
+✔ PBP-3: outside the Welcome Tree, no source copy claims Premium benefits the app does not deliver (8182.4769ms)
+ℹ tests 86
+ℹ suites 5
+ℹ pass 85
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 65114.7083
+
+✖ failing tests:
+
+test at tests\premiumFeedback.test.mjs:314:1
+✖ PBP-2 (evolved in Premium Stage 1): the backend enforces Premium ONLY inside the Premium namespace — no Free function, calendar, weather, AI, welcome-email or sync path reads the entitlement (1241.7696ms)
+  AssertionError [ERR_ASSERTION]: a function or migration outside the Premium namespace reads or enforces the entitlement
+  + actual - expected
+
+  + [
+  +   'supabase/functions/_shared/deletionCore.ts'
+  + ]
+  - []
+
+      at TestContext.<anonymous> (file:///C:/Users/jsmit/.codex/worktrees/deletion-crossplatform-closeout/Her%20Keys/tests/premiumFeedback.test.mjs:326:10)
+      at Test.runInAsyncScope (node:async_hooks:228:14)
+      at Test.run (node:internal/test_runner/test:1118:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:787:18)
+      at Test.postRun (node:internal/test_runner/test:1247:19)
+      at Test.run (node:internal/test_runner/test:1175:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: [ 'supabase/functions/_shared/deletionCore.ts' ],
+    expected: [],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }

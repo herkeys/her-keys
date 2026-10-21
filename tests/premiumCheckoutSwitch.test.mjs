@@ -7,6 +7,7 @@ const ready = read('supabase/migrations/20261016012000_premium_purchase_readines
 const switchSql = read('supabase/migrations/20261016013000_premium_checkout_independent_activation.sql');
 const client = read('src/monetization/premiumServerClient.ts');
 const provider = read('src/monetization/PremiumStateProvider.tsx');
+const requestOwner = read('src/monetization/premiumRequestOwner.ts');
 
 describe('Premium Production fulfillment and checkout separation', () => {
   test('commercial checkout is independently false by default on every new installation', () => {
@@ -33,7 +34,10 @@ describe('Premium Production fulfillment and checkout separation', () => {
     assert.match(ready, /public\.premium_account_lifecycle\(v_account\)/);
   });
   test('onboarding and feature paywalls ask server identity eligibility before native checkout', () => {
-    assert.match(client, /client\.rpc\('premium_purchase_readiness'\)/);
+    assert.match(client, /premiumRpc\(client, owner, 'premium_purchase_readiness'\)/);
+    assert.match(requestOwner, /client\.rpc\(name, args\)/);
+    assert.match(requestOwner, /session\.user\.id !== owner\.accountId/);
+    assert.match(requestOwner, /request\.setHeader\('Authorization', authorization\)/);
     assert.match(client, /timeout|setTimeout/);
     assert.match(provider, /const readiness = await client\.purchaseReadiness\?\.\(\)/);
     assert.match(provider, /readiness\?\.ready === true/);

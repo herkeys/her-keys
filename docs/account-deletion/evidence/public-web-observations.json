@@ -1,0 +1,19 @@
+{
+  "date": "2026-10-19",
+  "deletion_url": "https://herkeys.app/delete-account",
+  "deletion_http_status": 200,
+  "deletion_flow": "Disabled placeholder; explicitly says self-service will be enabled later",
+  "recovery_url": "https://herkeys.app/account/restore",
+  "recovery_http_status": 404,
+  "privacy_url": "https://herkeys.app/privacy",
+  "terms_url": "https://herkeys.app/terms",
+  "full_privacy_pdf": "https://npykvnxnehlsdlbumzwk.supabase.co/storage/v1/object/public/Legal%20docs/her-keys-policy.pdf",
+  "full_terms_pdf": "https://npykvnxnehlsdlbumzwk.supabase.co/storage/v1/object/public/Legal%20docs/her-keys-terms.pdf",
+  "privacy_pages": 8,
+  "terms_pages": 8,
+  "findings": [
+    "Privacy sections 15/16 and Terms section 29 retain contact/deletion URL placeholders",
+    "Exact approved 30-day recovery, 365-day minimal proof and seven-day completion outbox disclosures need Legal approval/publication",
+    "Full documents were read only. Downloaded references were kept in ignored local storage, not republished in the engineering PR."
+  ]
+}

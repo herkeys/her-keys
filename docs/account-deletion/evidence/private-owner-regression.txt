@@ -1,0 +1,27 @@
+✔ a former adult whose only household record is a private Premium receipt prevents whole-household cascade (3094.5972ms)
+▶ the migration chain
+  ✔ the migrations directory holds exactly the registered chain, in order, and nothing else (1.1819ms)
+  ✔ every migration version is unique and strictly increasing (no two files claim one version) (0.2754ms)
+  ✔ no migration that existed at WAVE3_BASE has changed by a single byte (an applied migration is never edited) (7.3326ms)
+  ✔ every migration the integration adds is LF on disk, pinned LF by .gitattributes, and opens, closes and asserts (7.7663ms)
+✔ the migration chain (17.4098ms)
+▶ post-certification migration governance
+  ✔ the environment-alignment migration stays registered, additive, and function-only at the schema level (1.8418ms)
+  ✔ the Google Calendar migration is byte-identical to its reviewed blueprint, never edited, and service-only (2.2141ms)
+✔ post-certification migration governance (4.2214ms)
+▶ a re-declaration never drops an earlier registration
+  ✔ change_log_entity_table_check: each re-declaration is a superset of the one before it (15.6436ms)
+  ✔ the sync_push owner-private allow-list: each re-declaration is a superset of the one before it (13.442ms)
+  ✔ the sync_push no-revision list: each re-declaration is a superset of the one before it (20.8556ms)
+  ✔ after the whole chain, the change-log check and the sync_push allow-list name every feature table (35.901ms)
+  ✔ HK13-D24: after the whole chain, each owner-private uniqueness rule is PER OWNER (its last definition names profile_id) (64.6407ms)
+  ✔ each feature migration registers its own tables in the SAME file that creates them (so every prefix of the chain works) (9.6824ms)
+✔ a re-declaration never drops an earlier registration (160.5023ms)
+ℹ tests 13
+ℹ suites 3
+ℹ pass 13
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3480.6657

@@ -68,6 +68,22 @@ const remount = (renderer, server, accountState) => TestRenderer.act(async () =>
 });
 
 describe('the consumer journey through the real provider', () => {
+  test('the shipping provider scopes server and ledger transports to the originating account lifetime', async () => {
+    const server = makeServer(); server.who = A; const owners = []; const ledgerOwners = [];
+    server.client.forAccount = owner => { owners.push(owner); return { ...server.client, forAccount: undefined }; };
+    const ledger = { forAccount: owner => { ledgerOwners.push(owner); return {}; } };
+    const r = await render(<PremiumStateProvider client={server.client} ledger={ledger} accountState={bound(A)}><Probe /></PremiumStateProvider>);
+    await settle();
+    assert.equal(owners[0].accountId, A); assert.equal(owners[0].isCurrent(), true);
+    assert.equal(ledgerOwners[0], owners[0]);
+    server.who = B;
+    await TestRenderer.act(async () => r.update(<PremiumStateProvider client={server.client} ledger={ledger} accountState={bound(B)}><Probe /></PremiumStateProvider>));
+    await settle();
+    assert.equal(owners[0].isCurrent(), false); assert.equal(owners.at(-1).accountId, B);
+    await TestRenderer.act(async () => r.unmount());
+    assert.equal(owners.at(-1).isCurrent(), false);
+  });
+
   test('V2 integration: stale same-household ledger callbacks cannot run after A -> B -> A', async () => {
     const server = makeServer();
     server.who = A;

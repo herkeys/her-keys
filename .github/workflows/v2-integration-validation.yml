@@ -45,6 +45,10 @@ on:
       - repair/v2-shared-backend-convergence-20261017
       # Shared AI-reporting metadata and controlled revenuecat/AI production convergence, source validation only.
       - repair/v2-ai-reporting-and-prod-convergence-20261017
+      # Shared defect closeout: exact pushed source validation only; no deployment or build.
+      - repair/v2-shared-defect-closeout-20261019
+      - repair/account-deletion-crossplatform-closeout-20261019
+      - repair/account-deletion-phase2-20261020
   workflow_dispatch:
 
 permissions:

@@ -1,5 +1,7 @@
 # Architecture and trust boundaries
 
+Current source authority (2026-10-19): PR #38 at `c7dca1ec13956e16e03b66ae64346be73829e077`, repaired through source `6267a299206a4e9e48ca987891e7c971567c1223` in PR #39. The current implementation, 50-table registry, independent verifier, account-generation fencing and deployment boundaries are documented in `engineering-closeout-20261019.md`, `resource-registry.md` and `production-promotion-20261019.md`. Earlier branch/SHA references below are historical discovery context, not the current candidate authority.
+
 Mobile authority: codex/build2b-shared-integration at ad72ccd5b517a83bde5e7bbf3bf658193a667b82. origin/main is an older Build 3 snapshot without the integrated account backend. Website entry: b893909. The iOS nonce repair 3fc9a46 was cherry-picked as 824b258; active audit worktrees were untouched.
 
 A verified user bearer and recent auth.sessions.created_at authorize the service-only request command. The client supplies only a high-entropy device receipt. Account/email IDs in a client body cannot select the victim. The SQL transaction records the exact original 30-day deadline, hashed recovery and receipt proofs, restrictive access state, and encrypted recovery-email outbox. Repeated requests retain the deadline and can register another device proof.

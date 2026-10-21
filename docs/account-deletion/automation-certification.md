@@ -1,5 +1,7 @@
 # Automation certification
 
+Current status (2026-10-19) is in `engineering-closeout-20261019.md` and `staging-certification.md`. The historical paragraph below predates subsequent Production lifecycle deployments and must not be read as the current Production inventory. Current Production contains the earlier lifecycle implementation with disabled processing; four new canonical repair migrations and seven differing function bundles await separate approval. Current monitoring also counts overdue requests independently of enabled/dry-run state. An independently hosted watchdog remains a release gate.
+
 Staging scheduled invocation is observed; full release certification remains incomplete. Production has no deletion tables, deletion migrations or pg_cron extension as of read-only inspection at 2026-10-14 11:09 UTC.
 
 Staging worker cadence: every five minutes, batch ceiling 1, five-minute lease, eight attempts, bounded backoff. Monitor: every five minutes offset by two minutes. Daily retention: 03:17 UTC. Installation creates disabled jobs; activation is separate. Final Staging destructive controls are in staging-certification.md.
