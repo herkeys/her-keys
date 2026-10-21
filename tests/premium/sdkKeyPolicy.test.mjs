@@ -10,10 +10,19 @@ test('Production rejects Test Store, secret, placeholder and swapped native keys
 });
 test('Test Store requires an explicit Staging route; real stores require platform public keys',()=>{
  for(const p of ['ios','android']){
-  assert.equal(isRevenueCatKeyAllowed(p,'test_abc','test','staging'),true);
+  assert.equal(isRevenueCatKeyAllowed(p,'test_abc','test','staging',true),true);
+  assert.equal(isRevenueCatKeyAllowed(p,'test_abc','test','staging',false),false,'SDK must not receive a Test Store key in release mode');
   assert.equal(isRevenueCatKeyAllowed(p,'test_abc',undefined,'staging'),false);
  }
  assert.equal(isRevenueCatKeyAllowed('ios','appl_abc','native','production'),true);
  assert.equal(isRevenueCatKeyAllowed('android','goog_abc','native','production'),true);
  assert.equal(isRevenueCatKeyAllowed('android','goog_abc','native','staging'),true);
+});
+test('Test Store EAS profiles compile in native Debug mode so the SDK does not intentionally terminate them',async()=>{
+ const {readFileSync}=await import('node:fs');const eas=JSON.parse(readFileSync('eas.json','utf8'));
+ for(const name of ['development','diagnostic-android']){
+  assert.equal(eas.build[name].env.EXPO_PUBLIC_REVENUECAT_STORE,'test');
+  assert.equal(eas.build[name].android.gradleCommand,':app:assembleDebug');
+ }
+ assert.equal(eas.build.development.ios.buildConfiguration,'Debug');
 });

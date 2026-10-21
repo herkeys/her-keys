@@ -6,6 +6,8 @@
     "development": {
       "environment": "development",
       "distribution": "internal",
+      "android": { "gradleCommand": ":app:assembleDebug" },
+      "ios": { "buildConfiguration": "Debug" },
       "env": {
         "EXPO_PUBLIC_HERKEYS_BACKEND": "staging",
         "EXPO_PUBLIC_REVENUECAT_STORE": "test",
@@ -50,7 +52,8 @@
       "environment": "development",
       "distribution": "internal",
       "android": {
-        "buildType": "apk"
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleDebug"
       },
       "env": {
         "EXPO_PUBLIC_HERKEYS_BACKEND": "staging",

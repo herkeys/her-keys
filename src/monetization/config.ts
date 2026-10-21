@@ -18,5 +18,5 @@ export const revenueCatApiKeys: RevenueCatApiKeys = {
 };
 
 export function hasConfiguredApiKey(platform: 'ios' | 'android'): boolean {
-  return isRevenueCatKeyAllowed(platform, revenueCatApiKeys[platform], process.env.EXPO_PUBLIC_REVENUECAT_STORE, process.env.EXPO_PUBLIC_HERKEYS_BACKEND);
+  return isRevenueCatKeyAllowed(platform, revenueCatApiKeys[platform], process.env.EXPO_PUBLIC_REVENUECAT_STORE, process.env.EXPO_PUBLIC_HERKEYS_BACKEND, typeof __DEV__ !== 'undefined' && __DEV__);
 }
