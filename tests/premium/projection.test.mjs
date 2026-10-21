@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { isDeepStrictEqual } from 'node:util';
 import { describe, test } from 'node:test';
 
 import { deriveEntitlementState, isEntitled } from '../../supabase/functions/_shared/premium/entitlementState.ts';
@@ -131,10 +132,12 @@ describe('the lifecycle, event by event', () => {
     assert.equal(projection.needs_reconcile, true);
   });
 
-  test('product change and subscription extension move the term and the product', () => {
-    const changed = fold([purchase(), ev('PRODUCT_CHANGE', DAY, { new_product_id: 'herkeys_premium_annual', expiration_at_ms: NOW + 365 * DAY })]).projection;
-    assert.equal(changed.product_id, 'herkeys_premium_annual');
-    assert.equal(changed.expires_at, new Date(NOW + 365 * DAY).toISOString());
+  test('a product change requires reconciliation; only a verified extension moves the term', () => {
+    const initial = fold([purchase()]).projection;
+    const changed = applyEvent(initial, ev('PRODUCT_CHANGE', DAY, { new_product_id: 'herkeys_premium_annual', expiration_at_ms: NOW + 365 * DAY }));
+    assert.equal(changed.projection, null);
+    assert.equal(changed.reconcile, true);
+    assert.equal(changed.disposition, 'reconcile_only');
     const extended = fold([purchase(), ev('SUBSCRIPTION_EXTENDED', DAY, { expiration_at_ms: NOW + 45 * DAY })]).projection;
     assert.equal(extended.expires_at, new Date(NOW + 45 * DAY).toISOString());
   });
@@ -244,7 +247,7 @@ describe('ordering, staleness and revocation', () => {
     let viaReconcile = 0;
     for (const order of permutations(lifecycle)) {
       const result = fold(order);
-      const same = JSON.stringify(result.projection) === JSON.stringify(canonical.projection);
+      const same = isDeepStrictEqual(result.projection, canonical.projection);
       if (same) exact += 1;
       else {
         viaReconcile += 1;
@@ -257,7 +260,7 @@ describe('ordering, staleness and revocation', () => {
     for (const order of permutations(lifecycle)) {
       if (['INITIAL_PURCHASE', 'RENEWAL'].includes(order[0].event_type)) {
         const result = fold(order);
-        assert.equal(result.reconcile && JSON.stringify(result.projection) !== JSON.stringify(canonical.projection), false);
+        assert.equal(result.reconcile && !isDeepStrictEqual(result.projection, canonical.projection), false);
       }
     }
   });

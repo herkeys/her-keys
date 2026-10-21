@@ -101,7 +101,8 @@ describe('the home gates nothing and shows no price', () => {
     const files = [...sources.filter((f) => f.startsWith('src/features/premium/')), 'src/monetization/premiumHomeCopy.ts', 'src/monetization/premiumHomeState.ts', 'src/monetization/subscriptionManagement.ts'];
     for (const file of files) {
       const code = read(file).replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
-      assert.doesNotMatch(code, /priceString|\bprice\b|currencyCode|availablePackages|fetchCurrentOffering|getOfferings|\$\d/i, file);
+      // A direction to check the store's renewal price is not a locally rendered monetary amount.
+      assert.doesNotMatch(code, /priceString|\.price\b|price\s*:|currencyCode|availablePackages|fetchCurrentOffering|getOfferings|\$\d/i, file);
     }
   });
 });

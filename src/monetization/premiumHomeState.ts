@@ -9,12 +9,13 @@ import type { EntitlementStatus } from './RevenueCatProvider';
  * home and the features can never disagree about what the server said. The store SDK is only a hint that makes the app verify; it can
  * never produce an entitled state here. Nothing in this module grants anything.
  */
+type PeriodDisplay = { periodType?: 'TRIAL' | 'INTRO' | 'NORMAL' | null; trialEndsOn?: string | null };
 export type PremiumHomeState =
   | { kind: 'signed_out' }
   | { kind: 'loading' }
   | { kind: 'free' }
-  | { kind: 'active'; endsOn: string | null }
-  | { kind: 'canceled_active'; endsOn: string | null }
+  | ({ kind: 'active'; endsOn: string | null } & PeriodDisplay)
+  | ({ kind: 'canceled_active'; endsOn: string | null } & PeriodDisplay)
   | { kind: 'billing_grace'; endsOn: string | null }
   | { kind: 'verification_pending'; cause: 'checking' | 'delayed' | 'account_mismatch' | 'outage'; canRetry: boolean }
   | { kind: 'expired' }
@@ -43,8 +44,9 @@ export function derivePremiumHomeState({ accountBound, snapshot, storeStatus }: 
       return { kind: 'account_closing' };
     case 'entitled':
       if (state.subscription === 'grace') return { kind: 'billing_grace', endsOn: state.endsOn };
-      if (state.subscription === 'canceled') return { kind: 'canceled_active', endsOn: state.endsOn };
-      return { kind: 'active', endsOn: state.endsOn };
+      const period = snapshot.server?.periodType ? { periodType: snapshot.server.periodType, trialEndsOn: snapshot.server.trialEndsAt ?? null } : {};
+      if (state.subscription === 'canceled') return { kind: 'canceled_active', endsOn: state.endsOn, ...period };
+      return { kind: 'active', endsOn: state.endsOn, ...period };
     case 'verification_pending':
       return { kind: 'verification_pending', cause: state.cause, canRetry: state.canRetry };
     case 'subscription_expired':

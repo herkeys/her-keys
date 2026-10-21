@@ -11,8 +11,8 @@ const highestObservedPlayVersionCode = 2;
 
 test('GA-01: EAS increments the Android artifact beyond the existing Play upload', () => {
   const eas = JSON.parse(readFileSync('eas.json', 'utf8'));
-  assert.equal(eas.cli.appVersionSource, 'local');
-  const increment = eas.build.production.android?.autoIncrement;
+  assert.equal(eas.cli.appVersionSource, 'remote');
+  const increment = eas.build.production.android?.autoIncrement ?? eas.build.production.autoIncrement;
   assert.ok(increment === true || increment === 'versionCode',
     'production Android must opt into EAS artifact versionCode incrementing');
   const config = JSON.parse(execFileSync(process.execPath,
@@ -20,8 +20,7 @@ test('GA-01: EAS increments the Android artifact beyond the existing Play upload
     { encoding: 'utf8', env: { ...process.env, EXPO_NO_TELEMETRY: '1' } }));
   assert.equal(config.android.package, 'com.heykeys.app');
   assert.ok(Number.isSafeInteger(config.android.versionCode));
-  const nextArtifactCode = config.android.versionCode + 1;
-  assert.ok(nextArtifactCode > highestObservedPlayVersionCode,
-    'the next EAS Android artifact must exceed the observed Play versionCode');
-  assert.ok(nextArtifactCode <= 2100000000, 'Play versionCode upper limit');
+  assert.ok(config.android.versionCode >= highestObservedPlayVersionCode, 'the local fallback cannot regress below the observed upload');
+  assert.equal(eas.build.production.ios?.autoIncrement ?? eas.build.production.autoIncrement, true, 'iOS also increments its remote build number');
+  // Actual remote baselines and resulting artifacts require separate EAS evidence; local config cannot certify them.
 });

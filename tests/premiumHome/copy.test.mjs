@@ -78,13 +78,15 @@ describe('what each state says', () => {
     assert.match(copy({ kind: 'revoked' }).title, /refunded/);
     assert.doesNotMatch(copy({ kind: 'expired' }).title, /refunded/);
   });
-  test('Verification Pending never says Premium is on, and says the money is not lost', () => {
+  test('Verification Pending never says Premium is on or guarantees store billing behavior', () => {
     for (const cause of ['checking', 'delayed', 'outage', 'account_mismatch']) {
       const c = copy({ kind: 'verification_pending', cause, canRetry: true });
       assert.doesNotMatch(c.title, /is on\b/i);
       assert.equal(c.tone === 'success', false);
     }
-    assert.match(copy({ kind: 'verification_pending', cause: 'delayed', canRetry: true }).body, /won’t be charged twice/);
+    const delayed = copy({ kind: 'verification_pending', cause: 'delayed', canRetry: true }).body;
+    assert.match(delayed, /Check your store subscription settings before trying to purchase again/);
+    assert.doesNotMatch(delayed, /won’t be charged twice/);
     assert.match(copy({ kind: 'verification_pending', cause: 'account_mismatch', canRetry: true }).body, /another Her Keys account/);
   });
   test('Service Unavailable says nothing changed', () => {

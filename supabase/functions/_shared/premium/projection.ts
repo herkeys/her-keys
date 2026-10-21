@@ -28,10 +28,12 @@ export interface ApplyResult {
   reconcile: boolean;
 }
 
-const PURCHASE_CLASS = new Set(['INITIAL_PURCHASE', 'RENEWAL', 'PRODUCT_CHANGE', 'SUBSCRIPTION_EXTENDED', 'UNCANCELLATION']);
+const PURCHASE_CLASS = new Set(['INITIAL_PURCHASE', 'RENEWAL', 'SUBSCRIPTION_EXTENDED', 'UNCANCELLATION']);
 /** Purchase-class events that start a NEW paid period (and so may clear a billing issue or a revocation). */
-const NEW_PERIOD = new Set(['INITIAL_PURCHASE', 'RENEWAL', 'PRODUCT_CHANGE']);
+const NEW_PERIOD = new Set(['INITIAL_PURCHASE', 'RENEWAL']);
 const RECONCILE_ONLY = new Set([
+  // A scheduled plan change is not evidence that the new plan or period has started.
+  'PRODUCT_CHANGE',
   'TRANSFER',
   'SUBSCRIBER_ALIAS',
   'PURCHASE_REDEEMED',
@@ -48,6 +50,9 @@ export function emptyProjection(environment: PremiumEnvironment): Projection {
     environment,
     product_id: null,
     store: null,
+    period_type: null,
+    period_started_at: null,
+    trial_ends_at: null,
     has_entitlement: false,
     expires_at: null,
     grace_expires_at: null,
@@ -100,12 +105,21 @@ export function applyEvent(current: Projection | null, event: NormalizedEvent): 
   };
 
   if (isPurchase) {
+    // Only a new subscription period can change trial classification. Cancellation, uncancellation and an
+    // extension do not start a new period. The independent clock prevents a late trial from replacing a renewal.
+    if (NEW_PERIOD.has(type) && newer('period')) {
+      next.period_type = event.period_type === 'TRIAL' || event.period_type === 'INTRO' || event.period_type === 'NORMAL' ? event.period_type : null;
+      next.period_started_at = event.purchased_at_ms === null ? null : iso(event.purchased_at_ms);
+      next.trial_ends_at = next.period_type === 'TRIAL' ? iso(event.expiration_at_ms as number) : null;
+      stamp('period');
+    }
     if (newer('expiry')) {
       next.has_entitlement = true;
       next.expires_at = iso(event.expiration_at_ms as number);
       next.product_id = event.new_product_id ?? event.product_id ?? next.product_id;
       next.store = event.store ?? next.store;
       next.environment = event.environment;
+      if (type === 'SUBSCRIPTION_EXTENDED' && next.period_type === 'TRIAL') next.trial_ends_at = next.expires_at;
       stamp('expiry');
     }
     if (type !== 'SUBSCRIPTION_EXTENDED') {

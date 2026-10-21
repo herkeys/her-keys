@@ -155,6 +155,19 @@ const LATER_FEATURES = [
     ],
   },
   {
+    id: 'HK-PREMIUM-STORE-CERT-20261021 (authorized Premium integration and D06 repair)',
+    branch: null,
+    // Exact D06 adapter path: native transport classification only; no new domain model or cloud authority.
+    owned: [/^src\/domain\/account\/accountAccessStatus\.ts$/, /^src\/monetization\/sdkKeyPolicy\.ts$/, /^docs\/audits\/premium-store-integration-20261021\//, /^scripts-dev\/premium-store-certification\//,
+      /^supabase\/migrations\/20261021075347_premium_verified_subscription_period\.sql$/, /^supabase\/migrations\/20261021083447_premium_test_store_checkout_isolation\.sql$/],
+    migrations: ['supabase/migrations/20261021075347_premium_verified_subscription_period.sql','supabase/migrations/20261021083447_premium_test_store_checkout_isolation.sql'],
+    schemas: [], rootCollections: [], syncKinds: [],
+    shared: [
+      ['src/domain/sync/syncRuntime.ts', 'D06: persistent cloud-suspension latch prevents account refresh from restarting sync during local-only offline access; no sync schema or kind change'],
+      ['src/monetization/config.ts', 'Premium store certification: reject swapped, placeholder, secret and Production Test Store keys before SDK configuration'],
+    ],
+  },
+  {
     id: 'HK-V2-IOS-AUDIT-20261019 (Build 2 Photos permission and Apple readiness review)',
     // PR #37 was reviewed and merged into the 2026-10-20 mobile candidate. These two
     // documents are audit evidence, not Meals-owned functionality or new schema.

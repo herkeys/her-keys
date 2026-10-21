@@ -54,6 +54,16 @@ export function premiumHomeCopyFor(state: PremiumHomeState, format: DateFormatte
         manage: null,
       };
     case 'active':
+      if (state.periodType === 'TRIAL') return {
+        status: 'Free trial', title: `${PREMIUM} — Free trial`,
+        body: `${through(state.trialEndsOn ?? null, format, 'Trial ends', 'Your free trial is active; its end date is not confirmed yet.')} After your trial, your subscription renews automatically unless canceled. Your store subscription settings show your plan and renewal price.`,
+        tone: 'success', primary: null, manage: MANAGE,
+      };
+      if (state.periodType === 'INTRO') return {
+        status: 'Introductory offer', title: `${PREMIUM} — Introductory offer`,
+        body: `${through(state.endsOn, format, 'Your introductory period runs through', 'Your introductory offer is active.')} Your store subscription settings show your renewal price and terms.`,
+        tone: 'success', primary: null, manage: MANAGE,
+      };
       return {
         status: 'On',
         title: `${PREMIUM} is on`,
@@ -63,6 +73,11 @@ export function premiumHomeCopyFor(state: PremiumHomeState, format: DateFormatte
         manage: MANAGE,
       };
     case 'canceled_active':
+      if (state.periodType === 'TRIAL') return {
+        status: 'Trial ending', title: `${PREMIUM} — Trial canceled`,
+        body: `${through(state.trialEndsOn ?? null, format, 'Your free trial stays on through', 'Your free trial stays on until its verified end.')} It won’t renew. ${FREE_UNTOUCHED}`,
+        tone: 'success', primary: null, manage: MANAGE,
+      };
       return {
         status: 'Ending',
         title: `${PREMIUM} is on, and won’t renew`,
@@ -127,7 +142,7 @@ function verificationCopy(cause: 'checking' | 'delayed' | 'account_mismatch' | '
     case 'checking':
       return { status: 'Confirming', title: 'Confirming your purchase…', body: `The store says your purchase went through. Her Keys is confirming it with your account, which usually takes a few seconds. ${FREE_UNTOUCHED}`, tone: 'info', primary: null, manage: MANAGE };
     case 'delayed':
-      return { status: 'Not confirmed yet', title: 'Your purchase isn’t confirmed yet', body: `The store says you purchased ${PREMIUM}, but Her Keys hasn’t been able to confirm it yet. You haven’t lost anything and you won’t be charged twice. ${RESTORE_HINT} ${FREE_UNTOUCHED}`, tone: 'attention', primary: check, manage: MANAGE };
+      return { status: 'Not confirmed yet', title: 'Your purchase isn’t confirmed yet', body: `The store says you purchased ${PREMIUM}, but Her Keys hasn’t been able to confirm it yet. Check your store subscription settings before trying to purchase again. ${RESTORE_HINT} ${FREE_UNTOUCHED}`, tone: 'attention', primary: check, manage: MANAGE };
     case 'outage':
       return { status: 'Can’t confirm right now', title: `Can’t reach ${PREMIUM} right now`, body: `Her Keys couldn’t confirm your subscription just now. Nothing has changed on your account. ${FREE_UNTOUCHED} Try again in a moment.`, tone: 'attention', primary: check, manage: MANAGE };
     case 'account_mismatch':

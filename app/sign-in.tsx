@@ -69,8 +69,8 @@ export default function SignIn() {
         onSignOut={() => void signOut()}
         onClose={() => router.back()}
         restoring={restoring}
-        premiumSection={<PremiumHome key={accountId} hold={busy || restoring} />}
-        restoreControl={<RestorePurchasesControl key={accountId} accountId={accountId} blocked={busy} onRestoringChange={setRestoring} />}
+        premiumSection={<PremiumHome key={`premium:${accountId}`} hold={busy || restoring} />}
+        restoreControl={<RestorePurchasesControl key={`restore:${accountId}`} accountId={accountId} blocked={busy} onRestoringChange={setRestoring} />}
       />
     </Screen>
   );

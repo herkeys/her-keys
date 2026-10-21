@@ -31,6 +31,9 @@ const EntitlementSchema = z.object({
   canceled: z.boolean().optional(),
   needsReconcile: z.boolean().optional(),
   checkedAt: Instant.optional(),
+  periodType: z.enum(['TRIAL', 'INTRO', 'NORMAL']).nullable().optional(),
+  periodStartedAt: z.iso.datetime({ offset: true }).nullable().optional(),
+  trialEndsAt: z.iso.datetime({ offset: true }).nullable().optional(),
 });
 
 const ManifestSchema = z.array(
@@ -136,7 +139,7 @@ export function createPremiumServerClient(client: SupabaseClient, owner?: Premiu
       let deadline: ReturnType<typeof setTimeout> | null = null;
       try {
         const answer = await Promise.race([
-          premiumRpc(client, owner, 'premium_purchase_readiness'),
+          premiumRpc(client, owner, process.env.EXPO_PUBLIC_REVENUECAT_STORE === 'test' ? 'premium_test_store_purchase_readiness' : 'premium_purchase_readiness'),
           new Promise<{ data: null; error: Error }>((resolve) => {
             deadline = setTimeout(() => resolve({ data: null, error: new Error('purchase_readiness_timeout') }), 8000);
           }),
@@ -163,6 +166,11 @@ export function createPremiumServerClient(client: SupabaseClient, owner?: Premiu
           canceled: parsed.data.canceled ?? false,
           needsReconcile: parsed.data.needsReconcile ?? false,
           checkedAt: parsed.data.checkedAt ?? '',
+          ...(parsed.data.periodType !== undefined ? {
+            periodType: parsed.data.periodType,
+            periodStartedAt: parsed.data.periodStartedAt ?? null,
+            trialEndsAt: parsed.data.trialEndsAt ?? null,
+          } : {}),
         };
         return { kind: 'ok', value };
       } catch {

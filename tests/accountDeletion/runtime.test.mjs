@@ -1,6 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {createDeletionRuntime} from '../../src/domain/account/deletionRuntime.ts';
+import {fetchAccountAccessStatus} from '../../src/domain/account/accountAccessStatus.ts';
 import {createMemorySecureStorage,createSecureSessionStore} from '../../src/domain/account/secureSession.ts';
 const A='11111111-1111-4111-8111-111111111111', B='22222222-2222-4222-8222-222222222222';
 const KEY='herkeys.secure.deletionReceipt';
@@ -9,7 +10,7 @@ const session=id=>({accountId:id,accessToken:'jwt-'+id,refreshToken:'refresh-'+i
 function harness(options={}) {
  let actor={kind:'accountBound',session:session(A),householdId:'household'},namespace=A;
  const subscribers=new Set(),effects=[],calls=[];
- const storage=createMemorySecureStorage(options.receipt?{[KEY+'.'+A]:JSON.stringify({accountId:A,proof:'p'.repeat(43)})}:{});
+ const storage=options.storage??createMemorySecureStorage(options.receipt?{[KEY+'.'+A]:JSON.stringify({accountId:A,proof:'p'.repeat(43)})}:{});
  const sessions=createSecureSessionStore(storage);
  const accountRuntime={getState:()=>actor,subscribe:fn=>{subscribers.add(fn);return()=>subscribers.delete(fn);},async signOut(expected){
   assert.equal(expected,actor.session?.accountId);effects.push('signout:'+expected);actor={kind:'unauthenticated'};for(const fn of subscribers)fn();
@@ -18,7 +19,7 @@ function harness(options={}) {
   setAccountAccessBlocked:value=>effects.push('blocked:'+value),async flush(){await options.flush?.();},
   async reset(expected){assert.equal(expected,namespace);effects.push('reset:'+expected);namespace=null;for(const fn of subscribers)fn();return true;}};
  const runtime=createDeletionRuntime({secure:storage,sessions,accountRuntime,appStore,
-  syncRuntime:{stop(){},async idle(){await options.idle?.();},onAccountState(){}},
+  syncRuntime:{stop(){effects.push('sync:stop');},setAccessSuspended(value){effects.push('sync:suspended:'+value);},async idle(){await options.idle?.();},onAccountState(){effects.push('sync:resume');}},
   randomProof:()=> 'p'.repeat(43),fingerprint:async id=>'fingerprint-'+id,
   activeStatus:async token=>options.activeStatus?options.activeStatus(token):true,
   refresh:async value=>options.refresh?options.refresh(value):value,
@@ -39,6 +40,44 @@ for(const stage of ['idle','flush','response'])test('request cannot sign out rep
  assert.equal(h.actor().session.accountId,B);assert.ok(!h.effects.some(x=>x.startsWith('signout:')));
  assert.equal((await h.sessions.read(Date.now())).session.accountId,B);
  assert.ok(h.calls.every(c=>c.token===session(A).accessToken));
+});
+test('D06: a recent verified account can reopen its own local household offline, with cloud sync suspended',async()=>{
+ let offline=false;const h=harness({activeStatus:async()=>{if(offline)throw new TypeError('network');return true;}});
+ await h.sessions.write(session(A));await h.runtime.check();assert.equal(h.runtime.getSnapshot().kind,'active');
+ offline=true;h.runtime.restrict();await h.runtime.check();
+ assert.equal(h.runtime.getSnapshot().kind,'offline_local');
+ assert.equal(h.effects.at(-2),'sync:suspended:true');assert.equal(h.effects.at(-1),'sync:stop');
+ assert.ok(h.effects.includes('blocked:false'));assert.ok(!h.effects.some(x=>x.startsWith('reset:')));
+ offline=false;await h.runtime.check();assert.equal(h.runtime.getSnapshot().kind,'active');assert.equal(h.effects.at(-1),'sync:resume');
+});
+test('D06: missing, stale, future or foreign active evidence fails closed during an outage',async()=>{
+ for(const record of [null,{accountId:A,checkedAt:Date.now()-25*3600000},{accountId:A,checkedAt:Date.now()+3600000},{accountId:B,checkedAt:Date.now()}]){
+  const h=harness({activeStatus:async()=>{throw new TypeError('network');}});await h.sessions.write(session(A));
+  if(record)await h.storage.setItem('herkeys.secure.lastActive.'+A,JSON.stringify(record));
+  await h.runtime.check();assert.equal(h.runtime.getSnapshot().kind,'unavailable');
+ }
+});
+test('D06: a cold offline launch uses only the same account’s durable positive check',async()=>{
+ const online=harness();await online.sessions.write(session(A));await online.runtime.check();
+ const cold=harness({storage:online.storage,activeStatus:async()=>{throw new TypeError('network');}});
+ cold.launch();await cold.runtime.check();assert.equal(cold.runtime.getSnapshot().kind,'offline_local');
+});
+test('D06: the native fetch adapter preserves local access when RN rejects with plain Error',async()=>{
+ let offline=false;
+ const h=harness({activeStatus:token=>fetchAccountAccessStatus(async()=>{if(offline)throw new Error('Network request failed');return new Response('"active"');},'https://staging.example','public-key',token)});
+ await h.sessions.write(session(A));await h.runtime.check();offline=true;h.launch();await h.runtime.check();
+ assert.equal(h.runtime.getSnapshot().kind,'offline_local');assert.equal(h.effects.at(-1),'sync:stop');
+});
+test('D06: known deactivation, a deletion receipt, HTTP rejection and account switching never borrow cached access',async()=>{
+ for(const scenario of ['inactive','receipt','http','switch']){
+  let phase='active';const h=harness({activeStatus:async()=>{if(phase==='active')return true;if(phase==='inactive')return false;if(phase==='http')throw new Error('status_unavailable');throw new TypeError('network');}});
+  await h.sessions.write(session(A));await h.runtime.check();
+  phase=scenario;
+  if(scenario==='receipt')await h.storage.setItem(KEY+'.'+A,JSON.stringify({accountId:A,proof:'p'.repeat(43)}));
+  if(scenario==='switch'){h.switch(B);await h.sessions.write(session(B));}
+  await h.runtime.check();assert.notEqual(h.runtime.getSnapshot().kind,'offline_local',scenario);
+  if(scenario==='inactive'){assert.equal(h.runtime.getSnapshot().kind,'pending');phase='offline';await h.runtime.check();assert.equal(h.runtime.getSnapshot().kind,'unavailable');}
+ }
 });
 test('a timed-out request retains a durable receipt until active-account authority returns',async()=>{
  const h=harness({call:async()=>{throw new Error('network');},activeStatus:async()=>{throw new Error('network');}});

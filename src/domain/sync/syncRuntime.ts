@@ -58,6 +58,8 @@ export interface SyncRuntime {
   snapshot(): SyncSnapshot | null;
   running(): { accountId: string; householdId: string } | null;
   stop(): void;
+  /** Account access revalidation can pause cloud traffic independently of local editing and auth refresh. */
+  setAccessSuspended(suspended: boolean): void;
   /** Resolves when no start-up or requested cycle is still running. For tests and diagnostics; nothing awaits it in the app. */
   idle(): Promise<void>;
   /** How many coordinators this runtime has ever built. More than one running at once is impossible; this proves it stayed cheap. */
@@ -86,6 +88,7 @@ export function createSyncRuntime(deps: SyncRuntimeDeps): SyncRuntime {
   const report = (type: string, detail?: string) => deps.report?.({ type, detail });
 
   let active: Active | null = null;
+  let accessSuspended = false;
   let generation = 0;
   let built = 0;
   let cancelRetry: (() => void) | null = null;
@@ -115,6 +118,15 @@ export function createSyncRuntime(deps: SyncRuntimeDeps): SyncRuntime {
     identity.sync.accountId === a.accountId;
 
   function build(a: Omit<Active, 'coordinator'>): SyncCoordinator {
+    const current = () => !accessSuspended && active?.generation === a.generation && deps.activeAccountId() === a.accountId;
+    const stopped = () => ({ kind: 'failure' as const, failure: 'unauthorized' as const, detail: 'Account access is being rechecked.', code: null });
+    // Guard EVERY transport request, including the second item of an already-running push or pull batch.
+    const transport: SyncTransport = {
+      create: (...args) => current() ? deps.transport.create(...args) : Promise.resolve(stopped()),
+      update: (...args) => current() ? deps.transport.update(...args) : Promise.resolve(stopped()),
+      pull: (...args) => current() ? deps.transport.pull(...args) : Promise.resolve(stopped()),
+      fetchRows: (...args) => current() ? deps.transport.fetchRows(...args) : Promise.resolve(stopped()),
+    };
     const turn: SyncTurn = {
       current: () => {
         const snapshot = deps.store.getSnapshot();
@@ -132,7 +144,7 @@ export function createSyncRuntime(deps: SyncRuntimeDeps): SyncRuntime {
 
     return createSyncCoordinator({
       accountId: a.accountId,
-      activeAccountId: () => deps.activeAccountId(),
+      activeAccountId: () => current() ? a.accountId : null,
       namespace: () => deps.store.getSnapshot().identity.sync,
       state: () => deps.store.getSnapshot().state,
       // Never used: every write goes through `turn`, against the state as it is when the write happens.
@@ -143,9 +155,9 @@ export function createSyncRuntime(deps: SyncRuntimeDeps): SyncRuntime {
       householdId: a.householdId,
       profileId: a.accountId,
       now: deps.now,
-      push: { householdId: a.householdId, profileId: a.accountId, deviceId: a.deviceId, transport: deps.transport, now: deps.now },
+      push: { householdId: a.householdId, profileId: a.accountId, deviceId: a.deviceId, transport, now: deps.now },
       pull: {
-        transport: deps.transport,
+        transport,
         now: deps.now,
         applyRow: applyCloudRow,
         applyTombstone: applyCloudTombstone,
@@ -227,6 +239,7 @@ export function createSyncRuntime(deps: SyncRuntimeDeps): SyncRuntime {
   }
 
   function start(accountId: string, householdId: string) {
+    if (accessSuspended) return;
     // Exactly once: the same account and household already have a live coordinator.
     if (active !== null && active.accountId === accountId && active.householdId === householdId) return;
     stop();
@@ -278,6 +291,10 @@ export function createSyncRuntime(deps: SyncRuntimeDeps): SyncRuntime {
   }
 
   const runtime: SyncRuntime = {
+    setAccessSuspended(suspended) {
+      accessSuspended = suspended;
+      if (suspended) stop();
+    },
     onAccountState(state) {
       if (state.kind === 'accountBound') start(state.session.accountId, state.householdId);
       else if (active !== null) stop();

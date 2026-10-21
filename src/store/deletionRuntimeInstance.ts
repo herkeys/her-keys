@@ -1,8 +1,10 @@
 import * as Crypto from 'expo-crypto';
+import {isAuthRetryableFetchError} from '@supabase/supabase-js';
 import {supabaseConfig} from '../config/supabase';
 import {createDeviceSecureStorage} from '../platform/secureStore';
 import {createSecureSessionStore} from '../domain/account/secureSession';
 import {createDeletionRuntime} from '../domain/account/deletionRuntime';
+import {fetchAccountAccessStatus} from '../domain/account/accountAccessStatus';
 import {accountRuntime,syncRuntime} from './accountRuntimeInstance';
 import {appStore} from './appStoreInstance';
 import {createSupabaseClient} from '../platform/supabaseCloud';
@@ -17,20 +19,19 @@ async function call(name:string,body:unknown,token?:string):Promise<any>{
  return result;
 }
 async function activeStatus(token:string):Promise<boolean> {
- const response=await fetch(supabaseConfig.url+'/rest/v1/rpc/account_access_status',{method:'POST',headers:{
-  'Content-Type':'application/json',apikey:supabaseConfig.anonKey!,Authorization:'Bearer '+token
- },body:'{}',signal:AbortSignal.timeout(10000)});
- if(!response.ok)throw new Error('status_unavailable');
- return await response.json()==='active';
+ if(!supabaseConfig.url||!supabaseConfig.anonKey)throw new Error('not_configured');
+ return fetchAccountAccessStatus(fetch,supabaseConfig.url,supabaseConfig.anonKey,token);
 }
 export const deletionRuntime=createDeletionRuntime({
  secure,sessions,accountRuntime,appStore,syncRuntime,call,activeStatus,
+ report:event=>{if(__DEV__)console.info('[herkeys] '+event);},
  randomProof:()=>base64Url(Crypto.getRandomBytes(32)),
  fingerprint:accountId=>Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256,'herkeys-deletion:'+accountId),
  async refresh(session){
   const auth=createSupabaseClient();if(!auth)throw new Error('not_configured');
   const result=await auth.auth.refreshSession({refresh_token:session.refreshToken});
-  if(result.error||!result.data.session||result.data.session.user.id!==session.accountId)throw new Error('refresh_unavailable');
+  if(result.error){if(isAuthRetryableFetchError(result.error))throw result.error;throw new Error('refresh_unavailable');}
+  if(!result.data.session||result.data.session.user.id!==session.accountId)throw new Error('refresh_unavailable');
   return sessionFromSupabase(result.data.session,session.accountId,session.provider);
  }
 });

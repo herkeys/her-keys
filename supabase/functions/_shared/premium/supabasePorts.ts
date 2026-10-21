@@ -10,7 +10,7 @@ function fail(op: string, error: { message?: string; code?: string } | null): ne
 }
 
 const PROJECTION_COLUMNS =
-  'source,environment,product_id,store,has_entitlement,expires_at,grace_expires_at,canceled_at,billing_issue_at,revoked_at,expiration_confirmed_at,clocks,last_event_ms,last_reconciled_at,needs_reconcile,version';
+  'source,environment,product_id,store,period_type,period_started_at,trial_ends_at,has_entitlement,expires_at,grace_expires_at,canceled_at,billing_issue_at,revoked_at,expiration_confirmed_at,clocks,last_event_ms,last_reconciled_at,needs_reconcile,version';
 
 interface ErrorLike {
   message?: string;
