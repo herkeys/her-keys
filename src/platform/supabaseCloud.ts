@@ -21,6 +21,7 @@ import { createTimeoutFetch } from './timeoutFetch';
  */
 export function createSupabaseClient(): SupabaseClient | null {
   if (!isSupabaseConfigured()) return null;
+  // S256 PKCE with a CSPRNG verifier needs WebCrypto, which Hermes lacks: app/_layout.tsx installs it first (AE2E-D02).
   return createClient(supabaseConfig.url as string, supabaseConfig.anonKey as string, {
     auth: {
       persistSession: false,
