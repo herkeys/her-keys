@@ -66,12 +66,25 @@ describe('Release identity guard', () => {
   });
 
   test('provenance requires an authorized branch, a clean tracked tree and a pushed HEAD', () => {
-    const good = { branch: RELEASE_BRANCHES[0], trackedChanges: [], head: 'a'.repeat(40), upstreamHead: 'a'.repeat(40), remoteHead: 'a'.repeat(40) };
+    assert.deepEqual(RELEASE_BRANCHES, ['build/02-gemini-integration', 'integration/build2-candidate-20261020']);
+    const good = { branch: 'integration/build2-candidate-20261020', trackedChanges: [], head: 'a'.repeat(40), upstreamHead: 'a'.repeat(40), remoteHead: 'a'.repeat(40) };
     assert.deepEqual(checkProvenance(good), []);
+    assert.deepEqual(checkProvenance({ ...good, branch: 'build/02-gemini-integration' }), []);
     assert.match(checkProvenance({ ...good, branch: 'feature/01-today-chief-of-staff' }).join('\n'), /not an authorized release branch/);
     assert.match(checkProvenance({ ...good, trackedChanges: ['app.json'] }).join('\n'), /tracked changes/);
     assert.match(checkProvenance({ ...good, upstreamHead: 'b' }).join('\n'), /differs from upstream/);
     assert.match(checkProvenance({ ...good, upstreamHead: '' }).join('\n'), /no upstream/);
+    assert.match(checkProvenance({ ...good, head: 'short-sha' }).join('\n'), /exact full commit SHA/);
+    assert.match(checkProvenance({ ...good, remoteHead: '' }).join('\n'), /could not be verified/);
+    assert.match(checkProvenance({ ...good, remoteHead: 'b'.repeat(40) }).join('\n'), /remote HEAD differs from the exact local source SHA/);
+  });
+
+  test('the V2 candidate has a documented iOS Production preflight without starting a build', () => {
+    const guide = read('docs/release/ANDROID_RELEASE_IDENTITY.md');
+    assert.match(guide, /integration\/build2-candidate-20261020/);
+    assert.match(guide, /eas env:exec production/);
+    assert.match(guide, /npm run release:preflight/);
+    assert.match(guide, /no IPA is built/i);
   });
 
   test('the parity registry agrees with the guard', () => {

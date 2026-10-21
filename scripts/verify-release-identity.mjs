@@ -17,8 +17,11 @@ export const CANONICAL_IDENTITY = Object.freeze({
   easProjectId: '7b25f8fe-d7de-49c1-ba69-1fd3a065826a',
 });
 
-// Branches a production store build may be cut from. Changing this list is an owner decision.
-export const RELEASE_BRANCHES = Object.freeze(['build/02-gemini-integration']);
+// Branches a production store build may be cut from. Keep this list explicit and narrowly scoped.
+export const RELEASE_BRANCHES = Object.freeze([
+  'build/02-gemini-integration',
+  'integration/build2-candidate-20261020',
+]);
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 

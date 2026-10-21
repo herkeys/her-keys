@@ -75,10 +75,52 @@ keytool -printcert -jarfile <app.aab>      # SHA1 must be 27:EF:71:89:70:C6:72:0
 and confirm the EAS build page shows application id `com.heykeys.app` and a `versionCode` Play has not seen
 (versionCode 1 was used by `ea226dc0`).
 
-## Branches that must not be used for a store build
+## Release branch authorization
 
-Only branches containing `f87aaee` resolve the correct Android id: `build/02-gemini-integration` and
-`audit/ios-android-platform-parity`. Every other branch (all `feature/*`, `integration/*`, `refinement/*`, `repair/*`,
-`design/*`, `docs/*`, `build/04-cloud-identity-sync`) still resolves `com.herkeys.app`, has no guard, and is
-**non-release**. `main` and the early `build/0x` branches have no Android package at all, so EAS would prompt for one.
-These branches pick up the correct id and the guard when they are rebased onto or merged with the release line.
+The release guard explicitly authorizes `build/02-gemini-integration` and the current V2 source candidate
+`integration/build2-candidate-20261020`. The separate `audit/ios-android-platform-parity` audit branch is not an
+authorized release source. Other branches remain non-release sources unless explicitly added to
+`RELEASE_BRANCHES` after review. `main` and early `build/0x` branches may not carry the required Android package or guard.
+The current candidate's iOS Production-environment PowerShell preflight is documented below. It does not start a build.
+
+## iOS Production release preflight
+
+The release identity guard authorizes `integration/build2-candidate-20261020` as a release source alongside
+`build/02-gemini-integration`. This is a source authorization only; it does not approve an App Store submission or start a
+build. The current V2 candidate at the time this change was prepared was `672714e7077f568c1577b01fab3dd35653bfa82c`.
+
+The preflight resolves the Expo public configuration and preserves all existing checks: canonical Her Keys Android and
+iOS identifiers, slug, EAS owner and project, Production Supabase project, mandatory V2 consent gate, empty data mode,
+clean tracked tree, branch upstream at HEAD, full commit SHA, and a live `git ls-remote` match for the exact source SHA.
+It prints the candidate SHA and identity fields; it does not print environment key values.
+
+From an existing Her Keys checkout with all intended changes committed and pushed, run these commands in PowerShell:
+
+```powershell
+git fetch origin
+git switch integration/build2-candidate-20261020
+git pull --ff-only origin integration/build2-candidate-20261020
+npm ci
+eas env:exec production 'npm run release:preflight'
+```
+
+For a fresh tracked checkout:
+
+```powershell
+git clone git@github-herkeys:herkeys/her-keys.git
+Set-Location .\her-keys
+git fetch origin integration/build2-candidate-20261020
+git switch --track origin/integration/build2-candidate-20261020
+npm ci
+eas env:exec production 'npm run release:preflight'
+```
+
+The EAS Production environment must contain the Her Keys Production backend URL, client publishable key,
+`EXPO_PUBLIC_HERKEYS_BACKEND=production`, `EXPO_PUBLIC_HERKEYS_DATA_MODE=empty`, and
+`EXPO_PUBLIC_HERKEYS_V2_CONSENT_GATE=true`. EAS CLI authentication must resolve to the Her Keys EAS project. If the
+preflight fails, do not build; resolve the reported identity, environment, branch, tree, upstream, or remote-SHA failure
+and rerun it.
+
+Require the final line `RELEASE_IDENTITY=PASS` and retain the printed `BRANCH`, `SOURCE_SHA`, and `REMOTE_SOURCE_SHA`
+with the release record. Confirm the two SHA values match. This command runs only the preflight; no IPA is built, no
+TestFlight upload is made, and no App Store release is submitted.
