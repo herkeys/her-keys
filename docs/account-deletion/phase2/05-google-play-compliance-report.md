@@ -35,7 +35,7 @@ Build: `npx expo run:android` (debug) on a host with ≥8 GB free RAM, or an EAS
 
 ## External web resource (Play requirement)
 
-The source (PR #9 plus web Phase 2 `c3b2c83`) satisfies the functional requirements when served, verified by local production build checks (22/22):
+The source (PR #9 plus web Phase 2 `b865fd7`) satisfies the functional requirements when served, verified by local production build checks (22/22):
 
 | Requirement | Evidence |
 |---|---|

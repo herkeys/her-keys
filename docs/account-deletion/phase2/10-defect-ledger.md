@@ -118,8 +118,8 @@ Validation values: PASS / FAIL / NOT_RUN. "Source" means executable Node/SQL tes
 | Severity / type | P3 / website |
 | Location | Web `lib/deletion-client.ts:9–17` (c751f9e) |
 | Evidence | Headless Chrome against a local production build: a blocked network showed "Failed to fetch"; an HTML 502 showed `Unexpected token '<' … is not valid JSON`. `deletionCall` did not apply the project allowlist that `deletionAuth` applies. |
-| Actual change | Web `c3b2c83`: transport failures say a network error proves neither success nor failure; responses are parsed defensively; `deletionCall` refuses non-Her Keys hosts before sending any receipt or token. |
-| Validation | PASS: 2 new web tests (both fail against c751f9e); browser checks 22/22. |
+| Actual change | Web `b865fd7`: transport failures say a network error proves neither success nor failure; responses are parsed defensively; `deletionCall` refuses non-Her Keys hosts before sending any receipt or token. |
+| Validation | PASS: 2 new web tests (both fail against c751f9e); browser checks 22/22. Not yet wired into web CI (owner follow-up W-1: credential lacked `workflow` scope). |
 | Release blocker | NO |
 
 ## DEL-P2-009 — Web deletion is unusable for Apple "Hide My Email" users
@@ -128,7 +128,7 @@ Validation values: PASS / FAIL / NOT_RUN. "Source" means executable Node/SQL tes
 |---|---|
 | Severity / type | P3 / website, identity |
 | Evidence | The web flow verifies ownership by email OTP (`shouldCreateUser=false`). An Apple relay-address user rarely knows that address. |
-| Actual change | Web `c3b2c83`: the page explains where to find the relay address, or to use the in-app path or support. |
+| Actual change | Web `b865fd7`: the page explains where to find the relay address, or to use the in-app path or support. |
 | Validation | PASS (build/lint/browser render) |
 | Release blocker | NO (in-app path exists; the web resource requirement is Google Play's) |
 

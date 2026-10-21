@@ -10,7 +10,7 @@
 | PR #39 `repair/account-deletion-crossplatform-closeout-20261019` | `e265f274671aa8caaec38d114613e9e31b275631` | Draft; exact-head CI **PASS** (run 39282406729); unchanged since the brief |
 | **Phase 2 mobile** `repair/account-deletion-phase2-20261020` | `5d408090325a11f44feb306711e9749f42b02692` (code), + docs commit | Stacked on #39 |
 | Website PR #9 `repair/account-deletion-web-closeout-20261019` | `c751f9e7eb18575ecc86e2bd4ad862349d648324` | Draft; exact-head CI **PASS** (run 39278472014); unchanged |
-| **Phase 2 website** `repair/account-deletion-web-phase2-20261020` | `c3b2c83` | Stacked on PR #9 |
+| **Phase 2 website** `repair/account-deletion-web-phase2-20261020` | `b865fd7` | Stacked on PR #9 |
 
 Linear ancestry confirmed: `559e50c ⊂ c7dca1e ⊂ e265f27 ⊂ Phase 2`. No newer shared V2 branch exists on origin after #39.
 
@@ -34,7 +34,7 @@ The full PR #39 source diff (27 non-documentation files) was reviewed: 4 migrati
 | `9da9ea1` | DEL-P2-002: Google `invalid_token` settlement, completion-email Google line |
 | `6e074ae` | DEL-P2-005: external watchdog script + inert scheduled workflow; integration gate includes this branch |
 | `5d40809` | DEL-P2-006: `eol=lf` pins for the four repair migrations |
-| web `c3b2c83` | DEL-P2-008/009: error handling, host allowlist on every call, Apple relay guidance, PR CI |
+| web `b865fd7` | DEL-P2-008/009: error handling, host allowlist on every call, Apple relay guidance (CI workflow edit deferred: needs a `workflow`-scoped token, W-1) |
 
 ## Test evidence
 
@@ -80,7 +80,7 @@ NEW_REGRESSIONS=0
 UNRESOLVED_P0=0
 UNRESOLVED_P1=4                       (DEL-P2-001, DEL-P2-002 repaired but pending approval+deploy; AD-009 website; AD-011 legal)
 MOBILE_SOURCE_SHA=5d408090325a11f44feb306711e9749f42b02692   (code; docs commit follows)
-WEBSITE_SOURCE_SHA=c3b2c83 (full SHA in the web PR)
+WEBSITE_SOURCE_SHA=b865fd71c4f8a69ef268b8fd711fd270f34fe6f7
 REPAIR_BRANCH=repair/account-deletion-phase2-20261020
 REPAIR_PR=see PR description
 READY_FOR_BUILD_MANAGER_INTEGRATION=NO   (drafts; needs review approvals, DEL-P2-001/002 sign-off, green exact-head CI, merge order above)

@@ -1,12 +1,12 @@
 # Website activation report — account deletion Phase 2 (2026-10-20)
 
-Repository `herkeys/her-keys-web`. PR #9 head `c751f9e7eb18575ecc86e2bd4ad862349d648324` (draft, base `main` `b8939095f5a1aec9877864635a7cafcfa521d1a2`, exact-head CI [39278472014](https://github.com/herkeys/her-keys-web/actions/runs/39278472014) PASS). Phase 2 repair branch `repair/account-deletion-web-phase2-20261020` at `c3b2c83` (stacked on PR #9).
+Repository `herkeys/her-keys-web`. PR #9 head `c751f9e7eb18575ecc86e2bd4ad862349d648324` (draft, base `main` `b8939095f5a1aec9877864635a7cafcfa521d1a2`, exact-head CI [39278472014](https://github.com/herkeys/her-keys-web/actions/runs/39278472014) PASS). Phase 2 repair branch `repair/account-deletion-web-phase2-20261020` at `b865fd7` (stacked on PR #9).
 
 ## Gate results
 
 | Gate | Result |
 |---|---|
-| `WEBSITE_SOURCE` | **PASS**: typecheck, lint, production build, 4/4 web tests, 22/22 browser checks at `c3b2c83` |
+| `WEBSITE_SOURCE` | **PASS**: typecheck, lint, production build, 4/4 web tests, 22/22 browser checks at `b865fd7` |
 | `WEBSITE_PUBLIC_DELETION` | **NOT_DEPLOYED**: live `/delete-account` = disabled placeholder (200) |
 | `WEBSITE_RESTORE` | **NOT_DEPLOYED**: live `/account/restore` = 404 |
 
@@ -35,13 +35,13 @@ Repository `herkeys/her-keys-web`. PR #9 head `c751f9e7eb18575ecc86e2bd4ad862349
 | Rate limits | Server side (Edge Functions + `account_deletion_rate_limits`). The page adds no client throttle beyond disabling buttons while busy. Acceptable. |
 | Errors | Raw "Failed to fetch" and JSON-parser text shown. **Fixed** (DEL-P2-008). |
 | Legal text | PR adds a privacy-summary section, a full-policy retention notice and contact addresses. **Needs Legal approval** (DEL-P2-007). |
-| CI | Workflow ran only on two branch pushes; Phase 2 adds `pull_request` and the new test. |
+| CI | Workflow runs only on pushes to two named branches plus manual dispatch, and runs only `deletion-status.test.mjs`. The Phase 2 edit (add `pull_request`, the Phase 2 branch and `deletion-client.test.mjs`) could not be pushed: the available GitHub credential lacks `workflow` scope. **Owner follow-up W-1:** apply that one-line change. An exact-head manual dispatch was run on the Phase 2 branch instead. |
 | Unrelated diff | `demos/life-scenarios` apostrophe escaping (lint), lockfile refresh for `@supabase/supabase-js@2.116.0`. Benign. |
 | Footer | Site-wide "Public preview — final photography and store links are placeholders" predates PR #9; a launch item for the site owner, not deletion. |
 
 ## Verification performed
 
-Local production build of `c3b2c83` served with `next start`, configured for **Staging** (publishable key only), driven by headless Chrome via Playwright (`evidence/web-deletion-check.json`, screenshots in `evidence/`). Live Staging calls used only a random 43-character token, random receipts and a nonexistent `.invalid` email. No account was created, deleted or restored.
+Local production build of `b865fd7` served with `next start`, configured for **Staging** (publishable key only), driven by headless Chrome via Playwright (`evidence/web-deletion-check.json`, screenshots in `evidence/`). Live Staging calls used only a random 43-character token, random receipts and a nonexistent `.invalid` email. No account was created, deleted or restored.
 
 22/22: fragment stripped; explicit confirm; token only in the POST body; empty Referer on all service calls; failure copy for unknown token; nothing in web storage; only localhost and the Staging host contacted; malformed token not offered; Her Keys identified; non-enumerating initiation; confirm disabled pre-verification; malformed receipt rejected; unknown receipt not "deleted"; offline and 502 handled with friendly copy; all inputs labelled; 375 px with no horizontal scroll and ≥44 px buttons on both pages.
 
