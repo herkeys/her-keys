@@ -1,6 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {createDeletionRuntime} from '../../src/domain/account/deletionRuntime.ts';
+import {fetchAccountAccessStatus} from '../../src/domain/account/accountAccessStatus.ts';
 import {createMemorySecureStorage,createSecureSessionStore} from '../../src/domain/account/secureSession.ts';
 const A='11111111-1111-4111-8111-111111111111', B='22222222-2222-4222-8222-222222222222';
 const KEY='herkeys.secure.deletionReceipt';
@@ -60,6 +61,12 @@ test('D06: a cold offline launch uses only the same account’s durable positive
  const online=harness();await online.sessions.write(session(A));await online.runtime.check();
  const cold=harness({storage:online.storage,activeStatus:async()=>{throw new TypeError('network');}});
  cold.launch();await cold.runtime.check();assert.equal(cold.runtime.getSnapshot().kind,'offline_local');
+});
+test('D06: the native fetch adapter preserves local access when RN rejects with plain Error',async()=>{
+ let offline=false;
+ const h=harness({activeStatus:token=>fetchAccountAccessStatus(async()=>{if(offline)throw new Error('Network request failed');return new Response('"active"');},'https://staging.example','public-key',token)});
+ await h.sessions.write(session(A));await h.runtime.check();offline=true;h.launch();await h.runtime.check();
+ assert.equal(h.runtime.getSnapshot().kind,'offline_local');assert.equal(h.effects.at(-1),'sync:stop');
 });
 test('D06: known deactivation, a deletion receipt, HTTP rejection and account switching never borrow cached access',async()=>{
  for(const scenario of ['inactive','receipt','http','switch']){

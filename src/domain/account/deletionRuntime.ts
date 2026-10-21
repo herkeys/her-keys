@@ -11,12 +11,13 @@ interface DeletionDependencies {
  call(name:string,body:unknown,token?:string):Promise<any>;
  activeStatus(token:string):Promise<boolean>;
  refresh(session:AccountSession):Promise<AccountSession>;
+ report?(event:string):void;
  randomProof():string;fingerprint(accountId:string):Promise<string>;
 }
 // A recent positive server check permits only this device's local household during a network outage.
 // It never authorizes cloud traffic, purchases, AI, or a namespace without its own durable session.
 export const OFFLINE_ACCOUNT_ACCESS_MAX_AGE_MS=24*60*60*1000;
-export function createDeletionRuntime({secure,sessions,accountRuntime,appStore,syncRuntime,call,activeStatus,refresh,randomProof,fingerprint}:DeletionDependencies) {
+export function createDeletionRuntime({secure,sessions,accountRuntime,appStore,syncRuntime,call,activeStatus,refresh,randomProof,fingerprint,report}:DeletionDependencies) {
 const KEY='herkeys.secure.deletionReceipt';
 const ACTIVE_KEY='herkeys.secure.lastActive.';
 const deniedAccounts=new Set<string>();
@@ -112,7 +113,8 @@ async function check() {
   publish({kind:'active'});
  } catch(error) {
   if(!scope.current())return;
-  const networkFailure=error instanceof Error&&new Set(['TypeError','AbortError','TimeoutError','AuthRetryableFetchError']).has(error.name);
+  report?.(`account.access_check_failed.${error instanceof Error?error.name:'non_error'}.cached_${!!lastActive}.scoped_${!!offlineAccount}`);
+  const networkFailure=error instanceof Error&&new Set(['TypeError','AbortError','TimeoutError','AuthRetryableFetchError','AccountAccessNetworkError']).has(error.name);
   const age=lastActive?Date.now()-lastActive.checkedAt:NaN;
   if(networkFailure&&offlineAccount&&lastActive?.accountId===offlineAccount&&Number.isFinite(age)&&age>=0&&age<=OFFLINE_ACCOUNT_ACCESS_MAX_AGE_MS
     &&!deniedAccounts.has(offlineAccount)&&appStore.currentIdentity().binding?.accountId===offlineAccount)publish({kind:'offline_local'});
