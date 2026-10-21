@@ -118,6 +118,15 @@ export function createSyncRuntime(deps: SyncRuntimeDeps): SyncRuntime {
     identity.sync.accountId === a.accountId;
 
   function build(a: Omit<Active, 'coordinator'>): SyncCoordinator {
+    const current = () => !accessSuspended && active?.generation === a.generation && deps.activeAccountId() === a.accountId;
+    const stopped = () => ({ kind: 'failure' as const, failure: 'unauthorized' as const, detail: 'Account access is being rechecked.', code: null });
+    // Guard EVERY transport request, including the second item of an already-running push or pull batch.
+    const transport: SyncTransport = {
+      create: (...args) => current() ? deps.transport.create(...args) : Promise.resolve(stopped()),
+      update: (...args) => current() ? deps.transport.update(...args) : Promise.resolve(stopped()),
+      pull: (...args) => current() ? deps.transport.pull(...args) : Promise.resolve(stopped()),
+      fetchRows: (...args) => current() ? deps.transport.fetchRows(...args) : Promise.resolve(stopped()),
+    };
     const turn: SyncTurn = {
       current: () => {
         const snapshot = deps.store.getSnapshot();
@@ -135,7 +144,7 @@ export function createSyncRuntime(deps: SyncRuntimeDeps): SyncRuntime {
 
     return createSyncCoordinator({
       accountId: a.accountId,
-      activeAccountId: () => deps.activeAccountId(),
+      activeAccountId: () => current() ? a.accountId : null,
       namespace: () => deps.store.getSnapshot().identity.sync,
       state: () => deps.store.getSnapshot().state,
       // Never used: every write goes through `turn`, against the state as it is when the write happens.
@@ -146,9 +155,9 @@ export function createSyncRuntime(deps: SyncRuntimeDeps): SyncRuntime {
       householdId: a.householdId,
       profileId: a.accountId,
       now: deps.now,
-      push: { householdId: a.householdId, profileId: a.accountId, deviceId: a.deviceId, transport: deps.transport, now: deps.now },
+      push: { householdId: a.householdId, profileId: a.accountId, deviceId: a.deviceId, transport, now: deps.now },
       pull: {
-        transport: deps.transport,
+        transport,
         now: deps.now,
         applyRow: applyCloudRow,
         applyTombstone: applyCloudTombstone,
