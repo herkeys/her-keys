@@ -51,6 +51,7 @@ test('DEL-P2-005: the workflow stays inert until enabled and reads the key only 
  const wf=readFileSync(new URL('../../.github/workflows/account-deletion-watchdog.yml',import.meta.url),'utf8');
  assert.match(wf,/if: vars\.DELETION_WATCHDOG_ENABLED == 'true'/);
  assert.match(wf,/DELETION_WORKER_KEY: \$\{\{ secrets\.DELETION_WORKER_KEY \}\}/);
- assert.match(wf,/permissions:\n  contents: read/);
+ assert.match(wf,/permissions:\r?\n  contents: read/,'permissions remain read-only on LF and CRLF checkouts');
+ assert.match(wf.replace(/\r?\n/g,'\r\n'),/permissions:\r?\n  contents: read/,'Windows CRLF must not weaken the permission check');
  assert.doesNotMatch(wf,/pull_request/,'a fork PR must never receive the worker key');
 });
