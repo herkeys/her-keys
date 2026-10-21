@@ -1,0 +1,116 @@
+{
+ "base": "http://localhost:3917",
+ "at": "2026-10-21T00:03:08.478Z",
+ "results": [
+  {
+   "name": "restore: fragment token removed from address bar",
+   "pass": true,
+   "detail": "http://localhost:3917/account/restore"
+  },
+  {
+   "name": "restore: explicit confirmation required (no auto-restore on open)",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "restore: token sent only in POST body, not URL",
+   "pass": true,
+   "detail": "https://fhhudicklmpofuzkxeqe.supabase.co/functions/v1/restore-account"
+  },
+  {
+   "name": "restore: no Referer header on the service call",
+   "pass": true,
+   "detail": "\"\""
+  },
+  {
+   "name": "restore: unknown/invalid token yields recoverable failure copy",
+   "pass": true,
+   "detail": "Recovery could not complete. The link may have expired or been replaced. Request a new link or contact support."
+  },
+  {
+   "name": "restore: nothing persisted to web storage",
+   "pass": true,
+   "detail": "{\"ls\":{},\"ss\":{}}"
+  },
+  {
+   "name": "restore: no third-party hosts contacted",
+   "pass": true,
+   "detail": "localhost:3917,fhhudicklmpofuzkxeqe.supabase.co"
+  },
+  {
+   "name": "restore: malformed token is not offered for confirmation",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "delete: identifies Her Keys and loads without the app",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "delete: nonexistent address gets the same generic notice (no enumeration)",
+   "pass": true,
+   "detail": "If this address can be verified, check your email for a sign-in code. No deletion has been requested yet."
+  },
+  {
+   "name": "delete: confirm stays disabled before verification",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "delete: malformed receipt rejected client-side",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "delete: unknown receipt never reads as deleted",
+   "pass": true,
+   "detail": "The account service could not complete this request. Please retry."
+  },
+  {
+   "name": "delete: network failure surfaces a non-success message and re-enables controls",
+   "pass": true,
+   "detail": "The account service could not be reached. Check your connection and retry. A network error does not prove that a request failed or succeeded."
+  },
+  {
+   "name": "delete: raw browser error text is not shown",
+   "pass": true,
+   "detail": "The account service could not be reached. Check your connection and retry. A network error does not prove that a request failed or succeeded."
+  },
+  {
+   "name": "delete: non-JSON gateway error shows friendly copy",
+   "pass": true,
+   "detail": "The account service could not complete this request. Please retry."
+  },
+  {
+   "name": "delete: no Referer on any service call",
+   "pass": true,
+   "detail": "4"
+  },
+  {
+   "name": "delete: every input has an accessible label",
+   "pass": true,
+   "detail": "0"
+  },
+  {
+   "name": "mobile 375px /delete-account: no horizontal scroll",
+   "pass": true,
+   "detail": "overflow=0px"
+  },
+  {
+   "name": "mobile 375px /delete-account: buttons at least 44px tall",
+   "pass": true,
+   "detail": "0"
+  },
+  {
+   "name": "mobile 375px /account/restore: no horizontal scroll",
+   "pass": true,
+   "detail": "overflow=0px"
+  },
+  {
+   "name": "mobile 375px /account/restore: buttons at least 44px tall",
+   "pass": true,
+   "detail": "0"
+  }
+ ]
+}

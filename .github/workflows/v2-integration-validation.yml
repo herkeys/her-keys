@@ -48,6 +48,7 @@ on:
       # Shared defect closeout: exact pushed source validation only; no deployment or build.
       - repair/v2-shared-defect-closeout-20261019
       - repair/account-deletion-crossplatform-closeout-20261019
+      - repair/account-deletion-phase2-20261020
   workflow_dispatch:
 
 permissions:

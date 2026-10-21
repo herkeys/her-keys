@@ -1167,6 +1167,8 @@ const LATER_FEATURES = [
     ['src/store/LocalNotificationProvider.tsx', 'Deletion V2: cancel reminders while deletion restricts account access.'],
     ['tests/premiumFeedback.test.mjs', 'Deletion V2: classify the exact cleanup-only migration and assert it never gates deletion on entitlement.'],
     ['.github/workflows/v2-integration-validation.yml', 'Deletion V2: run the unchanged full integration gate on the isolated repair branch exact SHA.'],
+    ['scripts-dev/deletion-watchdog.mjs', 'Deletion Phase 2 (DEL-P2-005): independent external watchdog for the deletion monitor; reads aggregate health only.'],
+    ['.github/workflows/account-deletion-watchdog.yml', 'Deletion Phase 2 (DEL-P2-005): scheduled external watchdog, inert until the owner enables it and adds the worker-key secret.'],
     ['supabase/migrations/20261014012518_account_deletion_auth_reconciliation.sql', 'Additive session-revocation reconciliation verified against hosted Auth behavior.'],
     ['supabase/migrations/20261014014020_account_deletion_terminal_identity.sql', 'Preserve receipt-to-namespace proof and reject deleted Auth identities.'],
     ['supabase/migrations/20261014014620_account_deletion_proof_retention.sql', 'Apply owner-approved 365-day minimal terminal proof and daily expiry.'],

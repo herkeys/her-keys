@@ -3,8 +3,15 @@ export function isOpaqueProof(value: unknown): value is string { return typeof v
 export function verifiedAuthAbsence(result: {data:{user:unknown};error:{status?:number}|null}):boolean {
  return result.data.user===null && result.error?.status===404;
 }
+// A settled provider has either confirmed its cleanup or holds no usable
+// credential: Apple without revocation material (manual revocation required), or
+// Google rejecting the stored token as already invalid. Neither is recorded as true.
+export function providerSettled(name:string,value:unknown):boolean {
+ return value===true||(name==='apple_revoked'&&value==='manual_revocation_required')
+  ||(name==='google_revoked'&&value==='credential_already_invalid');
+}
 export function verifiedProviderEvidence(evidence:Record<string,unknown>):boolean {
- return ['google_revoked','apple_revoked','revenuecat_deleted'].every(key=>evidence[key]===true);
+ return ['google_revoked','apple_revoked','revenuecat_deleted'].every(key=>providerSettled(key,evidence[key]));
 }
 export function needsProviderReconciliation(evidence:Record<string,unknown>):boolean {
  return !verifiedProviderEvidence(evidence)||evidence.providers!==true;
@@ -25,6 +32,10 @@ export function safeCategory(error: unknown): string {
  return ['shared_household_requires_policy','unclassified_resource','recent_auth_required','lease_or_control_refused','terminal_verification_failed']
   .find(code => message.includes(code)) ?? 'operation_unavailable';
 }
+// Shown for every completed deletion: Apple may not have issued revocation
+// material to older sign-ins, so the user can always remove the grant themselves.
+export const APPLE_MANUAL_REVOCATION = 'If you used Sign in with Apple and Her Keys still appears in your Apple Account, you can remove it there: on iPhone, open Settings, tap your name, then Sign-In & Security, Sign in with Apple, Her Keys, and Stop Using.';
+export const GOOGLE_ACCESS_CHECK = 'If you connected Google Calendar, your Google Account and calendar events are not deleted. You can confirm Her Keys no longer has access at https://myaccount.google.com/permissions.';
 export function recoveryEmail(kind: string, deadline: string, recoveryUrl?: string) {
  const date = new Date(deadline).toISOString();
  const recovery = kind === 'recovery';
@@ -38,7 +49,8 @@ export function recoveryEmail(kind: string, deadline: string, recoveryUrl?: stri
   'You can recover your account before ' + date + ' (UTC). After this deadline permanent deletion will be processed automatically.',
   'This replacement link supersedes any earlier recovery link. Open it and confirm to restore; then sign in again.',
   recoveryUrl ?? '', 'Account deletion does not cancel an Apple or Google subscription.',
- ] : [kind === 'restored' ? 'Account access is restored. Please sign in again.' : 'Her Keys account data has been permanently deleted after verification.'];
+ ] : kind === 'restored' ? ['Account access is restored. Please sign in again.'] : ['Her Keys account data has been permanently deleted after verification.',
+  APPLE_MANUAL_REVOCATION, GOOGLE_ACCESS_CHECK];
  const text = subject + '\n\n' + lines.join('\n\n') + '\n\nSubscription management: https://apps.apple.com/account/subscriptions or https://play.google.com/store/account/subscriptions\nSupport: https://herkeys.app/support';
  const escape = (s: string) => s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
  return { subject, text, html: '<!doctype html><html lang="en"><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+escape(subject)+'</title></head><body style="font:16px/1.6 Arial,sans-serif;background:#faf7f1;color:#272721"><main style="max-width:560px;margin:auto;padding:24px"><h1 style="font-size:24px">Her Keys</h1><h2 style="font-size:20px">'+escape(subject)+'</h2>'+lines.map(s=>'<p>'+escape(s)+'</p>').join('')+(recoveryUrl?'<p><a style="display:inline-block;padding:14px 24px;background:#272721;color:#fff" href="'+escape(recoveryUrl)+'">Restore my account</a></p>':'')+'<p><a href="https://herkeys.app/support">Contact support</a></p></main></body></html>' };

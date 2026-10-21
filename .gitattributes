@@ -55,3 +55,10 @@ supabase/migrations/20261014113517_account_deletion_household_lock.sql text eol=
 supabase/migrations/20261016012000_premium_purchase_readiness.sql text eol=lf
 supabase/migrations/20261016013000_premium_checkout_independent_activation.sql text eol=lf
 supabase/migrations/20261017221825_ai_report_review_workflow.sql text eol=lf
+
+# Account deletion repair migrations match normalized function definitions by exact text; a CRLF
+# checkout fails closed with *_contract_mismatch (DEL-P2-006). Pin them to LF on every checkout.
+supabase/migrations/20261019144729_account_deletion_v2_resource_certification.sql text eol=lf
+supabase/migrations/20261019151501_account_deletion_optional_welcome_inventory.sql text eol=lf
+supabase/migrations/20261019152629_account_deletion_overdue_request_monitor.sql text eol=lf
+supabase/migrations/20261019153801_account_deletion_private_household_owners.sql text eol=lf
