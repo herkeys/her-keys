@@ -34,7 +34,7 @@ describe('Premium Production fulfillment and checkout separation', () => {
     assert.match(ready, /public\.premium_account_lifecycle\(v_account\)/);
   });
   test('onboarding and feature paywalls ask server identity eligibility before native checkout', () => {
-    assert.match(client, /premiumRpc\(client, owner, 'premium_purchase_readiness'\)/);
+    assert.match(client, /premiumRpc\(client, owner, process\.env\.EXPO_PUBLIC_REVENUECAT_STORE === 'test' \? 'premium_test_store_purchase_readiness' : 'premium_purchase_readiness'\)/);
     assert.match(requestOwner, /client\.rpc\(name, args\)/);
     assert.match(requestOwner, /session\.user\.id !== owner\.accountId/);
     assert.match(requestOwner, /request\.setHeader\('Authorization', authorization\)/);
