@@ -7,6 +7,8 @@ A corrected UNPUBLISHED draft was saved and inspected structurally and via light
 
 The draft has not been published. Native price/offer rendering, accessibility focus, dark mode and all small-device layouts are not claimed certified from a static render. Existing full V2 UI/accessibility regression suites are retained.
 
+The native Account surface was inspected on the Android emulator after preserved-session restoration: server-confirmed Premium status/date and all three tool descriptions are present. Debug QA found a React sibling-key collision between Premium and Restore; distinct account-scoped keys repair it without altering purchase authorization. Focused UI checks passed 41/41. This is Account UI evidence, not store checkout accessibility certification.
+
 Account UX now shows verified trial and cancellation status, removes the unsupported promise that a pending customer 'won’t be charged twice', and tells them to check their store before attempting another purchase. D06 local-only access shows a calm offline/sync-paused notice and retry. Free planning/capture remains available; no wholesale redesign or new Premium plan was introduced.
 
 [Paywall draft for owner review](https://app.revenuecat.com/projects/93809efe/paywalls/pw9aa8edf9bdb34338/builder).

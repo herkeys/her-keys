@@ -11,3 +11,7 @@ Tests cover January/February/leap-year ends, DST and local display, trial→canc
 
 Evidence categories: all automated lifecycle records in the test suites are unit/scripted integration or disposable database fixtures. A provider TEST is not a purchase. Real Google/Apple purchase, renewal, cancellation, refund and restore remain uncertified until actual store sandbox transactions are recorded.
 
+Native D06 result after the actual RN transport repair: bundled diagnostic cold launch with airplane mode enabled and Wi-Fi/cellular off preserved Today/Life access and displayed the sync-paused notice. A uniquely named Needs Me capture was committed offline, survived force-stop/cold relaunch offline, and was then resolved through the UI while disconnected. Only this sprint's test item was resolved; no existing user record or entitlement was removed. Screenshots and artifact hashes are in evidence/. Billing was intentionally unavailable in that diagnostic; it is local household evidence only. Full local suite after the repair: 5,290/5,290, zero skips/cancellations.
+
+After restoring the original network settings and cold-launching online, the account reconnected and the offline notice disappeared. A direct Staging query verified that exact new test item with status=resolved, revision=1. This verifies offline mutation persistence and later account-bound sync against the deployed backend. Both checkout flags remain false and entitlement counts remain 2 in Staging / 1 in Production.
+

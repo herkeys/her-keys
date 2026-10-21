@@ -1,0 +1,88 @@
+{
+  "date": "2026-10-21",
+  "source_commit": "9a087d8",
+  "platform": "Android emulator-5554",
+  "application_id": "com.heykeys.app",
+  "install_method": "adb install -r; existing local household and secure session preserved",
+  "cloud": {
+    "android": "not submitted: Free quota 15/15",
+    "ios": "not submitted: Windows has no iOS runtime, quota 4/15 available",
+    "billing_cycle_end": "2026-11-01T00:00:00Z",
+    "charges": 0
+  },
+  "artifacts": [
+    {
+      "kind": "initial Release / Test Store",
+      "sha256": "1F9F8C358592C92E417353B0632BCFFE78747B8BF0EF268D804784B60B0BA6B9",
+      "compile": "PASS 11m49s / 645 tasks",
+      "runtime": "FAIL: SDK deliberately refuses Test Store in non-debuggable builds; source profiles and key policy repaired afterward",
+      "purchase_evidence": false
+    },
+    {
+      "kind": "Debug / Metro / Test Store",
+      "sha256": "120336FBBDD48486FC5539B288B056728B7E07207CC5CDAB016A872F045AE82E",
+      "compile": "PASS 9m39s / 403 tasks",
+      "runtime": "PASS online startup, preserved Staging session restoration, Account shows server-confirmed fixture Premium and all three tool descriptions; SDK Test Store accepted. Duplicate sibling-key warning repaired afterward.",
+      "purchase_evidence": false
+    },
+    {
+      "kind": "exploratory embedded development bundle",
+      "sha256": "663464D59560353B64AE84E327F8EAF9E3B96F66CD3CCBADD76F35032B9F8754",
+      "runtime": "FAIL: embedded dev JS cannot create devtools websocket; replaced with supported export:embed --dev false diagnostic",
+      "purchase_evidence": false
+    },
+    {
+      "kind": "offline diagnostic before native transport fix",
+      "sha256": "C67FDE1A3E13C720487F5709C23400DF4FE568798926EE2743AEC5465E6A4841",
+      "runtime": "Online startup PASS; cold offline launch FAIL Account status unavailable. Native fetch rejects with plain Error. Fixed in 9a087d8 with adapter-level network classification.",
+      "purchase_evidence": false
+    },
+    {
+      "kind": "final offline diagnostic (native Debug + embedded non-dev JS)",
+      "sha256": "685C4FFB271D0BEACACD57812C183AC4D1F913A2061CBF1768678BDC0C0E2F38",
+      "source": "9a087d80c3681ec375f34ab230e2c73f824d68e0",
+      "compile": "PASS 1m25s / 403 tasks",
+      "billing": "Intentionally unavailable: non-dev JS safely refuses the Test Store key. No Metro dependence.",
+      "startup": "PASS online; no data clear",
+      "cold_offline": "PASS airplane mode ON, wifi OFF, cellular OFF; Today and Life open with saved household and offline/sync-paused notice",
+      "offline_durable_edit": "PASS created uniquely named Premium-cert-offline-20261021 Needs Me capture offline, force-stopped/relaunched offline, verified persisted Today chip and exact item title, then marked only that test item Resolved while still offline. Existing household records untouched.",
+      "purchase_evidence": false
+    }
+  ],
+  "test_store": {
+    "route": "explicit staging + test + Debug JS required",
+    "new_transactions": 0,
+    "checkout_flag_final": false,
+    "native_checkout_flag_final": false,
+    "reason": "Current signed-in tester already has pre-existing test_fixture Premium. It was preserved and never represented as a purchase. No accessible credential for the other fresh tester; published paywall remains awaiting approval."
+  },
+  "real_store": {
+    "google": "NOT CERTIFIED: purchase API package-not-found plus Play tester/track access unavailable",
+    "apple": "NOT CERTIFIED: RC ASC key upload, MISSING_METADATA, iOS runtime/testers required"
+  },
+  "observations": {
+    "duplicate_keys": "reproduced in Account, fixed distinct premium:/restore: account-scoped keys",
+    "metro": "IPv6-only localhost listener caused initial connection failures; LAN listener/default emulator host restored service; not a Production app defect"
+  },
+  "production_checkout": false,
+  "deletion_worker_activated": false,
+  "evidence": {
+    "offline_screenshot": "android-offline-local.png",
+    "offline_persistence_screenshot": "android-offline-persisted.png",
+    "test_outcomes": "5290/5290 local tests; 96 focused account/sync checks; 13 ownership checks",
+    "cold_online_recovery": "PASS: restored network settings, force-stopped/relaunched online; Your account connected, offline notice absent; original household retained and test capture no longer open after explicit resolution.",
+    "staging_sync_after_online_recovery": [
+      {
+        "title": "Premium-cert-offline-20261021",
+        "status": "resolved",
+        "revision": 1
+      }
+    ],
+    "final_account_screenshot": "android-account-final.png"
+  },
+  "device_network_restoration": {
+    "airplane_mode": 0,
+    "wifi": 1,
+    "mobile_data": 1
+  }
+}

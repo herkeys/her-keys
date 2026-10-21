@@ -1,0 +1,280 @@
+{
+  "captured_at": "2026-10-21T08:53:40.477Z",
+  "projects": {
+    "fhhudicklmpofuzkxeqe": {
+      "runtime": {
+        "singleton": true,
+        "updated_at": "2026-10-21T04:37:29.666912+00:00",
+        "environment": "staging",
+        "premium_enabled": true,
+        "checkout_enabled": false,
+        "ai_policy_version": "ai-data-processing-initial-v1",
+        "webhook_processing": true,
+        "allow_test_fixtures": true,
+        "max_reconciled_age_seconds": 86400,
+        "test_store_checkout_enabled": false,
+        "reconcile_min_interval_seconds": 20
+      },
+      "features": [
+        {
+          "key": "village_delegation",
+          "tier": "premium",
+          "enabled": false,
+          "released": false,
+          "kill_switch": false,
+          "rollout_status": "not_released"
+        },
+        {
+          "key": "coparent_plus",
+          "tier": "premium",
+          "enabled": false,
+          "released": false,
+          "kill_switch": false,
+          "rollout_status": "not_released"
+        },
+        {
+          "key": "talk_it_out",
+          "tier": "free",
+          "enabled": true,
+          "released": true,
+          "kill_switch": false,
+          "rollout_status": "general"
+        },
+        {
+          "key": "daily_load_premium",
+          "tier": "premium",
+          "enabled": true,
+          "released": true,
+          "kill_switch": false,
+          "rollout_status": "staging_only"
+        },
+        {
+          "key": "smart_inbox_extract",
+          "tier": "premium",
+          "enabled": true,
+          "released": true,
+          "kill_switch": false,
+          "rollout_status": "staging_only"
+        },
+        {
+          "key": "momentum_report",
+          "tier": "premium",
+          "enabled": true,
+          "released": true,
+          "kill_switch": false,
+          "rollout_status": "staging_only"
+        }
+      ],
+      "tester_count": 2,
+      "deletion_jobs": [
+        {
+          "name": "herkeys-account-deletion-monitor",
+          "active": true
+        },
+        {
+          "name": "herkeys-account-deletion-proof-expiry",
+          "active": true
+        },
+        {
+          "name": "herkeys-account-deletion",
+          "active": false
+        }
+      ],
+      "entitlement_rows": 2,
+      "functions": [
+        {
+          "slug": "premium-gate",
+          "status": "ACTIVE",
+          "version": 7,
+          "verify_jwt": true,
+          "ezbr_sha256": "689de7e4114d0a4df3b545bceddf6de1318145cb8eaef51d7179ad27842db7fd"
+        },
+        {
+          "slug": "premium-reconcile",
+          "status": "ACTIVE",
+          "version": 8,
+          "verify_jwt": true,
+          "ezbr_sha256": "a11446ac585c8c5244186817197eb908d0d6a281c6552b1b191ce059e6b35f1f"
+        },
+        {
+          "slug": "smart-inbox-extract",
+          "status": "ACTIVE",
+          "version": 7,
+          "verify_jwt": true,
+          "ezbr_sha256": "924cad230ad3d19f560710bbc94fea33cdd6ea1704aabe044670705c30a3b34c"
+        },
+        {
+          "slug": "revenuecat-webhook",
+          "status": "ACTIVE",
+          "version": 9,
+          "verify_jwt": false,
+          "ezbr_sha256": "6438daa6300f8044904e43d4f2c0834aa44a2d63a58df47912747d7a19477351"
+        },
+        {
+          "slug": "premium-ops",
+          "status": "ACTIVE",
+          "version": 9,
+          "verify_jwt": false,
+          "ezbr_sha256": "1a48f11f642c5e00396f37e4889d0842d32a2450790616d804201935f27946d3"
+        }
+      ],
+      "migrations": [
+        {
+          "version": "20261021080329",
+          "name": "premium_verified_subscription_period"
+        },
+        {
+          "version": "20261021083704",
+          "name": "premium_test_store_checkout_isolation"
+        }
+      ]
+    },
+    "npykvnxnehlsdlbumzwk": {
+      "runtime": {
+        "singleton": true,
+        "updated_at": "2026-10-16T02:37:05.782922+00:00",
+        "environment": "production",
+        "premium_enabled": true,
+        "checkout_enabled": false,
+        "ai_policy_version": "ai-data-processing-initial-v1",
+        "webhook_processing": true,
+        "allow_test_fixtures": false,
+        "max_reconciled_age_seconds": 86400,
+        "test_store_checkout_enabled": false,
+        "reconcile_min_interval_seconds": 20
+      },
+      "features": [
+        {
+          "key": "village_delegation",
+          "tier": "premium",
+          "enabled": false,
+          "released": false,
+          "kill_switch": false,
+          "rollout_status": "not_released"
+        },
+        {
+          "key": "coparent_plus",
+          "tier": "premium",
+          "enabled": false,
+          "released": false,
+          "kill_switch": false,
+          "rollout_status": "not_released"
+        },
+        {
+          "key": "talk_it_out",
+          "tier": "free",
+          "enabled": true,
+          "released": true,
+          "kill_switch": false,
+          "rollout_status": "general"
+        },
+        {
+          "key": "daily_load_premium",
+          "tier": "premium",
+          "enabled": true,
+          "released": true,
+          "kill_switch": false,
+          "rollout_status": "general"
+        },
+        {
+          "key": "smart_inbox_extract",
+          "tier": "premium",
+          "enabled": true,
+          "released": true,
+          "kill_switch": false,
+          "rollout_status": "general"
+        },
+        {
+          "key": "momentum_report",
+          "tier": "premium",
+          "enabled": true,
+          "released": true,
+          "kill_switch": false,
+          "rollout_status": "general"
+        }
+      ],
+      "tester_count": 0,
+      "deletion_jobs": [
+        {
+          "name": "herkeys-account-deletion",
+          "active": false
+        },
+        {
+          "name": "herkeys-account-deletion-monitor",
+          "active": false
+        },
+        {
+          "name": "herkeys-account-deletion-proof-expiry",
+          "active": false
+        }
+      ],
+      "entitlement_rows": 1,
+      "functions": [
+        {
+          "slug": "premium-gate",
+          "status": "ACTIVE",
+          "version": 6,
+          "verify_jwt": true,
+          "ezbr_sha256": "689de7e4114d0a4df3b545bceddf6de1318145cb8eaef51d7179ad27842db7fd"
+        },
+        {
+          "slug": "premium-reconcile",
+          "status": "ACTIVE",
+          "version": 6,
+          "verify_jwt": true,
+          "ezbr_sha256": "a11446ac585c8c5244186817197eb908d0d6a281c6552b1b191ce059e6b35f1f"
+        },
+        {
+          "slug": "smart-inbox-extract",
+          "status": "ACTIVE",
+          "version": 6,
+          "verify_jwt": true,
+          "ezbr_sha256": "924cad230ad3d19f560710bbc94fea33cdd6ea1704aabe044670705c30a3b34c"
+        },
+        {
+          "slug": "revenuecat-webhook",
+          "status": "ACTIVE",
+          "version": 6,
+          "verify_jwt": false,
+          "ezbr_sha256": "6438daa6300f8044904e43d4f2c0834aa44a2d63a58df47912747d7a19477351"
+        },
+        {
+          "slug": "premium-ops",
+          "status": "ACTIVE",
+          "version": 6,
+          "verify_jwt": false,
+          "ezbr_sha256": "1a48f11f642c5e00396f37e4889d0842d32a2450790616d804201935f27946d3"
+        }
+      ],
+      "migrations": [
+        {
+          "version": "20261021082620",
+          "name": "premium_verified_subscription_period"
+        },
+        {
+          "version": "20261021083707",
+          "name": "premium_test_store_checkout_isolation"
+        }
+      ]
+    }
+  },
+  "closing_check": {
+    "at": "2026-10-21T09:26:15.872Z",
+    "projects": {
+      "fhhudicklmpofuzkxeqe": {
+        "environment": "staging",
+        "checkout_enabled": false,
+        "test_store_checkout_enabled": false,
+        "allow_test_fixtures": true,
+        "entitlement_rows": 2
+      },
+      "npykvnxnehlsdlbumzwk": {
+        "environment": "production",
+        "checkout_enabled": false,
+        "test_store_checkout_enabled": false,
+        "allow_test_fixtures": false,
+        "entitlement_rows": 1
+      }
+    }
+  }
+}
