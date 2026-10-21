@@ -80,7 +80,7 @@ describe('Release identity guard', () => {
   });
 
   test('the V2 candidate has a documented iOS Production preflight without starting a build', () => {
-    const guide = read('docs/release/IOS_RELEASE_PREFLIGHT.md');
+    const guide = read('docs/release/ANDROID_RELEASE_IDENTITY.md');
     assert.match(guide, /integration\/build2-candidate-20261020/);
     assert.match(guide, /eas env:exec production/);
     assert.match(guide, /npm run release:preflight/);
