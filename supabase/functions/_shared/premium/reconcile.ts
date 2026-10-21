@@ -26,8 +26,9 @@ export function defaultEnvironment(deployment: DeploymentEnvironment): PremiumEn
 export function parseSubscriberResponse(body: unknown, nowMs: number, deployment: DeploymentEnvironment): ParsedSubscriber {
   if (!isObject(body) || !isObject(body.subscriber)) return { ok: false, reason: 'invalid_response' };
   const subscriber = body.subscriber;
-  const entitlements = isObject(subscriber.entitlements) ? subscriber.entitlements : {};
-  const subscriptions = isObject(subscriber.subscriptions) ? subscriber.subscriptions : {};
+  if (!isObject(subscriber.entitlements) || !isObject(subscriber.subscriptions)) return { ok: false, reason: 'invalid_response' };
+  const entitlements = subscriber.entitlements;
+  const subscriptions = subscriber.subscriptions;
 
   const requestMs = typeof body.request_date_ms === 'number' && Number.isFinite(body.request_date_ms) ? body.request_date_ms : nowMs;
   // RevenueCat's clock is the one that matters for "has it expired", but never trust a wildly different server clock over ours.
@@ -38,6 +39,9 @@ export function parseSubscriberResponse(body: unknown, nowMs: number, deployment
     environment: defaultEnvironment(deployment),
     product_id: null,
     store: null,
+    period_type: null,
+    period_started_at: null,
+    trial_ends_at: null,
     has_entitlement: false,
     expires_at: null,
     grace_expires_at: null,
@@ -45,17 +49,21 @@ export function parseSubscriberResponse(body: unknown, nowMs: number, deployment
     billing_issue_at: null,
     revoked_at: null,
     expiration_confirmed_at: null,
-    clocks: { expiry: readMs, cancel: readMs, billing: readMs, revoke: readMs, expired: readMs },
+    clocks: { expiry: readMs, cancel: readMs, billing: readMs, revoke: readMs, expired: readMs, period: readMs },
     last_event_ms: null,
     last_reconciled_at: new Date(readMs).toISOString(),
     needs_reconcile: false,
   };
 
   const entitlement = entitlements[ENTITLEMENT_KEY];
-  if (!isObject(entitlement)) return { ok: true, projection: base };
+  if (entitlement === undefined) return { ok: true, projection: base };
+  if (!isObject(entitlement)) return { ok: false, reason: 'invalid_response' };
 
   const productId = typeof entitlement.product_identifier === 'string' ? entitlement.product_identifier : null;
   const subscription = productId !== null && isObject(subscriptions[productId]) ? (subscriptions[productId] as Record<string, unknown>) : null;
+  // Only an EXPLICIT null is non-expiring. Missing or malformed expiry must never become lifetime access.
+  if (!productId || productId.length > 200 || (entitlement.expires_date !== null && instant(entitlement.expires_date) === null)) return { ok: false, reason: 'invalid_response' };
+  if (entitlement.expires_date !== null && (subscription === null || typeof subscription.is_sandbox !== 'boolean')) return { ok: false, reason: 'invalid_response' };
 
   const expiresMs = instant(entitlement.expires_date); // null === a non-expiring entitlement
   const graceMs = instant(entitlement.grace_period_expires_date) ?? (subscription ? instant(subscription.grace_period_expires_date) : null);
@@ -63,6 +71,8 @@ export function parseSubscriberResponse(body: unknown, nowMs: number, deployment
   const refundedMs = subscription ? instant(subscription.refunded_at) : null;
   const inGrace = graceMs !== null && readMs <= graceMs;
   const lapsed = expiresMs !== null && readMs > expiresMs && !inGrace;
+  const rawPeriod = typeof subscription?.period_type === 'string' ? subscription.period_type.toUpperCase() : null;
+  const periodType = rawPeriod === 'TRIAL' || rawPeriod === 'INTRO' || rawPeriod === 'NORMAL' ? rawPeriod : null;
 
   return {
     ok: true,
@@ -71,6 +81,9 @@ export function parseSubscriberResponse(body: unknown, nowMs: number, deployment
       environment: subscription ? (subscription.is_sandbox === true ? 'SANDBOX' : 'PRODUCTION') : base.environment,
       product_id: productId,
       store: subscription && typeof subscription.store === 'string' ? subscription.store : null,
+      period_type: periodType,
+      period_started_at: iso(purchaseMs),
+      trial_ends_at: periodType === 'TRIAL' ? iso(expiresMs) : null,
       has_entitlement: true,
       expires_at: iso(expiresMs),
       grace_expires_at: iso(graceMs),

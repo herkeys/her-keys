@@ -31,6 +31,9 @@ const EntitlementSchema = z.object({
   canceled: z.boolean().optional(),
   needsReconcile: z.boolean().optional(),
   checkedAt: Instant.optional(),
+  periodType: z.enum(['TRIAL', 'INTRO', 'NORMAL']).nullable().optional(),
+  periodStartedAt: z.iso.datetime({ offset: true }).nullable().optional(),
+  trialEndsAt: z.iso.datetime({ offset: true }).nullable().optional(),
 });
 
 const ManifestSchema = z.array(
@@ -163,6 +166,11 @@ export function createPremiumServerClient(client: SupabaseClient, owner?: Premiu
           canceled: parsed.data.canceled ?? false,
           needsReconcile: parsed.data.needsReconcile ?? false,
           checkedAt: parsed.data.checkedAt ?? '',
+          ...(parsed.data.periodType !== undefined ? {
+            periodType: parsed.data.periodType,
+            periodStartedAt: parsed.data.periodStartedAt ?? null,
+            trialEndsAt: parsed.data.trialEndsAt ?? null,
+          } : {}),
         };
         return { kind: 'ok', value };
       } catch {

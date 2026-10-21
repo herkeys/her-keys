@@ -20,7 +20,7 @@ export type EntitlementState =
 export type ProjectionSource = 'webhook' | 'reconcile' | 'test_fixture';
 
 /** Per-field event clocks: the newest event_timestamp_ms that set each group of fields. An older event never overwrites a newer one. */
-export type ClockKey = 'expiry' | 'cancel' | 'billing' | 'revoke' | 'expired';
+export type ClockKey = 'expiry' | 'cancel' | 'billing' | 'revoke' | 'expired' | 'period';
 export type Clocks = Partial<Record<ClockKey, number>>;
 
 /** The projection row, as the RPCs exchange it (snake_case, ISO-8601 instants). Mirrors public.premium_entitlements. */
@@ -29,6 +29,10 @@ export interface Projection {
   environment: PremiumEnvironment;
   product_id: string | null;
   store: string | null;
+  /** Provider facts for presentation only; never a separate access grant. Optional for rolling deployments. */
+  period_type?: 'TRIAL' | 'INTRO' | 'NORMAL' | null;
+  period_started_at?: string | null;
+  trial_ends_at?: string | null;
   has_entitlement: boolean;
   expires_at: string | null;
   grace_expires_at: string | null;

@@ -62,8 +62,12 @@ describe('reading the authenticated RevenueCat subscriber record', () => {
     for (const body of [null, 'x', [], {}, { subscriber: null }, { subscriber: [] }]) {
       assert.deepEqual(parseSubscriberResponse(body, NOW, 'staging'), { ok: false, reason: 'invalid_response' });
     }
-    // an entitlement block that is not an object is treated as "no entitlement", not as access
-    assert.equal(stateOf(parse({ subscriber: { entitlements: { her_keys_plus: 'yes' } } })), 'free');
+    // A malformed entitlement cannot masquerade as either a verified free account or lifetime access.
+    for (const expires_date of [undefined, '', 'broken', 42]) {
+      const record=subscriberRecord();record.subscriber.entitlements.her_keys_plus.expires_date=expires_date;
+      assert.deepEqual(parseSubscriberResponse(record,NOW,'staging'),{ok:false,reason:'invalid_response'});
+    }
+    assert.deepEqual(parseSubscriberResponse({subscriber:{entitlements:{her_keys_plus:'yes'},subscriptions:{}}},NOW,'staging'),{ok:false,reason:'invalid_response'});
   });
 
   test('an entitlement under another key is NOT Premium', () => {

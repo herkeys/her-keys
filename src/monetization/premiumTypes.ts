@@ -43,6 +43,10 @@ export type NextAction = (typeof NEXT_ACTIONS)[number];
 
 export interface ServerEntitlement {
   state: ServerEntitlementState;
+  /** Verified provider period; absent on older servers. These fields never authorize access. */
+  periodType?: 'TRIAL' | 'INTRO' | 'NORMAL' | null;
+  periodStartedAt?: string | null;
+  trialEndsAt?: string | null;
   /** End of the paid term (or of the provider's grace) — display only. */
   expiresAt: string | null;
   graceExpiresAt: string | null;
