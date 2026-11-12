@@ -11,6 +11,7 @@ import { CAPABILITY_TEXT, PREMIUM_CAPABILITY_KEYS } from '../../src/monetization
 import { premiumLaunchState } from '../../src/monetization/premiumLaunchState';
 import { usePremiumStateIfMounted } from '../../src/monetization/PremiumStateProvider';
 import { usePaywallAction } from '../../src/monetization/usePaywallAction';
+import { goBackFromStep } from '../../src/features/onboarding/backNavigation';
 import { useOnboarding } from '../../src/store/OnboardingContext';
 import { usePremiumIntent } from '../../src/store/PremiumIntentContext';
 
@@ -105,6 +106,7 @@ export default function HerKeysPlus() {
 
   return (
     <Screen bottomClearance={spacing.xxl}>
+      <Button label="Back" variant="ghost" size="sm" onPress={() => goBackFromStep('plus', router)} disabled={busy !== null} style={styles.back} />
       <PremiumBadge style={styles.badge} />
       <Overline>{HER_KEYS_PREMIUM_DISPLAY_NAME}</Overline>
       <AppText variant="hero" style={styles.title}>
@@ -159,6 +161,7 @@ export default function HerKeysPlus() {
 }
 
 const styles = StyleSheet.create({
+  back: { alignSelf: 'flex-start', marginBottom: spacing.md },
   badge: { marginBottom: spacing.lg },
   title: { marginTop: spacing.md },
   lede: { marginTop: spacing.md, marginBottom: spacing.xxl },

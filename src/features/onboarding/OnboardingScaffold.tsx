@@ -13,6 +13,8 @@ interface OnboardingScaffoldProps {
   onContinue: () => void;
   continueLabel?: string;
   continueDisabled?: boolean;
+  /** Present on every step after the first: a visible Back that also works when the audit was resumed after a relaunch. */
+  onBack?: () => void;
 }
 
 export function OnboardingScaffold({
@@ -24,10 +26,12 @@ export function OnboardingScaffold({
   onContinue,
   continueLabel = 'Continue',
   continueDisabled,
+  onBack,
 }: OnboardingScaffoldProps) {
   const { colors } = useTheme();
   return (
     <Screen bottomClearance={spacing.xxl}>
+      {onBack ? <Button label="Back" variant="ghost" size="sm" onPress={onBack} style={styles.back} /> : null}
       <View style={styles.progress}>
         <View style={styles.progressHeader}>
           <Overline>Life systems audit</Overline>
@@ -53,6 +57,7 @@ export function OnboardingScaffold({
 }
 
 const styles = StyleSheet.create({
+  back: { alignSelf: 'flex-start', marginBottom: spacing.md },
   progress: { marginBottom: spacing.xxl },
   progressHeader: {
     flexDirection: 'row',

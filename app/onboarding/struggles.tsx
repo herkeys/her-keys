@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { onboardingOptions } from '../../src/data/catalog/onboardingOptions';
 import { ChipToggle } from '../../src/design/components';
+import { goBackFromStep } from '../../src/features/onboarding/backNavigation';
 import { OnboardingScaffold } from '../../src/features/onboarding/OnboardingScaffold';
 import { useOnboarding } from '../../src/store/OnboardingContext';
 
@@ -14,6 +15,7 @@ export default function StrugglesStep() {
       total={4}
       title="Where does it tend to break down?"
       description="These are starting hypotheses, not permanent labels."
+      onBack={() => goBackFromStep('struggles', router)}
       onContinue={() => {
         recordStep('talk-it-out');
         router.push('/onboarding/talk-it-out');
