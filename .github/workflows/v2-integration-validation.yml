@@ -9,6 +9,8 @@ on:
   push:
     branches:
       - integration/build2a-candidate
+      # V2 autonomous upgrade source candidate (Today, Talk It Out, Premium, Onboarding, Native UX): the same gate on its exact pushed SHA. Validation only; no build or deploy. Remove with the branch.
+      - integration/v2-autonomous-upgrade-20261112
       # Source-only Build 2 convergence candidate: run mandatory exact-head CI before EAS GO decision.
       - integration/build2-candidate-20261020
       - codex/premium-release-certification-20261021
