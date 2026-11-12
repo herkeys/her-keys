@@ -33,8 +33,21 @@ export const conversationStarters: ClarificationOption[] = [
 
 export const unmatchedReply = 'I’m not sure I understood that yet. Pick one of these, or say a little more.';
 
+/**
+ * She said she does not know (HER_KEYS_PRODUCT.md section 6: "I don't know yet" is an allowed answer, and uncertainty is preferable to
+ * fabricated certainty). Nothing is recorded as her answer, the question stays open, and no guess is made for her.
+ */
+export const notSureOpeningReply =
+  'You don’t have to know yet. Start with whatever has been taking up the most room today, or pick one of these.';
+
+export const notSureQuestionReply =
+  'Not knowing yet is a real answer, and I won’t guess it for you. Nothing is saved from this. Here is where my theory stands, and it is only a theory:';
+
+export const notSureQuestionReplyNoTheory =
+  'Not knowing yet is a real answer, and I won’t guess it for you. Nothing is saved from this. Pick the closest answer if one fits, or leave the question for now.';
+
 export const resolvedReply =
-  'That’s as far as this prototype conversation goes. Start over to look at something else.';
+  'That’s as far as this conversation goes for now. Choose “Start over” to look at something else.';
 
 const overload: DiscoveryTopic = {
   id: 'overload',

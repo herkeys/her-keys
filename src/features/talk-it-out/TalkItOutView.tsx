@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { Fragment, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { AppText, Button, ConfidenceBadge, InlineNotice, Overline, WhyThis } from '../../design/components';
 import { radius, sizing, spacing, type as typeScale } from '../../design/tokens';
@@ -8,6 +8,7 @@ import { useTalkItOut } from '../../store/TalkItOutContext';
 import type { TalkItOutMessage, TalkItOutStage } from '../../types';
 import { CaptureGroup } from './capture/CaptureCards';
 import { copy } from './capture/copy';
+import { recordRouteOf } from './capture/recordRoute';
 import { AiReportPanel } from '../ai-safety/AiReportPanel';
 
 /**
@@ -17,7 +18,7 @@ import { AiReportPanel } from '../ai-safety/AiReportPanel';
 function CaptureEntry({ captureId }: { captureId: string }) {
   const styles = useStyles();
   const [parked, setParked] = useState(false);
-  if (!parked) return <CaptureGroup captureId={captureId} onLater={() => setParked(true)} />;
+  if (!parked) return <CaptureGroup captureId={captureId} onLater={() => setParked(true)} onOpenRecord={(target) => router.push(recordRouteOf(target))} />;
   return (
     <View style={styles.parked}>
       <InlineNotice tone="waiting" title={copy.capture.parked} />
@@ -32,8 +33,15 @@ function CaptureEntry({ captureId }: { captureId: string }) {
 export function TalkItOutView({ showHeader = false }: { showHeader?: boolean }) {
   const { colors } = useTheme();
   const styles = useStyles();
-  const { messages, quickReplies, captures, isThinking, serviceNotice, canRetry, retryLastTurn, canRestart, sendMessage, selectQuickReply, restart } = useTalkItOut();
+  const { messages, quickReplies, captures, isThinking, householdRevision, serviceNotice, canRetry, retryLastTurn, canRestart, sendMessage, selectQuickReply, restart } = useTalkItOut();
   const [draft, setDraft] = useState('');
+  // What she had typed under one household is not handed to the next one: an account change or a reset lets it go.
+  const lastRevisionRef = useRef(householdRevision);
+  useEffect(() => {
+    if (lastRevisionRef.current === householdRevision) return;
+    lastRevisionRef.current = householdRevision;
+    setDraft('');
+  }, [householdRevision]);
   const [reportedMessage, setReportedMessage] = useState<string | null>(null);
   const scrollRef = useRef<ScrollView>(null);
   const frameRef = useRef<View>(null);
@@ -43,7 +51,9 @@ export function TalkItOutView({ showHeader = false }: { showHeader?: boolean }) 
     const words = draft;
     setDraft('');
     // If nothing could be saved, her words go back where she can send them again.
-    if ((await sendMessage(words)) === 'not-saved') setDraft(words);
+    // `busy` too: an earlier message is still being read, so this one was not taken and must not vanish.
+    const result = await sendMessage(words);
+    if (result === 'not-saved' || result === 'busy') setDraft((current) => (current.length === 0 ? words : `${words}\n${current}`));
   }
 
   // KeyboardAvoidingView compares the keyboard's position on screen with its

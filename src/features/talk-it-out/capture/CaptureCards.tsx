@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import {
   AiMark,
@@ -347,7 +347,18 @@ function FixSheet({ readingId, onClose, onFixed }: { readingId: string; onClose:
  * reading's own accept / reject / fix / answer. Readings resolve independently; the source is not
  * "resolved" until every reading has a final disposition.
  */
-export function CaptureGroup({ captureId, onLater, showSource = true }: { captureId: string; onLater?: () => void; showSource?: boolean }) {
+export function CaptureGroup({
+  captureId,
+  onLater,
+  onOpenRecord,
+  showSource = true,
+}: {
+  captureId: string;
+  onLater?: () => void;
+  /** Opens the record a saved reading made. The route supplies it (this file carries no navigation of its own); without it no link is shown. */
+  onOpenRecord?: (target: NonNullable<ProposalVM['openTarget']>) => void;
+  showSource?: boolean;
+}) {
   const { color } = useTheme();
   const styles = useStyles();
   const { coordinator } = useCapture();
@@ -355,14 +366,34 @@ export function CaptureGroup({ captureId, onLater, showSource = true }: { captur
   const [failures, setFailures] = useState<Record<string, number>>({});
   const [fixing, setFixing] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  // What a bulk save did, said only after it did it. A success is not an error, so it has its own tone.
+  const [bulkResult, setBulkResult] = useState<{ text: string; tone: 'success' | 'attention' } | null>(null);
   const [busy, setBusy] = useState(false);
+  const bulkRunning = useRef(false);
   const vm = useCaptureVM(captureId, { areaChoice, failures });
   if (!vm) return null;
 
   async function run(action: () => Promise<string | null>) {
     setBusy(true);
+    setBulkResult(null);
     setMessage(await action());
     setBusy(false);
+  }
+
+  async function saveReady() {
+    // A double tap is one step: the second tap arrives before React has re-rendered the button as disabled.
+    if (bulkRunning.current) return;
+    bulkRunning.current = true;
+    setBusy(true);
+    setMessage(null);
+    setBulkResult(null);
+    try {
+      const outcome = await coordinator.acceptReady(captureId, areaChoice);
+      setBulkResult({ text: copy.bulk.result(outcome.saved.length, outcome.failed.length), tone: outcome.failed.length > 0 || outcome.saved.length === 0 ? 'attention' : 'success' });
+    } finally {
+      bulkRunning.current = false;
+      setBusy(false);
+    }
   }
 
   const accept = (readingId: string) =>
@@ -396,6 +427,16 @@ export function CaptureGroup({ captureId, onLater, showSource = true }: { captur
         />
       )}
 
+      {/* One explicit step for the easy readings. It appears only when it would save more than one; a single reading has its own Save. */}
+      {vm.bulk.ready > 1 && (
+        <View style={styles.block}>
+          <Button label={copy.bulk.saveReady(vm.bulk.ready)} variant="secondary" onPress={saveReady} disabled={busy} accessibilityHint={copy.bulk.saveReadyHint} />
+          <AppText variant="supporting" color={color.text.secondary} style={styles.note}>
+            {copy.bulk.saveReadyHint}
+          </AppText>
+        </View>
+      )}
+
       {vm.proposals.map((p) =>
         p.phase === 'clarifying' && p.question ? (
           <ClarificationChoice
@@ -419,9 +460,14 @@ export function CaptureGroup({ captureId, onLater, showSource = true }: { captur
             onArea={(categoryId) => setAreaChoice((c) => ({ ...c, [p.readingId]: categoryId }))}
           />
         ) : (
-          <AppText key={p.readingId} variant="supporting" color={color.text.secondary} style={styles.decided}>
-            {copy.review.decidedTitle(p.kindLabel, p.title)} · {p.outcomeLine}
-          </AppText>
+          <View key={p.readingId} style={styles.decidedRow}>
+            <AppText variant="supporting" color={color.text.secondary} style={styles.decided}>
+              {copy.review.decidedTitle(p.kindLabel, p.title)} · {p.outcomeLine}
+            </AppText>
+            {p.openTarget && onOpenRecord && (
+              <Button label={p.openTarget.label} variant="ghost" size="sm" onPress={() => onOpenRecord(p.openTarget!)} accessibilityHint={copy.review.decidedTitle(p.kindLabel, p.title)} />
+            )}
+          </View>
         )
       )}
 
@@ -429,7 +475,10 @@ export function CaptureGroup({ captureId, onLater, showSource = true }: { captur
         <InlineNotice key={note} tone="info" title={note} style={styles.block} />
       ))}
 
-      <View accessibilityLiveRegion="polite">{message && <InlineNotice tone="attention" title={message} style={styles.block} />}</View>
+      <View accessibilityLiveRegion="polite">
+        {message && <InlineNotice tone="attention" title={message} style={styles.block} />}
+        {bulkResult && <InlineNotice tone={bulkResult.tone} title={bulkResult.text} style={styles.block} />}
+      </View>
 
       {(vm.actions.canRetry || vm.actions.canDismiss) && (
         <View style={styles.actions}>
@@ -459,4 +508,5 @@ const useStyles = createThemedStyles(({ color }) => StyleSheet.create({
   option: { paddingHorizontal: spacing.lg },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, alignItems: 'center', marginTop: spacing.lg },
   decided: { marginTop: spacing.md },
+  decidedRow: { alignItems: 'flex-start' },
 }));

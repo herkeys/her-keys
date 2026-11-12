@@ -1,6 +1,9 @@
 import {
   conversationStarters,
   discoveryTopics,
+  notSureOpeningReply,
+  notSureQuestionReply,
+  notSureQuestionReplyNoTheory,
   resolvedReply,
   unmatchedReply,
   type DiscoveryBranch,
@@ -81,6 +84,8 @@ function openTopic(state: ConversationState, userText: string, optionId?: string
   const topic = (optionId ? findTopic(optionId) : null) ?? matchTopic(userText);
 
   if (!topic) {
+    // "I don't know" at the start is allowed: it is not a failure to be understood, and it is not a reason to pick a topic for her.
+    if (saysNotSure(userText)) return { messages: [{ speaker: 'herkeys', stage: 'listen', text: notSureOpeningReply }], state, quickReplies: conversationStarters };
     return {
       messages: [{ speaker: 'herkeys', stage: 'unmatched', text: unmatchedReply }],
       state,
@@ -111,7 +116,7 @@ function refineHypothesis(state: ConversationState, userText: string, optionId?:
   if (!topic || !question) return restartFallback(state);
 
   const option = matchOption(question, userText, optionId);
-  if (!option) return notUnderstood(state, question);
+  if (!option) return saysNotSure(userText) ? notSureAnswer(state, question) : notUnderstood(state, question);
 
   const branch = ownEntry(topic.branches, option.id);
   if (!branch) return notUnderstood(state, question);
@@ -144,7 +149,7 @@ function concludeDiscovery(state: ConversationState, userText: string, optionId?
   if (!branch) return restartFallback(state);
 
   const option = matchOption(question, userText, optionId);
-  if (!option) return notUnderstood(state, question);
+  if (!option) return saysNotSure(userText) ? notSureAnswer(state, question) : notUnderstood(state, question);
 
   const result = ownEntry(branch.outcomes, option.id) ?? branch.fallbackOutcome;
   const evidence = [...state.evidence, recordEvidence(question, option)];
@@ -171,6 +176,48 @@ function concludeDiscovery(state: ConversationState, userText: string, optionId?
     },
     quickReplies: [],
   };
+}
+
+/**
+ * "I don't know yet" to a question on the table. The answer is honoured, not corrected: nothing is recorded as evidence (a guess would be
+ * fabricated certainty), the conversation does not move, the theory is restated as still only a theory, and the same question stays open
+ * with the same choices so she can answer when something fits.
+ */
+function notSureAnswer(state: ConversationState, question: ClarificationQuestion): DiscoveryTurn {
+  const theory = state.hypothesis;
+  const messages: DraftMessage[] = theory
+    ? [
+        { speaker: 'herkeys', stage: 'listen', text: notSureQuestionReply },
+        { speaker: 'herkeys', stage: 'hypothesis', text: theory.statement, confidence: 'possible' },
+        { speaker: 'herkeys', stage: 'clarify', text: question.text },
+      ]
+    : [
+        { speaker: 'herkeys', stage: 'listen', text: notSureQuestionReplyNoTheory },
+        { speaker: 'herkeys', stage: 'clarify', text: question.text },
+      ];
+  return { messages, state, quickReplies: question.options };
+}
+
+const NOT_SURE: readonly RegExp[] = [
+  /\b(?:dont|do not) (?:really )?(?:know|have a clue)\b/,
+  /\bnot (?:really |entirely )?(?:sure|certain)\b/,
+  /\b(?:no|not any) (?:real )?(?:idea|clue)\b/,
+  /\bunsure\b/,
+  /\b(?:idk|dunno)\b/,
+  /\bhard to say\b/,
+  /\bcant (?:really )?(?:say|tell)\b/,
+];
+
+/** A short message that says she does not know. A long one is narrative, not an answer, and keeps the existing handling. */
+export function saysNotSure(userText: string): boolean {
+  const plain = userText
+    .toLowerCase()
+    .replace(/[’']/g, '')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (plain.length === 0 || plain.split(' ').length > 10) return false;
+  return NOT_SURE.some((pattern) => pattern.test(plain));
 }
 
 function notUnderstood(state: ConversationState, question: ClarificationQuestion): DiscoveryTurn {

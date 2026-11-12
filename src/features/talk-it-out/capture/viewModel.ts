@@ -5,6 +5,7 @@ import type { HydrationStatus } from '../../../domain/routeAccess';
 import type { AppState, SystemRole } from '../../../domain/state';
 import type { RecoveryReason } from '../../../state/appStore';
 import { unresolvedCaptureAttention, type CaptureUrgency, type UnresolvedAttentionReason } from './attention';
+import { bulkEligibility } from './bulk';
 import { categoryIdForHint, chainRoot, draftOf, type CaptureSession } from './coordinator';
 import { copy } from './copy';
 import { formatDay, formatDayFull, formatEventWhen, formatMoneyLine, formatReceived, weekdayName } from './format';
@@ -56,6 +57,10 @@ export interface ProposalVM {
   /** Evidence lines for "Why this". Only facts: what she wrote (while the session holds it) or where it was read from. */
   evidence: string[];
   outcomeLine: string | null;
+  /** After a save: the record that now exists and where to find it. Null while the reading is undecided, rejected, or its record is gone. */
+  openTarget: { kind: 'event' | 'task' | 'needsMe'; id: string; label: string } | null;
+  /** Open, named, area chosen and nothing she was told to check: the readings "Save the ready ones" may save. See `bulkEligibility`. */
+  bulkReady: boolean;
   /** The reading arrived under the neutral label (another device kept her words): it cannot be saved until she names it. */
   titleNeeded: boolean;
   actions: { canAccept: boolean; canReject: boolean; canFix: boolean };
@@ -72,6 +77,8 @@ export interface CaptureVM {
   /** Earlier readings this one replaced. History, not shown as cards. */
   revisions: number;
   progress: { decided: number; total: number };
+  /** How many readings "Save the ready ones" would save right now. The step is offered only when it saves more than one. */
+  bulk: { ready: number };
   /** Session-only notes: what could not be turned into anything, and why. */
   sessionNotes: string[];
   /** The source has no reading and its words are gone — the honest, restart-survivor state. */
@@ -171,6 +178,16 @@ function evidenceOf(reading: Interpretation, inputs: ReviewInputs): string[] {
   return lines;
 }
 
+/** The record an accepted reading made, if it is still there: a record she deleted since is not offered. */
+function openTargetOf(reading: Interpretation, state: AppState): ProposalVM['openTarget'] {
+  const ref = reading.state === 'accepted' ? reading.acceptedRef : null;
+  if (!ref) return null;
+  const kind = ref.kind;
+  if (kind !== 'event' && kind !== 'task' && kind !== 'needsMe') return null;
+  const exists = kind === 'event' ? state.events.some((e) => e.id === ref.id) : kind === 'task' ? state.tasks.some((t) => t.id === ref.id) : state.needsMe.some((n) => n.id === ref.id);
+  return exists ? { kind, id: ref.id, label: copy.review.openRecord(kind) } : null;
+}
+
 export function buildProposalVM(reading: Interpretation, inputs: ReviewInputs): ProposalVM {
   const { state, areaChoice } = inputs;
   const phase: ProposalPhase = reading.state === 'clarifying' ? 'clarifying' : reading.state === 'pending' ? 'ready' : reading.state === 'accepted' ? 'accepted' : 'rejected';
@@ -220,6 +237,8 @@ export function buildProposalVM(reading: Interpretation, inputs: ReviewInputs): 
     area,
     evidence: isOpen && reading.state === 'pending' ? evidenceOf(reading, inputs) : [],
     outcomeLine: reading.state === 'accepted' ? copy.review.savedAs(reading.proposedKind) : reading.state === 'rejected' ? copy.review.rejected : null,
+    openTarget: openTargetOf(reading, state),
+    bulkReady: reading.state === 'pending' && bulkEligibility(state, reading, details ?? null, chosen).ok,
     titleNeeded: reading.state === 'pending' && isUndecidedReadingTitle(reading.title),
     actions: {
       canAccept: reading.state === 'pending' && !isUndecidedReadingTitle(reading.title) && (reading.proposedKind === 'needsMe' || !(area?.needed ?? false)),
@@ -268,6 +287,7 @@ export function buildCaptureVM(inputs: ReviewInputs & { captureId: string }): Ca
     else if (item.reason !== 'responsibility-handoff') sessionNotes.push(copy.review.unsupported(item.reason));
   }
 
+  const proposals = leaves.map((r) => buildProposalVM(r, inputs));
   return {
     captureId,
     phase,
@@ -276,9 +296,10 @@ export function buildCaptureVM(inputs: ReviewInputs & { captureId: string }): Ca
       text !== null
         ? { kind: 'echo', text, long: text.length > LONG_SOURCE, label: copy.review.sourceLabel }
         : { kind: 'unavailable', message: copy.review.sourceUnavailable },
-    proposals: leaves.map((r) => buildProposalVM(r, inputs)),
+    proposals,
     revisions: all.length - leaves.length,
     progress: { decided, total: leaves.length },
+    bulk: { ready: retracted ? 0 : proposals.filter((p) => p.bulkReady).length },
     sessionNotes,
     hollow,
     actions: { canDismiss: phase !== 'resolved', canRetry: leaves.length === 0 && text !== null && !retracted },

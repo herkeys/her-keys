@@ -10,6 +10,7 @@ import {
 import type { DiscoveryRecord } from '../domain/state';
 import { CaptureProvider, useCapture } from '../features/talk-it-out/capture/CaptureContext';
 import { copy } from '../features/talk-it-out/capture/copy';
+import { boundOwnerOf, ownerChanged, ownerKeyOf } from '../features/talk-it-out/capture/owner';
 import { routeMessage } from '../features/talk-it-out/capture/routing';
 import { advance, type DiscoveryTurn } from '../features/talk-it-out/engine';
 import type { ClarificationOption, ConversationState, TalkItOutMessage } from '../types';
@@ -22,7 +23,11 @@ export interface CaptureRef {
   captureId: string;
 }
 
-export type SendResult = 'sent' | 'not-saved' | 'ignored';
+/**
+ * `busy`: an earlier message is still being read or answered, so this one was NOT taken - the composer must give her words back.
+ * `ignored`: there was nothing to take (empty, or symbols only), so there is nothing to give back.
+ */
+export type SendResult = 'sent' | 'not-saved' | 'ignored' | 'busy';
 
 interface TalkItOutContextValue {
   messages: TalkItOutMessage[];
@@ -32,6 +37,8 @@ interface TalkItOutContextValue {
   captures: CaptureRef[];
   /** True while a submitted Talk It Out turn is waiting for its server response. */
   isThinking: boolean;
+  /** Goes up each time the household under this conversation changes hands or is reset. Optional for callers that predate it. */
+  householdRevision?: number;
   /** Calm product-level notice when the built-in path had to carry a turn. */
   serviceNotice: string | null;
   /** True when the most recent degraded turn can be replaced by a live response. */
@@ -103,11 +110,7 @@ function TalkItOutSession({ children }: { children: ReactNode }) {
 
   // The shared store can change owners while a provider turn is awaiting the
   // network. Never apply an old account's result to the replacement household.
-  const ownerKey = () => {
-    const snapshot = store.getSnapshot();
-    const binding = snapshot.identity.binding;
-    return [binding?.accountId, binding?.householdId, binding?.boundAt, snapshot.state?.household.id].join('|');
-  };
+  const ownerKey = () => ownerKeyOf(store.getSnapshot());
   useEffect(() => {
     let owner = ownerKey();
     const invalidate = () => {
@@ -120,6 +123,7 @@ function TalkItOutSession({ children }: { children: ReactNode }) {
       lastFallbackRef.current = null;
       setIsThinking(false);
       setServiceNotice(null);
+      setHouseholdRevision((revision) => revision + 1);
       update(startFrom(store.getSnapshot().state?.discovery ?? null));
     };
     const unsubscribe = store.subscribe(invalidate);
@@ -156,6 +160,8 @@ function TalkItOutSession({ children }: { children: ReactNode }) {
 
   const [session, setSession] = useState<Session>(() => startFrom(record));
   const [isThinking, setIsThinking] = useState(false);
+  // Counts the times the household under this conversation changed hands or was reset, so what the composer holds can be let go with it.
+  const [householdRevision, setHouseholdRevision] = useState(0);
   const [serviceNotice, setServiceNotice] = useState<string | null>(null);
   // Read by handlers so async turns always build on the latest committed conversation.
   const sessionRef = useRef(session);
@@ -178,8 +184,22 @@ function TalkItOutSession({ children }: { children: ReactNode }) {
     return { id: `msg-${counterRef.current}`, speaker: 'herkeys', stage: 'listen', text };
   }
 
-  async function capture(text: string): Promise<SendResult> {
+  async function capture(text: string, owner: string, submissionId: number): Promise<SendResult> {
+    // Reading can wait on the network (Her Keys Premium's reader), so she is told it is working and cannot send a second message over it.
+    setIsThinking(true);
+    const startedFor = boundOwnerOf(store.getSnapshot());
     const outcome = await coordinator.submit({ text, submissionKey: keyRef.current });
+    // The household changed hands (or the conversation was torn down) while this was being read. Her words belonged to the old one: they
+    // are not shown, and no reading, capture or message is added to the new one. The coordinator has already refused to write.
+    if (activeSubmissionRef.current !== submissionId || ownerKey() !== owner) {
+      // The next message is a new submission: it must not reuse the key of work that belonged to the household that is gone.
+      submissionRef.current += 1;
+      keyRef.current = submissionKey();
+      // Nothing was written, and the household was reset rather than handed to another account: what she typed goes back to the composer.
+      // Another account's household never gets her words back, so a switch is 'sent' and the words are simply gone from view.
+      if (outcome.kind === 'not-saved' && !ownerChanged(startedFor, boundOwnerOf(store.getSnapshot()))) return 'not-saved';
+      return 'sent';
+    }
     if (outcome.kind === 'refused') return 'ignored';
     if (outcome.kind === 'not-saved') return 'not-saved'; // same key kept, so a retry is the same submission
 
@@ -209,7 +229,9 @@ function TalkItOutSession({ children }: { children: ReactNode }) {
 
   async function submit(text: string, optionId?: string): Promise<SendResult> {
     const trimmed = text.trim();
-    if (!trimmed || activeSubmissionRef.current !== null) return 'ignored';
+    if (!trimmed) return 'ignored';
+    // Not dropped: the composer keeps what she typed and she can send it when the last message has been handled.
+    if (activeSubmissionRef.current !== null) return 'busy';
 
     nextSubmissionRef.current += 1;
     const submissionId = nextSubmissionRef.current;
@@ -238,7 +260,7 @@ function TalkItOutSession({ children }: { children: ReactNode }) {
           highStakes: preview?.failure?.code === 'high-stakes',
           conversationUnderstood: fallbackTurn.messages[0]?.stage !== 'unmatched',
         });
-        if (route === 'capture') return await capture(trimmed);
+        if (route === 'capture') return await capture(trimmed, owner, submissionId);
       }
 
       counterRef.current += 1;
@@ -390,6 +412,7 @@ function TalkItOutSession({ children }: { children: ReactNode }) {
     quickReplies: session.quickReplies,
     captures: session.captures,
     isThinking,
+    householdRevision,
     serviceNotice,
     canRetry: lastFallbackRef.current !== null,
     retryLastTurn: () => void retryLastTurn(),

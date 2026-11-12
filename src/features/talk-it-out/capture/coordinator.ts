@@ -16,7 +16,9 @@ import {
 import { logicalDateAt, wallClockMinutesAt } from '../../../domain/logicalDay';
 import type { AppState, SystemRole } from '../../../domain/state';
 import type { AppStore } from '../../../state/appStore';
+import { bulkEligibility } from './bulk';
 import { ENVELOPE_LIMITS } from './local/envelope';
+import { epochChanged, epochOf, type CaptureEpoch } from './owner';
 import { clarificationCodeOf, revise } from './revise';
 import type { CaptureTextStore } from './textStore';
 import type {
@@ -119,6 +121,20 @@ export type AcceptOutcome =
   | { kind: 'not-open' }
   | { kind: 'not-saved' };
 
+/**
+ * One explicit step that saves the readings of a capture that are ready AND need nothing checked. It goes through `accept` once per
+ * reading, so every per-reading rule (open, named, area chosen) applies exactly as it does for a single Save, and each reading's result
+ * is its own: one failing never undoes or hides the others.
+ */
+export interface BulkAcceptOutcome {
+  /** Readings that are now real records, in the order they were shown. */
+  saved: readonly string[];
+  /** Readings left exactly as they were because each needs her eyes first (a guessed detail, money, a child, a duplicate, an open question). */
+  needsReview: readonly string[];
+  /** Readings whose save did not happen (it could not be made durable, or the household changed under it). Nothing was changed for these. */
+  failed: readonly string[];
+}
+
 export type RejectOutcome = { kind: 'rejected' } | { kind: 'not-open' } | { kind: 'not-saved' };
 export type DismissOutcome = { kind: 'dismissed'; rejected: number; retracted: boolean } | { kind: 'gone' } | { kind: 'not-saved' };
 
@@ -141,6 +157,8 @@ export interface CaptureCoordinator {
   answerClarification(readingId: string, answer: ClarificationAnswer): Promise<RevisionOutcome>;
   correct(readingId: string, edit: CorrectionEdit): Promise<RevisionOutcome>;
   accept(readingId: string, choice?: { categoryId?: string }): Promise<AcceptOutcome>;
+  /** Save every reading of one capture that `bulkEligibility` allows, one at a time through `accept`. It never saves anything else. */
+  acceptReady(captureId: string, areaChoices?: Readonly<Record<string, string>>): Promise<BulkAcceptOutcome>;
   reject(readingId: string): Promise<RejectOutcome>;
   dismissCapture(captureId: string): Promise<DismissOutcome>;
   sessionOf(captureId: string): CaptureSession | null;
@@ -226,16 +244,26 @@ export function createCaptureCoordinator(deps: CaptureCoordinatorDeps): CaptureC
   const inflight = new Map<string, Promise<SubmitOutcome>>();
 
   const snapshotState = (): AppState | null => store.getSnapshot().state;
+  // Work that outlives one tick (a Premium reading is a network call) must not land in a different account's household.
+  const epochNow = (): CaptureEpoch => epochOf(store.getSnapshot());
+  const moved = (epoch: CaptureEpoch): boolean => epochChanged(epoch, store.getSnapshot());
+  /** A transition that does nothing if the household changed hands, or was reset, since `epoch` was read: it runs inside the store's own turn. */
+  const fenced =
+    (epoch: CaptureEpoch, transition: (state: AppState, ctx: TransitionContext) => AppState) =>
+    (state: AppState, ctx: TransitionContext): AppState =>
+      moved(epoch) ? state : transition(state, ctx);
   const contextNow = (state: AppState) => interpretationContextOf(state, now());
 
-  async function proposeReadings(captureId: string, proposals: readonly Proposal[]): Promise<boolean> {
-    return store.commit((state, ctx) => {
-      // A source that already has readings is never read into again: a retry, a double call and a restore all land here.
-      if (interpretationsOf(state, captureId).length > 0 || !artifactOf(state, captureId)) return state;
-      let next = state;
-      for (const proposal of proposals) next = proposeInterpretation(next, ctx, { artifactId: captureId, ...inputOf(proposal) });
-      return next;
-    });
+  async function proposeReadings(captureId: string, proposals: readonly Proposal[], epoch: CaptureEpoch): Promise<boolean> {
+    return store.commit(
+      fenced(epoch, (state, ctx) => {
+        // A source that already has readings is never read into again: a retry, a double call and a restore all land here.
+        if (interpretationsOf(state, captureId).length > 0 || !artifactOf(state, captureId)) return state;
+        let next = state;
+        for (const proposal of proposals) next = proposeInterpretation(next, ctx, { artifactId: captureId, ...inputOf(proposal) });
+        return next;
+      })
+    );
   }
 
   async function readAndPropose(
@@ -243,7 +271,10 @@ export function createCaptureCoordinator(deps: CaptureCoordinatorDeps): CaptureC
     duplicate: boolean,
     precomputed?: ReturnType<TalkItOutInterpreterPort['interpret']>,
     reader: CaptureReader = { kind: 'local', premiumNotUsed: null },
+    epoch: CaptureEpoch = epochNow(),
   ): Promise<SubmitOutcome> {
+    // The household changed hands while this was being read: nothing of it belongs in the new one.
+    if (moved(epoch)) return { kind: 'not-saved' };
     const state = snapshotState();
     const artifact = state ? artifactOf(state, captureId) : undefined;
     if (!state || !artifact || artifact.retractedAt !== null) return { kind: 'not-saved' };
@@ -261,7 +292,8 @@ export function createCaptureCoordinator(deps: CaptureCoordinatorDeps): CaptureC
     sessions.set(captureId, { captureId, unsupported: result.unsupported, failure: result.failure, details, reader });
     if (result.proposals.length === 0) return { kind: 'captured', captureId, readingIds: [], duplicate, failure: result.failure, unsupported: result.unsupported };
 
-    if (!(await proposeReadings(captureId, result.proposals))) return { kind: 'not-saved' };
+    if (!(await proposeReadings(captureId, result.proposals, epoch))) return { kind: 'not-saved' };
+    if (moved(epoch)) return { kind: 'not-saved' };
     const after = snapshotState();
     const readings = after ? interpretationsOf(after, captureId) : [];
     // The readings were proposed in the order of the proposals, so the first ones line up one to one.
@@ -277,13 +309,14 @@ export function createCaptureCoordinator(deps: CaptureCoordinatorDeps): CaptureC
     if (words.length === 0) return { kind: 'refused', reason: 'empty' };
     const state = snapshotState();
     if (!state) return { kind: 'not-saved' };
+    const epoch = epochNow();
 
     const contentRef = captureRefOf(input.submissionKey);
     const already = state.sourceArtifacts.find((a) => a.contentRef === contentRef);
     if (already) {
       // Same submission key: the source exists. Finish reading it if it was never read; never make a second source.
       if (!text.has(contentRef)) text.put(contentRef, words);
-      return readAndPropose(already.id, true);
+      return readAndPropose(already.id, true, undefined, undefined, epoch);
     }
 
     const preview = interpreter.interpret({ captureId: input.submissionKey, text: words, context: contextNow(state) });
@@ -292,13 +325,15 @@ export function createCaptureCoordinator(deps: CaptureCoordinatorDeps): CaptureC
 
     // Her words are held first, so a source can never exist without them for as long as the session lasts.
     text.put(contentRef, words);
-    const saved = await store.commit((s, ctx) => {
-      if (s.sourceArtifacts.some((a) => a.contentRef === contentRef)) return s;
-      return recordArtifact(s, ctx, { kind: 'message', origin: 'user-submitted', contentRef, contentDigest: null }).state;
-    });
+    const saved = await store.commit(
+      fenced(epoch, (s, ctx) => {
+        if (s.sourceArtifacts.some((a) => a.contentRef === contentRef)) return s;
+        return recordArtifact(s, ctx, { kind: 'message', origin: 'user-submitted', contentRef, contentDigest: null }).state;
+      })
+    );
     const after = snapshotState();
     const artifact = after?.sourceArtifacts.find((a) => a.contentRef === contentRef);
-    if (!saved || !artifact) {
+    if (!saved || !artifact || moved(epoch)) {
       text.delete(contentRef);
       return { kind: 'not-saved' };
     }
@@ -318,7 +353,45 @@ export function createCaptureCoordinator(deps: CaptureCoordinatorDeps): CaptureC
         reader = { kind: 'local', premiumNotUsed: 'unavailable' };
       }
     }
-    return readAndPropose(artifact.id, false, result, reader);
+    // The enhancer may have waited on the network. If the household changed hands in the meantime its answer is for someone else: it is
+    // dropped, and her words are forgotten with it.
+    if (moved(epoch)) {
+      text.delete(contentRef);
+      return { kind: 'not-saved' };
+    }
+    return readAndPropose(artifact.id, false, result, reader, epoch);
+  }
+
+  async function acceptOne(readingId: string, choice?: { categoryId?: string }): Promise<AcceptOutcome> {
+    const state = snapshotState();
+    const reading = state?.interpretations.find((r) => r.id === readingId);
+    if (!state || !reading) return { kind: 'not-open' };
+    if (reading.state === 'accepted' && reading.acceptedRef) return { kind: 'already-accepted', readingId, ref: reading.acceptedRef };
+    if (reading.state === 'clarifying') return { kind: 'needs-clarification' };
+    if (reading.state !== 'pending') return { kind: 'not-open' };
+    // A reading that arrived under the neutral label was never told its title: the words stayed on the device that heard them.
+    // It would become a row called "To-do to review", so nothing is saved until she has named it.
+    if (isUndecidedReadingTitle(reading.title)) return { kind: 'needs-title' };
+
+    let categoryId: string | undefined;
+    if (reading.proposedKind !== 'needsMe') {
+      const chosen = choice?.categoryId;
+      const valid = chosen !== undefined && state.categories.some((c) => c.id === chosen && c.status === 'active');
+      categoryId = (valid ? chosen : undefined) ?? categoryIdForHint(state, reading.categoryHint) ?? undefined;
+      if (categoryId === undefined) return { kind: 'needs-area' };
+    }
+    if (!canAccept(reading, { categoryId }).ok) return { kind: 'not-open' };
+
+    const epoch = epochNow();
+    const saved = await store.commit(fenced(epoch, (s, ctx) => acceptInterpretation(s, ctx, readingId, { categoryId })));
+    const after = snapshotState()?.interpretations.find((r) => r.id === readingId);
+    // "Saved" is said only after the durable commit, and never for a household that changed hands under the tap.
+    if (!saved || !after || moved(epoch)) return { kind: 'not-saved' };
+    if (after.state === 'accepted' && after.acceptedRef) {
+      // Two accepts of one reading race to the same state: whichever ran second changed nothing.
+      return { kind: 'accepted', readingId, ref: after.acceptedRef };
+    }
+    return { kind: 'not-open' };
   }
 
   return {
@@ -383,41 +456,45 @@ export function createCaptureCoordinator(deps: CaptureCoordinatorDeps): CaptureC
       return applyRevision(readingId, revised, touched);
     },
 
-    async accept(readingId, choice) {
+    accept: acceptOne,
+
+    async acceptReady(captureId, areaChoices = {}) {
       const state = snapshotState();
-      const reading = state?.interpretations.find((r) => r.id === readingId);
-      if (!state || !reading) return { kind: 'not-open' };
-      if (reading.state === 'accepted' && reading.acceptedRef) return { kind: 'already-accepted', readingId, ref: reading.acceptedRef };
-      if (reading.state === 'clarifying') return { kind: 'needs-clarification' };
-      if (reading.state !== 'pending') return { kind: 'not-open' };
-      // A reading that arrived under the neutral label was never told its title: the words stayed on the device that heard them.
-      // It would become a row called "To-do to review", so nothing is saved until she has named it.
-      if (isUndecidedReadingTitle(reading.title)) return { kind: 'needs-title' };
-
-      let categoryId: string | undefined;
-      if (reading.proposedKind !== 'needsMe') {
-        const chosen = choice?.categoryId;
-        const valid = chosen !== undefined && state.categories.some((c) => c.id === chosen && c.status === 'active');
-        categoryId = (valid ? chosen : undefined) ?? categoryIdForHint(state, reading.categoryHint) ?? undefined;
-        if (categoryId === undefined) return { kind: 'needs-area' };
+      const session = sessions.get(captureId) ?? null;
+      const saved: string[] = [];
+      const needsReview: string[] = [];
+      const failed: string[] = [];
+      if (!state) return { saved, needsReview, failed };
+      // Who is eligible is decided BEFORE anything is saved, from the readings as she is looking at them: one reading's save can never
+      // make another eligible, and a reading that turns up later is not swept in.
+      const candidates = interpretationsOf(state, captureId).filter((r) => r.state === 'pending' || r.state === 'clarifying');
+      for (const reading of candidates) {
+        if (!bulkEligibility(state, reading, session?.details.get(reading.id) ?? null, areaChoices[reading.id]).ok) needsReview.push(reading.id);
       }
-      if (!canAccept(reading, { categoryId }).ok) return { kind: 'not-open' };
-
-      const saved = await store.commit((s, ctx) => acceptInterpretation(s, ctx, readingId, { categoryId }));
-      const after = snapshotState()?.interpretations.find((r) => r.id === readingId);
-      if (!saved || !after) return { kind: 'not-saved' };
-      if (after.state === 'accepted' && after.acceptedRef) {
-        // Two accepts of one reading race to the same state: whichever ran second changed nothing.
-        return { kind: 'accepted', readingId, ref: after.acceptedRef };
+      const epoch = epochNow();
+      for (const reading of candidates) {
+        if (needsReview.includes(reading.id)) continue;
+        // The household changed hands part-way through: the rest are not attempted, and are reported as not saved.
+        if (moved(epoch)) {
+          failed.push(reading.id);
+          continue;
+        }
+        const outcome = await acceptOne(reading.id, { categoryId: areaChoices[reading.id] });
+        if (outcome.kind === 'accepted') saved.push(reading.id);
+        else if (outcome.kind === 'not-saved') failed.push(reading.id);
+        else if (outcome.kind !== 'already-accepted') needsReview.push(reading.id);
       }
-      return { kind: 'not-open' };
+      return { saved, needsReview, failed };
     },
 
     async reject(readingId) {
       const reading = snapshotState()?.interpretations.find((r) => r.id === readingId);
       if (!reading || (reading.state !== 'pending' && reading.state !== 'clarifying')) return { kind: 'not-open' };
-      const saved = await store.commit((s, ctx) => rejectInterpretation(s, ctx, readingId));
-      return saved ? { kind: 'rejected' } : { kind: 'not-saved' };
+      const epoch = epochNow();
+      const saved = await store.commit(fenced(epoch, (s, ctx) => rejectInterpretation(s, ctx, readingId)));
+      // "Not saved" is said only when it is true, and a household that changed hands under the tap was never rejected into.
+      if (!saved || moved(epoch)) return { kind: 'not-saved' };
+      return { kind: 'rejected' };
     },
 
     async dismissCapture(captureId) {
