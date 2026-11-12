@@ -31,7 +31,8 @@ export function Sheet({ visible, onClose, accessibilityLabel, children }: SheetP
       accessibilityLabel={accessibilityLabel}
     >
       <View style={styles.backdrop}>
-        <Pressable style={StyleSheet.absoluteFill} accessibilityLabel="Dismiss" onPress={onClose} />
+        {/* The scrim closes the sheet; without a role a screen reader announces it as plain text with no hint that it can be activated. */}
+        <Pressable style={StyleSheet.absoluteFill} accessibilityRole="button" accessibilityLabel="Dismiss" accessibilityHint="Closes this panel" onPress={onClose} />
         <View style={styles.sheet}>
           <View style={styles.handle} />
           {children}

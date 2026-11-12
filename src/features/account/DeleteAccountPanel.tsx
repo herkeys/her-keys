@@ -3,6 +3,7 @@ import {Linking,ScrollView,TextInput,View} from 'react-native';
 import {AppText,Button} from '../../design/components';
 import { radius } from '../../design/tokens';
 import { themed, useTheme } from '../../design/theme';
+import { useAnnounceOnIOS } from '../../design/announce';
 
 // Presentation only (HK-FE-UI-02): the two entry fields used a grey literal; they now use the control-border token.
 const fieldStyleFor=themed(({color})=>({borderWidth:1,borderColor:color.border.control,backgroundColor:color.surface.primary,color:color.text.primary,padding:14,borderRadius:radius.md} as const));
@@ -13,6 +14,10 @@ export function DeleteAccountPanel({onBack}:{onBack:()=>void}) {
  const fieldStyle=fieldStyleFor(useTheme());
  const [email,setEmail]=useState(''),[code,setCode]=useState(''),[busy,setBusy]=useState(false),[notice,setNotice]=useState('');
  const account=useAccount();
+ // The notice below is an Android live region; VoiceOver has none, so a new result is also spoken on iOS.
+ useAnnounceOnIOS(notice);
+ // A store/browser that cannot open a page must say so, not fail silently.
+ const open=(url:string)=>void Linking.openURL(url).catch(()=>setNotice('That page could not be opened. Check your connection and try again.'));
  async function work(fn:()=>Promise<unknown>){if(busy)return;setBusy(true);try{await fn();}catch{setNotice('This did not complete. Verify your identity recently and try again. Your deletion status is checked before access resumes.');}finally{setBusy(false);}}
  return <ScrollView automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" contentContainerStyle={{padding:24,gap:20}}>
   <AppText variant="hero" accessibilityRole="header">Privacy & Data</AppText>
@@ -21,13 +26,13 @@ export function DeleteAccountPanel({onBack}:{onBack:()=>void}) {
   <AppText>Account deletion does not cancel an Apple or Google subscription. Cancel Premium through your store. Provider records and backups may follow their disclosed retention schedules; see our Privacy Policy.</AppText>
   <AppText>If you use Sign in with Apple, Her Keys asks Apple to revoke its access when Apple has given us the token to do so. Older sign-ins may not have one; your data is still deleted, and you can remove Her Keys yourself on iPhone in Settings, your name, Sign-In & Security, Sign in with Apple.</AppText>
   <AppText>After verified purge, only minimal receipt-hash proof, verification times, aggregate counts and expiry are kept for 365 days. A daily job removes expired proof. Missing proof never confirms deletion; an explicit local reset remains available. Completion-email delivery uses a separate encrypted outbox for at most seven days.</AppText>
-  <Button variant="secondary" label="Apple subscriptions" onPress={()=>void Linking.openURL('https://apps.apple.com/account/subscriptions')}/>
-  <Button variant="secondary" label="Google Play subscriptions" onPress={()=>void Linking.openURL('https://play.google.com/store/account/subscriptions')}/>
-  <Button variant="ghost" label="Privacy Policy" onPress={()=>void Linking.openURL('https://herkeys.app/privacy')}/>
+  <Button variant="secondary" label="Apple subscriptions" onPress={()=>open('https://apps.apple.com/account/subscriptions')}/>
+  <Button variant="secondary" label="Google Play subscriptions" onPress={()=>open('https://play.google.com/store/account/subscriptions')}/>
+  <Button variant="ghost" label="Privacy Policy" onPress={()=>open('https://herkeys.app/privacy')}/>
   <AppText>For your security, verify your account within 10 minutes before confirming. You can use a fresh sign-in or request a sign-in code for your existing account.</AppText>
-  <TextInput accessibilityLabel="Account email" placeholder="Account email" autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} style={fieldStyle} placeholderTextColor={color.text.muted}/>
+  <TextInput accessibilityLabel="Account email" placeholder="Account email" autoCapitalize="none" autoCorrect={false} autoComplete="email" textContentType="emailAddress" keyboardType="email-address" value={email} onChangeText={setEmail} style={fieldStyle} placeholderTextColor={color.text.muted}/>
   <Button label="Send sign-in code" disabled={busy||!email} onPress={()=>void work(async()=>{const result=await account.requestEmailOtp(email);setNotice(result.kind==='sent'?'Check your email for a sign-in code.':'If a code is available, check your email.');})}/>
-  <TextInput accessibilityLabel="Sign-in code" placeholder="Sign-in code" keyboardType="number-pad" value={code} onChangeText={setCode} style={fieldStyle} placeholderTextColor={color.text.muted}/>
+  <TextInput accessibilityLabel="Sign-in code" placeholder="Sign-in code" autoComplete="one-time-code" textContentType="oneTimeCode" autoCorrect={false} keyboardType="number-pad" value={code} onChangeText={setCode} style={fieldStyle} placeholderTextColor={color.text.muted}/>
   <Button label="Verify code" disabled={busy||!code} onPress={()=>void work(async()=>{const result=await account.verifyEmailOtp(email,code);setNotice(result.outcome.kind==='verified'?'Identity verified. You can now confirm deletion.':'Verification did not complete.');})}/>
   <AppText accessibilityLiveRegion="polite">{notice}</AppText>
   <View style={{gap:12}}>

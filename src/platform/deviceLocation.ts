@@ -120,3 +120,21 @@ export async function openLocationSettings(): Promise<void> {
     // Nothing to recover: the card keeps its Open Settings action.
   }
 }
+
+export type LocationPermissionState = 'granted' | 'denied' | 'undetermined' | 'unknown';
+
+/**
+ * What the phone currently says about Her Keys' foreground-location permission, for the account status summary. It only READS
+ * (`getForegroundPermissionsAsync` never prompts) and returns the bare state: no position is acquired, nothing is stored, and 'unknown'
+ * is what an unreadable answer becomes — it is never guessed.
+ */
+export async function readLocationPermissionState(): Promise<LocationPermissionState> {
+  try {
+    const response = await Location.getForegroundPermissionsAsync();
+    if (response.granted) return 'granted';
+    if (response.status === 'undetermined') return 'undetermined';
+    return 'denied';
+  } catch {
+    return 'unknown';
+  }
+}

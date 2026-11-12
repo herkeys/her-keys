@@ -2,6 +2,7 @@ import { useState, type ComponentProps } from 'react';
 import { StyleSheet, TextInput, View, type KeyboardTypeOptions } from 'react-native';
 import { radius, sizing, spacing } from '../tokens';
 import { createThemedStyles, useTheme } from '../theme';
+import { useAnnounceOnIOS } from '../announce';
 import { AppText, Overline } from './AppText';
 
 export interface TextFieldProps {
@@ -26,7 +27,10 @@ export interface TextFieldProps {
   textContentType?: ComponentProps<typeof TextInput>['textContentType'];
   returnKeyType?: ComponentProps<typeof TextInput>['returnKeyType'];
   onSubmitEditing?: () => void;
-  /** Announces the error text politely when it appears (field-level errors). */
+  /**
+   * How the error text is announced when it appears. Defaults to 'polite': a validation message nobody hears is a dead end for a
+   * screen-reader user. (Android live region; iOS is spoken through `useAnnounceOnIOS` below, which has no such prop.)
+   */
   errorAccessibilityLiveRegion?: 'none' | 'polite' | 'assertive';
 }
 
@@ -57,6 +61,8 @@ export function TextField({
   const { color } = useTheme();
   const styles = useStyles();
   const [focused, setFocused] = useState(false);
+  // iOS has no live region: speak a NEW error through the native announcement API (silent on Android, which uses the live region).
+  useAnnounceOnIOS(error);
 
   return (
     <View style={styles.wrap}>
@@ -94,7 +100,7 @@ export function TextField({
           variant="metadata"
           color={color.status.attention}
           style={styles.error}
-          accessibilityLiveRegion={errorAccessibilityLiveRegion}
+          accessibilityLiveRegion={errorAccessibilityLiveRegion ?? 'polite'}
         >
           {error}
         </AppText>

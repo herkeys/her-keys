@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import { AppText, Button } from '../../design/components';
 import { spacing } from '../../design/tokens';
 import { useTheme } from '../../design/theme';
+import { useAnnounceOnIOS } from '../../design/announce';
 import { useRestorePurchases } from '../../monetization/useRestorePurchases';
 
 /**
@@ -33,6 +34,8 @@ export function RestorePurchasesControl({
 }) {
   const { colors } = useTheme();
   const { restoring, notice, restore } = useRestorePurchases(accountId, blocked);
+  // The result of a restore is spoken on iOS too (the live region below is Android-only).
+  useAnnounceOnIOS(notice);
 
   useEffect(() => {
     onRestoringChange?.(restoring);
