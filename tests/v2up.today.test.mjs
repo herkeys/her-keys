@@ -9,7 +9,7 @@
  */
 import assert from 'node:assert/strict';
 import React from 'react';
-import { describe, test } from 'node:test';
+import { after, describe, test } from 'node:test';
 import TestRenderer from 'react-test-renderer';
 import { render } from './support/render.tsx';
 import { STORAGE_KEYS, harness, stored } from './support/fixtures.mjs';
@@ -45,6 +45,18 @@ const text = (root) =>
 const pressable = (root, label) => root.findAllByType('Pressable').find((p) => p.props.accessibilityLabel === label);
 const press = (node) => TestRenderer.act(async () => node.props.onPress());
 const ctxAt = (h = 9) => mkCtx(nyMs(h));
+
+/**
+ * Every tree that mounts an AppStateProvider is unmounted when the file ends. The provider runs a 60-second
+ * `setInterval(refreshDay)` that only its unmount clears; left mounted, that interval keeps the test process alive
+ * forever (V2UP-DEF-A01: this file passed every test and then never exited).
+ */
+const mounted = [];
+after(async () => {
+  await TestRenderer.act(async () => {
+    for (const renderer of mounted.splice(0)) renderer.unmount();
+  });
+});
 
 /**
  * A long fixed shift that leaves 60 minutes, against today's list:
@@ -269,6 +281,7 @@ async function mountCard(state, { failWrites = { on: false } } = {}) {
     );
     await store.hydrate();
   });
+  mounted.push(renderer);
   return { h, store, renderer, root: renderer.root, failWrites };
 }
 
@@ -426,12 +439,14 @@ describe('One Move — “I did it” is recorded before “Done” is said', ()
       return null;
     };
     await TestRenderer.act(async () => {
-      TestRenderer.create(
-        <AppStateProvider store={store}>
-          <OneMoveProvider>
-            <Probe />
-          </OneMoveProvider>
-        </AppStateProvider>
+      mounted.push(
+        TestRenderer.create(
+          <AppStateProvider store={store}>
+            <OneMoveProvider>
+              <Probe />
+            </OneMoveProvider>
+          </AppStateProvider>
+        )
       );
       await store.hydrate();
     });
