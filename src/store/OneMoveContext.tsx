@@ -7,7 +7,8 @@ interface OneMoveContextValue {
   status: OneMoveView['status'];
   move: OneMoveItem | null;
   completed: boolean;
-  complete: () => void;
+  /** Saves before resolving: true only once today's move is really recorded as done. */
+  complete: () => Promise<boolean>;
 }
 
 const OneMoveContext = createContext<OneMoveContextValue | null>(null);
@@ -22,7 +23,7 @@ export function OneMoveProvider({ children }: { children: ReactNode }) {
     status: view.status,
     move: 'move' in view ? view.move : null,
     completed: view.status === 'completed',
-    complete: () => store.dispatch((current, ctx) => completeOneMove(current, ctx)),
+    complete: () => store.commit((current, ctx) => completeOneMove(current, ctx)),
   };
 
   return <OneMoveContext.Provider value={value}>{children}</OneMoveContext.Provider>;

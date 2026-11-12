@@ -4,20 +4,28 @@ import { AppText, Button, Card, Overline, Tag, WhyThis } from '../../design/comp
 import { spacing } from '../../design/tokens';
 import { createThemedStyles, useTheme } from '../../design/theme';
 import { CAPACITY_DAY_END_MINUTES, CAPACITY_DAY_START_MINUTES } from '../../domain/dailyLoadIssues';
-import { canShortenTask } from '../../domain/recommendationActions';
 import { useHouseholdState } from '../../store/AppStateProvider';
 import { useSchedule } from '../../store/ScheduleContext';
+import { canShortenTask } from '../../domain/recommendationActions';
+import { capacityOptionCopy } from './capacityOptionCopy';
 import { formatTime } from './computeDailyLoad';
 
 const CAPACITY_ACTION_TYPES = new Set(['daily_load.drop_task', 'daily_load.shorten_task', 'daily_load.keep_capacity_plan']);
 const DAY_WINDOW = `${formatTime(CAPACITY_DAY_START_MINUTES)} and ${formatTime(CAPACITY_DAY_END_MINUTES)}`;
 
+/** The 0-based position of the shown task in the live list; 0 when it is not found. */
+function indexOfTask(list: Array<{ taskId: string }> | undefined, taskId: string | null): number {
+  if (!list || taskId === null) return 0;
+  return Math.max(0, list.findIndex((candidate) => candidate.taskId === taskId));
+}
+
 export function DailyLoadCard() {
   const { colors } = useTheme();
   const styles = useStyles();
   const schedule = useSchedule();
-  const { events, tasks, issues, decision, candidates, candidateIndex, appliedMove, showNextCandidate, moveRecommendedTask, keepAsPlanned, moveEvent, dropTask, shortenTask, keepCapacity, protectItem } = schedule;
+  const { events, tasks, issues, decision, candidates, candidateIndex, appliedMove, showNextCandidate, capacityCandidate, capacityCandidateCount, showNextCapacityCandidate, moveRecommendedTask, keepAsPlanned, moveEvent, dropTask, shortenTask, keepCapacity, protectItem } = schedule;
   const { state, today } = useHouseholdState();
+  const capacityOptionNumber = indexOfTask(issues.capacityPressure?.candidates, capacityCandidate?.taskId ?? null) + 1;
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   // A second tap in the same frame would otherwise run an action twice before `busy` renders.
@@ -106,7 +114,7 @@ export function DailyLoadCard() {
           {failureNote}
           <Button label="Move it to tomorrow" onPress={() => run(() => moveEvent(movable.id))} disabled={busy} style={styles.primaryButton} />
           <View style={styles.secondaryRow}>
-            <Button label="Keep today as planned" variant="ghost" size="sm" onPress={keepAsPlanned} disabled={busy} style={styles.secondaryButton} />
+            <Button label="Keep today as planned" variant="ghost" size="sm" onPress={() => run(keepAsPlanned)} disabled={busy} style={styles.secondaryButton} />
             <Button
               label="Protect it"
               variant="ghost"
@@ -161,7 +169,10 @@ export function DailyLoadCard() {
       );
     }
 
-    const target = primary.largestTaskId;
+    // The option she is looking at: the largest by default, any other eligible task on request. Browsing writes nothing.
+    const option = capacityCandidate;
+    const target = option?.taskId ?? null;
+    const copy = option ? capacityOptionCopy(option.title, option.durationMinutes, primary.pressureMinutes) : null;
     return (
       <Card tone="attention" raised style={styles.card}>
         <Tag label={target ? 'Needs you' : 'Needs your attention'} tone="attention" />
@@ -177,23 +188,55 @@ export function DailyLoadCard() {
         />
         <Overline color={colors.attention}>What Her Keys recommends</Overline>
         <AppText variant="supporting" color={colors.textSecondary} style={styles.impact}>
-          {target
-            ? canShortenTask(primary.largestTaskMinutes ?? 0)
-              ? `Shorten or drop “${primary.largestTaskTitle}”.`
-              : `Drop “${primary.largestTaskTitle}” for today.`
+          {copy
+            ? copy.recommendation
             : 'Everything left on today’s list is due today or fixed, so Her Keys won’t drop or shorten any of it. Consider what else could give.'}
         </AppText>
+        {copy && (
+          <AppText variant="supporting" color={colors.textSecondary} style={styles.impact}>
+            {copy.shortenLine ? `${copy.dropLine} ${copy.shortenLine}` : copy.dropLine}
+          </AppText>
+        )}
+        {capacityCandidateCount > 1 && (
+          <AppText variant="metadata" color={colors.textTertiary} style={styles.impact}>
+            Option {capacityOptionNumber} of {capacityCandidateCount}
+          </AppText>
+        )}
 
         {failureNote}
-        {target && (
+        {target && copy && (
           <>
             <View style={styles.secondaryRow}>
-              {canShortenTask(primary.largestTaskMinutes ?? 0) && (
-                <Button label="Shorten it" onPress={() => run(() => shortenTask(target))} disabled={busy} style={styles.secondaryButton} />
+              {canShortenTask(option?.durationMinutes ?? 0) && copy.relief.canShorten && (
+                <Button
+                  label="Shorten it"
+                  onPress={() => run(() => shortenTask(target))}
+                  disabled={busy}
+                  accessibilityHint={`Shortens ${option?.title} to ${copy.relief.shortenToMinutes} minutes`}
+                  style={styles.secondaryButton}
+                />
               )}
-              <Button label="Drop it" variant="secondary" onPress={() => run(() => dropTask(target))} disabled={busy} style={styles.secondaryButton} />
+              <Button
+                label="Drop it"
+                variant="secondary"
+                onPress={() => run(() => dropTask(target))}
+                disabled={busy}
+                accessibilityHint={`Removes ${option?.title} from today and frees ${copy.relief.dropFreesMinutes} minutes`}
+                style={styles.secondaryButton}
+              />
             </View>
             <View style={styles.secondaryRow}>
+              {capacityCandidateCount > 1 && (
+                <Button
+                  label="Show another option"
+                  variant="ghost"
+                  size="sm"
+                  onPress={showNextCapacityCandidate}
+                  disabled={busy}
+                  accessibilityHint="Shows a different task you could shorten or drop. Nothing changes until you choose."
+                  style={styles.secondaryButton}
+                />
+              )}
               <Button label="Keep as planned" variant="ghost" size="sm" onPress={() => run(keepCapacity)} disabled={busy} style={styles.secondaryButton} />
               <Button
                 label="Protect it"
@@ -201,6 +244,7 @@ export function DailyLoadCard() {
                 size="sm"
                 onPress={() => run(() => protectItem({ targetType: 'task', targetId: target }))}
                 disabled={busy}
+                accessibilityHint={`Makes ${option?.title} a fixed commitment, so Her Keys won’t suggest changing it again`}
                 style={styles.secondaryButton}
               />
             </View>
@@ -236,7 +280,7 @@ export function DailyLoadCard() {
           {squeeze}, and nothing flexible is scheduled there to move.
         </AppText>
         <View style={styles.secondaryRow}>
-          <Button label="Got it" variant="ghost" size="sm" onPress={keepAsPlanned} style={styles.secondaryButton} />
+          <Button label="Got it" variant="ghost" size="sm" onPress={() => run(keepAsPlanned)} disabled={busy} style={styles.secondaryButton} />
         </View>
       </Card>
     );
@@ -255,7 +299,7 @@ export function DailyLoadCard() {
         {failureNote}
         <Button label="Move it to tomorrow" onPress={() => run(() => moveEvent(flexibleEvent.id))} disabled={busy} />
         <View style={styles.secondaryRow}>
-          <Button label="Keep today as planned" variant="ghost" size="sm" onPress={keepAsPlanned} disabled={busy} style={styles.secondaryButton} />
+          <Button label="Keep today as planned" variant="ghost" size="sm" onPress={() => run(keepAsPlanned)} disabled={busy} style={styles.secondaryButton} />
           <Button
             label="Protect it"
             variant="ghost"
@@ -287,15 +331,23 @@ export function DailyLoadCard() {
       {failureNote}
       <Button
         label="Move it to tomorrow"
-        onPress={moveRecommendedTask}
+        onPress={() => run(moveRecommendedTask)}
         disabled={busy}
         accessibilityHint={`Moves ${candidate.task.title} to tomorrow and frees ${candidate.task.durationMinutes} minutes today`}
       />
       <View style={styles.secondaryRow}>
         {candidates.length > 1 && (
-          <Button label="Show another option" variant="ghost" size="sm" onPress={showNextCandidate} style={styles.secondaryButton} />
+          <Button
+            label="Show another option"
+            variant="ghost"
+            size="sm"
+            onPress={showNextCandidate}
+            disabled={busy}
+            accessibilityHint="Shows a different task you could move. Nothing changes until you choose."
+            style={styles.secondaryButton}
+          />
         )}
-        <Button label="Keep today as planned" variant="ghost" size="sm" onPress={keepAsPlanned} disabled={busy} style={styles.secondaryButton} />
+        <Button label="Keep today as planned" variant="ghost" size="sm" onPress={() => run(keepAsPlanned)} disabled={busy} style={styles.secondaryButton} />
         <Button
           label="Protect it"
           variant="ghost"
