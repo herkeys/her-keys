@@ -1054,7 +1054,8 @@
       "lineHeight": 18,
       "fontWeight": "500",
       "marginTop": 4
-     }
+     },
+     "accessibilityLiveRegion": "polite"
     },
     "children": [
      "Use at least 8 characters."

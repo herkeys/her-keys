@@ -10,6 +10,12 @@ on all three platforms. The Android assertion failed before repair (`44 !== 48`)
 Guidance: https://developer.android.com/guide/topics/ui/accessibility/apps#use-large-simple-controls.
 This addendum does not recertify the historical V1 audit or its old live-service findings below.
 
+**V2UP-E / PC-V2UP-E01:** `accessibilityLiveRegion` is an Android-only React Native prop, so VoiceOver heard none of the app's polite
+status lines (form errors, sign-in failure, restore result). `src/design/announce.ts` now posts the same sentence once through
+`AccessibilityInfo.announceForAccessibility` when it changes, on iOS only (one `Platform.OS` expression); Android keeps its live region and
+is never announced twice. Text, handlers and state are identical on both platforms. `tests/v2up.e.announce.test.mjs` proves the iOS
+announcement fires once per new message and never on Android. VoiceOver / TalkBack output is **NOT RUN**.
+
 PART1_RESULT=FAIL
 
 - **Audit branch:** `audit/ios-android-platform-parity`.

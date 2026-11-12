@@ -34,6 +34,17 @@
       "evidence": "B2B-A02: tests/platformParity/androidButtonTarget.test.mjs checks rendered RN style and callback contracts for Android, iOS and web. Native layout and TalkBack remain NOT RUN."
     },
     {
+      "id": "PC-V2UP-E01",
+      "file": "src/design/announce.ts",
+      "count": 1,
+      "expression": "Platform.OS !== 'ios' -> no native announcement",
+      "class": "A",
+      "capability": "Spoken status changes (form errors, restore result, sign-in failure)",
+      "difference": "accessibilityLiveRegion is an Android-only React Native prop with no iOS implementation, so VoiceOver heard none of the app's polite status lines. On iOS the same sentence is posted once through AccessibilityInfo.announceForAccessibility when it changes; Android keeps its live region and is not announced twice. Text, handlers and state are identical.",
+      "iosAndroidEquivalent": true,
+      "evidence": "V2UP-E: tests/v2up.e.announce.test.mjs proves the iOS announcement fires once per new message and never on Android. Native VoiceOver / TalkBack output is NOT RUN."
+    },
+    {
       "id": "PC-01",
       "file": "src/platform/secureStore.ts",
       "count": 1,

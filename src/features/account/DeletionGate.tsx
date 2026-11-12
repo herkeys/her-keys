@@ -2,17 +2,31 @@ import {useEffect,useRef,useState,useSyncExternalStore,type ReactNode} from 'rea
 import {AppState,Linking,StyleSheet,TextInput,View} from 'react-native';
 import {SplashScreen} from 'expo-router';
 import {AppText,Button,Screen} from '../../design/components';
+import {useAnnounceOnIOS} from '../../design/announce';
+import {radius} from '../../design/tokens';
+import {themed,useTheme} from '../../design/theme';
 import {deletionRuntime} from '../../store/deletionRuntimeInstance';
 import {accountRuntime} from '../../store/accountRuntimeInstance';
 import {useStoreSnapshot} from '../../store/AppStateProvider';
 
+// The two entry fields on this screen (the private receipt and the local-reset confirmation) used an unthemed `{borderWidth:1}` with no
+// colour at all: in Dark appearance the typed text kept the platform default and the border stayed black, so what she typed (and where)
+// could not be seen on the dark ground. They now use the same control-border / surface / text tokens as every other field.
+const fieldStyleFor=themed(({color})=>({borderWidth:1,borderColor:color.border.control,backgroundColor:color.surface.primary,color:color.text.primary,padding:14,borderRadius:radius.md} as const));
+
+export const DELETION_OFFLINE_NOTICE='Offline — your saved household is available on this device. Sync is paused until account access is checked online.';
+
 export function DeletionGate({children}:{children:ReactNode}) {
+ const fieldStyle=fieldStyleFor(useTheme());
  const [receipt,setReceipt]=useState(''),[receiptNotice,setReceiptNotice]=useState(''),[importing,setImporting]=useState(false);
  const [resetAccount,setResetAccount]=useState<string|null>(null),[resetConfirmation,setResetConfirmation]=useState('');
  const snapshot=useStoreSnapshot();
  const gate=useSyncExternalStore(deletionRuntime.subscribe,deletionRuntime.getSnapshot,deletionRuntime.getSnapshot);
  const hydrated=snapshot.state!==null;
  const recoveryExpired=!!gate.deadline&&Date.parse(gate.deadline)<=Date.now();
+ // VoiceOver has no live region (Android-only prop): speak the offline and receipt notices when they APPEAR.
+ useAnnounceOnIOS(gate.kind==='offline_local'?DELETION_OFFLINE_NOTICE:null);
+ useAnnounceOnIOS(receiptNotice);
  useEffect(()=>{if(hydrated && gate.kind!=='checking')SplashScreen.hide();},[hydrated,gate.kind]);
  useEffect(()=>{
   if(!hydrated)return;
@@ -35,7 +49,7 @@ export function DeletionGate({children}:{children:ReactNode}) {
  const blocked=hydrated&&!localAccess;
  const app=appMounted?<View style={styles.fill} pointerEvents={blocked?'none':'auto'}
   importantForAccessibility={blocked?'no-hide-descendants':'auto'} accessibilityElementsHidden={blocked}>{children}</View>:null;
- if(!blocked)return <View style={styles.fill}>{app}{gate.kind==='offline_local'?<View style={{padding:12}}><AppText accessibilityLiveRegion="polite">Offline — your saved household is available on this device. Sync is paused until account access is checked online.</AppText><Button label="Check connection" variant="secondary" onPress={()=>void deletionRuntime.check()}/></View>:null}</View>;
+ if(!blocked)return <View style={styles.fill}>{app}{gate.kind==='offline_local'?<View style={{padding:12}}><AppText accessibilityLiveRegion="polite">{DELETION_OFFLINE_NOTICE}</AppText><Button label="Check connection" variant="secondary" onPress={()=>void deletionRuntime.check()}/></View>:null}</View>;
  const title=gate.kind==='review'?'Deletion requires privacy review':gate.kind==='pending'?'Account deletion pending':gate.kind==='purged'?'Account permanently deleted':
   gate.kind==='restored'?'Account restored':gate.kind==='checking'?'Checking account access':'Account status unavailable';
  const screen=<Screen><View style={{padding:24,gap:20}}>
@@ -49,7 +63,7 @@ export function DeletionGate({children}:{children:ReactNode}) {
   <Button label="Recovery and support" variant="secondary" onPress={()=>void Linking.openURL('https://herkeys.app/account/restore')}/>
   {gate.kind==='pending'||gate.kind==='review'||gate.kind==='unavailable'?<>
    <AppText>If deletion was requested on the website, enter its private receipt to verify this device’s account status.</AppText>
-   <TextInput accessibilityLabel="Private deletion receipt" value={receipt} onChangeText={setReceipt} maxLength={43} secureTextEntry autoCapitalize="none" autoCorrect={false} style={{borderWidth:1,padding:14,borderRadius:8}}/>
+   <TextInput accessibilityLabel="Private deletion receipt" value={receipt} onChangeText={setReceipt} maxLength={43} secureTextEntry autoCapitalize="none" autoCorrect={false} style={fieldStyle}/>
    <Button label="Use saved receipt" disabled={importing||receipt.trim().length!==43} onPress={()=>{
     setImporting(true);void deletionRuntime.importReceipt(receipt.trim()).then(()=>{setReceipt('');setReceiptNotice('');})
      .catch(()=>setReceiptNotice('This receipt could not verify the account stored on this device. Check the receipt and connection.'))
@@ -62,7 +76,7 @@ export function DeletionGate({children}:{children:ReactNode}) {
    <Button label="Reset this device’s local data" variant="secondary" onPress={()=>setResetAccount(deletionRuntime.localAccountId())}/>
    {resetAccount?<>
     <AppText>This permanently removes this device’s data and credentials for its current account. It does not confirm server deletion. Type DELETE LOCAL DATA to continue.</AppText>
-    <TextInput accessibilityLabel="Confirm local data reset" value={resetConfirmation} onChangeText={setResetConfirmation} autoCapitalize="characters" autoCorrect={false} style={{borderWidth:1,padding:14,borderRadius:8}}/>
+    <TextInput accessibilityLabel="Confirm local data reset" value={resetConfirmation} onChangeText={setResetConfirmation} autoCapitalize="characters" autoCorrect={false} style={fieldStyle}/>
     <Button label="Confirm local reset" disabled={resetConfirmation!=='DELETE LOCAL DATA'||importing} onPress={()=>{
      setImporting(true);void deletionRuntime.resetLocalData(resetConfirmation,resetAccount)
       .catch(()=>setReceiptNotice('Local reset did not complete. Your account namespace may have changed.'))
