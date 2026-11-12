@@ -104,6 +104,8 @@ export const copy = {
     noChild: 'Not tied to one child',
     savedAs: (kind: ProposalKind): string => `Saved as ${kind === 'event' ? 'an appointment' : kind === 'task' ? 'a to-do' : 'a note that needs you'}.`,
     rejected: 'Not saved.',
+    // After a save, the way to the record that now exists. Offered only while the record is still there.
+    openRecord: (kind: ProposalKind): string => (kind === 'event' ? 'Open the appointment' : kind === 'task' ? 'Open the to-do' : 'Open the note'),
     assumption: (code: AssumptionCode): string => ASSUMPTION[code],
     unsupported: (reason: Exclude<UnsupportedReason, 'responsibility-handoff'>): string => UNSUPPORTED[reason],
     handoff: (name: string): string => `I haven’t recorded that ${name} is handling this, and I haven’t contacted them.`,
@@ -120,6 +122,19 @@ export const copy = {
     accept: 'Save it like that',
     reject: 'That’s not it',
     fix: 'Fix it',
+  },
+
+  // "Save the ready ones": one explicit step for the easy readings of a capture. Everything it skips keeps its own card.
+  bulk: {
+    saveReady: (count: number): string => `Save the ${count} that need no checking`,
+    saveReadyHint: 'Anything with a guess, a possible duplicate, money or a child is left here for you to check one at a time.',
+    result: (saved: number, failed: number): string => {
+      const parts: string[] = [];
+      if (saved > 0) parts.push(saved === 1 ? 'Saved 1 item.' : `Saved ${saved} items.`);
+      if (failed > 0) parts.push(failed === 1 ? '1 couldn’t be saved, so nothing was changed for it. You can try it again.' : `${failed} couldn’t be saved, so nothing was changed for them. You can try them again.`);
+      if (saved === 0 && failed === 0) parts.push('Nothing was saved. Each one needs a look first.');
+      return parts.join(' ');
+    },
   },
 
   clarify: {
@@ -220,7 +235,10 @@ export function copyCorpus(): string[] {
     add(copy.review.kind(kind, true));
     add(copy.review.kind(kind, false));
     add(copy.review.savedAs(kind));
+    add(copy.review.openRecord(kind));
   }
+  add(copy.bulk.saveReady(3));
+  for (const [saved, failed] of [[1, 0], [3, 0], [0, 1], [2, 2], [0, 0]]) add(copy.bulk.result(saved, failed));
   add(copy.review.handoff('Jordan'));
   add(copy.review.handoffKnown('Maya'));
   add(copy.review.whyEvidence('Friday at 3', 'time'));

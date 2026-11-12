@@ -6,7 +6,7 @@ import { useTheme } from '../../../design/theme';
 import { CaptureGroup } from './CaptureCards';
 import { useCapture, useLifeInbox } from './CaptureContext';
 import { copy } from './copy';
-import type { InboxItemVM } from './viewModel';
+import type { InboxItemVM, ProposalVM } from './viewModel';
 
 /**
  * LIFE INBOX — unresolved life admin. Not a second task list (accepted items are canonical rows and are
@@ -14,7 +14,7 @@ import type { InboxItemVM } from './viewModel';
  * existing Life stack.
  */
 
-function ItemCard({ item, open, onToggle, onSayAgain }: { item: InboxItemVM; open: boolean; onToggle: () => void; onSayAgain: () => void }) {
+function ItemCard({ item, open, onToggle, onSayAgain, onOpenRecord }: { item: InboxItemVM; open: boolean; onToggle: () => void; onSayAgain: () => void; onOpenRecord?: OpenRecord }) {
   const { color } = useTheme();
   const { coordinator } = useCapture();
   const urgency = item.passed ? copy.inbox.passed : copy.inbox.urgency[item.urgency];
@@ -53,13 +53,15 @@ function ItemCard({ item, open, onToggle, onSayAgain }: { item: InboxItemVM; ope
         </View>
       )}
 
-      {open && !item.hollow && <CaptureGroup captureId={item.captureId} onLater={onToggle} />}
+      {open && !item.hollow && <CaptureGroup captureId={item.captureId} onLater={onToggle} onOpenRecord={onOpenRecord} />}
     </Card>
   );
 }
 
-/** `onSayAgain` opens Talk It Out; the route supplies it so this view carries no navigation of its own. */
-export function LifeInboxView({ onSayAgain }: { onSayAgain: () => void }) {
+type OpenRecord = (target: NonNullable<ProposalVM['openTarget']>) => void;
+
+/** `onSayAgain` opens Talk It Out and `onOpenRecord` opens a saved record; the route supplies both so this view carries no navigation of its own. */
+export function LifeInboxView({ onSayAgain, onOpenRecord }: { onSayAgain: () => void; onOpenRecord?: OpenRecord }) {
   const { color } = useTheme();
   const vm = useLifeInbox();
   const [openId, setOpenId] = useState<string | null>(null);
@@ -81,7 +83,7 @@ export function LifeInboxView({ onSayAgain }: { onSayAgain: () => void }) {
 
       {(vm.phase === 'items' || vm.phase === 'recovery') &&
         vm.items.map((item) => (
-          <ItemCard key={item.captureId} item={item} open={openId === item.captureId} onToggle={() => setOpenId(openId === item.captureId ? null : item.captureId)} onSayAgain={onSayAgain} />
+          <ItemCard key={item.captureId} item={item} open={openId === item.captureId} onToggle={() => setOpenId(openId === item.captureId ? null : item.captureId)} onSayAgain={onSayAgain} onOpenRecord={onOpenRecord} />
         ))}
     </View>
   );
