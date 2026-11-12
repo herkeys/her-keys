@@ -35,10 +35,16 @@ export interface PremiumHomeCopy {
   manage: HomeActionCopy | null;
 }
 
+const releasedToolNames = () => `${CAPABILITY_TEXT.daily_load_premium.name}, ${CAPABILITY_TEXT.smart_inbox_extract.name} and your ${CAPABILITY_TEXT.momentum_report.name.toLowerCase()}`;
 const MANAGE: HomeActionCopy = { action: 'manage', label: 'Manage subscription' };
 const through = (endsOn: string | null, format: DateFormatter, lead: string, fallback: string) => (endsOn ? `${lead} ${format(endsOn)}.` : fallback);
 
-export function premiumHomeCopyFor(state: PremiumHomeState, format: DateFormatter = defaultFormatDate): PremiumHomeCopy {
+/**
+ * `released` is the SERVER manifest's word that all three tools are switched on for this account (`premiumLaunchState(...).ready`).
+ * It only changes how the Free plan is DESCRIBED: until then the home says the tools are being prepared; once they are released it says
+ * plainly what they are. It never offers, grants or prices anything.
+ */
+export function premiumHomeCopyFor(state: PremiumHomeState, format: DateFormatter = defaultFormatDate, released = false): PremiumHomeCopy {
   switch (state.kind) {
     case 'signed_out':
       return { status: 'Signed out', title: `${PREMIUM} belongs to your account`, body: `Sign in to your Her Keys account to use ${PREMIUM}. ${FREE_UNTOUCHED}`, tone: 'info', primary: null, manage: null };
@@ -48,7 +54,9 @@ export function premiumHomeCopyFor(state: PremiumHomeState, format: DateFormatte
       return {
         status: 'Free plan',
         title: 'You’re on the Free plan',
-        body: `${PREMIUM} is being prepared to add three tools that do more of the work for you. Check availability below. ${FREE_UNTOUCHED}`,
+        body: released
+          ? `${PREMIUM} adds three tools that do more of the work for you: ${releasedToolNames()}. Nothing is saved or changed without your approval. ${FREE_UNTOUCHED} ${RESTORE_HINT}`
+          : `${PREMIUM} is being prepared to add three tools that do more of the work for you. Check availability below. ${FREE_UNTOUCHED}`,
         tone: 'info',
         primary: { action: 'upgrade', label: `See ${PREMIUM}` },
         manage: null,

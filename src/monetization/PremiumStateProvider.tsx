@@ -161,7 +161,13 @@ function PremiumAccountState({
       const result = await client.authorize(request);
       // An answer that arrives after the account changed belongs to nobody on screen now.
       if (!isCurrent() || controller.getSnapshot().accountId !== owner) return { kind: 'unavailable' };
-      if (result.kind === 'decision') recordDecision(request.feature, result.decision);
+      if (result.kind === 'decision') {
+        recordDecision(request.feature, result.decision);
+        // The server just said "no" about her SUBSCRIPTION while the screen may still say "Premium is on" (it ended, was refunded or was
+        // revoked since the last read). Re-read the server's state so the screen stops offering what the server will not do. This only ever
+        // moves the display TOWARD what the server said; it never grants anything.
+        if (isSubscriptionDenial(result.decision)) void controller.refresh();
+      }
       return result;
     },
     [client, controller, recordDecision, isCurrent, householdId],
@@ -173,6 +179,8 @@ function PremiumAccountState({
       const owner = controller.getSnapshot().accountId;
       const result = await client.extract(request);
       if (!isCurrent() || controller.getSnapshot().accountId !== owner) return { kind: 'unavailable', reason: 'account_changed' };
+      // Same as `authorize`: a subscription denial from the server means the screen's copy of her entitlement is out of date.
+      if (result.kind === 'denied' && isSubscriptionDenial(result.decision)) void controller.refresh();
       return result;
     },
     [client, controller, isCurrent, householdId],
@@ -193,6 +201,10 @@ function PremiumAccountState({
 }
 
 const EMPTY_DECISIONS: Readonly<Record<string, GateDecision>> = {};
+
+/** The denials that are a statement about her SUBSCRIPTION. The client's copy of the entitlement is only a display of an earlier server read. */
+const SUBSCRIPTION_DENIALS: ReadonlySet<string> = new Set(['requires_premium', 'entitlement_unknown', 'entitlement_expired']);
+export const isSubscriptionDenial = (decision: GateDecision): boolean => decision.outcome === 'denied' && SUBSCRIPTION_DENIALS.has(decision.reason);
 
 export function usePremiumState(): PremiumContextValue {
   const value = useContext(PremiumContext);
