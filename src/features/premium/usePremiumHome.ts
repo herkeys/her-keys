@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import { premiumHomeCopyFor, capabilityViews, type CapabilityView, type PremiumHomeCopy } from '../../monetization/premiumHomeCopy';
+import { premiumLaunchState } from '../../monetization/premiumLaunchState';
 import { derivePremiumHomeState, type PremiumHomeState } from '../../monetization/premiumHomeState';
 import { usePremiumState, usePremiumUpgrade, type PremiumUpgradeApi } from '../../monetization/PremiumStateProvider';
 import { useEntitlement } from '../../monetization/RevenueCatProvider';
@@ -41,7 +42,8 @@ export function usePremiumHome(manageDeps?: ManageDeps): PremiumHomeApi {
   const [manageNotice, setManageNotice] = useState<string | null>(null);
 
   const state = useMemo(() => derivePremiumHomeState({ accountBound, snapshot, storeStatus }), [accountBound, snapshot, storeStatus]);
-  const copy = useMemo(() => premiumHomeCopyFor(state), [state]);
+  const released = premiumLaunchState(snapshot.manifest).ready;
+  const copy = useMemo(() => premiumHomeCopyFor(state, undefined, released), [state, released]);
   const capabilities = useMemo(() => capabilityViews(state, snapshot.manifest), [state, snapshot.manifest]);
 
   useEffect(() => {

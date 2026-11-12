@@ -34,9 +34,31 @@ import { usePremiumMomentum, type MomentumView, type PremiumMomentumApi } from '
 export function PremiumMomentumSection() {
   const api = usePremiumMomentum();
   const { feature } = api;
-  if (feature.state.kind === 'signed_out' || feature.state.kind === 'loading') return null;
-  if (!feature.usable && feature.state.kind !== 'upgrade_required' && api.saved.length === 0) return null;
+  if (!showsMomentumCard(feature.state, api.saved.length)) return null;
   return <PremiumMomentumPanel api={api} />;
+}
+
+/**
+ * Whether the weekly review's card has anything TRUE and USEFUL to say on Today.
+ *
+ * Silent only where there is nothing she can act on: no account, the server not yet heard, the account closing, the tool not switched
+ * on for her, or the server unreachable for someone not known to be paying (a Free account must not be told "unavailable" on every
+ * offline launch). Every other state is a state she must be able to get out of from where she is: a purchase waiting for the server
+ * ("Check again" / "Restore in Your Account"), a subscription that ended ("Get Her Keys Premium again"), a limit, an old app.
+ * Saved reviews are hers and are always listed.
+ */
+export function showsMomentumCard(state: PremiumMomentumApi['feature']['state'], savedCount: number): boolean {
+  switch (state.kind) {
+    case 'signed_out':
+    case 'loading':
+      return false;
+    case 'feature_unavailable':
+      return savedCount > 0 || state.cause === 'busy' || state.cause === 'update_app';
+    case 'account_deactivated':
+      return savedCount > 0;
+    default:
+      return true;
+  }
 }
 
 export function PremiumMomentumPanel({ api }: { api: PremiumMomentumApi }) {
