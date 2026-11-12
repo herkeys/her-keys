@@ -263,6 +263,8 @@ const LATER_FEATURES = [
         'V2UP-DEF-E02: the Restore Purchases route test stubs the new account status section it is not about; no assertion weakened'],
       ['tests/platformParity/support/restoreRoute.mjs',
         'V2UP-DEF-E02: test-only stub for the account status section'],
+      ['docs/handoffs/V2_SONNET_TO_CODEX_20261112.md',
+        'V2UP integration: source-candidate handoff (ledger, defects, verification matrix, dependency triage, blockers); no executable behavior'],
       ['tests/v2up.deepLinkHardening.test.mjs',
         'V2UP-SEC-01 regression: hostile deep links refused cheaply, ordinary links and OAuth returns unchanged'],
       ['tests/v2up.e.accountStatus.test.mjs',
