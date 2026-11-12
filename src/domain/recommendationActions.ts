@@ -1,5 +1,6 @@
 import { decisionWindowFor, latestTransitionDecision, todaysIssues } from './dailyLoadDecisions';
 import type { TransitionContext } from './context';
+import type { CapacityPressureIssue } from './dailyLoadIssues';
 import { addDays, epochMsOf, logicalDateAt, toInstant, wallClockMinutesAt, zonedTimeToEpochMs, type LocalDate } from './logicalDay';
 import { appendObservation, plannedDateOf } from './observations';
 import type {
@@ -111,12 +112,45 @@ export function approveMoveEvent(state: AppState, ctx: TransitionContext, eventI
   });
 }
 
-/** Archives the exact task the current capacity-pressure verdict names — never an arbitrary other task, and never one that is fixed or due today. */
+/** Whether the live capacity verdict offers this task — the largest, or any other flexible, not-due-today task on today's list. */
+function isOfferedCapacityTask(pressure: CapacityPressureIssue, taskId: string): boolean {
+  return pressure.candidates.some((candidate) => candidate.taskId === taskId);
+}
+
+/**
+ * What approving each option for one candidate would honestly do to today's shortfall. Drop frees the whole task;
+ * shorten frees only what the 15-minute floor allows. `stillOver*` is what would remain — it is not zero for a smaller
+ * task, and the card says so rather than implying a single change fixes the day.
+ */
+export interface CapacityRelief {
+  dropFreesMinutes: number;
+  stillOverAfterDrop: number;
+  canShorten: boolean;
+  shortenToMinutes: number;
+  shortenFreesMinutes: number;
+  stillOverAfterShorten: number;
+}
+
+export function capacityReliefFor(pressureMinutes: number, durationMinutes: number): CapacityRelief {
+  const shortenToMinutes = Math.max(MINIMUM_TASK_MINUTES, durationMinutes - pressureMinutes);
+  const canShorten = canShortenTask(durationMinutes) && shortenToMinutes < durationMinutes;
+  const shortenFreesMinutes = canShorten ? durationMinutes - shortenToMinutes : 0;
+  return {
+    dropFreesMinutes: durationMinutes,
+    stillOverAfterDrop: Math.max(0, pressureMinutes - durationMinutes),
+    canShorten,
+    shortenToMinutes: canShorten ? shortenToMinutes : durationMinutes,
+    shortenFreesMinutes,
+    stillOverAfterShorten: Math.max(0, pressureMinutes - shortenFreesMinutes),
+  };
+}
+
+/** Archives a task the live capacity-pressure verdict offers — never an arbitrary other task, and never one that is fixed, due today, or no longer open. */
 export function approveDropTask(state: AppState, ctx: TransitionContext, taskId: string): AppState {
   if (latestCapacityDecision(state, ctx.today)) return state;
 
   const pressure = liveCapacityPressure(state, ctx);
-  if (!pressure || pressure.largestTaskId === null || pressure.largestTaskId !== taskId) return state;
+  if (!pressure || !isOfferedCapacityTask(pressure, taskId)) return state;
 
   const task = state.tasks.find((t) => t.id === taskId);
   if (!task || task.status !== 'open') return state;
@@ -149,12 +183,12 @@ export function approveDropTask(state: AppState, ctx: TransitionContext, taskId:
   });
 }
 
-/** Shortens the named task by exactly the shortfall the verdict reports, never below a 15-minute floor. */
+/** Shortens an offered task by exactly the shortfall the verdict reports, never below a 15-minute floor. */
 export function approveShortenTask(state: AppState, ctx: TransitionContext, taskId: string): AppState {
   if (latestCapacityDecision(state, ctx.today)) return state;
 
   const pressure = liveCapacityPressure(state, ctx);
-  if (!pressure || pressure.largestTaskId === null || pressure.largestTaskId !== taskId) return state;
+  if (!pressure || !isOfferedCapacityTask(pressure, taskId)) return state;
 
   const task = state.tasks.find((t) => t.id === taskId);
   if (!task || task.status !== 'open') return state;

@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { AppText, Button, Card, FadeIn, InsightBlock, Overline, RecommendationBlock, WhyThis } from '../../design/components';
 import { radius, sizing, spacing } from '../../design/tokens';
@@ -34,9 +35,28 @@ const COMPLETION_TEXT: Record<OneMoveCompletion, string> = {
  * There is deliberately no "not today" and no "show another": no domain mutation exists for either
  * (MP-02), so no affordance implies one.
  */
-export function OneMoveCard({ section, onComplete }: { section: OneMoveSection; onComplete: () => void }) {
+export function OneMoveCard({ section, onComplete }: { section: OneMoveSection; onComplete: () => void | Promise<boolean> }) {
   const { color } = useTheme();
   const styles = useStyles();
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<string | null>(null);
+  // A second tap in the same frame would otherwise record the move twice before `busy` renders.
+  const inFlight = useRef(false);
+
+  // "Done" is shown only once the completion has really been saved. A save that fails says so and leaves the move as it was.
+  const complete = async () => {
+    if (inFlight.current) return;
+    inFlight.current = true;
+    setBusy(true);
+    setNote(null);
+    try {
+      const saved = await onComplete();
+      if (saved === false) setNote('Her Keys couldn’t save that yet. Nothing changed — try again.');
+    } finally {
+      inFlight.current = false;
+      setBusy(false);
+    }
+  };
   if (section.status === 'completed') {
     // The completion settles in rather than snapping: a deliberate entrance on
     // the resolved card, with a quiet check that names the state in shape and
@@ -79,9 +99,14 @@ export function OneMoveCard({ section, onComplete }: { section: OneMoveSection; 
           approvalRequired={false}
           actionLabel="I did it"
           meta={estimatedMinutes != null ? durationMeta(estimatedMinutes, durationKnowledge) : undefined}
-          onApprove={onComplete}
+          onApprove={busy ? undefined : complete}
           raised
         />
+        {note ? (
+          <AppText variant="supporting" color={color.status.attention} style={styles.note} accessibilityRole="alert">
+            {note}
+          </AppText>
+        ) : null}
       </FadeIn>
       {source?.uncertain ? <TodaySourceLine source={source} /> : null}
       {why ? (

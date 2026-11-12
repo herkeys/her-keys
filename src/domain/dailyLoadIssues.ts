@@ -63,6 +63,13 @@ export interface TightWindowIssue {
   requiredBufferMinutes: number;
 }
 
+/** One task Her Keys may offer to drop or shorten to ease capacity pressure. */
+export interface CapacityCandidate {
+  taskId: string;
+  title: string;
+  durationMinutes: number;
+}
+
 export interface CapacityPressureIssue {
   kind: 'capacity_pressure';
   /** What the 6 AM–10 PM window has left after every active event and the travel/preparation she entered for each. */
@@ -74,6 +81,11 @@ export interface CapacityPressureIssue {
   largestTaskId: string | null;
   largestTaskTitle: string | null;
   largestTaskMinutes: number | null;
+  /**
+   * Every task Her Keys may offer — flexible, not due today, open on today's list — largest first, then by id.
+   * `largestTask*` is always `candidates[0]`. Browsing this list writes nothing: only an approved drop or shorten does.
+   */
+  candidates: CapacityCandidate[];
 }
 
 export interface OverdueTaskIssue {
@@ -240,15 +252,20 @@ export function detectCapacityPressure(events: CalendarEventItem[], tasks: TaskI
   const pressureMinutes = neededMinutes - availableMinutes;
   if (pressureMinutes <= 0) return null;
 
-  const largest = demand.filter(isMovable).sort((a, b) => b.durationMinutes - a.durationMinutes || a.id.localeCompare(b.id))[0] ?? null;
+  const candidates = demand
+    .filter(isMovable)
+    .sort((a, b) => b.durationMinutes - a.durationMinutes || a.id.localeCompare(b.id))
+    .map((task): CapacityCandidate => ({ taskId: task.id, title: task.title, durationMinutes: task.durationMinutes }));
+  const largest = candidates[0] ?? null;
   return {
     kind: 'capacity_pressure',
     availableMinutes,
     neededMinutes,
     pressureMinutes,
-    largestTaskId: largest?.id ?? null,
+    largestTaskId: largest?.taskId ?? null,
     largestTaskTitle: largest?.title ?? null,
     largestTaskMinutes: largest?.durationMinutes ?? null,
+    candidates,
   };
 }
 

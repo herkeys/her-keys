@@ -7,7 +7,7 @@ import {
   undoRecommendedMove,
   type AppliedMove,
 } from '../domain/dailyLoadDecisions';
-import { assessDailyLoadIssues, type DailyLoadIssues } from '../domain/dailyLoadIssues';
+import { assessDailyLoadIssues, type CapacityCandidate, type DailyLoadIssues } from '../domain/dailyLoadIssues';
 import type { LoadTier } from '../domain/loadTier';
 import { projectDay } from '../domain/projectDay';
 import {
@@ -36,9 +36,16 @@ interface ScheduleContextValue {
   /** Today's approved move, while Undo can still safely reverse it. */
   undoableMoveId: string | null;
   showNextCandidate: () => void;
-  moveRecommendedTask: () => void;
-  keepAsPlanned: () => void;
+  /**
+   * The capacity-pressure option she is looking at, and a way to look at the next one. Browsing is local only — nothing
+   * is recorded until she approves a drop or shorten for the task shown. Null when no task qualifies.
+   */
+  capacityCandidate: CapacityCandidate | null;
+  capacityCandidateCount: number;
+  showNextCapacityCandidate: () => void;
   /** These persist before resolving — the caller only shows success once the write has actually landed. */
+  moveRecommendedTask: () => Promise<boolean>;
+  keepAsPlanned: () => Promise<boolean>;
   moveEvent: (eventId: string) => Promise<boolean>;
   dropTask: (taskId: string) => Promise<boolean>;
   shortenTask: (taskId: string) => Promise<boolean>;
@@ -60,6 +67,9 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
   const store = useAppStore();
   const { state, today } = useHouseholdState();
   const [candidateIndex, setCandidateIndex] = useState(0);
+  // Remembered by task id, not position: when the list changes (a task protected, dropped, or edited) she stays on the
+  // task she was looking at if it still qualifies, and otherwise falls back to the largest.
+  const [capacityTaskId, setCapacityTaskId] = useState<string | null>(null);
 
   const day = useMemo(
     () => projectDay({ events: state.events, tasks: state.tasks, timeZone: state.user.timezone }, today),
@@ -76,6 +86,10 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
   const activeIndex = count === 0 ? 0 : candidateIndex % count;
   const activeCandidate = candidates[activeIndex] ?? null;
 
+  const capacityList = issues.capacityPressure?.candidates ?? [];
+  const capacityActiveIndex = Math.max(0, capacityList.findIndex((candidate) => candidate.taskId === capacityTaskId));
+  const capacityCandidate = capacityList[capacityActiveIndex] ?? null;
+
   const value: ScheduleContextValue = {
     events: day.events,
     tasks: day.tasks,
@@ -90,12 +104,14 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
     showNextCandidate: () => {
       if (count > 0) setCandidateIndex((activeIndex + 1) % count);
     },
-    moveRecommendedTask: () => {
-      if (activeCandidate) store.dispatch((current, ctx) => approveDailyLoadMove(current, ctx, activeCandidate.task.id));
+    capacityCandidate,
+    capacityCandidateCount: capacityList.length,
+    showNextCapacityCandidate: () => {
+      if (capacityList.length > 1) setCapacityTaskId(capacityList[(capacityActiveIndex + 1) % capacityList.length].taskId);
     },
-    keepAsPlanned: () => {
-      store.dispatch((current, ctx) => keepDailyLoadPlan(current, ctx, activeCandidate?.task.id ?? null));
-    },
+    moveRecommendedTask: () =>
+      activeCandidate ? store.commit((current, ctx) => approveDailyLoadMove(current, ctx, activeCandidate.task.id)) : Promise.resolve(false),
+    keepAsPlanned: () => store.commit((current, ctx) => keepDailyLoadPlan(current, ctx, activeCandidate?.task.id ?? null)),
     moveEvent: (eventId) => store.commit((current, ctx) => approveMoveEvent(current, ctx, eventId)),
     dropTask: (taskId) => store.commit((current, ctx) => approveDropTask(current, ctx, taskId)),
     shortenTask: (taskId) => store.commit((current, ctx) => approveShortenTask(current, ctx, taskId)),

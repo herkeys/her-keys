@@ -78,7 +78,7 @@ export function TodayBriefing({ view }: { view: TodayView }) {
   );
 }
 
-function renderSection(key: SectionKey, view: TodayReady, completeOneMove: () => void, actions: TodayActions) {
+function renderSection(key: SectionKey, view: TodayReady, completeOneMove: () => Promise<boolean>, actions: TodayActions) {
   switch (key) {
     case 'sparse':
       return view.sparse ? <TodayStateNotice kind={view.sparse.kind} entry={view.sparse.entry} /> : null;
