@@ -9,19 +9,38 @@ names the exact candidate SHA.
 
 ## 1. Outcome
 
-**SOURCE CANDIDATE NOT READY** — on the two items below only. Everything else in the addendum's READY definition is met at source level.
+**SOURCE CANDIDATE READY WITH DOCUMENTED CARRY-FORWARD** — subject to the exact-head CI result reported with this candidate (run ID and URL are in
+the final report; see §10). This is **source-level readiness only**. Native artifact certification, TestFlight/Play testing, store submission,
+RevenueCat/Apple/paywall completion and commercial certification are all NOT_RUN.
 
-| # | Blocker | Why it blocks | Owner action |
+Owner decisions approved 2026-11-12 (management closeout directive) turn the two items that held this candidate back into owner-assigned
+carry-forward to Codex. Neither is resolved by this pass:
+
+| # | Carry-forward | Facts | Assigned |
 |---|---|---|---|
-| NR-1 | Expo compatibility check is not green: `expo install --check` and `expo-doctor` (20/21 checks pass) report 10 SDK 57 **patch** mismatches (expo, expo-auth-session, expo-constants, expo-image-manipulator, expo-image-picker, expo-linking, expo-location, expo-notifications, expo-router, expo-splash-screen) | The READY definition requires the check green; the addendum forbids upgrading packages in this pass. `package.json`, `package-lock.json` and `app.json` are byte-identical to the base, so this is registry drift since `7bb3c63`, not something this candidate introduced | Accept the drift for this candidate, or authorize a separate patch-alignment pass (lockfile must be regenerated under npm 10, never npm 11; do not nest `expo-modules-core`) |
-| NR-2 | Dependency advisories §9: two **reachable runtime** high advisories have no recorded owner disposition: `decode-uri-component`/`query-string`/`expo-router` (deep-link parser) and direct `zod` | A reachable high runtime advisory forces NOT READY unless the owner records a disposition | Record a disposition for each (proposals in §7) |
+| CF-1 | Expo compatibility: `expo install --check` and `expo-doctor` (20/21 checks pass) report 10 SDK 57 **patch** mismatches (expo, expo-auth-session, expo-constants, expo-image-manipulator, expo-image-picker, expo-linking, expo-location, expo-notifications, expo-router, expo-splash-screen) | `package.json`, `package-lock.json` and `app.json` are byte-identical to the base, so this is registry drift since `7bb3c63`, not introduced by this candidate | Codex: a narrowly scoped dependency-alignment pass. No major SDK migration. Lockfile must be regenerated under npm 10, never npm 11; do not nest `expo-modules-core` |
+| CF-2 | `zod@4.6.5` advisory GHSA-mrhx-c7xc-m3w5 | Direct dependency and reachable (domain validation, `herkeys-ai`), but exploitability needs an oversized input that is hard to supply. Fix is `zod@4.6.7` | Codex: verified patch update inside the CF-1 pass. **Not resolved** |
+| CF-3 | Deep-link advisory (decode-uri-component / query-string / expo-router) | Source mitigation V2UP-SEC-01 accepted **provisionally**. The real fix is expo-router 58 (major) | Codex: independently validate **all** relevant link entry points and authentication callbacks, not only `routerPathForIncomingLink`. **Not marked permanently resolved** |
+| CF-4 | RevenueCat, backend activation, integration and implementation verification | Not touched in this pass | Codex, in full |
+| CF-5 | Account isolation (V2UP-ISO-01) | Closed with regression tests; preserved as built | Codex: independent hostile verification |
 
-Exact-head CI: see §10 (filled at push time).
+Required confirmations:
+
+- **Meals boundary-scan BASE is intentional.** `BASE = 38ab7f14…` is the Meals lane baseline. Advancing it was tried earlier and reverted; the scan
+  therefore measures from the Meals baseline on purpose and this candidate's files are accounted for by a registered lane
+  (`HK-V2-AUTONOMOUS-UPGRADE-20261112`, exact files, no migration/schema/root-collection/sync-kind). BASE and `INTEGRATION_CHECKPOINTS` are unchanged.
+- **RevenueCat safe state preserved:** checkout OFF, paywall unpublished, no RevenueCat or Production configuration touched, no pricing, trial,
+  consent or legal copy changed (`legalCopyLock` passes). The one Premium-adjacent wording change is C's Free-plan description on the Premium
+  home: once the SERVER manifest reports the three tools released, it names them and says nothing is saved without approval; it contains no price,
+  trial or offer, and the pre-release wording is unchanged. No entitlement or billing code changed beyond C's stale-state refresh, which only
+  re-reads server-derived state after a subscription denial.
+- **No EAS build, no signed artifact** (§11).
 
 ## 2. Candidate
 
-Recorded in §10 after the final push (a document cannot contain its own commit SHA). The tree is verified at the commit named there; the tip
-differs from it only by this document's results section.
+The full 40-character SHA, the remote SHA and the CI run are reported in the final report delivered with this candidate (a document cannot
+contain the SHA of the commit that holds it). The tree is fully tested at `33ba1749b0fdf59ace11286e01d3bb26e462496a`; the pushed tip differs from it
+only by documentation (this file).
 
 ## 3. Merge ledger
 
@@ -49,7 +68,7 @@ No silent promotion: A and C were merged ahead of green and are recorded above a
 | V2UP-DEF-E02 | P2 | FIXED | Full suite found `platformParity/persistentRestore` failing to load: E's account status section pulls notifications/location/consent modules the Restore test did not stub. The test now stubs the section (no assertion changed); the section has its own tests |
 | V2UP-DEF-B01 | P2 | FIXED | Test fixes in B (unnamed-title map, conversation key shares one household object, per-topic uncertainty assertion instead of an arbitrary count) |
 | V2UP-DEF-X01 | P2 | FIXED | My `feature/v2up-*` branch names tripped the Meals boundary scan; renamed to `ws/v2up-*`. The scanner was not weakened |
-| V2UP-NR-1 / NR-2 | — | OPEN (owner) | See §1 |
+| V2UP-CF-1..3 | — | OPEN, owner-assigned to Codex | Expo patch drift, zod, deep-link dependency advisory: see §1 |
 | V2UP-D-G3 | P2 | OPEN | Onboarding audit: a chip choice is mandatory per step and guard tests pin it; not changed |
 | V2UP-B-P2a | P2 | OPEN | Premium `extract` has no abort signal: after a switch/reset the server call completes and spends quota, but the answer is dropped and never written (not a cross-write) |
 | V2UP-B-P2b | P2 | OPEN | Server `herkeys-ai` handling of "I don't know yet" was not inspected; the client fix covers local/fallback path and routing only. `correct`, `answerClarification`, `dismissCapture` are not epoch-fenced but key by ids that cannot exist in a fresh household |
@@ -88,11 +107,11 @@ simulator cell is NOT_RUN: nothing was installed or run on a device in this pass
 | Meals boundary scan | meals/boundary 13/13, BASE `38ab7f14…` unchanged and intentional (the Meals baseline); every changed file has a lane reason | PASS |
 | `tsc --noEmit` | exit 0 | PASS |
 | `verify:release-identity` | `RELEASE_IDENTITY=PASS` (iOS com.herkeys.app, Android com.heykeys.app, EAS project 7b25f8fe-d7de-49c1-ba69-1fd3a065826a, version 1.0.0, Android versionCode 2, iOS build 2) | PASS |
-| Expo compatibility | expo-doctor 20/21; 10 patch mismatches, unchanged vs base | **FAIL (NR-1)** |
-| Full suite (serial) | see §10 | see §10 |
+| Expo compatibility | expo-doctor 20/21; 10 patch mismatches, unchanged vs base | **FAIL — pre-existing, owner-assigned carry-forward CF-1** |
+| Full suite (serial) | 5563 tests, 5563 pass, 0 fail, 0 skipped, exit 0 (§10) | PASS |
 | iOS device / simulator | not run | NOT_RUN |
 | Android device / emulator | not run | NOT_RUN |
-| Exact-head CI | see §10 | see §10 |
+| Exact-head CI | run ID and URL in the final report | see final report |
 
 ## 7. Dependency triage (17 advisories, `npm audit` at the base lockfile; no package changed)
 
@@ -100,8 +119,8 @@ simulator cell is NOT_RUN: nothing was installed or run on a device in this pass
 |---|---|---|---|
 | shell-quote | critical | build/dev tooling only (react-native → react-devtools-core); not in the app bundle | no runtime exposure; upgrade in a tooling pass |
 | @expo/cli, @expo/config, @expo/config-plugins, @expo/fingerprint, @expo/metro-config, @expo/prebuild-config, expo, glob, minimatch, brace-expansion, node-forge, deepmerge | high/moderate/low | build tooling only (CLI, prebuild, fingerprint, Metro); not shipped | upgrade with the Expo patch alignment (NR-1) |
-| decode-uri-component, query-string, expo-router | high | **reachable runtime** (deep-link parsing) | **Mitigated in source (V2UP-SEC-01).** Real fix is expo-router 58 (major). **Owner disposition required (NR-2):** proposed = accept the mitigation for this candidate and schedule the expo-router 58 migration |
-| zod 4.6.5 (direct) | high (GHSA-mrhx-c7xc-m3w5) | reachable in principle (domain validation; `herkeys-ai` function) | exploitability judged low; fix is `zod@4.6.7`, deferred (no upgrades this pass; lockfile must be regenerated under npm 10). **Owner disposition required (NR-2):** proposed = approve the 4.6.7 patch in the next dependency pass |
+| decode-uri-component, query-string, expo-router | high | **reachable runtime** (deep-link parsing) | **Owner disposition recorded 2026-11-12: source mitigation V2UP-SEC-01 accepted PROVISIONALLY; advisory NOT resolved** (CF-3). Real fix is expo-router 58 (major), not done. Codex must independently validate all relevant entry points and authentication callbacks, not only `routerPathForIncomingLink` |
+| zod 4.6.5 (direct) | high (GHSA-mrhx-c7xc-m3w5) | **direct and reachable** (domain validation; `herkeys-ai` function); exploitability requires an oversized input that is hard to supply | **Owner disposition recorded 2026-11-12: verified patch update to `zod@4.6.7` approved for the Codex dependency-alignment pass (CF-2); advisory NOT resolved.** No package changed in this pass; lockfile must be regenerated under npm 10 |
 
 ## 8. External blockers and owner actions (unchanged by this pass)
 
@@ -112,12 +131,22 @@ Account deletion Phase 2 stays in its draft PRs.
 
 ## 9. Decisions this pass did not make
 
-Package upgrades; any Production or backend change; the paywall; consent or legal wording; the two advisory dispositions; whether to accept the
-Expo patch drift.
+Package upgrades; any Production or backend change; the paywall; consent or legal wording. (The advisory dispositions and the Expo patch drift
+were decided by the owner on 2026-11-12 and are recorded in §1 and §7.)
 
-## 10. Final results (filled after the last run and the push)
+## 10. Final results
 
-Pending.
+**Full suite, serial** (`node --test --test-timeout=600000 --test-concurrency=1 "tests/**/*.test.mjs"`), run on commit
+`33ba1749b0fdf59ace11286e01d3bb26e462496a` (the handoff commit, clean tree, before this section was filled): **exit 0, 5563 tests, 1114 suites,
+5563 pass, 0 fail, 0 cancelled, 0 skipped, 0 todo, 401 s.** The first full run (at 7826fbc) had one failing file, `platformParity/persistentRestore`
+(V2UP-DEF-E02, repaired in test with no assertion changed); the repaired tree is the one above.
+
+The pushed tip differs from the tested commit only by this section and the §1/§7 owner-decision text (documentation, no code). The remote SHA, the
+local SHA it equals, and the exact-head CI run ID and URL are in the final report delivered with this candidate (a document cannot name the commit
+that contains it).
+
+Native and store evidence, all **NOT_RUN**: iOS device/simulator, Android device/emulator, signed artifact, TestFlight, Play testing, store
+submission, RevenueCat/Apple/Google paywall and settlement, commercial certification.
 
 ## 11. EAS / artifact statement
 
