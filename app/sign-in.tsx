@@ -4,6 +4,7 @@ import { DeleteAccountPanel } from '../src/features/account/DeleteAccountPanel';
 import { Screen } from '../src/design/components';
 import type { AuthProvider } from '../src/domain/account/identity';
 import { AccountPanel } from '../src/features/account/AccountPanel';
+import { AccountStatusSection } from '../src/features/account/AccountStatusSection';
 import { accountModalMode } from '../src/features/account/accountModel';
 import { WelcomeAuthFlow } from '../src/features/account/WelcomeAuthFlow';
 import { accountProviders } from '../src/store/accountRuntimeInstance';
@@ -61,6 +62,7 @@ export default function SignIn() {
     <Screen scroll={false}>
       <AccountPanel
         onPrivacy={() => setPrivacy(true)}
+        statusSection={<AccountStatusSection mode={mode} onPrivacy={mode === 'connected' ? () => setPrivacy(true) : undefined} />}
         mode={mode}
         providers={providers}
         busy={busy}

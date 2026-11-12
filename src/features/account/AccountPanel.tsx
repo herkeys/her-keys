@@ -1,6 +1,7 @@
 import { ScrollView, StyleSheet, View } from 'react-native';
 import type { ReactNode } from 'react';
 import { AppText, Button, Overline } from '../../design/components';
+import { useAnnounceOnIOS } from '../../design/announce';
 import { spacing } from '../../design/tokens';
 import { useTheme } from '../../design/theme';
 import type { AuthProvider } from '../../domain/account/identity';
@@ -27,7 +28,14 @@ export interface AccountPanelProps {
    * beneath it instead of in the footer — it is moved, never duplicated.
    */
   premiumSection?: ReactNode;
+  /**
+   * "Your account, at a glance" — the status summary (account, sync / offline, AI processing, permissions, legal, data). Supplied by
+   * the route so this panel stays presentational; placed after Premium and before Appearance, in every account state.
+   */
+  statusSection?: ReactNode;
 }
+
+const SIGN_IN_FAILED_COPY = 'That did not go through. Nothing on this device changed — you can try again.';
 
 /**
  * Your Account. Signing in is offered, never demanded: her household already works on this device, and an account is what
@@ -35,10 +43,13 @@ export interface AccountPanelProps {
  * holds its own household is never merged into one (the server refuses it). Signing out keeps everything on this phone; the next sign-in
  * of the same account resumes it. Presentational only — the route supplies the actions, and they all go through AccountRuntime.
  */
-export function AccountPanel({ mode, providers, busy, failed, onSignIn, onSignOut, onClose, onRestore, restoring = false, restoreNotice, restoreControl, onPrivacy, premiumSection }: AccountPanelProps) {
+export function AccountPanel({ mode, providers, busy, failed, onSignIn, onSignOut, onClose, onRestore, restoring = false, restoreNotice, restoreControl, onPrivacy, premiumSection, statusSection }: AccountPanelProps) {
   const { colors } = useTheme();
   const copy = COPY[mode];
   const offersProviders = mode === 'signIn' || mode === 'reconnect';
+  // The two notices below are Android live regions; VoiceOver has none, so they are also spoken on iOS when they appear.
+  useAnnounceOnIOS(failed && offersProviders ? SIGN_IN_FAILED_COPY : null);
+  useAnnounceOnIOS(restoreNotice);
   const premiumShown = mode === 'connected' && premiumSection != null;
   const restoreBlock =
     mode === 'connected' && restoreControl ? restoreControl : mode === 'connected' && onRestore ? (
@@ -67,6 +78,8 @@ export function AccountPanel({ mode, providers, busy, failed, onSignIn, onSignOu
         </View>
       ) : null}
 
+      {statusSection != null ? <View style={styles.status}>{statusSection}</View> : null}
+
       {/* Appearance is device-local and needs no account, so every account-panel state offers it. */}
       <View style={styles.appearance}>
         <AppearanceSection />
@@ -76,7 +89,7 @@ export function AccountPanel({ mode, providers, busy, failed, onSignIn, onSignOu
         {mode === 'connected' && onPrivacy ? <Button label="Privacy & Data" variant="secondary" disabled={busy || restoring} onPress={onPrivacy} /> : null}
         {failed && offersProviders && (
           <AppText variant="bodySm" color={colors.textTertiary} style={styles.note} accessibilityLiveRegion="polite">
-            That did not go through. Nothing on this device changed — you can try again.
+            {SIGN_IN_FAILED_COPY}
           </AppText>
         )}
 
@@ -139,6 +152,7 @@ const styles = StyleSheet.create({
   title: { marginTop: spacing.md },
   lede: { marginTop: spacing.lg },
   premium: { paddingHorizontal: spacing.xl, paddingVertical: spacing.xl, gap: spacing.md },
+  status: { paddingHorizontal: spacing.xl, paddingTop: spacing.xl },
   appearance: { paddingHorizontal: spacing.xl, paddingVertical: spacing.xl },
   footer: { paddingHorizontal: spacing.xl, paddingBottom: spacing.xxxl, gap: spacing.md },
   note: { textAlign: 'center' },
