@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import { AiMark, AppText, Button, Card, Overline, Screen, Tag } from '../../src/design/components';
 import { radius, spacing } from '../../src/design/tokens';
 import { createThemedStyles, useTheme } from '../../src/design/theme';
+import { goBackFromStep } from '../../src/features/onboarding/backNavigation';
 import { buildOperatingProfile } from '../../src/features/onboarding/buildOperatingProfile';
 import { useOnboarding } from '../../src/store/OnboardingContext';
 
@@ -14,6 +15,7 @@ export default function ProfileResult() {
 
   return (
     <Screen bottomClearance={spacing.xxl}>
+      <Button label="Back" variant="ghost" size="sm" onPress={() => goBackFromStep('profile', router)} style={styles.back} />
       <View style={styles.headerRow}>
         <AiMark kind="understood" />
         <Overline>Life operating profile</Overline>
@@ -71,6 +73,7 @@ export default function ProfileResult() {
 }
 
 const useStyles = createThemedStyles(({ color, colors }) => StyleSheet.create({
+  back: { alignSelf: 'flex-start', marginBottom: spacing.md },
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   title: { marginTop: spacing.md },
   lede: { marginTop: spacing.md, marginBottom: spacing.xxl },

@@ -3,6 +3,7 @@ import { StyleSheet } from 'react-native';
 import { AppText, Card, Overline } from '../../src/design/components';
 import { spacing } from '../../src/design/tokens';
 import { useTheme } from '../../src/design/theme';
+import { goBackFromStep } from '../../src/features/onboarding/backNavigation';
 import { OnboardingScaffold } from '../../src/features/onboarding/OnboardingScaffold';
 import { useOnboarding } from '../../src/store/OnboardingContext';
 
@@ -16,6 +17,7 @@ export default function TalkItOutInviteStep() {
       total={4}
       title="You don’t need to know what’s wrong."
       description="When something feels off but you can’t name it, you can just talk it out."
+      onBack={() => goBackFromStep('talk-it-out', router)}
       onContinue={() => {
         recordStep('profile');
         router.push('/onboarding/profile');

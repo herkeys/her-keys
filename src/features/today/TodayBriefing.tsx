@@ -9,6 +9,7 @@ import { PremiumMomentumSection } from '../momentum/premium/PremiumMomentumSecti
 import { OneMoveCard } from '../one-move/OneMoveCard';
 import { useOneMove } from '../../store/OneMoveContext';
 import { TalkItOutEntry } from '../talk-it-out/TalkItOutEntry';
+import { FirstStepCard } from '../onboarding/FirstStepCard';
 import { FadeIn } from '../../design/components';
 import { spacing } from '../../design/tokens';
 import { HandledLedger } from './HandledLedger';
@@ -81,7 +82,15 @@ export function TodayBriefing({ view }: { view: TodayView }) {
 function renderSection(key: SectionKey, view: TodayReady, completeOneMove: () => void, actions: TodayActions) {
   switch (key) {
     case 'sparse':
-      return view.sparse ? <TodayStateNotice kind={view.sparse.kind} entry={view.sparse.entry} /> : null;
+      if (!view.sparse) return null;
+      // A household with nothing in it gets ONE chosen first step (HK-V2UP-D); its own notice is the fallback.
+      return view.sparse.kind === 'never_entered' ? (
+        <FirstStepCard>
+          <TodayStateNotice kind={view.sparse.kind} entry={view.sparse.entry} />
+        </FirstStepCard>
+      ) : (
+        <TodayStateNotice kind={view.sparse.kind} entry={view.sparse.entry} />
+      );
     case 'decision':
       // The Free Daily Load speaks first and is unchanged; Her Keys Premium's review sits beneath it, only where the day needs it.
       return (

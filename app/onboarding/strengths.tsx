@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { onboardingOptions } from '../../src/data/catalog/onboardingOptions';
 import { ChipToggle } from '../../src/design/components';
+import { goBackFromStep } from '../../src/features/onboarding/backNavigation';
 import { OnboardingScaffold } from '../../src/features/onboarding/OnboardingScaffold';
 import { useOnboarding } from '../../src/store/OnboardingContext';
 
@@ -14,6 +15,7 @@ export default function StrengthsStep() {
       total={4}
       title="What's already working?"
       description="Her Keys won't try to fix what isn't broken."
+      onBack={() => goBackFromStep('strengths', router)}
       onContinue={() => {
         recordStep('struggles');
         router.push('/onboarding/struggles');
