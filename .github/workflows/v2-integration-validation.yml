@@ -3,11 +3,13 @@ name: Her Keys V2 Integration Gate
 on:
   pull_request:
     branches:
+      - integration/v2-autonomous-upgrade-20261112
       - integration/welcome-tree-auth-runtime
       - repair/v2-audit-safe-closeouts-20261008
   # Build 2A: the candidate is certified by pushing the exact SHA, not by a pull-request merge ref.
   push:
     branches:
+      - codex/v2-engineering-20261113
       - integration/build2a-candidate
       # V2 autonomous upgrade source candidate (Today, Talk It Out, Premium, Onboarding, Native UX): the same gate on its exact pushed SHA. Validation only; no build or deploy. Remove with the branch.
       - integration/v2-autonomous-upgrade-20261112

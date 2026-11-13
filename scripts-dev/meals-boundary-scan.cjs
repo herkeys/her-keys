@@ -129,6 +129,18 @@ const INTEGRATION_CHECKPOINTS = ['363e473fdf053547a21a41a67b7f62bd9aa2bcdf'];
  */
 const LATER_FEATURES = [
   {
+    id: 'HK-CODEX-V2-ENGINEERING-20261113 (SDK 57 baseline repair)',
+    branch: null,
+    owned: [], migrations: [], schemas: [], rootCollections: [], syncKinds: [],
+    shared: [
+      ['package.json', 'Align ten SDK 57 packages and patch reachable Zod advisory; preserve native core versions'],
+      ['package-lock.json', 'Regenerate using npm 10; verify one expo-modules-core installation'],
+      ['supabase/functions/herkeys-ai/index.ts', 'Patch server-side Zod to 4.6.7; no deployment implied'],
+      ['.github/workflows/v2-integration-validation.yml', 'Run unchanged mandatory checks on Codex exact head and PRs to V2 convergence'],
+      ['docs/handoffs/V2_CODEX_EXECUTION_20261113.md', 'Record verified baseline work and live observations separately from pending certification'],
+    ],
+  },
+  {
     id: 'HK-V2-AUTONOMOUS-UPGRADE-20261112 (V2 source candidate: Today/Daily Load, Talk It Out, Premium, Onboarding, Native UX)',
     // Exact-file ownership of the five V2 upgrade workstreams plus the integration's own repairs. No migration, schema, root collection,
     // sync kind, backend contract or permission change: every unrelated path stays default-deny.

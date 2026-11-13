@@ -1,4 +1,4 @@
-import { z } from 'npm:zod@4.6.5';
+import { z } from 'npm:zod@4.6.7';
 import { AuthError, adminClient, requireUser } from '../_shared/supabaseAdmin.ts';
 import { json, options } from '../_shared/http.ts';
 
