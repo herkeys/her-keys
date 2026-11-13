@@ -2,12 +2,36 @@ import * as WebBrowser from 'expo-web-browser';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { addDays, toInstant, zonedTimeToEpochMs } from '../../domain/logicalDay';
 import type { ExternalCalendar, ExternalCalendarEvent } from '../../external/types';
+import { isCalendarConnectedReturn } from '../../platform/systemLinks';
 import { useOptionalAccount } from '../../store/AccountProvider';
 import { externalIntelligenceClient } from '../../store/accountRuntimeInstance';
 
 type Availability = 'checking' | 'dormant' | 'disconnected' | 'connected' | 'reauth_required' | 'error';
 
 const HER_KEYS_CALENDAR_REDIRECT_URI = 'herkeys://calendar-connected';
+const COMPLETION_HANDLE = /^[A-Za-z0-9_-]{43}$/;
+
+/**
+ * The single-use completion handle from Google's return to the app, or null. Only the exact Calendar return with `status=authorized`
+ * carries one; anything else (cancelled, an error, a malformed or foreign URL) yields null and nothing is redeemed. Parsed by hand:
+ * React Native's URL polyfill does not reliably support custom schemes or `searchParams`.
+ */
+export function completionHandleOf(url: string | undefined): string | null {
+  if (typeof url !== 'string' || url.length > 1024 || !isCalendarConnectedReturn(url)) return null;
+  // Only the full app return the auth session captured; never the router's bare path forms the matcher also accepts.
+  if (!url.toLowerCase().startsWith(HER_KEYS_CALENDAR_REDIRECT_URI)) return null;
+  const at = url.indexOf('?');
+  if (at < 0) return null;
+  const query = url.slice(at + 1).split('#')[0];
+  const params = new Map<string, string>();
+  for (const pair of query.split('&')) {
+    const [key, value = ''] = pair.split('=');
+    if (params.has(key)) return null;
+    params.set(key, value);
+  }
+  const handle = params.get('handle') ?? '';
+  return params.get('status') === 'authorized' && COMPLETION_HANDLE.test(handle) ? handle : null;
+}
 
 export interface GoogleCalendarBridge {
   availability: Availability;
@@ -29,6 +53,8 @@ export function useGoogleCalendarBridge(selectedDate: string, timezone: string, 
   // was asked. Without this fence a slow answer for the previous day, or for an account that has since signed out, overwrote the
   // newer one (HK-V2ACT-CAL-01).
   const accountKey = account?.state.kind === 'accountBound' ? account.state.session.accountId : null;
+  const currentAccount = useRef(accountKey);
+  currentAccount.current = accountKey;
   const generation = useRef(0);
   const begin = useCallback(() => {
     generation.current += 1;
@@ -134,6 +160,9 @@ export function useGoogleCalendarBridge(selectedDate: string, timezone: string, 
 
   const connect = useCallback(async () => {
     if (busy || accountKey === null) return;
+    // The account that starts consent is the only one that may finish it (HK-V2ACT-CAL-03). The server enforces that; the app also
+    // never redeems a handle once the account on screen has changed.
+    const startedFor = accountKey;
     setBusy(true);
     setError(null);
     try {
@@ -146,7 +175,19 @@ export function useGoogleCalendarBridge(selectedDate: string, timezone: string, 
 
       WebBrowser.maybeCompleteAuthSession();
       const browser = await WebBrowser.openAuthSessionAsync(result.value.authorizationUrl, HER_KEYS_CALENDAR_REDIRECT_URI);
-      if (browser.type === 'success') await refresh();
+      if (browser.type !== 'success' || currentAccount.current !== startedFor) return;
+      const handle = completionHandleOf(browser.url);
+      if (handle !== null) {
+        const completed = await externalIntelligenceClient.completeCalendarConnection(handle);
+        if (currentAccount.current !== startedFor) return;
+        if (completed.kind !== 'ready') {
+          setAvailability('error');
+          setError(completed.kind === 'unavailable' ? completed.reason : null);
+          return;
+        }
+      }
+      // Cancelled, refused or completed: the server's answer is what the panel shows.
+      await refresh();
     } catch (cause) {
       setAvailability('error');
       setError(cause instanceof Error ? cause.message : String(cause));

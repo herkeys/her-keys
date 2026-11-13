@@ -167,7 +167,7 @@ describe('calendar-data disconnect (HK-V2ACT-CAL-02)', () => {
 function calendarOauth({ restricted = false, authorized = true } = {}) {
   let handler;
   class AuthError extends Error {}
-  const store = storage({ rows: [{ table: 'calendar_oauth_states', state_hash: 'hash:s', user_id: 'account-a', code_verifier: 'v', redirect_uri: 'https://x', expires_at: '2999-01-01T00:00:00.000Z' }] });
+  const store = storage({ rows: [{ table: 'calendar_oauth_states', state_hash: 'hash:synthetic-state-0123456789abcdef', user_id: 'account-a', code_verifier: 'v', redirect_uri: 'https://x', expires_at: '2999-01-01T00:00:00.000Z', completion_hash: null }] });
   const sandbox = {
     AuthError, Response, Request, URL, URLSearchParams, AbortSignal, Promise, Set, Array, Date, JSON,
     console: { error() {} },
@@ -189,7 +189,7 @@ function calendarOauth({ restricted = false, authorized = true } = {}) {
 describe('calendar-oauth callback failures return to the app (HK-V2ACT-CAL-04)', () => {
   test('a restricted account completing Google consent is redirected to the app, not left on a JSON page', async () => {
     const h = calendarOauth({ restricted: true });
-    const res = await h.handler(new Request('https://synthetic.invalid/calendar-oauth?code=c&state=s'));
+    const res = await h.handler(new Request('https://synthetic.invalid/calendar-oauth?code=c&state=synthetic-state-0123456789abcdef'));
     assert.equal(res.status, 302);
     const location = new URL(res.headers.get('Location'));
     assert.equal(location.protocol, 'herkeys:');
@@ -352,5 +352,96 @@ describe('panel: a connection needing re-authorization can be removed (HK-V2ACT-
     await settle('calendarStatus', { kind: 'ready', value: { connected: false, state: 'disconnected', selectedCalendarIds: [] } });
     const labels = buttons(r).map((b) => b.props.label);
     assert.deepEqual(labels, ['Connect Google Calendar']);
+  });
+});
+
+// ---------------------------------------------------------------------------------------------------------------------------------
+// Client: authenticated completion (HK-V2ACT-CAL-03)
+// ---------------------------------------------------------------------------------------------------------------------------------
+
+const { completionHandleOf } = await import('../src/features/calendar/useGoogleCalendarBridge.ts');
+const HANDLE = 'A'.repeat(21) + '_-' + 'b'.repeat(20);
+
+describe('completion handle parsing (HK-V2ACT-CAL-03)', () => {
+  test('only the exact Calendar return with status=authorized and a well-formed handle yields a handle', () => {
+    assert.equal(HANDLE.length, 43);
+    assert.equal(completionHandleOf(`herkeys://calendar-connected?status=authorized&handle=${HANDLE}`), HANDLE);
+    for (const url of [
+      undefined, '',
+      `herkeys://calendar-connected?status=connected&handle=${HANDLE}`,
+      `herkeys://calendar-connected?status=error&detail=invalid_state`,
+      `herkeys://calendar-connected?status=authorized`,
+      `herkeys://calendar-connected?status=authorized&handle=${HANDLE}x`,
+      `herkeys://calendar-connected?status=authorized&handle=${HANDLE}&handle=${HANDLE}`,
+      `herkeys://calendar-connected?status=authorized&status=authorized&handle=${HANDLE}`,
+      `herkeys://calendar-connectedX?status=authorized&handle=${HANDLE}`,
+      `herkeys://auth/callback?status=authorized&handle=${HANDLE}`,
+      `/calendar-connected?status=authorized&handle=${HANDLE}`,
+      `https://evil.example/calendar-connected?status=authorized&handle=${HANDLE}`,
+      `herkeys://calendar-connected?status=authorized&handle=${HANDLE}&pad=${'x'.repeat(1100)}`,
+    ]) assert.equal(completionHandleOf(url), null, String(url));
+  });
+});
+
+describe('bridge: Connect redeems the handle only for the account that started it (HK-V2ACT-CAL-03)', () => {
+  const disconnected = { kind: 'ready', value: { connected: false, state: 'disconnected', selectedCalendarIds: [] } };
+  const begun = { kind: 'ready', value: { authorizationUrl: 'https://accounts.google.com/o/oauth2/v2/auth?x=1', redirectUri: 'r', scopes: [] } };
+  const start = async () => {
+    calendarFixture.account = bound('a');
+    const r = await mount(<Probe date="2026-11-13" />);
+    await settle('calendarStatus', disconnected);
+    let connecting;
+    await TestRenderer.act(async () => { connecting = latest.connect(); });
+    calendarFixture.answer('beginCalendarConnection', begun);
+    await flush();
+    return { r, connecting };
+  };
+
+  test('authorized: the handle is redeemed as the same account, then the panel reloads from the server', async () => {
+    calendarFixture.browser = async () => ({ type: 'success', url: `herkeys://calendar-connected?status=authorized&handle=${HANDLE}` });
+    const { connecting } = await start();
+    const redeem = calendarFixture.calls.find((c) => c.name === 'completeCalendarConnection');
+    assert.deepEqual(redeem.args, [HANDLE]);
+    calendarFixture.answer('completeCalendarConnection', { kind: 'ready', value: { connected: true, state: 'connected', selectedCalendarIds: ['primary'] } });
+    await flush();
+    calendarFixture.answer('calendarStatus', connected);
+    await flush();
+    calendarFixture.answer('listCalendars', calendars);
+    await flush();
+    calendarFixture.answer('calendarEvents', { kind: 'ready', value: { events: [], syncedAt: 'now' } });
+    await TestRenderer.act(async () => { await connecting; });
+    assert.equal(latest.availability, 'connected');
+  });
+
+  test('the account changed while Google consent was open: nothing is redeemed', async () => {
+    let finishConsent;
+    calendarFixture.browser = () => new Promise((resolve) => { finishConsent = resolve; });
+    const { r, connecting } = await start();
+    // Another account becomes current (and renders) while the system browser is still open.
+    calendarFixture.account = bound('b');
+    await TestRenderer.act(() => r.update(<Probe date="2026-11-13" />));
+    await TestRenderer.act(async () => { finishConsent({ type: 'success', url: `herkeys://calendar-connected?status=authorized&handle=${HANDLE}` }); await connecting; });
+    assert.equal(calendarFixture.calls.some((c) => c.name === 'completeCalendarConnection'), false);
+  });
+
+  test('cancelled, dismissed or error returns redeem nothing', async () => {
+    for (const result of [{ type: 'cancel' }, { type: 'dismiss' }, { type: 'success', url: 'herkeys://calendar-connected?status=cancelled&detail=access_denied' }, { type: 'success', url: 'herkeys://calendar-connected?status=error&detail=invalid_state' }]) {
+      calendarFixture.reset();
+      calendarFixture.browser = async () => result;
+      const { connecting } = await start();
+      if (result.type === 'success') { await flush(); if (calendarFixture.pending.some((p) => p.name === 'calendarStatus')) calendarFixture.answer('calendarStatus', disconnected); }
+      await TestRenderer.act(async () => { await connecting; });
+      assert.equal(calendarFixture.calls.some((c) => c.name === 'completeCalendarConnection'), false, JSON.stringify(result));
+      for (const m of mounted.splice(0)) await TestRenderer.act(() => m.unmount());
+    }
+  });
+
+  test('a refused redemption is shown as an error, never as connected', async () => {
+    calendarFixture.browser = async () => ({ type: 'success', url: `herkeys://calendar-connected?status=authorized&handle=${HANDLE}` });
+    const { connecting } = await start();
+    calendarFixture.answer('completeCalendarConnection', { kind: 'unavailable', reason: 'function_unavailable' });
+    await TestRenderer.act(async () => { await connecting; });
+    assert.equal(latest.availability, 'error');
+    assert.equal(calendarFixture.calls.filter((c) => c.name === 'calendarStatus').length, 1, 'no reload pretends it connected');
   });
 });

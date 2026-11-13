@@ -6,10 +6,13 @@
  */
 export const calendarFixture = {
   account: null,
+  /** What the system auth browser returns; a function so a test can act while it is "open". */
+  browser: async () => ({ type: 'dismiss' }),
   calls: [],
   pending: [],
   reset() {
     this.account = null;
+    this.browser = async () => ({ type: 'dismiss' });
     this.calls.length = 0;
     this.pending.length = 0;
   },
@@ -40,6 +43,7 @@ export const externalIntelligenceClient = {
   weather: deferred('weather'),
   calendarStatus: deferred('calendarStatus'),
   beginCalendarConnection: deferred('beginCalendarConnection'),
+  completeCalendarConnection: deferred('completeCalendarConnection'),
   listCalendars: deferred('listCalendars'),
   selectCalendars: deferred('selectCalendars'),
   calendarEvents: deferred('calendarEvents'),
@@ -49,6 +53,6 @@ export const externalIntelligenceClient = {
 export const useOptionalAccount = () => calendarFixture.account;
 export const useAccount = () => calendarFixture.account;
 
-export const openAuthSessionAsync = async () => ({ type: 'dismiss' });
+export const openAuthSessionAsync = (...args) => { calendarFixture.calls.push({ name: 'openAuthSessionAsync', args }); return calendarFixture.browser(...args); };
 export const maybeCompleteAuthSession = () => ({ type: 'failed' });
 export default { openAuthSessionAsync, maybeCompleteAuthSession };
