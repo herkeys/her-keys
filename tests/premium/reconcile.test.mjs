@@ -33,7 +33,7 @@ describe('reading the authenticated RevenueCat subscriber record', () => {
     assert.equal(stateOf(parse(subscriberRecord({ unsubscribeMs: NOW - DAY }))), 'premium_canceled_active');
     assert.equal(stateOf(parse(subscriberRecord({ expiresMs: NOW - DAY, graceMs: NOW + 2 * DAY, billingIssueMs: NOW - DAY }))), 'premium_billing_grace');
     assert.equal(stateOf(parse(subscriberRecord({ expiresMs: null }))), 'premium_active');
-    assert.equal(parse(subscriberRecord({ sandbox: false })).environment, 'PRODUCTION');
+    assert.equal(parse(subscriberRecord({ sandbox: false }), NOW, 'production').environment, 'PRODUCTION');
   });
 
   test('a lapse RevenueCat itself reports is CONFIRMED expired (the read is the confirmation), and grace still wins while it lasts', () => {
@@ -128,6 +128,23 @@ describe('the reconcile service', () => {
   beforeEach(() => {
     store = new FakeStore();
     api = new FakeApi();
+  });
+
+  for (const deployment of ['staging', 'production']) {
+    test(`${deployment} cannot grant entitlement from the other store environment`, async () => {
+      api.set(ACCOUNT_A, subscriberRecord({ sandbox: deployment === 'production' }));
+      assert.equal(await reconcileAccount({ ...deps(), deployment }, ACCOUNT_A, { force: true }), 'invalid_response');
+      assert.equal(await store.getState(ACCOUNT_A), 'unknown');
+      assert.equal(store.projections.has(ACCOUNT_A), false);
+    });
+  }
+
+  test('an explicit null expiry without subscription environment evidence cannot become Production lifetime access', async () => {
+    const record = subscriberRecord({ expiresMs: null });
+    record.subscriber.subscriptions = {};
+    api.set(ACCOUNT_A, record);
+    assert.equal(await reconcileAccount({ ...deps(), deployment: 'production' }, ACCOUNT_A, { force: true }), 'invalid_response');
+    assert.equal(store.projections.has(ACCOUNT_A), false);
   });
 
   test('writes the projection from RevenueCat, keyed to the exact account, and reports success', async () => {

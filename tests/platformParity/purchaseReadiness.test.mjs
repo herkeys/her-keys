@@ -51,6 +51,35 @@ describe('offering assessment', () => {
 });
 
 describe('every SDK call ends', () => {
+  for (const rejects of [false, true]) {
+    test(`a timed-out restore fences account changes until native ${rejects ? 'rejection' : 'completion'}`, async () => {
+      await client.identifyRevenueCatAccount(A);
+      let settle;
+      sdk.restoreWait = new Promise((resolve, reject) => { settle = rejects ? reject : resolve; });
+      try {
+        assert.deepEqual(await client.restoreRevenueCatPurchases(A), { kind: 'unavailable' });
+        const logins = sdk.calls.filter(([kind]) => kind === 'login').length;
+        assert.equal(await client.identifyRevenueCatAccount(B), 'sdk_error');
+        assert.equal(client.getRevenueCatIdentity().accountId, null);
+        assert.equal(sdk.id, A, 'native restore must retain its original owner until it settles');
+        assert.equal(sdk.calls.filter(([kind]) => kind === 'login').length, logins);
+        assert.equal(await client.ensureRevenueCatIdentity(), false);
+        assert.equal(await client.fetchActiveEntitlementIds(), null);
+        assert.deepEqual(await client.restoreRevenueCatPurchases(B), { kind: 'unavailable' });
+        assert.deepEqual(await client.presentRevenueCatPaywall(nativeOffering, B), { kind: 'unavailable' });
+        assert.equal(sdk.calls.filter(([kind]) => kind === 'restore').length, 1);
+        assert.equal(sdk.calls.filter(([kind]) => kind === 'paywall').length, 0);
+      } finally {
+        sdk.restoreWait = null;
+        settle(rejects ? new Error('synthetic late store failure') : { entitlements: { active: { her_keys_plus: {} } } });
+        await new Promise(resolve => setImmediate(resolve));
+      }
+      assert.equal(client.getRevenueCatIdentity().accountId, null, 'late restore cannot publish A into B');
+      assert.equal(await client.identifyRevenueCatAccount(B), 'identified', 'a fresh bind recovers after real settlement');
+      assert.equal(sdk.id, B);
+    });
+  }
+
   test('a timed-out native logIn quarantines paid identity until the old SDK work actually settles', async () => {
     let resolveLogin;
     sdk.loginWait = new Promise((resolve) => { resolveLogin = resolve; });
@@ -143,8 +172,16 @@ describe('every SDK call ends', () => {
     assert.equal(await client.fetchActiveEntitlementIds(), null);
     sdk.hang.offerings = true;
     assert.equal(await client.fetchCurrentOffering(), null);
-    sdk.hang.restore = true;
-    assert.deepEqual(await client.restoreRevenueCatPurchases(A), { kind: 'unavailable' });
+    let releaseRestore;
+    sdk.restoreWait = new Promise(resolve => { releaseRestore = resolve; });
+    try {
+      assert.deepEqual(await client.restoreRevenueCatPurchases(A), { kind: 'unavailable' });
+      assert.equal(await client.ensureRevenueCatIdentity(), false, 'the bounded caller does not cancel native restore');
+    } finally {
+      sdk.restoreWait = null;
+      releaseRestore({ entitlements: { active: {} } });
+      await new Promise(resolve => setImmediate(resolve));
+    }
   });
 });
 

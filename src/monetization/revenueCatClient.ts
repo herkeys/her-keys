@@ -33,9 +33,9 @@ export const REVENUECAT_DEADLINES = { identifyMs: 15_000, readMs: 15_000, restor
 let configured = false;
 let desiredAccountId: string | null = null;
 let identifiedAccountId: string | null = null;
-// A timed-out native logIn/logOut/getAppUserID can finish after its JS caller has returned.
-// Do not start another account mutation, or a purchase, while its result is still uncertain.
-let nativeIdentityWorkUnsettled = false;
+// A timed-out native identity change or restore can finish after its JS caller has returned.
+// Keep the original native owner until that work settles; no new bind, purchase or restore may overlap.
+let nativeAccountWorkUnsettled = false;
 export interface RevenueCatIdentity { accountId: string | null; epoch: number }
 let identity: RevenueCatIdentity = { accountId: null, epoch: 0 };
 const identityListeners = new Set<() => void>();
@@ -57,13 +57,13 @@ function withAccountSdkOperation<T>(operation: () => Promise<T>): Promise<T> {
 }
 
 async function matchesIdentifiedAccount(expected: string | null): Promise<boolean> {
-  if (!configured || expected === null || identifiedAccountId !== expected || nativeIdentityWorkUnsettled) return false;
+  if (!configured || expected === null || identifiedAccountId !== expected || nativeAccountWorkUnsettled) return false;
   const epoch = identity.epoch;
   try {
     const read = await withDeadline(() => Purchases.getAppUserID(), REVENUECAT_DEADLINES.readMs);
     // A timed-out read is unverifiable: never start another native identity mutation
     // solely because a read stalled. A concurrent actor change also invalidates the result.
-    if (read.timedOut || nativeIdentityWorkUnsettled || identity.epoch !== epoch ||
+    if (read.timedOut || nativeAccountWorkUnsettled || identity.epoch !== epoch ||
         identifiedAccountId !== expected || desiredAccountId !== expected) return false;
     if (read.value === expected) return true;
     // A readable mismatch is definitive SDK drift (for example a late native logIn).
@@ -130,14 +130,14 @@ export async function identifyRevenueCatAccount(accountId: string | null): Promi
   const epoch = identity.epoch + 1;
   publishIdentity({ accountId: null, epoch });
   return withAccountSdkOperation(async () => {
-    if (identity.epoch !== epoch || nativeIdentityWorkUnsettled) return 'sdk_error';
+    if (identity.epoch !== epoch || nativeAccountWorkUnsettled) return 'sdk_error';
     identifiedAccountId = null;
     if (!configured) return 'not_configured';
 
     // A caller timeout cannot cancel a native identity mutation. Keep paid operations fenced until it
     // ACTUALLY settles, and never allow its late completion to publish a stale account identity.
     let active = true;
-    nativeIdentityWorkUnsettled = true;
+    nativeAccountWorkUnsettled = true;
     const work = (async (): Promise<IdentifyResult> => {
       const previousId = await Purchases.getAppUserID();
       if (!active || identity.epoch !== epoch) return 'sdk_error';
@@ -160,8 +160,8 @@ export async function identifyRevenueCatAccount(accountId: string | null): Promi
     // Both fulfillment and rejection release quarantine only when the native work has genuinely finished.
     // Keep a rejection handler even when the caller's deadline already expired.
     void work.then(
-      () => { nativeIdentityWorkUnsettled = false; },
-      () => { nativeIdentityWorkUnsettled = false; },
+      () => { nativeAccountWorkUnsettled = false; },
+      () => { nativeAccountWorkUnsettled = false; },
     );
     try {
       const done = await withDeadline(work, REVENUECAT_DEADLINES.identifyMs);
@@ -190,16 +190,16 @@ export async function ensureRevenueCatIdentity(): Promise<boolean> {
     // Serialize the bounded read against native store operations. A concurrent
     // account switch must never make an old caller report readiness.
     const verified = await withAccountSdkOperation(() => matchesIdentifiedAccount(wanted));
-    if (verified) return desiredAccountId === wanted && identity.accountId === wanted && !nativeIdentityWorkUnsettled;
+    if (verified) return desiredAccountId === wanted && identity.accountId === wanted && !nativeAccountWorkUnsettled;
     // Unknown/timeout is NOT permission to start a new native mutation. Only a
     // definitive, readable SDK mismatch withdraws identifiedAccountId above.
     if (identifiedAccountId === wanted || desiredAccountId !== wanted ||
-        identity.accountId !== wanted || nativeIdentityWorkUnsettled) return false;
+        identity.accountId !== wanted || nativeAccountWorkUnsettled) return false;
   }
-  if (desiredAccountId !== wanted || nativeIdentityWorkUnsettled) return false;
+  if (desiredAccountId !== wanted || nativeAccountWorkUnsettled) return false;
   const result = await identifyRevenueCatAccount(wanted);
   return result === 'identified' && desiredAccountId === wanted &&
-    identity.accountId === wanted && !nativeIdentityWorkUnsettled;
+    identity.accountId === wanted && !nativeAccountWorkUnsettled;
 }
 
 export function isRevenueCatConfigured(): boolean {
@@ -283,7 +283,15 @@ export async function restoreRevenueCatPurchases(expectedAccountId?: string): Pr
     if (!configured) return { kind: 'unavailable' };
     try {
       if (identity !== scope || !await matchesIdentifiedAccount(owner)) return { kind: 'unavailable' };
-      const restored = await withDeadline(() => Purchases.restorePurchases(), REVENUECAT_DEADLINES.restoreMs);
+      // The caller deadline cannot cancel the store transaction. Quarantine the native account lane
+      // until actual settlement, including rejection after timeout, so a late restore cannot attach to B.
+      nativeAccountWorkUnsettled = true;
+      const work = (async () => Purchases.restorePurchases())();
+      void work.then(
+        () => { nativeAccountWorkUnsettled = false; },
+        () => { nativeAccountWorkUnsettled = false; },
+      );
+      const restored = await withDeadline(work, REVENUECAT_DEADLINES.restoreMs);
       if (restored.timedOut) return { kind: 'unavailable' };
       if (identity !== scope || !await matchesIdentifiedAccount(owner)) return { kind: 'unavailable' };
       const active = activeEntitlementIds(restored.value);

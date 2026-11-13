@@ -63,7 +63,12 @@ export function parseSubscriberResponse(body: unknown, nowMs: number, deployment
   const subscription = productId !== null && isObject(subscriptions[productId]) ? (subscriptions[productId] as Record<string, unknown>) : null;
   // Only an EXPLICIT null is non-expiring. Missing or malformed expiry must never become lifetime access.
   if (!productId || productId.length > 200 || (entitlement.expires_date !== null && instant(entitlement.expires_date) === null)) return { ok: false, reason: 'invalid_response' };
-  if (entitlement.expires_date !== null && (subscription === null || typeof subscription.is_sandbox !== 'boolean')) return { ok: false, reason: 'invalid_response' };
+  // A server-confirmed record is not automatically a record for THIS environment. A subscriber can
+  // carry both sandbox and real purchases. Never relabel a sandbox/test-store entitlement as Production,
+  // including explicit-null expiry records with no subscription environment evidence.
+  if (subscription === null || typeof subscription.is_sandbox !== 'boolean') return { ok: false, reason: 'invalid_response' };
+  const environment: PremiumEnvironment = subscription.is_sandbox ? 'SANDBOX' : 'PRODUCTION';
+  if (environment !== defaultEnvironment(deployment)) return { ok: false, reason: 'invalid_response' };
 
   const expiresMs = instant(entitlement.expires_date); // null === a non-expiring entitlement
   const graceMs = instant(entitlement.grace_period_expires_date) ?? (subscription ? instant(subscription.grace_period_expires_date) : null);
@@ -78,7 +83,7 @@ export function parseSubscriberResponse(body: unknown, nowMs: number, deployment
     ok: true,
     projection: {
       ...base,
-      environment: subscription ? (subscription.is_sandbox === true ? 'SANDBOX' : 'PRODUCTION') : base.environment,
+      environment,
       product_id: productId,
       store: subscription && typeof subscription.store === 'string' ? subscription.store : null,
       period_type: periodType,
