@@ -244,7 +244,7 @@ const LATER_FEATURES = [
     // Parallel to the Codex RevenueCat lane: no src/monetization, RevenueCat or shared Premium server file. One additive, service-only
     // migration (HK-V2ACT-CAL-03: four nullable columns on calendar_oauth_states); no root collection, sync kind, RLS policy or grant.
     branch: null,
-    owned: [/^supabase/migrations/20261113191332_calendar_oauth_authenticated_completion.sql$/],
+    owned: [/^supabase\/migrations\/20261113191332_calendar_oauth_authenticated_completion\.sql$/],
     migrations: ['supabase/migrations/20261113191332_calendar_oauth_authenticated_completion.sql'],
     schemas: [], rootCollections: [], syncKinds: [],
     shared: [
