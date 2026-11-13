@@ -340,3 +340,68 @@ Run order once 1–3 exist: §13.2 backend checks, then §13.3 steps 1–6. Even
 **Production:** the security pause stays in place.
 - The guard migration is the one Production change this pass recommends next, after Staging: it is what the live read-only sync needs, and it is independent of CAL-03.
 - The permanent OAuth flow replaces the pause only after the native pass and a coordinated app build.
+
+## 15. Full-activation pass: live Android evidence and CAL-05
+
+Source authority:
+- PR #54 merged (head `f3916c8`, both checks passing, CLEAN) into integration **`0176a2b309f9e1db496577fe3143ed9b14645e32`**.
+- Exact-head integration CI 43504801229: **success**.
+
+Live fingerprint (read-only, 2026-11-13):
+- **Staging** `calendar-oauth` returns `Referrer-Policy: no-referrer` and `invalid_state`, so the permanent (authenticated-completion) handler is deployed. It was deployed outside this session; no bundle readback is available here.
+- **Production** returns `503 calendar_connect_paused`, so the pause is live.
+
+Android development build:
+- Local release APK `com.heykeys.app`, x86_64, built from `0176a2b` with `expo prebuild` and Gradle. No EAS build, no store.
+- Staging configuration (`fhhudicklmpofuzkxeqe`, consent gate on); the bundle contains `completeCalendarConnection` and `completionHandleOf`.
+- Installed in place on AVD `HerKeys_AE2E` (Play image, Chrome present), keeping the existing Staging test session.
+
+Live journey, steps 1–2:
+
+| Step | Result | Evidence |
+|---|---|---|
+| Signed-in app renders the Calendar panel | PASS | "EXTERNAL CALENDAR · Connect Google Calendar · Read-only…", which needs a successful `calendar-data` status call against Staging |
+| 1. Start the connection without HTTP 500 | PASS | `calendar-oauth` returned an authorization URL and Chrome opened it. The start insert into `calendar_oauth_states` succeeded on Staging, so on this path the guard does not fail live; whether Staging already carries the definer fix could not be read |
+| 2. Google OAuth opens with the intended permissions | **FAIL** | Google answered "Access blocked: Authorization Error. The OAuth client was not found. Error 401: invalid_client" |
+| 3–10 | NOT_RUN | Blocked by step 2 |
+
+The authorization URL, read from the Custom Tab intent with state and challenge redacted:
+- `client_id=http://857660202409-s63d2q8vng0gjjcmdm92hjbc6dkmvi1v.apps.googleusercontent.com`
+- `redirect_uri=http://fhhudicklmpofuzkxeqe.supabase.co/calendar-oauth`
+- the two read-only scopes, `access_type=offline`, `prompt=consent`, `code_challenge_method=S256`
+
+### HK-V2ACT-CAL-05: two causes
+
+1. **Configuration (Staging secret):** `GOOGLE_CALENDAR_CLIENT_ID` carries an `http://` prefix. The client itself (`…-s63d…`) is the intended Calendar web client; only the value is malformed. **Fix:** set the secret to the bare `857660202409-s63d2q8vng0gjjcmdm92hjbc6dkmvi1v.apps.googleusercontent.com`, in Staging and, after inspection, Production. **Status: BLOCKED.** Writing a function secret needs the Supabase tools or the dashboard.
+2. **Code (`calendar-oauth`):** the redirect URI was derived from `req.url`, which inside the Edge runtime is the internal URL (plain http, `/functions/v1` stripped). Google only accepts the registered `https://<ref>.supabase.co/functions/v1/calendar-oauth`. The pre-repair handler had the same derivation, so Google Calendar consent has likely never completed in either environment. **Repaired:**
+   - the public callback is built from `SUPABASE_URL`, or taken from an explicit `GOOGLE_CALENDAR_REDIRECT_URI`, and must be https;
+   - it is stored with the attempt and reused for the exchange;
+   - the function also validates the client ID shape and refuses a misconfiguration with the existing 503 `google_calendar_not_configured`, logging which part is unusable and never the value.
+
+Regression: `tests/claude.v2act.calendarOAuthBinding.test.mjs`, now 18 tests. The harness models the real runtime (internal request URL, real secret shapes); its earlier everything-is-`'configured'` stub had masked both defects. It covers:
+- the public callback on authorization and exchange;
+- the previous derivation reproducing the observed internal URL;
+- the explicit override;
+- refusal of non-https or malformed callbacks;
+- refusal of a malformed client ID, with the value never logged.
+
+### Remaining steps to a full PASS (in order)
+
+1. **Staging secret:** fix `GOOGLE_CALENDAR_CLIENT_ID`. Confirm the `…-s63d…` client lists `https://fhhudicklmpofuzkxeqe.supabase.co/functions/v1/calendar-oauth` (and the Production equivalent) as authorized redirect URIs, and that the consent screen allows the test Google account (test users, if the app is in Testing).
+2. **Staging deploy:** `calendar-oauth` from this branch. Apply the guard migration if absent; confirm `20261113201540` (CAL-03 schema) is present, and do not reapply `20261113191332`.
+3. **Device run:** rerun steps 2–10 on the same AVD with the same APK. The APK needs no rebuild for a backend-only fix. A person completes consent; then events are verified in Day view, plus refresh after a Google-side change, calendar selection, reconnect, revoke→`reauth_required`→disconnect, and the account-switch, invalid/expired handle and unauthorized checks.
+4. **Production, under the directive:** inspect and fix its client-ID secret; apply the guard migration; deploy `calendar-data`, then `calendar-oauth` (replacing the pause) with rollback bundles captured; repeat the device run against a Production-configured build.
+
+### Installed-app compatibility
+
+- Builds before PR #52 (`204f0b0`) cannot redeem completion handles. Against the permanent backend, their Connect returns to the app without connecting; existing connections and disconnect keep working.
+- Users must update to a build from `0176a2b` or later to connect Google Calendar.
+- The vulnerable handler must not be restored for compatibility.
+
+### iOS: source and configuration PASS; native NOT_RUN
+
+- Bundle ID `com.herkeys.app`; the URL schemes `herkeys` and `com.herkeys.app` are registered (introspected config).
+- `openAuthSessionAsync` uses `ASWebAuthenticationSession` with the `herkeys` callback, which returns the URL to the initiating session.
+- The completion code is platform-independent: no platform branches in the bridge, client or link matcher.
+- No associated domains are configured. Universal Links for the Calendar return are the future hardening for the residual custom-scheme interception risk on the attack path.
+- Native iOS Google consent: **NOT_RUN** (no device this pass).

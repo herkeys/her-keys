@@ -104,16 +104,33 @@ function google() {
   };
 }
 
-function world(source = currentSource, { restricted = new Set() } = {}) {
+/*
+ * The runtime as it really is (HK-V2ACT-CAL-05). Earlier versions of this harness answered every secret with 'configured' and sent
+ * requests to the PUBLIC URL; that masked two live defects found on Staging: a malformed client ID, and a redirect URI derived from
+ * the INTERNAL request URL. Requests now arrive the way Supabase delivers them (plain http, no /functions/v1 prefix) and the secrets
+ * have their real shapes.
+ */
+const INTERNAL = 'http://synthetic.supabase.invalid/calendar-oauth';
+const ENV = {
+  GOOGLE_CALENDAR_CLIENT_ID: '857660202409-synthetic0calendar.apps.googleusercontent.com',
+  GOOGLE_CALENDAR_CLIENT_SECRET: 'synthetic-client-secret',
+  EXTERNAL_TOKEN_ENCRYPTION_KEY_B64: 'synthetic-key',
+  SUPABASE_URL: 'https://synthetic.supabase.invalid',
+};
+const toInternal = (url) => url.replace(CALLBACK, INTERNAL);
+
+function world(source = currentSource, { restricted = new Set(), env = {} } = {}) {
   let handler;
   let now = Date.parse('2026-11-13T12:00:00.000Z');
   const db = database();
   const g = google();
+  const logs = [];
+  const environment = { ...ENV, ...env };
   class AuthError extends Error {}
   const sandbox = {
     AuthError, Response, Request, URL, URLSearchParams, AbortSignal, Promise, Set, Map, Array, JSON, Number, Boolean, Object,
     Date: class extends Date { constructor(...args) { super(...(args.length ? args : [now])); } static now() { return now; } },
-    console: { error() {} },
+    console: { error: (...args) => logs.push(args.join(' ')) },
     json: (body, status = 200) => Response.json(body, { status }),
     options: () => new Response('ok'),
     requireUser: async (req) => {
@@ -129,22 +146,24 @@ function world(source = currentSource, { restricted = new Set() } = {}) {
     // Opaque server-side sealing; the key never leaves the server in production.
     encryptSecret: async (value) => ({ ciphertext: `sealed:${Buffer.from(value).toString('base64')}`, iv: 'iv' }),
     decryptSecret: async (ciphertext) => Buffer.from(String(ciphertext).replace('sealed:', ''), 'base64').toString(),
-    Deno: { env: { get: (key) => (key === 'HERKEYS_CALENDAR_APP_REDIRECT_URI' ? undefined : 'configured') }, serve: (fn) => { handler = fn; } },
+    Deno: { env: { get: (key) => environment[key] }, serve: (fn) => { handler = fn; } },
     fetch: (input, init) => g.fetch(input, init),
   };
   runInNewContext(source, sandbox);
   const post = async (account, body) => {
     const headers = account ? { Authorization: `Bearer ${account}` } : {};
-    const res = await handler(new Request(CALLBACK, { method: 'POST', headers, body: JSON.stringify(body) }));
+    const res = await handler(new Request(INTERNAL, { method: 'POST', headers, body: JSON.stringify(body) }));
     return { status: res.status, body: await res.json() };
   };
   return {
-    db, g,
+    db, g, logs,
     advance: (ms) => { now += ms; },
     begin: async (account) => (await post(account, {})).body,
+    beginRaw: (account) => post(account, {}),
     complete: (account, handle) => post(account, { action: 'complete', handle }),
     async callback(url) {
-      const res = await handler(new Request(url));
+      // Google redirects the browser to the PUBLIC callback; the platform hands the function the internal form.
+      const res = await handler(new Request(toInternal(url)));
       const location = res.headers.get('Location');
       const target = location ? new URL(location) : null;
       return { status: res.status, location, status_: target?.searchParams.get('status') ?? null, detail: target?.searchParams.get('detail') ?? null, handle: target?.searchParams.get('handle') ?? null };
@@ -369,5 +388,50 @@ describe('HK-V2ACT-CAL-03: consent completes only for the signed-in account that
     assert.equal(url.searchParams.get('redirect_uri'), CALLBACK);
     assert.equal(url.searchParams.get('scope'), 'https://www.googleapis.com/auth/calendar.calendarlist.readonly https://www.googleapis.com/auth/calendar.events.readonly');
     assert.equal(JSON.stringify(started).includes(w.db.tables.calendar_oauth_states[0].code_verifier), false);
+  });
+});
+
+describe('HK-V2ACT-CAL-05: Google receives the registered public callback and a well-formed client (found live on Staging)', () => {
+  test('the authorization and the token exchange use the PUBLIC https callback, not the internal request URL', async () => {
+    const w = world();
+    const started = await w.begin(VICTIM);
+    const auth = new URL(started.authorizationUrl);
+    assert.equal(auth.searchParams.get('redirect_uri'), 'https://synthetic.supabase.invalid/functions/v1/calendar-oauth');
+    assert.equal(w.db.tables.calendar_oauth_states[0].redirect_uri, 'https://synthetic.supabase.invalid/functions/v1/calendar-oauth', 'stored for the exchange');
+    assert.equal(auth.searchParams.get('client_id'), ENV.GOOGLE_CALENDAR_CLIENT_ID);
+    // The simulated Google refuses an exchange whose redirect differs from the authorization's, as Google does.
+    const back = await w.callback(w.g.consent(started.authorizationUrl, 'victim-google'));
+    assert.equal((await w.complete(VICTIM, back.handle)).status, 200);
+  });
+
+  test('the previous derivation sent the internal http URL that Google rejects (the observed Staging request)', async () => {
+    const w = world(previousSource);
+    const started = await w.begin(VICTIM);
+    assert.equal(new URL(started.authorizationUrl).searchParams.get('redirect_uri'), INTERNAL);
+  });
+
+  test('an explicit GOOGLE_CALENDAR_REDIRECT_URI is honoured; a non-https or malformed callback is refused before any state is stored', async () => {
+    const custom = world(currentSource, { env: { GOOGLE_CALENDAR_REDIRECT_URI: 'https://calendar.herkeys.invalid/oauth/return' } });
+    assert.equal(new URL((await custom.begin(VICTIM)).authorizationUrl).searchParams.get('redirect_uri'), 'https://calendar.herkeys.invalid/oauth/return');
+    for (const env of [{ GOOGLE_CALENDAR_REDIRECT_URI: 'http://calendar.herkeys.invalid/x' }, { SUPABASE_URL: undefined }, { GOOGLE_CALENDAR_REDIRECT_URI: 'not a url' }]) {
+      const w = world(currentSource, { env });
+      const r = await w.beginRaw(VICTIM);
+      assert.equal(r.status, 503, JSON.stringify(env));
+      assert.equal(r.body.reason, 'google_calendar_not_configured');
+      assert.equal(w.db.tables.calendar_oauth_states.length, 0);
+    }
+  });
+
+  test('a malformed client ID (the Staging secret had an http:// prefix) is refused clearly instead of sending users to a Google error page', async () => {
+    for (const bad of ['http://857660202409-s63d2q8vng0gjjcmdm92hjbc6dkmvi1v.apps.googleusercontent.com', ' 857660202409-abc.apps.googleusercontent.com', '857660202409-abc.apps.googleusercontent.com\n', '', undefined]) {
+      const w = world(currentSource, { env: { GOOGLE_CALENDAR_CLIENT_ID: bad } });
+      const r = await w.beginRaw(VICTIM);
+      assert.equal(r.status, 503, JSON.stringify(bad));
+      assert.equal(r.body.reason, 'google_calendar_not_configured');
+      assert.equal(r.body.authorizationUrl, undefined);
+      assert.equal(w.db.tables.calendar_oauth_states.length, 0, 'no attempt is recorded');
+      assert.match(w.logs.join(' '), /"clientId":"missing_or_malformed"/);
+      if (bad) assert.equal(w.logs.join(' ').includes(bad.trim()), false, 'the log names the problem, never the value');
+    }
   });
 });
