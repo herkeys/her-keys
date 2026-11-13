@@ -77,6 +77,7 @@ export type CaptureReader = { kind: 'local'; premiumNotUsed: PremiumReadingSkip 
  * coordinator, and a decline always leaves the local reading in place. Everything it returns is still only a proposal awaiting her review.
  */
 export type CaptureEnhancer = (input: {
+  signal?: AbortSignal;
   text: string;
   submissionKey: string;
   context: InterpretationContext;
@@ -342,15 +343,21 @@ export function createCaptureCoordinator(deps: CaptureCoordinatorDeps): CaptureC
     let result = { ...preview, captureId: artifact.id };
     let reader: CaptureReader = { kind: 'local', premiumNotUsed: null };
     if (enhance) {
+      const pending = new AbortController();
+      const cancelIfMoved = () => { if (moved(epoch)) pending.abort(); };
+      const unsubscribe = store.subscribe(cancelIfMoved);
+      cancelIfMoved();
       try {
         const current = snapshotState();
-        const better = current ? await enhance({ text: words, submissionKey: input.submissionKey, context: contextNow(current), local: preview }) : null;
+        const better = current && !pending.signal.aborted ? await enhance({ text: words, submissionKey: input.submissionKey, context: contextNow(current), local: preview, signal: pending.signal }) : null;
         if (better?.kind === 'enhanced') {
           result = { ...better.result, captureId: artifact.id };
           reader = { kind: 'premium' };
         } else if (better) reader = { kind: 'local', premiumNotUsed: better.skipped };
       } catch {
         reader = { kind: 'local', premiumNotUsed: 'unavailable' };
+      } finally {
+        unsubscribe();
       }
     }
     // The enhancer may have waited on the network. If the household changed hands in the meantime its answer is for someone else: it is

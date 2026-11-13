@@ -1,4 +1,4 @@
-import { resolveOnboardingOptionId } from '../../data/catalog/onboardingOptions';
+import { ONBOARDING_UNSURE_ID, resolveOnboardingOptionId } from '../../data/catalog/onboardingOptions';
 import type { OnboardingAnswers, OperatingProfile } from '../../types';
 
 /**
@@ -11,6 +11,13 @@ export function buildOperatingProfile(
   answers: OnboardingAnswers,
   struggleIds?: readonly string[]
 ): OperatingProfile {
+  // An explicit unknown is a valid audit answer, not a goal, strength or pressure.
+  answers = {
+    ...answers,
+    goals: answers.goals.filter((value) => resolveOnboardingOptionId('goals', value) !== ONBOARDING_UNSURE_ID),
+    strengths: answers.strengths.filter((value) => resolveOnboardingOptionId('strengths', value) !== ONBOARDING_UNSURE_ID),
+    struggles: answers.struggles.filter((value) => resolveOnboardingOptionId('struggles', value) !== ONBOARDING_UNSURE_ID),
+  };
   const insights: OperatingProfile['insights'] = [];
 
   if (answers.goals.length > 0) {

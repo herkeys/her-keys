@@ -10,6 +10,8 @@ export interface OnboardingOption {
 }
 
 export type OnboardingGroup = 'goals' | 'strengths' | 'struggles';
+export const ONBOARDING_UNSURE_ID = 'not-sure-yet';
+const UNSURE_OPTION = { id: ONBOARDING_UNSURE_ID, label: "I'm not sure yet" };
 
 export const onboardingOptions: Record<OnboardingGroup, readonly OnboardingOption[]> = {
   goals: [
@@ -19,6 +21,7 @@ export const onboardingOptions: Record<OnboardingGroup, readonly OnboardingOptio
     { id: 'better-routines', label: 'Better routines' },
     { id: 'reduced-stress', label: 'Reduced stress' },
     { id: 'building-savings', label: 'Building savings' },
+    UNSURE_OPTION,
   ],
   strengths: [
     { id: 'kids-schedules', label: "Kids' schedules" },
@@ -27,6 +30,7 @@ export const onboardingOptions: Record<OnboardingGroup, readonly OnboardingOptio
     { id: 'home-maintenance', label: 'Home maintenance' },
     { id: 'planning-ahead', label: 'Planning ahead' },
     { id: 'communication', label: 'Communication' },
+    UNSURE_OPTION,
   ],
   struggles: [
     { id: 'overcommitting', label: 'Overcommitting' },
@@ -35,6 +39,7 @@ export const onboardingOptions: Record<OnboardingGroup, readonly OnboardingOptio
     { id: 'last-minute-meals', label: 'Last-minute meals' },
     { id: 'unrealistic-calendars', label: 'Unrealistic calendars' },
     { id: 'frozen-when-overloaded', label: 'Becoming frozen when overloaded' },
+    UNSURE_OPTION,
   ],
 };
 

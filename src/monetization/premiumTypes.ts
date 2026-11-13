@@ -170,7 +170,7 @@ export interface PremiumServerClient {
   verify(): Promise<{ kind: 'ok'; status: VerifyStatus } | { kind: 'unavailable' }>;
   authorize(request: GateRequest): Promise<GateResult>;
   /** Smart Inbox: the SERVER authorizes (entitlement, AI consent, quota), calls the model, and validates. Her words go nowhere else. */
-  extract(request: ExtractRequest): Promise<ExtractResult>;
+  extract(request: ExtractRequest, signal?: AbortSignal): Promise<ExtractResult>;
 }
 
 export function isEntitledState(state: ServerEntitlementState): boolean {

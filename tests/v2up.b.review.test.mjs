@@ -210,14 +210,14 @@ describe('SAVE THE READY ONES - it is the single Save, repeated: every per-readi
   test('behaviourally: N ready readings are N separate durable commits, exactly what N single Saves do', async () => {
     const { w, out } = await world([prop('p1', 'Water the plants'), prop('p2', 'Empty the bins'), prop('p3', 'Mow the lawn')]);
     let commits = 0;
-    const counting = { getSnapshot: () => w.store.getSnapshot(), commit: (t) => { commits += 1; return w.store.commit(t); } };
+    const counting = { subscribe: w.store.subscribe, getSnapshot: () => w.store.getSnapshot(), commit: (t) => { commits += 1; return w.store.commit(t); } };
     const coordinator = createCaptureCoordinator({ store: counting, interpreter: localInterpreter, text: w.text, now: () => w.clock.now, enhance: reader([]) });
     // This coordinator has no session of its own, so it must refuse to guess what was assumed: nothing is saved without it.
     assert.deepEqual((await coordinator.acceptReady(out.captureId)).saved, []);
     assert.equal(commits, 0);
     // The coordinator that read the capture saves all three, one commit each.
     const real = w.coordinator;
-    const spy = { getSnapshot: () => w.store.getSnapshot(), commit: (t) => { commits += 1; return w.store.commit(t); } };
+    const spy = { subscribe: w.store.subscribe, getSnapshot: () => w.store.getSnapshot(), commit: (t) => { commits += 1; return w.store.commit(t); } };
     const c2 = createCaptureCoordinator({ store: spy, interpreter: localInterpreter, text: createMemoryCaptureTextStore(), now: () => w.clock.now, enhance: reader([prop('q1', 'Water the plants'), prop('q2', 'Empty the bins')]) });
     const read = await c2.submit({ text: WORDS, submissionKey: 'k2' });
     commits = 0;
@@ -429,6 +429,7 @@ describe('an answer that was waited for is never written into another account', 
     await bindTo(w, ACCOUNT_A);
     const swap = { armed: false, on: false };
     const store = {
+      subscribe: w.store.subscribe,
       getSnapshot: () => {
         const snap = w.store.getSnapshot();
         return swap.on ? { ...snap, identity: { ...snap.identity, binding: { accountId: ACCOUNT_B, householdId: 'hb', boundAt: 't', kind: 'claim', idMap: {} } } } : snap;
@@ -484,6 +485,7 @@ describe('a household that is reset (or whose store is not settled) while work i
     if (bound) await bindTo(w, bound);
     const race = { hook: null, hide: false };
     const store = {
+      subscribe: w.store.subscribe,
       getSnapshot: () => {
         const snap = w.store.getSnapshot();
         return race.hide ? { ...snap, state: null } : snap;

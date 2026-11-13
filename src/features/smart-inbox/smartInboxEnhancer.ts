@@ -27,7 +27,7 @@ export interface SmartInboxEnv {
     /** The server's confirmed entitlement — never the store SDK's. */
     entitled: boolean;
     appVersion: string | undefined;
-    extract: (request: ExtractRequest) => Promise<ExtractResult>;
+    extract: (request: ExtractRequest, signal?: AbortSignal) => Promise<ExtractResult>;
   } | null;
   state: () => AppState | null;
 }
@@ -60,7 +60,8 @@ const skipFor = (result: ExtractResult): PremiumReadingSkip | null => {
 };
 
 export function createSmartInboxEnhancer(env: SmartInboxEnv): CaptureEnhancer {
-  return async ({ text, submissionKey, context, local }) => {
+  return async ({ text, submissionKey, context, local, signal }) => {
+    if (signal?.aborted) return { kind: 'kept-local', skipped: 'unavailable' };
     const premium = env.premium();
     if (!premium || !premium.accountBound || premium.householdId === null || !premium.entitled) return { kind: 'kept-local', skipped: null };
     if (text.length > SMART_INBOX_MAX_CHARS) return { kind: 'kept-local', skipped: null };
@@ -75,10 +76,11 @@ export function createSmartInboxEnhancer(env: SmartInboxEnv): CaptureEnhancer {
 
     let result: ExtractResult;
     try {
-      result = await premium.extract(request);
+      result = await premium.extract(request, signal);
     } catch {
       return { kind: 'kept-local', skipped: 'unavailable' };
     }
+    if (signal?.aborted) return { kind: 'kept-local', skipped: 'unavailable' };
     if (result.kind !== 'ok') return { kind: 'kept-local', skipped: skipFor(result) };
 
     const state = env.state();

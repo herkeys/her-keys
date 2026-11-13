@@ -18,3 +18,19 @@ After those checks, promoted the identical bundle to Production. Retrieved all t
 Scope of verification: dependency patch, deployed bundle identity and authentication startup. This does not certify real authenticated account recovery, real consent revocation against a provider, or complete application journeys. Those remain outstanding.
 
 Rollback: recover the three function files at immutable starting SHA `a8cbf21dd707dfc5a5f27abf8355fba6eb89c996` and redeploy them with verify_jwt=true, first Staging then Production after validation. This reinstates vulnerable Zod, so prefer a forward repair if any regression is found. No data rollback is needed because this patch changes no stored data or database contract. Prior bundle source was retrieved before replacement; do not change consent/auth guards as part of rollback.
+
+## Uncertainty behavior repair
+
+Reason: source-level local uncertainty handling did not guarantee equivalent server behavior; a model could force an answer or create evidence when the user did not know. The reviewed handler now returns an acknowledged unresolved turn without provider invocation, after authentication, affirmative consent and request validation. Narrative openings still use the provider. Existing output checks also validate the deterministic response's inherited untrusted state.
+
+Staging herkeys-ai 21 -> 22, ACTIVE, verify_jwt=true, deployment hash `3d2181e4eb35810ad4c187a434f84671f0550ef173e609dd7f4aa71aa43ee3f0`. Retrieved all three files and confirmed exact equality to the submitted bundle. Shared authentication and HTTP helper files unchanged. No schema, migration, RLS, secrets, entitlement, deletion or checkout modification.
+
+Live synthetic Staging checks: grant/revoke through the shipping consent adapter; 403 before grant and after revoke; schema-valid deterministic uncertainty response (request 467350c3-54f7-44ec-9b7e-d7f5c5ff1b88); normal synthetic narrative still returns schema-valid Gemini response (request 86068c15-b700-4fd0-8e79-562d699f47ff). Local shipping-handler regressions also verify zero outbound provider calls on uncertainty, unsafe-state rejection and unconditional consent enforcement. Original test account's revoked choice restored. Full shared regression/CI is tracked in the execution ledger.
+
+Rollback: redeploy the pre-change version-21 files (same as PR #45's dependency patch) with JWT verification enabled. This changes no data and retains Zod 4.6.7, consent and account-deletion guards. Production remains version 13 until a verified promotion is recorded here.
+
+## Owner checkpoint safety gates
+
+At the checkpoint directive, Staging's historical allow_test_fixtures=true was set false through a scoped UPDATE of public.premium_runtime_config where environment=staging. Returned row confirms premium_enabled=true, webhook_processing=true, checkout_enabled=false, test_store_checkout_enabled=false, allow_test_fixtures=false. This closes the Staging synthetic webhook permission and enables no commercial capability. Production fixture permission was already false and was not changed. No schema, RLS, secret or subscription identity change.
+
+Rollback requires a new authorized Staging synthetic-certification need before setting that one flag true; do not restore it automatically during continuation. Checkout must remain false. Both deletion control rows were reread: enabled=false, dry_run=true. No deletion processing, retention worker or terminal operation was enabled.

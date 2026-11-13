@@ -62,7 +62,12 @@ describe('first step: empty-household next-step selection (pure, deterministic)'
   });
 
   test('every struggle the catalog offers is accounted for', () => {
-    for (const { id } of onboardingOptions.struggles) assert.notEqual(first({}, [id]).reason, null, `${id} has a first step`);
+    for (const { id } of onboardingOptions.struggles) {
+      if (id === 'not-sure-yet') {
+        assert.equal(first({}, [id]).reason, null, 'unknown must not be presented as a stated struggle');
+        assert.equal(first({}, [id]).kind, 'talk_it_out');
+      } else assert.notEqual(first({}, [id]).reason, null, `${id} has a first step`);
+    }
   });
 
   test('her own order is the only tie-break: the first struggle she chose that points somewhere decides', () => {

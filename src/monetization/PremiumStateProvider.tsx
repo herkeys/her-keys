@@ -24,7 +24,7 @@ export interface PremiumContextValue {
   recordDecision: (featureKey: string, decision: GateDecision | null) => void;
   authorize: (request: GateRequest) => Promise<GateResult>;
   /** Smart Inbox: the server authorizes, runs and meters one extraction. An answer that arrives after the account changed is discarded. */
-  extract: (request: ExtractRequest) => Promise<ExtractResult>;
+  extract: (request: ExtractRequest, signal?: AbortSignal) => Promise<ExtractResult>;
   /** Synchronous account/lifecycle fence for an asynchronous canonical write. */
   isCurrent: () => boolean;
   /** Per-account, backend-authorized permission to PRESENT a new paid offer. */
@@ -82,7 +82,15 @@ function PremiumAccountState({
   const accountBound = accountState.kind === 'accountBound';
   const householdId = accountState.kind === 'accountBound' ? accountState.householdId : null;
   const live = useRef(true);
-  useEffect(() => { live.current = true; return () => { live.current = false; }; }, []);
+  const pendingExtractions = useRef(new Set<AbortController>());
+  useEffect(() => {
+    live.current = true;
+    return () => {
+      live.current = false;
+      for (const pending of pendingExtractions.current) pending.abort();
+      pendingExtractions.current.clear();
+    };
+  }, []);
   const isCurrent = useCallback(() => live.current && scopeIsCurrent() && accountBound && accountId !== null && householdId !== null
     && (isAccountCurrent?.(accountId, householdId) ?? true), [scopeIsCurrent, accountBound, accountId, householdId, isAccountCurrent]);
   const owner = useMemo(() => ({ accountId, isCurrent }), [accountId, isCurrent]);
@@ -174,14 +182,23 @@ function PremiumAccountState({
   );
 
   const extract = useCallback(
-    async (request: ExtractRequest): Promise<ExtractResult> => {
-      if (!isCurrent() || request.householdId !== householdId || controller.getSnapshot().server?.state === 'deletion_pending') return { kind: 'unavailable', reason: 'account_changed' };
+    async (request: ExtractRequest, signal?: AbortSignal): Promise<ExtractResult> => {
+      if (signal?.aborted || !isCurrent() || request.householdId !== householdId || controller.getSnapshot().server?.state === 'deletion_pending') return { kind: 'unavailable', reason: 'account_changed' };
       const owner = controller.getSnapshot().accountId;
-      const result = await client.extract(request);
-      if (!isCurrent() || controller.getSnapshot().accountId !== owner) return { kind: 'unavailable', reason: 'account_changed' };
-      // Same as `authorize`: a subscription denial from the server means the screen's copy of her entitlement is out of date.
-      if (result.kind === 'denied' && isSubscriptionDenial(result.decision)) void controller.refresh();
-      return result;
+      const pending = new AbortController();
+      const cancel = () => pending.abort();
+      signal?.addEventListener('abort', cancel, { once: true });
+      if (signal?.aborted) pending.abort();
+      pendingExtractions.current.add(pending);
+      try {
+        const result = await client.extract(request, pending.signal);
+        if (pending.signal.aborted || !isCurrent() || controller.getSnapshot().accountId !== owner) return { kind: 'unavailable', reason: 'account_changed' };
+        if (result.kind === 'denied' && isSubscriptionDenial(result.decision)) void controller.refresh();
+        return result;
+      } finally {
+        pendingExtractions.current.delete(pending);
+        signal?.removeEventListener('abort', cancel);
+      }
     },
     [client, controller, isCurrent, householdId],
   );
