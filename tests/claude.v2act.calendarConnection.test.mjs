@@ -366,6 +366,8 @@ describe('completion handle parsing (HK-V2ACT-CAL-03)', () => {
   test('only the exact Calendar return with status=authorized and a well-formed handle yields a handle', () => {
     assert.equal(HANDLE.length, 43);
     assert.equal(completionHandleOf(`herkeys://calendar-connected?status=authorized&handle=${HANDLE}`), HANDLE);
+    // The form the DEPLOYED callback actually emits (observed 2026-11-13: `herkeys://calendar-connected/?status=...`).
+    assert.equal(completionHandleOf(`herkeys://calendar-connected/?status=authorized&handle=${HANDLE}`), HANDLE);
     for (const url of [
       undefined, '',
       `herkeys://calendar-connected?status=connected&handle=${HANDLE}`,
