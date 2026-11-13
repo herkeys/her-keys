@@ -79,12 +79,31 @@ describe('One Move', () => {
     assert.equal(h.primaryWrites().length, 1);
   });
 
-  test("the day's decision isn't swapped when the rest of the day changes", () => {
+  test('an unfinished extra move is withheld when the day becomes overloaded', () => {
     const selected = onboardedState();
     const nowOverloaded = startEventAt(selected, 'evt-3', 16, 0);
     assert.equal(loadTierForDay(nowOverloaded, DAY), 'overloaded');
-    assert.equal(resolveOneMoveForToday(nowOverloaded, ctx()), nowOverloaded);
-    assert.equal(oneMoveForDay(nowOverloaded, DAY).status, 'selected');
+    const resolved = resolveOneMoveForToday(nowOverloaded, ctx());
+    assert.equal(oneMoveForDay(resolved, DAY).status, 'withheld');
+    assert.equal(resolved.tasks, nowOverloaded.tasks, 'withholding a suggestion never drops her tasks');
+    assert.equal(resolveOneMoveForToday(resolved, ctx()), resolved, 'withdrawal is stable');
+  });
+
+  test('a later overload does not erase completed One Move history', () => {
+    const done = completeOneMove(onboardedState(), ctx());
+    const overloaded = startEventAt(done, 'evt-3', 16, 0);
+    assert.equal(resolveOneMoveForToday(overloaded, ctx()), overloaded);
+    assert.equal(oneMoveForDay(overloaded, DAY).status, 'completed');
+  });
+
+  test('store transitions withdraw extra work immediately and persist that decision across restart', async () => {
+    const h = harness({ initial: { [STORAGE_KEYS.primary]: stored(onboardedState()) } });
+    let store = await launch(h);
+    store.dispatch(state => startEventAt(state, 'evt-3', 16, 0));
+    assert.equal(oneMoveForDay(store.getSnapshot().state, DAY).status, 'withheld');
+    await store.flush();
+    store = await launch(h);
+    assert.equal(oneMoveForDay(store.getSnapshot().state, DAY).status, 'withheld');
   });
 
   test('a new day decides afresh, and a move already done is not offered again', () => {

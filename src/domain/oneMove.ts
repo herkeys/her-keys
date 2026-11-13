@@ -20,7 +20,8 @@ import { completeTask } from './tasks';
 /**
  * Each logical day gets one One Move decision, stored the moment it's made.
  * Once she has seen it, it's a commitment: a restart or a change elsewhere in
- * the day doesn't swap it for a different move, and a day that was too full
+ * the day doesn't swap it for a different move, except that added pressure
+ * withdraws an unfinished move that adds work. A day that was too full
  * for one stays that way even if she frees up time later. A move she has done
  * stays done. The next day decides afresh.
  *
@@ -198,17 +199,18 @@ export function oneMoveForDay(state: AppState, date: LocalDate): OneMoveView {
   return target.standing === 'done' ? { status: 'completed', move: target.item } : { status: 'selected', move: target.item };
 }
 
-/** A decision stands unless it was an unfinished move whose target has since gone away. */
+/** Completed history stands; unfinished extra work must yield to an overloaded day. */
 function decisionStands(state: AppState, record: OneMoveRecord): boolean {
   if (record.targetId === null || record.status !== 'selected') return true;
   const target = targetOf(state, record.targetType, record.targetId);
-  return target !== null && target.standing !== 'gone';
+  if (target === null || target.standing === 'gone') return false;
+  return target.standing === 'done' || target.item.effect !== 'adds_work' || loadTierForDay(state, record.forDate) !== 'overloaded';
 }
 
 /**
  * Makes today's decision if there isn't one yet. The only thing that replaces
- * an existing decision is an unfinished move disappearing from the pool it
- * came from; a completed move is history and is never replaced.
+ * an existing decision is an unfinished move disappearing from its pool or
+ * adding work after the day becomes overloaded; completed history is never replaced.
  *
  * On an OVERLOADED day — as Daily Load judges the whole day — a move that adds
  * work is withheld: "nothing extra today" is the intervention. A move that
