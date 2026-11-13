@@ -3,6 +3,7 @@ import { AppText } from '../../design/components';
 import { spacing } from '../../design/tokens';
 import { useTheme } from '../../design/theme';
 import { useStoreSnapshot } from '../../store/AppStateProvider';
+import { useAnnounceOnIOS } from '../../design/announce';
 
 /**
  * A quiet line when saving isn't keeping up, or when stored data couldn't be
@@ -16,6 +17,7 @@ export function PersistenceNotice() {
   const startedOver = recovery !== null && !['future_version', 'read_failed', 'mode_mismatch'].includes(recovery.reason);
   if (startedOver) lines.push('Her Keys couldn’t read what was saved on this device, so it started fresh.');
   if (persistenceDegraded) lines.push('Some recent changes may not be saved yet.');
+  useAnnounceOnIOS(lines.length > 0 ? lines.join(' ') : null);
   if (lines.length === 0) return null;
 
   return (

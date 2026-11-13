@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { withDeadline } from '../domain/account/deadline';
 import { toAccountId, type ProviderResult } from '../domain/account/identity';
 import { sessionFromSupabase } from './sessionMapping';
+import { isUnparseableLink } from './incomingLinkSafety';
 
 /**
  * Google identity sign-in through Supabase Auth OAuth — the ONE mobile path.
@@ -74,6 +75,7 @@ export function routerPathForSystemLink(path: string): string | null {
 
 /** Read the Supabase OAuth callback. Parameters may arrive in the query or the fragment. */
 export function parseOAuthCallback(url: string): OAuthCallback {
+  if (isUnparseableLink(url)) return { code: null, error: 'invalid_callback', errorDescription: null, carriesTokens: false };
   const params = new Map<string, string>();
   const hash = url.indexOf('#');
   const beforeHash = hash === -1 ? url : url.slice(0, hash);

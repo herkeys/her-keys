@@ -10,6 +10,6 @@ export function redirectSystemPath({ path }: { path: string; initial: boolean })
   try {
     return routerPathForIncomingLink(path);
   } catch {
-    return path;
+    return null;
   }
 }

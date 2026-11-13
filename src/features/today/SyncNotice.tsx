@@ -5,6 +5,7 @@ import { useTheme } from '../../design/theme';
 import { needsSyncAttention, needsSyncAttentionCount } from '../../domain/sync/syncTypes';
 import { useAccount } from '../../store/AccountProvider';
 import { syncNoticeLine } from './syncNoticeLine';
+import { useAnnounceOnIOS } from '../../design/announce';
 
 /**
  * One quiet line when changes are waiting for her, and nothing at all
@@ -19,14 +20,15 @@ import { syncNoticeLine } from './syncNoticeLine';
 export function SyncNotice() {
   const { colors } = useTheme();
   const { syncNamespace } = useAccount();
-  if (!needsSyncAttention(syncNamespace)) return null;
-
   const count = needsSyncAttentionCount(syncNamespace);
+  const message = needsSyncAttention(syncNamespace) ? syncNoticeLine(count) : null;
+  useAnnounceOnIOS(message);
+  if (message === null) return null;
 
   return (
     <View style={styles.wrap} accessibilityLiveRegion="polite">
       <AppText variant="metadata" color={colors.textTertiary}>
-        {syncNoticeLine(count)}
+        {message}
       </AppText>
     </View>
   );

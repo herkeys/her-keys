@@ -195,10 +195,11 @@ export function createAppStore(options: AppStoreOptions): AppStore {
   /**
    * Today's One Move is decided the moment there is something to decide from,
    * not only at launch or midnight — so a real household's first capture gets
-   * its move without a restart. An existing decision is never touched here.
+   * its move without a restart. Existing decisions are rechecked for the
+   * domain's overload and missing-target safety rules, without changing tasks.
    */
   function withTodaysOneMove(next: AppState, ctx: TransitionContext): AppState {
-    return next.oneMoves.some((record) => record.forDate === ctx.today) ? next : resolveOneMoveForToday(next, ctx);
+    return resolveOneMoveForToday(next, ctx);
   }
 
   function applyNow(transition: Transition): void {

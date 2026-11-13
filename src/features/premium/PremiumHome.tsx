@@ -2,6 +2,7 @@ import { StyleSheet, View } from 'react-native';
 import { AppText, Button, Card, IconBadge, Overline, PremiumBadge, Tag } from '../../design/components';
 import { spacing } from '../../design/tokens';
 import { useTheme } from '../../design/theme';
+import { useAnnounceOnIOS } from '../../design/announce';
 import type { PremiumHomeCopy, CapabilityView, HomeActionCopy } from '../../monetization/premiumHomeCopy';
 import { usePremiumStateIfMounted } from '../../monetization/PremiumStateProvider';
 import { usePremiumHome, type PremiumHomeApi } from './usePremiumHome';
@@ -31,6 +32,8 @@ export interface PremiumHomeViewProps {
 export function PremiumHomeView({ home, hold }: PremiumHomeViewProps) {
   const { colors } = useTheme();
   const { copy, capabilities, upgrade } = home;
+  useAnnounceOnIOS(upgrade.notice?.message);
+  useAnnounceOnIOS(home.manageNotice);
   const act = (item: HomeActionCopy) => {
     switch (item.action) {
       case 'upgrade':

@@ -4,6 +4,7 @@ import {AppText,Button} from '../../design/components';
 import { radius } from '../../design/tokens';
 import { themed, useTheme } from '../../design/theme';
 import { useAnnounceOnIOS } from '../../design/announce';
+import { HER_KEYS_LEGAL_URLS } from '../../config/legal';
 
 // Presentation only (HK-FE-UI-02): the two entry fields used a grey literal; they now use the control-border token.
 const fieldStyleFor=themed(({color})=>({borderWidth:1,borderColor:color.border.control,backgroundColor:color.surface.primary,color:color.text.primary,padding:14,borderRadius:radius.md} as const));
@@ -28,7 +29,7 @@ export function DeleteAccountPanel({onBack}:{onBack:()=>void}) {
   <AppText>After verified purge, only minimal receipt-hash proof, verification times, aggregate counts and expiry are kept for 365 days. A daily job removes expired proof. Missing proof never confirms deletion; an explicit local reset remains available. Completion-email delivery uses a separate encrypted outbox for at most seven days.</AppText>
   <Button variant="secondary" label="Apple subscriptions" onPress={()=>open('https://apps.apple.com/account/subscriptions')}/>
   <Button variant="secondary" label="Google Play subscriptions" onPress={()=>open('https://play.google.com/store/account/subscriptions')}/>
-  <Button variant="ghost" label="Privacy Policy" onPress={()=>open('https://herkeys.app/privacy')}/>
+  <Button variant="ghost" label="Privacy Policy" onPress={()=>open(HER_KEYS_LEGAL_URLS.privacy)}/>
   <AppText>For your security, verify your account within 10 minutes before confirming. You can use a fresh sign-in or request a sign-in code for your existing account.</AppText>
   <TextInput accessibilityLabel="Account email" placeholder="Account email" autoCapitalize="none" autoCorrect={false} autoComplete="email" textContentType="emailAddress" keyboardType="email-address" value={email} onChangeText={setEmail} style={fieldStyle} placeholderTextColor={color.text.muted}/>
   <Button label="Send sign-in code" disabled={busy||!email} onPress={()=>void work(async()=>{const result=await account.requestEmailOtp(email);setNotice(result.kind==='sent'?'Check your email for a sign-in code.':'If a code is available, check your email.');})}/>

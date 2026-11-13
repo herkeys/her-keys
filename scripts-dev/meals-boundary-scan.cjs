@@ -129,6 +129,38 @@ const INTEGRATION_CHECKPOINTS = ['363e473fdf053547a21a41a67b7f62bd9aa2bcdf'];
  */
 const LATER_FEATURES = [
   {
+    id: 'HK-CODEX-V2-CARRYFORWARD-20261113 (overload, privacy link and status accessibility)',
+    branch: null,
+    owned: [], migrations: [], schemas: [], rootCollections: [], syncKinds: [],
+    shared: [
+      ['src/domain/oneMove.ts', 'Withdraw unfinished extra work when the day becomes overloaded while retaining completed history'],
+      ['src/state/appStore.ts', 'Recheck the domain One Move rules on state transitions, preserving atomic persistence'],
+      ['tests/oneMove.test.mjs', 'Update the superseded overload expectation and prove task preservation and restart durability'],
+      ['src/features/account/DeleteAccountPanel.tsx', 'Use the shared owner-approved Privacy Policy document URL'],
+      ['src/features/premium/PremiumHome.tsx', 'Announce new purchase and subscription-management notices on iOS'],
+      ['src/features/today/SyncNotice.tsx', 'Announce sync attention changes on iOS without conditional hooks'],
+      ['src/features/today/PersistenceNotice.tsx', 'Announce persistence failures on iOS while retaining Android live regions'],
+      ['tests/codex.statusAnnouncements.test.mjs', 'Render actual shared status components for iOS and Android and check the legal URL'],
+      ['tests/support/codexNoticePorts.mjs', 'Script external context hooks for actual status component tests'],
+      ['docs/handoffs/V2_CODEX_REVENUECAT_20261113.md', 'Record live store/paywall evidence with commercial and native blockers stated precisely'],
+    ],
+  },
+  {
+    id: 'HK-CODEX-V2-LINKS-20261113 (pre-Router link guards)',
+    branch: null,
+    owned: [], migrations: [], schemas: [], rootCollections: [], syncKinds: [],
+    shared: [
+      ['index.js', 'Install browser link safety before loading Expo Router'],
+      ['package.json', 'Use the documented custom entry point for pre-Router safety initialization'],
+      ['src/platform/incomingLinkSafety.ts', 'Shared bounded native URL decoder with no third-party parser'],
+      ['src/platform/webLinkGuard.ts', 'Guard browser cold starts, history and fragments before Router parsing'],
+      ['src/platform/systemLinks.ts', 'Share the safety predicate and accurately describe SDK 57 primary versus fallback parsing'],
+      ['src/platform/googleIdentityOAuth.ts', 'Apply bounded input validation to the separate Google auth callback parser'],
+      ['app/+native-intent.tsx', 'Fail closed on arbitrary native intent values and unexpected processing errors'],
+      ['tests/codex.linkEntryPoints.test.mjs', 'Exercise real entry ordering, web guard, auth callbacks, valid redirects and installed SDK primary parsing'],
+    ],
+  },
+  {
     id: 'HK-CODEX-V2-CONSENT-20261113 (AI choice management and account-bound legal save)',
     branch: null,
     owned: [], migrations: [], schemas: [], rootCollections: [], syncKinds: [],
