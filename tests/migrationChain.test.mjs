@@ -103,6 +103,7 @@ describe('post-certification migration governance', () => {
       ['PREMIUM_SUBSCRIPTION_PERIOD', '20261021075347_premium_verified_subscription_period.sql'],
       ['PREMIUM_TEST_STORE_CHECKOUT', '20261021083447_premium_test_store_checkout_isolation.sql'],
       ['CALENDAR_OAUTH_COMPLETION', '20261113191332_calendar_oauth_authenticated_completion.sql'],
+      ['PROVIDER_WRITE_GUARD_DEFINER', '20261113203431_provider_write_guard_definer.sql'],
     ]);
     const sql = lf(POST_CERT_CHAIN[0].file);
     const executable = sql.replace(/--.*$/gm, '');

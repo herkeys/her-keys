@@ -64,6 +64,8 @@ export const ADDITIVE_CHAIN = [
   { file: '20261021083447_premium_test_store_checkout_isolation.sql', owner: 'PREMIUM_TEST_STORE_CHECKOUT', label: 'premium-test-store-checkout' },
   // HK-V2ACT-CAL-03: Google Calendar consent completes only for the signed-in account that started it (service-only, additive).
   { file: '20261113191332_calendar_oauth_authenticated_completion.sql', owner: 'CALENDAR_OAUTH_COMPLETION', label: 'calendar-oauth-completion' },
+  // HK-V2ACT-GUARD-01: the pending-deletion provider-write guard runs as its owner (least privilege, no new grant).
+  { file: '20261113203431_provider_write_guard_definer.sql', owner: 'PROVIDER_WRITE_GUARD_DEFINER', label: 'provider-write-guard-definer' },
 ];
 
 /** WAVE3_BASE (363e473) ended at F05: the chain a WAVE3_BASE-era database was built with, and the populated-upgrade starting point. */

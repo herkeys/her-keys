@@ -244,8 +244,8 @@ const LATER_FEATURES = [
     // Parallel to the Codex RevenueCat lane: no src/monetization, RevenueCat or shared Premium server file. One additive, service-only
     // migration (HK-V2ACT-CAL-03: four nullable columns on calendar_oauth_states); no root collection, sync kind, RLS policy or grant.
     branch: null,
-    owned: [/^supabase\/migrations\/20261113191332_calendar_oauth_authenticated_completion\.sql$/],
-    migrations: ['supabase/migrations/20261113191332_calendar_oauth_authenticated_completion.sql'],
+    owned: [/^supabase\/migrations\/20261113191332_calendar_oauth_authenticated_completion\.sql$/, /^supabase\/migrations\/20261113203431_provider_write_guard_definer\.sql$/],
+    migrations: ['supabase/migrations/20261113191332_calendar_oauth_authenticated_completion.sql', 'supabase/migrations/20261113203431_provider_write_guard_definer.sql'],
     schemas: [], rootCollections: [], syncKinds: [],
     shared: [
       ['src/features/calendar/useGoogleCalendarBridge.ts', 'HK-V2ACT-CAL-01: apply provider answers only to the current account/day request; disconnect supersedes in-flight loads'],
@@ -264,6 +264,7 @@ const LATER_FEATURES = [
       ['supabase/functions/_emergency/calendar-oauth-paused/index.ts', 'HK-V2ACT-CAL-03 emergency Production mitigation: pause new Calendar connections under the calendar-oauth slug; no storage, secret or network dependency'],
       ['tests/localNotificationArchitecture.test.mjs', 'Register the reviewed emergency function folder as carrying no notification delivery path'],
       ['tests/claude.v2act.calendarMitigation.test.mjs', 'Execute the exact mitigation and the pinned pre-repair Calendar functions: attack before/after, existing sync and disconnect preserved, shipped builds degrade quietly'],
+      ['tests/accountDeletion/providerGuardServiceRole.test.mjs', 'HK-V2ACT-GUARD-01: prove under the real service_role that active accounts can write provider tables and pending-deletion accounts are still refused, with no new grant'],
       ['tests/claude.v2act.consentLegalLinks.test.mjs', 'Render the real consent gate through failed, recovered and cross-account late document opens'],
       ['.github/workflows/v2-integration-validation.yml', 'Run the unchanged mandatory gate on this lane’s exact pushed SHA'],
       ['scripts-dev/meals-boundary-scan.cjs', 'Register this lane and its changed files'],
