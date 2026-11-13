@@ -296,3 +296,47 @@ Rollback: the 0a93e9c three-file bundle.
 ### 13.5 Safety controls
 
 Not touched in this pass: checkout, test-store checkout, fixtures and account-deletion controls. Their live state could not be re-read without the tools; the last recorded state is OFF / OFF / OFF and disabled / dry-run (Codex 11-13).
+
+## 14. Guard-permission repair and end-to-end status (pass after PR #53 merge)
+
+Base: integration `2e0bcfb` (PR #53 merged). Branch `claude/v2-calendar-guard-and-e2e-20261113`.
+
+Live observation (read-only probe, 2026-11-13T20:32:40Z):
+- **Production:** `calendar-oauth` answers POST with `503 {"status":"unavailable","reason":"calendar_connect_paused"}` and a forged callback with `detail=connect_paused`. **The emergency pause is live.** It was deployed outside this session; the deployed bundle was not read back here.
+- **Staging:** still answers like the pre-pause code (401 / `invalid_state`).
+
+### HK-V2ACT-GUARD-01 (P1 for Calendar): pending-deletion guard blocked every legitimate provider write — REPAIRED IN SOURCE
+
+Cause:
+- `private.refuse_pending_provider_write()` guards 11 tables and ran with invoker rights.
+- It calls `private.account_is_active()`. `service_role` has no USAGE on schema `private`; only `authenticated` does.
+- Premium tables are written through SECURITY DEFINER RPCs and were unaffected. Edge Functions write `calendar_oauth_states`, `external_calendar_connections` and `apple_revocation_credentials` directly as `service_role`, so every insert or update there failed with "permission denied for schema private", for active accounts too.
+
+Consequences, inferred from source and the migration chain and not confirmed live (no database access):
+- Calendar consent could not start (insert) or complete (update), and no connection could be stored.
+- For existing connections, `calendar-data` updates on every event read (`last_sync_at`), calendar selection and lapse marking failed, so read-only sync returned 500 ("needs another try").
+- Disconnect (DELETE) is unaffected, because the guard covers INSERT/UPDATE only.
+
+Repair: migration `20261113203431_provider_write_guard_definer.sql` makes only that guard SECURITY DEFINER (owner; empty search_path unchanged) and re-revokes client EXECUTE.
+- No grant is added to `service_role` or any client role, and the guard logic is unchanged.
+- The migration asserts definer, empty search_path, no `service_role` schema USAGE, and no anon/authenticated EXECUTE.
+
+Evidence: `tests/accountDeletion/providerGuardServiceRole.test.mjs`, under the real `service_role` on the full chain in disposable PostgreSQL:
+- before the repair, 0/3: `permission denied for schema private`, even for an active account;
+- after, 3/3: an active account can start, complete and store a connection; a pending-deletion account is refused with `account_deactivated` on both Calendar tables; least privilege holds.
+- Account-deletion and governance suites pass 117/117.
+
+Scan of every trigger reaching schema `private`: this guard was the only invoker-rights function on a table written directly by `service_role`. The ledger-immutability triggers refuse those writes anyway, and the other private trigger functions are invoked by OID on tables written by `authenticated`.
+
+### End-to-end Google Calendar journey: BLOCKED (not run)
+
+Each prerequisite is unavailable here; none was faked:
+1. **Staging backend:** apply `20261113191332` and `20261113203431`, then deploy `calendar-data` and `calendar-oauth` from this branch. The Supabase MCP tools were still unavailable to this session ("requires authentication"), so this could not be done.
+2. **A compatible build on a device or emulator:** any build from `f7b686b` or later on the `development` profile (Staging). No EAS build was started; a local `expo run:android` on the existing Pixel_8_Pro AVD is the cheapest route once the backend is ready.
+3. **A real test Google account consent**, performed by a person. Credentials are never handled by the agent.
+
+Run order once 1–3 exist: §13.2 backend checks, then §13.3 steps 1–6. Event synchronization is verified by Day view showing a test event created in the Google account; reconnection keeps choices; disconnect removes the row.
+
+**Production:** the security pause stays in place.
+- The guard migration is the one Production change this pass recommends next, after Staging: it is what the live read-only sync needs, and it is independent of CAL-03.
+- The permanent OAuth flow replaces the pause only after the native pass and a coordinated app build.

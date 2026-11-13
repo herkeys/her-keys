@@ -65,3 +65,4 @@ supabase/migrations/20261019153801_account_deletion_private_household_owners.sql
 supabase/migrations/20261021075347_premium_verified_subscription_period.sql text eol=lf
 supabase/migrations/20261021083447_premium_test_store_checkout_isolation.sql text eol=lf
 supabase/migrations/20261113191332_calendar_oauth_authenticated_completion.sql text eol=lf
+supabase/migrations/20261113203431_provider_write_guard_definer.sql text eol=lf
