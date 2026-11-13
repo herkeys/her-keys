@@ -1,0 +1,38 @@
+{
+  "environment": "staging",
+  "projectRef": "fhhudicklmpofuzkxeqe",
+  "sourceBaseline": "ee32e9295d8c26e77ca65e45159fd10625e3b517",
+  "method": "deployed PostgreSQL RLS with transaction-local authenticated/anonymous roles and approved synthetic actor claims",
+  "status": "PASS",
+  "checks": 16,
+  "passed": [
+    "synthetic_fixture_guard",
+    "own_profile_read",
+    "unrelated_profile_denied",
+    "own_task_insert_and_read",
+    "own_task_update",
+    "unrelated_household_insert_denied",
+    "unrelated_task_read_denied",
+    "unrelated_task_update_denied",
+    "same_household_shared_read_allowed",
+    "same_household_private_read_denied",
+    "member_own_private_insert_allowed",
+    "household_owner_cannot_read_member_private",
+    "actor_switch_back_preserves_owner_data",
+    "private_owner_reassignment_denied",
+    "missing_identity_cannot_read",
+    "anonymous_privilege_denied"
+  ],
+  "rollbackVerified": {
+    "retainedProbeTasks": 0,
+    "retainedProbeMemberships": 0,
+    "verification": "independent query after transaction rollback"
+  },
+  "preparationFailures": [
+    { "status": "FAIL", "at": "own_task_insert_and_read", "sqlstate": "23502", "reason": "fixture omitted mandatory producer" },
+    { "status": "FAIL", "at": "own_task_insert_and_read", "sqlstate": "23514", "constraint": "tasks_producer_values_check", "reason": "fixture used an origin label instead of producer enum; inspected deployed constraint and corrected to user-action" }
+  ],
+  "production": "NOT_RUN",
+  "nativeSessionAndOfflineIsolation": "NOT_RUN",
+  "permanentSchemaPolicyGrantChanges": false
+}
