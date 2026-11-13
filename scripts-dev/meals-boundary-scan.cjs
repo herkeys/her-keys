@@ -129,6 +129,20 @@ const INTEGRATION_CHECKPOINTS = ['363e473fdf053547a21a41a67b7f62bd9aa2bcdf'];
  */
 const LATER_FEATURES = [
   {
+    id: 'HK-CODEX-V2-RECOVERY-20261113 (isolated recovery lifecycle and real certification)',
+    branch: null,
+    owned: [], migrations: [], schemas: [], rootCollections: [], syncKinds: [],
+    shared: [
+      ['src/platform/passwordRecoveryProvider.ts', 'Report transport/rate-limit failures honestly, invalidate earlier proof and clear disposed late sessions'],
+      ['tests/passwordRecovery.test.mjs', 'Reproduce and verify transport, overlapping attempts, stale proof and disposal races without weakening existing guards'],
+      ['tests/codex.recoveryJourney.test.mjs', 'Render the real recovery screen and adapter through retry, invalid proof, delayed update and sign-in return'],
+      ['scripts-dev/v2-password-recovery-certification.mjs', 'Pin approved synthetic account identities and exercise shipping PKCE recovery with secret-free evidence'],
+      ['scripts-dev/prepare-auth-recovery-config.ps1', 'Read-only Auth configuration preparation with explicit missing secure references and no settings writes'],
+      ['docs/handoffs/V2_CODEX_AUTH_RECOVERY_20261113.md', 'Separate observed Staging failures, real Production recovery results and inaccessible configuration gates'],
+      ['docs/handoffs/evidence/V2_RECOVERY_PRODUCTION_20261113.jsonl', 'Retain sanitized HTTP status and request evidence from approved Production synthetic recovery'],
+    ],
+  },
+  {
     id: 'HK-CODEX-V2-UNCERTAINTY-20261113 (honest onboarding and cancelled extraction)',
     branch: null,
     owned: [], migrations: [], schemas: [], rootCollections: [], syncKinds: [],
