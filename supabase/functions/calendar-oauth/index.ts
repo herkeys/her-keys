@@ -35,17 +35,35 @@ const GOOGLE_TIMEOUT_MS = 10_000;
  * the PKCE verifier or any Google token.
  */
 
+/** A Google OAuth web client ID, exactly. A value with a scheme, whitespace or anything else makes Google answer `invalid_client`. */
+const GOOGLE_CLIENT_ID_PATTERN = /^[0-9]+-[a-z0-9]+\.apps\.googleusercontent\.com$/;
+
 function configured(): boolean {
   return Boolean(
-    Deno.env.get('GOOGLE_CALENDAR_CLIENT_ID') &&
+    GOOGLE_CLIENT_ID_PATTERN.test(Deno.env.get('GOOGLE_CALENDAR_CLIENT_ID') ?? '') &&
     Deno.env.get('GOOGLE_CALENDAR_CLIENT_SECRET') &&
-    Deno.env.get('EXTERNAL_TOKEN_ENCRYPTION_KEY_B64')
+    Deno.env.get('EXTERNAL_TOKEN_ENCRYPTION_KEY_B64') &&
+    publicCallbackUri() !== null
   );
 }
 
-function redirectUriFor(req: Request): string {
-  const url = new URL(req.url);
-  return `${url.origin}${url.pathname}`;
+/**
+ * The PUBLIC callback URL registered with Google (HK-V2ACT-CAL-05).
+ *
+ * Inside the Supabase Edge runtime `req.url` is the INTERNAL URL — plain `http`, with the `/functions/v1` prefix stripped — so deriving
+ * the redirect from it sent `http://<ref>.supabase.co/calendar-oauth`, which no Google client registers (`redirect_uri_mismatch`).
+ * The public URL is built from SUPABASE_URL (always set by the platform), or taken verbatim from GOOGLE_CALENDAR_REDIRECT_URI when an
+ * environment registers something else. The same value is stored with the attempt and reused for the token exchange.
+ */
+function publicCallbackUri(): string | null {
+  const explicit = Deno.env.get('GOOGLE_CALENDAR_REDIRECT_URI');
+  const candidate = explicit ?? (Deno.env.get('SUPABASE_URL') ? `${Deno.env.get('SUPABASE_URL')!.replace(/\/+$/, '')}/functions/v1/calendar-oauth` : '');
+  try {
+    const url = new URL(candidate);
+    return url.protocol === 'https:' && !url.search && !url.hash ? `${url.origin}${url.pathname}` : null;
+  } catch {
+    return null;
+  }
 }
 
 function appRedirect(status: string, extra: { detail?: string; handle?: string } = {}): Response {
@@ -64,13 +82,22 @@ function appRedirect(status: string, extra: { detail?: string; handle?: string }
   });
 }
 
-async function begin(req: Request, user: User): Promise<Response> {
-  if (!configured()) return json({ status: 'unavailable', reason: 'google_calendar_not_configured' }, 503);
+async function begin(user: User): Promise<Response> {
+  if (!configured()) {
+    // Names only, never values: which part of the provider configuration is unusable.
+    console.error('[calendar-oauth] not configured', JSON.stringify({
+      clientId: GOOGLE_CLIENT_ID_PATTERN.test(Deno.env.get('GOOGLE_CALENDAR_CLIENT_ID') ?? '') ? 'ok' : 'missing_or_malformed',
+      clientSecret: Deno.env.get('GOOGLE_CALENDAR_CLIENT_SECRET') ? 'ok' : 'missing',
+      encryptionKey: Deno.env.get('EXTERNAL_TOKEN_ENCRYPTION_KEY_B64') ? 'ok' : 'missing',
+      callback: publicCallbackUri() ? 'ok' : 'missing_or_not_https',
+    }));
+    return json({ status: 'unavailable', reason: 'google_calendar_not_configured' }, 503);
+  }
 
   const state = randomUrlSafe(32);
   const verifier = randomUrlSafe(64);
   const challenge = await sha256Base64Url(verifier);
-  const redirectUri = redirectUriFor(req);
+  const redirectUri = publicCallbackUri()!;
   const expiresAt = new Date(Date.now() + ATTEMPT_TTL_MS).toISOString();
 
   const admin = adminClient();
@@ -267,7 +294,7 @@ Deno.serve(async (req) => {
       // An empty body starts a consent attempt, exactly as before.
     }
     if (body.action === 'complete') return await complete(user, body);
-    return await begin(req, user);
+    return await begin(user);
   } catch (error) {
     // The GET callback is opened by Google inside the app's auth browser, which waits for the app redirect. A bare JSON body there
     // strands her on a blank page, so every callback failure — a restricted account included — returns to the app (HK-V2ACT-CAL-04).

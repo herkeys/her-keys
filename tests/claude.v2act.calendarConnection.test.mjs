@@ -179,7 +179,8 @@ function calendarOauth({ restricted = false, authorized = true } = {}) {
     sha256Base64Url: async (value) => `hash:${value}`,
     randomUrlSafe: () => 'random',
     encryptSecret: async () => ({ ciphertext: 'c', iv: 'i' }),
-    Deno: { env: { get: (key) => (key === 'HERKEYS_CALENDAR_APP_REDIRECT_URI' ? undefined : 'configured') }, serve: (fn) => { handler = fn; } },
+    // Real secret shapes (HK-V2ACT-CAL-05): a well-formed client ID and the platform's SUPABASE_URL.
+    Deno: { env: { get: (key) => ({ GOOGLE_CALENDAR_CLIENT_ID: '857660202409-synthetic0calendar.apps.googleusercontent.com', GOOGLE_CALENDAR_CLIENT_SECRET: 'synthetic-secret', EXTERNAL_TOKEN_ENCRYPTION_KEY_B64: 'synthetic-key', SUPABASE_URL: 'https://synthetic.supabase.invalid' })[key] }, serve: (fn) => { handler = fn; } },
     fetch: async () => { throw new Error('no network in this test'); },
   };
   runInNewContext(calendarOauthSource, sandbox);
