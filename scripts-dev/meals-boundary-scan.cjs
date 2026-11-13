@@ -262,6 +262,7 @@ const LATER_FEATURES = [
       ['.gitattributes', 'HK-V2ACT-CAL-03: pin the new migration LF'],
       ['tests/claude.v2act.calendarOAuthBinding.test.mjs', 'HK-V2ACT-CAL-03: run the shipping and previous OAuth handlers against a PKCE-enforcing simulated Google through CSRF, replay, expiry, switching and race attacks'],
       ['supabase/functions/_emergency/calendar-oauth-paused/index.ts', 'HK-V2ACT-CAL-03 emergency Production mitigation: pause new Calendar connections under the calendar-oauth slug; no storage, secret or network dependency'],
+      ['tests/localNotificationArchitecture.test.mjs', 'Register the reviewed emergency function folder as carrying no notification delivery path'],
       ['tests/claude.v2act.calendarMitigation.test.mjs', 'Execute the exact mitigation and the pinned pre-repair Calendar functions: attack before/after, existing sync and disconnect preserved, shipped builds degrade quietly'],
       ['tests/claude.v2act.consentLegalLinks.test.mjs', 'Render the real consent gate through failed, recovered and cross-account late document opens'],
       ['.github/workflows/v2-integration-validation.yml', 'Run the unchanged mandatory gate on this lane’s exact pushed SHA'],
