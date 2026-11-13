@@ -15,6 +15,8 @@ on:
       - integration/v2-autonomous-upgrade-20261112
       # V2 application activation and integration (Claude, parallel to Codex RevenueCat): the same gate on its exact pushed SHA. Validation only; no build or deploy. Remove with the branch.
       - claude/v2-activation-integration-20261113
+      # CAL-03 emergency Production mitigation: the same gate on its exact pushed SHA before any deployment. Remove with the branch.
+      - claude/v2-calendar-security-mitigation-20261113
       # Source-only Build 2 convergence candidate: run mandatory exact-head CI before EAS GO decision.
       - integration/build2-candidate-20261020
       - codex/premium-release-certification-20261021
