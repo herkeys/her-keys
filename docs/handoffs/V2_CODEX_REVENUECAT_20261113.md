@@ -25,6 +25,8 @@ Google diagnosis: the saved service account successfully reads the same configur
 
 Apple secure requirement: an authorized `.p8` reference for existing key `XTNYDBS8T8`, its issuer ID, verified team/app access and Vendor number where required by the RevenueCat upload flow. The previously documented `%LOCALAPPDATA%\HerKeys\billing\herkeys-revenuecat-asc-key.clixml` is absent; exact-key-file searches in Downloads/Documents found no material. The subscription key is a separate working credential and must be preserved. [RevenueCat requires at least App Manager access](https://www.revenuecat.com/docs/service-credentials/itunesconnect-app-specific-shared-secret/app-store-connect-api-key-configuration). No key values belong in the report, source or chat. Apple private material remains BLOCKED; independent Android/source work continued.
 
+EAS public-key readback independently matched all four configured values (iOS/Android in both Production and preview) to the corresponding live RevenueCat app's public SDK key. These are the native-store profiles in eas.json; development retains its gated Staging Test Store profile. No EAS variable was changed. This verifies configuration, not the contents of an old TestFlight/Play binary.
+
 ## Paywall revision and publication
 
 Independently fetched both component trees and rendered published and draft views. Published revision **12** still contains example.com legal links, an unsupported video feature and a “save 30%” web-checkout action. That P1 remains open until a validated replacement is published. Its component tree was byte-for-byte unchanged by this pass.
@@ -32,6 +34,8 @@ Independently fetched both component trees and rendered published and draft view
 Draft **13 -> 14** is saved **unpublished**. The approved Her Keys title, three supported feature rows, annual default, monthly/annual product bindings, dynamic regular prices, purchase/dismiss/restore actions, canonical Terms/Privacy PDFs and renewal notice are preserved. Both introductory-offer price lines now use `product.offer_price` and `product.offer_period_with_unit` inside offer-eligibility overrides; both CTA variants say “Start Premium.” This prevents a paid introductory offer being called free. [RevenueCat documents that offer prices localize to “free” for free trials](https://www.revenuecat.com/docs/tools/paywalls/creating-paywalls/variables); no prices, durations or savings were hardcoded. Old unused video/savings localization strings remain in the editor's localization dictionary but have no reachable component references.
 
 Rendered revision 14 introductory layout and checked the component/localization bindings. Renderer offer values are samples (including a displayed $1.99/week); they are **not** the actual Google one-month free offer or Apple evidence. The renderer's dark request still shows the existing white design, so no native dark-mode certification is claimed. Native taps, scrolling/footer visibility, restoration, cancellation and store confirmation are NOT_RUN. Publication remains BLOCKED on applicable store/commercial/native evidence and authorization. Checkout remains OFF.
+
+Both canonical legal URLs returned HTTP 200 with application/pdf during this pass. That verifies link availability, not a new legal-policy approval.
 
 ## Repaired defects and identity results
 
@@ -93,6 +97,8 @@ Production approval-ready plan: after complete Staging readback and authenticate
 - Exact-head workflow dispatch [43485165645](https://github.com/herkeys/her-keys/actions/runs/43485165645) at repair commit **PASS**, including CI full regression 5,609/5,609, zero failures/skips, and 129 launch-critical checks. Final PR head and validation will be recorded in the PR after documentation is pushed. Workflow/boundary guard files were not edited.
 
 Logs are outside Git: `%TEMP%\herkeys-rc-completion-{focused,full,boundary,parity}.log` and audit JSON. No passwords, JWTs, OTPs, HMACs, private keys or SMTP secrets were recorded.
+
+Known open RC defect inventory after source repair: **0 P0; 2 P1 deployment/publication gates; 0 independently confirmed open P2/P3 source defects.** The P1 gates are Production's unpromoted environment guard and the defective published paywall. Native/store/credential checks remain BLOCKED or NOT_RUN and may reveal additional defects; these counts are not exhaustive commercial certification. The draft offer defect and SDK restore defect are repaired as recorded above.
 
 ## Cross-agent handoff and remaining gates
 
