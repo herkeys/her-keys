@@ -37,7 +37,7 @@ Baseline full suite at the starting SHA: 5,604 / 5,604 pass, 0 fail, 0 skipped (
 | Household records (Life areas, Systems) | Yes | Yes | Life tab hub, Systems tab | Local + sync | PASS(src) | PASS(src) | Staging policy probe 16/16 PASS(live, Codex) | Partial (database layer only) | Isolation probe NOT_RUN |
 | Tasks + reminders | Yes | Yes | Task editor, Life lists, local notifications | Local + OS notifications | PASS(src) | PASS(src) | n/a | NOT_RUN device | NOT_RUN device |
 | AI consent | Yes | Gate flag true in every profile | Mandatory consent gate; Your Account AI choice | `account_consents` ledger | PASS(src) | Server receipts | Fail closed | Grant/revoke PASS(live, Codex) | Source-verified gate; live grant/revoke NOT_RUN |
-| Privacy, settings, permissions | Yes | Yes | Your Account status section | OS settings, legal PDFs | PASS(src) | OS-owned | Status reads never prompt | NOT_RUN | NOT_RUN |
+| Privacy, settings, permissions | Yes | Yes | Your Account status section; mandatory consent gate | OS settings, legal PDFs | PASS(src) (consent legal-link failure repaired, CONSENT-01) | OS-owned | Status reads never prompt | NOT_RUN | NOT_RUN |
 | Offline persistence + sync | Yes | Yes | Persistence/Sync notices | Sync runtime | PASS(src) | PASS(src) | Namespace per account | NOT_RUN device | NOT_RUN device |
 | Premium presentation / locked state | Yes | Premium enabled; checkout OFF both envs | Your Account → Premium home; feature cards | premium-gate (read) | PASS(src) locked/unavailable copy | n/a | Entitlement never trusted from client | CODEX | CODEX |
 
@@ -99,7 +99,8 @@ No hosted change of any kind was made in this workstream.
 | HK-V2ACT-CAL-02 | P2 (privacy) | calendar-data + panel | Server refused `disconnect` unless status was `connected`, and the panel offered no Disconnect in `reauth_required`, so a lapsed connection's encrypted refresh token could not be removed without reconnecting; delete was unscoped by user and its error ignored | REPAIRED in source + regression; deployment pending |
 | HK-V2ACT-CAL-04 | P3 | calendar-oauth | A restricted account's callback returned bare JSON 401 inside the auth browser instead of the app redirect | REPAIRED in source + regression; deployment pending |
 | HK-V2ACT-CAL-03 | P2 (security) | calendar-oauth | Account-linking CSRF (see §3) | OPEN, repair designed, owner + live Google verification required |
-| HK-V2ACT-CONSENT-01 | P3 | Consent gate | Mandatory-consent "Read Terms/Privacy" links swallow `openURL` failure (no notice); Your Account already reports it | OPEN; views are stateless by design, fix belongs in ConsentGate |
+| HK-V2ACT-CONSENT-01 | P3 | Consent gate | Mandatory-consent "Read Terms/Privacy" buttons dropped an `openURL` failure (no notice, unhandled rejection), while Welcome and Your Account already report it | REPAIRED in source + regression (`tests/claude.v2act.consentLegalLinks.test.mjs`, 4 tests; 3 fail on the unrepaired code). The gate supplies the opener; the view stays stateless; no locked consent string, receipt or commit condition changed |
+| HK-V2ACT-LINK-02 | P4 | Deletion gate, Weather | "Recovery and support" (DeletionGate) and "Weather sources" also drop `openURL` failures | OPEN, noted only: DeletionGate is in the separate deletion lane |
 | V2UP-C-P3a | P3 | Smart Inbox | No Free discovery surface | OPEN (product copy decision) |
 | V2UP-C-P3b | P3 | Smart Inbox | No durable time-saved record | OPEN (would need a durable record: not in scope without approval) |
 | V2UP-B-P2a (server half) | P2 | smart-inbox-extract | Server ignores client abort; quota charged for a cancelled accepted request | HANDOFF to Codex (§9) |
@@ -111,6 +112,8 @@ No P0 or P1 was found in this workstream's scope. The carried external P1s (Stag
 | Gate | Result |
 |---|---|
 | New regression `tests/claude.v2act.calendarConnection.test.mjs` | 19/19 (14/19 fail on the unrepaired code) |
+| New regression `tests/claude.v2act.consentLegalLinks.test.mjs` | 4/4 (3/4 fail on the unrepaired code) |
+| Consent-adjacent suites (legal copy lock, design system, consent recovery/governance, AI consent management, welcome shell, onboarding layout) | 306/306 |
 | Calendar-adjacent suites (architecture, validation, links, Google parity, registry, F01–F13 Calendar, notifications, premium feedback) | 565/565 |
 | Full source suite, serial | see PR body for the final count at the pushed head |
 | TypeScript, release identity, Expo install check, Expo Doctor, Meals boundary scan | see PR body |
