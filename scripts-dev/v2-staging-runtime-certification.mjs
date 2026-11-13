@@ -35,7 +35,7 @@ const requireAccount = async sdk => {
 async function execute(command) {
   switch (command.op) {
     case 'setup':
-      if (client || typeof command.publishableKey !== 'string') throw new Error('invalid_setup');
+      if (client || typeof command.publishableKey !== 'string' || !/^sb_publishable_[A-Za-z0-9_-]+$/.test(command.publishableKey)) throw new Error('invalid_setup');
       key = command.publishableKey;
       client = makeClient(); recoveryClient = makeClient();
       recovery = createPasswordRecoveryPort(recoveryClient);

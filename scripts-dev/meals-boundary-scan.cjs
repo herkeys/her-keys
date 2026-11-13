@@ -153,6 +153,7 @@ const LATER_FEATURES = [
       ['tests/premium/clientProvider.test.mjs', 'Exercise account switch, caller abort and provider unmount with pending extraction'],
       ['tests/premium/smartInboxClient.test.mjs', 'Verify extraction signal propagation and suppression of cancelled answers'],
       ['scripts-dev/v2-staging-runtime-certification.mjs', 'Controlled synthetic Staging recovery, session and consent probes with secrets only in process memory'],
+      ['docs/handoffs/V2_CODEX_CONTINUATION_20261113.md', 'Preserve owner checkpoint decisions, exact source authority, verification limits and continuation actions'],
     ],
   },
   {
