@@ -26,7 +26,9 @@ export async function premiumRpc(client: SupabaseClient, owner: PremiumRequestOw
   return authorization ? request.setHeader('Authorization', authorization) : request;
 }
 
-export async function premiumInvoke(client: SupabaseClient, owner: PremiumRequestOwner | undefined, name: string, body: object) {
+export async function premiumInvoke(client: SupabaseClient, owner: PremiumRequestOwner | undefined, name: string, body: object, signal?: AbortSignal) {
+  if (signal?.aborted) throw new Error('premium_request_cancelled');
   const authorization = await premiumAuthorization(client, owner);
-  return client.functions.invoke(name, { body, ...(authorization ? { headers: { Authorization: authorization } } : {}) });
+  if (signal?.aborted) throw new Error('premium_request_cancelled');
+  return client.functions.invoke(name, { body, ...(signal ? { signal } : {}), ...(authorization ? { headers: { Authorization: authorization } } : {}) });
 }

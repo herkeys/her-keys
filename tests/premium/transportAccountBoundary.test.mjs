@@ -24,11 +24,12 @@ const operations = [
 ];
 
 function harness() {
-  const h = { session: session(A), current: true, requests: [], lookups: 0, beforeSession: async () => {} };
+  const h = { session: session(A), current: true, requests: [], lookups: 0, beforeSession: async () => {}, response: null };
   const sdk = createClient('https://premium-boundary.invalid', 'sb_publishable_local_test', {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
     global: { fetch: async (url, init) => {
-      h.requests.push({ url: String(url), authorization: new Headers(init.headers).get('Authorization'), body: init.body });
+      h.requests.push({ url: String(url), authorization: new Headers(init.headers).get('Authorization'), body: init.body, signal: init.signal });
+      if (h.response) return h.response(init.signal);
       return Response.json(String(url).includes('/premium_decisions?') ? [] : { status: 'reconciled', ready: true, reason: 'ready' });
     } },
   });
@@ -39,6 +40,41 @@ function harness() {
   h.ledger = createPremiumLedgerClient(sdk, owner);
   return h;
 }
+
+test('an extraction cancelled before or during session lookup never reaches HTTP', async () => {
+  for (const duringLookup of [false, true]) {
+    const h = harness(); const pending = new AbortController();
+    if (duringLookup) h.beforeSession = async () => pending.abort();
+    else pending.abort();
+    const result = await h.server.extract(extractInput, pending.signal);
+    assert.equal(result.kind, 'unavailable');
+    assert.equal(h.requests.length, 0);
+    if (!duringLookup) assert.equal(h.lookups, 0);
+  }
+});
+
+test('the installed Supabase SDK propagates extraction cancellation to the actual fetch', async () => {
+  const h = harness(); const pending = new AbortController();
+  let started;
+  const ready = new Promise(resolve => { started = resolve; });
+  h.response = signal => new Promise((_resolve, reject) => {
+    assert.ok(signal instanceof AbortSignal);
+    signal.addEventListener('abort', () => reject(new DOMException('Cancelled', 'AbortError')), { once: true });
+    started();
+  });
+  const request = h.server.extract(extractInput, pending.signal);
+  await ready;
+  assert.equal(h.requests.length, 1);
+  pending.abort();
+  assert.equal(h.requests[0].signal.aborted, true);
+  assert.equal((await request).kind, 'unavailable');
+});
+
+test('an abort-ignoring transport cannot return an extraction after cancellation', async () => {
+  const h = harness(); const pending = new AbortController();
+  h.response = async () => { pending.abort(); return Response.json({ status: 'invalid_request' }); };
+  assert.deepEqual(await h.server.extract(extractInput, pending.signal), { kind: 'unavailable', reason: 'account_changed' });
+});
 
 for (const [name, run] of operations) {
   test(name + ': a replacement session cannot send the old actor request', async () => {

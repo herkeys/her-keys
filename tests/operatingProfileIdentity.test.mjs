@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
-import { onboardingOptions, resolveOnboardingOptionId } from '../src/data/catalog/onboardingOptions.ts';
+import { ONBOARDING_UNSURE_ID, onboardingOptions, resolveOnboardingOptionId } from '../src/data/catalog/onboardingOptions.ts';
 import { buildOperatingProfile } from '../src/features/onboarding/buildOperatingProfile.ts';
 
 const FROZEN = 'What usually tips a day from full into frozen.';
@@ -27,7 +27,12 @@ describe('Operating Profile option identity', () => {
       const byId = buildOperatingProfile(answers([]), [option.id]).stillLearning;
       const byLabel = buildOperatingProfile(answers([option.label])).stillLearning;
       assert.equal(byLabel, byId, `${option.id} must resolve identically from either form`);
-      assert.notEqual(byId, DEFAULT, `${option.id} must have its own open question`);
+      if (option.id === ONBOARDING_UNSURE_ID) {
+        assert.equal(byId, DEFAULT, 'an undecided answer names no specific problem');
+        assert.deepEqual(buildOperatingProfile(answers([option.label])).insights, [], 'uncertainty is not a profile fact');
+      } else {
+        assert.notEqual(byId, DEFAULT, `${option.id} must have its own open question`);
+      }
     }
   });
 

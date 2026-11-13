@@ -98,6 +98,46 @@ test('client-supplied affirmative boolean cannot override a denial', async () =>
   assert.equal(h.calls(), 0);
 });
 
+test('uncertainty preserves pending questions and evidence without invoking a provider', async () => {
+  const question = { id: 'q-current', text: 'When does it get harder?', options: [{ id: 'o-morning', label: 'Morning', keywords: ['morning'] }] };
+  for (const stage of ['clarifying', 'refining']) {
+    for (const userText of ["I don't know yet", 'I don’t know', 'not sure', 'I have no idea', 'idk', 'hard to say', "I can't really tell"]) {
+      const before = { ...state(), topicId: 'topic-a', stage, hypothesis: { statement: 'It may be the timing.', confidence: 'possible' }, evidence: [{ questionId: 'q-old', optionId: 'o-old', label: 'A previous answer' }], pendingQuestion: question };
+      const h = harness();
+      const answer = await h.request({ state: before, userText });
+      assert.equal(answer.status, 200, userText);
+      assert.equal(h.calls(), 0, userText);
+      assert.deepEqual(answer.body.state, before, userText);
+      assert.deepEqual(answer.body.quickReplies, question.options);
+      assert.equal(answer.body.meta.provider, 'fallback');
+      assert.doesNotMatch(answer.body.messages[0].text, /pick one|choose one|did not understand/i);
+      assert.match(h.logs.join(' '), /"providerInvoked":false/);
+    }
+  }
+});
+
+test('pure uncertainty at opening invents no topic; narrative still reaches the provider', async () => {
+  for (const userText of ["I don't know", "I'm not sure yet", 'Honestly I dunno']) {
+    const h = harness(); const answer = await h.request({ userText });
+    assert.equal(answer.status, 200); assert.equal(h.calls(), 0);
+    assert.deepEqual(answer.body.state, state());
+  }
+  const h = harness();
+  assert.equal((await h.request({ userText: "I don't know what's wrong, I'm just overwhelmed" })).status, 200);
+  assert.equal(h.calls(), 1, 'a named problem must not be discarded as a bare unknown');
+});
+
+test('uncertainty never bypasses authentication, current affirmative consent, or output safety', async () => {
+  for (const options of [{ authorized: false }, { receipts: [receipt(false)] }]) {
+    const h = harness(options); assert.ok([401, 403].includes((await h.request({ userText: "I don't know" })).status));
+    assert.equal(h.calls(), 0);
+  }
+  const h = harness();
+  const before = { ...state(), stage: 'clarifying', pendingQuestion: { id: 'q', text: 'https://unsafe.invalid', options: [{ id: 'o', label: 'Yes', keywords: [] }] } };
+  assert.equal((await h.request({ userText: 'not sure', state: before })).status, 400);
+  assert.equal(h.calls(), 0);
+});
+
 test('current affirmative consent reaches the provider and validates the structured turn', async () => {
   const h = harness({ provider: ({ init }) => {
     const sent = JSON.parse(init.body);

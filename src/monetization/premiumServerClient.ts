@@ -232,9 +232,10 @@ export function createPremiumServerClient(client: SupabaseClient, owner?: Premiu
       }
     },
 
-    async extract(request: ExtractRequest): Promise<ExtractResult> {
+    async extract(request: ExtractRequest, signal?: AbortSignal): Promise<ExtractResult> {
       try {
-        const { data, error } = await premiumInvoke(client, owner, 'smart-inbox-extract', request);
+        const { data, error } = await premiumInvoke(client, owner, 'smart-inbox-extract', request, signal);
+        if (signal?.aborted) return { kind: 'unavailable', reason: 'account_changed' };
         const status = httpStatus(error);
         // Only 2xx and the server's own typed 400/502/503 are ANSWERS; anything else (401, 500, a gateway page) is "could not reach it".
         if (error && status !== 400 && status !== 502 && status !== 503) return { kind: 'unavailable', reason: 'transport' };

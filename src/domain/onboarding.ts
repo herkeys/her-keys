@@ -1,4 +1,4 @@
-import { isOnboardingOptionId, type OnboardingGroup } from '../data/catalog/onboardingOptions';
+import { isOnboardingOptionId, ONBOARDING_UNSURE_ID, type OnboardingGroup } from '../data/catalog/onboardingOptions';
 import type { TransitionContext } from './context';
 import { onboardingProvenance, type Provenance } from './foundation/provenance';
 import { toInstant } from './logicalDay';
@@ -21,7 +21,9 @@ export function toggleOnboardingOption(state: AppState, group: OnboardingGroup, 
 
   const field = GROUP_FIELDS[group];
   const current = onboarding[field];
-  const next = current.includes(optionId) ? current.filter((id) => id !== optionId) : [...current, optionId];
+  const next = current.includes(optionId)
+    ? current.filter((id) => id !== optionId)
+    : optionId === ONBOARDING_UNSURE_ID ? [optionId] : [...current.filter((id) => id !== ONBOARDING_UNSURE_ID), optionId];
   return { ...state, onboarding: { ...onboarding, [field]: next } };
 }
 

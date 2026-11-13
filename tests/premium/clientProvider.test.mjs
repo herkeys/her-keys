@@ -54,7 +54,7 @@ let probe;
 function Probe() {
   const feature = usePremiumFeature('daily_load_premium', 'Daily Load');
   const upgrade = usePremiumUpgrade('premium_feature');
-  probe = { feature, upgrade };
+  probe = { feature, upgrade, premium: usePremiumState() };
   return null;
 }
 
@@ -65,6 +65,38 @@ afterEach(() => {
 const mount = (server, accountState) => render(<PremiumStateProvider client={server.client} accountState={accountState}><Probe /></PremiumStateProvider>);
 const remount = (renderer, server, accountState) => TestRenderer.act(async () => {
   renderer.update(<PremiumStateProvider client={server.client} accountState={accountState}><Probe /></PremiumStateProvider>);
+});
+
+test('pending extractions are aborted on account replacement and late answers stay with nobody', async () => {
+  const server = makeServer(); server.who = A;
+  let finish; let signal;
+  server.client.extract = (_input, pending) => { signal = pending; return new Promise(resolve => { finish = resolve; }); };
+  const r = await mount(server, bound(A));
+  await settle();
+  const request = probe.premium.extract({ householdId: 'h' });
+  assert.equal(signal.aborted, false);
+  server.who = B;
+  await remount(r, server, bound(B));
+  assert.equal(signal.aborted, true);
+  finish({ kind: 'invalid_request' });
+  assert.deepEqual(await request, { kind: 'unavailable', reason: 'account_changed' });
+  assert.equal(probe.premium.snapshot.accountId, B);
+  await TestRenderer.act(async () => r.unmount());
+});
+
+test('caller cancellation and provider unmount both cancel pending extraction work', async () => {
+  const server = makeServer(); server.who = A;
+  const requests = [];
+  server.client.extract = (_input, signal) => new Promise(resolve => requests.push({ signal, resolve }));
+  const r = await mount(server, bound(A)); await settle();
+  const caller = new AbortController();
+  const first = probe.premium.extract({ householdId: 'h' }, caller.signal);
+  caller.abort(); assert.equal(requests[0].signal.aborted, true);
+  const second = probe.premium.extract({ householdId: 'h' });
+  await TestRenderer.act(async () => r.unmount());
+  assert.equal(requests[1].signal.aborted, true);
+  for (const request of requests) request.resolve({ kind: 'invalid_request' });
+  assert.equal((await first).kind, 'unavailable'); assert.equal((await second).kind, 'unavailable');
 });
 
 describe('the consumer journey through the real provider', () => {

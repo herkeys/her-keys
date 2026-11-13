@@ -193,9 +193,9 @@ function envOf({ entitled = true, accountBound = true, householdId = 'h1', extra
         householdId,
         entitled,
         appVersion: '1.2.3',
-        extract: async (request) => {
+        extract: async (request, signal) => {
           calls.push(request);
-          return extract(request);
+          return extract(request, signal);
         },
       }),
       state,
@@ -207,6 +207,20 @@ const OK = { kind: 'ok', extraction: extraction([prop()]), via: 'premium' };
 const denied = (reason) => ({ kind: 'denied', decision: { outcome: 'denied', reason, entitlementState: 'premium_active', via: null, nextAction: 'none', quota: null, decisionId: null, replay: false } });
 
 describe('SI-ENH — when Premium reads, and when it must not', () => {
+  test('cancellation reaches the extractor; cancelled and late answers keep the local reading', async () => {
+    const pending = new AbortController(); let calls = 0;
+    const { env } = envOf({ extract: async (_request, signal) => {
+      calls++;
+      assert.equal(signal, pending.signal);
+      pending.abort();
+      return OK;
+    } });
+    const read = createSmartInboxEnhancer(env);
+    assert.equal((await read({ ...input(), signal: pending.signal })).kind, 'kept-local');
+    assert.equal((await read({ ...input(), signal: pending.signal })).kind, 'kept-local');
+    assert.equal(calls, 1, 'already cancelled work must not consume another request');
+  });
+
   test('not entitled, not bound or no household: nothing is sent, nothing is said', async () => {
     for (const opts of [{ entitled: false }, { accountBound: false }, { householdId: null }]) {
       const { env, calls } = envOf({ ...opts, extract: () => OK });
