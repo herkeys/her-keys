@@ -17,6 +17,8 @@ on:
       - claude/v2-activation-integration-20261113
       # CAL-03 emergency Production mitigation: the same gate on its exact pushed SHA before any deployment. Remove with the branch.
       - claude/v2-calendar-security-mitigation-20261113
+      # Provider-write guard repair (HK-V2ACT-GUARD-01) and Calendar end-to-end preparation: exact pushed SHA. Remove with the branch.
+      - claude/v2-calendar-guard-and-e2e-20261113
       # Source-only Build 2 convergence candidate: run mandatory exact-head CI before EAS GO decision.
       - integration/build2-candidate-20261020
       - codex/premium-release-certification-20261021
