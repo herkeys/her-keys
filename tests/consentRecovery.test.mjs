@@ -20,7 +20,7 @@ registerHooks({ resolve(specifier, context, next) {
   if (/\/(consentBackend|AccountProvider|LocalNotificationProvider)$/.test(specifier)) return next(stub, context);
   return next(specifier, context);
 } });
-const { ConsentGate, CONSENT_READ_TIMEOUT_MS } = await import('../src/features/consent/ConsentFlow.tsx');
+const { ConsentGate, ConsentLegalView, CONSENT_READ_TIMEOUT_MS } = await import('../src/features/consent/ConsentFlow.tsx');
 const { Text } = await import('react-native');
 
 const A = '11111111-1111-4111-8111-111111111111';
@@ -42,6 +42,38 @@ const act = async (f) => TestRenderer.act(async () => { await f(); });
 const settle = () => act(async () => { await new Promise((resolve) => setImmediate(resolve)); });
 const reset = () => { Object.assign(fixture, { reads: [], read: async () => offline, record: async () => offline, signOutCalls: 0, signOut: async () => {} }); };
 const deferred = () => { let resolve; const promise = new Promise((r) => { resolve = r; }); return { promise, resolve }; };
+
+test('a late legal save cannot advance another account or a new lifetime of the same account', async () => {
+  for (const returnToA of [false, true]) {
+    reset();
+    const saved = deferred();
+    let writes = 0;
+    fixture.read = async () => ({ kind: 'ok', receipts: [] });
+    fixture.record = () => { writes++; return saved.promise; };
+    const r = await render(gate(sessionOf(A)));
+    try {
+      await settle();
+      await act(() => {
+        const p = r.root.findByType(ConsentLegalView).props;
+        p.onToggleTerms(); p.onTogglePrivacy(); p.onToggleAdult(); p.onChooseAi(false);
+      });
+      await act(() => {
+        const commit = r.root.findByType(ConsentLegalView).props.onCommit;
+        commit(); commit();
+      });
+      assert.equal(writes, 1, 'duplicate submit is fenced before a render');
+      await act(() => r.update(gate(sessionOf(B))));
+      await settle();
+      if (returnToA) { await act(() => r.update(gate(sessionOf(A)))); await settle(); }
+      await act(() => saved.resolve(consented));
+      await settle();
+      assert.equal(appOpen(r), false);
+      assert.doesNotMatch(text(r), /Optional permissions/);
+      const p = r.root.findByType(ConsentLegalView).props;
+      assert.equal(p.terms, false); assert.equal(p.privacy, false); assert.equal(p.adult, false); assert.equal(p.ai, null);
+    } finally { await act(() => r.unmount()); }
+  }
+});
 
 for (const platform of ['android', 'ios']) {
   test(`SC-05 ${platform}: unreadable consent keeps the app closed and offers Try again and Sign out`, async () => {

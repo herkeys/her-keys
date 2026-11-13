@@ -129,6 +129,21 @@ const INTEGRATION_CHECKPOINTS = ['363e473fdf053547a21a41a67b7f62bd9aa2bcdf'];
  */
 const LATER_FEATURES = [
   {
+    id: 'HK-CODEX-V2-CONSENT-20261113 (AI choice management and account-bound legal save)',
+    branch: null,
+    owned: [], migrations: [], schemas: [], rootCollections: [], syncKinds: [],
+    shared: [
+      ['src/platform/consentBackend.ts', 'Append only the AI decision; read the latest of each policy type without history truncation'],
+      ['src/features/consent/AiConsentControl.tsx', 'Explicit consent review, grant and revoke with confirmed receipts and account-key lifetime'],
+      ['src/features/consent/consentSummary.ts', 'Bound synchronous consent transport failures as well as rejected requests'],
+      ['src/features/account/AccountStatusSection.tsx', 'Wire account-scoped AI choice management into Your Account'],
+      ['src/features/consent/ConsentFlow.tsx', 'Fence pending mandatory consent saves by account lifetime; reset choices on account change'],
+      ['tests/codex.aiConsentManagement.test.mjs', 'Exercise actual backend adapter and UI revocation, failures, latest receipts and account-key remount'],
+      ['tests/consentRecovery.test.mjs', 'Hostile pending legal-save account transition and duplicate-submit regression'],
+      ['docs/handoffs/V2_CODEX_BACKEND_DEPLOYMENTS_20261113.md', 'Record exact AI dependency patch deployments, checks and rollback without claiming full backend certification'],
+    ],
+  },
+  {
     id: 'HK-CODEX-V2-ENGINEERING-20261113 (SDK 57 baseline repair)',
     branch: null,
     owned: [], migrations: [], schemas: [], rootCollections: [], syncKinds: [],

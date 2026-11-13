@@ -33,7 +33,7 @@ export function boundedConsentRead(
 ): Promise<ConsentReadResult> {
   return new Promise((resolve) => {
     const timer = setTimeout(() => resolve({ kind: 'unavailable' }), ms);
-    read().then(
+    Promise.resolve().then(read).then(
       (answer) => {
         clearTimeout(timer);
         resolve(answer);

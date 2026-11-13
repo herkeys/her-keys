@@ -45,6 +45,11 @@ export function ConsentGate({ session, children }: { session: AccountSession; ch
   // check or unmounts the app, while a different account always starts again from "loading" (fail closed).
   const sessionRef = useRef(session);
   sessionRef.current = session;
+  const epoch = useRef({ accountId });
+  if (epoch.current.accountId !== accountId) epoch.current = { accountId };
+  const mounted = useRef(true);
+  const writing = useRef<object | null>(null);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const [flow, setFlow] = useState<{ accountId: string; stage: Stage }>({ accountId, stage: 'loading' });
   const stage: Stage = flow.accountId === accountId ? flow.stage : 'loading';
   const setStage = useCallback((next: Stage) => setFlow({ accountId: sessionRef.current.accountId, stage: next }), []);
@@ -66,6 +71,8 @@ export function ConsentGate({ session, children }: { session: AccountSession; ch
 
   useEffect(() => {
     let active = true;
+    setTerms(false); setPrivacy(false); setAdult(false); setAi(null);
+    setSaving(false); setIssue(null);
     setStage('loading');
     void readWithTimeout(() => createConsentLedger(sessionRef.current).read(), CONSENT_READ_TIMEOUT_MS).then((answer) => {
       if (!active) return;
@@ -97,13 +104,16 @@ export function ConsentGate({ session, children }: { session: AccountSession; ch
   };
 
   const commit = async () => {
-    if (saving || !terms || !privacy || !adult || ai === null) return;
+    if (saving || writing.current === epoch.current || !terms || !privacy || !adult || ai === null) return;
+    const owner = epoch.current;
+    const savingSession = sessionRef.current;
+    writing.current = owner;
     setSaving(true);
     setIssue(null);
     // Bounded like the read: a save that never answers is a failed save she can retry, not a frozen button.
     const result = await readWithTimeout(
       () =>
-        createConsentLedger(sessionRef.current).record([
+        createConsentLedger(savingSession).record([
           { consent_type: 'terms', granted: true },
           { consent_type: 'privacy', granted: true },
           { consent_type: 'age18', granted: true },
@@ -111,6 +121,8 @@ export function ConsentGate({ session, children }: { session: AccountSession; ch
         ]),
       CONSENT_WRITE_TIMEOUT_MS
     );
+    if (!mounted.current || epoch.current !== owner) return;
+    writing.current = null;
     setSaving(false);
     if (result.kind !== 'ok') {
       setIssue('We could not securely save your selections. Check your connection and try again.');
