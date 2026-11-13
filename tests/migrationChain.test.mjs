@@ -102,6 +102,7 @@ describe('post-certification migration governance', () => {
       ['ACCOUNT_DELETION_PRIVATE_OWNERS', '20261019153801_account_deletion_private_household_owners.sql'],
       ['PREMIUM_SUBSCRIPTION_PERIOD', '20261021075347_premium_verified_subscription_period.sql'],
       ['PREMIUM_TEST_STORE_CHECKOUT', '20261021083447_premium_test_store_checkout_isolation.sql'],
+      ['CALENDAR_OAUTH_COMPLETION', '20261113191332_calendar_oauth_authenticated_completion.sql'],
     ]);
     const sql = lf(POST_CERT_CHAIN[0].file);
     const executable = sql.replace(/--.*$/gm, '');

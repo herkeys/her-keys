@@ -62,6 +62,8 @@ export const ADDITIVE_CHAIN = [
   { file: '20261019153801_account_deletion_private_household_owners.sql', owner: 'ACCOUNT_DELETION_PRIVATE_OWNERS', label: 'account-deletion-private-owners' },
   { file: '20261021075347_premium_verified_subscription_period.sql', owner: 'PREMIUM_SUBSCRIPTION_PERIOD', label: 'premium-subscription-period' },
   { file: '20261021083447_premium_test_store_checkout_isolation.sql', owner: 'PREMIUM_TEST_STORE_CHECKOUT', label: 'premium-test-store-checkout' },
+  // HK-V2ACT-CAL-03: Google Calendar consent completes only for the signed-in account that started it (service-only, additive).
+  { file: '20261113191332_calendar_oauth_authenticated_completion.sql', owner: 'CALENDAR_OAUTH_COMPLETION', label: 'calendar-oauth-completion' },
 ];
 
 /** WAVE3_BASE (363e473) ended at F05: the chain a WAVE3_BASE-era database was built with, and the populated-upgrade starting point. */

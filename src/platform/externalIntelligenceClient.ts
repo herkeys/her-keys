@@ -17,6 +17,11 @@ export interface ExternalIntelligenceClient {
   }): Promise<ExternalCall<WeatherSnapshot>>;
   calendarStatus(): Promise<ExternalCall<ExternalCalendarConnection>>;
   beginCalendarConnection(): Promise<ExternalCall<{ authorizationUrl: string; redirectUri: string; scopes: string[] }>>;
+  /**
+   * Redeem the single-use handle Google's callback returned, as the signed-in account (HK-V2ACT-CAL-03). The server completes the
+   * connection only for the account that started it; the app never handles Google's code or tokens.
+   */
+  completeCalendarConnection(handle: string): Promise<ExternalCall<ExternalCalendarConnection>>;
   listCalendars(): Promise<ExternalCall<{ calendars: ExternalCalendar[]; selectedCalendarIds: string[] }>>;
   selectCalendars(ids: string[]): Promise<ExternalCall<{ selectedCalendarIds: string[] }>>;
   calendarEvents(timeMin: string, timeMax: string): Promise<ExternalCall<{ events: ExternalCalendarEvent[]; syncedAt: string }>>;
@@ -61,6 +66,10 @@ export function createExternalIntelligenceClient(client: SupabaseClient): Extern
     },
     beginCalendarConnection: () =>
       invoke<{ authorizationUrl: string; redirectUri: string; scopes: string[] }>('calendar-oauth', {}),
+    async completeCalendarConnection(handle) {
+      const result = await invoke<{ status: 'ready'; connection: ExternalCalendarConnection }>('calendar-oauth', { action: 'complete', handle });
+      return result.kind === 'ready' ? { kind: 'ready', value: result.value.connection } : result;
+    },
     async listCalendars() {
       const result = await invoke<{ status: 'ready'; calendars: ExternalCalendar[]; selectedCalendarIds: string[] }>(
         'calendar-data',
@@ -98,6 +107,7 @@ export const UNCONFIGURED_EXTERNAL_INTELLIGENCE: ExternalIntelligenceClient = {
   weather: async () => ({ kind: 'unavailable', reason: 'supabase_not_configured' }),
   calendarStatus: async () => ({ kind: 'unavailable', reason: 'supabase_not_configured' }),
   beginCalendarConnection: async () => ({ kind: 'unavailable', reason: 'supabase_not_configured' }),
+  completeCalendarConnection: async () => ({ kind: 'unavailable', reason: 'supabase_not_configured' }),
   listCalendars: async () => ({ kind: 'unavailable', reason: 'supabase_not_configured' }),
   selectCalendars: async () => ({ kind: 'unavailable', reason: 'supabase_not_configured' }),
   calendarEvents: async () => ({ kind: 'unavailable', reason: 'supabase_not_configured' }),

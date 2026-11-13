@@ -53,9 +53,14 @@ export function ConsentPermissionsView({ inset, notificationsBusy, onEnableNotif
   </ScrollView>;
 }
 
-export function ConsentLegalView({ inset, terms, privacy, adult, ai, saving, issue, onToggleTerms, onTogglePrivacy, onToggleAdult, onChooseAi, onCommit }: {
+/** Opening a document with no handler reported back: the gallery's fixed rendering, never an unhandled rejection. */
+const openDocumentQuietly = (url: string) => void Linking.openURL(url).catch(() => undefined);
+
+export function ConsentLegalView({ inset, terms, privacy, adult, ai, saving, issue, onToggleTerms, onTogglePrivacy, onToggleAdult, onChooseAi, onCommit, onOpenDocument = openDocumentQuietly }: {
   inset: Inset; terms: boolean; privacy: boolean; adult: boolean; ai: boolean | null; saving: boolean; issue: string | null;
   onToggleTerms: () => void; onTogglePrivacy: () => void; onToggleAdult: () => void; onChooseAi: (value: boolean) => void; onCommit: () => void;
+  /** The gate opens the document and reports a failure through `issue` (HK-V2ACT-CONSENT-01). */
+  onOpenDocument?: (url: string) => void;
 }) {
   const { color } = useTheme();
   const styles = useStyles();
@@ -64,8 +69,8 @@ export function ConsentLegalView({ inset, terms, privacy, adult, ai, saving, iss
     <AppText variant="display">A little clarity goes a long way.</AppText>
     <AppText variant="body">Please review the complete Terms and Privacy Policy, and confirm your choices before using Her Keys.</AppText>
     <View style={styles.readRow}>
-      <Button variant="ghost" label="Read Terms and Conditions" onPress={() => void Linking.openURL(HER_KEYS_LEGAL_URLS.terms)} />
-      <Button variant="ghost" label="Read Privacy Policy" onPress={() => void Linking.openURL(HER_KEYS_LEGAL_URLS.privacy)} />
+      <Button variant="ghost" label="Read Terms and Conditions" onPress={() => onOpenDocument(HER_KEYS_LEGAL_URLS.terms)} />
+      <Button variant="ghost" label="Read Privacy Policy" onPress={() => onOpenDocument(HER_KEYS_LEGAL_URLS.privacy)} />
     </View>
     <Card style={styles.section}>
       <ChipToggle label="I agree to the Terms and Conditions" selected={terms} onPress={onToggleTerms} />

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Linking, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText } from '../../design/components';
 import { ConsentErrorView, ConsentLegalView, ConsentPermissionsView } from './ConsentViews';
@@ -20,6 +20,8 @@ type Stage = 'loading' | 'error' | 'legal' | 'permissions' | 'ready';
  */
 export const CONSENT_READ_TIMEOUT_MS = 15_000;
 export const CONSENT_WRITE_TIMEOUT_MS = 45_000;
+/** The same wording Your Account and account deletion use when a page cannot be opened. */
+export const LEGAL_DOCUMENT_FAILED = 'That page could not be opened. Check your connection and try again.';
 
 function readWithTimeout(read: () => Promise<ConsentReadResult>, ms: number): Promise<ConsentReadResult> {
   return new Promise((resolve) => {
@@ -130,6 +132,15 @@ export function ConsentGate({ session, children }: { session: AccountSession; ch
     }
     setStage('permissions');
   };
+
+  // She is asked to review the complete documents before agreeing; a document that cannot be opened must say so, not do nothing.
+  const openDocument = (url: string) => {
+    const owner = epoch.current;
+    setIssue(null);
+    void Linking.openURL(url).catch(() => {
+      if (mounted.current && epoch.current === owner) setIssue(LEGAL_DOCUMENT_FAILED);
+    });
+  };
   if (stage === 'ready') return <>{children}</>;
   if (stage === 'loading') return <View style={[styles.center, inset]}><AppText variant="body">Checking your account setup…</AppText></View>;
   if (stage === 'error') {
@@ -142,7 +153,7 @@ export function ConsentGate({ session, children }: { session: AccountSession; ch
     inset={inset}
     terms={terms} privacy={privacy} adult={adult} ai={ai} saving={saving} issue={issue}
     onToggleTerms={() => setTerms(!terms)} onTogglePrivacy={() => setPrivacy(!privacy)} onToggleAdult={() => setAdult(!adult)}
-    onChooseAi={setAi} onCommit={() => void commit()}
+    onChooseAi={setAi} onCommit={() => void commit()} onOpenDocument={openDocument}
   />;
 }
 
