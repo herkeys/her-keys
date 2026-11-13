@@ -203,3 +203,96 @@ iOS and Android: Apple/Google sign-in; Google Calendar connect, reconnect and di
 | 6 | Independent platform audit | NOT_RUN | Source candidate is ready for audit (verdict 1). The CAL-03 flow, Apple/Google sign-in, permissions, offline and account-switch journeys need device evidence; no IPA/AAB was created. |
 
 Issues in this workstream still open: CAL-03 deployment (live P2 exposure), V2UP-C-P3a/P3b (product decisions), LINK-02 (P4). Assigned to Codex: V2UP-B-P2a server half, entitlement-dependent journeys, paywall, webhooks.
+
+## 13. Rollout pass (management decisions after the PR #51/#52 merge)
+
+Integration authority: `f7b686b94fd8e577cc269c7302897d6fb00a5059` (PR #52 merge; contains PR #51 merge `632bf55` with head `c6f6ce9` and PR #52 head `204f0b0`). Exact-head push CI 43494631003: **success**. Work continues on `claude/v2-calendar-security-mitigation-20261113` from that SHA. PR #51 is now merged, which supersedes the "unmerged" reason in §12 verdict 5.
+
+### 13.1 Emergency Production mitigation for CAL-03 (management-authorized)
+
+Source: `supabase/functions/_emergency/calendar-oauth-paused/index.ts`, deployed under the existing `calendar-oauth` slug with verify_jwt unchanged (false). The underscore folder is never deployed as a function of its own. It imports only `_shared/http.ts` and is deployed as exactly those two files (entrypoint at its repository path), so the deployed bytes equal the reviewed bytes.
+
+| Requirement | How it is met | Evidence |
+|---|---|---|
+| Reject new authorization attempts | POST → 503 `{status:'unavailable', reason:'calendar_connect_paused'}`; no state row, no authorization URL | `tests/claude.v2act.calendarMitigation.test.mjs` |
+| Outstanding callbacks cannot exchange or write | GET → 302 `…?status=error&detail=connect_paused`; the file has no fetch, storage or Google secret | Same suite: an authorization started under the pinned pre-repair handler and completed under the mitigation writes nothing and makes no token call |
+| Preserve existing connections and read-only sync | `calendar-data` is not redeployed | Same suite: the pinned `calendar-data` still reports, lists calendars and reads with the mitigation live |
+| Preserve disconnect | Same | Same suite: disconnect removes only the caller's row |
+| No schema, credential or unrelated change | One function slug only | File-scan test: single import, no storage, secret or network tokens |
+| Shipped builds degrade quietly | The shipped bridge maps an unavailable start to the hidden "dormant" state before opening any browser | Pinned-source assertion in the suite |
+
+Known, accepted consequences:
+- **Lapsed connections:** a user whose existing connection needs re-authorization can't reconnect until the permanent repair ships. On builds before PR #52 they also can't remove it in-app, because the deployed `calendar-data` refuses disconnect for `reauth_required` (the CAL-02 fix is not yet in Production).
+- **Unauthenticated start:** an unauthenticated POST gets 503 instead of 401. The mitigation reads no account, so nothing is exposed.
+
+Live BEFORE evidence (read-only probes, 2026-11-13T19:49:37Z), identical in Production and Staging:
+- `calendar-oauth` POST without auth → 401.
+- `calendar-oauth` GET with a forged code and state → `302 herkeys://calendar-connected/?status=error&detail=invalid_state` (the state-lookup and exchange path is live).
+- `calendar-data` POST without auth → 401.
+
+Deployment status: **BLOCKED.** After the `/mcp` reconnection request the Supabase MCP tools were still not available to this session. So the deployed bundle could not be retrieved for rollback, the project identities could not be confirmed, and nothing was deployed.
+
+Procedure once tools are available:
+1. Confirm the Production project is `npykvnxnehlsdlbumzwk` in the Her Keys organization.
+2. Retrieve and save the current `calendar-oauth` bundle and version as the rollback artifact, and compare it with `4f17b91` (expected LF SHA-256 `d1292f9a…22ad0`).
+3. Record `select status, count(*) from external_calendar_connections group by status` (counts only).
+4. Deploy the two mitigation files: entrypoint `_emergency/calendar-oauth-paused/index.ts`, slug `calendar-oauth`, verify_jwt=false.
+5. Read back the bundle and compare.
+6. AFTER probes:
+   - POST → 503 `calendar_connect_paused`;
+   - GET forged → `detail=connect_paused`;
+   - `calendar-data` POST without auth → 401, version unchanged;
+   - connection counts unchanged.
+7. Rollback: redeploy the saved bundle and confirm the BEFORE responses return.
+
+### 13.2 Staging rollout of the permanent repair
+
+Status: **BLOCKED** (same tool unavailability). Ordered plan:
+1. Confirm the Staging project is `fhhudicklmpofuzkxeqe`.
+2. List migrations and confirm `20261113191332_calendar_oauth_authenticated_completion` is absent.
+3. Retrieve and save the current `calendar-oauth` and `calendar-data` bundles.
+4. Apply the migration, then read back the four columns, the CHECK, the partial unique index, no anon/authenticated privilege and no policy.
+5. Deploy `calendar-data` (CAL-02) and `calendar-oauth` (CAL-03/04) from `f7b686b`. Read back and compare (LF SHA-256 `b569e401…31cf1` and `69fe5b84…f532af`).
+6. Backend checks, all with marked synthetic accounts and synthetic rows (no Google account):
+   - unauthenticated 401 on both functions;
+   - forged callback → `invalid_state` and no handle;
+   - SQL-seeded pending authorization redeemed by the wrong account → 403, then by the right account → 409 (already consumed);
+   - malformed handle → 400;
+   - `calendar-data` disconnect of a synthetic `reauth_required` row owned by the caller → 200 and the row gone; a second disconnect → 200; another account's row untouched;
+   - every synthetic row removed afterwards.
+7. Restoration: redeploying the saved bundles restores the previous behavior; the additive columns may stay (nullable, unused by the old code).
+
+The genuine "authenticated completion with Google" check needs a real Google consent, which happens only in §13.3. Backend checks are not native certification.
+
+### 13.3 Native compatibility test (Android and iOS development builds)
+
+The `development` EAS profile targets Staging (`EXPO_PUBLIC_HERKEYS_BACKEND=staging`), with identities unchanged (iOS `com.herkeys.app`, Android `com.heykeys.app`, scheme `herkeys`). Any build from `f7b686b` or later contains the completion flow. After §13.2 is deployed, test with a marked synthetic Her Keys account and a test Google account:
+
+1. **Connect:** the consent screen lists only the two read-only scopes; the return lands in the app; the panel shows "Google Calendar connected" with the primary calendar selected; events appear in Day view.
+2. **Cancel** on the consent screen: the app returns, nothing is connected, and Connect works again.
+3. **Account switch:** start Connect, background the app, sign out and sign in as a second synthetic account, then finish consent. Neither account may be connected.
+4. **Old build:** a build older than PR #52 returns from Connect without connecting against Staging (expected; covered by the coordinated rollout).
+5. **Reconnect and choices:** reconnect keeps the earlier calendar choice; Disconnect removes the connection; a connection marked `reauth_required` (revoke access in the Google account) can be disconnected.
+6. **Android delivery:** the redirect is captured by the auth session, not delivered as a stray deep link. Check with Chrome Custom Tabs and with a non-Chrome default browser.
+
+Production rollout of the permanent repair, all of which must happen first:
+- this native pass is green on both platforms;
+- a build containing the flow is in testers' hands;
+- the Production migration is applied;
+- `calendar-oauth` and `calendar-data` are deployed together, replacing the mitigation.
+
+### 13.4 Talk It Out v13 → v14 (separate from the Calendar mitigation)
+
+Packet as in §5, validated at source and unchanged. It is deployed on its own, never combined with a Calendar change. Status: **BLOCKED** (bundle comparison and deployment need the tools).
+
+Evidence to record when it runs:
+- the Staging v22 and Production v13 bundle hashes against the source hashes in §4;
+- the v14 readback;
+- probes: 401 without auth (baseline PASS 2026-11-13); 403 for a synthetic account without current AI consent;
+- one schema-valid uncertainty turn with consent granted, then consent restored to its prior value.
+
+Rollback: the 0a93e9c three-file bundle.
+
+### 13.5 Safety controls
+
+Not touched in this pass: checkout, test-store checkout, fixtures and account-deletion controls. Their live state could not be re-read without the tools; the last recorded state is OFF / OFF / OFF and disabled / dry-run (Codex 11-13).
