@@ -240,6 +240,24 @@ const LATER_FEATURES = [
     ],
   },
   {
+    id: 'HK-CLAUDE-V2-ACTIVATION-20261113 (application activation, Google Calendar lifecycle repairs and activation ledger)',
+    // Parallel to the Codex RevenueCat lane: no src/monetization, RevenueCat or shared Premium server file. No migration, schema,
+    // root collection, sync kind, RLS or permission change.
+    branch: null,
+    owned: [], migrations: [], schemas: [], rootCollections: [], syncKinds: [],
+    shared: [
+      ['src/features/calendar/useGoogleCalendarBridge.ts', 'HK-V2ACT-CAL-01: apply provider answers only to the current account/day request; disconnect supersedes in-flight loads'],
+      ['src/features/calendar/GoogleCalendarPanel.tsx', 'HK-V2ACT-CAL-02: a connection needing re-authorization can be removed with the existing confirmed Disconnect'],
+      ['supabase/functions/calendar-data/index.ts', 'HK-V2ACT-CAL-02: delete the stored connection in every state, scoped to the caller, idempotent; no deployment implied'],
+      ['supabase/functions/calendar-oauth/index.ts', 'HK-V2ACT-CAL-04: every callback failure returns to the app instead of a JSON page; no deployment implied'],
+      ['tests/claude.v2act.calendarConnection.test.mjs', 'Execute the shipping calendar handlers and the real bridge/panel through stale, account, disconnect and failure races'],
+      ['tests/support/v2actCalendarPorts.mjs', 'Controllable account and provider ports for the calendar bridge tests'],
+      ['.github/workflows/v2-integration-validation.yml', 'Run the unchanged mandatory gate on this lane’s exact pushed SHA'],
+      ['scripts-dev/meals-boundary-scan.cjs', 'Register this lane and its changed files'],
+      ['docs/handoffs/V2_CLAUDE_ACTIVATION_20261113.md', 'Activation matrix, journeys, parity, defect ledger, promotion packet and RevenueCat handoff with evidence limits stated'],
+    ],
+  },
+  {
     id: 'HK-V2-AUTONOMOUS-UPGRADE-20261112 (V2 source candidate: Today/Daily Load, Talk It Out, Premium, Onboarding, Native UX)',
     // Exact-file ownership of the five V2 upgrade workstreams plus the integration's own repairs. No migration, schema, root collection,
     // sync kind, backend contract or permission change: every unrelated path stays default-deny.

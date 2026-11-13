@@ -176,8 +176,10 @@ Deno.serve(async (req) => {
     if (req.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
     return await begin(req);
   } catch (error) {
+    // The GET callback is opened by Google inside the app's auth browser, which waits for the app redirect. A bare JSON body there
+    // strands her on a blank page, so every callback failure — a restricted account included — returns to the app (HK-V2ACT-CAL-04).
+    if (req.method === 'GET') return appRedirect('error', error instanceof AuthError ? 'account_restricted' : 'internal_error');
     if (error instanceof AuthError) return json({ error: 'unauthorized' }, 401);
-    if (req.method === 'GET') return appRedirect('error', 'internal_error');
     console.error('[calendar-oauth] internal error', error instanceof Error ? error.name : 'unknown');
     return json({ status: 'unavailable', reason: 'calendar_oauth_internal_error' }, 500);
   }

@@ -1,5 +1,5 @@
 import * as WebBrowser from 'expo-web-browser';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { addDays, toInstant, zonedTimeToEpochMs } from '../../domain/logicalDay';
 import type { ExternalCalendar, ExternalCalendarEvent } from '../../external/types';
 import { useOptionalAccount } from '../../store/AccountProvider';
@@ -24,6 +24,17 @@ export interface GoogleCalendarBridge {
 
 export function useGoogleCalendarBridge(selectedDate: string, timezone: string, loadEvents: boolean): GoogleCalendarBridge {
   const account = useOptionalAccount();
+  // Every provider answer is about ONE account and ONE requested day. A reload starts whenever either changes, and an answer is
+  // applied only if no newer request (another day, another account, a disconnect, a calendar choice, unmount) has started since it
+  // was asked. Without this fence a slow answer for the previous day, or for an account that has since signed out, overwrote the
+  // newer one (HK-V2ACT-CAL-01).
+  const accountKey = account?.state.kind === 'accountBound' ? account.state.session.accountId : null;
+  const generation = useRef(0);
+  const begin = useCallback(() => {
+    generation.current += 1;
+    const mine = generation.current;
+    return () => mine === generation.current;
+  }, []);
   const [availability, setAvailability] = useState<Availability>('checking');
   const [calendars, setCalendars] = useState<ExternalCalendar[]>([]);
   const [selectedCalendarIds, setSelectedCalendarIds] = useState<string[]>([]);
@@ -37,8 +48,9 @@ export function useGoogleCalendarBridge(selectedDate: string, timezone: string, 
     return { timeMin: toInstant(start), timeMax: toInstant(end) };
   }, [selectedDate, timezone]);
 
-  const loadConnected = useCallback(async () => {
+  const loadConnected = useCallback(async (current: () => boolean) => {
     const calendarResult = await externalIntelligenceClient.listCalendars();
+    if (!current()) return;
     if (calendarResult.kind !== 'ready') {
       setAvailability(calendarResult.kind === 'unauthorized' ? 'dormant' : 'error');
       setError(calendarResult.kind === 'unavailable' ? calendarResult.reason : null);
@@ -55,6 +67,7 @@ export function useGoogleCalendarBridge(selectedDate: string, timezone: string, 
     }
 
     const eventResult = await externalIntelligenceClient.calendarEvents(range.timeMin, range.timeMax);
+    if (!current()) return;
     if (eventResult.kind === 'ready') {
       setEvents(eventResult.value.events);
       setAvailability('connected');
@@ -67,7 +80,8 @@ export function useGoogleCalendarBridge(selectedDate: string, timezone: string, 
   }, [range.timeMin, range.timeMax, loadEvents]);
 
   const refresh = useCallback(async () => {
-    if (account?.state.kind !== 'accountBound') {
+    const current = begin();
+    if (accountKey === null) {
       setAvailability('dormant');
       setCalendars([]);
       setEvents([]);
@@ -75,6 +89,7 @@ export function useGoogleCalendarBridge(selectedDate: string, timezone: string, 
     }
 
     const status = await externalIntelligenceClient.calendarStatus();
+    if (!current()) return;
     if (status.kind === 'unauthorized') {
       setAvailability('dormant');
       return;
@@ -96,12 +111,15 @@ export function useGoogleCalendarBridge(selectedDate: string, timezone: string, 
       return;
     }
 
-    await loadConnected();
-  }, [account?.state.kind, loadConnected]);
+    await loadConnected(current);
+  }, [accountKey, begin, loadConnected]);
 
   useEffect(() => {
     let live = true;
     setAvailability('checking');
+    // Another account or another day must never show the previous one's calendars or events while it loads.
+    setCalendars([]);
+    setEvents([]);
     void refresh().catch((cause) => {
       if (!live) return;
       setAvailability('error');
@@ -109,11 +127,13 @@ export function useGoogleCalendarBridge(selectedDate: string, timezone: string, 
     });
     return () => {
       live = false;
+      // Unmount, or a new account/day: every answer still in flight is now stale.
+      generation.current += 1;
     };
   }, [refresh]);
 
   const connect = useCallback(async () => {
-    if (busy || account?.state.kind !== 'accountBound') return;
+    if (busy || accountKey === null) return;
     setBusy(true);
     setError(null);
     try {
@@ -133,14 +153,17 @@ export function useGoogleCalendarBridge(selectedDate: string, timezone: string, 
     } finally {
       setBusy(false);
     }
-  }, [busy, account?.state.kind, refresh]);
+  }, [busy, accountKey, refresh]);
 
   const disconnect = useCallback(async () => {
     if (busy) return;
+    // A disconnect supersedes any load still in flight: that load's answer must not reinstate the calendars being removed.
+    const current = begin();
     setBusy(true);
     setError(null);
     try {
       const result = await externalIntelligenceClient.disconnectCalendar();
+      if (!current()) return;
       if (result.kind === 'ready') {
         setAvailability('disconnected');
         setCalendars([]);
@@ -152,27 +175,29 @@ export function useGoogleCalendarBridge(selectedDate: string, timezone: string, 
     } finally {
       setBusy(false);
     }
-  }, [busy]);
+  }, [busy, begin]);
 
   const toggleCalendar = useCallback(async (id: string) => {
     if (busy) return;
     const next = selectedCalendarIds.includes(id)
       ? selectedCalendarIds.filter((value) => value !== id)
       : [...selectedCalendarIds, id];
+    const current = begin();
     setBusy(true);
     setError(null);
     try {
       const result = await externalIntelligenceClient.selectCalendars(next);
+      if (!current()) return;
       if (result.kind === 'ready') {
         setSelectedCalendarIds(result.value.selectedCalendarIds);
-        await loadConnected();
+        await loadConnected(current);
       } else {
         setError(result.kind === 'unavailable' ? result.reason : 'Could not change calendars');
       }
     } finally {
       setBusy(false);
     }
-  }, [busy, selectedCalendarIds, loadConnected]);
+  }, [busy, begin, selectedCalendarIds, loadConnected]);
 
   return {
     availability,

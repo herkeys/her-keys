@@ -37,6 +37,15 @@ export function GoogleCalendarPanel({
           onPress={() => void bridge.connect()}
           style={styles.button}
         />
+        {/* A connection that needs re-authorization is still stored. She can remove it without reconnecting first (HK-V2ACT-CAL-02). */}
+        {bridge.availability === 'reauth_required' ? (
+          <Button label="Disconnect" variant="ghost" size="sm" disabled={bridge.busy} onPress={() => confirmDisconnect(bridge.disconnect)} style={styles.button} />
+        ) : null}
+        {bridge.error && bridge.availability === 'reauth_required' ? (
+          <AppText variant="supporting" color={color.text.secondary} style={styles.body} accessibilityRole="alert">
+            Google Calendar could not be disconnected. Try again.
+          </AppText>
+        ) : null}
       </Card>
     );
   }
@@ -93,16 +102,7 @@ export function GoogleCalendarPanel({
             variant="ghost"
             size="sm"
             disabled={bridge.busy}
-            onPress={() =>
-              Alert.alert(
-                'Disconnect Google Calendar?',
-                'Her Keys will remove its stored Calendar connection and ask Google to revoke the app’s OAuth access. Your Google Calendar events will not be changed.',
-                [
-                  { text: 'Cancel', style: 'cancel' },
-                  { text: 'Disconnect', style: 'destructive', onPress: () => void bridge.disconnect() },
-                ],
-              )
-            }
+            onPress={() => confirmDisconnect(bridge.disconnect)}
           />
         </View>
       </Card>
@@ -140,6 +140,17 @@ function ExternalEvents({ events, timezone }: { events: ExternalCalendarEvent[];
         ))}
       </View>
     </Card>
+  );
+}
+
+function confirmDisconnect(disconnect: () => Promise<void>): void {
+  Alert.alert(
+    'Disconnect Google Calendar?',
+    'Her Keys will remove its stored Calendar connection and ask Google to revoke the app’s OAuth access. Your Google Calendar events will not be changed.',
+    [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Disconnect', style: 'destructive', onPress: () => void disconnect() },
+    ],
   );
 }
 

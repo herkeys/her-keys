@@ -184,22 +184,34 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (!connection) return json({ status: 'ready', connection: { connected: false, state: 'disconnected' } }, 409);
-    if (connection.status !== 'connected') return json({ status: 'ready', connection: { connected: false, state: connection.status } }, 409);
-
+    // Removing the stored connection must work in EVERY state (HK-V2ACT-CAL-02). A connection whose Google grant lapsed
+    // (reauth_required) or was revoked still holds this account's encrypted refresh token and calendar choices; refusing to
+    // delete it until she reconnects kept that material stored against her wish. Disconnecting nothing is already done.
     if (action === 'disconnect') {
-      const refreshToken = await decryptSecret(connection.refresh_token_ciphertext, connection.refresh_token_iv);
+      if (!connection) return json({ status: 'ready', connection: { connected: false, state: 'disconnected' } });
       try {
+        // Best effort: Google revocation is a courtesy; the local credential is deleted whether or not it succeeds.
+        const refreshToken = await decryptSecret(connection.refresh_token_ciphertext, connection.refresh_token_iv);
         await fetch('https://oauth2.googleapis.com/revoke', {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
           body: new URLSearchParams({ token: refreshToken }),
+          signal: AbortSignal.timeout(10000),
         });
-      } finally {
-        await adminClient().from('external_calendar_connections').delete().eq('id', connection.id);
+      } catch {
+        // The stored grant may already be invalid or undecryptable; deletion below is what matters.
       }
+      const { error: deleteError } = await adminClient()
+        .from('external_calendar_connections')
+        .delete()
+        .eq('id', connection.id)
+        .eq('user_id', user.id);
+      if (deleteError) throw deleteError;
       return json({ status: 'ready', connection: { connected: false, state: 'disconnected' } });
     }
+
+    if (!connection) return json({ status: 'ready', connection: { connected: false, state: 'disconnected' } }, 409);
+    if (connection.status !== 'connected') return json({ status: 'ready', connection: { connected: false, state: connection.status } }, 409);
 
     const token = await accessToken(connection);
     const calendars = await liveCalendars(token);
