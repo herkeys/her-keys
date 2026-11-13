@@ -129,6 +129,16 @@ const INTEGRATION_CHECKPOINTS = ['363e473fdf053547a21a41a67b7f62bd9aa2bcdf'];
  */
 const LATER_FEATURES = [
   {
+    id: 'HK-CODEX-V2-HOSTED-ISOLATION-20261113 (rollback-only Staging policy verification)',
+    branch: null,
+    owned: [], migrations: [], schemas: [], rootCollections: [], syncKinds: [],
+    shared: [
+      ['supabase/blueprints/codex-v2-staging-isolation-20261113.sql', 'Exercise actual deployed ownership policies on pinned synthetic accounts inside a rolled-back transaction'],
+      ['docs/handoffs/V2_CODEX_ACCOUNT_ISOLATION_20261113.md', 'Record positive and negative database policy evidence, rollback verification and explicit runtime limits'],
+      ['docs/handoffs/evidence/V2_STAGING_ISOLATION_20261113.json', 'Retain sixteen actual hosted policy assertions and setup failures without private user data'],
+    ],
+  },
+  {
     id: 'HK-CODEX-V2-RECOVERY-20261113 (isolated recovery lifecycle and real certification)',
     branch: null,
     owned: [], migrations: [], schemas: [], rootCollections: [], syncKinds: [],
