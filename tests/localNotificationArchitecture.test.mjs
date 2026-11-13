@@ -90,6 +90,8 @@ describe('local notification architecture boundary', () => {
       'premium-reconcile': 'authenticated "verify my subscription" read of RevenueCat; no notification path',
       'premium-ops': 'operator-secret backlog and reconcile endpoint; no notification path',
       'smart-inbox-extract': 'authenticated Premium extraction of typed proposals from pasted text; returns data to the caller, sends nothing',
+      // HK-V2ACT-CAL-03 emergency mitigation. Reviewed: answers 503 or a redirect to the app only; no storage, network or notification path.
+      _emergency: 'Calendar connect pause (deployed under the calendar-oauth slug); no storage, network, push or notification path',
     };
     const functions = readdirSync('supabase/functions').filter((name) => name !== 'node_modules' && statSync(`supabase/functions/${name}`).isDirectory());
     for (const name of functions) {
