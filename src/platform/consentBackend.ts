@@ -1,6 +1,7 @@
 import type { AccountSession } from '../domain/account/identity';
 import { consentStatus, HER_KEYS_CONSENT_VERSIONS, type ConsentReceipt, type HerKeysConsentType } from '../domain/consent';
 import { createSupabaseClient } from './supabaseCloud';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 export type ConsentReadResult =
   | { kind: 'ok'; receipts: ConsentReceipt[] }
@@ -15,8 +16,7 @@ export interface ConsentChoice {
  * A short-lived authenticated client for the append-only consent ledger.
  * It has no durable Supabase session storage and never adopts a new household.
  */
-export function createConsentLedger(session: AccountSession) {
-  const client = createSupabaseClient();
+export function createConsentLedger(session: AccountSession, client: SupabaseClient | null = createSupabaseClient()) {
   const authorized = async () => {
     if (!client) return false;
     try {
@@ -30,12 +30,17 @@ export function createConsentLedger(session: AccountSession) {
   const read = async (): Promise<ConsentReadResult> => {
     if (!(await authorized()) || !client) return { kind: 'unavailable' };
     try {
-      const { data, error } = await client.from('account_consents')
+      // Read the latest of EACH type. Frequent AI-choice changes must never push
+      // mandatory legal receipts out of a shared history limit.
+      const answers = await Promise.all(Object.keys(HER_KEYS_CONSENT_VERSIONS).map((type) => client.from('account_consents')
         .select('consent_type,policy_version,granted,recorded_at')
         .eq('account_id', session.accountId)
+        .eq('consent_type', type)
         .order('recorded_at', { ascending: false })
-        .limit(100);
-      if (error || !data) return { kind: 'unavailable' };
+        .order('id', { ascending: false })
+        .limit(1)));
+      if (answers.some(({ data, error }) => error || !data)) return { kind: 'unavailable' };
+      const data = answers.flatMap((answer) => answer.data ?? []);
       const valid = data.filter((r) =>
         typeof r.consent_type === 'string' &&
         Object.hasOwn(HER_KEYS_CONSENT_VERSIONS, r.consent_type) &&
@@ -71,5 +76,21 @@ export function createConsentLedger(session: AccountSession) {
       return decision.legalAccepted && decision.aiDecisionRecorded ? observed : { kind: 'unavailable' };
     } catch { return { kind: 'unavailable' }; }
   };
-  return { read, record };
+  const changeAiProcessing = async (granted: boolean): Promise<ConsentReadResult> => {
+    if (typeof granted !== 'boolean' || !client || !await authorized()) return { kind: 'unavailable' };
+    try {
+      const { error } = await client.from('account_consents').insert({
+        account_id: session.accountId,
+        consent_type: 'ai_processing',
+        policy_version: HER_KEYS_CONSENT_VERSIONS.ai_processing,
+        granted,
+      });
+      if (error) return { kind: 'unavailable' };
+      const observed = await read();
+      if (observed.kind !== 'ok') return observed;
+      const decision = consentStatus(observed.receipts);
+      return decision.aiDecisionRecorded && decision.aiPermitted === granted ? observed : { kind: 'unavailable' };
+    } catch { return { kind: 'unavailable' }; }
+  };
+  return { read, record, changeAiProcessing };
 }

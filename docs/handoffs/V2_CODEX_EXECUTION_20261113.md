@@ -20,11 +20,13 @@ Observed local checks: Expo install compatibility PASS; Expo Doctor 21/21 PASS; 
 
 Audit: starting 17 reported vulnerabilities (one critical); after patch alignment and shell-quote update, six remain (zero critical, three high, three moderate). These totals include dependency-chain entries, not six distinct exploits. Router/query-string/decode-uri-component remains vulnerable; the native input filter is mitigation, not a dependency fix. Fingerprint/minimatch tooling advisory remains. No SDK 58 migration or forced audit fix performed.
 
-Full regression and exact-head CI results will be recorded after completion. An initial local invocation omitted the repository TypeScript loaders and was stopped after module-resolution failures; it is not valid product-failure evidence. The corrected serial run includes both repository loaders.
+Baseline PR #45 merged into the authorized V2 convergence branch at `1926676bb4a5e9f5a5232e9b7444bafeb30fbd09`. Repair commits: `0f5da909d64e33f0a9cdc3f061ab7705e02502b5` and `0a93e9c745abc1eab110983d0167c5c1dc715385`. Exact-head push CI 43424556478 and PR CI 43424566512 both PASS at the latter repair SHA: 5,563 source tests passed, zero failed/skipped; 127 launch-critical tests passed; all other workflow checks passed. Local focused Meals boundary (13), deep-link (22), native dependency (6) checks pass 41/41 after npm 10 clean installation. Merge-head CI must be checked independently.
+
+An initial local invocation omitted the repository TypeScript loaders and was stopped after module-resolution failures; it is not valid product-failure evidence. The corrected serial run finished 5,562 pass / 1 fail / 0 skipped; the failure required preserving the established Expo tilde range syntax, repaired without changing tests. The focused suite then passed 6/6 and the complete corrected tree passed CI as above.
 
 ## Live external observations
 
-Both Her Keys Supabase projects reported ACTIVE_HEALTHY. Read-only inspection of deployed herkeys-ai source in both environments confirms an unconditional affirmative, current-version AI consent gate before provider invocation. Both deployed functions still import Zod 4.6.5: server patch deployment is outstanding.
+Both Her Keys Supabase projects reported ACTIVE_HEALTHY. Inspection of deployed herkeys-ai source in both environments confirms an unconditional affirmative, current-version AI consent gate before provider invocation. The approved Zod patch is now deployed: Staging version 21, Production version 13. Both retrieved bundles match reviewed source, both require JWTs, and both reject anonymous-role and missing authentication with 401. See V2_CODEX_BACKEND_DEPLOYMENTS_20261113.md for identity, sequence, verification limits and rollback.
 
 RevenueCat project proj93809efe:
 
@@ -36,9 +38,19 @@ RevenueCat project proj93809efe:
 - Daily Load Premium, Smart Inbox extraction and Momentum are enabled/released in both databases; Staging rollout is staging_only, Production general. Village and Co-Parent Plus are disabled/unreleased. Runtime reachability and successful actions are NOT_YET_VERIFIED by this pass.
 - Both live runtime configurations keep checkout_enabled=false and test_store_checkout_enabled=false. Production allow_test_fixtures=false; Staging true. Premium and webhook processing are enabled in both.
 - Router source inspection shows web cold starts bypass +native-intent. The native filter alone is insufficient evidence of protection across all platforms. Follow-up remediation required before the security entry-point check can pass.
+- Resend reports herkeys.app verified with sending enabled, DKIM and SPF records verified; tracking disabled. This is configuration evidence, not recovery delivery certification. Resend conversation ID for continued tool calls: `01a1d4dc-d319-72de-b4c6-708c08058fd3`.
+- Supabase CLI defaults to an unrelated account; do not deploy with that CLI identity. The Her Keys Supabase connector reaches both intended projects. Auth provider/SMTP settings are not exposed by that connector. Browser inventory had no accessible browser host; native Chrome access timed out awaiting app access. Dashboard-only settings remain unverified.
 
-No hosted configuration, migration or function deployment has been made by this checkpoint. No checkout gate has been changed. No signed build or store submission has been generated.
+Only the reviewed AI-function Zod dependency patch has been deployed. No hosted configuration, schema, migration, RLS or checkout gate has been changed. No signed build or store submission has been generated.
+
+## Consent management and account transition repair
+
+Implementation in progress: Your Account offers explicit AI-choice review using the approved existing disclosure, then grant or revoke. The adapter appends only the AI receipt and confirms the observed decision; it does not restate mandatory legal acceptance. Read the newest receipt per policy type so repeated AI changes cannot hide older legal acceptance. Unknown outcomes are reported as unconfirmed; new choices remain disabled until the ledger is checked. Account-key remount drops late UI save results.
+
+Confirmed defect CODEX-CONSENT-01 (P1): the legal gate's pending save used the current session reference to advance stage after await, so an old-account save could move a replacement account to the optional permissions screen; previous legal selections also survived account changes. Repair fences each save by account-lifetime object, captures its session before awaiting, drops stale completion, resets selections, and prevents duplicate submit before render. Regression exercises A to B and A to B to A while the save is pending.
+
+Focused consent/account-status/governance tests: 79/79 pass; TypeScript passes. Shipping AI-handler executable tests: 20/20 pass. Full source regression and consent PR CI are pending. This is source evidence; real authenticated Staging revocation remains outstanding.
 
 ## Remaining execution
 
-Finish baseline review, complete source regression and green exact-head CI; create and merge the focused baseline PR into V2 convergence. Then continue authentication and actual recovery delivery, consent management and revocation, hostile isolation, all core features and journeys, deployed/source reconciliation, RevenueCat/paywall/store integration and webhook delivery, activation matrix and final platform handoff. Keep native purchase certification NOT_RUN until actual native evidence exists. Do not treat this ledger as completion of any unverified category.
+Baseline PR #45 is merged and its convergence-head CI 43434458985 PASS at 1926676bb4a5e9f5a5232e9b7444bafeb30fbd09. Finish consent repair validation/merge, then continue authentication and actual recovery delivery, live revocation, hostile isolation, all core features and journeys, remaining deployed/source reconciliation, RevenueCat/paywall/store integration and webhook delivery, activation matrix and final platform handoff. Keep native purchase certification NOT_RUN until actual native evidence exists. Do not treat this ledger as completion of any unverified category.
