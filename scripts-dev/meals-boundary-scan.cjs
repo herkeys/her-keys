@@ -272,6 +272,18 @@ const LATER_FEATURES = [
     ],
   },
   {
+    id: 'HK-ANDROID-V2-EAS-READINESS-20261113 (Android hostile audit, documentation only)',
+    // Audit package only: no app, backend, migration, permission, identity, signing or release-script change.
+    branch: null,
+    owned: [],
+    migrations: [],
+    schemas: [], rootCollections: [], syncKinds: [],
+    shared: [
+      ['docs/audits/android-v2-eas-readiness-20261113/REPORT.md', 'Android EAS readiness verdict, activation matrix, defect ledger, Play compliance and device handoff; no executable behavior'],
+      ['scripts-dev/meals-boundary-scan.cjs', 'Register this documentation-only lane'],
+    ],
+  },
+  {
     id: 'HK-V2-AUTONOMOUS-UPGRADE-20261112 (V2 source candidate: Today/Daily Load, Talk It Out, Premium, Onboarding, Native UX)',
     // Exact-file ownership of the five V2 upgrade workstreams plus the integration's own repairs. No migration, schema, root collection,
     // sync kind, backend contract or permission change: every unrelated path stays default-deny.
