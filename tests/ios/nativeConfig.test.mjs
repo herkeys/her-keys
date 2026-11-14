@@ -45,8 +45,12 @@ describe('iOS identity and Sign in with Apple', () => {
     assert.equal(infoPlist.NSUserTrackingUsageDescription, undefined);
   });
 
-  test('iPhone only', () => {
-    assert.equal(config.ios.supportsTablet, false);
+  test('universal: iPhone + iPad, iPhone portrait-only, iPad every orientation and resizable (IOS-FIX-001)', () => {
+    assert.equal(config.ios.supportsTablet, true);
+    assert.notEqual(config.ios.isTabletOnly, true);
+    assert.deepEqual(infoPlist.UISupportedInterfaceOrientations, ['UIInterfaceOrientationPortrait', 'UIInterfaceOrientationPortraitUpsideDown']);
+    assert.equal(infoPlist['UISupportedInterfaceOrientations~ipad'].length, 4);
+    assert.equal(infoPlist.UIRequiresFullScreen, false);
   });
 });
 
