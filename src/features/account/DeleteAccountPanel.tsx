@@ -1,10 +1,11 @@
 import {useState} from 'react';
-import {Linking,ScrollView,TextInput,View} from 'react-native';
+import {Linking,Platform,ScrollView,TextInput,View} from 'react-native';
 import {AppText,Button} from '../../design/components';
 import { radius } from '../../design/tokens';
 import { themed, useTheme } from '../../design/theme';
 import { useAnnounceOnIOS } from '../../design/announce';
 import { HER_KEYS_LEGAL_URLS } from '../../config/legal';
+import { subscriptionManagementUrl } from '../../monetization/subscriptionManagement';
 
 // Presentation only (HK-FE-UI-02): the two entry fields used a grey literal; they now use the control-border token.
 const fieldStyleFor=themed(({color})=>({borderWidth:1,borderColor:color.border.control,backgroundColor:color.surface.primary,color:color.text.primary,padding:14,borderRadius:radius.md} as const));
@@ -15,6 +16,7 @@ export function DeleteAccountPanel({onBack}:{onBack:()=>void}) {
  const fieldStyle=fieldStyleFor(useTheme());
  const [email,setEmail]=useState(''),[code,setCode]=useState(''),[busy,setBusy]=useState(false),[notice,setNotice]=useState('');
  const account=useAccount();
+ const storeSubscriptionsUrl=subscriptionManagementUrl(Platform.OS);
  // The notice below is an Android live region; VoiceOver has none, so a new result is also spoken on iOS.
  useAnnounceOnIOS(notice);
  // A store/browser that cannot open a page must say so, not fail silently.
@@ -24,11 +26,10 @@ export function DeleteAccountPanel({onBack}:{onBack:()=>void}) {
   <AppText variant="hero" accessibilityRole="header">Privacy & Data</AppText>
   <AppText variant="title">Delete Account</AppText>
   <AppText>Confirming stops account access and synchronization immediately. You have 30 days from the server-recorded request to recover through email. After that, automated permanent deletion removes your account-owned household, child, task, calendar, private, and associated records. Shared ownership exceptions are reviewed to protect other members.</AppText>
-  <AppText>Account deletion does not cancel an Apple or Google subscription. Cancel Premium through your store. Provider records and backups may follow their disclosed retention schedules; see our Privacy Policy.</AppText>
+  <AppText>Account deletion does not cancel Premium. Billing continues until you cancel through the store where you subscribed. Provider records and backups may follow their disclosed retention schedules; see our Privacy Policy.</AppText>
   <AppText>If you use Sign in with Apple, Her Keys asks Apple to revoke its access when Apple has given us the token to do so. Older sign-ins may not have one; your data is still deleted, and you can remove Her Keys yourself on iPhone in Settings, your name, Sign-In & Security, Sign in with Apple.</AppText>
   <AppText>After verified purge, only minimal receipt-hash proof, verification times, aggregate counts and expiry are kept for 365 days. A daily job removes expired proof. Missing proof never confirms deletion; an explicit local reset remains available. Completion-email delivery uses a separate encrypted outbox for at most seven days.</AppText>
-  <Button variant="secondary" label="Apple subscriptions" onPress={()=>open('https://apps.apple.com/account/subscriptions')}/>
-  <Button variant="secondary" label="Google Play subscriptions" onPress={()=>open('https://play.google.com/store/account/subscriptions')}/>
+  {storeSubscriptionsUrl&&<Button variant="secondary" label="Manage subscriptions" onPress={()=>open(storeSubscriptionsUrl)}/>}
   <Button variant="ghost" label="Privacy Policy" onPress={()=>open(HER_KEYS_LEGAL_URLS.privacy)}/>
   <AppText>For your security, verify your account within 10 minutes before confirming. You can use a fresh sign-in or request a sign-in code for your existing account.</AppText>
   <TextInput accessibilityLabel="Account email" placeholder="Account email" autoCapitalize="none" autoCorrect={false} autoComplete="email" textContentType="emailAddress" keyboardType="email-address" value={email} onChangeText={setEmail} style={fieldStyle} placeholderTextColor={color.text.muted}/>

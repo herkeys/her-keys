@@ -3,13 +3,13 @@
  *
  * Calendar is a projection engine, not a scheduler: it must scale with sorting/indexing, never with the
  * number of ALTERNATIVE schedules. These tests measure dense reference fixtures (medians of repeated runs
- * in the local reference environment), report the numbers, and check the two soft product targets:
+ * on the main JavaScript thread), report the numbers, and check the two soft product targets:
  *
  *     single-day projection  < 50 ms median
  *     seven-day projection   < 150 ms median
  *
- * The targets are diagnostic: they are asserted with headroom so a slow CI machine does not fail an
- * honest build, and the measured medians are printed so the ledger records real numbers.
+ * The projection is synchronous. Thread CPU time measures its work without counting time the OS
+ * spends running other test processes during the full suite. Device latency is measured separately.
  */
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
@@ -17,15 +17,22 @@ import { projectCalendarDay, projectCalendarWeek } from '../src/features/calenda
 import { revisionOf } from '../src/features/calendar/model/revision.ts';
 import { DAY, household, msAt } from './support/calendarScenarios.mjs';
 
-const RUNS = 40;
 const median = (values) => [...values].sort((a, b) => a - b)[Math.floor(values.length / 2)];
-const timeIt = (fn, runs = RUNS) => {
+const timeIt = (fn) => {
   fn(); // warm the JIT and the Intl formatters, as a running app would be
   const samples = [];
-  for (let index = 0; index < runs; index++) {
-    const start = performance.now();
-    fn();
-    samples.push(performance.now() - start);
+  for (let index = 0; index < 5; index++) {
+    const start = process.threadCpuUsage();
+    let microseconds = 0;
+    let iterations = 0;
+    // Windows accounts for CPU time in ticks. Average a batch across several ticks.
+    while (microseconds < 100_000) {
+      fn();
+      iterations++;
+      const { user, system } = process.threadCpuUsage(start);
+      microseconds = user + system;
+    }
+    samples.push(microseconds / iterations / 1000);
   }
   return median(samples);
 };
@@ -66,7 +73,7 @@ describe('measured on dense reference fixtures', () => {
 
   test('seven-day projection: dense week (30 commitments and 10 tasks a day) is well inside the 150 ms target', () => {
     const state = denseHousehold({ events: 30, tasks: 10, days: 7 }).state;
-    const ms = timeIt(() => projectCalendarWeek({ state, selectedDate: '2026-09-16', today: '2026-09-13', nowMs: nowMs() }), 20);
+    const ms = timeIt(() => projectCalendarWeek({ state, selectedDate: '2026-09-16', today: '2026-09-13', nowMs: nowMs() }));
     console.log(`  PERF seven-day, 210 events + 70 tasks: median ${ms.toFixed(2)} ms (target < 150)`);
     assert.ok(ms < 150, `median ${ms.toFixed(1)} ms`);
   });
@@ -89,7 +96,7 @@ describe('measured on dense reference fixtures', () => {
     for (let i = 0; i < 1500; i++) b.task(`tsk-h-${i}`, { title: `Done ${i}`, minutes: 15 });
     b.event('evt-today', { title: 'Today', start: '10:00', end: '11:00' });
     const ms = timeIt(() => projectCalendarDay({ state: b.state, date: DAY, today: DAY, nowMs: msAt('07:00') }));
-    const revisionMs = timeIt(() => revisionOf({ ...b.state }), 10);
+    const revisionMs = timeIt(() => revisionOf({ ...b.state }));
     console.log(`  PERF 3000 stored rows, one day: median ${ms.toFixed(2)} ms; content digest of the whole state: ${revisionMs.toFixed(2)} ms`);
     assert.ok(ms < 50, `median ${ms.toFixed(1)} ms`);
   });
@@ -99,7 +106,7 @@ describe('growth is not combinatorial', () => {
   test('quadrupling a day’s commitments never multiplies the time by anything like the number of arrangements', () => {
     const at = (n) => {
       const state = denseHousehold({ events: n, tasks: Math.floor(n / 3) }).state;
-      return timeIt(() => projectCalendarDay({ state, date: '2026-09-13', today: '2026-09-13', nowMs: nowMs() }), 25);
+      return timeIt(() => projectCalendarDay({ state, date: '2026-09-13', today: '2026-09-13', nowMs: nowMs() }));
     };
     const small = at(25);
     const large = at(100);
