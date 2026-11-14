@@ -8,7 +8,7 @@
     "icon": "./assets/her-keys-4-house.png",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "supportsTablet": false,
+      "supportsTablet": true,
       "usesAppleSignIn": true,
       "bundleIdentifier": "com.herkeys.app",
       "buildNumber": "2",

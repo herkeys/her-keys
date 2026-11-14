@@ -3,6 +3,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { sizing, spacing } from '../tokens';
 import { createThemedStyles } from '../theme';
+import { iPadReadableColumn } from '../readableColumn';
 
 export interface ScreenProps {
   children: ReactNode;
@@ -23,6 +24,9 @@ export function Screen({ children, scroll = true, bottomClearance }: ScreenProps
   const styles = useStyles();
   const insets = useSafeAreaInsets();
   const bottom = (bottomClearance ?? spacing.xxxl + 68) + insets.bottom;
+  // iPad only (IOS-FIX-002): the non-scrolling body gets the same readable-width cap the scroll content already has. `null` on
+  // iPhone and Android, where nothing is added to the style array.
+  const column = iPadReadableColumn();
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
@@ -38,7 +42,7 @@ export function Screen({ children, scroll = true, bottomClearance }: ScreenProps
           {children}
         </ScrollView>
       ) : (
-        <View style={[styles.flex, { paddingBottom: bottom }]}>{children}</View>
+        <View style={column ? [styles.flex, column, { paddingBottom: bottom }] : [styles.flex, { paddingBottom: bottom }]}>{children}</View>
       )}
     </SafeAreaView>
   );

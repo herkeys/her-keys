@@ -2177,6 +2177,25 @@ const LATER_FEATURES = [
     ],
   },
 
+  {
+    id: 'HK-IOS-IPAD-V2-EAS-READINESS-20261113 (universal iOS device family and iPad-only readable column)',
+    branch: null,
+    owned: [
+      /^src\/design\/readableColumn\.ts$/,
+      /^tests\/ios\/ipadSupport\.test\.mjs$/,
+      /^docs\/audits\/HK_IOS_IPAD_V2_EAS_READINESS_AUDIT_20261113\.md$/,
+    ],
+    migrations: [], schemas: [], rootCollections: [], syncKinds: [],
+    shared: [
+      ['app.json', 'Owner-scoped universal iPhone + iPad release: ios.supportsTablet true only; identity, orientation (iPhone portrait) and every other key unchanged'],
+      ['src/design/components/Screen.tsx', 'iPad only: the non-scrolling body takes the existing 680pt content cap; iPhone and Android style arrays unchanged'],
+      ['src/design/components/Sheet.tsx', 'iPad only: the sheet card takes the existing 680pt content cap; iPhone and Android unchanged'],
+      ['app/(app)/ai.tsx', 'iPad only: Talk It Out conversation frame takes the readable column; iPhone and Android unchanged'],
+      ['app/talk-it-out.tsx', 'iPad only: Talk It Out modal frame takes the readable column; iPhone and Android unchanged'],
+      ['tests/ios/nativeConfig.test.mjs', 'The resolved-config pin moves from iPhone-only to the universal device family the release now targets'],
+      ['scripts-dev/meals-boundary-scan.cjs', 'Register only this audit lane; all boundary assertions remain enforced'],
+    ],
+  },
 ];
 
 /**

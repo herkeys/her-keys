@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import { opacity, radius, spacing, withAlpha } from '../tokens';
 import { createThemedStyles, useTheme } from '../theme';
+import { iPadReadableColumn } from '../readableColumn';
 import { AppText } from './AppText';
 import { Button } from './Button';
 
@@ -21,6 +22,8 @@ export interface SheetProps {
 
 export function Sheet({ visible, onClose, accessibilityLabel, children }: SheetProps) {
   const styles = useStyles();
+  // iPad only (IOS-FIX-002): a centered card at the readable width instead of a full-width strip. `null` on iPhone and Android.
+  const column = iPadReadableColumn();
   return (
     <Modal
       visible={visible}
@@ -33,7 +36,7 @@ export function Sheet({ visible, onClose, accessibilityLabel, children }: SheetP
       <View style={styles.backdrop}>
         {/* The scrim closes the sheet; without a role a screen reader announces it as plain text with no hint that it can be activated. */}
         <Pressable style={StyleSheet.absoluteFill} accessibilityRole="button" accessibilityLabel="Dismiss" accessibilityHint="Closes this panel" onPress={onClose} />
-        <View style={styles.sheet}>
+        <View style={column ? [styles.sheet, column] : styles.sheet}>
           <View style={styles.handle} />
           {children}
         </View>
