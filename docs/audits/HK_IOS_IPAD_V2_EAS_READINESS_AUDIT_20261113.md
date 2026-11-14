@@ -41,20 +41,35 @@ Evidence labels: **PASS(src)** source/test evidence · **PASS(live)** read from 
 - **Step 2 pending.** The changes are in [herkeys/her-keys#57](https://github.com/herkeys/her-keys/pull/57) into `integration/v2-autonomous-upgrade-20261112`. It is not merged.
 - **Verdict once merged.** After the merge and a passing preflight on the V2 branch at the merge SHA (step 3), all three EAS readiness verdicts become **PASS** for that exact SHA. Nothing in this audit is left blocking an EAS build. Every device, store and external item in §09–§11 and §SH remains open.
 
+### Owner direction — RevenueCat / store purchasing SKIPPED (2026-11-13)
+
+The owner directed that the RevenueCat work be **skipped** because of a known RevenueCat connection issue. Every RevenueCat-dependent item below is therefore **SKIPPED · UNTESTED · NOT A BLOCKER**. None of them is a reason for a FAIL verdict in this audit, at any gate (EAS build, TestFlight, App Store submission or public release). They are recorded so the gap stays visible, not to block.
+
+| Item | What was not done | Status |
+|---|---|---|
+| BE-RC-01 | Production promotion of the RevenueCat cross-environment guard (Premium functions: Production v7 vs Staging v9–v11) | SKIPPED, untested, not a blocker |
+| OPS-PREM-01 | Production `checkout_enabled=false` (store purchasing off) | Observed only; SKIPPED, not a blocker |
+| ASR-01 / ASR-08 | In-app purchase review and subscription metadata for App Store submission | SKIPPED, not a blocker |
+| D-07 | Native StoreKit purchase / restore / expiry / account-switch device test | SKIPPED, untested |
+| Historical RC items | App Store Connect API key, Apple product reads (422), published paywall revision | SKIPPED, unverified |
+| RevenueCat dashboard, webhook deliveries, sandbox lifecycle | Not inspected | SKIPPED, untested |
+
+What *was* verified and still stands: the RevenueCat-related **source** suites pass (`platformParity` restore and purchase-readiness suites, `premiumCheckoutSwitch`, `premiumLaunchState`, `v2up.premiumStaleState`), the iOS RevenueCat public SDK key (`appl_`) is present in the production EAS environment, and the client has no contract change with either deployed Premium backend. The rows in §01–§SH that mention these items are superseded by this section.
+
 ---
 
 ## 01 — Executive hostile audit
 
 **Source control.** The candidate is the tip of `integration/v2-autonomous-upgrade-20261112` and equals the verified SHA `9b75343`. There are **no open PRs** in `herkeys/her-keys`; PRs #45–#55 are merged into the candidate; every sibling V2 branch (`claude/v2-*`, `codex/v2-*`) is 0 commits ahead of it. The historical checkpoint `2e0bcfb` (PR #53 merge) is an ancestor, 6 commits behind (PR #54 guard repair, PR #55 Calendar callback/client-ID repair and their docs). No unmerged change is required for the release except this audit's iPad work.
 
-**Overall.** The iPhone application is technically build-ready. The audit found no iOS P0–P3 code defect. It found one configuration gap against the new product scope (iPad support off — repaired), one iPad presentation issue (repaired), one release-control blocker (REL-01), and three shared/external problems that do not affect building but do affect store certification or public release:
+**Overall.** The iPhone application is technically build-ready. The audit found no iOS P0–P3 code defect. It found one configuration gap against the new product scope (iPad support off — repaired), one iPad presentation issue (repaired), one release-control blocker (REL-01, since resolved in source), shared/external problems that do not affect building, and RevenueCat items that the owner directed be skipped (untested, not blockers):
 
 | Highest risks | Gate affected |
 |---|---|
 | REL-01 release branch not authorized by the repository's preflight | EAS build (process gate) |
 | EXT-WEB-01 the account-recovery page `https://herkeys.app/account/restore` returns **404**; both the in-app "Recovery and support" button and every recovery email link there | Public release (and App Store review if exercised) |
-| BE-RC-01 the RevenueCat cross-environment guard (RC-V2-ENV-01, P1) is deployed to Staging only; Production still runs the 2026-10-21 Premium functions | Before Production checkout is enabled / any purchase certification |
-| OPS-PREM-01 `checkout_enabled=false` in Production: Premium cannot be bought | App Store submission decision (IAP review) |
+| BE-RC-01 the RevenueCat cross-environment guard (RC-V2-ENV-01) is deployed to Staging only; Production still runs the 2026-10-21 Premium functions | **SKIPPED by owner direction — untested, NOT a blocker** |
+| OPS-PREM-01 `checkout_enabled=false` in Production: Premium cannot be bought | **SKIPPED by owner direction — NOT a blocker** |
 | No native evidence of any kind (no Mac, no device) | TestFlight acceptance |
 
 ---
@@ -89,7 +104,7 @@ Columns: Impl = implemented · Integ = integrated into navigation/state · Activ
 | 22 | Life Admin / Documents (+ on-device OCR) | Y | Y | Y | Y | Y | PASS(src); `expo-image-picker` presents PHPicker as a popover on iPad (library source verified) | Camera/photo device NOT RUN |
 | 23 | People | Y | Y | Y | Y | Y | PASS(src) | — |
 | 24 | Smart Inbox | Y | Y | Y (released per manifest) | Y — `smart-inbox-extract` bundle `924cad23…` identical both envs PASS(live) | Y | PASS(src) | — |
-| 25 | Premium | Y | Y | **Partially**: `premium_enabled=true`, `checkout_enabled=false` both envs PASS(live) | Prod Premium functions **older** than Staging (BE-RC-01) | Y (Premium home, locked/unavailable copy) | PASS(src) `premiumLaunchState`, `premiumCheckoutSwitch`, `v2up.premiumStaleState` 17/17 | Purchase not offered in Production |
+| 25 | Premium | Y | Y | **Partially**: `premium_enabled=true`, `checkout_enabled=false` both envs PASS(live) | Prod Premium functions **older** than Staging (BE-RC-01) | Y (Premium home, locked/unavailable copy) | PASS(src) `premiumLaunchState`, `premiumCheckoutSwitch`, `v2up.premiumStaleState` 17/17 | Purchase not offered in Production; RevenueCat work SKIPPED by owner direction (not a blocker) |
 | 26 | Subscription purchase / restore | Y (RevenueCat UI paywall, Restore control in Your Account) | Y | Purchase OFF; Restore available | iOS SDK key `appl_…` set in production EAS env | Y | PASS(src) `platformParity/*` (restoreControl 8/8, restoreIdentity 7/7, purchaseReadiness 16/16) | StoreKit NOT RUN |
 | 27 | Account deletion + recovery | Y (OTP re-verification, 30-day recovery) | Y | Y (functions ACTIVE both envs) | Deletion: Y. **Recovery: broken** — web page 404 (EXT-WEB-01) | Y | PASS(src) `deletionGateCovering` 9/9; guard PASS(live) | Worker dry-run state UNVERIFIED |
 | 28 | AI response reporting | Y | Y | Y | Y | Y | PASS(src) `aiResponseReporting` 9/9, `aiReportingRuntime` 9/9 | Live report NOT RUN |
@@ -99,7 +114,7 @@ Columns: Impl = implemented · Integ = integrated into navigation/state · Activ
 | + | Appearance (Light/Dark automatic) | Y | Y | Y (`UIUserInterfaceStyle=Automatic`) | n/a | Y | PASS(src) design-system suites | Rendering NOT RUN |
 | + | Internal tools / design gallery | Y | guarded | **Off** (no `EXPO_PUBLIC_HERKEYS_INTERNAL_TOOLS` in production env) | n/a | No | PASS(src) | Correctly not shipped to users |
 
-**Advertising check.** No copy promises a feature that is switched off, with two exceptions to resolve before review: (a) Premium is presented while checkout is off in Production (OPS-PREM-01); (b) the deletion gate says "Use your recovery email to restore your account" while the recovery page does not exist (EXT-WEB-01).
+**Advertising check.** No copy promises a feature that is switched off, with two exceptions: (a) Premium is presented while checkout is off in Production (OPS-PREM-01 — SKIPPED with the RevenueCat work by owner direction, not a blocker); (b) to resolve before review: the deletion gate says "Use your recovery email to restore your account" while the recovery page does not exist (EXT-WEB-01).
 
 ---
 
@@ -127,10 +142,10 @@ None that is iOS-only. REL-01 (below, shared release control) is the only build-
 | IPAD-UP-01 | P7 | UNPOLISHED | Sheet scroll areas use fixed `maxHeight` 520–600pt; in a short Stage Manager window the sheet top clips (content still scrolls; actions are inside the scroll). | Deferred; full-screen iPad heights (≥744pt) fit. |
 
 ### Shared defects (not repaired — handoff in §SH below)
-REL-01, EXT-WEB-01, BE-RC-01, SH-A11Y-01, HK-V2ACT-LINK-02 (existing).
+REL-01 (resolved in source, PR #57), EXT-WEB-01, SH-A11Y-01, HK-V2ACT-LINK-02 (existing). BE-RC-01: SKIPPED by owner direction, untested, not a blocker.
 
 ### External / operator
-OPS-PREM-01 checkout off · RevenueCat App Store Connect / product / paywall state UNVERIFIED · Supabase Apple provider client IDs UNVERIFIED · deletion worker mode UNVERIFIED · Apple Developer capabilities/profiles · App Store Connect metadata (see §11).
+OPS-PREM-01 checkout off and RevenueCat App Store Connect / product / paywall state — SKIPPED by owner direction, untested, not blockers · Supabase Apple provider client IDs UNVERIFIED · deletion worker mode UNVERIFIED · Apple Developer capabilities/profiles · App Store Connect metadata (see §11).
 
 ### False positives / closed on evidence
 | Claim | Evidence | Result |
@@ -219,7 +234,7 @@ Introspection uses Expo's stub base Info.plist (for example `NSAllowsArbitraryLo
 | `smart-inbox-extract` | v8 `924cad23…` | v7 `924cad23…` | Verified compatible |
 | `capture-apple-credential` | v10 `032f9675…` | v6 `032f9675…` | Verified compatible |
 | Deletion set (`request-account-deletion`, `deletion-status`, `restore-account`, `resend-restoration-email`, `begin-web-deletion`, `process-`/`monitor-account-deletions`, `expire-account-deletion-proofs`) | identical hashes | identical hashes | Verified compatible (deployment); worker dry-run mode UNVERIFIED (secret/env, not readable) |
-| `premium-gate` / `premium-reconcile` / `revenuecat-webhook` / `premium-ops` | v9/v10/v11/v11 (RC-V2-ENV-01 fence, 2026-11-13) | v7 each (2026-10-21) | **Partially verified — Production behind** (BE-RC-01). No client contract change (handoff: "exports and response status unions remain unchanged"), so the iOS build is compatible with both; the Production server lacks the cross-environment guard |
+| `premium-gate` / `premium-reconcile` / `revenuecat-webhook` / `premium-ops` | v9/v10/v11/v11 (RC-V2-ENV-01 fence, 2026-11-13) | v7 each (2026-10-21) | **Partially verified — Production behind** (BE-RC-01). No client contract change (handoff: "exports and response status unions remain unchanged"), so the iOS build is compatible with both; the Production server lacks the cross-environment guard. **Promotion SKIPPED by owner direction — untested, not a blocker** |
 | `weather-context` | v16 `b3945bfa…` | v12 `31cda8f3…` | Different bundles; not re-diffed in this pass → source-compatible, not functionally tested |
 | `herkeys-welcome-email` | v8 `78a70fe5…` | v10 `b62cd7dc…` | Different bundles (Production newer); not re-diffed → external validation |
 | Premium runtime config | premium on, checkout **off**, test checkout off, fixtures off, webhook on | premium on, checkout **off**, test checkout off, fixtures off, webhook on | Functional parity; purchasing disabled in both |
@@ -249,7 +264,7 @@ Nothing was deployed, migrated, toggled or written in either environment.
 | ATS | The introspected `NSAllowsArbitraryLoads=true` is Expo's introspection stub, not prebuild output | UNVERIFIED — inspect the built `Info.plist` (D-12) |
 | Account deletion (5.1.1(v)) | In-app: Your Account → Privacy & Data → Delete Account | PASS(src); recovery path broken (EXT-WEB-01) |
 | Third-party AI disclosure (5.1.2(i)) | Consent names "external AI providers, including Google Gemini" and requires affirmative consent before any AI request (client and server) | PASS(src) |
-| Subscriptions (3.1.2) | RevenueCat paywall shows store price; Terms/Privacy links in app; Restore in Your Account; deletion copy says store subscriptions are not cancelled | PASS(src); checkout off (OPS-PREM-01); StoreKit NOT RUN |
+| Subscriptions (3.1.2) | RevenueCat paywall shows store price; Terms/Privacy links in app; Restore in Your Account; deletion copy says store subscriptions are not cancelled | PASS(src); checkout off and StoreKit untested — SKIPPED by owner direction, not a blocker |
 | Minimum OS / SDK | Set by Expo SDK 57 template and the EAS image | UNVERIFIED on this host |
 
 Gates are separated in §10.
@@ -293,8 +308,8 @@ Not executed: anything native (Xcode compile, prebuild Info.plist/PrivacyInfo, s
 | PR #53/#54/#55 Calendar | Reconcile | Live Production runs the permanent handler; client uses completion handles (`calendarOAuthBinding` 18/18) | PASS | No |
 | V2UP-SEC-01 router advisory (GHSA-vcc3-ghjq-m6fr) | Mitigated | Resolved `expo-router` 57.0.31 still installs `query-string` 7.1.3 / `decode-uri-component` 0.2.2; native intent and web guards reject malformed/oversized links before the router (22 tests) | **MITIGATED** (not FIXED — upstream fix is a major router upgrade) | No for build |
 | V2UP-ISO-01 account isolation | Partially verified | Source suites pass (accountAccess 26, aiClientAccountBoundary 11, talkItOutAccountFence 14, premiumStaleState 17) | PASS(src); hostile device switching NOT RUN | TestFlight check D-10 |
-| RevenueCat App Store Connect API key / Apple product reads 422 | Historical | No RevenueCat access in this pass | UNVERIFIED | Purchase certification |
-| Paywall revision 13 unpublished | Historical | Not readable here; Codex 11-13 handoff records the published paywall as defective and draft 13 unpublished | UNVERIFIED (likely still open) | Before checkout is enabled |
+| RevenueCat App Store Connect API key / Apple product reads 422 | Historical | Not inspected | SKIPPED by owner direction (known RevenueCat connection issue), untested | No — not a blocker |
+| Paywall revision 13 unpublished | Historical | Not inspected; Codex 11-13 handoff records the published paywall as defective and draft 13 unpublished | SKIPPED by owner direction, untested | No — not a blocker |
 | Google Play package discovery | Android | Out of iOS scope | NOT APPLICABLE to iOS | No |
 | Deletion workers dry-run | Historical | Mode is an Edge Function secret/env, not readable | UNVERIFIED | Before public release |
 | IOS-D03 photo purpose string (Build 2 audit) | Owner had set `photosPermission:false` | Now present (`NSPhotoLibraryUsageDescription`) | CLOSED | No |
@@ -312,7 +327,7 @@ Priority order (iPhone first; iPad rows marked ◆ are required because iPad is 
 4. **D-04 Talk It Out against Production** — real authenticated turn, uncertainty quick replies, provider failure shows a non-model notice (not a fake reply), report submission.
 5. **D-05 AI consent accepted / declined / revoked** — 403 path visible as a clear state.
 6. **D-06 Google Calendar** — consent, native return, redemption, list, events, refresh, selection, disconnect/reconnect.
-7. **D-07 Premium** — only after BE-RC-01 promotion and the owner enables checkout: sandbox purchase monthly/annual, restore, expiry, account switch.
+7. **D-07 Premium purchase / restore** — **SKIPPED by owner direction (known RevenueCat connection issue); untested; not a blocker.**
 8. **D-08 Account deletion and recovery** — on a marked test account only; recovery link must open a working page (blocked by EXT-WEB-01).
 9. **D-09 Critical UI/navigation** — tabs, modals, sheets, Dynamic Type at AX sizes, VoiceOver, Light/Dark.
 10. **D-10 Account isolation and offline** — A→B switch with requests in flight; airplane mode and recovery.
@@ -327,8 +342,8 @@ Priority order (iPhone first; iPad rows marked ◆ are required because iPad is 
 |---|---|---|
 | **A. Before EAS build** | FAIL on REL-01 only | (1) owner authorizes the release branch in `RELEASE_BRANCHES`; (2) merge this audit branch (needs explicit authorization); (3) `release:preflight` PASS on the pushed merge SHA with the production env |
 | **B. Before TestFlight testing** | Open | Apple Developer: App ID capabilities (Sign in with Apple, Push), distribution profile; confirm Supabase Apple provider includes `com.herkeys.app`; D-12 artifact inspection; D-01/D-02 smoke |
-| **C. Before App Store submission** | NOT READY | §11 items ASR-01…ASR-10, incl. the IAP decision, the recovery page, 13-inch iPad screenshots, review demo account |
-| **D. Before public release** | NOT READY | EXT-WEB-01 fixed; BE-RC-01 promoted before any checkout; deletion workers out of dry-run with sign-off; full device plan D-01…D-12 |
+| **C. Before App Store submission** | NOT READY | §11 items ASR-02…ASR-07, ASR-09…ASR-11: the recovery page, 13-inch iPad screenshots, review demo account, privacy labels (RevenueCat items ASR-01/ASR-08 skipped, not blockers) |
+| **D. Before public release** | NOT READY | EXT-WEB-01 fixed; deletion workers out of dry-run with sign-off; device plan D-01…D-12 except D-07 (RevenueCat skipped, not a blocker) |
 
 **Next required release action:** owner decision on REL-01 (and authorization to merge this audit branch). Then re-run the preflight and start a real EAS iOS `production` build.
 
@@ -338,14 +353,14 @@ Priority order (iPhone first; iPad rows marked ◆ are required because iPad is 
 
 | ID | Risk | Guideline / source | Likelihood | Gate | Required action |
 |---|---|---|---|---|---|
-| ASR-01 | Premium is shown but cannot be purchased in Production (`checkout_enabled=false`). If the subscriptions are attached to the version, review cannot complete a purchase; if they are not, a "Premium" surface with no way to buy reads as incomplete | 2.1 App Completeness, 3.1.1 | **High** | C | Decide: (a) enable checkout for review after BE-RC-01 promotion and a published, verified paywall, with IAPs submitted with the binary; or (b) ship without IAPs and hide/soften Premium surfaces (shared UI change, not iOS-only) |
+| ASR-01 | Premium is shown but cannot be purchased in Production (`checkout_enabled=false`) | 2.1, 3.1.1 | — | — | **SKIPPED by owner direction (known RevenueCat connection issue): untested, NOT a blocker.** Recorded for later only. |
 | ASR-02 | Account recovery page 404 while the app and emails promise recovery | 5.1.1(v) (deletion itself is compliant), 2.1 | Medium (only if exercised) — **certain for users** | C/D | Publish `https://herkeys.app/account/restore` (web PR #10 lane) and verify a real recovery email end to end |
 | ASR-03 | 13-inch iPad screenshots required now that the app runs on iPad (2064×2752 / 2752×2064 or 2048×2732 / 2732×2048) | App Store Connect screenshot specs | Certain | C | Capture from a real iPad or iPad simulator running the release build — never upscaled iPhone captures |
 | ASR-04 | iPad review: reviewers test universal apps on iPad; layout unverified visually | 2.4.1 / 4.0 Design | Medium | C | Run D-11 before submission |
 | ASR-05 | Sign-in required → reviewer needs a working demo account (email/password) on Production, AI consent and onboarding path documented in review notes | 2.1 | High if omitted | C | Prepare a marked review account and notes |
 | ASR-06 | Privacy nutrition labels must reflect what is collected (contact info, user content incl. household/children data, AI processing by Google) and the privacy manifest must cover required-reason APIs | 5.1.1, 5.1.2 | Medium | C | Complete App Privacy in App Store Connect; inspect aggregated `PrivacyInfo.xcprivacy` (D-12) |
 | ASR-07 | Custom "Continue with Apple" button not in Apple's black/white styles | 4.8 + HIG Sign in with Apple | Low–Medium | C | Owner decision: use `AppleAuthenticationButton` or match HIG colors (iOS-only change) |
-| ASR-08 | Subscription metadata: Terms of Use (EULA) and Privacy links in the App Store description/metadata, subscription group, localized names, review screenshot of the paywall | 3.1.2 | High if IAPs ship | C | App Store Connect work |
+| ASR-08 | Subscription metadata (EULA/Privacy in metadata, subscription group, paywall review screenshot) | 3.1.2 | — | — | **SKIPPED with the RevenueCat work: untested, NOT a blocker** |
 | ASR-09 | Third-party AI disclosure and consent | 5.1.2(i) | Low (implemented) | C | Ensure the Privacy Policy PDF matches the in-app disclosure |
 | ASR-10 | Age rating questionnaire (AI chat, user-generated content) and support URL (`/support` 200) | App Store Connect | Low | C | Complete in App Store Connect |
 | ASR-11 | Unused capability strings (Motion, Face ID) | 5.1.1 | Low | C | Optional cleanup in a later build |
@@ -375,14 +390,14 @@ Inaccessible to this audit: App Store Connect (app record, agreements, IAP produ
 12. Deploy the restore page; keep the pinned origin · 13. Real recovery email → page → restore → sign in
 14. Not EAS/TestFlight; **must be fixed before App Store submission (if deletion is demoed) and before public release** · 15. Web owner
 
-### BE-RC-01 — RevenueCat environment guard not promoted to Production
-1. BE-RC-01 (RC-V2-ENV-01) · 2. P1 for purchase certification · 3. Backend · 4. Premium
+### BE-RC-01 — RevenueCat environment guard not promoted to Production (SKIPPED by owner direction — not a blocker)
+1. BE-RC-01 (RC-V2-ENV-01) · 2. SKIPPED by owner direction — not a blocker (severity not assessed further) · 3. Backend · 4. Premium
 5. `supabase/functions/_shared/premium/reconcile.ts` (commit 961acca); live Production Premium functions v7 (2026-10-21) vs Staging v9–v11 (2026-11-13)
 6. `list_edge_functions` on both projects (hashes in §05)
 7. Live read · 8. Promotion awaits specific Production authorization (Codex handoff)
 9. iOS: TestFlight purchases are sandbox; without the guard a sandbox subscription could be projected as a Production entitlement once checkout is on · 10. Android: same · 11. Production: latent while checkout is off
 12. Promote the four reviewed bundles per the handoff's rollback-ready plan · 13. Authenticated reconcile, sandbox-into-Production refusal
-14. **Not EAS build; must precede enabling checkout, TestFlight purchase tests on Production and submission with IAPs** · 15. Premium/backend owner (Codex lane)
+14. **SKIPPED by owner direction (known RevenueCat connection issue): untested, NOT a blocker at any gate** · 15. Premium/backend owner (Codex lane), when the RevenueCat work resumes
 
 ### SH-A11Y-01 — Non-scrolling auth steps at accessibility text sizes
 1. SH-A11Y-01 · 2. P4 · 3. Shared accessibility · 4. Welcome account choice, email entry, code entry
