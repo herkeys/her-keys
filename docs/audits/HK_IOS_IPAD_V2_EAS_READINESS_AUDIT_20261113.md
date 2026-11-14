@@ -34,6 +34,13 @@ Evidence labels: **PASS(src)** source/test evidence · **PASS(live)** read from 
 3. Re-run `npm run release:preflight` on the pushed merge SHA with the `production` EAS environment loaded (`eas env:pull production` or the build environment). The audit confirmed every non-provenance check it contains already passes.
 4. Then a real EAS iOS `production` build is authorized.
 
+### Post-audit update — REL-01 resolved in source (2026-11-13)
+
+- **Step 1 done.** The owner authorized the V2 branch. Commit `c1111fc09586a3afd7d551c964595779bfc16f09` adds the exact literal `integration/v2-autonomous-upgrade-20261112` to `RELEASE_BRANCHES`. Tests pin the new list and still refuse near-miss names, pattern entries and the audit branch. The boundary scan registers the change. Full suite at `c1111fc`: **5,681/5,681**.
+- **Preflight evidence.** `eas env:exec production "npm run release:preflight"` at `c1111fc` (pushed, `REMOTE_SOURCE_SHA` matches) passes identity, Production backend target, consent gate, data mode, clean tree, upstream and live `ls-remote`. The only refusal is the branch name `audit/ios-ipad-v2-eas-readiness-20261113`, which is the intended behavior for an audit branch.
+- **Step 2 pending.** The changes are in [herkeys/her-keys#57](https://github.com/herkeys/her-keys/pull/57) into `integration/v2-autonomous-upgrade-20261112`. It is not merged.
+- **Verdict once merged.** After the merge and a passing preflight on the V2 branch at the merge SHA (step 3), all three EAS readiness verdicts become **PASS** for that exact SHA. Nothing in this audit is left blocking an EAS build. Every device, store and external item in §09–§11 and §SH remains open.
+
 ---
 
 ## 01 — Executive hostile audit
