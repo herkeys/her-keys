@@ -2204,6 +2204,18 @@ const LATER_FEATURES = [
       ['scripts-dev/meals-boundary-scan.cjs', 'Register only this audit lane; all boundary assertions remain enforced'],
     ],
   },
+
+  {
+    id: 'HK-IOS-IPAD-V2-FINAL-PRE-EAS-20261114 (docs-only final iOS/iPadOS pre-EAS audit of b8ec2a7)',
+    branch: null,
+    owned: [
+      /^docs\/audits\/HK_IOS_IPAD_V2_FINAL_PRE_EAS_AUDIT_20261114\.md$/,
+    ],
+    migrations: [], schemas: [], rootCollections: [], syncKinds: [],
+    shared: [
+      ['scripts-dev/meals-boundary-scan.cjs', 'Register only this docs-only audit lane; all boundary assertions remain enforced'],
+    ],
+  },
 ];
 
 /**
