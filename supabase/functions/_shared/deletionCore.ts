@@ -18,7 +18,7 @@ export function needsProviderReconciliation(evidence:Record<string,unknown>):boo
 }
 export function deletionHealthNeedsAttention(health:Record<string,unknown>):boolean {
  return ['scheduler_stale','retention_stale','retention_failed'].some(key=>health[key]===true)
-  || ['failed','overdue_cases','overdue_requests','stale_leases','email_problems','retention_overdue']
+  || ['failed','overdue_cases','overdue_requests','stale_leases','email_problems','retention_overdue','overdue_auth_reconciliation']
    .some(key=>typeof health[key]==='number'&&(health[key] as number)>0);
 }
 export function isVerifiedPurge(value: unknown): value is DeletionStatus {
@@ -29,7 +29,7 @@ export function isVerifiedPurge(value: unknown): value is DeletionStatus {
 }
 export function safeCategory(error: unknown): string {
  const message = error instanceof Error ? error.message : '';
- return ['shared_household_requires_policy','unclassified_resource','recent_auth_required','lease_or_control_refused','terminal_verification_failed']
+ return ['shared_household_requires_policy','unclassified_resource','recent_auth_required','lease_or_control_refused','terminal_verification_failed','provider_retry_required']
   .find(code => message.includes(code)) ?? 'operation_unavailable';
 }
 // Shown for every completed deletion: Apple may not have issued revocation
@@ -47,7 +47,7 @@ export function recoveryEmail(kind: string, deadline: string, recoveryUrl?: stri
   'Use your private deletion receipt to check status, or contact Her Keys support.'] : recovery ? [
   'Your account access has stopped. Your deletion request is recorded.',
   'You can recover your account before ' + date + ' (UTC). After this deadline permanent deletion will be processed automatically.',
-  'This replacement link supersedes any earlier recovery link. Open it and confirm to restore; then sign in again.',
+  'Open your recovery link and confirm to restore. Once your account is restored, sign in again.',
   recoveryUrl ?? '', 'Account deletion does not cancel an Apple or Google subscription.',
  ] : kind === 'restored' ? ['Account access is restored. Please sign in again.'] : ['Her Keys account data has been permanently deleted after verification.',
   APPLE_MANUAL_REVOCATION, GOOGLE_ACCESS_CHECK];

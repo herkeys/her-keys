@@ -4,6 +4,28 @@ import {createHash} from 'node:crypto';
 import {deletionDatabase} from '../../supabase/tests/deletion-database.mjs';
 const A='11111111-1111-4111-8111-111111111111',B='22222222-2222-4222-8222-222222222222';
 const SA='aaaaaaaa-1111-4111-8111-111111111111',SB='bbbbbbbb-2222-4222-8222-222222222222';
+test('replacement received after an ambiguous send may restore once; late delivery cannot undo it',async t=>{
+ const db=await deletionDatabase();
+ t.after(()=>db.close());
+ const query=(sql,args=[])=>db.query(sql,args);
+ const command=async(action,args={})=>(await query('select public.herkeys_deletion_command($1,$2::jsonb) as r',[action,JSON.stringify(args)])).rows[0].r;
+ await query('insert into auth.users(id,email) values($1,$2)',[A,'synthetic@local.test']);
+ await query('insert into auth.sessions(id,user_id) values($1,$2)',[SA,A]);
+ const original='o'.repeat(43),replacement='p'.repeat(43);
+ const request=await command('request',{account_id:A,session_id:SA,receipt_hash:'z'.repeat(43),recovery_hash:original,ciphertext:'fixture',iv:'fixture'});
+ await command('deactivation_ack',{request_id:request.request_id,auth_ban:true});
+ await command('resend',{account_id:A,recovery_hash:replacement,ciphertext:'fixture',iv:'fixture'});
+ const messages=await command('claim_email');
+ const pending=messages.find(row=>row.replacement_recovery_hash===replacement);
+ assert.ok(pending);
+ await query("update public.account_deletion_outbox set status='failed' where id=$1",[pending.id]);
+ assert.equal((await command('restore',{recovery_hash:replacement})).status,'restoring');
+ await command('record_delivery',{outbox_id:pending.id,delivery:'delivered'});
+ assert.equal((await command('restore',{recovery_hash:original})).status,'invalid_or_expired');
+ assert.equal((await command('restore',{recovery_hash:replacement})).status,'invalid_or_expired');
+ assert.deepEqual((await query('select status,recovery_hash from public.account_deletion_requests where id=$1',[request.request_id])).rows,[{status:'restoring',recovery_hash:null}]);
+ assert.equal((await command('health')).overdue_auth_reconciliation,0);
+});
 test('account deletion: real SQL state, privileges, recovery and purge',async t=>{
  const db=await deletionDatabase();
  t.after(()=>db.close());
@@ -50,8 +72,20 @@ test('account deletion: real SQL state, privileges, recovery and purge',async t=
   await q('update public.account_deletion_control set dry_run=false');
   assert.equal((await cmd('claim')).requests.length,0);
  });
- await t.test('replacement recovery invalidates previous token without extending deadline',async()=>{
+ await t.test('only confirmed delivery rotates recovery; failed and duplicate sends preserve the deadline',async()=>{
   await cmd('resend',{account_id:A,recovery_hash:'n'.repeat(43),ciphertext:'replacement',iv:'iv'});
+  await cmd('resend',{account_id:A,recovery_hash:'m'.repeat(43),ciphertext:'duplicate',iv:'iv'});
+  const pending=(await q('select id,replacement_recovery_hash from public.account_deletion_outbox where replacement_recovery_hash is not null')).rows;
+  assert.deepEqual(pending.map(row=>row.replacement_recovery_hash),['n'.repeat(43)]);
+  assert.equal((await q('select recovery_hash from public.account_deletion_requests where id=$1',[request.request_id])).rows[0].recovery_hash,'t'.repeat(43));
+  assert.equal((await cmd('restore',{recovery_hash:'n'.repeat(43)})).status,'invalid_or_expired');
+  await q("update public.account_deletion_outbox set status='failed',first_attempt_at=now(),attempts=1 where id=$1",[pending[0].id]);
+  await cmd('record_delivery',{outbox_id:pending[0].id,delivery:'delivered'});
+  assert.equal((await q('select recovery_hash from public.account_deletion_requests where id=$1',[request.request_id])).rows[0].recovery_hash,'t'.repeat(43));
+  await q("update public.account_deletion_outbox set status='accepted' where id=$1",[pending[0].id]);
+  await cmd('record_delivery',{outbox_id:pending[0].id,delivery:'unconfirmed'});
+  assert.equal((await q('select recovery_hash from public.account_deletion_requests where id=$1',[request.request_id])).rows[0].recovery_hash,'t'.repeat(43));
+  await cmd('record_delivery',{outbox_id:pending[0].id,delivery:'delivered'});
   assert.equal((await cmd('restore',{recovery_hash:'t'.repeat(43)})).status,'invalid_or_expired');
   assert.equal((await cmd('status',{receipt_hash:'r'.repeat(43)})).deadline,request.deadline);
  });
@@ -67,6 +101,8 @@ test('account deletion: real SQL state, privileges, recovery and purge',async t=
   await cmd('deactivation_ack',{request_id:r.request_id,auth_ban:true,session_revocation:false});
   assert.equal((await q('select count(*) as n from auth.sessions where user_id=$1',[A])).rows[0].n,0);
   assert.equal((await q('select count(*) as n from auth.sessions where user_id=$1',[B])).rows[0].n,1);
+  assert.equal((await cmd('claim_restoration',{request_id:r.request_id})).claimed,true);
+  assert.equal((await cmd('claim_restoration',{request_id:r.request_id})).claimed,false);
   await cmd('restored',{request_id:r.request_id,ciphertext:'confirmation',iv:'iv'});
   assert.equal((await cmd('status',{receipt_hash:'r'.repeat(43)})).status,'restored');
   assert.equal((await as(A,()=>q('select * from public.profiles'))).rows.length,1);

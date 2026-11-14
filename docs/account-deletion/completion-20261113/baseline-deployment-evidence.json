@@ -1,0 +1,1771 @@
+{
+  "staging": {
+    "ref": "fhhudicklmpofuzkxeqe",
+    "guard": {
+      "schema_name": "private",
+      "proname": "refuse_pending_provider_write",
+      "args": "",
+      "owner": "postgres",
+      "prosecdef": true,
+      "proconfig": [
+        "search_path=\"\""
+      ],
+      "proacl": "{postgres=X/postgres,service_role=X/postgres}",
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_role_execute": true,
+      "service_role_schema_usage": false,
+      "definition": "CREATE OR REPLACE FUNCTION private.refuse_pending_provider_write()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\nBEGIN\n IF NOT private.account_is_active((to_jsonb(new)->>TG_ARGV[0])::uuid) THEN\n  RAISE EXCEPTION 'account_deactivated' USING ERRCODE='42501';\n END IF;\n RETURN new;\nEND $function$\n",
+      "triggers": [
+        {
+          "table": "apple_revocation_credentials",
+          "name": "deletion_apple_guard",
+          "enabled": "O"
+        },
+        {
+          "table": "calendar_oauth_states",
+          "name": "deletion_calendar_state_guard",
+          "enabled": "O"
+        },
+        {
+          "table": "external_calendar_connections",
+          "name": "deletion_calendar_guard",
+          "enabled": "O"
+        },
+        {
+          "table": "premium_authorization_audit",
+          "name": "deletion_v2_guard",
+          "enabled": "O"
+        },
+        {
+          "table": "premium_decisions",
+          "name": "deletion_v2_guard",
+          "enabled": "O"
+        },
+        {
+          "table": "premium_entitlements",
+          "name": "deletion_v2_guard",
+          "enabled": "O"
+        },
+        {
+          "table": "premium_reconcile_state",
+          "name": "deletion_v2_guard",
+          "enabled": "O"
+        },
+        {
+          "table": "premium_subscriber_identities",
+          "name": "deletion_v2_guard",
+          "enabled": "O"
+        },
+        {
+          "table": "premium_usage",
+          "name": "deletion_v2_guard",
+          "enabled": "O"
+        },
+        {
+          "table": "premium_usage_events",
+          "name": "deletion_v2_guard",
+          "enabled": "O"
+        }
+      ]
+    },
+    "eventGuard": {
+      "schema_name": "private",
+      "proname": "deletion_redact_inactive_event",
+      "args": "",
+      "owner": "postgres",
+      "prosecdef": true,
+      "proconfig": [
+        "search_path=\"\""
+      ],
+      "proacl": "{postgres=X/postgres}",
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_role_execute": false,
+      "service_role_schema_usage": false,
+      "definition": "CREATE OR REPLACE FUNCTION private.deletion_redact_inactive_event()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\nDECLARE ids text[];\nBEGIN\n SELECT ARRAY(SELECT DISTINCT id FROM jsonb_array_elements_text(\n  jsonb_build_array(NEW.app_user_id,NEW.original_app_user_id)||NEW.aliases||NEW.transferred_from||NEW.transferred_to) v(id)\n  WHERE CASE WHEN id ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'\n   THEN NOT private.account_is_active(id::uuid)\n   ELSE EXISTS(SELECT 1 FROM public.premium_subscriber_identities i WHERE i.provider_user_id=id AND i.account_id IS NOT NULL AND NOT private.account_is_active(i.account_id)) END) INTO ids;\n IF NEW.account_id IS NOT NULL AND NOT private.account_is_active(NEW.account_id) THEN NEW.account_id:=NULL; END IF;\n IF NEW.app_user_id=ANY(ids) THEN NEW.app_user_id:=NULL; END IF;\n IF NEW.original_app_user_id=ANY(ids) THEN NEW.original_app_user_id:=NULL; END IF;\n NEW.aliases:=private.deletion_redact_ids(NEW.aliases,ids);\n NEW.transferred_from:=private.deletion_redact_ids(NEW.transferred_from,ids);\n NEW.transferred_to:=private.deletion_redact_ids(NEW.transferred_to,ids);\n NEW.payload:=private.deletion_redact_ids(NEW.payload,ids);\n RETURN NEW;\nEND $function$\n",
+      "triggers": [
+        {
+          "table": "premium_events",
+          "name": "deletion_event_guard",
+          "enabled": "O"
+        }
+      ]
+    },
+    "functions": [
+      {
+        "slug": "deletion-status",
+        "status": "ACTIVE",
+        "version": 10,
+        "verify_jwt": false,
+        "ezbr_sha256": "2fcec57346b7a3529af3fbf433c901ab92f147004c951474da77e04b91bd76de"
+      },
+      {
+        "slug": "capture-apple-credential",
+        "status": "ACTIVE",
+        "version": 10,
+        "verify_jwt": true,
+        "ezbr_sha256": "032f9675ec80e7853b8f62d6093094de1d3e8c1061fac640fa736fe465afe3ca"
+      },
+      {
+        "slug": "request-account-deletion",
+        "status": "ACTIVE",
+        "version": 12,
+        "verify_jwt": true,
+        "ezbr_sha256": "8dddf0dce8206c4a888ef90792c66e3766b4176831304bf5f1c4b95875f26ebb"
+      },
+      {
+        "slug": "restore-account",
+        "status": "ACTIVE",
+        "version": 10,
+        "verify_jwt": false,
+        "ezbr_sha256": "f92bc37f055cb46808cb556cfefb5a3766a1c35eab1ff9e70e463c791c7fb97d"
+      },
+      {
+        "slug": "resend-restoration-email",
+        "status": "ACTIVE",
+        "version": 10,
+        "verify_jwt": false,
+        "ezbr_sha256": "cf8e69f206859e6ff1c0242b72e5cdc19fefbbc6560468baec52542178cad33f"
+      },
+      {
+        "slug": "begin-web-deletion",
+        "status": "ACTIVE",
+        "version": 9,
+        "verify_jwt": false,
+        "ezbr_sha256": "5ebc05b02d7bed4b27155aecf6a14cf19b3e9af14abfe2dc50a0129e39e3bdaf"
+      },
+      {
+        "slug": "process-account-deletions",
+        "status": "ACTIVE",
+        "version": 15,
+        "verify_jwt": false,
+        "ezbr_sha256": "efc1e038f5b3af0f5e7c1641299fcef56b268caa568c5dd089af34efc08457c3"
+      },
+      {
+        "slug": "monitor-account-deletions",
+        "status": "ACTIVE",
+        "version": 12,
+        "verify_jwt": false,
+        "ezbr_sha256": "f4bab42c2545477d456aa8a1775a599855ca596703b69141fc8fd1fb7c8de209"
+      },
+      {
+        "slug": "staging-deletion-fixture",
+        "status": "ACTIVE",
+        "version": 15,
+        "verify_jwt": true,
+        "ezbr_sha256": "d7dd982952224cf894a5507bc4b2c33573861d41b8dad2ea47e5c49ea2d2243b"
+      },
+      {
+        "slug": "expire-account-deletion-proofs",
+        "status": "ACTIVE",
+        "version": 9,
+        "verify_jwt": false,
+        "ezbr_sha256": "e6b1473af2a0845f95d6c08915ce949ab141e8b57866105f75eb14a2dff913f1"
+      },
+      {
+        "slug": "staging-deletion-lock-probe",
+        "status": "ACTIVE",
+        "version": 8,
+        "verify_jwt": true,
+        "ezbr_sha256": "f3a633bf95b73163f2fa7aa8c5c23a7cbba0e454dfb4dc51be9d5255268e36fd"
+      },
+      {
+        "slug": "revenuecat-webhook",
+        "status": "ACTIVE",
+        "version": 11,
+        "verify_jwt": false,
+        "ezbr_sha256": "5f174a96f9c23b3507b2e28c4910708e0cc62e5992d892d83bc93ecc3a35be28"
+      },
+      {
+        "slug": "deletion-v2-certification",
+        "status": "ACTIVE",
+        "version": 4,
+        "verify_jwt": true,
+        "ezbr_sha256": "8c62d42604796a435fb02d89905605bd56186875b85d8466645dedc5de63714b"
+      }
+    ],
+    "migrations": [
+      {
+        "version": "20260919230054",
+        "name": "build4_baseline"
+      },
+      {
+        "version": "20260919231500",
+        "name": "build4_cloud_schema"
+      },
+      {
+        "version": "20260921120000",
+        "name": "ir01_duration_source_and_claim_v3"
+      },
+      {
+        "version": "20260921160000",
+        "name": "f08_meal_slot_and_status"
+      },
+      {
+        "version": "20260921190000",
+        "name": "f05_add_child_after_binding"
+      },
+      {
+        "version": "20260924182047",
+        "name": "f09_task_payment_mechanism"
+      },
+      {
+        "version": "20260924182051",
+        "name": "f10_career_opportunities"
+      },
+      {
+        "version": "20260924182055",
+        "name": "f11_rebuild_focus"
+      },
+      {
+        "version": "20260924182059",
+        "name": "f12_life_records"
+      },
+      {
+        "version": "20260924182113",
+        "name": "f13_people_os"
+      },
+      {
+        "version": "20260924182116",
+        "name": "int13_per_owner_uniqueness"
+      },
+      {
+        "version": "20260924182838",
+        "name": "env_function_alignment"
+      },
+      {
+        "version": "20260925142007",
+        "name": "external_calendar_connections"
+      },
+      {
+        "version": "20261009102234",
+        "name": "v2_account_consents"
+      },
+      {
+        "version": "20261014012151",
+        "name": "account_deletion_lifecycle"
+      },
+      {
+        "version": "20261014012355",
+        "name": "account_deletion_scheduler_disabled"
+      },
+      {
+        "version": "20261014012645",
+        "name": "account_deletion_auth_reconciliation"
+      },
+      {
+        "version": "20261014014243",
+        "name": "account_deletion_terminal_identity"
+      },
+      {
+        "version": "20261014015314",
+        "name": "account_deletion_proof_retention"
+      },
+      {
+        "version": "20261014015657",
+        "name": "account_deletion_retention_scheduler_disabled"
+      },
+      {
+        "version": "20261014015954",
+        "name": "account_deletion_cancelled_history_cleanup"
+      },
+      {
+        "version": "20261014021221",
+        "name": "staging_deletion_storage_fixture"
+      },
+      {
+        "version": "20261014110526",
+        "name": "account_deletion_shared_provider_retry"
+      },
+      {
+        "version": "20261014111528",
+        "name": "account_deletion_staging_storage_fixture_teardown"
+      },
+      {
+        "version": "20261014112526",
+        "name": "account_deletion_orphan_shared_ownership"
+      },
+      {
+        "version": "20261014113628",
+        "name": "account_deletion_household_lock"
+      },
+      {
+        "version": "20261014113908",
+        "name": "account_deletion_staging_lock_probe"
+      },
+      {
+        "version": "20261014113943",
+        "name": "account_deletion_staging_lock_probe_teardown"
+      },
+      {
+        "version": "20261014175642",
+        "name": "premium_entitlement_foundation"
+      },
+      {
+        "version": "20261014175647",
+        "name": "premium_decision_ledger"
+      },
+      {
+        "version": "20261014210054",
+        "name": "premium_staging_tester_guard"
+      },
+      {
+        "version": "20261015015427",
+        "name": "premium_stale_projection_guard"
+      },
+      {
+        "version": "20261017214221",
+        "name": "ai_response_reporting_20261017"
+      },
+      {
+        "version": "20261017222919",
+        "name": "ai_report_review_workflow_20261017"
+      },
+      {
+        "version": "20261019150824",
+        "name": "account_deletion_v2_resource_certification"
+      },
+      {
+        "version": "20261019151317",
+        "name": "staging_only_temporary_deletion_v2_certification"
+      },
+      {
+        "version": "20261019151616",
+        "name": "account_deletion_optional_welcome_inventory"
+      },
+      {
+        "version": "20261019152912",
+        "name": "account_deletion_overdue_request_monitor"
+      },
+      {
+        "version": "20261019153216",
+        "name": "staging_only_retire_deletion_v2_fixture"
+      },
+      {
+        "version": "20261019153856",
+        "name": "account_deletion_private_household_owners"
+      },
+      {
+        "version": "20261021080329",
+        "name": "premium_verified_subscription_period"
+      },
+      {
+        "version": "20261021083704",
+        "name": "premium_test_store_checkout_isolation"
+      },
+      {
+        "version": "20261113201540",
+        "name": "calendar_oauth_authenticated_completion"
+      },
+      {
+        "version": "20261113211130",
+        "name": "provider_write_guard_definer"
+      }
+    ],
+    "controls": {
+      "worker": {
+        "dry_run": true,
+        "enabled": false,
+        "singleton": true,
+        "batch_size": 1,
+        "last_run_at": "2026-10-19T15:35:21.818324+00:00",
+        "max_attempts": 8,
+        "test_scope_only": false
+      },
+      "retention": {
+        "enabled": true,
+        "singleton": true,
+        "last_failure_at": "2026-10-14T01:59:01.074+00:00",
+        "last_success_at": "2026-11-13T03:17:01.711185+00:00",
+        "failure_category": null
+      },
+      "request_counts": {
+        "restored": 2
+      },
+      "cron_dispatch": [
+        {
+          "jobname": "herkeys-account-deletion",
+          "last_cron_success": "2026-10-14T11:15:00.090864+00:00",
+          "last_cron_failure": null
+        },
+        {
+          "jobname": "herkeys-account-deletion-monitor",
+          "last_cron_success": "2026-11-14T01:57:00.106679+00:00",
+          "last_cron_failure": null
+        },
+        {
+          "jobname": "herkeys-account-deletion-proof-expiry",
+          "last_cron_success": "2026-11-13T03:17:00.170872+00:00",
+          "last_cron_failure": null
+        }
+      ],
+      "private_relation_access": [
+        {
+          "schema_name": "private",
+          "relname": "deletion_worker_key",
+          "anon_select": false,
+          "auth_select": false
+        },
+        {
+          "schema_name": "private",
+          "relname": "deletion_scheduler_target",
+          "anon_select": false,
+          "auth_select": false
+        },
+        {
+          "schema_name": "private",
+          "relname": "deletion_resource_registry",
+          "anon_select": false,
+          "auth_select": false
+        }
+      ]
+    },
+    "cron": [
+      {
+        "jobname": "herkeys-account-deletion",
+        "schedule": "*/5 * * * *",
+        "active": false
+      },
+      {
+        "jobname": "herkeys-account-deletion-monitor",
+        "schedule": "2-59/5 * * * *",
+        "active": true
+      },
+      {
+        "jobname": "herkeys-account-deletion-proof-expiry",
+        "schedule": "17 3 * * *",
+        "active": true
+      }
+    ],
+    "census": {
+      "registry": 50,
+      "exceptions": 24,
+      "unclassified": null,
+      "v2_fixture_rpc": false
+    },
+    "resources": {
+      "registry": [
+        {
+          "table_name": "account_claims",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "account_consents",
+          "owner_column": "account_id",
+          "household_scoped": false,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "action_executions",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "action_intents",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "action_outcomes",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "action_records",
+          "owner_column": "actor_profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "apple_revocation_credentials",
+          "owner_column": "account_id",
+          "household_scoped": false,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "automation_authorities",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "behavior_observations",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "calendar_oauth_states",
+          "owner_column": "user_id",
+          "household_scoped": false,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "capacity_profiles",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "career_opportunities",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "change_log",
+          "owner_column": "owner_profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "dependencies",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "discovery_records",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "events",
+          "owner_column": "owner_profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "evidence_links",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "external_calendar_connections",
+          "owner_column": "user_id",
+          "household_scoped": false,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "external_references",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "goals",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "herkeys_welcome_email_receipts",
+          "owner_column": "user_id",
+          "household_scoped": false,
+          "optional_when_absent": true
+        },
+        {
+          "table_name": "household_categories",
+          "owner_column": "owner_profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "household_members",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "household_people",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "household_systems",
+          "owner_column": "owner_profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "intent_decisions",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "interpretations",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "life_record_task_links",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "life_records",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "meal_plan_entries",
+          "owner_column": "owner_profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "needs_me_items",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "onboarding_state",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "one_move_records",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "patterns",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "person_contexts",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "person_task_links",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "premium_authorization_audit",
+          "owner_column": "account_id",
+          "household_scoped": false,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "premium_decisions",
+          "owner_column": "account_id",
+          "household_scoped": false,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "premium_entitlements",
+          "owner_column": "account_id",
+          "household_scoped": false,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "premium_reconcile_state",
+          "owner_column": "account_id",
+          "household_scoped": false,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "premium_subscriber_identities",
+          "owner_column": "account_id",
+          "household_scoped": false,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "premium_usage",
+          "owner_column": "account_id",
+          "household_scoped": false,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "premium_usage_events",
+          "owner_column": "account_id",
+          "household_scoped": false,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "rebuild_focus_links",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "rebuild_focuses",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "recurrence_rules",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "responsibilities",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "source_artifacts",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "system_steps",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "tasks",
+          "owner_column": "owner_profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        }
+      ],
+      "exceptions": [
+        {
+          "schema_name": "private",
+          "table_name": "ai_response_reports",
+          "handling": "custom",
+          "reason": "Erase owned reports and redact reviewerId in another account report"
+        },
+        {
+          "schema_name": "private",
+          "table_name": "deletion_resource_exceptions",
+          "handling": "global",
+          "reason": "Reviewed schema classifications only"
+        },
+        {
+          "schema_name": "private",
+          "table_name": "deletion_resource_registry",
+          "handling": "global",
+          "reason": "Reviewed resource metadata only"
+        },
+        {
+          "schema_name": "private",
+          "table_name": "deletion_scheduler_target",
+          "handling": "global",
+          "reason": "Hosted project URL only; optional in local harness"
+        },
+        {
+          "schema_name": "private",
+          "table_name": "deletion_test_scope",
+          "handling": "lifecycle",
+          "reason": "Expiring synthetic-account processing allowlist; never proof"
+        },
+        {
+          "schema_name": "private",
+          "table_name": "deletion_worker_key",
+          "handling": "global",
+          "reason": "Service authentication secret; no customer identity"
+        },
+        {
+          "schema_name": "public",
+          "table_name": "account_deletion_alerts",
+          "handling": "lifecycle",
+          "reason": "Operational alert delivery metadata"
+        },
+        {
+          "schema_name": "public",
+          "table_name": "account_deletion_cases",
+          "handling": "lifecycle",
+          "reason": "Exact nonterminal shared resource review; erased at terminal completion"
+        },
+        {
+          "schema_name": "public",
+          "table_name": "account_deletion_control",
+          "handling": "global",
+          "reason": "Worker kill switch"
+        },
+        {
+          "schema_name": "public",
+          "table_name": "account_deletion_outbox",
+          "handling": "lifecycle",
+          "reason": "Encrypted recipient; completion outbox unlinked and expires within seven days"
+        },
+        {
+          "schema_name": "public",
+          "table_name": "account_deletion_rate_limits",
+          "handling": "lifecycle",
+          "reason": "Rate-limit hashes expire after one day"
+        },
+        {
+          "schema_name": "public",
+          "table_name": "account_deletion_receipts",
+          "handling": "lifecycle",
+          "reason": "Nonterminal receipt/request associations"
+        },
+        {
+          "schema_name": "public",
+          "table_name": "account_deletion_requests",
+          "handling": "lifecycle",
+          "reason": "Nonterminal lifecycle and bounded operational evidence"
+        },
+        {
+          "schema_name": "public",
+          "table_name": "account_deletion_retention_control",
+          "handling": "global",
+          "reason": "Retention job state only"
+        },
+        {
+          "schema_name": "public",
+          "table_name": "account_deletion_retention_runs",
+          "handling": "global",
+          "reason": "Aggregate expiry counters only"
+        },
+        {
+          "schema_name": "public",
+          "table_name": "account_deletion_runs",
+          "handling": "global",
+          "reason": "Aggregate run counters only"
+        },
+        {
+          "schema_name": "public",
+          "table_name": "account_deletion_terminal_proofs",
+          "handling": "lifecycle",
+          "reason": "Five-field minimal proof expires after 365 days"
+        },
+        {
+          "schema_name": "public",
+          "table_name": "discovery_answers",
+          "handling": "cascade",
+          "reason": "Owned through discovery_records; FK ON DELETE CASCADE"
+        },
+        {
+          "schema_name": "public",
+          "table_name": "households",
+          "handling": "custom",
+          "reason": "Only exclusive households; shared ownership escalated"
+        },
+        {
+          "schema_name": "public",
+          "table_name": "premium_events",
+          "handling": "custom",
+          "reason": "Remove exact account/provider identity references; preserve other accounts and event idempotency"
+        },
+        {
+          "schema_name": "public",
+          "table_name": "premium_feature_config",
+          "handling": "global",
+          "reason": "Public product manifest; contains no account identifier"
+        },
+        {
+          "schema_name": "public",
+          "table_name": "premium_runtime_config",
+          "handling": "global",
+          "reason": "Environment switches; contains no account identifier"
+        },
+        {
+          "schema_name": "public",
+          "table_name": "premium_usage_global",
+          "handling": "global",
+          "reason": "Feature/day aggregate cost only; no account identifier"
+        },
+        {
+          "schema_name": "public",
+          "table_name": "profiles",
+          "handling": "custom",
+          "reason": "Restricted profile removed after provider material; independently counted"
+        }
+      ]
+    }
+  },
+  "production": {
+    "ref": "npykvnxnehlsdlbumzwk",
+    "guard": {
+      "schema_name": "private",
+      "proname": "refuse_pending_provider_write",
+      "args": "",
+      "owner": "postgres",
+      "prosecdef": true,
+      "proconfig": [
+        "search_path=\"\""
+      ],
+      "proacl": "{postgres=X/postgres,service_role=X/postgres}",
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_role_execute": true,
+      "service_role_schema_usage": false,
+      "definition": "CREATE OR REPLACE FUNCTION private.refuse_pending_provider_write()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\nBEGIN\n IF NOT private.account_is_active((to_jsonb(new)->>TG_ARGV[0])::uuid) THEN\n  RAISE EXCEPTION 'account_deactivated' USING ERRCODE='42501';\n END IF;\n RETURN new;\nEND $function$\n",
+      "triggers": [
+        {
+          "table": "apple_revocation_credentials",
+          "name": "deletion_apple_guard",
+          "enabled": "O"
+        },
+        {
+          "table": "calendar_oauth_states",
+          "name": "deletion_calendar_state_guard",
+          "enabled": "O"
+        },
+        {
+          "table": "external_calendar_connections",
+          "name": "deletion_calendar_guard",
+          "enabled": "O"
+        },
+        {
+          "table": "premium_authorization_audit",
+          "name": "deletion_v2_guard",
+          "enabled": "O"
+        },
+        {
+          "table": "premium_decisions",
+          "name": "deletion_v2_guard",
+          "enabled": "O"
+        },
+        {
+          "table": "premium_entitlements",
+          "name": "deletion_v2_guard",
+          "enabled": "O"
+        },
+        {
+          "table": "premium_reconcile_state",
+          "name": "deletion_v2_guard",
+          "enabled": "O"
+        },
+        {
+          "table": "premium_subscriber_identities",
+          "name": "deletion_v2_guard",
+          "enabled": "O"
+        },
+        {
+          "table": "premium_usage",
+          "name": "deletion_v2_guard",
+          "enabled": "O"
+        },
+        {
+          "table": "premium_usage_events",
+          "name": "deletion_v2_guard",
+          "enabled": "O"
+        }
+      ]
+    },
+    "eventGuard": {
+      "schema_name": "private",
+      "proname": "deletion_redact_inactive_event",
+      "args": "",
+      "owner": "postgres",
+      "prosecdef": true,
+      "proconfig": [
+        "search_path=\"\""
+      ],
+      "proacl": "{postgres=X/postgres}",
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_role_execute": false,
+      "service_role_schema_usage": false,
+      "definition": "CREATE OR REPLACE FUNCTION private.deletion_redact_inactive_event()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\nDECLARE ids text[];\nBEGIN\n SELECT ARRAY(SELECT DISTINCT id FROM jsonb_array_elements_text(\n  jsonb_build_array(NEW.app_user_id,NEW.original_app_user_id)||NEW.aliases||NEW.transferred_from||NEW.transferred_to) v(id)\n  WHERE CASE WHEN id ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'\n   THEN NOT private.account_is_active(id::uuid)\n   ELSE EXISTS(SELECT 1 FROM public.premium_subscriber_identities i WHERE i.provider_user_id=id AND i.account_id IS NOT NULL AND NOT private.account_is_active(i.account_id)) END) INTO ids;\n IF NEW.account_id IS NOT NULL AND NOT private.account_is_active(NEW.account_id) THEN NEW.account_id:=NULL; END IF;\n IF NEW.app_user_id=ANY(ids) THEN NEW.app_user_id:=NULL; END IF;\n IF NEW.original_app_user_id=ANY(ids) THEN NEW.original_app_user_id:=NULL; END IF;\n NEW.aliases:=private.deletion_redact_ids(NEW.aliases,ids);\n NEW.transferred_from:=private.deletion_redact_ids(NEW.transferred_from,ids);\n NEW.transferred_to:=private.deletion_redact_ids(NEW.transferred_to,ids);\n NEW.payload:=private.deletion_redact_ids(NEW.payload,ids);\n RETURN NEW;\nEND $function$\n",
+      "triggers": [
+        {
+          "table": "premium_events",
+          "name": "deletion_event_guard",
+          "enabled": "O"
+        }
+      ]
+    },
+    "functions": [
+      {
+        "slug": "capture-apple-credential",
+        "status": "ACTIVE",
+        "version": 6,
+        "verify_jwt": true,
+        "ezbr_sha256": "032f9675ec80e7853b8f62d6093094de1d3e8c1061fac640fa736fe465afe3ca"
+      },
+      {
+        "slug": "request-account-deletion",
+        "status": "ACTIVE",
+        "version": 7,
+        "verify_jwt": true,
+        "ezbr_sha256": "8dddf0dce8206c4a888ef90792c66e3766b4176831304bf5f1c4b95875f26ebb"
+      },
+      {
+        "slug": "deletion-status",
+        "status": "ACTIVE",
+        "version": 7,
+        "verify_jwt": false,
+        "ezbr_sha256": "2fcec57346b7a3529af3fbf433c901ab92f147004c951474da77e04b91bd76de"
+      },
+      {
+        "slug": "restore-account",
+        "status": "ACTIVE",
+        "version": 7,
+        "verify_jwt": false,
+        "ezbr_sha256": "f92bc37f055cb46808cb556cfefb5a3766a1c35eab1ff9e70e463c791c7fb97d"
+      },
+      {
+        "slug": "resend-restoration-email",
+        "status": "ACTIVE",
+        "version": 7,
+        "verify_jwt": false,
+        "ezbr_sha256": "cf8e69f206859e6ff1c0242b72e5cdc19fefbbc6560468baec52542178cad33f"
+      },
+      {
+        "slug": "begin-web-deletion",
+        "status": "ACTIVE",
+        "version": 7,
+        "verify_jwt": false,
+        "ezbr_sha256": "5ebc05b02d7bed4b27155aecf6a14cf19b3e9af14abfe2dc50a0129e39e3bdaf"
+      },
+      {
+        "slug": "process-account-deletions",
+        "status": "ACTIVE",
+        "version": 7,
+        "verify_jwt": false,
+        "ezbr_sha256": "efc1e038f5b3af0f5e7c1641299fcef56b268caa568c5dd089af34efc08457c3"
+      },
+      {
+        "slug": "monitor-account-deletions",
+        "status": "ACTIVE",
+        "version": 7,
+        "verify_jwt": false,
+        "ezbr_sha256": "f4bab42c2545477d456aa8a1775a599855ca596703b69141fc8fd1fb7c8de209"
+      },
+      {
+        "slug": "expire-account-deletion-proofs",
+        "status": "ACTIVE",
+        "version": 6,
+        "verify_jwt": false,
+        "ezbr_sha256": "e6b1473af2a0845f95d6c08915ce949ab141e8b57866105f75eb14a2dff913f1"
+      },
+      {
+        "slug": "revenuecat-webhook",
+        "status": "ACTIVE",
+        "version": 7,
+        "verify_jwt": false,
+        "ezbr_sha256": "6438daa6300f8044904e43d4f2c0834aa44a2d63a58df47912747d7a19477351"
+      }
+    ],
+    "migrations": [
+      {
+        "version": "20260924181956",
+        "name": "build4_cloud_schema"
+      },
+      {
+        "version": "20260924182007",
+        "name": "ir01_duration_source_and_claim_v3"
+      },
+      {
+        "version": "20260924182010",
+        "name": "f08_meal_slot_and_status"
+      },
+      {
+        "version": "20260924182014",
+        "name": "f05_add_child_after_binding"
+      },
+      {
+        "version": "20260924182017",
+        "name": "f09_task_payment_mechanism"
+      },
+      {
+        "version": "20260924182021",
+        "name": "f10_career_opportunities"
+      },
+      {
+        "version": "20260924182024",
+        "name": "f11_rebuild_focus"
+      },
+      {
+        "version": "20260924182028",
+        "name": "f12_life_records"
+      },
+      {
+        "version": "20260924182033",
+        "name": "f13_people_os"
+      },
+      {
+        "version": "20260924182038",
+        "name": "int13_per_owner_uniqueness"
+      },
+      {
+        "version": "20260924182148",
+        "name": "build4_baseline"
+      },
+      {
+        "version": "20260924182844",
+        "name": "env_function_alignment"
+      },
+      {
+        "version": "20260925142013",
+        "name": "external_calendar_connections"
+      },
+      {
+        "version": "20261009013436",
+        "name": "herkeys_welcome_email_receipts"
+      },
+      {
+        "version": "20261009102702",
+        "name": "v2_account_consents"
+      },
+      {
+        "version": "20261014115427",
+        "name": "account_deletion_lifecycle"
+      },
+      {
+        "version": "20261014115429",
+        "name": "account_deletion_auth_reconciliation"
+      },
+      {
+        "version": "20261014115432",
+        "name": "account_deletion_terminal_identity"
+      },
+      {
+        "version": "20261014115434",
+        "name": "account_deletion_proof_retention"
+      },
+      {
+        "version": "20261014115436",
+        "name": "account_deletion_cancelled_history_cleanup"
+      },
+      {
+        "version": "20261014115439",
+        "name": "account_deletion_shared_provider_retry"
+      },
+      {
+        "version": "20261014115441",
+        "name": "account_deletion_orphan_shared_ownership"
+      },
+      {
+        "version": "20261014115443",
+        "name": "account_deletion_household_lock"
+      },
+      {
+        "version": "20261014143934",
+        "name": "account_deletion_scheduler_installed_disabled"
+      },
+      {
+        "version": "20261014175709",
+        "name": "premium_entitlement_foundation"
+      },
+      {
+        "version": "20261014175713",
+        "name": "premium_decision_ledger"
+      },
+      {
+        "version": "20261015020810",
+        "name": "premium_stale_projection_guard"
+      },
+      {
+        "version": "20261016023521",
+        "name": "premium_purchase_readiness_production_20261016"
+      },
+      {
+        "version": "20261016023535",
+        "name": "premium_checkout_independent_activation_20261016"
+      },
+      {
+        "version": "20261018231626",
+        "name": "ai_response_reporting_20261017"
+      },
+      {
+        "version": "20261018231630",
+        "name": "ai_report_review_workflow_20261017"
+      },
+      {
+        "version": "20261021061327",
+        "name": "account_deletion_v2_resource_certification"
+      },
+      {
+        "version": "20261021061330",
+        "name": "account_deletion_optional_welcome_inventory"
+      },
+      {
+        "version": "20261021061333",
+        "name": "account_deletion_overdue_request_monitor"
+      },
+      {
+        "version": "20261021061336",
+        "name": "account_deletion_private_household_owners"
+      },
+      {
+        "version": "20261021082620",
+        "name": "premium_verified_subscription_period"
+      },
+      {
+        "version": "20261021083707",
+        "name": "premium_test_store_checkout_isolation"
+      },
+      {
+        "version": "20261113211334",
+        "name": "provider_write_guard_definer"
+      },
+      {
+        "version": "20261113211418",
+        "name": "calendar_oauth_authenticated_completion"
+      }
+    ],
+    "controls": {
+      "worker": {
+        "dry_run": true,
+        "enabled": false,
+        "singleton": true,
+        "batch_size": 1,
+        "last_run_at": null,
+        "max_attempts": 8,
+        "test_scope_only": false
+      },
+      "retention": {
+        "enabled": false,
+        "singleton": true,
+        "last_failure_at": null,
+        "last_success_at": null,
+        "failure_category": null
+      },
+      "request_counts": null,
+      "cron_dispatch": [
+        {
+          "jobname": "herkeys-account-deletion",
+          "last_cron_success": null,
+          "last_cron_failure": null
+        },
+        {
+          "jobname": "herkeys-account-deletion-monitor",
+          "last_cron_success": null,
+          "last_cron_failure": null
+        },
+        {
+          "jobname": "herkeys-account-deletion-proof-expiry",
+          "last_cron_success": null,
+          "last_cron_failure": null
+        }
+      ],
+      "private_relation_access": [
+        {
+          "schema_name": "private",
+          "relname": "deletion_worker_key",
+          "anon_select": false,
+          "auth_select": false
+        },
+        {
+          "schema_name": "private",
+          "relname": "deletion_scheduler_target",
+          "anon_select": false,
+          "auth_select": false
+        },
+        {
+          "schema_name": "private",
+          "relname": "deletion_resource_registry",
+          "anon_select": false,
+          "auth_select": false
+        }
+      ]
+    },
+    "cron": [
+      {
+        "jobname": "herkeys-account-deletion",
+        "schedule": "*/5 * * * *",
+        "active": false
+      },
+      {
+        "jobname": "herkeys-account-deletion-monitor",
+        "schedule": "2-59/5 * * * *",
+        "active": false
+      },
+      {
+        "jobname": "herkeys-account-deletion-proof-expiry",
+        "schedule": "17 3 * * *",
+        "active": false
+      }
+    ],
+    "census": {
+      "registry": 50,
+      "exceptions": 24,
+      "unclassified": null,
+      "v2_fixture_rpc": false
+    },
+    "resources": {
+      "registry": [
+        {
+          "table_name": "account_claims",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "account_consents",
+          "owner_column": "account_id",
+          "household_scoped": false,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "action_executions",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "action_intents",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "action_outcomes",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "action_records",
+          "owner_column": "actor_profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "apple_revocation_credentials",
+          "owner_column": "account_id",
+          "household_scoped": false,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "automation_authorities",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "behavior_observations",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "calendar_oauth_states",
+          "owner_column": "user_id",
+          "household_scoped": false,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "capacity_profiles",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "career_opportunities",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "change_log",
+          "owner_column": "owner_profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "dependencies",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "discovery_records",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "events",
+          "owner_column": "owner_profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "evidence_links",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "external_calendar_connections",
+          "owner_column": "user_id",
+          "household_scoped": false,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "external_references",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "goals",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "herkeys_welcome_email_receipts",
+          "owner_column": "user_id",
+          "household_scoped": false,
+          "optional_when_absent": true
+        },
+        {
+          "table_name": "household_categories",
+          "owner_column": "owner_profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "household_members",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "household_people",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "household_systems",
+          "owner_column": "owner_profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "intent_decisions",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "interpretations",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "life_record_task_links",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "life_records",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "meal_plan_entries",
+          "owner_column": "owner_profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "needs_me_items",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "onboarding_state",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "one_move_records",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "patterns",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "person_contexts",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "person_task_links",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "premium_authorization_audit",
+          "owner_column": "account_id",
+          "household_scoped": false,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "premium_decisions",
+          "owner_column": "account_id",
+          "household_scoped": false,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "premium_entitlements",
+          "owner_column": "account_id",
+          "household_scoped": false,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "premium_reconcile_state",
+          "owner_column": "account_id",
+          "household_scoped": false,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "premium_subscriber_identities",
+          "owner_column": "account_id",
+          "household_scoped": false,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "premium_usage",
+          "owner_column": "account_id",
+          "household_scoped": false,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "premium_usage_events",
+          "owner_column": "account_id",
+          "household_scoped": false,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "rebuild_focus_links",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "rebuild_focuses",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "recurrence_rules",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "responsibilities",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "source_artifacts",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "system_steps",
+          "owner_column": "profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        },
+        {
+          "table_name": "tasks",
+          "owner_column": "owner_profile_id",
+          "household_scoped": true,
+          "optional_when_absent": false
+        }
+      ],
+      "exceptions": [
+        {
+          "schema_name": "private",
+          "table_name": "ai_response_reports",
+          "handling": "custom",
+          "reason": "Erase owned reports and redact reviewerId in another account report"
+        },
+        {
+          "schema_name": "private",
+          "table_name": "deletion_resource_exceptions",
+          "handling": "global",
+          "reason": "Reviewed schema classifications only"
+        },
+        {
+          "schema_name": "private",
+          "table_name": "deletion_resource_registry",
+          "handling": "global",
+          "reason": "Reviewed resource metadata only"
+        },
+        {
+          "schema_name": "private",
+          "table_name": "deletion_scheduler_target",
+          "handling": "global",
+          "reason": "Hosted project URL only; optional in local harness"
+        },
+        {
+          "schema_name": "private",
+          "table_name": "deletion_test_scope",
+          "handling": "lifecycle",
+          "reason": "Expiring synthetic-account processing allowlist; never proof"
+        },
+        {
+          "schema_name": "private",
+          "table_name": "deletion_worker_key",
+          "handling": "global",
+          "reason": "Service authentication secret; no customer identity"
+        },
+        {
+          "schema_name": "public",
+          "table_name": "account_deletion_alerts",
+          "handling": "lifecycle",
+          "reason": "Operational alert delivery metadata"
+        },
+        {
+          "schema_name": "public",
+          "table_name": "account_deletion_cases",
+          "handling": "lifecycle",
+          "reason": "Exact nonterminal shared resource review; erased at terminal completion"
+        },
+        {
+          "schema_name": "public",
+          "table_name": "account_deletion_control",
+          "handling": "global",
+          "reason": "Worker kill switch"
+        },
+        {
+          "schema_name": "public",
+          "table_name": "account_deletion_outbox",
+          "handling": "lifecycle",
+          "reason": "Encrypted recipient; completion outbox unlinked and expires within seven days"
+        },
+        {
+          "schema_name": "public",
+          "table_name": "account_deletion_rate_limits",
+          "handling": "lifecycle",
+          "reason": "Rate-limit hashes expire after one day"
+        },
+        {
+          "schema_name": "public",
+          "table_name": "account_deletion_receipts",
+          "handling": "lifecycle",
+          "reason": "Nonterminal receipt/request associations"
+        },
+        {
+          "schema_name": "public",
+          "table_name": "account_deletion_requests",
+          "handling": "lifecycle",
+          "reason": "Nonterminal lifecycle and bounded operational evidence"
+        },
+        {
+          "schema_name": "public",
+          "table_name": "account_deletion_retention_control",
+          "handling": "global",
+          "reason": "Retention job state only"
+        },
+        {
+          "schema_name": "public",
+          "table_name": "account_deletion_retention_runs",
+          "handling": "global",
+          "reason": "Aggregate expiry counters only"
+        },
+        {
+          "schema_name": "public",
+          "table_name": "account_deletion_runs",
+          "handling": "global",
+          "reason": "Aggregate run counters only"
+        },
+        {
+          "schema_name": "public",
+          "table_name": "account_deletion_terminal_proofs",
+          "handling": "lifecycle",
+          "reason": "Five-field minimal proof expires after 365 days"
+        },
+        {
+          "schema_name": "public",
+          "table_name": "discovery_answers",
+          "handling": "cascade",
+          "reason": "Owned through discovery_records; FK ON DELETE CASCADE"
+        },
+        {
+          "schema_name": "public",
+          "table_name": "households",
+          "handling": "custom",
+          "reason": "Only exclusive households; shared ownership escalated"
+        },
+        {
+          "schema_name": "public",
+          "table_name": "premium_events",
+          "handling": "custom",
+          "reason": "Remove exact account/provider identity references; preserve other accounts and event idempotency"
+        },
+        {
+          "schema_name": "public",
+          "table_name": "premium_feature_config",
+          "handling": "global",
+          "reason": "Public product manifest; contains no account identifier"
+        },
+        {
+          "schema_name": "public",
+          "table_name": "premium_runtime_config",
+          "handling": "global",
+          "reason": "Environment switches; contains no account identifier"
+        },
+        {
+          "schema_name": "public",
+          "table_name": "premium_usage_global",
+          "handling": "global",
+          "reason": "Feature/day aggregate cost only; no account identifier"
+        },
+        {
+          "schema_name": "public",
+          "table_name": "profiles",
+          "handling": "custom",
+          "reason": "Restricted profile removed after provider material; independently counted"
+        }
+      ]
+    }
+  },
+  "sourceParity": [
+    "MATCH supabase/functions/request-account-deletion/index.ts",
+    "MATCH supabase/functions/_shared/deletionService.ts",
+    "MATCH supabase/functions/_shared/supabaseAdmin.ts",
+    "MATCH supabase/functions/_shared/crypto.ts",
+    "MATCH supabase/functions/_shared/http.ts",
+    "DIFF supabase/functions/_shared/deletionCore.ts",
+    "MATCH supabase/functions/deletion-status/index.ts",
+    "MATCH supabase/functions/restore-account/index.ts",
+    "MATCH supabase/functions/resend-restoration-email/index.ts",
+    "MATCH supabase/functions/begin-web-deletion/index.ts",
+    "MATCH supabase/functions/process-account-deletions/index.ts",
+    "DIFF supabase/functions/_shared/deletionWorker.ts",
+    "DIFF supabase/functions/_shared/deletionProviders.ts",
+    "MATCH supabase/functions/_shared/deletionApple.ts",
+    "MATCH supabase/functions/monitor-account-deletions/index.ts",
+    "MATCH supabase/functions/_shared/deletionMonitor.ts",
+    "MATCH supabase/functions/capture-apple-credential/index.ts",
+    "MATCH supabase/functions/expire-account-deletion-proofs/index.ts"
+  ]
+}

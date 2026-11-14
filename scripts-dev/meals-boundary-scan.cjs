@@ -240,6 +240,14 @@ const LATER_FEATURES = [
     ],
   },
   {
+    id: 'HK-DEL-20261113 (account deletion recovery delivery)',
+    branch: null,
+    owned: [/^supabase\/migrations\/20261114020529_account_deletion_recovery_delivery\.sql$/],
+    migrations: ['supabase/migrations/20261114020529_account_deletion_recovery_delivery.sql'],
+    schemas: [], rootCollections: [], syncKinds: [],
+    shared: [],
+  },
+  {
     id: 'HK-CLAUDE-V2-ACTIVATION-20261113 (application activation, Google Calendar lifecycle and account-binding repairs, activation ledger)',
     // Parallel to the Codex RevenueCat lane: no src/monetization, RevenueCat or shared Premium server file. One additive, service-only
     // migration (HK-V2ACT-CAL-03: four nullable columns on calendar_oauth_states); no root collection, sync kind, RLS policy or grant.
