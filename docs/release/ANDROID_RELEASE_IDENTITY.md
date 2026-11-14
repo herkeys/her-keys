@@ -77,17 +77,22 @@ and confirm the EAS build page shows application id `com.heykeys.app` and a `ver
 
 ## Release branch authorization
 
-The release guard explicitly authorizes `build/02-gemini-integration` and the current V2 source candidate
-`integration/build2-candidate-20261020`. The separate `audit/ios-android-platform-parity` audit branch is not an
-authorized release source. Other branches remain non-release sources unless explicitly added to
-`RELEASE_BRANCHES` after review. `main` and early `build/0x` branches may not carry the required Android package or guard.
-The current candidate's iOS Production-environment PowerShell preflight is documented below. It does not start a build.
+The release guard explicitly authorizes `build/02-gemini-integration`, the Build 2 candidate
+`integration/build2-candidate-20261020`, and the current V2 source candidate `integration/v2-autonomous-upgrade-20261112`.
+Only those exact names are authorized: the V2 lane branches (`claude/v2-*`, `codex/v2-*`) and audit branches such as
+`audit/ios-android-platform-parity` and `audit/android-v2-eas-readiness-20261113` are not release sources. Other branches
+remain non-release sources unless explicitly added to `RELEASE_BRANCHES` after review. `main` and early `build/0x` branches
+may not carry the required Android package or guard. `integration/build2-candidate-20261020` (`c37fa45`) is an ancestor of the
+V2 candidate and lacks every 2026-11-13 repair; do not cut a new store build from it. The current candidate's Production
+preflight (Android and iOS) is documented below. It does not start a build.
 
-## iOS Production release preflight
+## Production release preflight (Android and iOS)
 
-The release identity guard authorizes `integration/build2-candidate-20261020` as a release source alongside
-`build/02-gemini-integration`. This is a source authorization only; it does not approve an App Store submission or start a
-build. The current V2 candidate at the time this change was prepared was `672714e7077f568c1577b01fab3dd35653bfa82c`.
+The release identity guard authorizes `integration/v2-autonomous-upgrade-20261112` as the current release source, alongside
+`integration/build2-candidate-20261020` and `build/02-gemini-integration`. This is a source authorization only; it does not
+approve a Google Play or App Store submission or start a build. The V2 candidate at the time this change was prepared was
+`9b75343917369f43c2fa9304e8a45f35dbad54b9`; before that change the preflight refused the branch (finding AND-SH-01 in
+`docs/audits/android-v2-eas-readiness-20261113/REPORT.md` on `audit/android-v2-eas-readiness-20261113`).
 
 The preflight resolves the Expo public configuration and preserves all existing checks: canonical Her Keys Android and
 iOS identifiers, slug, EAS owner and project, Production Supabase project, mandatory V2 consent gate, empty data mode,
@@ -98,8 +103,8 @@ From an existing Her Keys checkout with all intended changes committed and pushe
 
 ```powershell
 git fetch origin
-git switch integration/build2-candidate-20261020
-git pull --ff-only origin integration/build2-candidate-20261020
+git switch integration/v2-autonomous-upgrade-20261112
+git pull --ff-only origin integration/v2-autonomous-upgrade-20261112
 npm ci
 eas env:exec production 'npm run release:preflight'
 ```
@@ -109,8 +114,8 @@ For a fresh tracked checkout:
 ```powershell
 git clone git@github-herkeys:herkeys/her-keys.git
 Set-Location .\her-keys
-git fetch origin integration/build2-candidate-20261020
-git switch --track origin/integration/build2-candidate-20261020
+git fetch origin integration/v2-autonomous-upgrade-20261112
+git switch --track origin/integration/v2-autonomous-upgrade-20261112
 npm ci
 eas env:exec production 'npm run release:preflight'
 ```
@@ -123,4 +128,6 @@ and rerun it.
 
 Require the final line `RELEASE_IDENTITY=PASS` and retain the printed `BRANCH`, `SOURCE_SHA`, and `REMOTE_SOURCE_SHA`
 with the release record. Confirm the two SHA values match. This command runs only the preflight; no IPA is built, no
-TestFlight upload is made, and no App Store release is submitted.
+TestFlight upload is made, and no App Store release is submitted. Likewise no AAB is built and nothing is uploaded to Google
+Play. If the branch is already checked out in another worktree, run the commands from that worktree or use the fresh
+checkout.

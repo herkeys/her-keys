@@ -13,8 +13,9 @@ test('only the exact V2 candidate is added; other integration, candidate, releas
   for(const branch of ['integration/anything','candidate/anything','release/anything','repair/v2-shared-backend-convergence-20261017']){
     assert.match(checkProvenance({...good,branch}).join(' '),/not an authorized release branch/);
   }
-  assert.deepEqual(RELEASE_BRANCHES,['build/02-gemini-integration','integration/build2-candidate-20261020']);
+  assert.deepEqual(RELEASE_BRANCHES,['build/02-gemini-integration','integration/build2-candidate-20261020','integration/v2-autonomous-upgrade-20261112']);
   assert.deepEqual(checkProvenance({...good,branch:'integration/build2-candidate-20261020'}),[]);
+  assert.deepEqual(checkProvenance({...good,branch:'integration/v2-autonomous-upgrade-20261112'}),[]);
 });
 function reader({live=OTHER,remote='origin',upstream=SHA}={}){
   const calls=[];
