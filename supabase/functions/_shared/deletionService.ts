@@ -24,9 +24,10 @@ export async function queueRecovery(accountId: string, email: string) {
  const encrypted = await recoveryPayload(email, token);
  await command('resend', { account_id:accountId, recovery_hash:await sha256Base64Url(token), ...encrypted });
 }
-export async function reconcileRestoration(requestId: string, accountId: string): Promise<boolean> {
- const state=await adminClient().from('account_deletion_requests').select('auth_deactivation_pending,status').eq('id',requestId).single();
- if(state.error || state.data?.auth_deactivation_pending || state.data?.status!=='restoring')return false;
+export async function reconcileRestoration(requestId: string): Promise<boolean> {
+ const claim=await command('claim_restoration',{request_id:requestId});
+ if(!claim.claimed)return false;
+ const accountId=claim.account_id;
  const user=await adminClient().auth.admin.getUserById(accountId);
  if(!user.data.user?.email) return false;
  const encrypted=await encryptSecret(JSON.stringify({email:deliveryRecipient(user.data.user.email)}));
@@ -34,6 +35,33 @@ export async function reconcileRestoration(requestId: string, accountId: string)
  if(error) return false;
  await command('restored',{request_id:requestId,...encrypted});
  return true;
+}
+// This maintenance can run with the purge job disabled. It cannot claim a
+// destructive batch and respects the same disposable-fixture scope.
+export async function reconcileDeletionAccess() {
+ const admin=adminClient(),scope=await command('processing_scope');
+ if(scope.scoped&&!scope.accounts.length)return;
+ let query=admin.from('account_deletion_requests').select('id,account_id,status,auth_deactivation_pending')
+  .in('status',['restoring','deactivated'])
+  .or('status.eq.restoring,auth_deactivation_pending.eq.true')
+  .or('auth_reconciliation_lease_until.is.null,auth_reconciliation_lease_until.lt.'+new Date().toISOString())
+  .order('deactivated_at').limit(8);
+ if(scope.scoped)query=query.in('account_id',scope.accounts);
+ const {data,error}=await query;
+ if(error)throw new Error('access_reconciliation_unavailable');
+ let rowFailed=false;
+ for(const row of data??[]) {
+  try {
+   if(row.auth_deactivation_pending) {
+    const claim=await command('claim_deactivation',{request_id:row.id});
+    if(!claim.claimed)continue;
+    const {error}=await admin.auth.admin.updateUserById(row.account_id,{ban_duration:'876000h'});
+    await command('deactivation_ack',{request_id:row.id,auth_ban:!error,session_revocation:false});
+   }
+   if(row.status==='restoring')await reconcileRestoration(row.id);
+  } catch {rowFailed=true;}
+ }
+ if(rowFailed)throw new Error('access_reconciliation_unavailable');
 }
 export async function handleDeletion(req: Request, action: 'request'|'restore'|'resend'|'status') {
  if(req.method==='OPTIONS') return options();
@@ -71,7 +99,8 @@ export async function handleDeletion(req: Request, action: 'request'|'restore'|'
    if(!isOpaqueProof(body.token)) return json({status:'invalid_or_expired'},400);
    const result=await command('restore',{recovery_hash:await sha256Base64Url(body.token)});
    if(result.status!=='restoring') return json({status:'invalid_or_expired'},400);
-   const restored=await reconcileRestoration(result.request_id,result.account_id);
+   // The restore reservation is durable even if GoTrue cannot unban now.
+   const restored=await reconcileRestoration(result.request_id).catch(()=>false);
    return json({status:restored?'restored':'recovery_pending',sign_in_required:true},restored?200:202);
   }
   // Same public response for existing, unknown, expired, and rate-limited addresses.
@@ -117,11 +146,11 @@ export async function drainDeletionEmail() {
    const data=await response.json();
    if(typeof data.id!=='string') throw new Error('email_acceptance_unconfirmed');
    const accepted=await admin.from('account_deletion_outbox').update({status:'accepted',provider_message_id:data.id,
-    payload_ciphertext:null,payload_iv:null,lease_until:null}).eq('id',row.id).eq('attempts',row.attempts);
+    payload_ciphertext:null,payload_iv:null,lease_until:null}).eq('id',row.id).eq('attempts',row.attempts).eq('status','sending');
    if(accepted.error)throw new Error('email_acceptance_persistence_failed');
   } catch {
    const failed=await admin.from('account_deletion_outbox').update({status:'failed',lease_until:null,
-    next_attempt_at:new Date(Date.now()+Math.min(3600000,60000*2**row.attempts)).toISOString()}).eq('id',row.id).eq('attempts',row.attempts);
+    next_attempt_at:new Date(Date.now()+Math.min(3600000,60000*2**row.attempts)).toISOString()}).eq('id',row.id).eq('attempts',row.attempts).eq('status','sending');
    if(failed.error)throw new Error('email_retry_persistence_failed');
   }
  }

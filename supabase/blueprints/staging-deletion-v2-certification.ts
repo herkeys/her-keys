@@ -3,7 +3,7 @@ import {createClient} from 'npm:@supabase/supabase-js@2.116.0';
 import {adminClient} from '../functions/_shared/supabaseAdmin.ts';
 import {randomUrlSafe,sha256Base64Url,decryptSecret} from '../functions/_shared/crypto.ts';
 import {json} from '../functions/_shared/http.ts';
-import {handleDeletion,queueRecovery} from '../functions/_shared/deletionService.ts';
+import {command,handleDeletion,queueRecovery} from '../functions/_shared/deletionService.ts';
 const URL='https://fhhudicklmpofuzkxeqe.supabase.co';
 Deno.serve(async req=>{
  if(Deno.env.get('SUPABASE_URL')!==URL||req.method!=='POST')return json({error:'staging_only'},403);
@@ -92,14 +92,15 @@ Deno.serve(async req=>{
    const row=await admin.from('account_deletion_outbox').select('payload_ciphertext,payload_iv').eq('request_id',initiated.request_id).eq('kind','recovery').single();check(!row.error,'fixture_recovery_payload_missing');
    const old=JSON.parse(await decryptSecret(row.data!.payload_ciphertext,row.data!.payload_iv));
    await queueRecovery(actors[0].id,actors[0].email);
-   const oldAttempt=await handleDeletion(new Request(URL,{method:'POST',body:JSON.stringify({token:old.token})}),'restore');
-   check(oldAttempt.status===400,'replacement_token_replay');
-   const next=await admin.from('account_deletion_outbox').select('payload_ciphertext,payload_iv').eq('request_id',initiated.request_id).eq('kind','recovery').eq('status','queued').single();check(!next.error,'fixture_replacement_missing');
-   const payload=JSON.parse(await decryptSecret(next.data!.payload_ciphertext,next.data!.payload_iv));
-   const restored=await handleDeletion(new Request(URL,{method:'POST',body:JSON.stringify({token:payload.token})}),'restore');
-   check(restored.ok,'fixture_restore_failed');
-   const replay=await handleDeletion(new Request(URL,{method:'POST',body:JSON.stringify({token:payload.token})}),'restore');check(replay.status===400,'recovery_replay_succeeded');
-   observations.recovery={restored:await restored.json(),old_token_rejected:true,replay_rejected:true};
+   const next=await admin.from('account_deletion_outbox').select('replacement_recovery_hash').eq('request_id',initiated.request_id).not('replacement_recovery_hash','is',null).single();
+   check(!next.error,'fixture_replacement_missing');
+   const early=await command('restore',{recovery_hash:next.data!.replacement_recovery_hash});
+   check(early.status==='invalid_or_expired','unsent_replacement_usable');
+   const restored=await handleDeletion(new Request(URL,{method:'POST',body:JSON.stringify({token:old.token})}),'restore');
+   const recovery=await restored.json();
+   check(restored.ok&&recovery.status==='restored','fixture_restore_failed');
+   const replay=await handleDeletion(new Request(URL,{method:'POST',body:JSON.stringify({token:old.token})}),'restore');check(replay.status===400,'recovery_replay_succeeded');
+   observations.recovery={restored:recovery,original_usable_while_queued:true,unsent_replacement_rejected:true,replay_rejected:true};
    // Reauthenticate the same owned fixture after restoration for a new lifecycle.
    const generated=await admin.auth.admin.generateLink({type:'magiclink',email:actors[0].email});
    const client=createClient(URL,Deno.env.get('SUPABASE_ANON_KEY')!,{auth:{persistSession:false,autoRefreshToken:false}});

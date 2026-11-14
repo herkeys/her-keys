@@ -1,5 +1,5 @@
 import {adminClient} from './supabaseAdmin.ts';
-import {command} from './deletionService.ts';
+import {command,drainDeletionEmail,reconcileDeletionAccess} from './deletionService.ts';
 import {sha256Base64Url} from './crypto.ts';
 import {deletionHealthNeedsAttention} from './deletionCore.ts';
 export async function pollDeletionDelivery() {
@@ -13,21 +13,22 @@ export async function pollDeletionDelivery() {
   if(!response.ok)continue;
   const result=await response.json(),event=result.last_event;
   const terminal=['delivered','bounced','complained','failed','suppressed'];
-  const {error:writeError}=await admin.from('account_deletion_outbox').update({
-   delivery_status:terminal.includes(event)?event:'unconfirmed',delivery_checked_at:new Date().toISOString()
-  }).eq('id',row.id);
-  if(writeError)throw new Error('email_monitor_unavailable');
+  await command('record_delivery',{outbox_id:row.id,delivery:terminal.includes(event)?event:'unconfirmed'});
  }
 }
 export async function monitorDeletions() {
- await pollDeletionDelivery();
+ // A provider outage must not suppress the independent lifecycle health check.
+ const maintenance=await Promise.allSettled([reconcileDeletionAccess(),drainDeletionEmail(),pollDeletionDelivery()]);
+ const maintenanceFailed=maintenance.some(result=>result.status==='rejected');
  const health=await command('health');
- const unhealthy=deletionHealthNeedsAttention(health);
+ if(maintenanceFailed)health.maintenance_failed=true;
+ const unhealthy=maintenanceFailed||deletionHealthNeedsAttention(health);
  if(!unhealthy)return {healthy:true};
  const recipient=Deno.env.get('DELETION_ALERT_RECIPIENT'),key=Deno.env.get('RESEND_API_KEY');
  if(!recipient||!key)throw new Error('deletion_alert_not_configured');
  const fingerprint=await sha256Base64Url(JSON.stringify({failed:health.failed,overdue_cases:health.overdue_cases,overdue_requests:health.overdue_requests,
   scheduler_stale:health.scheduler_stale,stale_leases:health.stale_leases,email_problems:health.email_problems,
+  overdue_auth_reconciliation:health.overdue_auth_reconciliation,maintenance_failed:maintenanceFailed,
   retention_stale:health.retention_stale,retention_failed:health.retention_failed,retention_overdue:health.retention_overdue,hour:Math.floor(Date.now()/3600000)}));
  const admin=adminClient();
  let claim=await admin.from('account_deletion_alerts').insert({fingerprint}).select('id').single();
