@@ -66,10 +66,14 @@ describe('Release identity guard', () => {
   });
 
   test('provenance requires an authorized branch, a clean tracked tree and a pushed HEAD', () => {
-    assert.deepEqual(RELEASE_BRANCHES, ['build/02-gemini-integration', 'integration/build2-candidate-20261020']);
+    assert.deepEqual(RELEASE_BRANCHES, ['build/02-gemini-integration', 'integration/build2-candidate-20261020', 'integration/v2-autonomous-upgrade-20261112']);
+    for (const branch of RELEASE_BRANCHES) assert.doesNotMatch(branch, /[*?[\]{}]/, 'every entry is a literal branch name, never a pattern');
     const good = { branch: 'integration/build2-candidate-20261020', trackedChanges: [], head: 'a'.repeat(40), upstreamHead: 'a'.repeat(40), remoteHead: 'a'.repeat(40) };
     assert.deepEqual(checkProvenance(good), []);
     assert.deepEqual(checkProvenance({ ...good, branch: 'build/02-gemini-integration' }), []);
+    assert.deepEqual(checkProvenance({ ...good, branch: 'integration/v2-autonomous-upgrade-20261112' }), []);
+    // The audit branch that carried the authorization is not itself a release source.
+    assert.match(checkProvenance({ ...good, branch: 'audit/ios-ipad-v2-eas-readiness-20261113' }).join('\n'), /not an authorized release branch/);
     assert.match(checkProvenance({ ...good, branch: 'feature/01-today-chief-of-staff' }).join('\n'), /not an authorized release branch/);
     assert.match(checkProvenance({ ...good, trackedChanges: ['app.json'] }).join('\n'), /tracked changes/);
     assert.match(checkProvenance({ ...good, upstreamHead: 'b' }).join('\n'), /differs from upstream/);

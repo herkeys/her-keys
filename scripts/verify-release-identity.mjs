@@ -21,6 +21,8 @@ export const CANONICAL_IDENTITY = Object.freeze({
 export const RELEASE_BRANCHES = Object.freeze([
   'build/02-gemini-integration',
   'integration/build2-candidate-20261020',
+  // V2 candidate, owner-authorized 2026-11-13 (REL-01, docs/audits/HK_IOS_IPAD_V2_EAS_READINESS_AUDIT_20261113.md).
+  'integration/v2-autonomous-upgrade-20261112',
 ]);
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');

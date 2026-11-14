@@ -83,6 +83,11 @@ authorized release source. Other branches remain non-release sources unless expl
 `RELEASE_BRANCHES` after review. `main` and early `build/0x` branches may not carry the required Android package or guard.
 The current candidate's iOS Production-environment PowerShell preflight is documented below. It does not start a build.
 
+**2026-11-13 (REL-01):** the owner authorized the V2 candidate branch `integration/v2-autonomous-upgrade-20261112` as a
+release source (exact literal, no prefix). Use it in place of `integration/build2-candidate-20261020` in the commands below.
+This is a source authorization only; it does not approve an App Store submission or start a build. See
+`docs/audits/HK_IOS_IPAD_V2_EAS_READINESS_AUDIT_20261113.md`.
+
 ## iOS Production release preflight
 
 The release identity guard authorizes `integration/build2-candidate-20261020` as a release source alongside
