@@ -322,3 +322,44 @@ tests pass). Track with the next Expo Router major. Blocks: nothing now.
 **NEXT REQUIRED STEP:** Shared Integration Engineering adds `integration/v2-autonomous-upgrade-20261112` to `RELEASE_BRANCHES` (with its
 test pin and doc) in a reviewed PR; then rerun `npm run release:preflight` on the resulting pushed SHA. If it passes, that SHA may
 proceed to the production-profile EAS Android build.
+
+---
+
+## Addendum — re-verification after PR #56 (2026-11-14)
+
+AND-SH-01 was repaired by [PR #56](https://github.com/herkeys/her-keys/pull/56) (head `3beec64`, merged as
+`494bcf86ab459a984f9dbd8daf99f10b78c8ceb7`). The diff from `9b75343` is exactly five files: the allowlist entry, two test pins,
+the release guide and the lane register. No app, backend, permission, identity or signing change.
+
+Re-verified on a fresh tracked clone of `integration/v2-autonomous-upgrade-20261112` at `494bcf8` (`C:\Users\jsmit\Her-Keys-REL01`,
+clean tree, upstream `origin/integration/v2-autonomous-upgrade-20261112`):
+
+| Check | Result |
+|---|---|
+| `eas env:exec production 'npm run release:preflight'` | **`RELEASE_IDENTITY=PASS`**; `BRANCH=integration/v2-autonomous-upgrade-20261112`; `SOURCE_SHA` = `REMOTE_SOURCE_SHA` = `494bcf86ab459a984f9dbd8daf99f10b78c8ceb7`; `com.heykeys.app` / `com.herkeys.app` / project `7b25f8fe…` |
+| `npm ci`, `npm run typecheck`, `npm run verify:release-identity`, `npx expo install --check` | all exit 0 / PASS / up to date |
+| `npm test` (clean environment) | 5,667/5,667, 1,128 suites, 0 failed / skipped |
+| Android export with EAS Production values | exit 0; bundle `index-d734e93a…` (identical hash to the audited `9b75343` export); Production Supabase only; no Staging URL, service-role or test RevenueCat key; web-link guard present |
+| CI at `494bcf8` | Her Keys V2 Integration Gate, push run 43538557469: success |
+
+Every Gate A requirement in section 23 of the directive is now met by evidence. Real-device behavior remains deferred (section 10),
+and Gates B and C are unchanged.
+
+**ANDROID EAS BUILD READINESS: PASS**
+
+**CERTIFIED SOURCE SHA:** `494bcf86ab459a984f9dbd8daf99f10b78c8ceb7`
+
+**ANDROID-ONLY REPAIRS COMPLETED:** 0
+
+**SHARED DEFECTS OUTSTANDING:** 3 — AND-SH-02, AND-SH-03, AND-SH-04 (AND-SH-01 repaired by PR #56)
+
+**GOOGLE PLAY TESTING READINESS:** NOT YET VERIFIED
+
+**GOOGLE PLAY SUBMISSION READINESS:** FAIL
+
+**PRODUCTION FEATURE ACTIVATION:** Partial
+
+**NEXT REQUIRED STEP:** Owner confirms EAS Android build quota and that remote versionCode 4 is above every code uploaded to Play,
+then runs the production-profile EAS Android build from this exact SHA. The `eas-build-post-install` identity and backend-target
+guard runs inside the build. After it finishes, inspect the AAB (package, versionCode, upload-key SHA-1 `27:EF:…:C1:E5`, arm64 16 KB
+alignment) before uploading it to the Play internal track.
