@@ -10,7 +10,7 @@ test('release provenance requires full SHA and actual current remote, beyond the
   assert.match(checkProvenance({...good,head:'a',upstreamHead:'a',remoteHead:'a'}).join(' '),/exact full commit/);
 });
 test('only the exact V2 candidate is added; other integration, candidate, release prefixes and the unfinished repair remain unauthorized',()=>{
-  for(const branch of ['integration/anything','candidate/anything','release/anything','repair/v2-shared-backend-convergence-20261017','integration/v2-autonomous-upgrade','audit/ios-ipad-v2-eas-readiness-20261113']){
+  for(const branch of ['integration/anything','candidate/anything','release/anything','repair/v2-shared-backend-convergence-20261017']){
     assert.match(checkProvenance({...good,branch}).join(' '),/not an authorized release branch/);
   }
   assert.deepEqual(RELEASE_BRANCHES,['build/02-gemini-integration','integration/build2-candidate-20261020','integration/v2-autonomous-upgrade-20261112']);

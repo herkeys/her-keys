@@ -272,6 +272,22 @@ const LATER_FEATURES = [
     ],
   },
   {
+    id: 'HK-V2-RELEASE-PREFLIGHT-20261113 (authorize the V2 candidate branch in the release guard; AND-SH-01)',
+    // Release-control only: one exact branch name added to RELEASE_BRANCHES. Every identity, backend, consent, clean-tree, upstream and
+    // live-remote-SHA check is unchanged. No app, backend, migration, permission or signing change.
+    branch: null,
+    owned: [],
+    migrations: [],
+    schemas: [], rootCollections: [], syncKinds: [],
+    shared: [
+      ['scripts/verify-release-identity.mjs', 'AND-SH-01: add the exact V2 candidate branch to RELEASE_BRANCHES; provenance checks unchanged'],
+      ['tests/releaseIdentity.test.mjs', 'AND-SH-01: pin the three-branch allowlist; V2 lane branches and look-alike names stay refused'],
+      ['tests/releaseProvenanceRemote.test.mjs', 'AND-SH-01: pin the three-branch allowlist and accept the exact V2 branch'],
+      ['docs/release/ANDROID_RELEASE_IDENTITY.md', 'AND-SH-01: document the V2 release source and its Android/iOS Production preflight commands'],
+      ['scripts-dev/meals-boundary-scan.cjs', 'Register this release-control lane'],
+    ],
+  },
+  {
     id: 'HK-V2-AUTONOMOUS-UPGRADE-20261112 (V2 source candidate: Today/Daily Load, Talk It Out, Premium, Onboarding, Native UX)',
     // Exact-file ownership of the five V2 upgrade workstreams plus the integration's own repairs. No migration, schema, root collection,
     // sync kind, backend contract or permission change: every unrelated path stays default-deny.
@@ -2160,6 +2176,7 @@ const LATER_FEATURES = [
       ['scripts-dev/meals-boundary-scan.cjs', 'Register only exact shared repair paths and dated evidence; all boundary assertions remain enforced'],
     ],
   },
+
   {
     id: 'HK-IOS-IPAD-V2-EAS-READINESS-20261113 (universal iOS device family and iPad-only readable column)',
     branch: null,
@@ -2176,14 +2193,9 @@ const LATER_FEATURES = [
       ['app/(app)/ai.tsx', 'iPad only: Talk It Out conversation frame takes the readable column; iPhone and Android unchanged'],
       ['app/talk-it-out.tsx', 'iPad only: Talk It Out modal frame takes the readable column; iPhone and Android unchanged'],
       ['tests/ios/nativeConfig.test.mjs', 'The resolved-config pin moves from iPhone-only to the universal device family the release now targets'],
-      ['scripts/verify-release-identity.mjs', 'REL-01, owner-authorized 2026-11-13: add the exact V2 candidate branch literal to RELEASE_BRANCHES; every other check unchanged'],
-      ['tests/releaseIdentity.test.mjs', 'Pin the owner-authorized V2 branch literal and keep the audit branch and patterns refused'],
-      ['tests/releaseProvenanceRemote.test.mjs', 'Pin the owner-authorized V2 branch literal; near-miss names still refused'],
-      ['docs/release/ANDROID_RELEASE_IDENTITY.md', 'Record the REL-01 source authorization of the V2 candidate branch'],
       ['scripts-dev/meals-boundary-scan.cjs', 'Register only this audit lane; all boundary assertions remain enforced'],
     ],
   },
-
 ];
 
 /**

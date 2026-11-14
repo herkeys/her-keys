@@ -1,5 +1,8 @@
 # Her Keys AI V2 — iOS / iPadOS Hostile Audit, Integration Certification and EAS Build Readiness
 
+
+> **PR #57 merge reconciliation (2026-11-13):** PR #56 (AND-SH-01) already merged the exact V2 release-branch authorization into the integration base at `494bcf86ab459a984f9dbd8daf99f10b78c8ceb7`. This PR retains the stronger release guard, provenance tests, and release instructions from PR #56 rather than reintroducing duplicate REL-01 changes. The original REL-01 FAIL in this audit is historical; rerun Production release preflight on the eventual merged integration SHA before declaring EAS build readiness. This reconciliation does not add device or simulator verification.
+
 Date: 2026-11-13 · Auditor: Claude (iOS Release Manager / hostile auditor role) · Host: Windows 11 (no macOS, Xcode, simulator, iPhone or iPad)
 
 | | |
