@@ -66,10 +66,15 @@ describe('Release identity guard', () => {
   });
 
   test('provenance requires an authorized branch, a clean tracked tree and a pushed HEAD', () => {
-    assert.deepEqual(RELEASE_BRANCHES, ['build/02-gemini-integration', 'integration/build2-candidate-20261020']);
-    const good = { branch: 'integration/build2-candidate-20261020', trackedChanges: [], head: 'a'.repeat(40), upstreamHead: 'a'.repeat(40), remoteHead: 'a'.repeat(40) };
+    assert.deepEqual(RELEASE_BRANCHES, ['build/02-gemini-integration', 'integration/build2-candidate-20261020', 'integration/v2-autonomous-upgrade-20261112']);
+    const good = { branch: 'integration/v2-autonomous-upgrade-20261112', trackedChanges: [], head: 'a'.repeat(40), upstreamHead: 'a'.repeat(40), remoteHead: 'a'.repeat(40) };
     assert.deepEqual(checkProvenance(good), []);
+    assert.deepEqual(checkProvenance({ ...good, branch: 'integration/build2-candidate-20261020' }), []);
     assert.deepEqual(checkProvenance({ ...good, branch: 'build/02-gemini-integration' }), []);
+    // Only the exact V2 branch: its lane branches and a look-alike suffix stay unauthorized.
+    for (const branch of ['claude/v2-activation-integration-20261113', 'codex/v2-engineering-20261113', 'integration/v2-autonomous-upgrade-20261112-hotfix', 'integration/v2-autonomous-upgrade']) {
+      assert.match(checkProvenance({ ...good, branch }).join('\n'), /not an authorized release branch/, branch);
+    }
     assert.match(checkProvenance({ ...good, branch: 'feature/01-today-chief-of-staff' }).join('\n'), /not an authorized release branch/);
     assert.match(checkProvenance({ ...good, trackedChanges: ['app.json'] }).join('\n'), /tracked changes/);
     assert.match(checkProvenance({ ...good, upstreamHead: 'b' }).join('\n'), /differs from upstream/);
@@ -82,6 +87,7 @@ describe('Release identity guard', () => {
   test('the V2 candidate has a documented iOS Production preflight without starting a build', () => {
     const guide = read('docs/release/ANDROID_RELEASE_IDENTITY.md');
     assert.match(guide, /integration\/build2-candidate-20261020/);
+    assert.match(guide, /git switch --track origin\/integration\/v2-autonomous-upgrade-20261112/);
     assert.match(guide, /eas env:exec production/);
     assert.match(guide, /npm run release:preflight/);
     assert.match(guide, /no IPA is built/i);

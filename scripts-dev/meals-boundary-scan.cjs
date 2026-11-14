@@ -272,6 +272,22 @@ const LATER_FEATURES = [
     ],
   },
   {
+    id: 'HK-V2-RELEASE-PREFLIGHT-20261113 (authorize the V2 candidate branch in the release guard; AND-SH-01)',
+    // Release-control only: one exact branch name added to RELEASE_BRANCHES. Every identity, backend, consent, clean-tree, upstream and
+    // live-remote-SHA check is unchanged. No app, backend, migration, permission or signing change.
+    branch: null,
+    owned: [],
+    migrations: [],
+    schemas: [], rootCollections: [], syncKinds: [],
+    shared: [
+      ['scripts/verify-release-identity.mjs', 'AND-SH-01: add the exact V2 candidate branch to RELEASE_BRANCHES; provenance checks unchanged'],
+      ['tests/releaseIdentity.test.mjs', 'AND-SH-01: pin the three-branch allowlist; V2 lane branches and look-alike names stay refused'],
+      ['tests/releaseProvenanceRemote.test.mjs', 'AND-SH-01: pin the three-branch allowlist and accept the exact V2 branch'],
+      ['docs/release/ANDROID_RELEASE_IDENTITY.md', 'AND-SH-01: document the V2 release source and its Android/iOS Production preflight commands'],
+      ['scripts-dev/meals-boundary-scan.cjs', 'Register this release-control lane'],
+    ],
+  },
+  {
     id: 'HK-V2-AUTONOMOUS-UPGRADE-20261112 (V2 source candidate: Today/Daily Load, Talk It Out, Premium, Onboarding, Native UX)',
     // Exact-file ownership of the five V2 upgrade workstreams plus the integration's own repairs. No migration, schema, root collection,
     // sync kind, backend contract or permission change: every unrelated path stays default-deny.
