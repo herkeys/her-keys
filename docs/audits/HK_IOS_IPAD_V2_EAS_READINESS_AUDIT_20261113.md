@@ -1,5 +1,38 @@
 # Her Keys AI V2 — iOS / iPadOS Hostile Audit, Integration Certification and EAS Build Readiness
 
+## FINAL CERTIFICATION — EAS BUILD READINESS: PASS (2026-11-13)
+
+**Certified source:** `integration/v2-autonomous-upgrade-20261112` @ **`8b13fc0c8b971427f46da581f38d9b80b9749b1d`** (PR #57 merge, after PR #56). This supersedes the FAIL rows in "Final verdicts (summary)" below, which are kept as the audit's history.
+
+| Verdict | Result at `8b13fc0` |
+|---|---|
+| **iPhone EAS BUILD READINESS** | **PASS** |
+| **iPad EAS BUILD READINESS** | **PASS** |
+| **COMBINED UNIVERSAL iOS EAS BUILD READINESS** | **PASS** |
+| iPad OPTIMIZATION | PARTIAL: no blocking iPad defect; no device or simulator evidence |
+| Apple App Store submission readiness | NOT READY: separate gate, see §11; RevenueCat items skipped by owner direction and not blockers |
+
+**Merge check.** PR #56 had already authorized the same exact V2 branch literal. The PR #57 conflict resolution (`0b1f578`) kept #56's allow-list, tests and release instructions. Every iOS/iPad repair file (`src/design/readableColumn.ts`, `Screen.tsx`, `Sheet.tsx`, `app/(app)/ai.tsx`, `app/talk-it-out.tsx`, `tests/ios/ipadSupport.test.mjs`, `tests/ios/nativeConfig.test.mjs`) is byte-identical to the audited commit `87e26ad`, and `app.json` keeps `ios.supportsTablet: true`.
+
+**Fresh-clone evidence at `8b13fc0`** (a new clone of the branch, not the audit worktree):
+
+| Check | Result |
+|---|---|
+| `package-lock.json` SHA-256 | `3092e6ca…aeb9`, unchanged |
+| `npm ci`, `npm run typecheck`, `npm run verify:release-identity`, `npx expo-doctor`, `npx expo install --check` | PASS |
+| `npx expo export --dev --platform ios --no-bytecode` / production-mode Hermes export | PASS / PASS |
+| iOS, release and link suites (`ios/*`, `releaseIdentity`, `releaseProvenanceRemote`, `meals/boundary`, `codex.linkEntryPoints`, `v2up.deepLinkHardening`, `platformParity/systemLinks`) | 128/128 |
+| `npm test` | **5,681/5,681**, 1,130 suites, 0 fail/cancelled/skipped/todo; tree unchanged afterwards |
+| `eas env:exec production "npm run release:preflight"` | **`RELEASE_IDENTITY=PASS`**; `BRANCH=integration/v2-autonomous-upgrade-20261112`; `SOURCE_SHA` = `REMOTE_SOURCE_SHA` = `8b13fc0…` |
+
+**Authorization.** A real EAS iOS `production` build from `8b13fc0` is authorized. If the branch moves, re-run the preflight on the new SHA first. No build, TestFlight upload or store submission was made by this audit.
+
+**Still open (not EAS blockers):**
+- The device plan in §09 and Addendum §H, highest priority first: `index.js` cold start and deep links, Apple Sign-In, password recovery, Talk It Out against Production, Google Calendar, the iPad layout matrix.
+- EXT-WEB-01: `https://herkeys.app/account/restore` returns 404.
+- App Store work in §11: 13-inch iPad screenshots, review demo account, privacy labels.
+- RevenueCat: SKIPPED by owner direction, untested, not a blocker.
+
 
 > **PR #57 merge reconciliation (2026-11-13):** PR #56 (AND-SH-01) already merged the exact V2 release-branch authorization into the integration base at `494bcf86ab459a984f9dbd8daf99f10b78c8ceb7`. This PR retains the stronger release guard, provenance tests, and release instructions from PR #56 rather than reintroducing duplicate REL-01 changes. The original REL-01 FAIL in this audit is historical; rerun Production release preflight on the eventual merged integration SHA before declaring EAS build readiness. This reconciliation does not add device or simulator verification.
 
