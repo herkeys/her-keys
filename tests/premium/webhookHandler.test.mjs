@@ -1,9 +1,13 @@
 import assert from 'node:assert/strict';
 import { beforeEach, describe, test } from 'node:test';
+import { readFileSync } from 'node:fs';
+import { runInNewContext } from 'node:vm';
+import { transformSync } from 'esbuild';
 
 import { handleWebhook, processBacklog } from '../../supabase/functions/_shared/premium/webhookHandler.ts';
+import * as ingress from '../../supabase/functions/_shared/premium/events.ts';
 import {
-  ACCOUNT_A, ACCOUNT_B, ACCOUNT_C, AUTH_SECRET, DAY, FakeApi, FakeStore, NOW, bytes, rcBody, request, subscriberRecord, webhookDeps,
+  ACCOUNT_A, ACCOUNT_B, ACCOUNT_C, AUTH_SECRET, DAY, FakeApi, FakeStore, NOW, bytes, rcBody, request, signature, subscriberRecord, webhookDeps,
 } from '../support/premium/harness.mjs';
 
 let store;
@@ -18,6 +22,170 @@ beforeEach(() => {
   store = new FakeStore();
   api = new FakeApi();
   deps = webhookDeps(store, api);
+});
+
+// Execute the actual Deno HTTP adapter with its existing runtime ports supplied by the test harness.
+// The handler, raw-body reader, parser and signature verifier are real; no hosted credentials or network are used.
+function httpAdapter() {
+  const entry = readFileSync(new URL('../../supabase/functions/revenuecat-webhook/index.ts', import.meta.url), 'utf8');
+  const code = transformSync(entry.replace(/^import[^;]+;\r?\n/gm, ''), { loader: 'ts', format: 'cjs' }).code;
+  let handler;
+  let handled = 0;
+  const allocations = [];
+  const module = { exports: {} };
+  const ingressCode = transformSync(readFileSync(new URL('../../supabase/functions/_shared/premium/events.ts', import.meta.url), 'utf8').replace(/^import[^;]+;\r?\n/gm, ''), { loader: 'ts', format: 'cjs' }).code;
+  runInNewContext(ingressCode, {
+    module, exports: module.exports, TextDecoder,
+    Uint8Array: new Proxy(Uint8Array, { construct(Target, args) {
+      const array = Reflect.construct(Target, args);
+      allocations.push(array.byteLength);
+      return array;
+    } }),
+  });
+  runInNewContext(code, {
+    Deno: { serve(fn) { handler = fn; } },
+    handleWebhook: (...args) => { handled += 1; return handleWebhook(...args); },
+    readWebhookBody: module.exports.readWebhookBody,
+    createApi: () => api, createStore: () => store, log: deps.log,
+    readDeployment: () => store.runtime.environment, readWebhookAuthConfig: () => deps.auth, unavailableApi: {},
+    Response, Uint8Array, Date: class extends Date { static now() { return NOW; } },
+  });
+  return { send: (req) => handler(req), handled: () => handled, allocated: () => allocations.reduce((a, b) => a + b, 0) };
+}
+
+function streamedRequest(raw, { contentLength, signed = false, chunkSize = 64 * 1024, broken = false, stallCancel = false } = {}) {
+  const progress = { produced: 0, cancelled: false };
+  const headers = new Headers();
+  if (contentLength !== undefined) headers.set('content-length', String(contentLength));
+  if (signed) {
+    headers.set('authorization', AUTH_SECRET);
+    headers.set('x-revenuecat-webhook-signature', signature(raw));
+  }
+  const req = new Request('https://example.invalid/revenuecat-webhook', {
+    method: 'POST', duplex: 'half', headers,
+    body: new ReadableStream({
+      pull(controller) {
+        if (broken) return controller.error(new Error('synthetic_body_failure'));
+        if (progress.produced >= raw.byteLength) return controller.close();
+        const end = Math.min(raw.byteLength, progress.produced + chunkSize);
+        controller.enqueue(raw.subarray(progress.produced, end));
+        progress.produced = end;
+      },
+      cancel() { progress.cancelled = true; if (stallCancel) return new Promise(() => {}); },
+    }, { highWaterMark: 0 }),
+  });
+  return { req, progress };
+}
+
+describe('webhook HTTP adapter: enforce the existing raw-body budget before authentication', () => {
+  test('rejects declared oversize without allocating a body buffer or invoking the handler', async () => {
+    const adapter = httpAdapter();
+    const { req, progress } = streamedRequest(new Uint8Array(ingress.MAX_BODY_BYTES * 2), { contentLength: ingress.MAX_BODY_BYTES * 2 });
+    assert.equal((await adapter.send(req)).status, 413);
+    assert.equal(adapter.allocated(), 0, 'discard transport chunks without retaining an oversized body');
+    assert.equal(progress.produced, ingress.MAX_BODY_BYTES * 2);
+    assert.equal(progress.cancelled, false, 'do not cancel the HTTP transport while returning a response');
+    assert.equal(adapter.handled(), 0);
+    assert.equal(store.events.size, 0);
+  });
+
+  for (const contentLength of [undefined, 1]) {
+    test(`bounds an oversized stream with ${contentLength === undefined ? 'no' : 'misleading'} Content-Length`, async () => {
+      const adapter = httpAdapter();
+      const raw = new Uint8Array(ingress.MAX_BODY_BYTES * 2);
+      const { req, progress } = streamedRequest(raw, { contentLength });
+      assert.equal((await adapter.send(req)).status, 413);
+      assert.equal(adapter.allocated(), ingress.MAX_BODY_BYTES, 'retained body allocation must not grow with the upload');
+      assert.equal(progress.produced, raw.byteLength, 'finish consuming the HTTP upload without retaining excess data');
+      assert.equal(progress.cancelled, false, 'the HTTP server owns transport cleanup');
+      assert.equal(req.body.locked, false, 'release the application reader on refusal');
+      assert.equal(adapter.handled(), 0);
+      assert.equal(store.events.size, 0);
+      assert.equal(store.projections.size, 0);
+      assert.equal(store.identities.size, 0);
+    });
+  }
+
+  test('stream errors fail as a bounded client error before any authentication or persistence', async () => {
+    const adapter = httpAdapter();
+    const { req } = streamedRequest(bytes('unused'), { broken: true });
+    const response = await adapter.send(req);
+    assert.equal(response.status, 400);
+    assert.deepEqual(await response.json(), { error: 'invalid_payload' });
+    assert.equal(adapter.handled(), 0);
+    assert.equal(store.events.size, 0);
+  });
+
+  test('oversize refusal never invokes an unresponsive HTTP stream cancellation', { timeout: 2000 }, async () => {
+    for (const contentLength of [undefined, ingress.MAX_BODY_BYTES * 2]) {
+      const adapter = httpAdapter();
+      const { req, progress } = streamedRequest(new Uint8Array(ingress.MAX_BODY_BYTES * 2), { contentLength, stallCancel: true });
+      assert.equal((await adapter.send(req)).status, 413);
+      assert.equal(progress.cancelled, false);
+      assert.equal(adapter.handled(), 0);
+    }
+  });
+
+  test('a much larger declared upload never increases application body-buffer allocation', async () => {
+    const adapter = httpAdapter();
+    const raw = new Uint8Array(ingress.MAX_BODY_BYTES * 8);
+    const { req } = streamedRequest(raw, { contentLength: raw.byteLength });
+    const response = await adapter.send(req);
+    assert.equal(response.status, 413);
+    assert.equal(adapter.allocated(), 0);
+    assert.equal(adapter.handled(), 0);
+  });
+
+  test('a missing request body retains the authenticated-handler refusal contract', async () => {
+    const adapter = httpAdapter();
+    const response = await adapter.send(new Request('https://example.invalid/webhook', { method: 'POST' }));
+    assert.equal(response.status, 401);
+    assert.equal(store.events.size, 0);
+  });
+
+  test('non-POST requests never attempt to consume a body', async () => {
+    const adapter = httpAdapter();
+    const response = await adapter.send({
+      method: 'GET', headers: new Headers(),
+      get body() { throw new Error('GET body must not be read'); },
+      arrayBuffer() { throw new Error('GET body must not be read'); },
+    });
+    assert.equal(response.status, 405);
+    assert.equal(store.events.size, 0);
+  });
+
+  test('preserves original signed bytes across UTF-8 fragments and whitespace', async () => {
+    const adapter = httpAdapter();
+    const raw = bytes(`\n${JSON.stringify(rcBody({ type: 'TEST', app_user_id: '$RCAnonymousID:ingress', original_app_user_id: null, aliases: [], ignored_text: '🌷 café' }), null, 2)}\n`);
+    const { req } = streamedRequest(raw, { signed: true, chunkSize: 7 });
+    const response = await adapter.send(req);
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), { status: 'ignored_test' });
+    assert.equal(store.events.size, 1);
+    assert.equal(store.projections.size, 0);
+  });
+
+  test('accepts a valid signed payload exactly at the existing byte limit', async () => {
+    const adapter = httpAdapter();
+    const json = bytes(rcBody({ type: 'TEST', app_user_id: '$RCAnonymousID:ingress', original_app_user_id: null, aliases: [] }));
+    const raw = new Uint8Array(ingress.MAX_BODY_BYTES).fill(32);
+    raw.set(json);
+    const { req } = streamedRequest(raw, { signed: true, contentLength: raw.byteLength });
+    const response = await adapter.send(req);
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), { status: 'ignored_test' });
+    assert.equal(store.events.size, 1);
+  });
+
+  test('ordinary missing authentication and changed signed bytes remain 401', async () => {
+    const adapter = httpAdapter();
+    const raw = bytes(rcBody());
+    assert.equal((await adapter.send(streamedRequest(raw).req)).status, 401);
+    const { req } = streamedRequest(bytes(`${new TextDecoder().decode(raw)}\n`), { signed: true });
+    req.headers.set('x-revenuecat-webhook-signature', signature(raw));
+    assert.equal((await adapter.send(req)).status, 401);
+    assert.equal(store.events.size, 0);
+  });
 });
 
 describe('webhook endpoint: authentication happens before anything is stored', () => {
