@@ -23,6 +23,17 @@
   },
   "conditionals": [
     {
+      "id": "PC-PLAY-01",
+      "file": "src/config/legal.ts",
+      "count": 1,
+      "expression": "Platform.OS selects Android HTML legal pages, while preserving previously approved iOS PDF destinations",
+      "class": "A",
+      "capability": "Review complete Privacy Policy and Terms during consent and Account privacy controls",
+      "difference": "Android opens publicly accessible full HTML legal policies required for the Google Play privacy disclosures; iOS and web retain their existing owner-approved PDF links. Consent storage and policy choices are unchanged.",
+      "iosAndroidEquivalent": true,
+      "evidence": "tests/androidPlayLegalLinks.test.mjs pins Android and iOS/web legal destinations; connected Vercel production fetch returned HTTP 200 for both HTML documents on 2026-11-15. Native opening remains untested."
+    },
+    {
       "id": "PC-B2B-A02",
       "file": "src/design/components/Button.tsx",
       "count": 1,
