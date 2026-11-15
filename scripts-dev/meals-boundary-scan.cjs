@@ -129,6 +129,13 @@ const INTEGRATION_CHECKPOINTS = ['363e473fdf053547a21a41a67b7f62bd9aa2bcdf'];
  */
 const LATER_FEATURES = [
   {
+    id: 'HK-ANDROID-PLAY-LEGAL-20261115 (Android-only HTML legal destinations for store review)',
+    branch: null,
+    owned: ['tests/androidPlayLegalLinks.test.mjs'],
+    migrations: [], schemas: [], rootCollections: [], syncKinds: [],
+    shared: [],
+  },
+  {
     id: 'HK-CODEX-V2-HOSTED-ISOLATION-20261113 (rollback-only Staging policy verification)',
     branch: null,
     owned: [], migrations: [], schemas: [], rootCollections: [], syncKinds: [],
