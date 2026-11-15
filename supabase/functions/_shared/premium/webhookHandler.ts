@@ -110,6 +110,12 @@ async function safeStatus(deps: WebhookDeps, id: string, status: EventStatus, ac
 export async function processStoredEvent(deps: WebhookDeps, id: string, event: NormalizedEvent): Promise<EventStatus> {
   let accountForStatus: string | null = null;
   try {
+    // The initial receipt's ignored-status write can fail after the event was durably stored.
+    // Recovery must enforce the same boundary BEFORE any identity, reconcile or projection work;
+    // a backlog row is not evidence that this deployment is allowed to process its environment.
+    if (event.environment !== acceptedEnvironment(deps.deployment)) {
+      return await finish(deps, id, 'ignored_environment', null, 'environment_mismatch');
+    }
     const resolved = await deps.store.resolveAccounts(candidateAccountIds(event));
     const plan = planIdentity(event, resolved);
     await registerEvidence(deps, plan.evidence);

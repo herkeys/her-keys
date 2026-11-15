@@ -111,6 +111,38 @@ describe('webhook endpoint: lifecycle through the real handler', () => {
 });
 
 describe('webhook endpoint: environment separation', () => {
+  for (const deployment of ['staging', 'production']) {
+    for (const type of ['INITIAL_PURCHASE', 'TRANSFER']) {
+      test(`${deployment} backlog cannot process a foreign ${type} after the ignore-status write failed`, async () => {
+        const processing = webhookDeps(store, api, { deployment });
+        const environment = deployment === 'production' ? 'SANDBOX' : 'PRODUCTION';
+        const setStatus = store.setEventStatus.bind(store);
+        let failIgnore = true;
+        store.setEventStatus = async (...args) => {
+          if (failIgnore && args[1] === 'ignored_environment') throw new Error('synthetic status write outage');
+          return setStatus(...args);
+        };
+        const body = rcBody({ environment, type, ...(type === 'TRANSFER' ? { transferred_from: [ACCOUNT_A], transferred_to: [ACCOUNT_B] } : {}) });
+        const received = await handleWebhook(processing, request(body));
+        assert.equal(received.status, 200, 'the authenticated event is durably received');
+        assert.equal(rows()[0].status, 'received', 'failed classification leaves a real backlog row');
+        // The status store is still failing on the first recovery attempt. No identity lookup,
+        // provider reconcile, entitlement grant or retry may bypass the environment gate.
+        await processBacklog(processing, 50);
+        assert.equal(store.projections.size, 0);
+        assert.equal(store.identities.size, 0);
+        assert.deepEqual(api.calls, []);
+        failIgnore = false;
+        await processBacklog(processing, 50);
+        assert.equal(rows()[0].status, 'ignored_environment');
+        assert.equal(rows()[0].accountId, null);
+        assert.equal(store.projections.size, 0);
+        assert.equal(store.identities.size, 0);
+        assert.deepEqual(api.calls, []);
+      });
+    }
+  }
+
   test('staging records a PRODUCTION event as evidence but NEVER grants from it', async () => {
     const response = await send(rcBody({ environment: 'PRODUCTION' }));
     assert.deepEqual(response, { status: 200, body: { status: 'ignored_environment' } });
