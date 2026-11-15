@@ -131,7 +131,7 @@ const LATER_FEATURES = [
   {
     id: 'HK-ANDROID-PLAY-LEGAL-20261115 (Android-only HTML legal destinations for store review)',
     branch: null,
-    owned: ['tests/androidPlayLegalLinks.test.mjs'],
+    owned: [/^tests\/androidPlayLegalLinks\.test\.mjs$/],
     migrations: [], schemas: [], rootCollections: [], syncKinds: [],
     shared: [],
   },
