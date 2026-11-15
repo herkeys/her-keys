@@ -6,6 +6,13 @@ import {
 } from '../../src/monetization/subscriptionManagement.ts';
 
 describe('the platform subscription-management destination', () => {
+  test('account deletion renders one management action wired to the current platform', () => {
+    const panel = readFileSync(new URL('../../src/features/account/DeleteAccountPanel.tsx', import.meta.url), 'utf8');
+    assert.match(panel, /storeSubscriptionsUrl\s*=\s*subscriptionManagementUrl\(Platform\.OS\)/);
+    assert.match(panel, /storeSubscriptionsUrl\s*&&\s*<Button[^>]*label="Manage subscriptions"\s+onPress=\{\(\)=>open\(storeSubscriptionsUrl\)\}/);
+    assert.doesNotMatch(panel, /Apple subscriptions|Google Play subscriptions|https:\/\/(apps\.apple\.com|play\.google\.com)/);
+    assert.match(panel, /Billing continues until you cancel through the store where you subscribed/);
+  });
   test('iOS opens the App Store subscriptions screen; Android opens Google Play subscriptions for THIS app', () => {
     assert.equal(subscriptionManagementUrl('ios'), 'https://apps.apple.com/account/subscriptions');
     assert.equal(subscriptionManagementUrl('android'), `https://play.google.com/store/account/subscriptions?package=${ANDROID_PACKAGE}`);

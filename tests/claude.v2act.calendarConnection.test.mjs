@@ -427,6 +427,25 @@ describe('bridge: Connect redeems the handle only for the account that started i
     assert.equal(calendarFixture.calls.some((c) => c.name === 'completeCalendarConnection'), false);
   });
 
+  test('the account changed before the authorization URL arrived: the old browser flow never opens', async () => {
+    let browserOpened = false;
+    calendarFixture.browser = async () => { browserOpened = true; return { type: 'cancel' }; };
+    calendarFixture.account = bound('a');
+    const r = await mount(<Probe date="2026-11-13" />);
+    await settle('calendarStatus', disconnected);
+    let connecting;
+    await TestRenderer.act(async () => { connecting = latest.connect(); });
+
+    calendarFixture.account = bound('b');
+    await TestRenderer.act(() => r.update(<Probe date="2026-11-13" />));
+    await TestRenderer.act(async () => {
+      calendarFixture.answer('beginCalendarConnection', begun);
+      await connecting;
+    });
+    assert.equal(browserOpened, false);
+    assert.equal(calendarFixture.calls.some((c) => c.name === 'completeCalendarConnection'), false);
+  });
+
   test('cancelled, dismissed or error returns redeem nothing', async () => {
     for (const result of [{ type: 'cancel' }, { type: 'dismiss' }, { type: 'success', url: 'herkeys://calendar-connected?status=cancelled&detail=access_denied' }, { type: 'success', url: 'herkeys://calendar-connected?status=error&detail=invalid_state' }]) {
       calendarFixture.reset();

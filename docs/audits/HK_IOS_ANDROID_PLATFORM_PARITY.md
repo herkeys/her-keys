@@ -1,5 +1,7 @@
 # Her Keys V1: iOS / Android Platform Parity Audit (Finalization Part 1)
 
+**PC-DEL-01 (2026-11-14).** The deletion panel uses the shared subscription-management action. iOS opens Apple subscriptions and Android opens Google Play subscriptions for Her Keys. The automated tests verify both destinations and the panel wiring. Opening the store screens on a device is pending.
+
 ## Build 2B Android addendum (2026-10-13)
 
 **B2B-A02 / PC-B2B-A02:** compact `Button` controls previously supplied a 44dp minimum height on Android. Android's accessibility

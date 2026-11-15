@@ -136,6 +136,17 @@
       "difference": "Each store has its own subscriptions page. The state, the words, the single-flight behaviour and the failure notice are shared; only the destination URL differs (src/monetization/subscriptionManagement.ts).",
       "iosAndroidEquivalent": true,
       "evidence": "tests/premiumHome/subscriptionManagement.test.mjs and tests/premiumHome/home.test.mjs open the iOS and Android destinations through the same control. The real store screens are NOT RUN (no device, no store build)."
+    },
+    {
+      "id": "PC-DEL-01",
+      "file": "src/features/account/DeleteAccountPanel.tsx",
+      "count": 1,
+      "expression": "Platform.OS selects the subscription management URL",
+      "class": "A",
+      "capability": "Manage subscriptions during account deletion",
+      "difference": "The shared control opens the store for the current device platform.",
+      "iosAndroidEquivalent": true,
+      "evidence": "tests/premiumHome/subscriptionManagement.test.mjs checks both destination URLs and the deletion panel wiring."
     }
   ],
   "platformFiles": [],

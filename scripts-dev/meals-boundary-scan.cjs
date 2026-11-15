@@ -2204,6 +2204,23 @@ const LATER_FEATURES = [
       ['scripts-dev/meals-boundary-scan.cjs', 'Register only this audit lane; all boundary assertions remain enforced'],
     ],
   },
+  {
+    id: 'Her Keys V2 store submission repair 2026-11-14',
+    branch: null,
+    owned: [],
+    migrations: [], schemas: [], rootCollections: [], syncKinds: [],
+    shared: [
+      ['src/features/account/DeleteAccountPanel.tsx', 'Use the platform subscription management link during deletion'],
+      ['docs/audits/HK_PLATFORM_PARITY_REGISTRY.json', 'Register the store destination used by the account deletion panel'],
+      ['docs/audits/HK_IOS_ANDROID_PLATFORM_PARITY.md', 'Record the deletion screen store-link behavior and its verification'],
+      ['tests/premiumHome/subscriptionManagement.test.mjs', 'Verify the platform destinations and deletion action'],
+      ['src/features/calendar/useGoogleCalendarBridge.ts', 'Discard pending OAuth start results after an account switch'],
+      ['tests/claude.v2act.calendarConnection.test.mjs', 'Cover an account switch while the start request is pending'],
+      ['tests/calendarPerformance.test.mjs', 'Measure synchronous projection with batched thread CPU time'],
+      ['.github/workflows/v2-integration-validation.yml', 'Run source validation against the pushed repair SHA'],
+      ['scripts-dev/meals-boundary-scan.cjs', 'Record the exact store submission repair paths'],
+    ],
+  },
 ];
 
 /**

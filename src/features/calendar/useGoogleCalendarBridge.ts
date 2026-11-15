@@ -167,6 +167,7 @@ export function useGoogleCalendarBridge(selectedDate: string, timezone: string, 
     setError(null);
     try {
       const result = await externalIntelligenceClient.beginCalendarConnection();
+      if (currentAccount.current !== startedFor) return;
       if (result.kind !== 'ready') {
         setAvailability(result.kind === 'unavailable' ? 'dormant' : 'error');
         setError(result.kind === 'unavailable' ? result.reason : null);
@@ -189,6 +190,7 @@ export function useGoogleCalendarBridge(selectedDate: string, timezone: string, 
       // Cancelled, refused or completed: the server's answer is what the panel shows.
       await refresh();
     } catch (cause) {
+      if (currentAccount.current !== startedFor) return;
       setAvailability('error');
       setError(cause instanceof Error ? cause.message : String(cause));
     } finally {

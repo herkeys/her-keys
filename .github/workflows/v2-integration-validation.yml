@@ -9,6 +9,7 @@ on:
   # Build 2A: the candidate is certified by pushing the exact SHA, not by a pull-request merge ref.
   push:
     branches:
+      - repair/v2-store-submission-mobile-20261114
       - codex/v2-engineering-20261113
       - integration/build2a-candidate
       # V2 autonomous upgrade source candidate (Today, Talk It Out, Premium, Onboarding, Native UX): the same gate on its exact pushed SHA. Validation only; no build or deploy. Remove with the branch.
