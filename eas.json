@@ -25,6 +25,19 @@
         "EXPO_PUBLIC_HERKEYS_V2_CONSENT_GATE": "true"
       }
     },
+    "store-sandbox": {
+      "environment": "preview",
+      "distribution": "store",
+      "autoIncrement": true,
+      "android": { "buildType": "app-bundle" },
+      "ios": { "buildConfiguration": "Release" },
+      "env": {
+        "EXPO_PUBLIC_HERKEYS_BACKEND": "staging",
+        "EXPO_PUBLIC_REVENUECAT_STORE": "native",
+        "EXPO_PUBLIC_HERKEYS_DATA_MODE": "empty",
+        "EXPO_PUBLIC_HERKEYS_V2_CONSENT_GATE": "true"
+      }
+    },
     "production": {
       "environment": "production",
       "autoIncrement": true,
