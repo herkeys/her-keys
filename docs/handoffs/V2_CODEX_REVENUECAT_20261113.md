@@ -1,4 +1,108 @@
-# RevenueCat completion agent — 2026-11-13
+# RevenueCat continuation — 2026-11-14 (UTC evidence through November 15)
+
+**Current engineering readiness: BLOCKED. Live/native subscription certification: NOT_RUN.** This section supersedes the historical November 13 status below. Scope is RevenueCat only; Claude owns shared application activation. Checkout, test checkout and fixtures remain OFF in both environments; deletion workers remain disabled/dry-run. The owner specifically authorized the two-function Production repair described below. No IPA/AAB, commercial activation or paywall publication occurred.
+
+## Source and validation checkpoint
+
+PR #51 is merged (merge `632bf552cdf2e8f5c58c1ffabc253c62cf884498`). The user merged PR #61 into integration at **`86e41f1e4d5ba0da56a503e602cbb2dae2e73056`**; merge-head [CI 43667344764](https://github.com/herkeys/her-keys/actions/runs/43667344764) passed. This continuation uses that verified base in the dedicated `C:\Users\jsmit\Her-Keys-RevenueCat-V2` worktree, branch `codex/v2-revenuecat-continuation-20261114`. Original/Claude worktrees were not edited.
+
+Repair commit **`25cebea0dbefdd4607288082877e8e8b10496223`**, [PR #62](https://github.com/herkeys/her-keys/pull/62), targets the authorized integration branch. Its exact-head [dispatch 43667775686](https://github.com/herkeys/her-keys/actions/runs/43667775686) and [PR validation 43667775869](https://github.com/herkeys/her-keys/actions/runs/43667775869) passed. The documentation checkpoint and its exact-head checks are recorded on the PR. Leave this PR for coordinated integration review; this agent has not merged it.
+
+| Validation | Actual result |
+| --- | --- |
+| Full local source regression | **PASS: 5,688 passed, 0 failed, 0 skipped, 0 cancelled; 1,130 suites; 562.861 seconds; exit 0** |
+| Focused webhook/authentication/reconciliation | **PASS: 70 passed, 0 failed/skipped/cancelled** |
+| TypeScript / release identity / Meals boundary | PASS |
+| Expo SDK 57 compatibility / Expo Doctor | PASS / **21 of 21** |
+| Dependencies / npm 10 lockfile | Unchanged; Expo 57.0.33 and RevenueCat SDK/UI 10.9.1 preserved |
+| Refreshed npm audit | Six entries: 0 critical, 3 high, 3 moderate. Router/decode-uri-component/query-string advisory remains OPEN despite source mitigation; fingerprint/minimatch tooling entries remain. No SDK 58 migration. |
+| Native purchase, restore, renewal and device switching | NOT_RUN; no signed artifact generated |
+
+Logs: `%TEMP%\herkeys-rc14-full.log`, `herkeys-rc14-webhook-focused.log`, `herkeys-rc14-audit.json`. Full regression includes the relevant RevenueCat, SQL authorization, entitlement, identity and lifecycle contracts; it does not replace hosted provider or native evidence.
+
+## New defect and repair
+
+**RC-V2-WEBHOOK-RECOVERY-01 / P1:** the initial authenticated webhook path records a foreign-environment event durably, then tries to classify it `ignored_environment`. If that classification write fails, the row stays `received`. Backlog recovery previously called `processStoredEvent` without checking the environment again, allowing subscription projection writes or transfer identity/reconciliation side effects from the other environment.
+
+Repair: `_shared/premium/webhookHandler.ts::processStoredEvent` now enforces `acceptedEnvironment(deployment)` before account resolution, identity evidence, reconciliation or projection work. It classifies foreign events `ignored_environment` with no account binding. If classification storage still fails, existing bounded failure/retry behavior applies without processing that event. No exported API, schema, RLS, credential, flag or dependency changed.
+
+Four new executable regressions in the existing `tests/premium/webhookHandler.test.mjs` cover INITIAL_PURCHASE and TRANSFER in both deployment directions. All four failed on merged baseline `86e41f1...`: purchase cases wrote projections; transfer cases wrote identity evidence. The repaired handler passes while classification storage is failing and after storage recovers, with zero projection/identity/provider side effects. Authentication and HMAC remain required; this is a recovery-boundary defect, not evidence that an unauthenticated request can grant Premium. Source FIXED, Staging FIXED, Production FIXED by the specifically authorized deployment below. Real store lifecycle certification remains separate.
+
+## Actual signed provider delivery
+
+The authenticated RevenueCat dashboard was available. Its Staging webhook `whintgr2afbbcfb32` is Active, Sandbox only, with a stored masked Authorization value and **HMAC signing visibly enabled**. Two dashboard-generated TEST deliveries returned **HTTP 200**, response `{"status":"ignored_test"}`. Hosted SQL independently verified exactly one durable receipt per event, SANDBOX/TEST, `ignored_test`, null account binding and no retry attempts:
+
+| RevenueCat event ID | Received UTC | Processed UTC |
+| --- | --- | --- |
+| `849B21FF-7BE8-4119-BB63-554A271FC4D1` | 2026-11-15 02:37:26.729329 | 02:37:27.398327 |
+| `7F9AAAA4-4FC5-4203-BE11-2E3ECA41D1D7` | 2026-11-15 02:38:09.415540 | 02:38:10.092898 |
+
+The deployed runtime requires HMAC in Staging and Production; authenticated 200 plus exact bundle readback establishes that the Staging provider's Authorization and signing configuration matches the hosted verifier for these deliveries. No secret was read, rotated or exported. Staging projection count remained two (the existing free/historical-fixture rows), with fixtures OFF.
+
+**Important limit:** “Resend Test Event” generated a *new* event ID. It proves repeated delivery, not same-event duplicate/replay handling. The ordinary dashboard event-history list showed no entries for these generated tests. Same-event hosted retry, captured-signature expiry rejection and real subscription lifecycle delivery remain NOT_RUN; source tests cover those contracts. Do not replay historical customer events.
+
+Production webhook `whintgrf7d1c93842` is Active, Production only, with masked Authorization and HMAC signing visibly enabled. No Production test event was sent, so matching Production credentials and real authenticated delivery remain BLOCKED/NOT_RUN. Neither webhook was renamed to imply certification.
+
+## Current deployed bundle comparison and rollback
+
+Before the new repair, all eight current Staging/Production returned bundles were compared against the merged source. Every returned file matched after line-ending normalization. **Production already contains PR #51's reconciliation environment guard**; it was promoted outside this continuation. The older report's Production-NOT_DEPLOYED statement for RC-V2-ENV-01 is historical, not the current state. Different build hashes between environments alone are not source drift.
+
+| Function | Staging before new repair | Staging current | Production current |
+| --- | --- | --- | --- |
+| premium-gate | v9 | v9 / `d4d0c7a7237e2437ddf2704587972a84a4d620da714ddf7585d417b58d5ebc68` | v8 / `0adcb188b7442c72ce928635a874cafcace63a6706b169fed008c4e1160b3c96` |
+| premium-reconcile | v10 | v10 / `8072bbb2aa44e0c667651f0d04c8aa0afaf76dbfa529449317cc4515ebcab38c` | v8 / `28b774a942248a231a258eb6cf7e1c1b4c0d442d3d247267282de9797568cd1d` |
+| revenuecat-webhook | v11 / `5f174a96f9c23b3507b2e28c4910708e0cc62e5992d892d83bc93ecc3a35be28` | **v12 / `16c6d6425f99bf8678175f297af94a3fa17c794172d2197125aef5b5ec95d0f1`** | **v9 / `0577ccab303d02e92e1b3bd7391b6c1758af3785a619d712e8538854b80b4ea2`** |
+| premium-ops | v11 / `c7b387347042f1607e497bb6e76115860ec6a8b95f74c88f9120454dba6b6222` | **v12 / `e36d586b0cec8f849ad985b33a69a9d2ba88c8ac80569c4f9b3fc5b928ce554d`** | **v9 / `2df70b4302944e3f93cf152f67cf46b54dc1a9b8530511768215c8a2be9bc36e`** |
+
+Only webhook and ops were deployed in each environment in this continuation, after focused regressions, TypeScript and health-advisor inspection. Each is ACTIVE; all **13/13 returned files per function per environment** match its submitted candidate. Existing `verify_jwt=false` is preserved, with mandatory handler Authorization/HMAC or operator authentication. Unauthenticated POST probes returned 401 and GET probes 405 for all four deployments. No historical backlog was processed. No database or entitlement mutation was performed to fake purchase evidence.
+
+Exact rollback bundles: `%TEMP%\herkeys-rc-backlog-20261114\rollback.json`; reviewed candidates: adjacent `staging-candidates.json`. Source before-image `86e41f1e4d5ba0da56a503e602cbb2dae2e73056`. Handler SHA-256 before `3098efdaa48c95443d380c9baf6ff53cf872d306571081145d34fe0d67f68461`, after `e74f0a1eca652cd0cbb7cd7fc5fceed012aba13471c4e0aff760251da57e6033`. Roll back by redeploying the corresponding exact preimage with its JWT setting, then read back files/hash/ACTIVE and verify 401/405. No data rollback is necessary; rollback restores this security defect, so prefer forward repair.
+
+**Authorized Production promotion completed:** the owner answered “Authorize the two-function Production repair” for commit `25cebea0dbefdd4607288082877e8e8b10496223`. Fresh Production preimages still matched v8: webhook hash `db054faa4b2fd98fd963b1aa69c0c14a28f70cca5ac09c2a8d2e3375d1b11a73`; ops hash `6d49abc974c1bb9f87450c698f0f2c5e652a49de01ab97ad00f18fc31e74b732`. The only changed source file in either bundle is `functions/_shared/premium/webhookHandler.ts`. Production preimages and candidates are retained at `production-rollback.json` and `production-candidates.json` in the same temporary artifact directory. Existing Production entrypoints, dependencies, JWT settings, secrets and switches were preserved.
+
+Deployment timestamps: webhook **2026-11-15T02:51:30.321Z**, ops **02:51:37.090Z**. Both returned ACTIVE v9, independently read back 13/13 matching files, and passed the four 401/405 negative probes. Runtime readback at 02:52 UTC independently confirmed checkout/test checkout/fixtures OFF and deletion enabled=false/dry_run=true in both environments. Gate/reconcile were not redeployed. Rollback uses the corresponding exact Production v8 preimage, followed by content/hash/ACTIVE, refusal and control checks; no data rollback is needed. Successful authenticated Production reconciliation/delivery remains a separate live gate; none was inferred from deployment or refusal probes.
+
+## Store, paywall and identity status
+
+| Gate | Current evidence / result |
+| --- | --- |
+| App identities, offering and entitlement | PASS configuration: `proj93809efe`, Apple `app55f51de583` / `com.herkeys.app`, Google `app3311d4868e` / `com.heykeys.app`, `her_keys_plus`, current `default` / `ofrng40c3008072`. Preserved. |
+| Apple App Store Connect credential | BLOCKED: still unconfigured, validation/product access HTTP 422. Need secure `.p8` reference for authorized existing key `XTNYDBS8T8`, issuer/team/app access and vendor context; minimum App Manager per linked historical credential documentation. Subscription key remains separate and configured. |
+| Google credential | Catalog/base-plan access PASS; purchase validation still package-not-found. Dashboard identifies Cloud project `her-keys` and configured principal `revenuecat-service-account@her-keys.iam.gserviceaccount.com`. Private key material was not opened or copied. |
+| Google live US products | Previously verified and preserved: monthly USD9.99/P1M; annual USD79.99/P1Y; ACTIVE free-P1M offers; P7D/P14D grace. Customer eligibility and purchase records NOT_RUN. |
+| Google developer notifications | Dashboard has no connected topic; selector is unselected and Connect disabled. Cloud/Play topic and permissions require verification before configuration. [Official setup](https://www.revenuecat.com/docs/platform-resources/server-notifications/google-server-notifications). |
+| Paywall | `pw9aa8edf9bdb34338` still published revision12, draft14. Published placeholder legal/video/savings defects remain; draft14 is corrected and unpublished. Actual Apple pricing/offers, native rendering/actions and commercial publication gates remain. No checkout workaround. |
+| Restore policy | Dashboard readback: **Transfer to new App User ID**. No setting changed. Actual A/B restore/transfer lifecycle NOT_RUN. |
+| Test-entitlement allowlist | Project setting reads **Anybody**. No setting changed; backend fixture/environment/checkout gates remain OFF. Approved tester allowlist/hardening is a coordinated configuration decision, not permission to use test entitlements in Production. |
+| SDK/account/server authority | Existing source contracts PASS in full regression: canonical UUID binding, quarantined timed-out restore lane, immediate account invalidation, exact-account reconciliation, server-confirmed Premium access, failure/staleness/deletion denial. Native restart/restore/device proof NOT_RUN. |
+
+The user opened an authenticated Play Console session for the existing Her Keys app, developer `5226893100792551856`, app `4974814352236449756`. The configured RC principal is **Active / Never expires**, explicitly associated with **Her Keys / com.heykeys.app**. Its permission dialog shows **View app information**, **View financial data** and **Manage orders and subscriptions** checked, inherited from account permissions. Admin and release-to-production/testing boxes are not selected. No permission or access change was made; Apply and Save changes remained disabled. The Google account/developer account is named K Scan, but the inspection was limited to the user-opened Her Keys app and its matching RC service-account grant; no K Scan Supabase credential was used.
+
+The internal track has an **Untitled draft** with no bundle selected and Next disabled. Its existing artifact library contains an **App bundle, version code2, version1.0.0, API24+, uploaded October4,2026**. Thus “no first upload” is not established and must not be asserted as the root cause. The app dashboard shows store setup **8/14** complete, internal testing **2/3** complete and no completed rollout; the Monetize page says to finish app setup first. Correct package and purchase permissions are independently verified, while a prepared/approved testing release, completed applicable setup and an actual license-test purchase remain outstanding. [Official troubleshooting](https://www.revenuecat.com/docs/service-credentials/creating-play-service-credentials/troubleshooting) also calls for completed release preparation and a sandbox transaction; catalog success alone does not certify purchase access. No permission escalation, package rename, upload, draft edit or release rollout was performed.
+
+The Google notification topic is unselected in RevenueCat. Play's Monetization setup topic value was **NOT_RUN**: Windows Computer Use stopped because it could not verify the browser URL with sufficient confidence. Browser work ended; it was not bypassed with another automation mechanism. The already observed app/grant/artifact facts above remain valid. Production deployment continued independently through the authenticated Supabase connector after the owner's explicit authorization.
+
+## Cross-agent contract and remaining gates
+
+PR #62 changes only the RC-owned webhook helper, its existing tests and this RC report. It needs no shared source-interface change. The owner subsequently assigned RevenueCat activation to this agent and requested working Apple/Google checkout webhooks; that expanded ownership does not change the evidence or commercial safeguards recorded here. The full integrated candidate and general platform-audit readiness remain separate from this focused repair.
+
+### Native checkout routing contract
+
+Latest connector readback confirms both webhook integrations are **active**, with `app_id=null` and `event_types=null`: both Apple and Google apps and all lifecycle types are included. Production sends PRODUCTION to `npykvnxnehlsdlbumzwk`; Staging sends SANDBOX to `fhhudicklmpofuzkxeqe`. No per-platform filter is dropping one store. Both hosted handlers now include the repaired recovery guard. Changing webhook filters to send sandbox grants into Production would contradict the verified environment boundary and is not a checkout fix.
+
+`premium_enabled=true` and `webhook_processing=true` already enable fulfillment in both environments. `checkout_enabled` controls new purchase presentation separately. Test Store checkout and fixtures are not prerequisites for Apple/Google billing; Production Test Store checkout is forbidden by its database constraint. Deletion workers are unrelated to checkout.
+
+The existing EAS preview profile uses native store keys with Staging backend, but internal distribution (Android APK/iOS ad hoc). Production uses native keys, Production backend and store distribution. A future TestFlight or Play license-test artifact must deliberately pair native sandbox purchases with Staging; a Production-backend TestFlight build's SANDBOX purchase cannot be certified by accepting it as a live entitlement. Prepare an explicit store-distributed sandbox profile for the later authorized build phase, preserving both app identifiers. No build or profile mutation is included in PR #62. Actual checkout stays gated while the published paywall and live store/credential/native checks remain incomplete.
+
+The separate Smart Inbox server-cancellation handoff requires design before implementation: the Claude-owned `smart-inbox-extract` entry point would pass an abort signal to RC-owned extraction/provider helpers. Current `premium_fail_usage` refunds both user quota and global cost units; automatically refunding after provider work has started would let cancellations evade global spend accounting. A correct cancellation contract must distinguish pre-dispatch cancellation from actual provider cost, preserve idempotency and account ownership, and test both. This repair does not change that interface or claim server-side cancellation complete.
+
+Open confirmed RC P0–P3 inventory: **0 P0; 1 P1 operational gate** (defective paywall revision still published); the backlog guard is repaired in source and both environments. No newly confirmed open P2/P3 source defect. Apple credential, Google purchase validation/notification setup, Production signed delivery, live reconciliation and native lifecycle remain separate BLOCKED/NOT_RUN certification gates, not invented PASS results.
+
+Next: coordinate PR #62 integration; resolve Apple secure-key reference; complete Play notification-topic inspection and an approval-ready Google Cloud/Play setup plan; let the release owner finish the applicable store/testing release gates after platform audits; certify exact-account reconciliation and controlled store sandbox lifecycle in the later signed-native phase. Keep all commercial switches OFF until the prescribed evidence and authorization exist. No native purchase, terminal deletion, release submission or broad application audit was performed by this checkpoint.
+
+---
+
+# RevenueCat completion agent — 2026-11-13 (historical)
 
 **Current verdict: BLOCKED for engineering readiness for native purchase testing; live subscriptions are NOT_RUN.** Source repairs, four Staging deployments and configuration preparation are complete below; credentials, authenticated delivery and Production promotion remain gates. This is the dedicated RevenueCat workstream, not a general application certification.
 
