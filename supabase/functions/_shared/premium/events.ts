@@ -2,6 +2,45 @@ import { ENTITLEMENT_KEY, type NormalizedEvent, type PremiumEnvironment } from '
 
 export const MAX_BODY_BYTES = 256 * 1024;
 
+export type WebhookBody = { ok: true; rawBody: Uint8Array } | { ok: false; reason: 'body_too_large' | 'body_unreadable' };
+
+/** Buffer at most the existing limit before HMAC work. Preserve signed bytes; discard excess bytes without retaining them. */
+export async function readWebhookBody(request: Pick<Request, 'headers' | 'body'>): Promise<WebhookBody> {
+  const advertised = request.headers.get('content-length');
+  let oversized = advertised !== null && /^\d+$/.test(advertised) && Number(advertised) > MAX_BODY_BYTES;
+  const body = request.body;
+  if (body === null) return oversized ? { ok: false, reason: 'body_too_large' } : { ok: true, rawBody: new Uint8Array() };
+
+  let reader: ReadableStreamDefaultReader<Uint8Array>;
+  try { reader = body.getReader(); } catch { return { ok: false, reason: 'body_unreadable' }; }
+  let buffer: Uint8Array | null = oversized ? null : new Uint8Array(MAX_BODY_BYTES);
+  let size = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) return oversized ? { ok: false, reason: 'body_too_large' } : { ok: true, rawBody: buffer!.subarray(0, size) };
+      if (!(value instanceof Uint8Array)) {
+        return { ok: false, reason: 'body_unreadable' };
+      }
+      // A hosted HTTP response may depend on upload completion. Consume the remaining
+      // transport chunks without buffering/copying them or performing authentication work.
+      if (oversized) continue;
+      if (value.byteLength > MAX_BODY_BYTES - size) {
+        oversized = true;
+        buffer = null;
+        continue;
+      }
+      buffer!.set(value, size);
+      size += value.byteLength;
+    }
+  } catch {
+    return { ok: false, reason: 'body_unreadable' };
+  } finally {
+    // The HTTP server owns transport cancellation. Always release the application reader.
+    reader.releaseLock();
+  }
+}
+
 export type ParseResult = { ok: true; event: NormalizedEvent } | { ok: false; reason: string };
 
 const isObject = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
