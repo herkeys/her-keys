@@ -67,6 +67,7 @@ const AUTH_STUB = join(HERE, 'helpers', '00-auth-stub.sql');
 const TEST_HELPERS = join(HERE, 'helpers', '01-test-helpers.sql');
 const TEST_DEFAULTS = join(HERE, 'helpers', '05-test-defaults.sql');
 const FIXTURES = join(HERE, 'helpers', '10-fixtures.sql');
+const PREMIUM_FIXTURES = join(HERE, 'helpers', '30-premium-fixtures.sql');
 // ENV F: what Features 01-08 write into a WAVE3_BASE-era database, and what the later features then do with it.
 const WAVE3_POPULATION = join(HERE, 'helpers', '20-wave3-population.sql');
 const WAVE3_AFTER_CHAIN = join(HERE, 'helpers', '21-wave3-after-chain.sql');
@@ -336,7 +337,12 @@ function envC(only) {
 
   cursorBarrier();
 
+  // The numbered Premium suites need the same local-only helper as run-premium.mjs.
+  const firstPremiumSuite = files.find((file) => /^8[23]-premium-/.test(file));
   for (const file of files) {
+    if (file === firstPremiumSuite) {
+      psqlFile(dbName('env_c'), PREMIUM_FIXTURES, { label: 'ENV C Premium fixtures' });
+    }
     console.log(`\n  ${file}`);
     const out = psqlFile(dbName('env_c'), join(HERE, file), { label: file }).out;
     for (const line of out.split('\n')) {

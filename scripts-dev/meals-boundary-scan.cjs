@@ -240,15 +240,25 @@ const LATER_FEATURES = [
     ],
   },
   {
-    id: 'HK-MIG-01 (service table RLS denials)',
+    id: 'HK-MIG-01 (service table RLS and Premium denial contract)',
     branch: null,
-    owned: [/^supabase\/migrations\/20261118040247_explicit_server_table_denials\.sql$/],
-    migrations: ['supabase/migrations/20261118040247_explicit_server_table_denials.sql'],
+    owned: [
+      /^supabase\/migrations\/20261118040247_explicit_server_table_denials\.sql$/,
+      /^supabase\/migrations\/20261118042005_premium_deactivated_denial\.sql$/,
+    ],
+    migrations: [
+      'supabase/migrations/20261118040247_explicit_server_table_denials.sql',
+      'supabase/migrations/20261118042005_premium_deactivated_denial.sql',
+    ],
     schemas: [], rootCollections: [], syncKinds: [],
     shared: [
       ['.gitattributes', 'Pin the migration to LF'],
       ['scripts-dev/meals-boundary-scan.cjs', 'Register the service-table policy migration and its governance changes'],
       ['supabase/tests/migration-chain.mjs', 'Register the additive policy migration in the shared test chain'],
+      ['supabase/tests/run.mjs', 'Load the existing Premium fixtures when the full local database runner reaches the Premium suites'],
+      ['supabase/tests/82-premium-authorization.sql', 'Prove a deactivated account returns a denial without writing protected audit rows'],
+      ['supabase/tests/83-premium-decision-ledger.sql', 'Pin both the ledger ownership policy and the restrictive active-account policy without subscription gating'],
+      ['.github/workflows/v2-integration-validation.yml', 'Run the unchanged integration validation job on this repair branch'],
       ['tests/migrationChain.test.mjs', 'Require the new migration in the governed chain'],
       ['tests/premiumFeedback.test.mjs', 'Require catalog-only access in the reviewed service-table policy migration'],
     ],

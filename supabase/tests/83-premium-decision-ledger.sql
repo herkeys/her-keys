@@ -27,9 +27,19 @@ SELECT CASE WHEN has_table_privilege('authenticated', 'public.premium_decisions'
               AND NOT has_table_privilege('authenticated', 'public.premium_decisions', 'INSERT, UPDATE, DELETE, TRUNCATE')
               AND NOT has_table_privilege('anon', 'public.premium_decisions', 'SELECT, INSERT, UPDATE, DELETE')
             THEN 'PASS' ELSE 'FAIL' END || ' | a client can only READ its ledger rows: no direct insert, update or delete, and anon holds nothing';
-SELECT CASE WHEN (SELECT count(*) FROM pg_policies WHERE tablename = 'premium_decisions') = 1
-              AND (SELECT qual FROM pg_policies WHERE tablename = 'premium_decisions') !~* 'entitle|premium_ent|expires'
-            THEN 'PASS' ELSE 'FAIL' END || ' | the ledger read policy is ownership only: it never depends on a subscription';
+WITH ledger_policies AS (
+  SELECT * FROM pg_policies WHERE schemaname = 'public' AND tablename = 'premium_decisions'
+)
+SELECT CASE WHEN count(*) = 2
+              AND count(*) FILTER (WHERE policyname = 'premium_decisions_select_own' AND permissive = 'PERMISSIVE'
+                AND cmd = 'SELECT' AND roles = ARRAY['authenticated']::name[]
+                AND qual ~ 'account_id\s*=.*auth\.uid\(\)') = 1
+              AND count(*) FILTER (WHERE policyname = 'deletion_active_account' AND permissive = 'RESTRICTIVE'
+                AND cmd = 'ALL' AND roles = ARRAY['authenticated']::name[]
+                AND qual = 'private.account_is_active(auth.uid())' AND with_check = qual) = 1
+              AND bool_and(qual !~* 'entitle|premium_ent|expires')
+            THEN 'PASS' ELSE 'FAIL' END || ' | ledger reads require ownership and an active account, regardless of subscription'
+FROM ledger_policies;
 
 -- ============ AUTHORIZATION LINKAGE ===============================================================================================
 BEGIN;

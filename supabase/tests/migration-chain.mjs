@@ -68,6 +68,7 @@ export const ADDITIVE_CHAIN = [
   { file: '20261113203431_provider_write_guard_definer.sql', owner: 'PROVIDER_WRITE_GUARD_DEFINER', label: 'provider-write-guard-definer' },
   { file: '20261114020529_account_deletion_recovery_delivery.sql', owner: 'ACCOUNT_DELETION_RECOVERY_DELIVERY', label: 'account-deletion-recovery-delivery' },
   { file: '20261118040247_explicit_server_table_denials.sql', owner: 'SERVER_TABLE_RLS_DENIALS', label: 'server-table-rls-denials' },
+  { file: '20261118042005_premium_deactivated_denial.sql', owner: 'PREMIUM_DEACTIVATED_DENIAL', label: 'premium-deactivated-denial' },
 ];
 
 /** WAVE3_BASE (363e473) ended at F05: the chain a WAVE3_BASE-era database was built with, and the populated-upgrade starting point. */
