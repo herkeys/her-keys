@@ -322,7 +322,11 @@ test('PBP-2 (evolved in Premium Stage 1): the backend enforces Premium ONLY insi
     assert.match(read(file),/fhhudicklmpofuzkxeqe/,'fixture must pin Her Keys Staging');
     assert.match(read(file),/deletion_certification_fixture/,'fixture must require owned synthetic identities');
   }
-  assert.deepEqual(mentions.filter((f) => !PREMIUM_BACKEND.test(f) && !deletionProviderOnly.has(f) && f!==deletionResourceMigration && !deletionTestFixtures.has(f)), [], 'a function or migration outside the Premium namespace reads or enforces the entitlement');
+  const serviceTablePolicies = 'supabase/migrations/20261118040247_explicit_server_table_denials.sql';
+  const servicePolicySql = read(serviceTablePolicies).replace(/--.*$/gm, '');
+  assert.doesNotMatch(servicePolicySql, /\b(?:FROM|JOIN|INTO|UPDATE|TRUNCATE)\s+public\.|\b(?:her_keys_plus|premium_(?:authorize|derive_state|my_entitlement)\s*\()/i);
+  assert.match(servicePolicySql, /AS RESTRICTIVE FOR ALL TO anon, authenticated USING \(false\) WITH CHECK \(false\)/);
+  assert.deepEqual(mentions.filter((f) => !PREMIUM_BACKEND.test(f) && !deletionProviderOnly.has(f) && f !== deletionResourceMigration && f !== serviceTablePolicies && !deletionTestFixtures.has(f)), [], 'a function or migration outside the Premium namespace reads or enforces the entitlement');
   assert.ok(mentions.some((f) => f.startsWith('supabase/functions/premium-gate/') || f.startsWith('supabase/functions/_shared/premium/')), 'and the Premium namespace really does carry the enforcement');
   // The Free functions are named, so a future edit that quietly gates one fails here by name.
   for (const free of ['herkeys-ai', 'calendar-data', 'calendar-oauth', 'weather-context', 'herkeys-welcome-email']) {

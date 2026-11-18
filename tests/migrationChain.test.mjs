@@ -105,6 +105,7 @@ describe('post-certification migration governance', () => {
       ['CALENDAR_OAUTH_COMPLETION', '20261113191332_calendar_oauth_authenticated_completion.sql'],
       ['PROVIDER_WRITE_GUARD_DEFINER', '20261113203431_provider_write_guard_definer.sql'],
       ['ACCOUNT_DELETION_RECOVERY_DELIVERY', '20261114020529_account_deletion_recovery_delivery.sql'],
+      ['SERVER_TABLE_RLS_DENIALS', '20261118040247_explicit_server_table_denials.sql'],
     ]);
     const sql = lf(POST_CERT_CHAIN[0].file);
     const executable = sql.replace(/--.*$/gm, '');

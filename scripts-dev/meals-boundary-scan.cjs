@@ -240,6 +240,20 @@ const LATER_FEATURES = [
     ],
   },
   {
+    id: 'HK-MIG-01 (service table RLS denials)',
+    branch: null,
+    owned: [/^supabase\/migrations\/20261118040247_explicit_server_table_denials\.sql$/],
+    migrations: ['supabase/migrations/20261118040247_explicit_server_table_denials.sql'],
+    schemas: [], rootCollections: [], syncKinds: [],
+    shared: [
+      ['.gitattributes', 'Pin the migration to LF'],
+      ['scripts-dev/meals-boundary-scan.cjs', 'Register the service-table policy migration and its governance changes'],
+      ['supabase/tests/migration-chain.mjs', 'Register the additive policy migration in the shared test chain'],
+      ['tests/migrationChain.test.mjs', 'Require the new migration in the governed chain'],
+      ['tests/premiumFeedback.test.mjs', 'Require catalog-only access in the reviewed service-table policy migration'],
+    ],
+  },
+  {
     id: 'HK-DEL-20261113 (account deletion recovery delivery)',
     branch: null,
     owned: [/^supabase\/migrations\/20261114020529_account_deletion_recovery_delivery\.sql$/],
