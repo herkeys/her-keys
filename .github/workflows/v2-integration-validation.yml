@@ -10,6 +10,7 @@ on:
   push:
     branches:
       - repair/v2-store-submission-mobile-20261114
+      - repair/v2-production-migration-gate-20261117
       - codex/v2-engineering-20261113
       - integration/build2a-candidate
       # V2 autonomous upgrade source candidate (Today, Talk It Out, Premium, Onboarding, Native UX): the same gate on its exact pushed SHA. Validation only; no build or deploy. Remove with the branch.

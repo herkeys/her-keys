@@ -161,8 +161,11 @@ BEGIN
   END IF;
 END
 $stub$;
-SELECT public.premium_authorize(:'ua', 'daily_load_premium', :'hh_a', 'k-life-1') AS d \gset
+SELECT public.premium_authorize(:'ua', 'daily_load_premium', :'hh_a', 'k-life-1', 'k-life-1-audit') AS d \gset
 SELECT CASE WHEN (:'d'::jsonb ->> 'reason') = 'account_deactivated' AND (:'d'::jsonb ->> 'entitlementState') = 'deletion_pending' THEN 'PASS' ELSE 'FAIL' END || ' | an open deletion request overrides an active subscription (account_deactivated / deletion_pending)';
+SELECT CASE WHEN NOT EXISTS (
+  SELECT 1 FROM public.premium_authorization_audit WHERE account_id = :'ua' AND request_id = 'k-life-1-audit'
+) THEN 'PASS' ELSE 'FAIL' END || ' | denying a deactivated account never writes to its protected audit table';
 UPDATE public.account_deletion_requests SET status = 'restored';
 SELECT public.premium_authorize(:'ua', 'daily_load_premium', :'hh_a', 'k-life-2') ->> 'outcome' AS o \gset
 SELECT CASE WHEN :'o' = 'allowed' THEN 'PASS' ELSE 'FAIL' END || ' | a restored account is authorized again';
@@ -375,12 +378,18 @@ FROM pg_class WHERE relnamespace = 'public'::regnamespace AND relname LIKE 'prem
 SELECT CASE WHEN bool_and(NOT has_function_privilege('authenticated', p.oid, 'EXECUTE') AND NOT has_function_privilege('anon', p.oid, 'EXECUTE'))
             THEN 'PASS' ELSE 'FAIL' END || ' | no client role can execute a service-only Premium function (incl. premium_authorize)'
 FROM pg_proc p WHERE p.pronamespace = 'public'::regnamespace AND p.proname LIKE 'premium\_%'
-  AND p.proname NOT IN ('premium_my_entitlement', 'premium_feature_manifest', 'premium_decision_record', 'premium_decision_transition');
--- The client-callable Premium surface is EXACTLY these four (the two entitlement reads here, the two ledger state-machine functions in suite 83).
+  AND p.proname NOT IN ('premium_my_entitlement', 'premium_feature_manifest', 'premium_decision_record', 'premium_decision_transition',
+                        'premium_purchase_readiness', 'premium_test_store_purchase_readiness');
+-- Pin the exact authenticated surface, including the actor-bound checkout readiness calls.
 SELECT CASE WHEN (SELECT array_agg(p.proname::text ORDER BY p.proname) FROM pg_proc p WHERE p.pronamespace = 'public'::regnamespace AND p.proname LIKE 'premium\_%'
                     AND has_function_privilege('authenticated', p.oid, 'EXECUTE'))
-                 = ARRAY['premium_decision_record', 'premium_decision_transition', 'premium_feature_manifest', 'premium_my_entitlement']
-            THEN 'PASS' ELSE 'FAIL' END || ' | the client-callable Premium functions are exactly the two entitlement reads and the two ledger functions';
+                 = ARRAY['premium_decision_record', 'premium_decision_transition', 'premium_feature_manifest', 'premium_my_entitlement',
+                         'premium_purchase_readiness', 'premium_test_store_purchase_readiness']
+              AND NOT EXISTS (
+                SELECT 1 FROM pg_proc p WHERE p.pronamespace = 'public'::regnamespace AND p.proname LIKE 'premium\_%'
+                  AND has_function_privilege('anon', p.oid, 'EXECUTE')
+              )
+            THEN 'PASS' ELSE 'FAIL' END || ' | only authenticated callers can access the six approved Premium RPCs';
 SELECT CASE WHEN has_function_privilege('authenticated', 'public.premium_my_entitlement()', 'EXECUTE')
               AND NOT has_function_privilege('anon', 'public.premium_my_entitlement()', 'EXECUTE')
             THEN 'PASS' ELSE 'FAIL' END || ' | only authenticated can read its own entitlement state';
