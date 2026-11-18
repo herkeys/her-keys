@@ -2221,6 +2221,16 @@ const LATER_FEATURES = [
       ['scripts-dev/meals-boundary-scan.cjs', 'Record the exact store submission repair paths'],
     ],
   },
+  {
+    id: 'HK-IOS-IPA-AUDIT-20261117 PRIV-01 (iOS privacy manifest restores the ExpoFileSystem required-reason declarations)',
+    branch: null,
+    owned: [/^tests\/ios\/privacyManifest\.test\.mjs$/],
+    migrations: [], schemas: [], rootCollections: [], syncKinds: [],
+    shared: [
+      ['app.json', 'iOS only: ios.privacyManifests restores the DiskSpace and FileTimestamp reasons the precompiled ExpoFileSystem framework dropped from the IPA; Android and every other key unchanged'],
+      ['scripts-dev/meals-boundary-scan.cjs', 'Register only this iOS privacy-manifest lane; all boundary assertions remain enforced'],
+    ],
+  },
 ];
 
 /**
