@@ -69,6 +69,20 @@ describe('iOS privacy manifest (PRIV-01)', () => {
     }
   });
 
+  test('prebuild applies ios.privacyManifests: withPrivacyInfo is in Expo\'s default iOS plugin chain and registers an Xcode mod', () => {
+    // `expo prebuild -p ios` refuses to run on Windows, so the wiring is proven here instead of by generating the Xcode project.
+    const defaults = readFileSync('node_modules/@expo/prebuild-config/build/plugins/withDefaultPlugins.js', 'utf8');
+    const start = defaults.indexOf('const withIosExpoPlugins');
+    assert.ok(start >= 0, 'withIosExpoPlugins is still the default iOS chain');
+    const iosChain = defaults.slice(start, defaults.indexOf('\n};', start));
+    assert.match(iosChain, /IOSConfig\.PrivacyInfo\.withPrivacyInfo/);
+    const { IOSConfig } = require('@expo/config-plugins');
+    const withMod = IOSConfig.PrivacyInfo.withPrivacyInfo({ name: 'Her Keys', slug: 'her-keys', ios: { privacyManifests: declared } });
+    assert.equal(typeof withMod.mods?.ios?.xcodeproj, 'function', 'a declared manifest is written during the Xcode project mod');
+    const without = IOSConfig.PrivacyInfo.withPrivacyInfo({ name: 'Her Keys', slug: 'her-keys', ios: {} });
+    assert.equal(without.mods, undefined, 'and nothing is written when no manifest is declared');
+  });
+
   test('prebuild (Expo mergePrivacyInfo) writes the declaration into a fresh app manifest without tracking', () => {
     const written = mergePrivacyInfo({}, declared);
     assert.equal(written.NSPrivacyTracking, false);
