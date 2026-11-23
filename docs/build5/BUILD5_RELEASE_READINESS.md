@@ -167,4 +167,12 @@ BUILD 5 APP STORE SUBMISSION READINESS: PENDING REVIEW
 
 ## 6. Draft PRs
 
-Recorded after the branches are pushed (see the next commit on this branch).
+All three are drafts. **None is merged.** Merge order is 1 → 2 → 3, each only after owner review.
+
+| PR | Branch → base | Link |
+|---|---|---|
+| 1/3: responsive foundation | `build5/01-responsive-foundation` → `integration/v2-autonomous-upgrade-20261112` | [herkeys/her-keys#69](https://github.com/herkeys/her-keys/pull/69) |
+| 2/3: navigation and iPad layout | `build5/02-adaptive-navigation-ipad` → `build5/01-responsive-foundation` | [herkeys/her-keys#70](https://github.com/herkeys/her-keys/pull/70) |
+| 3/3: Duo spec, matrices, readiness | `feature/build5-ipad-iphone-duo-adaptive` → `build5/02-adaptive-navigation-ipad` | [herkeys/her-keys#71](https://github.com/herkeys/her-keys/pull/71) |
+
+**CI:** the "Her Keys V2 Integration Gate" runs on pull requests into the integration branch, so it runs on #69 only. PRs #70 and #71 are stacked on other branches and get no CI run until each is retargeted after the PR below it merges. Their full suite was run locally (§3.1).
