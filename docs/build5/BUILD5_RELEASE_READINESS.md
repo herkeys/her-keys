@@ -74,7 +74,7 @@
 | Clean install | `npm ci` | PASS (591 packages) |
 | Typecheck | `npx tsc --noEmit` | PASS at baseline, at PR 1 and at the tip |
 | Full suite, baseline | `npm test` at `5ed5b30` | 5707 / 5707 |
-| Full suite, PR 1 alone | `npm test` in a detached worktree at `cd20863` (PR 1 code) | see §3.1 |
+| Full suite, PR 1 alone | `npm test` in a fresh clone at `967724d` | **5755 / 5755** (§3.1) |
 | Full suite, Build 5 code | `npm test` at the final code | **5767 / 5767** |
 | Design system, accessibility, platform parity, auth, Calendar, AI, consent, Premium, deletion | Part of `npm test`, including `design-system/*`, `platformParity/*`, `calendar*`, `consent*`, `premium*`, `accountDeletion/*`, `ios/*` | PASS (inside 5767) |
 | Build 5 tests | `tests/build5/*.test.mjs` | 54 / 54 |
@@ -87,7 +87,17 @@
 
 ### 3.1 PR 1 standalone
 
-Recorded in the final report of this build. (This file is written before that run finishes; see §6 for where the result is recorded.)
+**First run** (detached worktree at `cd20863`): typecheck passed; tests 5752 / 5755. All 3 failures were the Meals boundary scan:
+- **H, real:** PR 1's lane claimed `app/(app)/today.tsx`, which only PR 2 changes. Fixed in `967724d`: each PR now registers only its own files.
+- **G, local-only:** the other stacked local `feature/build5-*` branches counted as sibling features. Fixed by renaming the two lower branches to `build5/*`.
+
+**Re-run** in a fresh clone of `build5/01-responsive-foundation` @ `967724d` (LF checkout, only that branch local, as CI sees it):
+- typecheck PASS
+- tests **5755 / 5755**
+
+**Tip** (`feature/build5-ipad-iphone-duo-adaptive` @ `917c0a3`, code identical to `b9b9cee`):
+- typecheck PASS
+- tests **5767 / 5767**
 
 ### 3.2 Bundle provenance
 
