@@ -49,7 +49,7 @@ None of the items below was installed or built.
 
 | Area | Current | SDK 58 evidence | Status |
 |---|---|---|---|
-| RevenueCat | `react-native-purchases` / `-ui` ^10.9.1 | 11.0.4 is current (11.0.0 released 2026-10-28). Peer dependency `react-native >= 0.80.0`. | **NOT VERIFIED.** A major-version bump is needed or must be ruled out. RevenueCat changes need owner authorization (not allowed in Build 5). |
+| RevenueCat | `react-native-purchases` / `-ui` ^10.9.1 | 11.0.4 is current (11.0.0 released 2026-10-28). Peer dependency `react-native >= 0.80.0`. | **Out of scope, untested, not a blocker** (owner direction 2026-11-23: RevenueCat has a known connection issue). Build 5 does not touch it. |
 | Supabase auth (PKCE, email, OTP) | `@supabase/supabase-js` ^2.116.0 | 2.119.2. JS only. | Likely compatible. NOT VERIFIED. |
 | Apple Sign-In | `expo-apple-authentication` ~57.0.2 | Must move to the SDK 58 line | NOT VERIFIED |
 | Google OAuth | `expo-auth-session` / `expo-web-browser` 57.x | Must move to the SDK 58 line | NOT VERIFIED |
@@ -63,9 +63,7 @@ None of the items below was installed or built.
 
 1. Create a branch off the Build 5 tip, for example `feature/build5-sdk58-migration`. Isolate it in its own worktree.
 2. Run `npx expo install expo@^58 --fix`. Then regenerate the lockfile with npm 10 and confirm `npm@10 ci --dry-run`.
-3. Resolve the majors:
-   - `react-native-purchases` 11 needs owner authorization.
-   - Decide whether `expo-ocr-kit` can be kept on SDK 58, and build it natively.
+3. Decide whether `expo-ocr-kit` can be kept on SDK 58, and build it natively. RevenueCat is excluded from this migration's acceptance criteria (owner direction: known connection issue, not a blocker).
 4. Gates:
    - `tsc`, the full suite, Expo Doctor
    - iOS and Android `expo export`
