@@ -2,7 +2,8 @@ import type { ReactNode } from 'react';
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import { opacity, radius, spacing, withAlpha } from '../tokens';
 import { createThemedStyles, useTheme } from '../theme';
-import { iPadReadableColumn } from '../readableColumn';
+import { readableColumnFor } from '../readableColumn';
+import { useAdaptiveLayout } from '../adaptive';
 import { AppText } from './AppText';
 import { Button } from './Button';
 
@@ -22,8 +23,14 @@ export interface SheetProps {
 
 export function Sheet({ visible, onClose, accessibilityLabel, children }: SheetProps) {
   const styles = useStyles();
-  // iPad only (IOS-FIX-002): a centered card at the readable width instead of a full-width strip. `null` on iPhone and Android.
-  const column = iPadReadableColumn();
+  const layout = useAdaptiveLayout();
+  // Wider than compact (iOS): the sheet keeps the readable width instead of a full-width strip. `null` on compact windows and on
+  // Android, where the sheet renders exactly as before.
+  const column = readableColumnFor(layout);
+  // Expanded windows (a full-screen iPad, a wide Stage Manager window): a centered dialog card with every corner rounded, so a
+  // short confirmation does not sit at the bottom of a 1,000pt-tall window and the keyboard never covers it. The handle is a
+  // bottom-sheet affordance, so the dialog does not draw one; the scrim and the explicit buttons still close it.
+  const dialog = layout.sheetPresentation === 'dialog';
   return (
     <Modal
       visible={visible}
@@ -33,11 +40,11 @@ export function Sheet({ visible, onClose, accessibilityLabel, children }: SheetP
       accessibilityViewIsModal
       accessibilityLabel={accessibilityLabel}
     >
-      <View style={styles.backdrop}>
+      <View style={dialog ? [styles.backdrop, styles.backdropDialog] : styles.backdrop}>
         {/* The scrim closes the sheet; without a role a screen reader announces it as plain text with no hint that it can be activated. */}
         <Pressable style={StyleSheet.absoluteFill} accessibilityRole="button" accessibilityLabel="Dismiss" accessibilityHint="Closes this panel" onPress={onClose} />
-        <View style={column ? [styles.sheet, column] : styles.sheet}>
-          <View style={styles.handle} />
+        <View style={dialog ? [styles.sheet, column, styles.dialog] : column ? [styles.sheet, column] : styles.sheet}>
+          {dialog ? null : <View style={styles.handle} />}
           {children}
         </View>
       </View>
@@ -91,6 +98,8 @@ const useStyles = createThemedStyles(({ color }) => StyleSheet.create({
     backgroundColor: withAlpha(color.scrim, opacity.scrim),
     justifyContent: 'flex-end',
   },
+  backdropDialog: { justifyContent: 'center', paddingHorizontal: spacing.xl, paddingVertical: spacing.xxl },
+  dialog: { maxWidth: 560, borderRadius: radius.xl, paddingTop: spacing.xl, paddingBottom: spacing.xl },
   sheet: {
     backgroundColor: color.surface.elevated,
     borderTopLeftRadius: radius.xl,

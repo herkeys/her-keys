@@ -2,6 +2,8 @@
 
 **PC-DEL-01 (2026-11-14).** The deletion panel uses the shared subscription-management action. iOS opens Apple subscriptions and Android opens Google Play subscriptions for Her Keys. The automated tests verify both destinations and the panel wiring. Opening the store screens on a device is pending.
 
+**PC-B5-01 / EX-B5-01 (Build 5, 2026-11-23).** The Build 5 adaptive layout decides from the window, not the device model. On iOS, windows wider than compact get a readable column. Expanded windows also get a leading sidebar and, where two panes fit, two-pane workspaces. Android always gets the compact presentation, exactly as before Build 5, at every window size. That is one `Platform.OS` expression in `src/design/adaptive/useAdaptiveLayout.ts`. Destinations, routes, features, data and handlers are identical on both platforms. `tests/build5/adaptiveLayout.test.mjs` locks the Android options and geometry. Android tablet or foldable rendering on a device is **NOT RUN**.
+
 ## Build 2B Android addendum (2026-10-13)
 
 **B2B-A02 / PC-B2B-A02:** compact `Button` controls previously supplied a 44dp minimum height on Android. Android's accessibility

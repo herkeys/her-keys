@@ -2255,6 +2255,30 @@ const LATER_FEATURES = [
       ['scripts-dev/meals-boundary-scan.cjs', 'Register only this iOS privacy-manifest lane; all boundary assertions remain enforced'],
     ],
   },
+  {
+    id: 'HK-BUILD-05 iPad + iPhone Duo adaptive layout (presentation only, iOS-first)',
+    branch: null,
+    owned: [
+      /^src\/design\/adaptive\/[A-Za-z]+\.tsx?$/,
+      /^tests\/build5\/[A-Za-z]+\.test\.mjs$/,
+      /^docs\/build5\/BUILD5_[A-Z0-9_]+\.md$/,
+    ],
+    migrations: [], schemas: [], rootCollections: [], syncKinds: [],
+    shared: [
+      ['app/(app)/ai.tsx', 'Readable column follows the window (bodyColumnMaxWidth) instead of Platform.isPad'],
+      ['app/talk-it-out.tsx', 'Readable column follows the window (bodyColumnMaxWidth) instead of Platform.isPad'],
+      ['src/design/readableColumn.ts', 'Replace the isPad predicate with readableColumnFor(layout); the column style itself is unchanged'],
+      ['src/design/components/Screen.tsx', 'Window-based column, tab-chrome clearance from the layout (68pt with a tab bar, 0 with a sidebar) and an opt-in workspace width'],
+      ['src/design/components/Sheet.tsx', 'Window-based column; expanded windows present the same sheet as a centered dialog card'],
+      ['tests/support/rn-stub.tsx', 'Test-controlled safe-area insets (defaults unchanged at zero) so asymmetric insets can be tested'],
+      ['tests/ios/ipadSupport.test.mjs', 'IOS-FIX-002 contract moves from the isPad predicate to the window-based readable column'],
+      ['tests/onboardingLayout.test.mjs', 'The default clearance expression now names the tab-bar chrome constant (still 68pt with a tab bar)'],
+      ['src/features/consent/ConsentFlow.tsx', 'The consent stages (outside Screen) take the readable column on wider-than-compact iOS windows; gate logic, copy and receipts unchanged'],
+      ['docs/audits/HK_PLATFORM_PARITY_REGISTRY.json', 'Register PC-B5-01 / EX-B5-01: Android keeps the compact presentation (Build 5 is iOS-first)'],
+      ['docs/audits/HK_IOS_ANDROID_PLATFORM_PARITY.md', 'Record PC-B5-01 in the parity report the registry guard reads'],
+      ['scripts-dev/meals-boundary-scan.cjs', 'Register only this Build 5 presentation lane; all boundary assertions remain enforced'],
+    ],
+  },
 ];
 
 /**

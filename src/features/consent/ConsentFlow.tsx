@@ -4,6 +4,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText } from '../../design/components';
 import { ConsentErrorView, ConsentLegalView, ConsentPermissionsView } from './ConsentViews';
 import { spacing } from '../../design/tokens';
+import { useAdaptiveLayout } from '../../design/adaptive';
+import { readableColumnFor } from '../../design/readableColumn';
 import { createThemedStyles } from '../../design/theme';
 import { consentStatus } from '../../domain/consent';
 import type { AccountSession } from '../../domain/account/identity';
@@ -69,7 +71,13 @@ export function ConsentGate({ session, children }: { session: AccountSession; ch
   const { signOut } = useAccount();
   // The gate renders above the app's own safe-area shell, so it carries the system insets itself (status bar, gesture/3-button bar).
   const insets = useSafeAreaInsets();
-  const inset = { paddingTop: insets.top + spacing.xxl, paddingBottom: insets.bottom + spacing.xxl };
+  // Build 5: the consent stages render outside `Screen`, so on a window wider than compact (a full-screen iPad, an iPhone Duo inner
+  // display) they take the readable column themselves instead of stretching the legal text and buttons edge to edge. `null` on
+  // compact windows and on Android, where the inset is exactly what it was.
+  const column = readableColumnFor(useAdaptiveLayout());
+  const inset = column
+    ? { ...column, paddingTop: insets.top + spacing.xxl, paddingBottom: insets.bottom + spacing.xxl }
+    : { paddingTop: insets.top + spacing.xxl, paddingBottom: insets.bottom + spacing.xxl };
 
   useEffect(() => {
     let active = true;

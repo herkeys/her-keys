@@ -31,7 +31,9 @@ export const KeyboardAvoidingView = (props: AnyProps) =>
 export const Modal = (props: AnyProps) => React.createElement('Modal', props, props.children);
 export const SafeAreaView = (props: AnyProps) => React.createElement('SafeAreaView', props, props.children);
 export const ActivityIndicator = (props: AnyProps) => React.createElement('ActivityIndicator', props);
-export const useSafeAreaInsets = () => ({ top: 0, bottom: 0, left: 0, right: 0 });
+/** Test-controlled safe-area insets (Build 5): tests change these to simulate a rail, a sensor housing or a Split View edge. */
+export const safeAreaMetrics = { top: 0, bottom: 0, left: 0, right: 0 };
+export const useSafeAreaInsets = () => ({ ...safeAreaMetrics });
 
 /** Test-controlled window metrics: tests change these to simulate a small phone or large accessibility text. */
 export const windowMetrics = { width: 390, height: 844, scale: 3, fontScale: 1 };
