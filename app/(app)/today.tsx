@@ -10,7 +10,7 @@ import { useTodayView } from '../../src/features/today/useTodayView';
 export default function TodayScreen() {
   const view = useTodayView();
   return (
-    <Screen>
+    <Screen workspace>
       <TodayBriefing view={view} />
     </Screen>
   );
