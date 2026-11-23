@@ -34,6 +34,18 @@
       "evidence": "B2B-A02: tests/platformParity/androidButtonTarget.test.mjs checks rendered RN style and callback contracts for Android, iOS and web. Native layout and TalkBack remain NOT RUN."
     },
     {
+      "id": "PC-B5-01",
+      "file": "src/design/adaptive/useAdaptiveLayout.ts",
+      "count": 1,
+      "exception": "EX-B5-01",
+      "expression": "computeAdaptiveLayout(Platform.OS, window) -> ADAPTIVE_PLATFORMS has 'ios' only; Android always presents 'compact'",
+      "class": "B",
+      "capability": "Build 5 adaptive layout (sidebar navigation, two-pane workspaces, readable column, dialog sheets)",
+      "difference": "Build 5 is iOS-first (BUILD5 section 14). iOS windows wider than compact get the readable column and, when expanded, the sidebar and two-pane layouts; Android always receives the compact presentation, i.e. exactly what it rendered before Build 5, on every window size. Destinations, routes, features, data and handlers are identical on both platforms; only geometry differs. Android large-screen adaptation is a separate, reviewed change.",
+      "iosAndroidEquivalent": true,
+      "evidence": "Build 5: tests/build5/adaptiveLayout.test.mjs proves Android returns compact / tabBar / one pane / no column for phone, tablet and foldable windows, and that the compact tab options equal the pre-Build-5 options. Native Android tablet rendering is NOT RUN."
+    },
+    {
       "id": "PC-V2UP-E01",
       "file": "src/design/announce.ts",
       "count": 1,
@@ -151,6 +163,15 @@
   ],
   "platformFiles": [],
   "exceptions": [
+    {
+      "id": "EX-B5-01",
+      "name": "Build 5 adaptive (tablet / foldable) layouts are iOS-only; Android keeps the compact presentation",
+      "status": "BUILD_SCOPE_INTENTIONAL_EXCEPTION",
+      "approvedBy": "Build 5 brief (iPad + iPhone Duo adaptive upgrade), section 14: iOS-first, do not change Android functionality; recorded 2026-11-23 for owner review in the Build 5 draft PRs",
+      "ios": "window-based compact / medium / expanded presentation: readable column, leading sidebar and two-pane workspaces on expanded windows, dialog sheets",
+      "android": "compact presentation on every window size, identical to the pre-Build-5 rendering; every destination, route, feature and handler is the same",
+      "basis": "Android large-screen layouts were not designed, tested or requested for Build 5; enabling them is a one-line policy change (ADAPTIVE_PLATFORMS) that needs its own Android review and device evidence."
+    },
     {
       "id": "EX-01",
       "name": "Sign in with Apple is iOS-only in Her Keys V1",

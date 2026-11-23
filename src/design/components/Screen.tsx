@@ -3,7 +3,8 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { sizing, spacing } from '../tokens';
 import { createThemedStyles } from '../theme';
-import { iPadReadableColumn } from '../readableColumn';
+import { readableColumnFor } from '../readableColumn';
+import { tabChromeClearance, useAdaptiveLayout } from '../adaptive';
 
 export interface ScreenProps {
   children: ReactNode;
@@ -13,26 +14,39 @@ export interface ScreenProps {
    * bar or three-button bar) is always added, so the last control never sits under system chrome.
    */
   bottomClearance?: number;
+  /**
+   * Build 5: the screen lays out a two-pane workspace (`AdaptiveSplit`). When the window can hold two panes the scroll content may
+   * grow to the workspace width; otherwise it keeps the readable measure. No effect on compact or medium windows.
+   */
+  workspace?: boolean;
 }
 
 /**
  * The application screen shell: safe areas, app background, margins, scroll
- * convention. The tab bar owns 68pt + system inset; scrollable screens pad
- * past it so the last row is never trapped underneath.
+ * convention. A bottom tab bar owns 68pt + system inset; scrollable screens pad
+ * past it so the last row is never trapped underneath. With sidebar navigation
+ * (Build 5, expanded iOS windows) nothing owns the bottom edge but the system inset.
+ *
+ * Horizontal safe areas come from the native `SafeAreaView` (left and right edges, measured for THIS view), so an
+ * asymmetric inset (an iPhone Duo navigation rail, a landscape sensor housing, a Split View edge) pads only its own side.
  */
-export function Screen({ children, scroll = true, bottomClearance }: ScreenProps) {
+export function Screen({ children, scroll = true, bottomClearance, workspace = false }: ScreenProps) {
   const styles = useStyles();
   const insets = useSafeAreaInsets();
-  const bottom = (bottomClearance ?? spacing.xxxl + 68) + insets.bottom;
-  // iPad only (IOS-FIX-002): the non-scrolling body gets the same readable-width cap the scroll content already has. `null` on
-  // iPhone and Android, where nothing is added to the style array.
-  const column = iPadReadableColumn();
+  const layout = useAdaptiveLayout();
+  const bottom = (bottomClearance ?? spacing.xxxl + tabChromeClearance(layout.navigation)) + insets.bottom;
+  // Wider than compact (iOS): the non-scrolling body gets the same readable-width cap the scroll content already has. `null` on
+  // compact windows and on Android, where nothing is added to the style array.
+  const column = readableColumnFor(layout);
+  const wide = workspace && layout.twoPane;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       {scroll ? (
         <ScrollView
-          contentContainerStyle={[styles.scrollContent, { paddingBottom: bottom }]}
+          contentContainerStyle={
+            wide ? [styles.scrollContent, { paddingBottom: bottom, maxWidth: layout.contentMaxWidth }] : [styles.scrollContent, { paddingBottom: bottom }]
+          }
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           // iOS draws the keyboard over the app instead of resizing it (Android's adjustResize does). This iOS-only prop (not in

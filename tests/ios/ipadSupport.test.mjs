@@ -5,9 +5,11 @@ import { after, describe, test } from 'node:test';
 import React from 'react';
 import { Platform, StyleSheet } from 'react-native';
 import { Screen, Sheet, AppText } from '../../src/design/components/index.ts';
-import { IPAD_READABLE_COLUMN, iPadReadableColumn, isIPad } from '../../src/design/readableColumn.ts';
+import { READABLE_COLUMN, readableColumnFor } from '../../src/design/readableColumn.ts';
+import { computeAdaptiveLayout } from '../../src/design/adaptive/sizeClass.ts';
 import { sizing } from '../../src/design/tokens.ts';
 import { render } from '../support/render.tsx';
+import { safeAreaMetrics, windowMetrics } from '../support/rn-stub.tsx';
 
 /**
  * iPad support (Addendum A: IOS-FIX-001 universal device family, IOS-FIX-002 iPad readable column).
@@ -20,13 +22,18 @@ const require = createRequire(import.meta.url);
 const read = (path) => readFileSync(new URL(`../../${path}`, import.meta.url), 'utf8');
 const appJson = JSON.parse(read('app.json'));
 const flatten = (node) => StyleSheet.flatten(node.props.style) ?? {};
-const original = { OS: Platform.OS, isPad: Platform.isPad };
-function asDevice(os, isPad) {
+const original = { OS: Platform.OS, isPad: Platform.isPad, window: { ...windowMetrics }, insets: { ...safeAreaMetrics } };
+/** A device is a platform, an idiom flag (which Build 5 must IGNORE) and the window the app was actually given. */
+function asDevice(os, isPad, window = { width: 390, height: 844 }) {
   Platform.OS = os;
   if (isPad === undefined) delete Platform.isPad;
   else Platform.isPad = isPad;
+  Object.assign(windowMetrics, { fontScale: 1 }, window);
 }
-after(() => asDevice(original.OS, original.isPad));
+after(() => {
+  asDevice(original.OS, original.isPad, original.window);
+  Object.assign(safeAreaMetrics, original.insets);
+});
 
 describe('IOS-FIX-001 the iOS build is universal (iPhone + iPad) and keeps the iPhone contract', () => {
   const { getDeviceFamilies } = require('@expo/config-plugins/build/ios/DeviceFamily');
@@ -72,25 +79,38 @@ describe('IOS-FIX-001 the iOS build is universal (iPhone + iPad) and keeps the i
   });
 });
 
-describe('IOS-FIX-002 iPad readable column: iPad only, never iPhone or Android', () => {
-  test('the predicate is true only for the iPad idiom on iOS', () => {
-    assert.equal(isIPad({ OS: 'ios', isPad: true }), true);
-    assert.equal(isIPad({ OS: 'ios', isPad: false }), false);
-    assert.equal(isIPad({ OS: 'ios' }), false);
-    assert.equal(isIPad({ OS: 'android', isPad: true }), false, 'Android never takes the iPad branch');
-    assert.equal(isIPad({ OS: 'web' }), false);
+/**
+ * IOS-FIX-002, superseded by Build 5: the readable column follows the WINDOW, not `Platform.isPad`. A full-screen iPad and an
+ * iPhone Duo inner display are capped; an iPad in a narrow Split View window is not (it is compact); Android never is.
+ */
+const IPAD_13_LANDSCAPE = { width: 1366, height: 1024 };
+const IPAD_MINI_PORTRAIT = { width: 744, height: 1133 };
+const IPAD_SPLIT_THIRD = { width: 320, height: 1024 };
+
+describe('IOS-FIX-002 / Build 5 readable column: wider-than-compact iOS windows only, never compact windows or Android', () => {
+  test('the decision ignores the idiom flag and reads the window', () => {
+    const column = (os, window) => readableColumnFor(computeAdaptiveLayout(os, window));
+    assert.equal(column('ios', IPAD_13_LANDSCAPE), READABLE_COLUMN);
+    assert.equal(column('ios', IPAD_MINI_PORTRAIT), READABLE_COLUMN);
+    assert.equal(column('ios', IPAD_SPLIT_THIRD), null, 'a narrow iPad window is compact: full width, as before');
+    assert.equal(column('ios', { width: 390, height: 844 }), null, 'iPhone: unchanged');
+    assert.equal(column('android', IPAD_13_LANDSCAPE), null, 'Android never takes the adaptive branch, at any size');
   });
 
   test('the column is a centered cap at the existing content width, not a fixed width', () => {
-    assert.deepEqual({ ...IPAD_READABLE_COLUMN }, { width: '100%', maxWidth: sizing.contentWidth, alignSelf: 'center' });
+    assert.deepEqual({ ...READABLE_COLUMN }, { width: '100%', maxWidth: sizing.contentWidth, alignSelf: 'center' });
     assert.equal(sizing.contentWidth, 680, 'the shared design token is reused, not changed');
-    assert.equal(iPadReadableColumn({ OS: 'ios', isPad: false }), null);
-    assert.equal(iPadReadableColumn({ OS: 'android' }), null);
+    assert.equal(readableColumnFor({ bodyColumnMaxWidth: null }), null);
   });
 
-  for (const [label, os, isPad] of [['iPhone', 'ios', false], ['Android', 'android', undefined]]) {
+  for (const [label, os, isPad, window] of [
+    ['iPhone', 'ios', false, { width: 390, height: 844 }],
+    ['Android phone', 'android', undefined, { width: 412, height: 915 }],
+    ['Android tablet', 'android', undefined, { width: 1280, height: 800 }],
+    ['iPad in a narrow Split View window', 'ios', true, IPAD_SPLIT_THIRD],
+  ]) {
     test(`${label}: the non-scrolling Screen and the Sheet render exactly as before (no cap added)`, async () => {
-      asDevice(os, isPad);
+      asDevice(os, isPad, window);
       const screen = await render(<Screen scroll={false}><AppText>Account</AppText></Screen>);
       const body = screen.root.findAll((n) => n.type === 'View' && 'paddingBottom' in flatten(n))[0];
       assert.ok(body, 'the Screen body view is present');
@@ -101,36 +121,65 @@ describe('IOS-FIX-002 iPad readable column: iPad only, never iPhone or Android',
     });
   }
 
-  test('iPad: the non-scrolling Screen body (welcome, sign-in, account, deletion) is capped and centered', async () => {
-    asDevice('ios', true);
+  for (const [label, window] of [['full-screen 13-inch iPad', IPAD_13_LANDSCAPE], ['iPad mini portrait', IPAD_MINI_PORTRAIT]]) {
+    test(`${label}: the non-scrolling Screen body (welcome, sign-in, account, deletion) is capped and centered`, async () => {
+      asDevice('ios', true, window);
+      const screen = await render(<Screen scroll={false}><AppText>Account</AppText></Screen>);
+      const body = screen.root.findAll((n) => n.type === 'View' && 'paddingBottom' in flatten(n))[0];
+      assert.equal(flatten(body).maxWidth, 680);
+      assert.equal(flatten(body).alignSelf, 'center');
+      assert.equal(flatten(body).flex, 1, 'it still fills the height');
+    });
+  }
+
+  test('the idiom flag alone changes nothing: an iOS window that is wide gets the column even when isPad is false (iPhone Duo inner)', async () => {
+    asDevice('ios', false, { width: 669, height: 951 });
     const screen = await render(<Screen scroll={false}><AppText>Account</AppText></Screen>);
     const body = screen.root.findAll((n) => n.type === 'View' && 'paddingBottom' in flatten(n))[0];
     assert.equal(flatten(body).maxWidth, 680);
-    assert.equal(flatten(body).alignSelf, 'center');
-    assert.equal(flatten(body).flex, 1, 'it still fills the height');
   });
 
-  test('iPad: the bottom sheet is a centered card instead of a 1,366pt strip', async () => {
-    asDevice('ios', true);
+  test('medium iPad window: the bottom sheet is a centered readable card instead of a full-width strip', async () => {
+    asDevice('ios', true, IPAD_MINI_PORTRAIT);
     const sheet = await render(<Sheet visible onClose={() => {}} accessibilityLabel="Panel"><AppText>Body</AppText></Sheet>);
     const capped = sheet.root.findAll((n) => n.type === 'View' && flatten(n).maxWidth === 680);
     assert.equal(capped.length, 1);
     assert.equal(flatten(capped[0]).alignSelf, 'center');
   });
 
-  test('the Talk It Out routes (AI tab and modal) apply the iPad column to their conversation frame', () => {
+  test('expanded iPad window: the sheet is a centered dialog card (every corner rounded, no drag handle), not a 1,366pt strip', async () => {
+    asDevice('ios', true, IPAD_13_LANDSCAPE);
+    const sheet = await render(<Sheet visible onClose={() => {}} accessibilityLabel="Panel"><AppText>Body</AppText></Sheet>);
+    const card = sheet.root.findAll((n) => n.type === 'View' && flatten(n).maxWidth === 560);
+    assert.equal(card.length, 1, 'one dialog card');
+    assert.equal(flatten(card[0]).alignSelf, 'center');
+    assert.ok(flatten(card[0]).borderRadius > 0, 'every corner rounded');
+    const backdrop = sheet.root.findAll((n) => n.type === 'View' && flatten(n).justifyContent === 'center');
+    assert.equal(backdrop.length, 1, 'the card is centered vertically');
+    assert.equal(sheet.root.findAll((n) => n.type === 'View' && flatten(n).width === 36).length, 0, 'no bottom-sheet handle');
+    // The scrim still dismisses, so the dialog never traps her.
+    assert.equal(sheet.root.findAll((n) => n.props.accessibilityLabel === 'Dismiss').length > 0, true);
+  });
+
+  test('the Talk It Out routes (AI tab and modal) apply the readable column to their conversation frame', () => {
     for (const path of ['app/(app)/ai.tsx', 'app/talk-it-out.tsx']) {
       const source = read(path);
-      assert.match(source, /iPadReadableColumn\(\)/, path);
+      assert.match(source, /readableColumnFor\(useAdaptiveLayout\(\)\)/, path);
       assert.match(source, /style=\{column \? \[styles\.flex, column\] : styles\.flex\}/, path);
     }
   });
 
-  test('every caller adds the column only when it is non-null (no null entries on iPhone/Android style arrays)', () => {
+  test('every caller adds the column only when it is non-null (no null entries on compact or Android style arrays)', () => {
     for (const path of ['src/design/components/Screen.tsx', 'src/design/components/Sheet.tsx', 'app/(app)/ai.tsx', 'app/talk-it-out.tsx']) {
       const source = read(path);
-      assert.match(source, /const column = iPadReadableColumn\(\);/, path);
+      assert.match(source, /const column = readableColumnFor\((layout|useAdaptiveLayout\(\))\);/, path);
       assert.doesNotMatch(source, /\[[^\]]*\bcolumn\b[^\]]*\]\s*:\s*null/, path);
+    }
+  });
+
+  test('no layout decision reads the device idiom any more', () => {
+    for (const path of ['src/design/readableColumn.ts', 'src/design/components/Screen.tsx', 'src/design/components/Sheet.tsx', 'src/design/adaptive/sizeClass.ts', 'src/design/adaptive/useAdaptiveLayout.ts']) {
+      assert.doesNotMatch(read(path).replace(/\/\/.*|\/\*[\s\S]*?\*\//g, ''), /isPad/, path);
     }
   });
 });

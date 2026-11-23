@@ -35,7 +35,12 @@ describe('onboarding layout contract', () => {
   });
 
   test('Screen keeps tab-bar clearance by default and always adds the system bottom inset', () => {
-    assert.match(screen, /\(bottomClearance \?\? spacing\.xxxl \+ 68\) \+ insets\.bottom/);
+    // Build 5: the 68pt is the bottom tab bar's chrome, read from the adaptive layout (a sidebar owns no bottom edge). The rendered
+    // value for a tab-bar layout is still exactly spacing.xxxl + 68 + inset — proven in tests/build5/adaptiveLayout.test.mjs.
+    assert.match(screen, /\(bottomClearance \?\? spacing\.xxxl \+ tabChromeClearance\(layout\.navigation\)\) \+ insets\.bottom/);
+    const sizeClass = read('src/design/adaptive/sizeClass.ts');
+    assert.match(sizeClass, /export const TAB_BAR_CHROME_HEIGHT = 68;/);
+    assert.match(sizeClass, /return navigation === 'tabBar' \? TAB_BAR_CHROME_HEIGHT : 0;/);
   });
 
   test('consent scrolls and clears the status bar and the navigation bar', () => {
