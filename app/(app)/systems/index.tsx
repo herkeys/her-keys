@@ -1,4 +1,5 @@
 import { StyleSheet } from 'react-native';
+import { AdaptiveSplit, useAdaptiveLayout } from '../../../src/design/adaptive';
 import { AppText, Button, Card, Overline, Screen } from '../../../src/design/components';
 import { spacing } from '../../../src/design/tokens';
 import { useTheme } from '../../../src/design/theme';
@@ -16,6 +17,7 @@ import { premiumLaunchState } from '../../../src/monetization/premiumLaunchState
  */
 export default function SystemsScreen() {
   const { color } = useTheme();
+  const { twoPane } = useAdaptiveLayout();
   const { isPlus } = useEntitlement();
   const paywall = usePaywallAction('systems_upgrade');
   const premium = usePremiumStateIfMounted();
@@ -23,12 +25,14 @@ export default function SystemsScreen() {
   // The paywall is a full-screen sheet while it is open; the control is only ever held for that one in-flight action.
   const busy = paywall.presenting;
 
+  // Build 5: when the window holds two panes the Premium card sits beside the hub instead of under it. The paywall action and its
+  // in-flight state live in this component, above the split, so a resize while the paywall is open never starts a second one.
   return (
-    <Screen>
-      <SystemsHub />
-
-      {!isPlus && (
-        <Card tone="subtle" style={styles.upgrade}>
+    <Screen workspace>
+      <AdaptiveSplit
+        primary={<SystemsHub />}
+        secondary={!isPlus && (
+        <Card tone="subtle" style={twoPane ? null : styles.upgrade}>
           <Overline>{HER_KEYS_PREMIUM_DISPLAY_NAME}</Overline>
           <AppText variant="supporting" color={color.text.secondary} style={styles.upgradeCopy}>
             {releaseReady
@@ -45,7 +49,8 @@ export default function SystemsScreen() {
           />
           <PaywallNoticeView notice={paywall.notice} style={styles.upgradeNotice} />
         </Card>
-      )}
+        )}
+      />
     </Screen>
   );
 }

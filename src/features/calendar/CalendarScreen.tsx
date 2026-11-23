@@ -3,6 +3,7 @@ import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { AppText, Button, Screen, Tag } from '../../design/components';
 import { spacing } from '../../design/tokens';
+import { AdaptiveSplit, useAdaptiveLayout } from '../../design/adaptive';
 import { isCoparentingHandoff } from '../../domain/handoffs';
 import { undoableMove } from '../../domain/dailyLoadDecisions';
 import type { AppState } from '../../domain/state';
@@ -53,6 +54,12 @@ function ReadyCalendar({ state, today, degraded }: { state: AppState; today: str
   const week = presentation.view === 'week';
   const view = useMemo(() => (week ? null : projectCalendarDay({ state, date: selectedDate, today, nowMs })), [week, state, selectedDate, today, nowMs]);
   const weekView = useMemo(() => (week ? projectCalendarWeek({ state, selectedDate, today, nowMs }) : null), [week, state, selectedDate, today, nowMs]);
+  // Build 5, two panes only: the week around the selected day, shown beside the Day view. Not computed on any other layout.
+  const { twoPane } = useAdaptiveLayout();
+  const contextWeek = useMemo(
+    () => (twoPane && !week ? projectCalendarWeek({ state, selectedDate, today, nowMs }) : null),
+    [twoPane, week, state, selectedDate, today, nowMs],
+  );
 
   // PRESENTATION STATE ONLY: a preview lives here, in memory. It is never written to the store, so a restart discards it.
   const [preview, setPreview] = useState<ActionPreview | null>(null);
@@ -130,51 +137,75 @@ function ReadyCalendar({ state, today, degraded }: { state: AppState; today: str
 
   const validity = preview === null ? null : validityOf(preview, state, today);
 
+  // Build 5: the same Calendar in every window. Compact and medium windows render the single column in the order they always
+  // had (lead, then the Google Calendar panel and any preview, then the week or the day). When the window holds two panes the
+  // schedule is the main pane and the Google Calendar panel, an open preview and the week around the selected day sit beside it,
+  // so a proposed change is read next to the schedule it changes. Presentation state (view, selected date, preview) lives here,
+  // above the split, and the split never remounts its panes, so none of it is lost when the window changes.
   return (
-    <Screen>
-      <View style={styles.header}>
-        <AppText variant="display" accessibilityRole="header">
-          {COPY.screenTitle}
-        </AppText>
-        {state.origin === 'demo' ? <Tag label={COPY.demoMarker} tone="neutral" /> : null}
-      </View>
-      <Button label={COPY.addEvent} onPress={() => router.push('/event-editor')} style={styles.add} />
-      {degraded ? <CalendarDegradedNotice /> : null}
-      <ViewSwitch view={presentation.view} onChange={(next) => dispatch({ type: 'setView', view: next })} />
-      <DayNavigator
-        date={selectedDate}
-        today={today}
-        view={presentation.view}
-        onStep={(direction) => dispatch({ type: 'step', days: week ? direction * 7 : direction })}
-        onToday={() => dispatch({ type: 'goToday' })}
+    <Screen workspace>
+      <AdaptiveSplit
+        stackedOrder="secondaryFirst"
+        lead={
+          <>
+            <View style={styles.header}>
+              <AppText variant="display" accessibilityRole="header">
+                {COPY.screenTitle}
+              </AppText>
+              {state.origin === 'demo' ? <Tag label={COPY.demoMarker} tone="neutral" /> : null}
+            </View>
+            <Button label={COPY.addEvent} onPress={() => router.push('/event-editor')} style={styles.add} />
+            {degraded ? <CalendarDegradedNotice /> : null}
+            <ViewSwitch view={presentation.view} onChange={(next) => dispatch({ type: 'setView', view: next })} />
+            <DayNavigator
+              date={selectedDate}
+              today={today}
+              view={presentation.view}
+              onStep={(direction) => dispatch({ type: 'step', days: week ? direction * 7 : direction })}
+              onToday={() => dispatch({ type: 'goToday' })}
+            />
+          </>
+        }
+        secondary={
+          <>
+            <GoogleCalendarPanel selectedDate={selectedDate} timezone={state.user.timezone} showEvents={!week} />
+            {preview !== null && validity !== null ? (
+              <PreviewPanel
+                preview={preview}
+                validity={validity}
+                notice={notice}
+                busy={busy}
+                onAccept={() => void run(preview.intent, preview.basedOn)}
+                onCancel={() => {
+                  setPreview(null);
+                  setNotice(null);
+                }}
+                onPreviewAgain={() => openPreview(preview.intent)}
+              />
+            ) : null}
+            {preview === null && notice === 'out_of_date' ? <PreviewGone /> : null}
+            {contextWeek !== null ? (
+              // Two panes only: the week around the selected day, as context. Choosing a day selects it and stays in Day view.
+              <WeekOverview week={contextWeek} today={today} onSelectDay={(date) => dispatch({ type: 'select', date })} />
+            ) : null}
+          </>
+        }
+        primary={
+          <>
+            {weekView !== null ? (
+              <WeekOverview
+                week={weekView}
+                today={today}
+                onSelectDay={(date) => {
+                  dispatch({ type: 'select', date });
+                  dispatch({ type: 'setView', view: 'day' });
+                }}
+              />
+            ) : null}
+            {view !== null ? <CalendarDayView view={view} onOpenItem={onOpenItem} actions={actions} /> : null}
+          </>
+        }
       />
-      <GoogleCalendarPanel selectedDate={selectedDate} timezone={state.user.timezone} showEvents={!week} />
-      {preview !== null && validity !== null ? (
-        <PreviewPanel
-          preview={preview}
-          validity={validity}
-          notice={notice}
-          busy={busy}
-          onAccept={() => void run(preview.intent, preview.basedOn)}
-          onCancel={() => {
-            setPreview(null);
-            setNotice(null);
-          }}
-          onPreviewAgain={() => openPreview(preview.intent)}
-        />
-      ) : null}
-      {preview === null && notice === 'out_of_date' ? <PreviewGone /> : null}
-      {weekView !== null ? (
-        <WeekOverview
-          week={weekView}
-          today={today}
-          onSelectDay={(date) => {
-            dispatch({ type: 'select', date });
-            dispatch({ type: 'setView', view: 'day' });
-          }}
-        />
-      ) : null}
-      {view !== null ? <CalendarDayView view={view} onOpenItem={onOpenItem} actions={actions} /> : null}
     </Screen>
   );
 }

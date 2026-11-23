@@ -1,54 +1,24 @@
 import { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { TabIcon, type TabIconSpec } from '../../src/design/components';
-import { sizing, spacing, typography } from '../../src/design/tokens';
+import { useAdaptiveLayout } from '../../src/design/adaptive';
+import { appTabsScreenOptions } from '../../src/design/adaptive/appTabs';
 import { useTheme } from '../../src/design/theme';
 
 /**
- * The primary navigation: five tabs, one icon family (Ionicons — outline at
- * rest, filled when selected, one optical weight), labels kept for
- * accessibility and clarity. Iconography is restrained and literal:
- * a day (Today), a home (Life), a calendar, a grid of systems, a spark (AI).
+ * The primary navigation: five destinations, one icon family (Ionicons: outline at rest, filled when selected), labels kept
+ * for accessibility and clarity.
+ *
+ * Build 5: a bottom tab bar on compact and medium windows (unchanged), a leading sidebar on expanded iOS windows (a full-screen
+ * iPad, a wide Stage Manager window, an iPhone Duo inner display in landscape). It is the SAME `Tabs` navigator in both — only its
+ * screen options change — so a resize keeps the selected destination, every tab's stack and every mounted screen.
  */
-const TAB_ICONS: Record<string, TabIconSpec> = {
-  today: { outline: 'sunny-outline', filled: 'sunny' },
-  life: { outline: 'home-outline', filled: 'home' },
-  calendar: { outline: 'calendar-outline', filled: 'calendar' },
-  systems: { outline: 'grid-outline', filled: 'grid' },
-  ai: { outline: 'sparkles-outline', filled: 'sparkles' },
-};
-
 export default function AppTabsLayout() {
-  const { colors } = useTheme();
+  const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const layout = useAdaptiveLayout();
 
   return (
-    <Tabs
-      screenOptions={({ route }) => ({
-        headerShown: false,
-        sceneStyle: { backgroundColor: colors.background },
-        tabBarActiveTintColor: colors.accent,
-        tabBarInactiveTintColor: colors.textTertiary,
-        tabBarIcon: ({ color, focused }) => (
-          <TabIcon spec={TAB_ICONS[route.name]} color={color} size={sizing.icon.lg} focused={focused} />
-        ),
-        tabBarLabelStyle: typography.micro,
-        // Fixed chrome: the tab bar's height is fixed, so its labels do not scale with
-        // Dynamic Type — an 11pt label at 200% would clip inside 68pt. Documented narrow
-        // cap (HK-FE-UI-02): every other surface scales freely.
-        tabBarAllowFontScaling: false,
-        tabBarItemStyle: { paddingVertical: spacing.xs },
-        tabBarIconStyle: { marginTop: spacing.xxs },
-        tabBarStyle: {
-          backgroundColor: colors.surface,
-          borderTopColor: colors.borderSubtle,
-          // A fixed height replaces the navigator's own inset math, so the system
-          // navigation bar has to be added back or it squeezes the labels out.
-          height: 68 + insets.bottom,
-          paddingTop: spacing.xs,
-        },
-      })}
-    >
+    <Tabs screenOptions={({ route }) => appTabsScreenOptions({ routeName: route.name, theme, insets, layout })}>
       <Tabs.Screen name="today" options={{ title: 'Today' }} />
       <Tabs.Screen name="life" options={{ title: 'Life' }} />
       <Tabs.Screen name="calendar" options={{ title: 'Calendar' }} />

@@ -11,6 +11,7 @@ import { useOneMove } from '../../store/OneMoveContext';
 import { TalkItOutEntry } from '../talk-it-out/TalkItOutEntry';
 import { FirstStepCard } from '../onboarding/FirstStepCard';
 import { FadeIn } from '../../design/components';
+import { AdaptiveSplit } from '../../design/adaptive';
 import { spacing } from '../../design/tokens';
 import { HandledLedger } from './HandledLedger';
 import type { SectionKey, TodayReady, TodayView } from './model';
@@ -53,29 +54,43 @@ export function TodayBriefing({ view }: { view: TodayView }) {
     );
   }
 
+  // Build 5: one composition, two layouts. On a compact or medium window this is the single column it always was, in the same
+  // order. When the window holds two panes, the briefing (load, weather and the composed sections, including One Move and the
+  // Daily Load decision) is the main column and tomorrow, momentum and Talk It Out sit in a restrained supporting column. Nothing
+  // is added for the extra space and nothing remounts when the window changes (`AdaptiveSplit`).
   return (
-    <>
-      <TodayHeader view={view}>
-        <PersistenceNotice />
-        <SyncNotice />
-        <AccountEntry />
-      </TodayHeader>
-      {view.load ? <LoadMeter load={view.load} note={view.capacityNote} /> : null}
-      <WeatherContextCard />
-      {view.composition.map(({ key }, index) => {
-        const section = renderSection(key, view, complete, actions);
-        // Sections settle in with a short stagger rather than appearing at once;
-        // capped so a long day never feels delayed. Honors Reduce Motion.
-        return section ? (
-          <FadeIn key={key} delay={Math.min(index, 4) * 40} style={styles.block}>
-            {section}
-          </FadeIn>
-        ) : null;
-      })}
-      <TomorrowReminderCard />
-      <PremiumMomentumSection />
-      <TalkItOutEntry />
-    </>
+    <AdaptiveSplit
+      lead={
+        <TodayHeader view={view}>
+          <PersistenceNotice />
+          <SyncNotice />
+          <AccountEntry />
+        </TodayHeader>
+      }
+      primary={
+        <>
+          {view.load ? <LoadMeter load={view.load} note={view.capacityNote} /> : null}
+          <WeatherContextCard />
+          {view.composition.map(({ key }, index) => {
+            const section = renderSection(key, view, complete, actions);
+            // Sections settle in with a short stagger rather than appearing at once;
+            // capped so a long day never feels delayed. Honors Reduce Motion.
+            return section ? (
+              <FadeIn key={key} delay={Math.min(index, 4) * 40} style={styles.block}>
+                {section}
+              </FadeIn>
+            ) : null;
+          })}
+        </>
+      }
+      secondary={
+        <>
+          <TomorrowReminderCard />
+          <PremiumMomentumSection />
+          <TalkItOutEntry />
+        </>
+      }
+    />
   );
 }
 

@@ -1,5 +1,6 @@
 import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
+import { AdaptiveSplit, useAdaptiveLayout } from '../../../src/design/adaptive';
 import { AppText, Overline, Screen, StatusList } from '../../../src/design/components';
 import { spacing } from '../../../src/design/tokens';
 import { useTheme } from '../../../src/design/theme';
@@ -25,9 +26,14 @@ import { useHouseholdState } from '../../../src/store/AppStateProvider';
  *   Just for you — the three areas that are owner-private by construction: Me / Rebuild, Life Admin / Documents and People. Nothing in
  *     them is shared with the household, and none of them reaches her day by itself; only a Task she makes from one does.
  * Every row is a count or a date, never a name, a title, a note, a number or a place.
+ *
+ * Build 5: when the window holds two panes, "Where things stand" is the main pane and "Just for you" sits beside it; otherwise
+ * the single column is unchanged. The quick-add field is in the lead, which never moves, so a half-typed capture survives a
+ * resize, a rotation or a fold.
  */
 export default function LifeHub() {
   const { colors } = useTheme();
+  const { twoPane } = useAdaptiveLayout();
   const statuses = useLifeStatus();
   const inbox = useLifeInbox();
   const { state, today } = useHouseholdState();
@@ -37,86 +43,99 @@ export default function LifeHub() {
   const pausedFocuses = state.rebuildFocuses.filter((focus) => focus.state === 'paused').length;
   const people = peopleLifeTile(state, today);
 
+  const householdItems = [
+    ...statuses.map((s) => ({
+      key: s.key,
+      label: s.label,
+      value: s.value,
+      needsAttention: s.needsAttention,
+      onPress: () => router.push(s.route),
+    })),
+    // One row, not a list: everything saved in a category without its own screen stays reachable.
+    ...(otherOpenTasks > 0
+      ? [
+          {
+            key: 'other-tasks',
+            label: 'Other open tasks',
+            value: `${otherOpenTasks} open`,
+            onPress: () => router.push('/life/other-tasks'),
+          },
+        ]
+      : []),
+    // Unresolved captures — what still needs a decision. Never says "nothing" while loading or recovering.
+    {
+      key: 'life-inbox',
+      label: copy.inbox.rowLabel,
+      value: inboxRowValue(inbox),
+      needsAttention: inbox.phase === 'items' && inbox.items.some((item) => item.urgency === 'now' || item.urgency === 'today'),
+      onPress: () => router.push('/life/inbox'),
+    },
+    {
+      key: 'needs-me',
+      label: 'Needs Me',
+      value: openNeedsMe.length === 0 ? 'Nothing captured' : `${openNeedsMe.length} captured`,
+      onPress: () => router.push('/life/needs-me'),
+    },
+  ];
+
+  const privateItems = [
+    // Her own life as a person (HK-FEATURE-11). A count of what she chose to keep visible — never a score, never a nudge.
+    {
+      key: 'me-rebuild',
+      label: REBUILD_COPY.life.rowLabel,
+      value: REBUILD_COPY.life.rowValue(activeFocuses, pausedFocuses),
+      onPress: () => router.push('/life/rebuild'),
+    },
+    // Life Admin / Documents (HK-FEATURE-12): a count only. No title, number, note, place, issuer or child name reaches the hub.
+    {
+      key: 'life-admin',
+      label: LIFE_ADMIN_COPY.hubLabel,
+      ...lifeAdminHubSummary(state, today),
+      onPress: () => router.push('/life/admin'),
+    },
+    // People (HK-FEATURE-13): the tile Feature 13 built for this hub (MP-13-08) — a count or a date, never a name or a note.
+    {
+      key: people.key,
+      label: people.label,
+      value: people.value,
+      needsAttention: people.needsAttention,
+      onPress: () => router.push(people.route),
+    },
+  ];
+
   return (
-    <Screen>
-      <View style={styles.header}>
-        <AppText variant="display">Life</AppText>
-        <AppText variant="supporting" color={colors.textSecondary} style={styles.subtitle}>
-          {LIFE_HUB_COPY.subtitle}
-        </AppText>
-      </View>
+    <Screen workspace>
+      <AdaptiveSplit
+        lead={
+          <>
+            <View style={styles.header}>
+              <AppText variant="display">Life</AppText>
+              <AppText variant="supporting" color={colors.textSecondary} style={styles.subtitle}>
+                {LIFE_HUB_COPY.subtitle}
+              </AppText>
+            </View>
 
-      <NeedsMeQuickAdd />
-
-      <Overline style={styles.sectionLabel}>{LIFE_HUB_COPY.householdSection}</Overline>
-      <StatusList
-        items={[
-          ...statuses.map((s) => ({
-            key: s.key,
-            label: s.label,
-            value: s.value,
-            needsAttention: s.needsAttention,
-            onPress: () => router.push(s.route),
-          })),
-          // One row, not a list: everything saved in a category without its own screen stays reachable.
-          ...(otherOpenTasks > 0
-            ? [
-                {
-                  key: 'other-tasks',
-                  label: 'Other open tasks',
-                  value: `${otherOpenTasks} open`,
-                  onPress: () => router.push('/life/other-tasks'),
-                },
-              ]
-            : []),
-          // Unresolved captures — what still needs a decision. Never says "nothing" while loading or recovering.
-          {
-            key: 'life-inbox',
-            label: copy.inbox.rowLabel,
-            value: inboxRowValue(inbox),
-            needsAttention: inbox.phase === 'items' && inbox.items.some((item) => item.urgency === 'now' || item.urgency === 'today'),
-            onPress: () => router.push('/life/inbox'),
-          },
-          {
-            key: 'needs-me',
-            label: 'Needs Me',
-            value: openNeedsMe.length === 0 ? 'Nothing captured' : `${openNeedsMe.length} captured`,
-            onPress: () => router.push('/life/needs-me'),
-          },
-        ]}
-      />
-
-      <View style={styles.privateSection}>
-        <Overline style={styles.sectionLabelWithNote}>{LIFE_HUB_COPY.privateSection}</Overline>
-        <AppText variant="supporting" color={colors.textSecondary} style={styles.sectionNote}>
-          {LIFE_HUB_COPY.privateSectionNote}
-        </AppText>
-      </View>
-      <StatusList
-        items={[
-          // Her own life as a person (HK-FEATURE-11). A count of what she chose to keep visible — never a score, never a nudge.
-          {
-            key: 'me-rebuild',
-            label: REBUILD_COPY.life.rowLabel,
-            value: REBUILD_COPY.life.rowValue(activeFocuses, pausedFocuses),
-            onPress: () => router.push('/life/rebuild'),
-          },
-          // Life Admin / Documents (HK-FEATURE-12): a count only. No title, number, note, place, issuer or child name reaches the hub.
-          {
-            key: 'life-admin',
-            label: LIFE_ADMIN_COPY.hubLabel,
-            ...lifeAdminHubSummary(state, today),
-            onPress: () => router.push('/life/admin'),
-          },
-          // People (HK-FEATURE-13): the tile Feature 13 built for this hub (MP-13-08) — a count or a date, never a name or a note.
-          {
-            key: people.key,
-            label: people.label,
-            value: people.value,
-            needsAttention: people.needsAttention,
-            onPress: () => router.push(people.route),
-          },
-        ]}
+            <NeedsMeQuickAdd />
+          </>
+        }
+        primary={
+          <>
+            <Overline style={styles.sectionLabel}>{LIFE_HUB_COPY.householdSection}</Overline>
+            <StatusList items={householdItems} />
+          </>
+        }
+        secondary={
+          <>
+            {/* Beside the household list the private section starts level with it; stacked, it keeps its separating space. */}
+            <View style={twoPane ? null : styles.privateSection}>
+              <Overline style={styles.sectionLabelWithNote}>{LIFE_HUB_COPY.privateSection}</Overline>
+              <AppText variant="supporting" color={colors.textSecondary} style={styles.sectionNote}>
+                {LIFE_HUB_COPY.privateSectionNote}
+              </AppText>
+            </View>
+            <StatusList items={privateItems} />
+          </>
+        }
       />
     </Screen>
   );
